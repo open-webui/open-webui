@@ -377,25 +377,40 @@
 							placeholder="gpt-realtime-2.1-mini"
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('Voice')}>
-						<input class={inputClass} bind:value={realtime.VOICE} placeholder="marin" />
+					<AdminSettingField label={$i18n.t('Voice')} forId="realtime-call-voice">
+						<input
+							id="realtime-call-voice"
+							class={inputClass}
+							bind:value={realtime.VOICE}
+							placeholder="marin"
+						/>
 					</AdminSettingField>
 				</div>
-				<AdminSettingField label={$i18n.t('Input Transcription Model')}>
-					<input class={inputClass} bind:value={realtime.TRANSCRIPTION_MODEL} />
+				<AdminSettingField
+					label={$i18n.t('Input Transcription Model')}
+					forId="realtime-transcription-model"
+				>
+					<input
+						id="realtime-transcription-model"
+						class={inputClass}
+						bind:value={realtime.TRANSCRIPTION_MODEL}
+					/>
 				</AdminSettingField>
 				<AdminSettingField
 					label={$i18n.t('settings.audio.realtime.inputParams')}
 					description={$i18n.t('settings.audio.realtime.inputParamsHelp')}
+					forId="realtime-input-params"
 				>
 					<Textarea
+						id="realtime-input-params"
 						className={textareaClass}
 						bind:value={REALTIME_INPUT_PARAMS}
 						placeholder={$i18n.t('Enter additional parameters in JSON format')}
 					/>
 				</AdminSettingField>
-				<AdminSettingField label={$i18n.t('Prompt Template')}>
+				<AdminSettingField label={$i18n.t('Prompt Template')} forId="realtime-prompt-template">
 					<Textarea
+						id="realtime-prompt-template"
 						className={textareaClass}
 						bind:value={realtime.REALTIME_CALL_PROMPT_TEMPLATE}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -430,8 +445,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.audio.supportedMimeTypes.label')}
 					description={$i18n.t('settings.admin.audio.supportedMimeTypes.description')}
+					forId="stt-supported-mime-types"
 				>
 					<input
+						id="stt-supported-mime-types"
 						class={inputClass}
 						bind:value={STT_SUPPORTED_CONTENT_TYPES}
 						placeholder={$i18n.t('e.g., audio/wav,audio/mpeg,video/* (leave blank for defaults)')}
@@ -441,8 +458,12 @@
 
 			{#if STT_ENGINE === 'openai'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.sttOpenaiApiBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.sttOpenaiApiBaseUrl.label')}
+						forId="stt-openai-api-base-url"
+					>
 						<input
+							id="stt-openai-api-base-url"
 							class={inputClass}
 							placeholder={$i18n.t('settings.admin.audio.sttOpenaiApiBaseUrl.label')}
 							bind:value={STT_OPENAI_API_BASE_URL}
@@ -469,8 +490,12 @@
 					</SettingsSelect>
 				</AdminSettingRow>
 
-				<AdminSettingField label={$i18n.t('settings.admin.audio.sttModel.label')}>
+				<AdminSettingField
+					label={$i18n.t('settings.admin.audio.sttModel.label')}
+					forId="stt-openai-model"
+				>
 					<input
+						id="stt-openai-model"
 						list="stt-openai-model-list"
 						class={inputClass}
 						bind:value={STT_MODEL}
@@ -492,8 +517,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.audio.sttModel.label')}
 					description={$i18n.t('settings.admin.audio.sttModel.description')}
+					forId="stt-deepgram-model"
 				>
 					<input
+						id="stt-deepgram-model"
 						class={inputClass}
 						bind:value={STT_MODEL}
 						placeholder={$i18n.t('Select a model (optional)')}
@@ -515,29 +542,45 @@
 				</AdminSettingField>
 
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.sttAzureRegion.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.sttAzureRegion.label')}
+						forId="stt-azure-region"
+					>
 						<input
+							id="stt-azure-region"
 							class={inputClass}
 							bind:value={STT_AZURE_REGION}
 							placeholder={$i18n.t('e.g., westus (leave blank for eastus)')}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.languageLocales.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.languageLocales.label')}
+						forId="stt-azure-locales"
+					>
 						<input
+							id="stt-azure-locales"
 							class={inputClass}
 							bind:value={STT_AZURE_LOCALES}
 							placeholder={$i18n.t('e.g., en-US,ja-JP (leave blank for auto-detect)')}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.sttAzureBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.sttAzureBaseUrl.label')}
+						forId="stt-azure-base-url"
+					>
 						<input
+							id="stt-azure-base-url"
 							class={inputClass}
 							bind:value={STT_AZURE_BASE_URL}
 							placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.maxSpeakers.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.maxSpeakers.label')}
+						forId="stt-azure-max-speakers"
+					>
 						<input
+							id="stt-azure-max-speakers"
 							class={inputClass}
 							bind:value={STT_AZURE_MAX_SPEAKERS}
 							placeholder={$i18n.t('e.g., 3, 4, 5 (leave blank for default)')}
@@ -546,8 +589,12 @@
 				</div>
 			{:else if STT_ENGINE === 'mistral'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.sttMistralApiBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.sttMistralApiBaseUrl.label')}
+						forId="stt-mistral-api-base-url"
+					>
 						<input
+							id="stt-mistral-api-base-url"
 							class={inputClass}
 							placeholder={$i18n.t('settings.admin.audio.sttMistralApiBaseUrl.label')}
 							bind:value={STT_MISTRAL_API_BASE_URL}
@@ -566,8 +613,14 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.audio.mistralSttModel.label')}
 					description={$i18n.t('settings.admin.audio.mistralSttModel.description')}
+					forId="stt-mistral-model"
 				>
-					<input class={inputClass} bind:value={STT_MODEL} placeholder="voxtral-mini-latest" />
+					<input
+						id="stt-mistral-model"
+						class={inputClass}
+						bind:value={STT_MODEL}
+						placeholder="voxtral-mini-latest"
+					/>
 					<div class="mt-1 {linkedHelpClass}">
 						<a href="https://docs.mistral.ai/capabilities/audio_transcription" target="_blank">
 							{$i18n.t('Learn more about Voxtral transcription.')}
@@ -589,9 +642,11 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.audio.sttWhisperModel.label')}
 					description={$i18n.t('settings.admin.audio.sttWhisperModel.description')}
+					forId="stt-whisper-model"
 				>
 					<div class="flex w-full gap-2">
 						<input
+							id="stt-whisper-model"
 							class={inputClass}
 							placeholder={$i18n.t('Set whisper model')}
 							bind:value={STT_WHISPER_MODEL}
@@ -681,8 +736,12 @@
 
 			{#if TTS_ENGINE === 'openai' || TTS_ENGINE === 'openai-realtime'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsOpenaiApiBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsOpenaiApiBaseUrl.label')}
+						forId="tts-openai-api-base-url"
+					>
 						<input
+							id="tts-openai-api-base-url"
 							class={inputClass}
 							placeholder={$i18n.t('settings.admin.audio.ttsOpenaiApiBaseUrl.label')}
 							bind:value={TTS_OPENAI_API_BASE_URL}
@@ -717,15 +776,23 @@
 				</AdminSettingField>
 
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsAzureSpeechRegion.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsAzureSpeechRegion.label')}
+						forId="tts-azure-speech-region"
+					>
 						<input
+							id="tts-azure-speech-region"
 							class={inputClass}
 							bind:value={TTS_AZURE_SPEECH_REGION}
 							placeholder={$i18n.t('e.g., westus (leave blank for eastus)')}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsAzureSpeechBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsAzureSpeechBaseUrl.label')}
+						forId="tts-azure-speech-base-url"
+					>
 						<input
+							id="tts-azure-speech-base-url"
 							class={inputClass}
 							bind:value={TTS_AZURE_SPEECH_BASE_URL}
 							placeholder={$i18n.t('(leave blank for to use commercial endpoint)')}
@@ -734,8 +801,12 @@
 				</div>
 			{:else if TTS_ENGINE === 'mistral'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsMistralApiBaseUrl.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsMistralApiBaseUrl.label')}
+						forId="tts-mistral-api-base-url"
+					>
 						<input
+							id="tts-mistral-api-base-url"
 							class={inputClass}
 							placeholder={$i18n.t('settings.admin.audio.ttsMistralApiBaseUrl.label')}
 							bind:value={TTS_MISTRAL_API_BASE_URL}
@@ -772,8 +843,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.audio.ttsModel.label')}
 					description={$i18n.t('settings.admin.audio.ttsModel.description')}
+					forId="tts-transformers-model"
 				>
 					<input
+						id="tts-transformers-model"
 						list="tts-transformers-model-list"
 						class={inputClass}
 						bind:value={TTS_MODEL}
@@ -795,7 +868,10 @@
 				</AdminSettingField>
 			{:else if TTS_ENGINE === 'openai' || TTS_ENGINE === 'openai-realtime'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsVoice.label')}
+						forId="tts-voice-input"
+					>
 						<TTSVoiceInput
 							bind:value={TTS_VOICE}
 							voices={providerVoices}
@@ -803,8 +879,12 @@
 							className={inputClass}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsModel.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsModel.label')}
+						forId="tts-openai-model"
+					>
 						<input
+							id="tts-openai-model"
 							list="tts-model-list"
 							class={inputClass}
 							bind:value={TTS_MODEL}
@@ -816,16 +896,22 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.audio.additionalParameters.label')}
 						description={$i18n.t('settings.admin.audio.additionalParameters.description')}
+						forId="tts-openai-params"
 					>
 						<Textarea
+							id="tts-openai-params"
 							className={textareaClass}
 							bind:value={TTS_OPENAI_PARAMS}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
 						/>
 					</AdminSettingField>
 				{:else}
-					<AdminSettingField label={$i18n.t('Prompt Template')}>
+					<AdminSettingField
+						label={$i18n.t('Prompt Template')}
+						forId="realtime-tts-prompt-template"
+					>
 						<Textarea
+							id="realtime-tts-prompt-template"
 							className={textareaClass}
 							bind:value={REALTIME_TTS_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(
@@ -836,7 +922,10 @@
 				{/if}
 			{:else if TTS_ENGINE === 'elevenlabs' || TTS_ENGINE === 'mistral'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsVoice.label')}
+						forId="tts-voice-input"
+					>
 						<TTSVoiceInput
 							bind:value={TTS_VOICE}
 							voices={providerVoices}
@@ -844,8 +933,12 @@
 							className={inputClass}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsModel.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsModel.label')}
+						forId="tts-elevenlabs-mistral-model"
+					>
 						<input
+							id="tts-elevenlabs-mistral-model"
 							list="tts-model-list"
 							class={inputClass}
 							bind:value={TTS_MODEL}
@@ -855,7 +948,10 @@
 				</div>
 			{:else if TTS_ENGINE === 'azure'}
 				<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-					<AdminSettingField label={$i18n.t('settings.admin.audio.ttsVoice.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.ttsVoice.label')}
+						forId="tts-voice-input"
+					>
 						<TTSVoiceInput
 							bind:value={TTS_VOICE}
 							voices={providerVoices}
@@ -863,8 +959,12 @@
 							className={inputClass}
 						/>
 					</AdminSettingField>
-					<AdminSettingField label={$i18n.t('settings.admin.audio.outputFormat.label')}>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.audio.outputFormat.label')}
+						forId="tts-azure-speech-output-format"
+					>
 						<input
+							id="tts-azure-speech-output-format"
 							class={inputClass}
 							bind:value={TTS_AZURE_SPEECH_OUTPUT_FORMAT}
 							placeholder={$i18n.t('Select an output format')}

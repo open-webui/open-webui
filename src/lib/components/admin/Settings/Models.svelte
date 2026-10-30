@@ -846,6 +846,7 @@
 							class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 							bind:value={searchValue}
 							placeholder={$i18n.t('Search Models')}
+							aria-label={$i18n.t('Search Models')}
 						/>
 						{#if searchValue}
 							<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">

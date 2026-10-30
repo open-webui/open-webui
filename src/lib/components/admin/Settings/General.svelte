@@ -308,8 +308,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.general.folderMaxFileCount.label')}
 						description={$i18n.t('settings.admin.general.folderMaxFileCount.description')}
+						forId="folder-max-file-count"
 					>
 						<input
+							id="folder-max-file-count"
 							class={inputClass}
 							type="number"
 							min="0"
@@ -471,8 +473,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.general.webuiUrl.label')}
 					description={$i18n.t('settings.admin.general.webuiUrl.description')}
+					forId="webui-url"
 				>
 					<input
+						id="webui-url"
 						class={inputClass}
 						type="text"
 						placeholder={`e.g.) "http://localhost:3000"`}
