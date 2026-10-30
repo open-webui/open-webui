@@ -2778,6 +2778,7 @@
 										<ModelSelector
 											bind:this={modelSelector}
 											bind:selectedModels
+											on:modelselect
 											showSetDefault={!history?.currentId}
 											placement="auto"
 											align="end"

@@ -415,6 +415,7 @@
 		compareEnabled = enabled;
 
 		if (!enabled && values) {
+			dispatch('modelselect', primaryValue || selectedValues[0] || '');
 			values = [primaryValue || selectedValues[0] || ''];
 			value = values[0];
 		}
@@ -422,6 +423,7 @@
 
 	const selectItem = (item, index: number) => {
 		selectedModelIdx = index;
+		dispatch('modelselect', item.value);
 
 		if (values) {
 			if (compareEnabled) {

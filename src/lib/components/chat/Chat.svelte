@@ -213,6 +213,11 @@
 	};
 
 	let selectedModels = [''];
+	let preservedChatModels: string[] | null = null;
+	const getChatModelsForSave = () => preservedChatModels ?? selectedModels;
+	const clearPreservedChatModels = () => {
+		preservedChatModels = null;
+	};
 	let selectedModelIdx = 0;
 	$: selectedModelIdx = Math.max(0, selectedModels.length - 1);
 	$: backgroundImage = embedded
@@ -2881,6 +2886,7 @@
 	};
 
 	const loadChat = async () => {
+		preservedChatModels = null;
 		if (chatIdProp && chatIdProp !== $chatId) {
 			terminalContext = null;
 			history = { messages: {}, currentId: null };
@@ -2939,6 +2945,13 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				const availableModelIds = new Set($models.map((model) => model.id));
+				if (
+					selectedModels.some(Boolean) &&
+					(!$models.length || selectedModels.some((modelId) => modelId && !availableModelIds.has(modelId)))
+				) {
+					preservedChatModels = structuredClone(selectedModels);
+				}
 
 				// An empty model list is not evidence that the chat's models are gone.
 				if ($models.length > 0) {
@@ -3291,7 +3304,7 @@
 
 		if (changed && !$temporaryChatEnabled) {
 			chat = await updateChatById(localStorage.token, _chatId, {
-				models: selectedModels,
+				models: getChatModelsForSave(),
 				messages: createMessagesList(history, responseMessageId),
 				history: history,
 				files: chatFiles
@@ -4785,6 +4798,7 @@
 	};
 
 	const initChatHandler = async (_history: typeof history) => {
+		preservedChatModels = null;
 		let _chatId = $chatId;
 		const selectedFolderId = $selectedFolder?.id;
 
@@ -4842,7 +4856,7 @@
 		if ($chatId == _chatId) {
 			if (!$temporaryChatEnabled) {
 				chat = await updateChatById(localStorage.token, _chatId, {
-					models: selectedModels,
+					models: getChatModelsForSave(),
 					history: history,
 					messages: createMessagesList(history, history.currentId),
 					files: chatFiles
@@ -5366,6 +5380,7 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										on:modelselect={clearPreservedChatModels}
 										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
@@ -5463,6 +5478,7 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										on:modelselect={clearPreservedChatModels}
 										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}

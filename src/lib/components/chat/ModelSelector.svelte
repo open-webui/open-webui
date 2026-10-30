@@ -80,6 +80,7 @@
 					{align}
 					{showSetDefault}
 					onSetDefault={saveDefaultModel}
+					on:modelselect
 					multipleEnabled={$user?.role === 'admin' ||
 						($user?.permissions?.chat?.multiple_models ?? true)}
 					{disabled}
