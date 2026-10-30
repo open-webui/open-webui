@@ -198,7 +198,11 @@
 	</div>
 </div>
 
-<Modal size="sm" bind:show>
+<Modal
+	ariaLabel={editingKey ? $i18n.t('Edit control') : $i18n.t('Add control')}
+	size="sm"
+	bind:show
+>
 	<div class="px-5 pb-5 pt-4 dark:text-gray-200">
 		<div class="mb-3 flex items-center justify-between gap-3">
 			<div class="font-primary text-lg font-medium">

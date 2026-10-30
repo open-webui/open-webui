@@ -59,7 +59,7 @@
 	$: topTags = model?.top_tags ?? [];
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={model?.name ?? $i18n.t('Model')} size="md" bind:show>
 	{#if model}
 		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<Tooltip content={`${model.name} (${model.id})`} placement="top-start">

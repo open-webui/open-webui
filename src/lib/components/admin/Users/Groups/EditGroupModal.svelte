@@ -184,7 +184,15 @@
 	}}
 />
 
-<Modal size="lg" bind:show>
+<Modal
+	ariaLabel={custom
+		? edit
+			? $i18n.t('Edit User Group')
+			: $i18n.t('Add User Group')
+		: $i18n.t('Edit Default Permissions')}
+	size="lg"
+	bind:show
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 			<div class=" text-sm font-medium self-center">

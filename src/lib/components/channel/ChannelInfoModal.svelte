@@ -96,7 +96,11 @@
 		{joinedApps}
 		onUpdate={updateMembers}
 	/>
-	<Modal size="sm" bind:show>
+	<Modal
+		ariaLabel={channel?.type === 'dm' ? $i18n.t('Direct Message') : channel?.name}
+		size="sm"
+		bind:show
+	>
 		<div class="flex max-h-[calc(100dvh-3rem)] flex-col">
 			<div class="flex shrink-0 justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="self-center text-base">

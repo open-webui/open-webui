@@ -214,7 +214,7 @@
 	};
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={title || $i18n.t('Event')} size="md" bind:show>
 	<div>
 		<div class="dark:text-gray-100 px-4 pt-3 pb-1">
 			<input

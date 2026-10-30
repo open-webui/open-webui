@@ -600,7 +600,13 @@
 	</div>
 </ConfirmDialog>
 
-<Modal size="sm" bind:show={variableModalOpen}>
+<Modal
+	ariaLabel={variableFormIndex === null
+		? $i18n.t('Add User Variable')
+		: $i18n.t('Edit User Variable')}
+	size="sm"
+	bind:show={variableModalOpen}
+>
 	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
 		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
 			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}

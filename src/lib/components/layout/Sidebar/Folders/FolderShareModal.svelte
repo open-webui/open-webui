@@ -70,7 +70,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={`${$i18n.t('Access')}: ${folder?.name ?? ''}`} size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
 			<div class=" text-sm self-center">

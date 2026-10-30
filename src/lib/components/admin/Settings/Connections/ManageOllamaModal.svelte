@@ -11,7 +11,12 @@
 	export let urlIdx: number | null = null;
 </script>
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Manage Ollama')}
+	size="sm"
+	bind:show
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<div class="flex w-full justify-between items-center text-sm font-medium self-center">

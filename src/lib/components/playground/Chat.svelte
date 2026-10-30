@@ -315,7 +315,7 @@
 	});
 </script>
 
-<Modal size="sm" bind:show={showControls}>
+<Modal ariaLabel={$i18n.t('Controls')} size="sm" bind:show={showControls}>
 	<div class="text-gray-700 dark:text-gray-100">
 		<div class="flex justify-between px-4 pt-3 pb-1">
 			<div class="text-sm font-medium self-center">{$i18n.t('Controls')}</div>

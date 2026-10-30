@@ -27,7 +27,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('Add Access')} size="sm" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 			<div class="self-center text-sm font-medium">

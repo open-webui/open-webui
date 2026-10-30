@@ -323,7 +323,12 @@
 	};
 </script>
 
-<Modal bind:show size="md" className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Sync Usage Stats')}
+	bind:show
+	size="md"
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div class="w-full">
 		{#if completed}
 			<div class="px-5.5 py-5">

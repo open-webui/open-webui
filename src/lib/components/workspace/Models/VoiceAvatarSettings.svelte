@@ -44,7 +44,7 @@
 	<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Configure')}</span>
 </button>
 
-<Modal bind:show size="sm">
+<Modal ariaLabel={$i18n.t('Avatar setup')} bind:show size="sm">
 	<div class="p-5 text-gray-900 dark:text-gray-100">
 		<div class="flex items-center justify-between gap-3">
 			<h2 class="text-base font-medium">{$i18n.t('Avatar setup')}</h2>

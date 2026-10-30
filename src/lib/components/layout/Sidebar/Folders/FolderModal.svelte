@@ -130,7 +130,7 @@
 	}
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={edit ? $i18n.t('Edit Folder') : $i18n.t('Create Folder')} size="md" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">

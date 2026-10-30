@@ -19,7 +19,13 @@
 	let voiceInput = false;
 </script>
 
-<Modal size="full" containerClassName="" className="h-full bg-white dark:bg-gray-900" bind:show>
+<Modal
+	ariaLabel={$i18n.t('Add text content')}
+	size="full"
+	containerClassName=""
+	className="h-full bg-white dark:bg-gray-900"
+	bind:show
+>
 	<div class="absolute top-0 right-0 p-5">
 		<button
 			aria-label={$i18n.t('Close')}
