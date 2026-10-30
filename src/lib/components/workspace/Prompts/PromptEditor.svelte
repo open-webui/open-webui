@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -436,6 +439,7 @@
 	}}
 />
 
+<Comments bind:view={comments} resourceType={modal ? null : 'prompt'} {modal}>
 <div
 	class="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden {modal
 		? 'px-5 pt-3 pb-1'
@@ -462,7 +466,7 @@
 				</button>
 			{/if}
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				{#if edit && prompt?.id}<CommentButton wrapperClassName="me-2"
+				{#if edit && prompt?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-2"
 						resource={{ resource_type: 'prompt', resource_id: prompt.id }}
 					/>{/if}
 
@@ -743,3 +747,4 @@
 		{/if}
 	</form>
 </div>
+</Comments>

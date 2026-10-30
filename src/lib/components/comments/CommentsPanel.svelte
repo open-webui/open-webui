@@ -1,7 +1,6 @@
 <script context="module" lang="ts">
 	import type { CommentResource, CommentTarget } from '$lib/apis/comments';
-	export type CommentsRequest = CommentResource &
-		CommentTarget & { comment_id?: string; modal?: boolean };
+	export type CommentsRequest = CommentResource & CommentTarget & { comment_id?: string };
 </script>
 
 <script lang="ts">
@@ -24,6 +23,7 @@
 	import { scrollToComment } from '$lib/utils';
 	export let view: CommentsRequest;
 	export let embedded = false;
+	export let modal = false;
 	export let onClose: () => void = () => {};
 	export let onCountChange: (count: number) => void = () => {};
 	let total: number | null = null;
@@ -232,7 +232,7 @@
 			</Tooltip>
 		</header>
 	{/if}
-	{#if view.modal && resource && title}
+	{#if modal && resource && title}
 		<div class="flex min-w-0 shrink-0 items-baseline gap-1.5 px-4 pb-1 leading-4">
 			<span class="shrink-0 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 				{$i18n.t(resourceLabels[resource.resource_type])}

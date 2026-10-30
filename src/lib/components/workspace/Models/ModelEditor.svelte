@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
@@ -789,6 +792,7 @@
 	});
 </script>
 
+<Comments bind:view={comments} resourceType={admin || readOnly ? null : 'model'} modal={admin}>
 {#if loaded}
 	<DiffEditorModal
 		bind:show={showComparison}
@@ -903,7 +907,7 @@
 				/>
 			{/if}
 			<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
-				{#if edit && model?.id}<CommentButton wrapperClassName="me-2"
+				{#if edit && model?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-2"
 						resource={{ resource_type: 'model', resource_id: model.id }}
 					/>{/if}
 				{#if !historical && !readOnly}
@@ -1839,3 +1843,4 @@
 		<span class="sr-only">{$i18n.t('Loading...')}</span>
 	</div>
 {/if}
+</Comments>

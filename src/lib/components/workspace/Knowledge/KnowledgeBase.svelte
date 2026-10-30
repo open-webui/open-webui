@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -936,6 +939,7 @@
 	}}
 />
 
+<Comments bind:view={comments} resourceType="knowledge">
 <div class="flex h-full min-h-0 w-full flex-col overflow-hidden" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
@@ -971,7 +975,7 @@
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
 			<div class="flex items-center gap-2">
-				{#if !isExternalKnowledge && knowledge?.id}<CommentButton wrapperClassName="me-1"
+				{#if !isExternalKnowledge && knowledge?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-1"
 						resource={{ resource_type: 'knowledge', resource_id: knowledge.id }}
 					/>{/if}
 				{#if knowledge.write_access}
@@ -1134,6 +1138,7 @@
 		</div>
 	{:else}<Spinner className="size-5" />{/if}
 </div>
+</Comments>
 
 <Modal bind:show={showSettings} size="md" ariaLabel={$i18n.t('Settings')}>
 	{#if knowledge}

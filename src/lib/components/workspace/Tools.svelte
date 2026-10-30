@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -354,6 +357,7 @@
 	successMessage={$i18n.t('Tool imported successfully')}
 />
 
+<Comments bind:view={comments} resourceType="tool">
 {#if loaded}
 	<input
 		id="documents-import-input"
@@ -624,12 +628,12 @@
 												</button>
 											</Tooltip>
 
-											<CommentButton
+											<CommentButton onComment={(request) => (comments = request)}
 												modal
 												className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												resource={{ resource_type: 'tool', resource_id: tool.id }}
 											/>
-											<ToolMenu
+											<ToolMenu onComment={(request) => (comments = request)}
 												resourceId={tool.id}
 												accessHandler={$user?.permissions?.sharing?.tools || $user?.role === 'admin'
 													? () => accessModal.open(tool.id)
@@ -686,7 +690,7 @@
 									</div>
 								{/if}
 								{#if !tool.write_access}
-									<CommentButton
+									<CommentButton onComment={(request) => (comments = request)}
 										modal
 										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 										resource={{ resource_type: 'tool', resource_id: tool.id }}
@@ -786,3 +790,4 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+</Comments>

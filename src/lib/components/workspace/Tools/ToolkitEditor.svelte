@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
@@ -312,6 +315,7 @@ class Tools:
 	}}
 />
 
+<Comments bind:view={comments} resourceType="tool">
 <div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
 	<form
 		bind:this={formElement}
@@ -352,7 +356,7 @@ class Tools:
 				{/if}
 			</div>
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				{#if edit && id}<CommentButton wrapperClassName="me-2" resource={{ resource_type: 'tool', resource_id: id }} />{/if}
+				{#if edit && id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-2" resource={{ resource_type: 'tool', resource_id: id }} />{/if}
 				<LanguageModeSelect
 					bind:value={locale}
 					translatedLocales={Object.keys(
@@ -593,6 +597,8 @@ class Tools:
 		</div>
 	</form>
 </div>
+
+</Comments>
 
 <ConfirmDialog
 	bind:show={showConfirm}

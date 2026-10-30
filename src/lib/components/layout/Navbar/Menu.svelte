@@ -428,7 +428,7 @@
 			{/if}
 
 			{#if chat?.id && !$temporaryChatEnabled}
-				<CommentButton
+				<CommentButton onComment={() => showControls.set('comments')}
 					menu
 					resource={{ resource_type: 'chat', resource_id: chat.id }}
 					onOpen={() => (show = false)}

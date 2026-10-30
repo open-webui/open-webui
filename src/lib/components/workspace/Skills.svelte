@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
@@ -346,6 +349,7 @@
 
 <h1 class="sr-only">{$i18n.t('Skills')}</h1>
 
+<Comments bind:view={comments} resourceType="skill">
 {#if loaded}
 	<ImportModal
 		bind:show={showImportFromLink}
@@ -590,12 +594,12 @@
 											</Tooltip>
 										{:else}
 											<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
-												<CommentButton
+												<CommentButton onComment={(request) => (comments = request)}
 													modal
 													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 													resource={{ resource_type: 'skill', resource_id: skill.id }}
 												/>
-												<SkillMenu
+												<SkillMenu onComment={(request) => (comments = request)}
 													resourceId={skill.id}
 													shareHandler={() => shareHandler(skill)}
 													accessHandler={$user?.permissions?.sharing?.skills ||
@@ -660,7 +664,7 @@
 									</div>
 								{/if}
 								{#if !skill.write_access}
-									<CommentButton
+									<CommentButton onComment={(request) => (comments = request)}
 										modal
 										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 										resource={{ resource_type: 'skill', resource_id: skill.id }}
@@ -713,3 +717,4 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+</Comments>

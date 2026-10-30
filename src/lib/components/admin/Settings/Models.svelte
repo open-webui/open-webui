@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import { marked } from 'marked';
 	import Sortable from 'sortablejs';
 	import fileSaver from 'file-saver';
@@ -1239,7 +1242,7 @@
 										</svg>
 									</button>
 
-									<ModelMenu
+									<ModelMenu onComment={(request) => (comments = request)}
 										user={$user}
 										{model}
 										deleteLabel={canResetModel(model) ? $i18n.t('Reset') : $i18n.t('Delete')}
@@ -1369,3 +1372,5 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+
+<Comments modal bind:view={comments} />

@@ -10,6 +10,7 @@ export type CommentSurface = CommentResource &
 		toolbar_id?: string;
 		enabled?: boolean;
 		prepare?: () => Promise<void>;
+		onComment?: (target: CommentTarget) => void;
 	};
 export const contentHash = (text: string) => sha256(text);
 export function noteCommentText(content: { json?: unknown; md?: string }) {

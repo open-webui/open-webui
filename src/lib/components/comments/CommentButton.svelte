@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { config, user } from '$lib/stores';
+	import type { CommentsRequest } from './CommentsPanel.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
@@ -14,8 +15,8 @@
 	export let target: CommentTarget = {};
 	export let label = 'Comments';
 	export let onOpen = () => {};
+	export let onComment: (request: CommentsRequest) => void;
 	export let menu = false;
-	export let modal: boolean | undefined = undefined;
 	export let className = '';
 	export let wrapperClassName = '';
 	$: buttonClass =
@@ -67,9 +68,7 @@
 			aria-label={count > 0 ? `${$i18n.t(label)} (${count})` : $i18n.t(label)}
 			on:click|stopPropagation={() => {
 				onOpen();
-				document.dispatchEvent(
-					new CustomEvent('comments:open', { detail: { ...resource, ...target, modal } })
-				);
+				onComment({ ...resource, ...target });
 			}}
 			><span class="relative inline-flex shrink-0">
 				<Annotation className={menu ? 'size-3.5' : 'size-4'} />

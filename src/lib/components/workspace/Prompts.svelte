@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -394,6 +397,7 @@
 
 <h1 class="sr-only">{$i18n.t('Prompts')}</h1>
 
+<Comments bind:view={comments} resourceType="prompt">
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
@@ -690,12 +694,12 @@
 										</Tooltip>
 
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
-											<CommentButton
+											<CommentButton onComment={(request) => (comments = request)}
 												modal
 												className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												resource={{ resource_type: 'prompt', resource_id: prompt.id }}
 											/>
-											<PromptMenu
+											<PromptMenu onComment={(request) => (comments = request)}
 												resourceId={prompt.id}
 												accessHandler={$user?.permissions?.sharing?.prompts ||
 												$user?.role === 'admin'
@@ -799,3 +803,4 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+</Comments>

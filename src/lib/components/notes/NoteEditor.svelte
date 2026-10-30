@@ -352,18 +352,11 @@
 	$: if (currentNoteComments && (!commentsEnabled || currentNoteComments.resource_id !== note?.id))
 		currentNoteComments = null;
 	onMount(() => {
-		const open = (event: Event) => {
-			const request = (event as CustomEvent<CommentsRequest>).detail;
-			if (!request.modal && request.resource_type === 'note' && request.resource_id === note?.id)
-				currentNoteComments = request;
-		};
 		const close = (event: KeyboardEvent) => {
 			if (event.key === 'Escape' && currentNoteComments) closeNotePanel();
 		};
-		document.addEventListener('comments:open', open);
 		document.addEventListener('keydown', close);
 		return () => {
-			document.removeEventListener('comments:open', open);
 			document.removeEventListener('keydown', close);
 		};
 	});
@@ -1373,6 +1366,7 @@ ${content}
 										<CommentButton
 											menu
 											onOpen={close}
+											onComment={(request) => (currentNoteComments = request)}
 											resource={{ resource_type: 'note', resource_id: note.id }}
 										/>
 									</svelte:fragment>
@@ -1568,7 +1562,13 @@ ${content}
 										? contentHash(noteCommentText(activePage.content))
 										: savedCommentHashes[activePageId],
 									enabled: versionIdx === null,
-									prepare: flushActivePage
+									prepare: flushActivePage,
+									onComment: (target) =>
+										(currentNoteComments = {
+											resource_type: 'note',
+											resource_id: note.id,
+											...target
+										})
 								}}
 							>
 								{#each [activePage] as renderedPage (`${note.id}:${renderedPage.id}:${renderedPage.generation}:${autoFormat}`)}

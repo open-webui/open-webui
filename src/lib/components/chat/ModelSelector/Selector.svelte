@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
 	import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
@@ -1108,7 +1111,7 @@
 								<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
-									<ModelItem
+									<ModelItem onComment={(request) => (comments = request)}
 										bind:selectedModelIdx
 										{item}
 										{index}
@@ -1312,3 +1315,5 @@
 		</div>
 	{/if}
 </div>
+
+<Comments modal bind:view={comments} />

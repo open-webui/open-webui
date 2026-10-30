@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -314,6 +317,7 @@
 
 <h1 class="sr-only">{$i18n.t('Knowledge')}</h1>
 
+<Comments bind:view={comments} resourceType="knowledge">
 {#if loaded}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
@@ -536,14 +540,14 @@
 								<div
 									class="flex min-w-0 items-center justify-end gap-1.5"
 								>
-									<CommentButton
+									<CommentButton onComment={(request) => (comments = request)}
 										modal
 										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 										resource={{ resource_type: 'knowledge', resource_id: item.id }}
 									/>
 									{#if item?.write_access || $user?.role === 'admin'}
 										<div class="flex shrink-0 flex-row items-center self-center">
-											<ItemMenu
+											<ItemMenu onComment={(request) => (comments = request)}
 												resourceId={item.id}
 												accessHandler={$user?.permissions?.sharing?.knowledge ||
 												$user?.role === 'admin'
@@ -602,3 +606,4 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+</Comments>

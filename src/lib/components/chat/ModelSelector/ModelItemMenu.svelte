@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	export let onComment: (request: CommentsRequest) => void;
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
@@ -85,9 +87,8 @@
 			{/if}
 
 			{#if showComments}
-				<CommentButton
+				<CommentButton {onComment}
 					menu
-					modal
 					resource={{ resource_type: 'model', resource_id: model?.id }}
 					className="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
 					onOpen={() => {
