@@ -705,7 +705,14 @@
 															if (!image.src.endsWith('/favicon.png')) image.src = '/favicon.png';
 														}}
 													/>
-													<span class="truncate max-w-[9.375rem]">{model.name}</span>
+													<button
+														type="button"
+														class="truncate max-w-[9.375rem] text-left"
+														on:click={() => {
+															selectedModel = { id: model.model_id, name: model.name };
+															showModelModal = true;
+														}}>{model.name}</button
+													>
 												</div>
 											</td>
 											<td class="font-normal px-3 py-1.5 text-right"
