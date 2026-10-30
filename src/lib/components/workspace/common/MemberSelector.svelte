@@ -68,6 +68,16 @@
 		}
 	};
 
+	const toggleGroup = (group: { id: string; [key: string]: any }) => {
+		if ((groupIds ?? []).includes(group.id)) {
+			groupIds = groupIds.filter((id) => id !== group.id);
+			delete selectedGroup[group.id];
+		} else {
+			groupIds = [...groupIds, group.id];
+			selectedGroup[group.id] = group;
+		}
+	};
+
 	let page = 1;
 	let users: any[] | null = null;
 	let total: number | null = null;
@@ -242,20 +252,14 @@
 
 							<div class="mb-3">
 								{#each filteredGroups as group, groupIdx (group.id)}
-									<button
+									<div
 										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
-										type="button"
-										on:click={() => {
-											if ((groupIds ?? []).includes(group.id)) {
-												groupIds = groupIds.filter((id) => id !== group.id);
-												delete selectedGroup[group.id];
-											} else {
-												groupIds = [...groupIds, group.id];
-												selectedGroup[group.id] = group;
-											}
-										}}
 									>
-										<div class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
+										<button
+											type="button"
+											class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1"
+											on:click={() => toggleGroup(group)}
+										>
 											<div class="flex items-center gap-2">
 												<Tooltip content={group.name} placement="top-start">
 													<div class="font-normal truncate flex items-center gap-1">
@@ -263,16 +267,18 @@
 													</div>
 												</Tooltip>
 											</div>
-										</div>
+										</button>
 
 										<div class="px-3 py-1">
 											<div class=" translate-y-0.5">
 												<Checkbox
+													ariaLabel={group.name}
+													on:change={() => toggleGroup(group)}
 													state={(groupIds ?? []).includes(group.id) ? 'checked' : 'unchecked'}
 												/>
 											</div>
 										</div>
-									</button>
+									</div>
 								{/each}
 							</div>
 						{/if}
