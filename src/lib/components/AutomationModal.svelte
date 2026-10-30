@@ -155,6 +155,7 @@
 				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={name}
+				aria-label={$i18n.t('Automation title')}
 				placeholder={$i18n.t('Automation title')}
 			/>
 			<button
@@ -168,8 +169,11 @@
 
 		<!-- Prompt -->
 		<div class="px-5 pb-2">
-			<div class="mb-1 text-xs text-gray-500">{$i18n.t('Instructions')}</div>
+			<label for="automation-instructions" class="block mb-1 text-xs text-gray-500"
+				>{$i18n.t('Instructions')}</label
+			>
 			<textarea
+				id="automation-instructions"
 				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[12rem]"
 				bind:value={prompt}
 				rows={8}

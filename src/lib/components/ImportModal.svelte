@@ -83,10 +83,13 @@
 				>
 					<div class="px-1">
 						<div class="flex flex-col w-full">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('URL')}</div>
+							<label for="import-url" class="block mb-1 text-xs text-gray-500"
+								>{$i18n.t('URL')}</label
+							>
 
 							<div class="flex-1">
 								<input
+									id="import-url"
 									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
 									type="url"
 									bind:value={url}

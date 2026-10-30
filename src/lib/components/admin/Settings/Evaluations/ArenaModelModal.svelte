@@ -300,10 +300,13 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('ID')}</div>
+								<label for="arena-model-id" class="block mb-0.5 text-xs text-gray-500"
+									>{$i18n.t('ID')}</label
+								>
 
 								<div class="flex-1">
 									<input
+										id="arena-model-id"
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										type="text"
 										bind:value={id}
@@ -369,6 +372,7 @@
 											<div class="shrink-0">
 												<button
 													type="button"
+													aria-label={$i18n.t('Remove')}
 													on:click={() => {
 														modelIds = modelIds.filter((_, idx) => idx !== modelIdx);
 													}}
@@ -394,6 +398,7 @@
 									? ''
 									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								bind:value={selectedModelId}
+								aria-label={$i18n.t('Select a model')}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
 								{#each $models.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
@@ -404,6 +409,7 @@
 							<div>
 								<button
 									type="button"
+									aria-label={$i18n.t('Add')}
 									on:click={() => {
 										addModelHandler();
 									}}

@@ -652,9 +652,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-id" class={`text-xs text-gray-500`}>
 												{$i18n.t('Policy ID')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -680,10 +680,10 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-image" class={`text-xs text-gray-500`}>
 												{$i18n.t('Image')}
 												<span class="opacity-50">({$i18n.t('optional')})</span>
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -701,9 +701,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-cpu" class={`text-xs text-gray-500`}>
 												{$i18n.t('CPU')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -718,9 +718,9 @@
 									</div>
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-memory" class={`text-xs text-gray-500`}>
 												{$i18n.t('Memory')}
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -738,13 +738,17 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="policy-storage" class={`text-xs text-gray-500`}>
 												{$i18n.t('Storage')}
-											</div>
+											</label>
 										</div>
 										<div class="flex gap-2">
 											<div class="flex-shrink-0 self-start">
-												<select class={`w-full text-sm ${selectClass}`} bind:value={policyStorage}>
+												<select
+													id="policy-storage"
+													class={`w-full text-sm ${selectClass}`}
+													bind:value={policyStorage}
+												>
 													<option value="ephemeral">{$i18n.t('Ephemeral')}</option>
 													<option value="persistent">{$i18n.t('Persistent')}</option>
 												</select>
@@ -756,6 +760,7 @@
 														class={`w-full flex-1 text-sm font-mono ${inputClass}`}
 														type="text"
 														bind:value={policyStorageSize}
+														aria-label={$i18n.t('Size')}
 														placeholder="5Gi"
 														autocomplete="off"
 													/>
@@ -766,10 +771,10 @@
 
 									<div class="flex flex-col flex-1">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="idle-timeout" class={`text-xs text-gray-500`}>
 												{$i18n.t('Idle Timeout')}
 												<span class="opacity-50">({$i18n.t('min')})</span>
-											</div>
+											</label>
 										</div>
 										<div class="flex flex-1 items-center">
 											<input
@@ -807,12 +812,14 @@
 													class={`flex-1 text-sm font-mono ${inputClass}`}
 													type="text"
 													bind:value={pair.key}
+													aria-label={$i18n.t('Key')}
 													placeholder="KEY"
 												/>
 												<input
 													class={`flex-[2] text-sm font-mono ${inputClass}`}
 													type="text"
 													bind:value={pair.value}
+													aria-label={$i18n.t('Value')}
 													placeholder="value"
 												/>
 												<button
@@ -831,9 +838,9 @@
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
 										<div class="flex justify-between mb-0.5">
-											<div class={`text-xs text-gray-500`}>
+											<label for="lifecycle-json" class={`text-xs text-gray-500`}>
 												{$i18n.t('Lifecycle JSON')}
-											</div>
+											</label>
 										</div>
 										<textarea
 											id="lifecycle-json"
@@ -1015,15 +1022,19 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between items-center">
 									<div class="flex gap-2 items-center">
-										<div class={`text-xs text-gray-500`}>
+										<label for="terminal-auth-type" class={`text-xs text-gray-500`}>
 											{$i18n.t('Auth')}
-										</div>
+										</label>
 									</div>
 								</div>
 
 								<div class="flex gap-2">
 									<div class="flex-shrink-0 self-start">
-										<select class={`w-full text-sm ${selectClass}`} bind:value={auth_type}>
+										<select
+											id="terminal-auth-type"
+											class={`w-full text-sm ${selectClass}`}
+											bind:value={auth_type}
+										>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
 											{#if !direct}

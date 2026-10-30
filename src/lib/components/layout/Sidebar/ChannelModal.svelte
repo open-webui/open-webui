@@ -173,7 +173,9 @@
 				>
 					{#if !edit}
 						<div class="flex flex-col w-full mt-2 mb-1">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Channel Type')}</div>
+							<label for="channel-type" class="block mb-1 text-xs text-gray-500"
+								>{$i18n.t('Channel Type')}</label
+							>
 
 							<div class="flex-1">
 								<Tooltip
@@ -187,6 +189,7 @@
 									placement="top-start"
 								>
 									<select
+										id="channel-type"
 										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 										bind:value={type}
 									>
@@ -218,15 +221,16 @@
 					</div>
 
 					<div class="flex flex-col w-full mt-2">
-						<div class=" mb-1 text-xs text-gray-500">
+						<label for="channel-name" class="block mb-1 text-xs text-gray-500">
 							{$i18n.t('Channel Name')}
 							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5">
 								{#if type === 'dm'}{$i18n.t('Optional')}{/if}
 							</span>
-						</div>
+						</label>
 
 						<div class="flex-1">
 							<input
+								id="channel-name"
 								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
