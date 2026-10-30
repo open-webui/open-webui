@@ -978,18 +978,6 @@
 				{#if !isExternalKnowledge && knowledge?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-1"
 						resource={{ resource_type: 'knowledge', resource_id: knowledge.id }}
 					/>{/if}
-				{#if knowledge.write_access}
-					{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
-						<AccessButton
-							on:click={() => {
-								savedAccessGrants = structuredClone(knowledge.access_grants ?? []);
-								showAccessControlModal = true;
-							}}
-						/>
-					{/if}
-				{:else}
-					<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>
-				{/if}
 				{#if !isExternalKnowledge && (knowledge.user_id === $user?.id || $user?.role === 'admin')}
 					<Dropdown closeOnSelect align="end">
 						<button
@@ -1014,6 +1002,18 @@
 							</DropdownMenu>
 						</div>
 					</Dropdown>
+				{/if}
+				{#if knowledge.write_access}
+					{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
+						<AccessButton
+							on:click={() => {
+								savedAccessGrants = structuredClone(knowledge.access_grants ?? []);
+								showAccessControlModal = true;
+							}}
+						/>
+					{/if}
+				{:else}
+					<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>
 				{/if}
 			</div>
 		</div>

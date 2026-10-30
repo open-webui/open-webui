@@ -98,6 +98,8 @@
 
 	let query = '';
 	let viewOption = '';
+	$: hasFilters = Boolean(query || viewOption || selectedTag);
+
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
 
@@ -732,7 +734,7 @@
 				<!-- Previous labels retained for i18n extraction: {$i18n.t('Sort by')} -->
 				<div class="@container" id="model-list">
 					<div
-						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -772,7 +774,7 @@
 						{#each models as model (model.id)}
 							{@const localizedModelName = resolveLocalizedModelName(model, $i18n.language)}
 							<div
-								class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group text-left {model.write_access
+								class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group text-left {model.write_access
 									? 'cursor-pointer'
 									: ''} {model?.meta?.hidden ? 'opacity-50 dark:opacity-50' : ''}"
 								id="model-item-{model.id}"
@@ -844,7 +846,6 @@
 													content={(
 														resolveLocalizedModelDescription(model, $i18n.language) ?? ''
 													).trim() ||
-														model.base_model_id ||
 														$i18n.t('No description')}
 													className="min-w-0"
 													placement="top-start"
@@ -853,7 +854,6 @@
 														{(
 															resolveLocalizedModelDescription(model, $i18n.language) ?? ''
 														).trim() ||
-															model.base_model_id ||
 															$i18n.t('No description')}
 													</div>
 												</Tooltip>
@@ -900,7 +900,7 @@
 								<div
 									class="flex min-w-0 items-center justify-end gap-1.5"
 								>
-									<div class="flex shrink-0 flex-row items-center self-center">
+									<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 										{#if shiftKey && model.write_access}
 											<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 												<button
@@ -923,7 +923,7 @@
 
 											<Tooltip content={$i18n.t('Delete')}>
 												<button
-													class="ml-0.5 flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 													type="button"
 													aria-label={$i18n.t('Delete')}
 													on:click={(e) => {
@@ -936,7 +936,7 @@
 												</button>
 											</Tooltip>
 										{:else}
-											<div class="flex shrink-0 flex-row items-center gap-1 self-center">
+											<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 												<CommentButton onComment={(request) => (comments = request)}
 													modal
 													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
@@ -1014,9 +1014,13 @@
 			{:else}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
 					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
-						<div class="mb-1.5 text-sm">{$i18n.t('No models found')}</div>
+						<div class="mb-1.5 text-sm">
+							{hasFilters ? $i18n.t('No models found') : $i18n.t('No models yet')}
+						</div>
 						<div class="text-center text-xs leading-5 text-gray-500">
-							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+							{hasFilters
+								? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
+								: $i18n.t('Items you create or that are shared with you will appear here.')}
 						</div>
 					</div>
 				</div>

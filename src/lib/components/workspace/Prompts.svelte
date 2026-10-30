@@ -92,6 +92,8 @@
 	let viewOption = '';
 	let selectedTag = '';
 	let copiedId: string | null = null;
+	$: hasFilters = Boolean(query || viewOption || selectedTag);
+
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
 	let openPromptMenuId: string | null = null;
@@ -545,7 +547,7 @@
 		{:else if (prompts ?? []).length !== 0}
 			<div class="@container">
 				<div
-					class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+					class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
 				>
 					<button
 						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -584,7 +586,7 @@
 				<div class="grid gap-y-0.5">
 					{#each prompts as prompt (prompt.id)}
 						<div
-							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group cursor-pointer text-left"
+							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group cursor-pointer text-left"
 							role="presentation"
 							on:click={(e) => {
 								if (shouldIgnoreRowClick(e.target)) return;
@@ -674,26 +676,26 @@
 											</button>
 										</Tooltip>
 									{:else}
-										<Tooltip content={$i18n.t('Copy Prompt')}>
-											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-												type="button"
-												aria-label={$i18n.t('Copy Prompt')}
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													copyHandler(prompt);
-												}}
-											>
-												{#if copiedId === prompt.command}
-													<Check className="size-4" strokeWidth="1.5" />
-												{:else}
-													<Clipboard className="size-4" strokeWidth="1.5" />
-												{/if}
-											</button>
-										</Tooltip>
-
 										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
+											<Tooltip content={$i18n.t('Copy Prompt')}>
+												<button
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													type="button"
+													aria-label={$i18n.t('Copy Prompt')}
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														copyHandler(prompt);
+													}}
+												>
+													{#if copiedId === prompt.command}
+														<Check className="size-4" strokeWidth="1.5" />
+													{:else}
+														<Clipboard className="size-4" strokeWidth="1.5" />
+													{/if}
+												</button>
+											</Tooltip>
+
 											<CommentButton onComment={(request) => (comments = request)}
 												modal
 												className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
@@ -782,9 +784,13 @@
 		{:else}
 			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
 				<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
-					<div class="mb-1.5 text-sm">{$i18n.t('No prompts found')}</div>
+					<div class="mb-1.5 text-sm">
+						{hasFilters ? $i18n.t('No prompts found') : $i18n.t('No prompts yet')}
+					</div>
 					<div class="text-center text-xs leading-5 text-gray-500">
-						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+						{hasFilters
+							? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
+							: $i18n.t('Items you create or that are shared with you will appear here.')}
 					</div>
 				</div>
 			</div>

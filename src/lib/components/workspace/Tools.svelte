@@ -83,6 +83,8 @@
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
+	$: hasFilters = Boolean(query || viewOption);
+
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
 	let openToolMenuId: string | null = null;
@@ -471,7 +473,7 @@
 						<div
 							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group text-left {tool.write_access
 								? 'cursor-pointer'
-								: 'cursor-not-allowed'}"
+								: ''}"
 							role="presentation"
 							on:click={(e) => {
 								if (!tool.write_access || shouldIgnoreRowClick(e.target)) return;
@@ -491,7 +493,7 @@
 													>
 												{:else}
 													<span
-														class="block truncate text-[0.8125rem] leading-5 text-gray-800 group-hover:underline dark:text-gray-200"
+														class="block truncate text-[0.8125rem] leading-5 text-gray-800 dark:text-gray-200"
 														>{resolveLocalizedResource(tool, $i18n.language)}</span
 													>
 												{/if}
@@ -704,9 +706,13 @@
 		{:else}
 			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
 				<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
-					<div class="mb-1.5 text-sm">{$i18n.t('No tools found')}</div>
+					<div class="mb-1.5 text-sm">
+						{hasFilters ? $i18n.t('No tools found') : $i18n.t('No tools yet')}
+					</div>
 					<div class="text-center text-xs leading-5 text-gray-500">
-						{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
+						{hasFilters
+							? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
+							: $i18n.t('Items you create or that are shared with you will appear here.')}
 					</div>
 				</div>
 			</div>
