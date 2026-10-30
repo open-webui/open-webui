@@ -3,7 +3,12 @@
 	import tippy, { type Instance } from 'tippy.js';
 	import dayjs from '$lib/dayjs';
 	import { socket, user, showControls } from '$lib/stores';
-	import { commentsRequest, resourceQuery, type ResourceComment } from '$lib/apis/comments';
+	import {
+		commentsRequest,
+		resourceQuery,
+		type CommentResource,
+		type ResourceComment
+	} from '$lib/apis/comments';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import {
 		anchorRange,
@@ -40,12 +45,12 @@
 		($surfaceRevision,
 		[...getCommentSurfaces()].filter(
 			([, options]) =>
-				options.resource_type === 'chat' &&
 				options.enabled !== false &&
-				isSavedChatId(options.resource_id)
+				(options.resource_type === 'note' ||
+					(options.resource_type === 'chat' && isSavedChatId(options.resource_id)))
 		));
-	$: resourceIds = [...new Set(surfaces.map(([, options]) => options.resource_id))];
-	$: if (mounted) syncResources(resourceIds);
+	$: resourceKeys = [...new Set(surfaces.map(([, options]) => resourceQuery(options)))];
+	$: if (mounted) syncResources(resourceKeys);
 	$: if (mounted) rebuild(surfaces, records);
 	$: draftRange = $commentSelectionDraft ? selectionRange($commentSelectionDraft, surfaces) : null;
 	$: if (mounted) paint('comment-draft', draftRange ? [draftRange] : []);
@@ -80,6 +85,7 @@
 	) => {
 		const entry = entries.find(
 			([, surface]) =>
+				surface.resource_type === draft.options.resource_type &&
 				surface.resource_id === draft.options.resource_id &&
 				surface.target_id === draft.options.target_id &&
 				surface.surface_id === draft.anchor.surface_id
@@ -108,10 +114,10 @@
 		const item = located.find(({ comment }) => comment.id === created.id);
 		if (item) void reveal([item], item.range.getBoundingClientRect());
 	};
-	const load = async (id: string) => {
-		requests.get(id)?.abort();
+	const load = async (key: string) => {
+		requests.get(key)?.abort();
 		const controller = new AbortController();
-		requests.set(id, controller);
+		requests.set(key, controller);
 		let items: ResourceComment[] = [];
 		let cursor: string | null = null;
 		try {
@@ -120,7 +126,7 @@
 					items: ResourceComment[];
 					next_cursor: string | null;
 				}>(
-					`/?${resourceQuery({ resource_type: 'chat', resource_id: id })}&anchored=true&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+					`/?${key}&anchored=true&limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
 					'GET',
 					undefined,
 					controller.signal
@@ -132,31 +138,31 @@
 				];
 				cursor = page.next_cursor;
 			} while (cursor);
-			if (!controller.signal.aborted) records = { ...records, [id]: items };
+			if (!controller.signal.aborted) records = { ...records, [key]: items };
 		} catch {
 			if (!controller.signal.aborted) {
-				records = { ...records, [id]: [] };
+				records = { ...records, [key]: [] };
 				hide();
 			}
 		}
 	};
-	const syncResources = (ids: string[]) => {
-		for (const [id, request] of requests) {
-			if (ids.includes(id)) continue;
+	const syncResources = (keys: string[]) => {
+		for (const [key, request] of requests) {
+			if (keys.includes(key)) continue;
 			request.abort();
-			requests.delete(id);
-			delete records[id];
+			requests.delete(key);
+			delete records[key];
 		}
-		for (const id of ids) if (!requests.has(id)) void load(id);
+		for (const key of keys) if (!requests.has(key)) void load(key);
 	};
 	const refresh = () => {
 		clearTimeout(refreshTimer);
 		refreshTimer = setTimeout(() => {
-			for (const id of resourceIds) void load(id);
+			for (const key of resourceKeys) void load(key);
 		}, 150);
 	};
-	const changed = (resource: { resource_type: string; resource_id: string }) => {
-		if (resource.resource_type === 'chat' && resourceIds.includes(resource.resource_id)) refresh();
+	const changed = (resource: CommentResource) => {
+		if (resourceKeys.includes(resourceQuery(resource))) refresh();
 	};
 	$: if (mounted && connection !== $socket) {
 		connection?.off('comments:changed', changed);
@@ -181,7 +187,7 @@
 		restoreFocus();
 		const next: LocatedComment[] = [];
 		for (const [node, surface] of entries) {
-			for (const comment of comments[surface.resource_id] ?? []) {
+			for (const comment of comments[resourceQuery(surface)] ?? []) {
 				const anchor = comment.meta?.anchor;
 				if (
 					!anchor ||
@@ -264,7 +270,17 @@
 	};
 	const open = async (comment: ResourceComment) => {
 		hide();
-		showControls.set({ tab: 'comments', comment_id: comment.id });
+		if (comment.resource_type === 'chat') {
+			showControls.set({ tab: 'comments', comment_id: comment.id });
+		} else {
+			const surface = surfaces.find(
+				([, options]) =>
+					options.resource_type === comment.resource_type &&
+					options.resource_id === comment.resource_id &&
+					options.target_id === comment.target_id
+			)?.[1];
+			surface?.onComment?.({ comment_id: comment.id });
+		}
 		await tick();
 		scrollToComment(comment.id);
 	};
@@ -392,7 +408,7 @@
 				>
 					{draft.anchor.quote}
 				</div>
-				{#key `${draft.options.resource_id}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
+				{#key `${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
 					<CommentComposer
 						bind:this={composer}
 						resource={draft.options}
@@ -415,8 +431,10 @@
 							postedComment = created;
 							records = {
 								...records,
-								[created.resource_id]: [
-									...(records[created.resource_id] ?? []).filter((item) => item.id !== created.id),
+								[resourceQuery(created)]: [
+									...(records[resourceQuery(created)] ?? []).filter(
+										(item) => item.id !== created.id
+									),
 									created
 								]
 							};

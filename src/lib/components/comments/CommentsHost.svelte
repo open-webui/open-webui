@@ -40,15 +40,7 @@
 		try {
 			await selected.options.prepare?.();
 			if (version !== navigation || accountId !== account) return;
-			if (selected.options.resource_type === 'chat') commentSelectionDraft.set(selected);
-			else {
-				const target = {
-					target_type: selected.options.target_type,
-					target_id: selected.options.target_id,
-					anchor: selected.anchor
-				};
-				selected.options.onComment?.(target);
-			}
+			commentSelectionDraft.set(selected);
 			window.getSelection()?.removeAllRanges();
 			selection = null;
 		} catch (e) {
