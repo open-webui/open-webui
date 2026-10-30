@@ -276,7 +276,7 @@
 	export let image = false;
 	export let fileHandler = false;
 	export let attachments = false;
-	export let suggestions = null;
+	export let suggestions: Partial<import('@tiptap/suggestion').SuggestionOptions>[] | null = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {

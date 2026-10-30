@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -393,7 +394,7 @@
 		}}
 	/>
 
-	<div class="space-y-1">
+	<div class="space-y-0">
 		<div class="flex h-8 w-full items-center gap-2">
 			<div class="flex min-w-0 flex-1">
 				<div class=" self-center ml-1 mr-3">
@@ -409,7 +410,7 @@
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
@@ -453,16 +454,16 @@
 				<Spinner className="size-5" />
 			</div>
 		{:else if (filteredItems ?? []).length !== 0}
-			<div class="my-1">
+			<div class="@container">
 				<div
-					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
 				>
 					<button
 						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
 						type="button"
 						on:click={() => setSortKey('name')}
 					>
-						{$i18n.t('Title')}
+						{$i18n.t('Name')}
 						{#if sortKey === 'name'}
 							{#if sortDirection === 'asc'}
 								<ChevronUp className="size-2" />
@@ -472,10 +473,10 @@
 						{/if}
 					</button>
 
-					<div class="hidden w-44 shrink-0 md:block"></div>
+					<div class="@max-[48rem]:hidden">{$i18n.t('Owner')}</div>
 
 					<button
-						class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+						class="@max-[36rem]:hidden flex min-w-0 items-center gap-1 py-0.5 text-left"
 						type="button"
 						on:click={() => setSortKey('updated_at')}
 					>
@@ -488,12 +489,13 @@
 							{/if}
 						{/if}
 					</button>
+					<span class="sr-only">{$i18n.t('Actions')}</span>
 				</div>
 
 				<div class="grid gap-y-0.5">
 					{#each filteredItems as skill (skill.id)}
 						<div
-							class="group flex min-h-8 w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left"
+							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_7.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_7.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_7.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group cursor-pointer text-left"
 							role="presentation"
 							on:click={(e) => {
 								if (shouldIgnoreRowClick(e.target)) return;
@@ -511,65 +513,44 @@
 													>{resolveLocalizedResource(skill, $i18n.language)}</a
 												>
 											</Tooltip>
-
-											<div
-												class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
-											>
-												/{skill.id}
-											</div>
-
-											<Tooltip
-												content={dayjs((skill.updated_at ?? skill.created_at) * 1000)
-													.locale($i18n.language)
-													.format('LLLL')}
-											>
-												<div
-													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
-												>
-													{dayjs((skill.updated_at ?? skill.created_at) * 1000)
-														.locale($i18n.language)
-														.fromNow()}
-												</div>
-											</Tooltip>
+											{#if !skill.write_access}
+												<Badge type="subtle" content={$i18n.t('Read Only')} />
+											{/if}
 
 											{#if !skill.is_active}
 												<Badge type="muted" content={$i18n.t('Inactive')} />
 											{/if}
-
-											{#if !skill.write_access}
-												<Badge type="muted" content={$i18n.t('Read Only')} />
-											{/if}
 										</div>
 									</div>
 
-									{#if resolveLocalizedResource(skill, $i18n.language, 'description')}
-										<Tooltip
-											content={resolveLocalizedResource(skill, $i18n.language, 'description')}
-											className="min-w-0"
-											placement="top-start"
-										>
-											<div
-												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+									<div class="mt-0.5 min-w-0">
+										{#if resolveLocalizedResource(skill, $i18n.language, 'description')}
+											<Tooltip
+												content={resolveLocalizedResource(skill, $i18n.language, 'description')}
+												className="min-w-0"
+												placement="top-start"
 											>
-												{resolveLocalizedResource(skill, $i18n.language, 'description')}
-											</div>
-										</Tooltip>
-									{/if}
+												<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
+													{resolveLocalizedResource(skill, $i18n.language, 'description')}
+												</div>
+											</Tooltip>
+										{/if}
+									</div>
 								</div>
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400"
 							>
-								<ProfilePreview user={skill?.user ?? null} side="left">
-									<span class="flex max-w-44 items-center gap-1.75">
+								<ProfilePreview user={skill?.user ?? null} side="bottom" className="w-full min-w-0">
+									<span class="flex w-full min-w-0 items-center gap-2">
 										<ProfileImage
 											src={skill?.user?.id
 												? `/api/v1/users/${skill.user.id}/profile/image`
 												: '/user.png'}
-											className="size-4 shrink-0 rounded-full!"
+											className="size-5 shrink-0 rounded-full!"
 										/>
-										<span class="min-w-0 max-w-24 truncate">
+										<span class="min-w-0 truncate">
 											{capitalizeFirstLetter(
 												skill?.user?.name ?? skill?.user?.email ?? $i18n.t('Deleted User')
 											)}
@@ -577,89 +558,115 @@
 									</span>
 								</ProfilePreview>
 							</div>
-
-							{#if skill.write_access}
-								<div class="ml-2 flex shrink-0 flex-row items-center self-center">
-									{#if shiftKey}
-										<Tooltip content={$i18n.t('Delete')}>
-											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-												type="button"
-												aria-label={$i18n.t('Delete')}
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													deleteHandler(skill);
-												}}
-											>
-												<GarbageBin className="size-4" />
-											</button>
-										</Tooltip>
-									{:else}
-										<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
-											<SkillMenu
-												shareHandler={() => shareHandler(skill)}
-												accessHandler={$user?.permissions?.sharing?.skills ||
-												$user?.role === 'admin'
-													? () => accessModal.open(skill.id)
-													: null}
-												show={openSkillMenuId === skill.id}
-												editHandler={() => {
-													goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
-												}}
-												cloneHandler={() => {
-													cloneHandler(skill);
-												}}
-												exportHandler={(format) => {
-													exportHandler(skill, format);
-												}}
-												deleteHandler={async () => {
-													selectedSkill = skill;
-													showDeleteConfirm = true;
-												}}
-												onClose={() => {
-													openSkillMenuId = null;
-												}}
-											>
+							<Tooltip
+								content={dayjs((skill.updated_at ?? skill.created_at) * 1000)
+									.locale($i18n.language)
+									.format('LLLL')}
+								className="@max-[36rem]:hidden min-w-0"
+							>
+								<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
+									{dayjs((skill.updated_at ?? skill.created_at) * 1000)
+										.locale($i18n.language)
+										.fromNow()}
+								</div>
+							</Tooltip>
+							<div class="flex min-w-0 items-center justify-end gap-1.5">
+								{#if skill.write_access}
+									<div class="flex shrink-0 flex-row items-center self-center">
+										{#if shiftKey}
+											<Tooltip content={$i18n.t('Delete')}>
 												<button
 													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 													type="button"
-													aria-label={$i18n.t('Skill Menu')}
+													aria-label={$i18n.t('Delete')}
 													on:click={(e) => {
 														e.preventDefault();
 														e.stopPropagation();
-														openSkillMenuId = openSkillMenuId === skill.id ? null : skill.id;
+														deleteHandler(skill);
 													}}
 												>
-													<EllipsisHorizontal className="size-4" />
+													<GarbageBin className="size-4" />
 												</button>
-											</SkillMenu>
-
-											<div
-												class="flex h-6 items-center"
-												role="presentation"
-												on:click={(e) => {
-													e.stopPropagation();
-													e.preventDefault();
-												}}
-											>
-												<Tooltip
-													content={skill.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+											</Tooltip>
+										{:else}
+											<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
+												<CommentButton
+													modal
+													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													resource={{ resource_type: 'skill', resource_id: skill.id }}
+												/>
+												<SkillMenu
+													resourceId={skill.id}
+													shareHandler={() => shareHandler(skill)}
+													accessHandler={$user?.permissions?.sharing?.skills ||
+													$user?.role === 'admin'
+														? () => accessModal.open(skill.id)
+														: null}
+													show={openSkillMenuId === skill.id}
+													editHandler={() => {
+														goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
+													}}
+													cloneHandler={() => {
+														cloneHandler(skill);
+													}}
+													exportHandler={(format) => {
+														exportHandler(skill, format);
+													}}
+													deleteHandler={async () => {
+														selectedSkill = skill;
+														showDeleteConfirm = true;
+													}}
+													onClose={() => {
+														openSkillMenuId = null;
+													}}
 												>
-													<Switch
-														bind:state={skill.is_active}
-														ariaLabel={$i18n.t('Enabled')}
-														on:change={async () => {
-															await toggleSkillById(localStorage.token, skill.id);
-															_skills.set(await getSkills(localStorage.token));
+													<button
+														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														type="button"
+														aria-label={$i18n.t('Skill Menu')}
+														on:click={(e) => {
+															e.preventDefault();
+															e.stopPropagation();
+															openSkillMenuId = openSkillMenuId === skill.id ? null : skill.id;
 														}}
-													/>
-												</Tooltip>
+													>
+														<EllipsisHorizontal className="size-4" />
+													</button>
+												</SkillMenu>
+
+												<div
+													class="flex h-6 items-center"
+													role="presentation"
+													on:click={(e) => {
+														e.stopPropagation();
+														e.preventDefault();
+													}}
+												>
+													<Tooltip
+														content={skill.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+													>
+														<Switch
+															bind:state={skill.is_active}
+															ariaLabel={$i18n.t('Enabled')}
+															on:change={async () => {
+																await toggleSkillById(localStorage.token, skill.id);
+																_skills.set(await getSkills(localStorage.token));
+															}}
+														/>
+													</Tooltip>
+												</div>
 											</div>
-										</div>
-									{/if}
-								</div>
-							{/if}
+										{/if}
+									</div>
+								{/if}
+								{#if !skill.write_access}
+									<CommentButton
+										modal
+										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+										resource={{ resource_type: 'skill', resource_id: skill.id }}
+									/>
+								{/if}
+							</div>
 						</div>
 					{/each}
 				</div>

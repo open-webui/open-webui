@@ -1,4 +1,5 @@
 <script lang="ts">
+	import MessageComposerShell from '$lib/components/common/MessageComposerShell.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -980,15 +981,7 @@
 								{/each}
 							</div>
 						{/if}
-						<div
-							id="message-input-container"
-							class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
-							dir={$settings?.chatDirection === 'RTL'
-								? 'rtl'
-								: $settings?.chatDirection === 'LTR'
-									? 'ltr'
-									: 'auto'}
-						>
+						<MessageComposerShell id="message-input-container">
 							{#if replyToMessage !== null}
 								<div class="px-3 pt-2 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
@@ -1005,7 +998,7 @@
 										</div>
 										<div>
 											<button
-												class="flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 dark:text-gray-400"
+												class="flex h-6 shrink-0 items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-0"
 												aria-label={$i18n.t('Cancel')}
 												type="button"
 												on:click={() => {
@@ -1353,7 +1346,7 @@
 									</div>
 								</div>
 							</div>
-						</div>
+						</MessageComposerShell>
 					</form>
 				{/if}
 			</div>

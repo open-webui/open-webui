@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -461,6 +462,10 @@
 				</button>
 			{/if}
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				{#if edit && prompt?.id}<CommentButton wrapperClassName="me-2"
+						resource={{ resource_type: 'prompt', resource_id: prompt.id }}
+					/>{/if}
+
 				{#if !disabled}{#if $user?.permissions?.sharing?.prompts || $user?.role === 'admin'}<AccessButton
 							on:click={() => {
 								savedAccessGrants = structuredClone(accessGrants);

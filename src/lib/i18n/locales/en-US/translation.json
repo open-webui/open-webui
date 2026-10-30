@@ -1,4 +1,6 @@
 {
+	"Add a comment…": "",
+	"Mention someone": "",
 	"Maximum total files.": "",
 	"Maximum size per file.": "",
 	"File count limit": "",
@@ -2096,6 +2098,7 @@
 	"Participants": "",
 	"Participate in community leaderboards and evaluations! Syncing aggregated usage stats helps drive research and improvements to Open WebUI. Your privacy is paramount: no message content is ever shared.": "",
 	"Passthrough params": "",
+	"Owner": "Owner",
 	"Password": "",
 	"Password updated. Please sign in again.": "",
 	"Passwords do not match.": "",
@@ -2985,6 +2988,8 @@
 	"settings.admin.general.calendar.label": "Calendar",
 	"settings.admin.general.channels.description": "Allow users to use channels for shared conversations.",
 	"settings.admin.general.channels.label": "Channels",
+	"settings.admin.general.comments.description": "Allow users to comment on workspace items, notes, and chats they can access.",
+	"settings.admin.general.comments.label": "Comments",
 	"settings.admin.general.checkForUpdates.label": "Check for updates",
 	"settings.admin.general.communitySharing.description": "Allow users to share chats with the Open WebUI community.",
 	"settings.admin.general.communitySharing.label": "Community Sharing",

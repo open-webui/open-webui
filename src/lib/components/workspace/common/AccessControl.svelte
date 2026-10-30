@@ -636,7 +636,7 @@
 						{/if}
 
 						<button
-							class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 							type="button"
 							on:click={() => {
 								removePrincipal('group', group.id);
@@ -688,7 +688,7 @@
 							{/if}
 
 							<button
-								class="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 								type="button"
 								on:click={() => {
 									removePrincipal('user', user.id);

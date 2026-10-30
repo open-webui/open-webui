@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -336,6 +337,7 @@ class Tools:
 					<ChevronLeft className="size-3" strokeWidth="2" />
 					<span>{$i18n.t('Back')}</span>
 				</button>
+
 				{#if edit && version_id}
 					<ToolHistory
 						bind:this={historyControl}
@@ -350,12 +352,14 @@ class Tools:
 				{/if}
 			</div>
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				{#if edit && id}<CommentButton wrapperClassName="me-2" resource={{ resource_type: 'tool', resource_id: id }} />{/if}
 				<LanguageModeSelect
 					bind:value={locale}
 					translatedLocales={Object.keys(
 						pruneEmptyLocaleEntries(selected ? selected.snapshot.meta.i18n : meta.i18n)
 					)}
 				/>
+
 				{#if $user?.permissions?.sharing?.tools || $user?.role === 'admin'}
 					<AccessButton
 						disabled={!!selected || loading || selecting || promoting}

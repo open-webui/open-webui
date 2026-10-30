@@ -8,6 +8,7 @@ import time
 from fastapi import HTTPException
 
 # local imports
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -15,7 +16,7 @@ from open_webui.models.tool_history import ToolHistories, ToolHistory, tool_snap
 from open_webui.models.users import UserResponse, Users
 from open_webui.utils.valves import decrypt_valves, encrypt_valves, validate_valves
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Column, String, Text, delete, select, update
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, delete, select, true, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ class Tool(Base):  # database table definition
     specs = Column(JSONField)  # OpenAPI-style function specs
     meta = Column(JSONField)  # description, manifest, etc.
     valves = Column(JSONField)  # admin-configurable runtime parameters
+    is_active = Column(Boolean, nullable=False, default=True, server_default=true())
 
     updated_at = Column(BigInteger, nullable=False)  # modification timestamp
     created_at = Column(BigInteger, index=True)  # creation timestamp
@@ -54,6 +56,7 @@ class ToolModel(BaseModel):
     content: str | None = None
     specs: list[dict]
     meta: ToolMeta
+    is_active: bool = True
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     updated_at: int  # timestamp in epoch
@@ -77,6 +80,7 @@ class ToolResponse(BaseModel):
     user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     meta: ToolMeta
+    is_active: bool = True
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -215,6 +219,26 @@ class ToolsTable:
                 for tool in tools
             }
 
+    async def is_tool_active(self, id: str, db: AsyncSession | None = None) -> bool:
+        async with get_async_db_context(db) as session:
+            return (await session.scalar(select(Tool.is_active).where(Tool.id == id))) is True
+
+    async def toggle_tool_by_id(self, id: str, db: AsyncSession | None = None) -> ToolModel | None:
+        async with get_async_db_context(db) as session:
+            try:
+                tool = await self._lock_tool(session, id)
+                if tool is None:
+                    return None
+                tool.is_active = not tool.is_active
+                tool.updated_at = int(time.time())
+                await session.flush()
+                result = await self._to_tool_model(tool, db=session)
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                raise
+
     async def get_tools(
         self,
         defer_content: bool = False,
@@ -222,6 +246,7 @@ class ToolsTable:
         user_id: str | None = None,
         user_group_ids: set[str] | None = None,
         permission: str = 'read',
+        active_only: bool = False,
     ) -> list[ToolUserModel]:
         async with get_async_db_context(db) as db:
             # Skip Tool.content (plugin source, potentially large) via a
@@ -234,12 +259,16 @@ class ToolsTable:
                     Tool.name,
                     Tool.specs,
                     Tool.meta,
+                    Tool.is_active,
                     Tool.updated_at,
                     Tool.created_at,
                 )
                 if defer_content
                 else select(Tool)
             ).order_by(Tool.updated_at.desc())
+
+            if active_only:
+                stmt = stmt.where(Tool.is_active.is_(True))
 
             if user_id is not None:
                 if user_group_ids is None:
@@ -396,6 +425,7 @@ class ToolsTable:
     async def delete_tool_by_id(self, id, db=None):
         async with get_async_db_context(db) as session:
             try:
+                await delete_resource_comments(session, 'tool', [id])
                 await self._lock_tool(session, id)
                 await session.execute(delete(AccessGrant).filter_by(resource_type='tool', resource_id=id))
                 await session.execute(delete(ToolHistory).filter_by(tool_id=id))

@@ -1,10 +1,13 @@
 <script>
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
-	const i18n = getContext('i18n');
-
-	import Markdown from './Markdown.svelte';
-	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
 	import {
+		commentSurface,
+		contentHash,
+		selectedComment
+	} from '$lib/components/comments/anchors';
+	import {
+		openComments,
+		config,
+		user,
 		artifactCode,
 		chatId as currentChatId,
 		mobile,
@@ -13,6 +16,11 @@
 		showControls,
 		showEmbeds
 	} from '$lib/stores';
+	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	const i18n = getContext('i18n');
+
+	import Markdown from './Markdown.svelte';
+	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
 
@@ -140,6 +148,8 @@
 			: messageContent;
 
 	let autoOpenedArtifactIds = new Set();
+	/** @type {ReturnType<typeof selectedComment>} */
+	let commentSelection = null;
 
 	const hasClosingCodeFence = (raw = '') => /(?:^|\n)```[ \t]*$/.test(raw.trimEnd());
 
@@ -201,6 +211,7 @@
 
 			if (selection.toString().trim().length > 0) {
 				floatingButtonsRange = selection.getRangeAt(0);
+				commentSelection = $config?.features?.enable_comments && $user ? selectedComment() : null;
 				positionFloatingButtons();
 			} else {
 				closeFloatingButtons();
@@ -234,6 +245,7 @@
 	};
 
 	const closeFloatingButtons = () => {
+		commentSelection = null;
 		floatingButtonsRange = null;
 		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
 		if (buttonsContainerElement) {
@@ -294,6 +306,7 @@
 <div bind:this={contentContainerElement}>
 	{#if output?.length}
 		<StructuredOutputRenderer
+			commentToolbarId={floatingButtons ? `floating-buttons-${id}` : undefined}
 			{id}
 			{chatId}
 			{messageId}
@@ -317,7 +330,18 @@
 			onPreview={previewHandler}
 		/>
 	{:else if $settings?.renderMarkdownInAssistantMessages ?? true}
-		<div class="markdown-prose">
+		<div
+			class="markdown-prose"
+			use:commentSurface={{
+				resource_type: 'chat', resource_id: chatId,
+				target_type: 'chat_message',
+				target_id: messageId,
+				surface_id: 'content',
+				content_hash: contentHash(content ?? ''),
+				enabled: done && !compactPreview && !!chatId,
+				toolbar_id: floatingButtons ? `floating-buttons-${id}` : undefined
+			}}
+		>
 			<Markdown
 				{id}
 				{chatId}
@@ -361,7 +385,20 @@
 			</div>
 		{/if}
 		{#if extracted.plainContent}
-			<div class="whitespace-pre-wrap text-[0.9375rem]">{extracted.plainContent}</div>
+			<div
+				class="whitespace-pre-wrap text-[0.9375rem]"
+				use:commentSurface={{
+					resource_type: 'chat', resource_id: chatId,
+					target_type: 'chat_message',
+					target_id: messageId,
+					surface_id: 'content',
+					content_hash: contentHash(content ?? ''),
+					enabled: done && !compactPreview && !!chatId,
+					toolbar_id: floatingButtons ? `floating-buttons-${id}` : undefined
+				}}
+			>
+				{extracted.plainContent}
+			</div>
 		{/if}
 	{/if}
 </div>
@@ -371,6 +408,18 @@
 		bind:this={floatingButtonsElement}
 		{id}
 		actions={$settings?.floatingActionButtons ?? []}
+		onComment={commentSelection
+			? () => {
+					if (!commentSelection) return;
+					const { options, anchor } = commentSelection;
+					openComments(
+						{ resource_type: options.resource_type, resource_id: options.resource_id },
+						{ target_type: options.target_type, target_id: options.target_id, anchor }
+					);
+					window.getSelection()?.removeAllRanges();
+					closeFloatingButtons();
+				}
+			: null}
 		onSetInputText={(text) => {
 			onSetInputText(text);
 			closeFloatingButtons();

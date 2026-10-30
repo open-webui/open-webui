@@ -7,7 +7,7 @@ import inspect
 import logging
 import os
 import re
-from functools import cache, partial, update_wrapper
+from functools import cache, partial, update_wrapper, wraps
 from typing import (
     Any,
     Awaitable,
@@ -339,12 +339,26 @@ async def get_updated_tool_function(function: Callable, extra_params: dict):
     __extra_params__ = getattr(function, '__extra_params__', None)
 
     if __function__ is not None and __extra_params__ is not None:
-        return await get_async_tool_function_and_apply_extra_params(
+        updated = await get_async_tool_function_and_apply_extra_params(
             __function__,
             {**__extra_params__, **extra_params},
         )
+        tool_id = getattr(function, '__tool_id__', None)
+        return guard_tool_enabled(tool_id, updated) if tool_id is not None else updated
 
     return function
+
+
+def guard_tool_enabled(tool_id: str, function: Callable) -> Callable:
+    @wraps(function)
+    async def guarded(*args, **kwargs):
+        # Resolve again at invocation: a chat may have prepared this callable before a toggle.
+        if not await Tools.is_tool_active(tool_id):
+            raise HTTPException(status_code=403, detail='Tool is disabled or no longer available')
+        return await function(*args, **kwargs)
+
+    guarded.__tool_id__ = tool_id
+    return guarded
 
 
 async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extra_params: dict) -> dict[str, dict]:
@@ -373,6 +387,8 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     for tool_id in tool_ids:
         tool = tool_models.get(tool_id)
         if tool:
+            if not tool.is_active:
+                continue
             # Check access control for local tools
             if (
                 not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
@@ -431,6 +447,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         '__user__': __user__,
                     },
                 )
+                callable = guard_tool_enabled(tool_id, callable)
 
                 # TODO: Support Pydantic models as parameters
                 if callable.__doc__ and callable.__doc__.strip() != '':

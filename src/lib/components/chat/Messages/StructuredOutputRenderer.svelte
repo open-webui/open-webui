@@ -1,4 +1,8 @@
 <script lang="ts">
+	import {
+		commentSurface,
+		contentHash
+	} from '$lib/components/comments/anchors';
 	import { getContext } from 'svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Image from '$lib/components/common/Image.svelte';
@@ -26,6 +30,7 @@
 	export let model = null;
 	export let save = false;
 	export let preview = false;
+	export let commentToolbarId: string | undefined = undefined;
 	export let compactPreview = false;
 	export let renderMarkdown = true;
 	export let editCodeBlock = true;
@@ -77,7 +82,18 @@
 {#each displayItems as displayItem (displayItem.id)}
 	{#if displayItem.type === 'message'}
 		{#if renderMarkdown}
-			<div class="markdown-prose">
+			<div
+				class="markdown-prose"
+				use:commentSurface={{
+					resource_type: 'chat', resource_id: chatId,
+					target_type: 'chat_message',
+					target_id: messageId,
+					surface_id: displayItem.id,
+					content_hash: contentHash(displayItem.text),
+					enabled: done && !compactPreview && !!chatId,
+					toolbar_id: commentToolbarId
+				}}
+			>
 				<Markdown
 					id={`${id}-${displayItem.id}`}
 					{chatId}
@@ -101,7 +117,20 @@
 				/>
 			</div>
 		{:else}
-			<div class="whitespace-pre-wrap text-[0.9375rem]">{displayItem.text}</div>
+			<div
+				class="whitespace-pre-wrap text-[0.9375rem]"
+				use:commentSurface={{
+					resource_type: 'chat', resource_id: chatId,
+					target_type: 'chat_message',
+					target_id: messageId,
+					surface_id: displayItem.id,
+					content_hash: contentHash(displayItem.text),
+					enabled: done && !compactPreview && !!chatId,
+					toolbar_id: commentToolbarId
+				}}
+			>
+				{displayItem.text}
+			</div>
 		{/if}
 	{:else if displayItem.type === 'image'}
 		<Image src={displayItem.src} alt={$i18n.t('Generated Image')} />

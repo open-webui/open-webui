@@ -1,4 +1,8 @@
 <script lang="ts">
+	import {
+		commentSurface,
+		contentHash
+	} from '$lib/components/comments/anchors';
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 	import CopyIcon from '$lib/components/layout/Sidebar/icons/Copy.svelte';
 	import TrashIcon from '$lib/components/layout/Sidebar/icons/Trash.svelte';
@@ -435,7 +439,17 @@
 						>
 							{#if message.content}
 								{#if $settings?.renderMarkdownInUserMessages ?? true}
-									<div class="markdown-prose">
+									<div
+										class="markdown-prose"
+										use:commentSurface={{
+											resource_type: 'chat', resource_id: chatId,
+											target_type: 'chat_message',
+											target_id: message.id,
+											surface_id: 'content',
+											content_hash: contentHash(message.content ?? ''),
+											enabled: !!chatId
+										}}
+									>
 										<Markdown
 											id={`${chatId}-${message.id}`}
 											content={message.content}
@@ -446,6 +460,14 @@
 								{:else}
 									<div
 										class="whitespace-pre-wrap text-[0.9375rem]"
+										use:commentSurface={{
+											resource_type: 'chat', resource_id: chatId,
+											target_type: 'chat_message',
+											target_id: message.id,
+											surface_id: 'content',
+											content_hash: contentHash(message.content ?? ''),
+											enabled: !!chatId
+										}}
 										dir={$settings?.chatDirection ?? 'auto'}
 									>
 										{message.content}

@@ -97,6 +97,7 @@ async def get_tools(
         tools_cache = get_tools_cache(request)
         for tool in await Tools.get_tools(
             defer_content=True,
+            active_only=True,
             db=db,
             user_id=None if bypass_access_control else user.id,
             user_group_ids=user_group_ids,
@@ -364,6 +365,38 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
             )
         )
     return result
+
+
+@router.post('/id/{id}/toggle', response_model=ToolResponse)
+async def toggle_tool_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    tool = await Tools.get_tool_by_id(id, db=db)
+    if tool is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or tool.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='tool', resource_id=id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    tool = await Tools.toggle_tool_by_id(id, db=db)
+    if tool is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    await publish_event(
+        request,
+        EVENTS.TOOL_ENABLED if tool.is_active else EVENTS.TOOL_DISABLED,
+        actor=user,
+        subject_id=tool.id,
+        data={'name': tool.name},
+    )
+    return tool
 
 
 ############################

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
@@ -970,6 +971,9 @@
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
 			<div class="flex items-center gap-2">
+				{#if !isExternalKnowledge && knowledge?.id}<CommentButton wrapperClassName="me-1"
+						resource={{ resource_type: 'knowledge', resource_id: knowledge.id }}
+					/>{/if}
 				{#if knowledge.write_access}
 					{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
 						<AccessButton

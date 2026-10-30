@@ -50,7 +50,7 @@
 			<h2 class="text-base font-medium">{$i18n.t('Avatar setup')}</h2>
 			<button
 				type="button"
-				class="p-1 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-850"
+				class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 px-0"
 				aria-label={$i18n.t('Close avatar setup')}
 				on:click={() => {
 					show = false;

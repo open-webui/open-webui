@@ -238,34 +238,6 @@
 								</h1>
 							{/if}
 
-							{#if shareEnabled && chat && (chat.id || $temporaryChatEnabled) && (scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
-								<Menu
-									{chat}
-									{shareEnabled}
-									{readOnly}
-									{scrollToTop}
-									shareHandler={() => {
-										showShareChatModal = !showShareChatModal;
-									}}
-									{renameHandler}
-									archiveChatHandler={() => {
-										archiveChatHandler(chat.id);
-									}}
-									deleteChatHandler={() => {
-										deleteChatHandler(chat.id);
-									}}
-									{moveChatHandler}
-								>
-									<button
-										class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
-										id="chat-context-menu-button"
-										aria-label={$i18n.t('Chat actions')}
-									>
-										<EllipsisHorizontal className="size-4.5" strokeWidth="1.5" />
-									</button>
-								</Menu>
-							{/if}
-
 							{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
 								<button
 									id="delete-chat-button"
@@ -291,7 +263,7 @@
 					{/if}
 				</div>
 
-				<div class="lg:mr-1 flex flex-none items-center gap-3 self-center">
+				<div class="lg:mr-1 flex flex-none items-center gap-2 self-center">
 					<!-- <div class="md:hidden flex self-center w-[0.0625rem] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
 
 					{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
@@ -366,6 +338,34 @@
 							mode="presence"
 							avatarClass="size-5"
 						/>
+					{/if}
+
+					{#if shareEnabled && chat?.id && (scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
+						<Menu
+							{chat}
+							{shareEnabled}
+							{readOnly}
+							{scrollToTop}
+							shareHandler={() => {
+								showShareChatModal = !showShareChatModal;
+							}}
+							{renameHandler}
+							archiveChatHandler={() => {
+								archiveChatHandler(chat.id);
+							}}
+							deleteChatHandler={() => {
+								deleteChatHandler(chat.id);
+							}}
+							{moveChatHandler}
+						>
+							<button
+								class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								id="chat-context-menu-button"
+								aria-label={$i18n.t('Chat actions')}
+							>
+								<EllipsisHorizontal className="size-4.5" strokeWidth="1.5" />
+							</button>
+						</Menu>
 					{/if}
 
 					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}

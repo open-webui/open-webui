@@ -5,6 +5,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import Pin from '$lib/components/icons/Pin.svelte';
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
@@ -24,7 +25,18 @@
 
 	export let onClose: Function = () => {};
 
+	$: canEdit =
+		model?.preset || model?.info?.base_model_id
+			? model?.info?.user_id === $user?.id
+			: $user?.role === 'admin';
 	const providerSupportsDelete = (provider = '') => provider === 'llama.cpp';
+	$: showComments =
+		$config?.features?.enable_comments &&
+		$user &&
+		model?.id &&
+		!model?.direct &&
+		!model?.arena &&
+		(model?.info || $user?.role === 'admin');
 </script>
 
 <Dropdown
@@ -49,7 +61,7 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[13.125rem] z-[9999999]">
-			{#if model?.preset || model?.info?.base_model_id ? model?.info?.user_id === $user?.id : $user?.role === 'admin'}
+			{#if canEdit}
 				<button
 					type="button"
 					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
@@ -70,7 +82,22 @@
 
 					<div class="flex items-center">{$i18n.t('Edit')}</div>
 				</button>
+			{/if}
 
+			{#if showComments}
+				<CommentButton
+					menu
+					modal
+					resource={{ resource_type: 'model', resource_id: model?.id }}
+					className="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
+					onOpen={() => {
+						show = false;
+						onEdit();
+					}}
+				/>
+			{/if}
+
+			{#if canEdit}
 				{#if $user?.role === 'admin' && (model?.owned_by === 'ollama' || providerSupportsDelete(model?.provider))}
 					<button
 						type="button"
@@ -152,7 +179,9 @@
 
 			{#if $config?.features.enable_community_sharing}
 				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
+			{/if}
 
+			{#if $config?.features.enable_community_sharing}
 				<button
 					type="button"
 					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"

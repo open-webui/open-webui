@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
@@ -30,11 +31,13 @@
 		exportTools,
 		getToolById,
 		getToolList,
-		getTools
+		getTools,
+		toggleToolById
 	} from '$lib/apis/tools';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import Tooltip from '../common/Tooltip.svelte';
+	import Switch from '../common/Switch.svelte';
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -72,6 +75,7 @@
 	let showDeleteConfirm = false;
 
 	let tools = [];
+	let updatingTools: Record<string, boolean> = {};
 	let filteredItems = [];
 
 	let tagsContainerElement: HTMLDivElement;
@@ -81,6 +85,31 @@
 	let openToolMenuId: string | null = null;
 
 	let showImportModal = false;
+
+	const toggleToolHandler = async (tool) => {
+		if (updatingTools[tool.id]) return;
+		const previousState = !tool.is_active;
+		updatingTools = { ...updatingTools, [tool.id]: true };
+		try {
+			const updatedTool = await toggleToolById(localStorage.token, tool.id);
+			tool.is_active = updatedTool.is_active;
+			tool.updated_at = updatedTool.updated_at;
+			tools = tools;
+		} catch (error) {
+			tool.is_active = previousState;
+			tools = tools;
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		} finally {
+			updatingTools = { ...updatingTools, [tool.id]: false };
+		}
+
+		try {
+			_tools.set(await getTools(localStorage.token));
+		} catch (error) {
+			toast.error(`${error?.detail ?? error}`);
+		}
+	};
 
 	$: if (loaded) {
 		workspaceActions.set([
@@ -339,7 +368,7 @@
 		}}
 	/>
 
-	<div class="space-y-1">
+	<div class="space-y-0">
 		<div class="flex h-8 w-full items-center gap-2">
 			<div class="flex min-w-0 flex-1">
 				<div class=" self-center ml-1 mr-3">
@@ -355,7 +384,7 @@
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
@@ -395,16 +424,16 @@
 		</div>
 
 		{#if (filteredItems ?? []).length !== 0}
-			<div class="my-1">
+			<div class="@container">
 				<div
-					class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+					class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
 				>
 					<button
 						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
 						type="button"
 						on:click={() => setSortKey('name')}
 					>
-						{$i18n.t('Title')}
+						{$i18n.t('Name')}
 						{#if sortKey === 'name'}
 							{#if sortDirection === 'asc'}
 								<ChevronUp className="size-2" />
@@ -414,10 +443,10 @@
 						{/if}
 					</button>
 
-					<div class="hidden w-44 shrink-0 md:block"></div>
+					<div class="@max-[48rem]:hidden">{$i18n.t('Owner')}</div>
 
 					<button
-						class="flex w-36 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+						class="@max-[36rem]:hidden flex min-w-0 items-center gap-1 py-0.5 text-left"
 						type="button"
 						on:click={() => setSortKey('updated_at')}
 					>
@@ -430,14 +459,15 @@
 							{/if}
 						{/if}
 					</button>
+					<span class="sr-only">{$i18n.t('Actions')}</span>
 				</div>
 
 				<div class="grid gap-y-0.5">
 					{#each filteredItems as tool}
 						<div
-							class="group flex min-h-8 w-full items-center gap-2 overflow-hidden rounded-xl px-2 py-1 text-left {tool.write_access
+							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group text-left {tool.write_access
 								? 'cursor-pointer'
-								: 'cursor-not-allowed opacity-60'}"
+								: 'cursor-not-allowed'}"
 							role="presentation"
 							on:click={(e) => {
 								if (!tool.write_access || shouldIgnoreRowClick(e.target)) return;
@@ -462,6 +492,9 @@
 													>
 												{/if}
 											</Tooltip>
+											{#if !tool.write_access}
+												<Badge type="subtle" content={$i18n.t('Read Only')} />
+											{/if}
 
 											{#if tool?.meta?.manifest?.version}
 												<div
@@ -470,55 +503,37 @@
 													v{tool?.meta?.manifest?.version ?? ''}
 												</div>
 											{/if}
-
-											<Tooltip
-												content={dayjs(tool.updated_at * 1000)
-													.locale($i18n.language)
-													.format('LLLL')}
-											>
-												<div
-													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
-												>
-													{dayjs(tool.updated_at * 1000)
-														.locale($i18n.language)
-														.fromNow()}
-												</div>
-											</Tooltip>
-
-											{#if !tool.write_access}
-												<Badge type="muted" content={$i18n.t('Read Only')} />
-											{/if}
 										</div>
 									</div>
 
-									{#if resolveLocalizedResource(tool, $i18n.language, 'description')}
-										<Tooltip
-											content={resolveLocalizedResource(tool, $i18n.language, 'description')}
-											className="min-w-0"
-											placement="top-start"
-										>
-											<div
-												class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+									<div class="mt-0.5 min-w-0">
+										{#if resolveLocalizedResource(tool, $i18n.language, 'description')}
+											<Tooltip
+												content={resolveLocalizedResource(tool, $i18n.language, 'description')}
+												className="min-w-0"
+												placement="top-start"
 											>
-												{resolveLocalizedResource(tool, $i18n.language, 'description')}
-											</div>
-										</Tooltip>
-									{/if}
+												<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
+													{resolveLocalizedResource(tool, $i18n.language, 'description')}
+												</div>
+											</Tooltip>
+										{/if}
+									</div>
 								</div>
 							</div>
 
 							<div
-								class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400"
 							>
-								<ProfilePreview user={tool?.user ?? null} side="left">
-									<span class="flex max-w-44 items-center gap-1.75">
+								<ProfilePreview user={tool?.user ?? null} side="bottom" className="w-full min-w-0">
+									<span class="flex w-full min-w-0 items-center gap-2">
 										<ProfileImage
 											src={tool?.user?.id
 												? `/api/v1/users/${tool.user.id}/profile/image`
 												: '/user.png'}
-											className="size-4 shrink-0 rounded-full!"
+											className="size-5 shrink-0 rounded-full!"
 										/>
-										<span class="min-w-0 max-w-24 truncate">
+										<span class="min-w-0 truncate">
 											{capitalizeFirstLetter(
 												tool?.user?.name ?? tool?.user?.email ?? $i18n.t('Deleted User')
 											)}
@@ -526,118 +541,158 @@
 									</span>
 								</ProfilePreview>
 							</div>
-
-							{#if tool.write_access}
-								<div class="ml-2 flex shrink-0 flex-row items-center gap-1.5 self-center">
-									{#if shiftKey}
-										<Tooltip content={$i18n.t('Delete')}>
-											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-												type="button"
-												aria-label={$i18n.t('Delete')}
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													deleteHandler(tool);
-												}}
-											>
-												<GarbageBin className="size-4" />
-											</button>
-										</Tooltip>
-									{:else}
-										{#if tool?.meta?.manifest?.funding_url ?? false}
-											<Tooltip content="Support">
+							<Tooltip
+								content={dayjs(tool.updated_at * 1000)
+									.locale($i18n.language)
+									.format('LLLL')}
+								className="@max-[36rem]:hidden min-w-0"
+							>
+								<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
+									{dayjs(tool.updated_at * 1000)
+										.locale($i18n.language)
+										.fromNow()}
+								</div>
+							</Tooltip>
+							<div class="flex min-w-0 items-center justify-end gap-1.5">
+								{#if tool.write_access}
+									<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
+										{#if shiftKey}
+											<Tooltip content={$i18n.t('Delete')}>
 												<button
 													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 													type="button"
-													aria-label={$i18n.t('Support')}
+													aria-label={$i18n.t('Delete')}
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														deleteHandler(tool);
+													}}
+												>
+													<GarbageBin className="size-4" />
+												</button>
+											</Tooltip>
+										{:else}
+											{#if tool?.meta?.manifest?.funding_url ?? false}
+												<Tooltip content="Support">
+													<button
+														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														type="button"
+														aria-label={$i18n.t('Support')}
+														on:click={(e) => {
+															e.preventDefault();
+															e.stopPropagation();
+															selectedTool = tool;
+															showManifestModal = true;
+														}}
+													>
+														<Heart className="size-4" />
+													</button>
+												</Tooltip>
+											{/if}
+
+											<Tooltip content={$i18n.t('Valves')}>
+												<button
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													type="button"
+													aria-label={$i18n.t('Valves')}
 													on:click={(e) => {
 														e.preventDefault();
 														e.stopPropagation();
 														selectedTool = tool;
-														showManifestModal = true;
+														showValvesModal = true;
 													}}
 												>
-													<Heart className="size-4" />
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke-width="1.5"
+														stroke="currentColor"
+														class="size-4"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
+														/>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+														/>
+													</svg>
 												</button>
 											</Tooltip>
-										{/if}
 
-										<Tooltip content={$i18n.t('Valves')}>
-											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-												type="button"
-												aria-label={$i18n.t('Valves')}
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
+											<CommentButton
+												modal
+												className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												resource={{ resource_type: 'tool', resource_id: tool.id }}
+											/>
+											<ToolMenu
+												resourceId={tool.id}
+												accessHandler={$user?.permissions?.sharing?.tools || $user?.role === 'admin'
+													? () => accessModal.open(tool.id)
+													: null}
+												show={openToolMenuId === tool.id}
+												editHandler={() => {
+													goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
+												}}
+												shareHandler={() => {
+													shareHandler(tool);
+												}}
+												cloneHandler={() => {
+													cloneHandler(tool);
+												}}
+												exportHandler={() => {
+													exportHandler(tool);
+												}}
+												deleteHandler={async () => {
 													selectedTool = tool;
-													showValvesModal = true;
+													showDeleteConfirm = true;
+												}}
+												onClose={() => {
+													openToolMenuId = null;
 												}}
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke-width="1.5"
-													stroke="currentColor"
-													class="size-4"
+												<button
+													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													type="button"
+													aria-label={$i18n.t('Tool Menu')}
+													on:click={(e) => {
+														e.preventDefault();
+														e.stopPropagation();
+														openToolMenuId = openToolMenuId === tool.id ? null : tool.id;
+													}}
 												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"
-													/>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-													/>
-												</svg>
-											</button>
-										</Tooltip>
-
-										<ToolMenu
-											accessHandler={$user?.permissions?.sharing?.tools || $user?.role === 'admin'
-												? () => accessModal.open(tool.id)
-												: null}
-											show={openToolMenuId === tool.id}
-											editHandler={() => {
-												goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);
-											}}
-											shareHandler={() => {
-												shareHandler(tool);
-											}}
-											cloneHandler={() => {
-												cloneHandler(tool);
-											}}
-											exportHandler={() => {
-												exportHandler(tool);
-											}}
-											deleteHandler={async () => {
-												selectedTool = tool;
-												showDeleteConfirm = true;
-											}}
-											onClose={() => {
-												openToolMenuId = null;
-											}}
-										>
-											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-												type="button"
-												aria-label={$i18n.t('Tool Menu')}
-												on:click={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													openToolMenuId = openToolMenuId === tool.id ? null : tool.id;
-												}}
+													<EllipsisHorizontal className="size-4" />
+												</button>
+											</ToolMenu>
+											<Tooltip
+												content={updatingTools[tool.id]
+													? $i18n.t('Saving...')
+													: tool.is_active
+														? $i18n.t('Enabled')
+														: $i18n.t('Disabled')}
 											>
-												<EllipsisHorizontal className="size-4" />
-											</button>
-										</ToolMenu>
-									{/if}
-								</div>
-							{/if}
+												<Switch
+													bind:state={tool.is_active}
+													disabled={updatingTools[tool.id] ?? false}
+													ariaLabel={`${$i18n.t('Enabled')}: ${resolveLocalizedResource(tool, $i18n.language)}`}
+													on:change={() => toggleToolHandler(tool)}
+												/>
+											</Tooltip>
+										{/if}
+									</div>
+								{/if}
+								{#if !tool.write_access}
+									<CommentButton
+										modal
+										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+										resource={{ resource_type: 'tool', resource_id: tool.id }}
+									/>
+								{/if}
+							</div>
 						</div>
 					{/each}
 				</div>

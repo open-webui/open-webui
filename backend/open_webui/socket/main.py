@@ -463,7 +463,14 @@ async def periodic_socket_authentication():
         await asyncio.sleep(30)
         await encryption.sweep()
         for sid in tuple(LOCAL_AUTHENTICATED_SIDS):
-            await get_socket_session_user(sid)
+            session_user = await get_socket_session_user(sid)
+            if session_user:
+                from open_webui.socket.comments import revalidate_comment_subscription
+
+                try:
+                    await revalidate_comment_subscription(sio, sid, session_user)
+                except Exception:
+                    log.exception('Could not revalidate comment subscription')
 
 
 async def get_socket_session_user(sid: str, *, wait_for_disconnect: bool = True) -> dict | None:
@@ -1883,3 +1890,8 @@ async def get_event_call(request_info):
 
 
 get_event_caller = get_event_call
+
+
+from open_webui.socket.comments import register_comment_events
+
+register_comment_events(sio, get_socket_session_user)

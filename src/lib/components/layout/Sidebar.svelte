@@ -1900,7 +1900,7 @@
 									<button
 										type="button"
 										disabled={$selectionBusy}
-										class="flex size-6 items-center justify-center rounded-md hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+										class="flex h-6 items-center justify-center rounded-md hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40 text-gray-500 dark:text-gray-400 px-0"
 										aria-label={$i18n.t('Clear selection')}
 										on:click={chatSelection.clear}
 									>

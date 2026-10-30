@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 # local imports
 from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db, get_async_db_context
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.automations import AutomationRun
@@ -2814,6 +2815,7 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
+                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(id=id))
                 await session.execute(delete(Chat).filter_by(id=id))
                 await session.commit()
 
@@ -2826,6 +2828,7 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
+                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(id=id, user_id=user_id))
                 await session.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await session.commit()
 
@@ -2847,6 +2850,7 @@ class ChatTable:
                 await session.execute(
                     delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
+                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(user_id=user_id))
                 await session.execute(delete(Chat).filter_by(user_id=user_id))
                 await session.commit()
 
@@ -2866,7 +2870,9 @@ class ChatTable:
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
+                await delete_resource_comments(session, 'chat', chat_ids_stmt)
                 await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
+                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.commit()
 
@@ -2897,6 +2903,7 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as session:
                 # Delete shared_chat rows for this user's chats
+                await delete_resource_comments(session, 'shared_chat', select(SharedChatTable.id).filter_by(user_id=user_id))
                 await session.execute(delete(SharedChatTable).filter_by(user_id=user_id))
 
                 # Clear share_id on all of this user's chats

@@ -86,7 +86,7 @@
 				</div>
 			</a>
 			<button
-				class="hover-reveal self-center p-0.5 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition"
+				class="hover-reveal self-center py-0.5 rounded-lg transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 				on:click|preventDefault|stopPropagation={async () => {
 					await toggleNotePinnedStatusById(localStorage.token, note.id);
 					const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(() => []);

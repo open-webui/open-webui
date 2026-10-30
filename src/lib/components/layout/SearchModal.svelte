@@ -345,7 +345,7 @@
 				on:blur={() => (suggesting = false)}
 			/>
 			{#if query}<button
-					class={quietButton}
+					class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 					aria-label={$i18n.t('Clear search')}
 					on:click={() => {
 						query = '';
@@ -370,8 +370,10 @@
 				on:click={() => (panel = panel === 'filters' ? null : 'filters')}
 				><Adjustments className="size-3.5" /></button
 			>
-			<button class={quietButton} aria-label={$i18n.t('Close search')} on:click={close}
-				><XMark className="size-3.5" /></button
+			<button
+				class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				aria-label={$i18n.t('Close search')}
+				on:click={close}><XMark className="size-3.5" /></button
 			>
 		</div>
 		{#if sharing !== 'all' || scope}

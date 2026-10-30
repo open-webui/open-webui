@@ -233,7 +233,7 @@
 		<!-- Close -->
 		<Tooltip content={$i18n.t('Close')}>
 			<button
-				class="p-1 rounded text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 transition"
+				class="py-1 rounded text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition px-0"
 				on:click={onClose}
 				aria-label={$i18n.t('Close')}
 			>

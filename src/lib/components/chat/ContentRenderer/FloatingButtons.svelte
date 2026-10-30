@@ -3,9 +3,11 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
+	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import LightBulb from '$lib/components/icons/LightBulb.svelte';
 
 	export let id = '';
+	export let onComment: (() => void) | null = null;
 
 	export let actions = [];
 	export let onSetInputText = (text) => {};
@@ -130,6 +132,14 @@
 					<div class="shrink-0">{action.label}</div>
 				</button>
 			{/each}
+			{#if onComment}<button
+					type="button"
+					aria-label={$i18n.t('Comment')}
+					class="px-1.5 py-[0.0625rem] hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+					on:mousedown|preventDefault
+					on:click={onComment}
+					><Annotation className="size-3 shrink-0" /><span>{$i18n.t('Comment')}</span></button
+				>{/if}
 		</div>
 	{:else}
 		<div

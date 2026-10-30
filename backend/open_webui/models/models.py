@@ -7,6 +7,7 @@ from copy import deepcopy
 from typing import Annotated, Any, Literal
 
 from fastapi import HTTPException
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -714,6 +715,7 @@ class ModelsTable:
             return None
 
     async def _delete_models(self, session, ids):
+        await delete_resource_comments(session, 'model', ids)
         await session.execute(
             delete(AccessGrant).where(AccessGrant.resource_type == 'model', AccessGrant.resource_id.in_(ids))
         )

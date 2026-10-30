@@ -4,9 +4,10 @@
 
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import {
 		config,
+		temporaryChatEnabled,
 		terminalServers,
 		showControls,
 		showSidebar,
@@ -17,8 +18,15 @@
 		settings,
 		showFileNavPath,
 		selectedTerminalId,
-		user
+		user,
+		commentsView,
+		chatCommentsId,
+		openComments,
+		type CommentsView
 	} from '$lib/stores';
+
+	import { commentsRequest, resourceQuery } from '$lib/apis/comments';
+	import CommentsPanel from '$lib/components/comments/CommentsPanel.svelte';
 
 	import Controls from './Controls/Controls.svelte';
 	import CallPanel from './MessageInput/CallPanel.svelte';
@@ -66,10 +74,10 @@
 	let viewportWidth = 0;
 
 	// Tab state for Controls+Files panel
-	let activeTab = savedTab;
+	let activeTab: typeof savedTab | 'comments' = savedTab;
 	// svelte-ignore reactive_declaration_module_script_dependency
 	$: {
-		savedTab = activeTab;
+		if (activeTab !== 'comments') savedTab = activeTab;
 	}
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
@@ -98,6 +106,58 @@
 		terminalFilesAvailable ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showOverviewTab = hasMessages;
+	$: showCommentsTab = !!(
+		$config?.features?.enable_comments &&
+		$user &&
+		isSavedChatId(chatId) &&
+		!$temporaryChatEnabled
+	);
+	let commentCount: number | null = null;
+	let countVersion = 0;
+	const setCommentCount = (total: number) => {
+		++countVersion;
+		commentCount = total;
+	};
+	const loadCommentCount = async (id: string) => {
+		const version = ++countVersion;
+		commentCount = null;
+		try {
+			const result = await commentsRequest<{ total: number }>(
+				`/?${resourceQuery({ resource_type: 'chat', resource_id: id })}&limit=1`
+			);
+			if (version === countVersion) commentCount = result.total;
+		} catch {
+			/* The comments panel handles access errors when opened. */
+		}
+	};
+	$: if (showCommentsTab && $showControls) loadCommentCount(chatId);
+	$: chatCommentsId.set(showCommentsTab ? chatId : null);
+	$: currentComments =
+		showCommentsTab &&
+		!$commentsView?.modal &&
+		$commentsView?.resource_type === 'chat' &&
+		$commentsView.resource_id === chatId
+			? $commentsView
+			: null;
+	let previousComments: CommentsView | null = null;
+	$: if (currentComments !== previousComments) {
+		previousComments = currentComments;
+		if (currentComments) {
+			activeTab = 'comments';
+			showArtifacts.set(false);
+			showEmbeds.set(false);
+			showCallOverlay.set(false);
+			showControls.set(true);
+		} else if (activeTab === 'comments') {
+			activeTab = 'controls';
+			showControls.set(false);
+		}
+	}
+	onDestroy(() => {
+		++countVersion;
+		chatCommentsId.set(null);
+		if (activeTab === 'comments') showControls.set(false);
+	});
 
 	// Tab fallback: if active tab becomes hidden, switch to next available
 	$: if (!showOverviewTab && activeTab === 'overview') activeTab = 'controls';
@@ -105,10 +165,18 @@
 	$: if (!showControlsTab && activeTab === 'controls') {
 		if (showFilesTab) activeTab = 'files';
 		else if (showOverviewTab) activeTab = 'overview';
+		else if (showCommentsTab && $showControls)
+			openComments({ resource_type: 'chat', resource_id: chatId });
 	}
 
 	// Auto-close if there are no visible tabs
-	$: if (!showControlsTab && !showFilesTab && !showOverviewTab) {
+	$: if (
+		!showControlsTab &&
+		!showFilesTab &&
+		!showOverviewTab &&
+		!showCommentsTab &&
+		!showCommentsTab
+	) {
 		showControls.set(false);
 	}
 
@@ -216,7 +284,8 @@
 		open={$showControls}
 		enabled={$mobile}
 		side="right"
-		blocked={$showSidebar || (!showControlsTab && !showFilesTab && !showOverviewTab)}
+		blocked={$showSidebar ||
+			(!showControlsTab && !showFilesTab && !showOverviewTab && !showCommentsTab)}
 		startTarget="#chat-container"
 		width={viewportWidth}
 		onOpenChange={(open) => showControls.set(open)}
@@ -272,6 +341,20 @@
 											{$i18n.t('Controls')}
 										</button>
 									{/if}
+									{#if showCommentsTab}
+										<button
+											class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'comments'
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+											on:click={() => openComments({ resource_type: 'chat', resource_id: chatId })}
+										>
+											{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
+													class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+													>{commentCount}</span
+												>{/if}
+										</button>
+									{/if}
 									{#if showFilesTab}
 										<button
 											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
@@ -296,7 +379,7 @@
 									{/if}
 								</div>
 								<button
-									class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
+									class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
 									on:click={() => showControls.set(false)}
 									aria-label={$i18n.t('Close')}
 								>
@@ -320,7 +403,15 @@
 										? 'overflow-y-auto px-3 pt-1'
 										: ''}"
 							>
-								{#if activeTab === 'overview'}
+								{#if activeTab === 'comments' && currentComments}
+									{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+										<CommentsPanel
+											embedded={true}
+											bind:view={$commentsView}
+											onCountChange={setCommentCount}
+										/>
+									{/key}
+								{:else if activeTab === 'overview'}
 									<Overview
 										{history}
 										{chatUser}
@@ -396,6 +487,20 @@
 										{$i18n.t('Controls')}
 									</button>
 								{/if}
+								{#if showCommentsTab}
+									<button
+										class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'comments'
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+										on:click={() => openComments({ resource_type: 'chat', resource_id: chatId })}
+									>
+										{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
+												class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+												>{commentCount}</span
+											>{/if}
+									</button>
+								{/if}
 								{#if showFilesTab}
 									<button
 										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
@@ -420,7 +525,7 @@
 								{/if}
 							</div>
 							<button
-								class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
+								class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
 								on:click={() => showControls.set(false)}
 								aria-label={$i18n.t('Close')}
 							>
@@ -444,7 +549,15 @@
 									? 'overflow-y-auto px-3 pt-1'
 									: ''}"
 						>
-							{#if activeTab === 'overview'}
+							{#if activeTab === 'comments' && currentComments}
+								{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+									<CommentsPanel
+										embedded={true}
+										bind:view={$commentsView}
+										onCountChange={setCommentCount}
+									/>
+								{/key}
+							{:else if activeTab === 'overview'}
 								<Overview
 									{history}
 									{chatUser}

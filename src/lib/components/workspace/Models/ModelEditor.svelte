@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -889,6 +890,7 @@
 					<span>{$i18n.t('Back')}</span>
 				</button>
 			{/if}
+
 			{#if edit && model?.version_id && !readOnly}
 				<ModelHistory
 					bind:this={historyMenu}
@@ -900,19 +902,23 @@
 					onProduction={productionHandler}
 				/>
 			{/if}
-			{#if !historical && !readOnly}
-				<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
+			<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
+				{#if edit && model?.id}<CommentButton wrapperClassName="me-2"
+						resource={{ resource_type: 'model', resource_id: model.id }}
+					/>{/if}
+				{#if !historical && !readOnly}
 					<LanguageModeSelect
 						bind:value={editingLocale}
 						{languages}
 						{translatedLocales}
 						className="w-fit"
 					/>
-					{#if $user?.permissions?.sharing?.models || $user?.role === 'admin'}
-						<AccessButton on:click={() => (showAccessControlModal = true)} />
-					{/if}
-				</div>
-			{/if}
+				{/if}
+
+				{#if !historical && !readOnly && ($user?.permissions?.sharing?.models || $user?.role === 'admin')}
+					<AccessButton on:click={() => (showAccessControlModal = true)} />
+				{/if}
+			</div>
 		</div>
 
 		{#if selectingVersion}

@@ -26,6 +26,9 @@
 	export let userSuggestions = false;
 	export let channelSuggestions = false;
 	export let channelId: string | null = null;
+	export let loadUsers:
+		| ((query: string, signal: AbortSignal) => Promise<{ id: string; name: string }[]>)
+		| null = null;
 
 	let _models = [];
 	let _users = [];
@@ -47,6 +50,11 @@
 
 	const getUserList = async (requestQuery: string, requestChannelId: string | null) => {
 		const signal = getAbortSignal();
+		if (loadUsers) {
+			const users = await loadUsers(requestQuery, signal).catch(() => []);
+			if (!signal.aborted) _users = toUserItems(users);
+			return;
+		}
 		const [channelMembers, searchResults] = await Promise.all([
 			requestChannelId
 				? getChannelMembersById(

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, tick } from 'svelte';
 
@@ -58,6 +59,7 @@
 	export let scrollToTop: (() => void) | null = null;
 
 	let showFullMessages = false;
+	let show = false;
 
 	const getChatAsText = async () => {
 		const history = chat.chat.history;
@@ -322,6 +324,7 @@
 {/if}
 
 <Dropdown
+	bind:show
 	closeOnSelect
 	onOpenChange={(state) => {
 		if (state === false) {
@@ -422,6 +425,15 @@
 					<Share className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</button>
+			{/if}
+
+			{#if chat?.id && !$temporaryChatEnabled}
+				<CommentButton
+					menu
+					resource={{ resource_type: 'chat', resource_id: chat.id }}
+					onOpen={() => (show = false)}
+					className="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				/>
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}

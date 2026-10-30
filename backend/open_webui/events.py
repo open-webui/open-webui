@@ -540,6 +540,12 @@ class EventDefinitions(BaseModel):
     TOOL_UPDATED: EventDefinition = EventDefinition(
         name='tool.updated', description='A tool was updated.', message='Tool updated'
     )
+    TOOL_ENABLED: EventDefinition = EventDefinition(
+        name='tool.enabled', description='A tool was enabled.', message='Tool enabled'
+    )
+    TOOL_DISABLED: EventDefinition = EventDefinition(
+        name='tool.disabled', description='A tool was disabled.', message='Tool disabled'
+    )
     TOOL_DELETED: EventDefinition = EventDefinition(
         name='tool.deleted', description='A tool was deleted.', message='Tool deleted'
     )
