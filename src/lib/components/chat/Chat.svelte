@@ -1929,7 +1929,12 @@
 			});
 		}
 
+		let lastUrl = '';
 		const pageSubscribe = page.subscribe(async (p) => {
+			const url = `${p.url.pathname}${p.url.search}`;
+			// a hash-only change like Skip to main content is not a new chat
+			if (p.url.hash && url === lastUrl) return;
+			lastUrl = url;
 			if (p.url.pathname === '/' || p.url.pathname.startsWith('/folders/')) {
 				await tick();
 				initNewChat();
