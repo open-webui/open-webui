@@ -393,7 +393,12 @@
 	});
 </script>
 
-<Modal bind:show={showWebhookModal} size="sm" className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
+	bind:show={showWebhookModal}
+	size="sm"
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">

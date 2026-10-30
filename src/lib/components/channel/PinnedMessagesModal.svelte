@@ -67,7 +67,7 @@
 </script>
 
 {#if channel}
-	<Modal size="sm" bind:show>
+	<Modal ariaLabel={$i18n.t('Pinned Messages')} size="sm" bind:show>
 		<div>
 			<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="self-center text-base">

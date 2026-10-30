@@ -83,6 +83,7 @@
 </script>
 
 <Modal
+	ariaLabel={`${$i18n.t("What's New in")} ${$WEBUI_NAME}`}
 	bind:show
 	size="lg"
 	className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden"

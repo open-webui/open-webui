@@ -61,7 +61,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('New Calendar')} size="sm" bind:show>
 	<div>
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">

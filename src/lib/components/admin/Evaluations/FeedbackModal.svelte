@@ -39,7 +39,7 @@
 	}
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('Feedback Details')} size="sm" bind:show>
 	{#if selectedFeedback}
 		<div>
 			<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">

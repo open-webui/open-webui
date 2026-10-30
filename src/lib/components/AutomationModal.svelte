@@ -147,7 +147,7 @@
 	}
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={name || $i18n.t('Automation')} size="md" bind:show>
 	<div>
 		<!-- Header -->
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">

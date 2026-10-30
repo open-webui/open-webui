@@ -13,7 +13,7 @@
 	export let manifest = {};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('Show your support!')} size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Show your support!')}</div>

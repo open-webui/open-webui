@@ -44,7 +44,7 @@
 	};
 </script>
 
-<Modal bind:show size="sm">
+<Modal ariaLabel={data?.server_name} bind:show size="sm">
 	<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 		<div class="text-sm font-medium self-center">{data.server_name}</div>
 		<button

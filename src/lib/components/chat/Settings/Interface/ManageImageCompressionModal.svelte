@@ -24,7 +24,12 @@
 	onMount(() => {});
 </script>
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Image Max Compression Size')}
+	size="sm"
+	bind:show
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">

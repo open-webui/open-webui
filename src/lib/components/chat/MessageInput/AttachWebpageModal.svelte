@@ -37,7 +37,7 @@
 	};
 </script>
 
-<Modal bind:show size="sm">
+<Modal ariaLabel={$i18n.t('Attach Webpage')} bind:show size="sm">
 	<div class="flex flex-col h-full">
 		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">

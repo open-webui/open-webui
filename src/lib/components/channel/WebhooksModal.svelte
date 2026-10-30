@@ -97,7 +97,7 @@
 <ConfirmDialog bind:show={showDeleteConfirmDialog} on:confirm={deleteHandler} />
 
 {#if channel}
-	<Modal size="sm" bind:show>
+	<Modal ariaLabel={$i18n.t('Webhooks')} size="sm" bind:show>
 		<div>
 			<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="flex w-full justify-between items-center mr-3">

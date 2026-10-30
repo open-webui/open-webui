@@ -12,7 +12,7 @@
 	export let codeExecution = null;
 </script>
 
-<Modal size="lg" bind:show>
+<Modal ariaLabel={codeExecution?.name ?? $i18n.t('Code execution')} size="lg" bind:show>
 	<div>
 		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class="text-sm font-medium self-center flex flex-col gap-0.5 capitalize">

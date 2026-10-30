@@ -70,7 +70,7 @@
 				: null;
 </script>
 
-<Modal bind:show size="md">
+<Modal ariaLabel={$i18n.t('Available Tools')} bind:show size="md">
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Available Tools')}</div>

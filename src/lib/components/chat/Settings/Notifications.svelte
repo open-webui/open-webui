@@ -350,7 +350,13 @@
 	</div>
 </div>
 
-<Modal size="sm" bind:show={formOpen}>
+<Modal
+	ariaLabel={editingId
+		? $i18n.t('Edit')
+		: $i18n.t('settings.personal.notifications.addNotificationTarget.label')}
+	size="sm"
+	bind:show={formOpen}
+>
 	<div class="p-4">
 		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
 			{editingId

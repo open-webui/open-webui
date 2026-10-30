@@ -509,7 +509,11 @@
 	}
 </script>
 
-<Modal size="sm" bind:show>
+<Modal
+	ariaLabel={edit ? $i18n.t('Edit Connection') : $i18n.t('Add Connection')}
+	size="sm"
+	bind:show
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 			<h1 class=" text-lg font-medium self-center font-primary">

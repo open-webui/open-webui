@@ -96,7 +96,7 @@
 	};
 </script>
 
-<Modal size="lg" bind:show>
+<Modal ariaLabel={citation?.source?.name ?? $i18n.t('Citation')} size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
 			<div class=" text-sm font-medium self-center flex items-center">
