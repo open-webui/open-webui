@@ -116,146 +116,149 @@
 
 {#if loaded}
 	<div
-		class="flex flex-col flex-1 min-w-0 w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
+		id="workspace-layout"
+		class="flex flex-1 min-w-0 w-full h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
 			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 			: 'md:max-w-[calc(100%-42px)]'} max-w-full"
 	>
-		<nav class="px-2.5 pt-1 backdrop-blur-xl drag-region select-none">
-			<div class="flex items-center gap-0.5 md:gap-1">
-				{#if $mobile}
-					<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
-						<Tooltip
-							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							interactive={true}
+		<div class="flex h-full min-w-0 flex-1 flex-col">
+			<nav class="px-2.5 pt-1 backdrop-blur-xl drag-region select-none">
+				<div class="flex items-center gap-0.5 md:gap-1">
+					{#if $mobile}
+						<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
+							<Tooltip
+								content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								interactive={true}
+							>
+								<button
+									id="sidebar-toggle-button"
+									class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+									aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+									on:click={() => {
+										showSidebar.set(!$showSidebar);
+									}}
+								>
+									<div class=" self-center p-1.5">
+										<Sidebar className="size-4" />
+									</div>
+								</button>
+							</Tooltip>
+						</div>
+					{/if}
+
+					<div class="flex w-full items-center">
+						<div
+							class="flex min-w-0 mr-1.5 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent py-1 touch-auto pointer-events-auto"
 						>
-							<button
-								id="sidebar-toggle-button"
-								class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
-								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-								on:click={() => {
-									showSidebar.set(!$showSidebar);
-								}}
-							>
-								<div class=" self-center p-1.5">
-									<Sidebar className="size-4" />
-								</div>
-							</button>
-						</Tooltip>
-					</div>
-				{/if}
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
+								<a
+									draggable="false"
+									data-sveltekit-keepfocus
+									aria-current={activeWorkspaceSection === 'models' ? 'page' : null}
+									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+									'models'
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									href="/workspace/models"
+								>
+									<span>{$i18n.t('Models')}</span>
+									<span class="text-sm opacity-60">
+										{formatCount($workspaceCounts.models)}
+									</span>
+								</a>
+							{/if}
 
-				<div class="flex w-full items-center">
-					<div
-						class="flex min-w-0 mr-1.5 items-center gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent py-1 touch-auto pointer-events-auto"
-					>
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models}
-							<a
-								draggable="false"
-								data-sveltekit-keepfocus
-								aria-current={activeWorkspaceSection === 'models' ? 'page' : null}
-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
-								'models'
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/models"
-							>
-								<span>{$i18n.t('Models')}</span>
-								<span class="text-sm opacity-60">
-									{formatCount($workspaceCounts.models)}
-								</span>
-							</a>
-						{/if}
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+								<a
+									draggable="false"
+									data-sveltekit-keepfocus
+									aria-current={activeWorkspaceSection === 'knowledge' ? 'page' : null}
+									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+									'knowledge'
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									href="/workspace/knowledge"
+								>
+									<span>{$i18n.t('Knowledge')}</span>
+									<span class="text-sm opacity-60">
+										{formatCount($workspaceCounts.knowledge)}
+									</span>
+								</a>
+							{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
-							<a
-								draggable="false"
-								data-sveltekit-keepfocus
-								aria-current={activeWorkspaceSection === 'knowledge' ? 'page' : null}
-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
-								'knowledge'
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/knowledge"
-							>
-								<span>{$i18n.t('Knowledge')}</span>
-								<span class="text-sm opacity-60">
-									{formatCount($workspaceCounts.knowledge)}
-								</span>
-							</a>
-						{/if}
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
+								<a
+									draggable="false"
+									data-sveltekit-keepfocus
+									aria-current={activeWorkspaceSection === 'prompts' ? 'page' : null}
+									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+									'prompts'
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									href="/workspace/prompts"
+								>
+									<span>{$i18n.t('Prompts')}</span>
+									<span class="text-sm opacity-60">
+										{formatCount($workspaceCounts.prompts)}
+									</span>
+								</a>
+							{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts}
-							<a
-								draggable="false"
-								data-sveltekit-keepfocus
-								aria-current={activeWorkspaceSection === 'prompts' ? 'page' : null}
-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
-								'prompts'
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/prompts"
-							>
-								<span>{$i18n.t('Prompts')}</span>
-								<span class="text-sm opacity-60">
-									{formatCount($workspaceCounts.prompts)}
-								</span>
-							</a>
-						{/if}
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
+								<a
+									draggable="false"
+									data-sveltekit-keepfocus
+									aria-current={activeWorkspaceSection === 'skills' ? 'page' : null}
+									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+									'skills'
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									href="/workspace/skills"
+								>
+									<span>{$i18n.t('Skills')}</span>
+									<span class="text-sm opacity-60">
+										{formatCount($workspaceCounts.skills)}
+									</span>
+								</a>
+							{/if}
 
-						{#if $user?.role === 'admin' || $user?.permissions?.workspace?.skills}
-							<a
-								draggable="false"
-								data-sveltekit-keepfocus
-								aria-current={activeWorkspaceSection === 'skills' ? 'page' : null}
-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
-								'skills'
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/skills"
-							>
-								<span>{$i18n.t('Skills')}</span>
-								<span class="text-sm opacity-60">
-									{formatCount($workspaceCounts.skills)}
-								</span>
-							</a>
-						{/if}
+							{#if $config?.features?.enable_tools && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools)}
+								<a
+									draggable="false"
+									data-sveltekit-keepfocus
+									aria-current={activeWorkspaceSection === 'tools' ? 'page' : null}
+									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
+									'tools'
+										? 'text-gray-900 dark:text-gray-100'
+										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+									href="/workspace/tools"
+								>
+									<span>{$i18n.t('Tools')}</span>
+									<span class="text-sm opacity-60">
+										{formatCount($workspaceCounts.tools)}
+									</span>
+								</a>
+							{/if}
+						</div>
 
-						{#if $config?.features?.enable_tools && ($user?.role === 'admin' || $user?.permissions?.workspace?.tools)}
-							<a
-								draggable="false"
-								data-sveltekit-keepfocus
-								aria-current={activeWorkspaceSection === 'tools' ? 'page' : null}
-								class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
-								'tools'
-									? 'text-gray-900 dark:text-gray-100'
-									: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
-								href="/workspace/tools"
-							>
-								<span>{$i18n.t('Tools')}</span>
-								<span class="text-sm opacity-60">
-									{formatCount($workspaceCounts.tools)}
-								</span>
-							</a>
-						{/if}
+						<div class="ml-auto flex shrink-0 items-center gap-1">
+							<SplitCreateButton actions={visibleActions} />
+						</div>
 					</div>
 
-					<div class="ml-auto flex shrink-0 items-center gap-1">
-						<SplitCreateButton actions={visibleActions} />
-					</div>
+					<!-- <div class="flex items-center text-xl font-normal">{$i18n.t('Workspace')}</div> -->
 				</div>
+			</nav>
 
-				<!-- <div class="flex items-center text-xl font-normal">{$i18n.t('Workspace')}</div> -->
+			<div
+				class="pb-1 flex-1 min-w-0 max-h-full overflow-y-auto overflow-x-hidden"
+				class:px-3={!['/workspace/models/create', '/workspace/models/edit'].includes(
+					$page.url.pathname
+				)}
+				id="workspace-container"
+			>
+				<slot />
 			</div>
-		</nav>
-
-		<div
-			class="pb-1 flex-1 min-w-0 max-h-full overflow-y-auto overflow-x-hidden"
-			class:px-3={!['/workspace/models/create', '/workspace/models/edit'].includes(
-				$page.url.pathname
-			)}
-			id="workspace-container"
-		>
-			<slot />
 		</div>
 	</div>
 {/if}

@@ -94,6 +94,7 @@
 					maxWidth={640}
 					minSiblingWidth={400}
 					resizerId="comments-resizer"
+					portalTarget="workspace-layout"
 					storageKey="comments-panel-width"
 					className="h-full min-h-0"
 					onClose={() => (view = null)}
