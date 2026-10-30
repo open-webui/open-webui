@@ -183,12 +183,6 @@
 		showControls.set('files');
 	}
 
-	// Keep Files selected when a terminal is active; opening the panel is handled by selection UI.
-	$: if ($selectedTerminalId && terminalFilesAvailable) {
-		activeTab = 'files';
-		if ($showControls) showControls.set('files');
-	}
-
 	// Clear selected direct terminal if user lost permission
 	$: if (
 		$selectedTerminalId &&

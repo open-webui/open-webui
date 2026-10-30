@@ -70,7 +70,7 @@
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
 		selectedTerminalId.set(newId);
 		if (newId && !$mobile) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+			showControls.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
 		// Enable the selected direct terminal, disable all others
@@ -94,7 +94,7 @@
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
 		selectedTerminalId.set(newId);
 		if (newId && !$mobile) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+			showControls.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
 		// Disable all direct terminals when switching to a system terminal
