@@ -697,6 +697,22 @@
 										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 										resource={{ resource_type: 'tool', resource_id: tool.id }}
 									/>
+									<span class="size-6 shrink-0" aria-hidden="true"></span>
+									<div
+										class="flex h-6 items-center"
+										role="presentation"
+										on:click={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+										}}
+									>
+										<Switch
+											state={tool.is_active}
+											disabled
+											tooltip={$i18n.t('Read Only')}
+											ariaLabel={`${$i18n.t('Enabled')}: ${resolveLocalizedResource(tool, $i18n.language)}`}
+										/>
+									</div>
 								{/if}
 							</div>
 						</div>

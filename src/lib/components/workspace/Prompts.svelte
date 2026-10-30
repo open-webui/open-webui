@@ -766,6 +766,13 @@
 														/>
 													</Tooltip>
 												</div>
+											{:else}
+												<Switch
+													state={prompt.is_active}
+													disabled
+													tooltip={$i18n.t('Read Only')}
+													ariaLabel={`${$i18n.t('Enabled')}: ${prompt.name}`}
+												/>
 											{/if}
 										</div>
 									{/if}

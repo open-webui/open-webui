@@ -998,6 +998,13 @@
 															on:change={() => toggleModelHandler(model)}
 														/>
 													</Tooltip>
+												{:else}
+													<Switch
+														state={model.is_active}
+														disabled
+														tooltip={$i18n.t('Read Only')}
+														ariaLabel={`${$i18n.t('Enabled')}: ${localizedModelName}`}
+													/>
 												{/if}
 											</div>
 										{/if}
