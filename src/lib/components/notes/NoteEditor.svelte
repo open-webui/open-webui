@@ -1513,7 +1513,7 @@ ${content}
 							bind:show={showNoteTabs}
 							side="left"
 							panelWidth={280}
-							minWidth={240}
+							minWidth={180}
 							closeOnDragBelowMinWidth={false}
 							resizerId="note-tabs-resizer"
 							storageKey={`note-tabs-width:${$user?.id}`}
