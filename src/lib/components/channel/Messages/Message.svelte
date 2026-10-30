@@ -234,6 +234,7 @@
 								>
 									<Tooltip content={$i18n.t('Add Reaction')}>
 										<button
+											aria-label={$i18n.t('Add Reaction')}
 											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 											on:click={() => {
 												showButtons = true;
@@ -261,6 +262,7 @@
 
 							<Tooltip content={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}>
 								<button
+									aria-label={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
 										onPin(message);
@@ -292,6 +294,7 @@
 								{#if onEdit}
 									<Tooltip content={$i18n.t('Edit')}>
 										<button
+											aria-label={$i18n.t('Edit')}
 											id="edit-message-{renderedMessageId}"
 											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 											on:click={async () => {
@@ -314,6 +317,7 @@
 								{#if onDelete}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
+											aria-label={$i18n.t('Delete')}
 											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 											on:click={() => (showDeleteConfirmDialog = true)}
 										>
