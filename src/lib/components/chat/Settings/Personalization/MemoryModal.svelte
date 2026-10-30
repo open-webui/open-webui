@@ -93,6 +93,7 @@
 							class="bg-transparent w-full text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 							rows="6"
 							style="resize: vertical;"
+							aria-label={$i18n.t('Memory')}
 							placeholder={type === 'user'
 								? $i18n.t('Add a preference, fact, or instruction about you')
 								: $i18n.t('Add durable context for future chats')}

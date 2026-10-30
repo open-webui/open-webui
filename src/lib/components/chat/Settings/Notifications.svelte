@@ -358,10 +358,14 @@
 				: $i18n.t('settings.personal.notifications.addNotificationTarget.label')}
 		</h2>
 
-		<div class="text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<label
+			for="notification-form-id"
+			class="block text-[0.625rem] text-gray-400 dark:text-gray-600"
+		>
 			{$i18n.t('Target ID for notify')}
-		</div>
+		</label>
 		<input
+			id="notification-form-id"
 			bind:value={form.id}
 			placeholder={$i18n.t('Target ID')}
 			autocomplete="off"
@@ -369,10 +373,14 @@
 			class="block w-full bg-transparent py-0.5 font-mono text-[0.8125rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 		/>
 
-		<div class="mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<label
+			for="notification-form-url"
+			class="block mt-2 text-[0.625rem] text-gray-400 dark:text-gray-600"
+		>
 			{$i18n.t('Webhook')}
-		</div>
+		</label>
 		<input
+			id="notification-form-url"
 			type="url"
 			bind:value={form.url}
 			placeholder={editingId

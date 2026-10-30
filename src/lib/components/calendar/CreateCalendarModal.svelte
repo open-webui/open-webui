@@ -79,8 +79,10 @@
 		<div class="px-4 pb-2 flex flex-col gap-3">
 			<!-- Name -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+				<label for="calendar-name" class="block mb-1 text-xs text-gray-500">{$i18n.t('Name')}</label
+				>
 				<input
+					id="calendar-name"
 					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 					type="text"
 					bind:value={name}
@@ -115,7 +117,12 @@
 						style="background-color: {color};"
 						title={$i18n.t('Custom color')}
 					>
-						<input type="color" bind:value={color} class="opacity-0 w-0 h-0 absolute" />
+						<input
+							type="color"
+							bind:value={color}
+							aria-label={$i18n.t('Custom color')}
+							class="opacity-0 w-0 h-0 absolute"
+						/>
 					</label>
 				</div>
 			</div>
