@@ -2,10 +2,10 @@
 	import {
 		commentSurface,
 		contentHash,
+		commentSelectionDraft,
 		selectedComment
 	} from '$lib/components/comments/anchors';
 	import {
-		openComments,
 		config,
 		user,
 		artifactCode,
@@ -333,7 +333,8 @@
 		<div
 			class="markdown-prose"
 			use:commentSurface={{
-				resource_type: 'chat', resource_id: chatId,
+				resource_type: 'chat',
+				resource_id: chatId,
 				target_type: 'chat_message',
 				target_id: messageId,
 				surface_id: 'content',
@@ -388,7 +389,8 @@
 			<div
 				class="whitespace-pre-wrap text-[0.9375rem]"
 				use:commentSurface={{
-					resource_type: 'chat', resource_id: chatId,
+					resource_type: 'chat',
+					resource_id: chatId,
 					target_type: 'chat_message',
 					target_id: messageId,
 					surface_id: 'content',
@@ -411,11 +413,7 @@
 		onComment={commentSelection
 			? () => {
 					if (!commentSelection) return;
-					const { options, anchor } = commentSelection;
-					openComments(
-						{ resource_type: options.resource_type, resource_id: options.resource_id },
-						{ target_type: options.target_type, target_id: options.target_id, anchor }
-					);
+					commentSelectionDraft.set(commentSelection);
 					window.getSelection()?.removeAllRanges();
 					closeFloatingButtons();
 				}

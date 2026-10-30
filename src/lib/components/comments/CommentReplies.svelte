@@ -3,7 +3,7 @@
 	import { commentsRequest, type ResourceComment } from '$lib/apis/comments';
 	import CommentItem from './CommentItem.svelte';
 	import CommentReplyComposer from './CommentReplyComposer.svelte';
-	import { groupReplies } from '$lib/utils';
+	import { groupReplies, scrollToComment } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	export let parent: ResourceComment;
 	export let replyTo: ResourceComment | null;
@@ -71,7 +71,7 @@
 			if (linkedCommentId && revealedId !== linkedCommentId) {
 				revealedId = linkedCommentId;
 				await tick();
-				document.getElementById(`comment-${linkedCommentId}`)?.scrollIntoView({ block: 'nearest' });
+				if (alive && request === version) scrollToComment(linkedCommentId);
 			}
 		} catch (e) {
 			if (alive && request === version) onError(e);

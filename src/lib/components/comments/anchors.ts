@@ -1,5 +1,6 @@
 import { isSavedChatId } from '$lib/utils/chatId';
 import { sha256 } from 'js-sha256';
+import { writable } from 'svelte/store';
 import type { CommentAnchor, CommentResource, CommentTarget } from '$lib/apis/comments';
 
 export type CommentSurface = CommentResource &
@@ -21,14 +22,32 @@ export function noteCommentText(content: { json?: unknown; md?: string }) {
 	return content.json && typeof content.json === 'object' ? text(content.json) : (content.md ?? '');
 }
 const surfaces = new Map<HTMLElement, CommentSurface>();
+export const surfaceRevision = writable(0);
+export const commentSelectionDraft = writable<ReturnType<typeof selectedComment>>(null);
+export const getCommentSurfaces = () => surfaces;
+let pendingSurfaceUpdate = false;
+const surfaceChanged = () => {
+	if (pendingSurfaceUpdate) return;
+	pendingSurfaceUpdate = true;
+	queueMicrotask(() => {
+		pendingSurfaceUpdate = false;
+		surfaceRevision.update((value) => value + 1);
+	});
+};
 export function commentSurface(node: HTMLElement, options: CommentSurface) {
 	surfaces.set(node, options);
+	surfaceChanged();
+	const observer = new MutationObserver(surfaceChanged);
+	observer.observe(node, { childList: true, characterData: true, subtree: true });
 	return {
 		update(value: CommentSurface) {
 			surfaces.set(node, value);
+			surfaceChanged();
 		},
 		destroy() {
+			observer.disconnect();
 			surfaces.delete(node);
+			surfaceChanged();
 		}
 	};
 }
@@ -85,8 +104,7 @@ export function selectedComment() {
 	for (const [node, options] of surfaces) {
 		if (
 			options.enabled === false ||
-			(options.resource_type === 'chat' &&
-				!isSavedChatId(options.resource_id)) ||
+			(options.resource_type === 'chat' && !isSavedChatId(options.resource_id)) ||
 			!options.resource_id ||
 			!node.contains(range.startContainer) ||
 			!node.contains(range.endContainer)
@@ -132,6 +150,25 @@ export function selectedComment() {
 	}
 	return null;
 }
+export function anchorRange(node: HTMLElement, anchor: CommentAnchor): Range | null {
+	const { nodes, text } = surfaceText(node);
+	const position = anchorPosition(text, anchor);
+	if (!position) return null;
+	const range = document.createRange();
+	const start = [...text].slice(0, position[0]).join('').length;
+	const end = [...text].slice(0, position[1]).join('').length;
+	let offset = 0;
+	for (const n of nodes) {
+		if (start >= offset && start < offset + n.length) range.setStart(n, start - offset);
+		if (end > offset && end <= offset + n.length) {
+			range.setEnd(n, end - offset);
+			return range;
+		}
+		offset += n.length;
+	}
+	return null;
+}
+
 export function highlightAnchor(
 	resource: CommentResource,
 	targetId: string,
@@ -145,21 +182,8 @@ export function highlightAnchor(
 			options.surface_id !== anchor.surface_id
 		)
 			continue;
-		const { nodes, text } = surfaceText(node);
-		const position = anchorPosition(text, anchor);
-		if (!position) return false;
-		const range = document.createRange();
-		let start = [...text].slice(0, position[0]).join('').length;
-		let end = [...text].slice(0, position[1]).join('').length;
-		let offset = 0;
-		for (const n of nodes) {
-			if (start >= offset && start <= offset + n.length) range.setStart(n, start - offset);
-			if (end >= offset && end <= offset + n.length) {
-				range.setEnd(n, end - offset);
-				break;
-			}
-			offset += n.length;
-		}
+		const range = anchorRange(node, anchor);
+		if (!range) return false;
 		const highlights = (CSS as any).highlights;
 		const HighlightClass = (window as any).Highlight;
 		if (highlights && HighlightClass) {

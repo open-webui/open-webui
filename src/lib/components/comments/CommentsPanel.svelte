@@ -16,6 +16,7 @@
 	import CommentReplies from './CommentReplies.svelte';
 	import CommentComposer from './CommentComposer.svelte';
 	import CommentReplyComposer from './CommentReplyComposer.svelte';
+	import { scrollToComment } from '$lib/utils';
 	export let view: CommentsView;
 	export let embedded = false;
 	export let onCountChange: (count: number) => void = () => {};
@@ -150,8 +151,7 @@
 			if (alive) loading = false;
 		}
 		await tick();
-		if (alive && linkedCommentId === linkedRootId)
-			document.getElementById(`comment-${linkedRootId}`)?.scrollIntoView({ block: 'nearest' });
+		if (alive && linkedRootId && linkedCommentId === linkedRootId) scrollToComment(linkedRootId);
 	};
 	const more = async () => {
 		if (!resource || loadingMore) return;

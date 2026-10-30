@@ -2519,6 +2519,14 @@ export function groupReplies(items: ResourceComment[], parentId: string) {
 	return children;
 }
 
+export function scrollToComment(id: string) {
+	const element = document.getElementById(`comment-${id}`);
+	element?.scrollIntoView({ block: 'center' });
+	element?.animate([{ backgroundColor: '#a5a5c544' }, { backgroundColor: 'transparent' }], {
+		duration: 2200
+	});
+}
+
 export function commentLink(
 	comment: Pick<
 		ResourceComment,

@@ -108,10 +108,12 @@ async def mentions(
     return result
 
 
-async def list_comments(db, user, resource, resource_type, resource_id, parent_id, cursor, limit):
+async def list_comments(db, user, resource, resource_type, resource_id, parent_id, cursor, limit, *, anchored=False):
     query = select(Comment).where(
         Comment.resource_type == resource_type, Comment.resource_id == resource_id, Comment.parent_id == parent_id
     )
+    if anchored:
+        query = query.where(Comment.meta['anchor'].as_string().is_not(None), Comment.deleted_at.is_(None))
     if cursor:
         try:
             timestamp, id = cursor.split(':', 1)
@@ -138,11 +140,12 @@ async def list_resource_comments(
     resource_id: str,
     cursor: str | None = None,
     limit: int = Query(20, ge=1, le=50),
+    anchored: bool = False,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     resource = await comment_resource(resource_type, resource_id, user, db, request=request)
-    result = await list_comments(db, user, resource, resource_type, resource_id, None, cursor, limit)
+    result = await list_comments(db, user, resource, resource_type, resource_id, None, cursor, limit, anchored=anchored)
     result['total'] = await db.scalar(
         select(func.count())
         .select_from(Comment)

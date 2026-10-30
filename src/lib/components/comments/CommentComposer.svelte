@@ -10,6 +10,8 @@
 	export let draftKey: string;
 	export let contextLabel = '';
 	export let quote = '';
+	export let scrollable = true;
+	export let embedded = false;
 	export let onClearContext: (() => void) | null = null;
 	export let initialContent = '';
 	export let submitLabel = 'Comment';
@@ -88,35 +90,41 @@
 				: $settings?.chatDirection === 'LTR'
 					? 'ltr'
 					: 'auto'}
-			class="relative rounded-2xl border border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white/5 dark:bg-gray-500/5 ps-3 pb-2.5 {contextLabel ||
-			quote
-				? 'pt-1'
-				: 'pt-2.5'} {($settings?.highContrastMode ?? false)
+			class="relative {embedded
+				? ''
+				: `rounded-2xl border border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white/5 dark:bg-gray-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
+			false)
 				? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
 				: ''}"
 		>
 			{#if contextLabel || quote}
-				<div class="pb-2 pe-3 text-left w-full flex flex-col">
-					<div
-						class="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400"
-					>
-						<span class="truncate">{contextLabel}</span>{#if onClearContext}<button
-								type="button"
-								class="flex h-6 shrink-0 items-center justify-center p-0 hover:text-gray-700 dark:hover:text-gray-200"
-								aria-label={$i18n.t('Remove context')}
-								on:click={onClearContext}><XMark className="size-3.5" /></button
-							>{/if}
-					</div>
+				<div class="pb-2 {embedded ? '' : 'pe-3'} text-left w-full flex flex-col">
+					{#if contextLabel || onClearContext}
+						<div
+							class="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400"
+						>
+							<span class="truncate">{contextLabel}</span>{#if onClearContext}<button
+									type="button"
+									class="flex h-6 shrink-0 items-center justify-center p-0 hover:text-gray-700 dark:hover:text-gray-200"
+									aria-label={$i18n.t('Remove context')}
+									on:click={onClearContext}><XMark className="size-3.5" /></button
+								>{/if}
+						</div>
+					{/if}
 					{#if quote}<div
-							class="mb-1 mt-1 max-h-20 overflow-auto border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-xs text-gray-500 whitespace-pre-wrap"
+							class="{embedded ? '' : 'mb-1 mt-1'} {scrollable
+								? 'max-h-20 overflow-auto'
+								: ''} border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-xs text-gray-500 whitespace-pre-wrap break-words"
 						>
 							{quote}
 						</div>{/if}
 				</div>
 			{/if}
-			<div class={submitLabel === 'Save' ? 'pe-16' : 'pe-12'}>
+			<div class={embedded ? 'min-h-6 py-0.5 pe-9' : submitLabel === 'Save' ? 'pe-16' : 'pe-12'}>
 				<div
-					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full resize-none h-fit max-h-96 overflow-auto"
+					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full resize-none h-fit {scrollable
+						? 'max-h-96 overflow-auto'
+						: ''}"
 				>
 					<RichTextInput
 						id={`comment-input-${tempId}`}
@@ -154,7 +162,7 @@
 				</div>
 			</div>
 			{#if error}<p role="alert" class="py-1 text-xs text-red-500">{error}</p>{/if}
-			<div class="absolute bottom-2 end-2.5 flex items-center">
+			<div class="absolute {embedded ? 'bottom-0 end-0' : 'bottom-2 end-2.5'} flex items-center">
 				<div class="flex items-center gap-2">
 					<button
 						type="button"

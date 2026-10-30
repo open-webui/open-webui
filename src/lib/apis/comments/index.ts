@@ -1,14 +1,7 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type CommentResource = {
-	resource_type:
-		| 'model'
-		| 'knowledge'
-		| 'prompt'
-		| 'skill'
-		| 'tool'
-		| 'note'
-		| 'chat';
+	resource_type: 'model' | 'knowledge' | 'prompt' | 'skill' | 'tool' | 'note' | 'chat';
 	resource_id: string;
 };
 export type CommentAnchor = {
@@ -71,6 +64,7 @@ export async function commentsRequest<T>(
 			response.status,
 			typeof data.detail === 'string' ? data.detail : 'Unable to load comments'
 		);
+	if (method !== 'GET') window.dispatchEvent(new Event('comments:updated'));
 	return data;
 }
 export const resourceQuery = (resource: CommentResource) =>

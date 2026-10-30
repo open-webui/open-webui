@@ -17,7 +17,8 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import CommentsPanel from './CommentsPanel.svelte';
-	import { selectedComment } from './anchors';
+	import CommentHighlights from './CommentHighlights.svelte';
+	import { selectedComment, commentSelectionDraft } from './anchors';
 	import { toast } from 'svelte-sonner';
 	const i18n = getContext<any>('i18n');
 	let selection: ReturnType<typeof selectedComment> = null;
@@ -30,13 +31,19 @@
 		navigation += 1;
 		deepLink = '';
 		commentsView.set(null);
+		commentSelectionDraft.set(null);
 		selection = null;
 	}
-	$: commentsAllowed = !!($config?.features?.enable_comments && $user && !$page.url.pathname.startsWith('/s/'));
+	$: commentsAllowed = !!(
+		$config?.features?.enable_comments &&
+		$user &&
+		!$page.url.pathname.startsWith('/s/')
+	);
 	let preparing = false;
 	$: if (($user?.id ?? null) !== account) {
 		account = $user?.id ?? null;
 		commentsView.set(null);
+		commentSelectionDraft.set(null);
 		selection = null;
 		tick().then(() => commentDrafts.clear());
 	}
@@ -59,17 +66,12 @@
 				toast.error(e instanceof Error ? e.message : String(e));
 		}
 	};
-	$: if (
-		commentsAllowed &&
-		$page.url.searchParams.get('comment') &&
-		deepLink !== $page.url.href
-	) {
+	$: if (commentsAllowed && $page.url.searchParams.get('comment') && deepLink !== $page.url.href) {
 		deepLink = $page.url.href;
 		loadLink($page.url.searchParams.get('comment')!);
 	}
 	const select = () => {
-		if (!preparing)
-			selection = commentsAllowed ? selectedComment() : null;
+		if (!preparing) selection = commentsAllowed ? selectedComment() : null;
 	};
 	const commentSelection = async () => {
 		const selected = selection;
@@ -80,17 +82,19 @@
 		try {
 			await selected.options.prepare?.();
 			if (version !== navigation || accountId !== account) return;
-			openComments(
-				{
-					resource_type: selected.options.resource_type,
-					resource_id: selected.options.resource_id
-				},
-				{
-					target_type: selected.options.target_type,
-					target_id: selected.options.target_id,
-					anchor: selected.anchor
-				}
-			);
+			if (selected.options.resource_type === 'chat') commentSelectionDraft.set(selected);
+			else
+				openComments(
+					{
+						resource_type: selected.options.resource_type,
+						resource_id: selected.options.resource_id
+					},
+					{
+						target_type: selected.options.target_type,
+						target_id: selected.options.target_id,
+						anchor: selected.anchor
+					}
+				);
 			window.getSelection()?.removeAllRanges();
 			selection = null;
 		} catch (e) {
@@ -119,6 +123,7 @@
 	on:scroll|capture={() => (selection = null)}
 />
 {#if commentsAllowed}
+	{#key account}<CommentHighlights />{/key}
 	{#if selection && !selection.options.toolbar_id}
 		<button
 			type="button"
