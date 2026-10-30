@@ -43,16 +43,7 @@
 		</div>
 
 		{#if value}
-			<button
-				class="outline-none"
-				type="button"
-				on:click|stopPropagation={() => {
-					value = '';
-					onChange(value);
-				}}
-			>
-				<XMark className="size-3.5" />
-			</button>
+			<div class="size-3.5 shrink-0" />
 		{:else}
 			<ChevronDown className="size-2.5" strokeWidth="2.5" />
 		{/if}
@@ -65,6 +56,20 @@
 		</div>
 	</svelte:fragment>
 </Select>
+
+{#if value}
+	<button
+		class="focus-ring relative -ml-[1.375rem] mr-1.5 self-center rounded-sm outline-none"
+		type="button"
+		aria-label={$i18n.t('Clear filters')}
+		on:click={() => {
+			value = '';
+			onChange(value);
+		}}
+	>
+		<XMark className="size-3.5" />
+	</button>
+{/if}
 
 <!-- <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
