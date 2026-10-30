@@ -2216,6 +2216,7 @@
 						type="text"
 						class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
 						placeholder={$i18n.t('Search files and contents')}
+						aria-label={$i18n.t('Search files and contents')}
 						bind:value={searchQuery}
 					/>
 					{#if searchQuery}

@@ -477,6 +477,7 @@
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Notes')}
+						aria-label={$i18n.t('Search Notes')}
 					/>
 
 					{#if query}

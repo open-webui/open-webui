@@ -94,6 +94,7 @@
 					? 'px-0.5'
 					: ''} text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
 				placeholder={$i18n.t('Add a tag...')}
+				aria-label={$i18n.t('Add a tag')}
 				role="combobox"
 				aria-autocomplete="list"
 				aria-expanded={suggestionsOpen && filteredSuggestionTags.length > 0}

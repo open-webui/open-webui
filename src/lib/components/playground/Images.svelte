@@ -220,6 +220,9 @@
 							placeholder={sourceImages.length > 0
 								? $i18n.t('Describe the edit...')
 								: $i18n.t('Describe the image...')}
+							aria-label={sourceImages.length > 0
+								? $i18n.t('Describe the edit...')
+								: $i18n.t('Describe the image...')}
 							on:input={resizePromptTextarea}
 							on:focus={resizePromptTextarea}
 							on:keydown={(e) => {
