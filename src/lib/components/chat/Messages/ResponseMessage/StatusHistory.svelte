@@ -30,18 +30,19 @@
 {#if history && history.length > 0}
 	{#if status?.hidden !== true}
 		<div class="text-[0.9375rem] flex flex-col w-full">
-			<button
-				class="w-full"
-				aria-label={$i18n.t('Toggle status history')}
-				aria-expanded={showHistory}
-				on:click={() => {
-					showHistory = !showHistory;
-				}}
-			>
-				<div class="flex items-start gap-2">
+			<div class="relative w-full">
+				<button
+					class="absolute inset-0"
+					aria-label={$i18n.t('Toggle status history')}
+					aria-expanded={showHistory}
+					on:click={() => {
+						showHistory = !showHistory;
+					}}
+				></button>
+				<div class="relative pointer-events-none flex items-start gap-2">
 					<StatusItem {status} clamp={!showHistory || history.length > 1} />
 				</div>
-			</button>
+			</div>
 
 			{#if showHistory}
 				<div class="flex flex-row">

@@ -11,17 +11,21 @@
 </script>
 
 <Collapsible grow={true} className="w-full" buttonClassName="w-full" bind:open={state}>
-	<div class="flex items-center gap-2 text-gray-500 transition">
+	<button
+		type="button"
+		class="pointer-events-auto flex w-full items-center gap-2 text-gray-500 transition"
+		aria-expanded={state}
+	>
 		<slot />
 		{#if state}
 			<ChevronUp strokeWidth="2.5" className="size-3.5 " />
 		{:else}
 			<ChevronDown strokeWidth="2.5" className="size-3.5 " />
 		{/if}
-	</div>
+	</button>
 
 	<div
-		class="text-sm border border-gray-50 dark:border-gray-850/30 rounded-xl my-1.5 p-2 w-full"
+		class="pointer-events-auto text-sm border border-gray-50 dark:border-gray-850/30 rounded-xl my-1.5 p-2 w-full"
 		slot="content"
 	>
 		{#if status?.query}
