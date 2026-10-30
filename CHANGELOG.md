@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.6] - 2026-10-30
+## [0.12.6] - 2026-10-31
 
 ### Added
 
@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📏 **Knowledge base file limits.** Administrators can now cap how many files a knowledge base holds, how large each of its files may be and how many files go into it in one upload, for all knowledge bases in Admin Settings > Documents or with "KNOWLEDGE_MAX_FILE_COUNT", "KNOWLEDGE_MAX_FILE_SIZE" and "KNOWLEDGE_MAX_UPLOAD_COUNT", and a knowledge base's owner can set its own file count and size limits under Advanced when creating it or from Settings in its menu, while the global limits always apply. [Commit](https://github.com/open-webui/open-webui/commit/7618df3f53a8db2ad5352a789c88673a736b07a4), [Commit](https://github.com/open-webui/open-webui/commit/5c4fb61d862b011cf9efda6b2289de637ba8d6bb), [#33318](https://github.com/open-webui/open-webui/issues/33318), [#24845](https://github.com/open-webui/open-webui/discussions/24845)
 - 🗂️ **Sort files by date added.** The terminal file browser can now sort files by when they were added, next to name, size and date modified, on terminals that report creation times. [Commit](https://github.com/open-webui/open-webui/commit/8c308e4e88c48924209f0018d73beb82a4ba2d94)
 - 🏷️ **Role prompt variable.** System prompts, saved prompts and chat requests through the API can now use "{{USER_ROLE}}", which is replaced with the signed-in user's role, such as admin or user. [#33441](https://github.com/open-webui/open-webui/pull/33441), [#4765](https://github.com/open-webui/open-webui/discussions/4765)
-- ♿ **Accessibility improvements.** Screen reader users now hear a name for every window, form field, setting and icon button, including Admin Settings, Valves, filters and channel message actions, and keyboard users can answer tool approvals, dismiss notifications, open model details in Admin Analytics and reach every event on the calendar.
+- ♿ **Accessibility improvements.** Screen reader users now hear a name for every window, form field, setting and icon button, including Admin Settings, Valves, filters and channel message actions, and keyboard users can answer tool approvals, dismiss notifications, open model details in Admin Analytics, sort Analytics and group member tables, resize the sidebar, open notebook cells for editing, use multi-select lists in Valves, pick a status emoji and reach every event on the calendar.
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
 
