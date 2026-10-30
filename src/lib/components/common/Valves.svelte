@@ -79,6 +79,7 @@
 						{#if displaySpec.properties[property]?.enum ?? null}
 							<select
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								aria-label={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								on:change={() => {
 									dispatch('change');
@@ -103,6 +104,7 @@
 
 								<div class=" pr-2">
 									<Switch
+										ariaLabel={displaySpec.properties[property].title}
 										bind:state={valves[property]}
 										on:change={() => {
 											dispatch('change');
@@ -151,6 +153,7 @@
 							<input
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
 								type="text"
+								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
@@ -190,6 +193,7 @@
 									<div class="relative size-6">
 										<input
 											type="color"
+											aria-label={displaySpec.properties[property].title}
 											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
 											value={valves[property] ?? '#000000'}
 											on:input={(e) => {
@@ -203,6 +207,7 @@
 									<input
 										type="text"
 										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+										aria-label={displaySpec.properties[property].title}
 										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 										bind:value={valves[property]}
 										autocomplete="off"
@@ -229,6 +234,7 @@
 										<input
 											type="text"
 											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+											aria-label={displaySpec.properties[property].title}
 											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 											bind:value={valves[property]}
 											autocomplete="off"
@@ -242,6 +248,7 @@
 						{:else}
 							<textarea
 								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								autocomplete="off"
