@@ -29,9 +29,10 @@
 	export let onToggleHidden: () => void = () => {};
 
 	// Sort controls
-	export let sortBy: 'name' | 'size' | 'date' = 'name';
+	export let sortBy: 'name' | 'size' | 'date' | 'created' = 'name';
 	export let sortAsc: boolean = true;
-	export let onSort: (mode: 'name' | 'size' | 'date') => void = () => {};
+	export let showDateAdded = false;
+	export let onSort: (mode: 'name' | 'size' | 'date' | 'created') => void = () => {};
 
 	// Back / forward navigation
 	export let canGoBack = false;
@@ -230,6 +231,28 @@
 							/>
 						{/if}
 					</button>
+					{#if showDateAdded}
+						<button
+							type="button"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+							on:click={() => {
+								onSort('created');
+								sortMenuOpen = false;
+							}}
+						>
+							<span class="flex-1 text-left">{$i18n.t('Date Added')}</span>
+							{#if sortBy === 'created'}
+								<Icon
+									name="chevron-up"
+									size={12}
+									strokeWidth={1.5}
+									class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+										? ''
+										: 'rotate-180'}"
+								/>
+							{/if}
+						</button>
+					{/if}
 				</DropdownMenu>
 			</div>
 		</Dropdown>

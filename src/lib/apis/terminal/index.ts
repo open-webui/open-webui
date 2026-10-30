@@ -36,6 +36,7 @@ export type FileEntry = {
 	type: 'file' | 'directory';
 	size?: number;
 	modified?: number;
+	created?: number | null;
 	writable?: boolean;
 };
 

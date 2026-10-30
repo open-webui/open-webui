@@ -58,9 +58,11 @@
 	export let onLongPress: () => void = () => {};
 	export let onToggleExpand: (path: string) => void = () => {};
 	export let showDate: boolean = false;
+	export let dateField: 'modified' | 'created' = 'modified';
 	export let showHidden: boolean = false;
 	export let parentWritable = true;
 
+	$: entryDate = entry[dateField];
 	$: entryPath =
 		fullPath ??
 		(entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`);
@@ -511,16 +513,16 @@
 								{/if}
 							</span>
 						{:else if entry.type === 'file' && entry.size !== undefined && !renaming}
-							{#if showDate && entry.modified}
+							{#if showDate && entryDate != null}
 								<span class="text-[0.625rem] text-gray-400 shrink-0"
-									>{formatRelativeTime(entry.modified)}</span
+									>{formatRelativeTime(entryDate)}</span
 								>
 							{/if}
 							<span class="text-xs text-gray-400 shrink-0">{formatFileSize(entry.size)}</span>
 						{:else if entry.type === 'directory' && !renaming}
-							{#if showDate && entry.modified}
+							{#if showDate && entryDate != null}
 								<span class="text-[0.625rem] text-gray-400 shrink-0"
-									>{formatRelativeTime(entry.modified)}</span
+									>{formatRelativeTime(entryDate)}</span
 								>
 							{/if}
 							{#if terminalUrl}
