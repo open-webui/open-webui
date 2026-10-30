@@ -561,6 +561,7 @@
 				</div>
 				<Switch
 					state={hasPublicWriteGrant(accessGrants ?? [])}
+					ariaLabel={$i18n.t('Allow public write access')}
 					on:change={() => {
 						togglePublicWrite();
 					}}

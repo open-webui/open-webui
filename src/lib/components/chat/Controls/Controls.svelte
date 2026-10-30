@@ -125,6 +125,7 @@
 								: compactSystemPromptTextareaClass}
 							rows="3"
 							placeholder={$i18n.t('Enter system prompt')}
+							aria-label={$i18n.t('System Prompt')}
 						/>
 					</div>
 				</Collapsible>

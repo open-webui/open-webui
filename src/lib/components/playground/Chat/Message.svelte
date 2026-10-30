@@ -37,6 +37,9 @@
 			placeholder={$i18n.t(`Enter {{role}} message here`, {
 				role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
 			})}
+			aria-label={$i18n.t(`Enter {{role}} message here`, {
+				role: message.role === 'user' ? $i18n.t('a user') : $i18n.t('an assistant')
+			})}
 			rows="1"
 			on:input={(e) => {
 				textAreaElement.style.height = '';

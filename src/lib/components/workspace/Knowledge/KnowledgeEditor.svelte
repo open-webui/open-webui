@@ -125,12 +125,16 @@
 
 			<div class="w-full flex flex-col gap-2.5">
 				<div class="w-full">
-					<div class="{modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2">
+					<label
+						for="knowledge-name"
+						class="block {modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2"
+					>
 						{$i18n.t('What are you working on?')}
-					</div>
+					</label>
 
 					<div class="w-full mt-1">
 						<input
+							id="knowledge-name"
 							class={modal
 								? 'w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
 								: 'w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
@@ -143,12 +147,16 @@
 				</div>
 
 				<div>
-					<div class="{modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2">
+					<label
+						for="knowledge-description"
+						class="block {modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2"
+					>
 						{$i18n.t('What are you trying to achieve?')}
-					</div>
+					</label>
 
 					<div class="w-full mt-1">
 						<textarea
+							id="knowledge-description"
 							class={modal
 								? 'w-full resize-none text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
 								: 'w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}

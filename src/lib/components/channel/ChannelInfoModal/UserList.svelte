@@ -158,6 +158,7 @@
 							bind:value={query}
 							on:input={handleSearchInput}
 							placeholder={$i18n.t('Search')}
+							aria-label={$i18n.t('Search')}
 						/>
 					</div>
 				</div>

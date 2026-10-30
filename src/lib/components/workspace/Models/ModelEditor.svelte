@@ -1151,6 +1151,7 @@
 															? 'min-h-6'
 															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={name || $i18n.t('Model Name')}
+														aria-label={$i18n.t('Model Name')}
 														value={localizedField('name')}
 														on:input={(e) =>
 															setLocalizedField(
@@ -1164,6 +1165,7 @@
 															? 'min-h-6'
 															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={$i18n.t('Model Name')}
+														aria-label={$i18n.t('Model Name')}
 														bind:value={name}
 														required
 													/>
@@ -1234,6 +1236,7 @@
 													? 'min-h-6'
 													: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 												placeholder={$i18n.t('Model ID')}
+												aria-label={$i18n.t('Model ID')}
 												bind:value={id}
 												disabled={edit}
 												required
@@ -1741,11 +1744,12 @@
 											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
 											<div class="flex min-w-0 items-center">
-												<div
+												<label
+													for="tts-voice-input"
 													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
 												>
 													{$i18n.t('TTS Voice')}
-												</div>
+												</label>
 											</div>
 											<TTSVoiceInput
 												className="w-full font-normal text-gray-900 dark:text-gray-100"
