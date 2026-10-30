@@ -966,7 +966,9 @@
 								aria-autocomplete="list"
 								aria-expanded={filteredItems.length + downloadTargets.length > 0}
 								aria-controls="model-selector-list"
-								aria-activedescendant={filteredItems.length + downloadTargets.length > 0
+								aria-activedescendant={filteredItems.length + downloadTargets.length > 0 &&
+								(selectedModelIdx >= filteredItems.length ||
+									(selectedModelIdx >= visibleStart && selectedModelIdx < visibleEnd))
 									? `model-option-${selectedModelIdx}`
 									: undefined}
 								on:keydown={(e) => {
@@ -992,6 +994,18 @@
 									} else {
 										// if the user types something, reset to the top selection.
 										selectedModelIdx = 0;
+									}
+
+									if (
+										listContainer &&
+										selectedModelIdx < filteredItems.length &&
+										(selectedModelIdx < visibleStart || selectedModelIdx >= visibleEnd)
+									) {
+										listScrollTop = Math.max(
+											0,
+											selectedModelIdx * ITEM_HEIGHT - 128 + ITEM_HEIGHT / 2
+										);
+										listContainer.scrollTop = listScrollTop;
 									}
 
 									const item = document.querySelector(`[data-arrow-selected="true"]`);
