@@ -360,10 +360,10 @@
 		const close = (event: KeyboardEvent) => {
 			if (event.key === 'Escape' && currentNoteComments) closeNotePanel();
 		};
-		document.addEventListener('open-comments', open);
+		document.addEventListener('comments:open', open);
 		document.addEventListener('keydown', close);
 		return () => {
-			document.removeEventListener('open-comments', open);
+			document.removeEventListener('comments:open', open);
 			document.removeEventListener('keydown', close);
 		};
 	});

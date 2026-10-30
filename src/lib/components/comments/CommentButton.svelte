@@ -68,7 +68,7 @@
 			on:click|stopPropagation={() => {
 				onOpen();
 				document.dispatchEvent(
-					new CustomEvent('open-comments', { detail: { ...resource, ...target, modal } })
+					new CustomEvent('comments:open', { detail: { ...resource, ...target, modal } })
 				);
 			}}
 			><span class="relative inline-flex shrink-0">

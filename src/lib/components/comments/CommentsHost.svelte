@@ -83,7 +83,7 @@
 			if (selected.options.resource_type === 'chat') commentSelectionDraft.set(selected);
 			else
 				document.dispatchEvent(
-					new CustomEvent('open-comments', {
+					new CustomEvent('comments:open', {
 						detail: {
 							resource_type: selected.options.resource_type,
 							resource_id: selected.options.resource_id,
@@ -115,11 +115,11 @@
 	};
 	const openHandler = (event: Event) => open((event as CustomEvent<CommentsRequest>).detail);
 	onMount(() => {
-		document.addEventListener('open-comments', openHandler);
+		document.addEventListener('comments:open', openHandler);
 		document.addEventListener('mouseup', select);
 		document.addEventListener('keyup', select);
 		return () => {
-			document.removeEventListener('open-comments', openHandler);
+			document.removeEventListener('comments:open', openHandler);
 			document.removeEventListener('mouseup', select);
 			document.removeEventListener('keyup', select);
 		};
