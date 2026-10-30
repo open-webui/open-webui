@@ -46,6 +46,8 @@
 	let postedComment: ResourceComment | null = null;
 	let linkedRootId: string | null = null;
 	let linkedCommentId: string | null = null;
+	let commentList: HTMLDivElement;
+	let revealPending = false;
 	let error = '';
 	let loading = true;
 	let alive = true;
@@ -128,8 +130,15 @@
 	};
 	const unavailable = () =>
 		fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
+	const revealLinkedComment = () => {
+		if (!alive || loading || !revealPending || !linkedCommentId) return;
+		if (commentList?.querySelector('[aria-busy="true"]')) return;
+		revealPending = false;
+		scrollToComment(linkedCommentId);
+	};
 	const setup = async () => {
 		loading = true;
+		revealPending = !!view.comment_id;
 		try {
 			const context = await commentsRequest<CommentResource & { title: string }>(
 				`/context?${resourceQuery(view)}`
@@ -151,7 +160,7 @@
 			if (alive) loading = false;
 		}
 		await tick();
-		if (alive && linkedRootId && linkedCommentId === linkedRootId) scrollToComment(linkedRootId);
+		revealLinkedComment();
 	};
 	const more = async () => {
 		if (!resource || loadingMore) return;
@@ -199,9 +208,7 @@
 <svelte:window on:focus={refresh} />
 <div class="flex flex-col min-h-0 w-full h-full {embedded ? '' : 'bg-white dark:bg-gray-900'}">
 	{#if !embedded}
-		<header
-			class="sticky top-0 flex min-h-10 shrink-0 items-center justify-between px-4 py-1.5"
-		>
+		<header class="sticky top-0 flex min-h-10 shrink-0 items-center justify-between px-4 py-1.5">
 			<h2 class="flex items-center gap-1 font-normal text-sm" {title}>
 				{$i18n.t('Comments')}{#if total !== null && total > 0}<span
 						class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70 font-normal"
@@ -227,6 +234,7 @@
 		</div>
 	{/if}
 	<div
+		bind:this={commentList}
 		class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
 		class:flex={!items.length}
 		class:flex-col={!items.length}
@@ -278,6 +286,7 @@
 						onReply={reply}
 						onChange={refresh}
 						onError={fail}
+						onLoaded={revealLinkedComment}
 					/>
 				</div>
 			{/each}

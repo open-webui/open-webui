@@ -3,7 +3,7 @@
 	import { commentsRequest, type ResourceComment } from '$lib/apis/comments';
 	import CommentItem from './CommentItem.svelte';
 	import CommentReplyComposer from './CommentReplyComposer.svelte';
-	import { groupReplies, scrollToComment } from '$lib/utils';
+	import { groupReplies } from '$lib/utils';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	export let parent: ResourceComment;
 	export let replyTo: ResourceComment | null;
@@ -16,6 +16,7 @@
 	export let onReply: (comment: ResourceComment) => void;
 	export let onChange: () => Promise<void>;
 	export let onError: (error: unknown) => void;
+	export let onLoaded: () => void = () => {};
 	const i18n = getContext<any>('i18n');
 	type CommentPage = { items: ResourceComment[]; next_cursor: string | null };
 	let items: ResourceComment[] = [];
@@ -24,7 +25,6 @@
 	let loading = false;
 	let alive = true;
 	let version = 0;
-	let revealedId: string | null = null;
 	let insertedId: string | null = null;
 	$: if (postedComment?.parent_id === parent.id && postedComment.id !== insertedId) {
 		// Show the saved reply in the same update that removes its composer.
@@ -33,7 +33,6 @@
 		loading = false;
 		items = [...items.filter((comment) => comment.id !== postedComment.id), postedComment];
 		insertedId = postedComment.id;
-		revealedId = postedComment.id;
 	}
 	const fetchPage = (cursor?: string) =>
 		commentsRequest<CommentPage>(
@@ -68,15 +67,14 @@
 			if (!alive || request !== version) return;
 			items = result.items;
 			cursor = result.next_cursor;
-			if (linkedCommentId && revealedId !== linkedCommentId) {
-				revealedId = linkedCommentId;
-				await tick();
-				if (alive && request === version) scrollToComment(linkedCommentId);
-			}
 		} catch (e) {
 			if (alive && request === version) onError(e);
 		} finally {
-			if (alive && request === version) loading = false;
+			if (alive && request === version) {
+				loading = false;
+				await tick();
+				if (alive && request === version) onLoaded();
+			}
 		}
 	};
 	const more = async () => {
@@ -128,6 +126,7 @@
 {#if items.length || loading}
 	<div
 		id={`comment-replies-${parent.id}`}
+		aria-busy={loading}
 		class="ms-4 border-s border-gray-200/40 dark:border-gray-700/30"
 	>
 		{@render branch(parent.id)}

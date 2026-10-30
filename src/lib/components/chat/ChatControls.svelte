@@ -5,6 +5,7 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
 	import {
 		config,
 		temporaryChatEnabled,
@@ -153,6 +154,12 @@
 			showControls.set(false);
 		}
 	}
+	beforeNavigate(({ from, to }) => {
+		if (activeTab === 'comments' && from?.url.pathname !== to?.url.pathname) {
+			commentsView.set(null);
+			showControls.set(false);
+		}
+	});
 	onDestroy(() => {
 		++countVersion;
 		chatCommentsId.set(null);
