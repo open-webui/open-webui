@@ -62,13 +62,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
             latest=${{ github.ref == 'refs/heads/main' }}
-      - name: Clean up local cache until the last 2 weeks
-        continue-on-error: true
-        run: |
-          echo "Cleaning up Docker cache..."
-          docker buildx prune --filter type=local --filter until=336h --force
-          echo "Overall disk usage on the cache volume:"
-          df -h /var/lib/docker/cache
+
       - name: Build Docker image (latest)
         uses: docker/build-push-action@v7
         id: build
@@ -77,8 +71,8 @@ jobs:
           push: true
           labels: ${{ steps.meta.outputs.labels }}
           # outputs: type=image,name=${{ steps.image-vars.outputs.full_image_name }},push-by-digest=true,name-canonical=true,push=true
-          cache-to: type=local,dest=/var/lib/docker/cache,mode=max
-          cache-from: type=local,src=/var/lib/docker/cache
+          cache-from: type=registry,ref=${{ steps.image-vars.outputs.full_image_name }}:buildcache
+          cache-to: type=registry,ref=${{ steps.image-vars.outputs.full_image_name }}:buildcache,mode=max
           build-args: |
             BUILD_HASH=${{ github.sha }}
             UID=1001
