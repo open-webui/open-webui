@@ -1,7 +1,12 @@
+<script context="module" lang="ts">
+	const drafts = new Map<string, { content: string; temp_id: string }>();
+	let draftAccount: string | undefined;
+</script>
+
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import { settings, mobile, commentDrafts } from '$lib/stores';
+	import { settings, mobile, user } from '$lib/stores';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import MentionList from '$lib/components/channel/MessageInput/MentionList.svelte';
 	import { getSuggestionRenderer } from '$lib/components/common/RichTextInput/suggestions';
@@ -22,8 +27,12 @@
 	export let onSubmit: (content: string, tempId: string) => Promise<void>;
 	export let onCancel: (() => void) | null = null;
 	const i18n = getContext<any>('i18n');
-	let content = commentDrafts.get(draftKey)?.content ?? initialContent;
-	let tempId = commentDrafts.get(draftKey)?.temp_id ?? crypto.randomUUID();
+	if (draftAccount !== $user?.id) {
+		drafts.clear();
+		draftAccount = $user?.id;
+	}
+	let content = drafts.get(draftKey)?.content ?? initialContent;
+	let tempId = drafts.get(draftKey)?.temp_id ?? crypto.randomUUID();
 	let editor: import('@tiptap/core').Editor | null = null;
 	let saving = false;
 	let submitted = false;
@@ -47,8 +56,8 @@
 	];
 	const remember = () => {
 		if (submitted) return;
-		if (content.trim()) commentDrafts.set(draftKey, { content, temp_id: tempId });
-		else commentDrafts.delete(draftKey);
+		if (content.trim()) drafts.set(draftKey, { content, temp_id: tempId });
+		else drafts.delete(draftKey);
 	};
 	const submit = async () => {
 		if (saving || !content.trim()) return;
@@ -59,7 +68,7 @@
 			await onSubmit(content, tempId);
 			submitted = true;
 			content = '';
-			commentDrafts.delete(draftKey);
+			drafts.delete(draftKey);
 			tempId = crypto.randomUUID();
 			editor?.commands.clearContent();
 			onSubmitted();

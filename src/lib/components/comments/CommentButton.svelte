@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import { config, user, openComments, commentCounts } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
@@ -29,23 +29,23 @@
 		$config?.features?.enable_comments &&
 		$user &&
 		resource.resource_id &&
-		(resource.resource_type !== 'chat' ||
-			isSavedChatId(resource.resource_id))
+		(resource.resource_type !== 'chat' || isSavedChatId(resource.resource_id))
 	);
 	$: countKey = enabled && !menu ? `${$user.id}:${resourceQuery(resource)}` : '';
-	$: count = countKey ? ($commentCounts[countKey] ?? 0) : 0;
+	let count = 0;
 	const loadCount = async (key: string) => {
 		const version = ++requestVersion;
-		if (!key) return;
-		const previous = $commentCounts[key];
+		if (!key) {
+			count = 0;
+			return;
+		}
 		try {
 			const result = await commentsRequest<{ total: number }>(
 				`/?${resourceQuery(resource)}&limit=1`
 			);
-			if (version === requestVersion && $commentCounts[key] === previous)
-				commentCounts.update((counts) => ({ ...counts, [key]: result.total }));
+			if (version === requestVersion) count = result.total;
 		} catch {
-			if (version === requestVersion) commentCounts.update((counts) => ({ ...counts, [key]: 0 }));
+			if (version === requestVersion) count = 0;
 		}
 	};
 	$: loadCount(countKey);
@@ -54,7 +54,10 @@
 	});
 </script>
 
-<svelte:window on:focus={() => loadCount(countKey)} />
+<svelte:window
+	on:focus={() => loadCount(countKey)}
+	on:comments:updated={() => loadCount(countKey)}
+/>
 
 {#if enabled}
 	{#snippet commentButton()}
@@ -64,7 +67,9 @@
 			aria-label={count > 0 ? `${$i18n.t(label)} (${count})` : $i18n.t(label)}
 			on:click|stopPropagation={() => {
 				onOpen();
-				openComments(resource, { ...target, modal });
+				document.dispatchEvent(
+					new CustomEvent('open-comments', { detail: { ...resource, ...target, modal } })
+				);
 			}}
 			><span class="relative inline-flex shrink-0">
 				<Annotation className={menu ? 'size-3.5' : 'size-4'} />

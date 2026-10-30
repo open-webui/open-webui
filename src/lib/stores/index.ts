@@ -6,7 +6,7 @@ import {
 } from '$lib/utils/ui-visibility';
 import { APP_NAME } from '$lib/constants';
 import { type Writable, derived, get, writable } from 'svelte/store';
-import type { CommentResource, CommentTarget } from '$lib/apis/comments';
+import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
@@ -61,30 +61,6 @@ export const TTSWorker = writable(null);
 
 export const chatId = writable('');
 export const chatTitle = writable('');
-
-export type CommentsView = CommentResource &
-	CommentTarget & { comment_id?: string; modal?: boolean };
-// The mounted chat controls panel hosts comments for this chat.
-export const chatCommentsId = writable<string | null>(null);
-export const noteCommentsId = writable<string | null>(null);
-export const commentsView = writable<CommentsView | null>(null);
-export const commentCounts = writable<Record<string, number>>({});
-export const openComments = (
-	resource: CommentResource,
-	target: CommentTarget & { comment_id?: string; modal?: boolean } = {}
-) =>
-	commentsView.set({
-		...resource,
-		...target,
-		// Overlays cover the page-level pane; keep their comments above them.
-		modal:
-			target.modal ??
-			(!(resource.resource_type === 'note' && resource.resource_id === get(noteCommentsId)) &&
-				typeof document !== 'undefined' &&
-				!!document.querySelector('.modal, [aria-modal="true"]'))
-	});
-// Drafts stay in memory and are cleared when the signed-in account changes.
-export const commentDrafts = new Map<string, { content: string; temp_id: string }>();
 
 type ChannelListItem = {
 	id: string;
@@ -200,7 +176,14 @@ export const showSearch = writable(false);
 export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
-export const showControls = writable(false);
+export const showControls = writable<
+	| boolean
+	| 'controls'
+	| 'files'
+	| 'comments'
+	| 'overview'
+	| (CommentTarget & { tab: 'comments'; comment_id?: string })
+>(false);
 export const showEmbeds = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);

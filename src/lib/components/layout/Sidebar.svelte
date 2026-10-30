@@ -1025,7 +1025,7 @@
 <MobileSwipePanel
 	open={$showSidebar}
 	enabled={$mobile}
-	blocked={$showControls}
+	blocked={!!$showControls}
 	width={$sidebarWidth}
 	onOpenChange={(open) => showSidebar.set(open)}
 	let:visible

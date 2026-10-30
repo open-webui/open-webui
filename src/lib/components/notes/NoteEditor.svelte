@@ -2,10 +2,6 @@
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
 	import {
-		commentsView,
-		noteCommentsId,
-		commentCounts,
-		openComments,
 		config,
 		mobile,
 		models,
@@ -16,8 +12,9 @@
 		WEBUI_NAME,
 		pinnedNotes
 	} from '$lib/stores';
-	import CommentsPanel from '$lib/components/comments/CommentsPanel.svelte';
-	import { resourceQuery } from '$lib/apis/comments';
+	import CommentsPanel, {
+		type CommentsRequest
+	} from '$lib/components/comments/CommentsPanel.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
@@ -52,7 +49,6 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-
 
 	import { contentFiles, downloadNote } from './utils';
 	import NoteTabs from './NoteTabs.svelte';
@@ -344,23 +340,37 @@
 	let displayMediaRecord = false;
 
 	let showNoteChat = false;
-	$: noteCommentsId.set(note?.id ?? null);
 	$: commentsEnabled = !!($config?.features?.enable_comments && $user && note?.id);
-	$: currentNoteComments =
-		commentsEnabled &&
-		!$commentsView?.modal &&
-		$commentsView?.resource_type === 'note' &&
-		$commentsView.resource_id === note?.id
-			? $commentsView
-			: null;
-	$: noteCommentCount = note?.id
-		? ($commentCounts[
-				`${$user?.id}:${resourceQuery({ resource_type: 'note', resource_id: note.id })}`
-			] ?? 0)
-		: 0;
+	let currentNoteComments: CommentsRequest | null = null;
+	let linkedComment = '';
+	$: if (commentsEnabled && note?.id === $page.params.id && $page.url.href !== linkedComment) {
+		linkedComment = $page.url.href;
+		const comment_id = $page.url.searchParams.get('comment');
+		if (comment_id)
+			currentNoteComments = { resource_type: 'note', resource_id: note.id, comment_id };
+	}
+	$: if (currentNoteComments && (!commentsEnabled || currentNoteComments.resource_id !== note?.id))
+		currentNoteComments = null;
+	onMount(() => {
+		const open = (event: Event) => {
+			const request = (event as CustomEvent<CommentsRequest>).detail;
+			if (!request.modal && request.resource_type === 'note' && request.resource_id === note?.id)
+				currentNoteComments = request;
+		};
+		const close = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' && currentNoteComments) closeNotePanel();
+		};
+		document.addEventListener('open-comments', open);
+		document.addEventListener('keydown', close);
+		return () => {
+			document.removeEventListener('open-comments', open);
+			document.removeEventListener('keydown', close);
+		};
+	});
+	let noteCommentCount = 0;
 	$: if (currentNoteComments) showNoteChat = true;
 	const closeNotePanel = () => {
-		if (currentNoteComments) commentsView.set(null);
+		currentNoteComments = null;
 		showNoteChat = false;
 	};
 	let noteChatId = null;
@@ -807,7 +817,7 @@ ${content}
 			sidebarOpen: showNoteChat
 		});
 		if (!note?.id) return;
-		commentsView.set(null);
+		currentNoteComments = null;
 		showNoteChat = true;
 		if (noteChatLoading || noteChatId || noteChatDraftKey) return;
 
@@ -1036,8 +1046,6 @@ ${content}
 	});
 
 	onDestroy(() => {
-		if ($noteCommentsId === note?.id) noteCommentsId.set(null);
-		if (currentNoteComments) commentsView.set(null);
 		loadGeneration++;
 		if (note?.id) $socket?.emit('note:leave', { note_id: note.id });
 		if (debounceTimeout) clearTimeout(debounceTimeout);
@@ -1664,7 +1672,7 @@ ${content}
 							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 						on:click={() =>
 							tab === 'Comments'
-								? openComments({ resource_type: 'note', resource_id: note.id }, { modal: false })
+								? (currentNoteComments = { resource_type: 'note', resource_id: note.id })
 								: openNoteChat()}
 					>
 						{$i18n.t(tab)}
@@ -1685,7 +1693,11 @@ ${content}
 		{#if currentNoteComments}
 			<div class="flex-1 min-h-0">
 				{#key `${$user.id}:${note.id}:${currentNoteComments.comment_id ?? ''}`}
-					<CommentsPanel embedded bind:view={$commentsView} />
+					<CommentsPanel
+						embedded
+						bind:view={currentNoteComments}
+						onCountChange={(count) => (noteCommentCount = count)}
+					/>
 				{/key}
 			</div>
 		{/if}

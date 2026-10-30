@@ -2,7 +2,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import tippy, { type Instance } from 'tippy.js';
 	import dayjs from '$lib/dayjs';
-	import { socket, user, commentsView, openComments } from '$lib/stores';
+	import { socket, user, showControls } from '$lib/stores';
 	import { commentsRequest, resourceQuery, type ResourceComment } from '$lib/apis/comments';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import {
@@ -59,7 +59,11 @@
 			'comment-active',
 			(hovered.length
 				? hovered
-				: located.filter(({ comment }) => comment.id === $commentsView?.comment_id)
+				: located.filter(
+						({ comment }) =>
+							comment.id ===
+							(typeof $showControls === 'object' ? $showControls.comment_id : undefined)
+					)
 			).map(({ range }) => range)
 		);
 
@@ -260,10 +264,7 @@
 	};
 	const open = async (comment: ResourceComment) => {
 		hide();
-		openComments(
-			{ resource_type: comment.resource_type, resource_id: comment.resource_id },
-			{ comment_id: comment.id }
-		);
+		showControls.set({ tab: 'comments', comment_id: comment.id });
 		await tick();
 		scrollToComment(comment.id);
 	};

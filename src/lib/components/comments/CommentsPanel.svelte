@@ -1,12 +1,17 @@
+<script context="module" lang="ts">
+	import type { CommentResource, CommentTarget } from '$lib/apis/comments';
+	export type CommentsRequest = CommentResource &
+		CommentTarget & { comment_id?: string; modal?: boolean };
+</script>
+
 <script lang="ts">
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
-	import { socket, user, commentsView, commentCounts, type CommentsView } from '$lib/stores';
+	import { socket, user } from '$lib/stores';
 	import {
 		commentsRequest,
 		getComments,
 		resourceQuery,
 		CommentError,
-		type CommentResource,
 		type ResourceComment
 	} from '$lib/apis/comments';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -17,8 +22,9 @@
 	import CommentComposer from './CommentComposer.svelte';
 	import CommentReplyComposer from './CommentReplyComposer.svelte';
 	import { scrollToComment } from '$lib/utils';
-	export let view: CommentsView;
+	export let view: CommentsRequest;
 	export let embedded = false;
+	export let onClose: () => void = () => {};
 	export let onCountChange: (count: number) => void = () => {};
 	let total: number | null = null;
 	const i18n = getContext<any>('i18n');
@@ -33,11 +39,7 @@
 	};
 	let resource: CommentResource | null = null;
 	let title = '';
-	$: if (resource && total !== null && $user)
-		commentCounts.update((counts) => ({
-			...counts,
-			[`${$user.id}:${resourceQuery(resource)}`]: total
-		}));
+	$: if (resource && total !== null) window.dispatchEvent(new Event('comments:updated'));
 	let composerVersion = 0;
 	let loadedCount = 0;
 	let items: ResourceComment[] = [];
@@ -149,6 +151,11 @@
 			if (view.comment_id) {
 				const comment = await commentsRequest<ResourceComment>(`/${view.comment_id}`);
 				if (!alive) return;
+				if (
+					comment.resource_type !== resource.resource_type ||
+					comment.resource_id !== resource.resource_id
+				)
+					throw new CommentError(404, 'Comment not found');
 				linkedRootId = comment.parent_id ?? comment.id;
 				linkedCommentId = comment.id;
 			}
@@ -220,7 +227,7 @@
 					type="button"
 					aria-label={$i18n.t('Close')}
 					class="flex h-7 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-0"
-					on:click={() => commentsView.set(null)}><XMark className="size-4" /></button
+					on:click={onClose}><XMark className="size-4" /></button
 				>
 			</Tooltip>
 		</header>

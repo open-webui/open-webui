@@ -2496,7 +2496,10 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	stores: {
+		showControls: Pick<Writable<boolean>, 'set'>;
+		showFileNavPath: Writable<FileNavOpenRequest | null>;
+	},
 	options: { page?: unknown } = {}
 ) => {
 	if (path) {
