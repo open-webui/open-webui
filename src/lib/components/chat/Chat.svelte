@@ -1929,6 +1929,10 @@
 			});
 		}
 
+		if ($page.url.pathname === '/' || $page.url.pathname.startsWith('/folders/')) {
+			tick().then(initNewChat);
+		}
+
 		const showControlsSubscribe = showControls.subscribe((value) => {
 			if (!value) {
 				showCallOverlay.set(false);
@@ -2470,8 +2474,12 @@
 		return () => bridge?.end();
 	});
 	// Only real navigation resets the chat; shallow sidebar state changes must preserve it.
-	afterNavigate(async ({ to }) => {
-		if (to?.url.pathname === '/' || to?.url.pathname.startsWith('/folders/')) {
+	afterNavigate(async ({ from, to }) => {
+		// A navigation that mounts this page starts its new chat in onMount.
+		if (
+			from?.route.id === to?.route.id &&
+			(to?.url.pathname === '/' || to?.url.pathname.startsWith('/folders/'))
+		) {
 			await tick();
 			initNewChat();
 		}
