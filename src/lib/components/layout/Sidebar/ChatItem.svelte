@@ -789,6 +789,7 @@
 				>
 					<Tooltip content={$i18n.t('Generate')}>
 						<button
+							aria-label={$i18n.t('Generate')}
 							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 							id="generate-title-button"
 							disabled={generating}
@@ -805,6 +806,7 @@
 					{#if $visibleControls['chat.archive']}
 						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 							<button
+								aria-label={$i18n.t('Archive')}
 								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 								disabled={archiving}
 								on:click={() => {
@@ -820,6 +822,7 @@
 					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 						<Tooltip content={$i18n.t('Delete')}>
 							<button
+								aria-label={$i18n.t('Delete')}
 								class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 								disabled={deleting}
 								on:click={() => {

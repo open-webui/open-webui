@@ -98,6 +98,7 @@
 
 								{#if floatingActionButtons !== null}
 									<button
+										aria-label={$i18n.t('Add')}
 										class=""
 										type="button"
 										on:click={() => {

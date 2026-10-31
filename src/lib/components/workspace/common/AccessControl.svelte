@@ -637,6 +637,7 @@
 						{/if}
 
 						<button
+							aria-label={$i18n.t('Remove {{name}}', { name: group.name })}
 							class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 							type="button"
 							on:click={() => {
@@ -689,6 +690,7 @@
 							{/if}
 
 							<button
+								aria-label={$i18n.t('Remove {{name}}', { name: user.name ?? user.id })}
 								class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 								type="button"
 								on:click={() => {

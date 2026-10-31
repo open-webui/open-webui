@@ -1131,6 +1131,7 @@
 									{#if shiftKey}
 										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 											<button
+												aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
 												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
 												on:click={() => {
