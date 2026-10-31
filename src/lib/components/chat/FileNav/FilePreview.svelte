@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
+	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
@@ -27,6 +28,7 @@
 	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileSqliteData: ArrayBuffer | null = null;
+	export let fileModelData: ArrayBuffer | null = null;
 	export let fileDocxData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
@@ -284,6 +286,7 @@
 <div
 	class="flex-1 {fileImageUrl !== null ||
 	fileDocxData !== null ||
+	fileModelData !== null ||
 	filePdfData !== null ||
 	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
@@ -330,6 +333,32 @@
 			listLabel={isPptx ? 'Slides' : 'Pages'}
 			className="w-full h-full"
 		/>
+	{:else if fileModelData !== null}
+		{#key fileModelData}
+			{#await import('../../common/ModelPreview.svelte')}
+				<div class="flex h-full items-center justify-center"><Spinner className="size-4" /></div>
+			{:then { default: ModelPreview }}
+				<ModelPreview
+					data={fileModelData}
+					path={selectedFile ?? ''}
+					loadResource={baseUrl
+						? async (path, signal) => {
+								const result = await downloadFileBlob(
+									baseUrl,
+									apiKey,
+									path,
+									chatId ?? undefined,
+									signal
+								);
+								if (!result) throw new Error('Could not load model resource.');
+								return result.blob;
+							}
+						: undefined}
+				/>
+			{:catch}
+				<div class="p-4 text-sm text-red-500">{$i18n.t('Preview failed')}</div>
+			{/await}
+		{/key}
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}

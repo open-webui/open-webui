@@ -21,6 +21,7 @@
 	let fileVideoUrl: string | null = null;
 	let fileAudioUrl: string | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
 	let disposed = false;
 	const controller = new AbortController();
 	const documentPreview = supportsComments(path);
@@ -38,9 +39,10 @@
 		const isAudio = ['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus'].includes(
 			extension
 		);
+		const isModel = ['glb', 'gltf', 'stl', 'obj', 'ply'].includes(extension);
 		const isSqlite = ['db', 'sqlite', 'sqlite3', 'db3'].includes(extension);
 		try {
-			if (isImage || isVideo || isAudio || isSqlite) {
+			if (isImage || isVideo || isAudio || isSqlite || isModel) {
 				const result = await downloadFileBlob(
 					terminalUrl,
 					terminalKey,
@@ -49,9 +51,12 @@
 					controller.signal
 				);
 				if (!result || disposed) return;
-				if (isSqlite) {
+				if (isSqlite || isModel) {
 					const bytes = await result.blob.arrayBuffer();
-					if (!disposed) fileSqliteData = bytes;
+					if (!disposed) {
+						if (isModel) fileModelData = bytes;
+						else fileSqliteData = bytes;
+					}
 				} else {
 					const url = URL.createObjectURL(result.blob);
 					if (isImage) fileImageUrl = url;
@@ -109,7 +114,7 @@
 					apiKey={terminalKey}
 					chatId={sessionId ?? null}
 				/>
-			{:else if loading || fileContent !== null || fileImageUrl || fileVideoUrl || fileAudioUrl || fileSqliteData}
+			{:else if loading || fileContent !== null || fileImageUrl || fileVideoUrl || fileAudioUrl || fileSqliteData || fileModelData}
 				<FilePreview
 					selectedFile={path}
 					fileLoading={loading}
@@ -118,6 +123,7 @@
 					{fileVideoUrl}
 					{fileAudioUrl}
 					{fileSqliteData}
+					{fileModelData}
 					baseUrl={terminalUrl}
 					apiKey={terminalKey}
 					chatId={sessionId ?? null}

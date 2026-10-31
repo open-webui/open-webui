@@ -11,6 +11,7 @@
 
 	import {
 		showControls,
+		showOverview,
 		showArtifacts,
 		mobile,
 		temporaryChatEnabled,
@@ -32,6 +33,7 @@
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -391,7 +393,21 @@
 					</svg>
 					<div class="flex items-center">{$i18n.t('Scroll to Top')}</div>
 				</button>
+			{/if}
 
+			{#if Object.keys(chat?.chat?.history?.messages ?? {}).length > 0}
+				<button
+					draggable="false"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					aria-haspopup="dialog"
+					on:click={() => showOverview.set(true)}
+				>
+					<Map className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Overview')}</div>
+				</button>
+			{/if}
+
+			{#if scrollToTop}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
@@ -428,7 +444,8 @@
 			{/if}
 
 			{#if chat?.id && !$temporaryChatEnabled}
-				<CommentButton onComment={() => showControls.set('comments')}
+				<CommentButton
+					onComment={() => showControls.set('comments')}
 					menu
 					resource={{ resource_type: 'chat', resource_id: chat.id }}
 					onOpen={() => (show = false)}

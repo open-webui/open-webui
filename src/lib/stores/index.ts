@@ -181,7 +181,6 @@ export const showControls = writable<
 	| 'controls'
 	| 'files'
 	| 'comments'
-	| 'overview'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);

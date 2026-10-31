@@ -543,6 +543,7 @@
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
@@ -966,6 +967,7 @@
 		}
 		filePdfData = null;
 		fileSqliteData = null;
+		fileModelData = null;
 		fileDocxData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
@@ -1148,6 +1150,7 @@
 			fileAudioUrl: null,
 			filePdfData: null,
 			fileSqliteData: null,
+			fileModelData: null,
 			fileDocxData: null,
 			fileOfficeHtml: null,
 			fileOfficeSlides: null,
@@ -1189,14 +1192,22 @@
 				chatId ?? undefined
 			);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
-		} else if (isSqlite(filePath)) {
+		} else if (
+			isSqlite(filePath) ||
+			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
+		) {
 			const result = await downloadFileBlob(
 				terminal.url,
 				terminal.key,
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) next.fileSqliteData = await result.blob.arrayBuffer();
+			if (result) {
+				const data = await result.blob.arrayBuffer();
+				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
+					next.fileModelData = data;
+				else next.fileSqliteData = data;
+			}
 		} else if (isOffice(filePath)) {
 			const ext = getFileExt(filePath);
 			try {
@@ -1285,6 +1296,7 @@
 		fileAudioUrl = next.fileAudioUrl;
 		filePdfData = next.filePdfData;
 		fileSqliteData = next.fileSqliteData;
+		fileModelData = next.fileModelData;
 		fileDocxData = next.fileDocxData;
 		fileOfficeHtml = next.fileOfficeHtml;
 		fileOfficeSlides = next.fileOfficeSlides;
@@ -1302,6 +1314,7 @@
 				next.fileAudioUrl,
 				next.filePdfData,
 				next.fileSqliteData,
+				next.fileModelData,
 				next.fileDocxData,
 				next.fileOfficeHtml,
 				next.fileOfficeSlides
@@ -2358,6 +2371,7 @@
 						{fileAudioUrl}
 						{filePdfData}
 						{fileSqliteData}
+						{fileModelData}
 						{fileDocxData}
 						{fileContent}
 						{fileOfficeHtml}
