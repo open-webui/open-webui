@@ -145,6 +145,8 @@
 	) => {
 		if (!knowledge) return false;
 		if (count === 0) return true;
+		// Preserve the previous upload limit message for i18n extraction.
+		// $i18n.t('You can only upload a maximum of {{maxCount}} file(s) per batch.')
 		try {
 			await validateKnowledgeUpload(
 				localStorage.token,
@@ -974,6 +976,7 @@
 				on:click={() => goto('/workspace/knowledge')}
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
+			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
 			<div class="flex items-center gap-2">
 				{#if !isExternalKnowledge && knowledge?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-1"
 						resource={{ resource_type: 'knowledge', resource_id: knowledge.id }}

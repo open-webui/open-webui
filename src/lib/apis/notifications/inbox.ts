@@ -44,6 +44,12 @@ export async function inboxRequest<T>(path: string, method = 'GET'): Promise<T> 
 	return response.json();
 }
 
+// Preserve dynamically translated labels for i18n extraction.
+// t('{{name}} commented')
+// t('{{name}} replied')
+// t('{{name}} mentioned you')
+// t('Upcoming event')
+// t('Announcement')
 export const inboxLabels: Record<string, string> = {
 	'comment.created': '{{name}} commented',
 	'comment.replied': '{{name}} replied',

@@ -37,6 +37,7 @@
 	let saving = false;
 	let submitted = false;
 	let error = '';
+	// Preserve the previous mention label for i18n extraction: $i18n.t('Mention someone')
 	const suggestions = [
 		{
 			char: '@',

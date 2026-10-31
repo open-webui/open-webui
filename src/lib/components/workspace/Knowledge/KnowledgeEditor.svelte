@@ -57,6 +57,7 @@
 						})
 					: await createNewKnowledge(localStorage.token, name, description, accessGrants, meta);
 			if (res) {
+				// Preserve the dynamic creation message for i18n extraction: $i18n.t('Knowledge created successfully.')
 				toast.success($i18n.t(edit ? 'Saved' : 'Knowledge created successfully.'));
 				await onSaved(res);
 			}
@@ -257,6 +258,7 @@
 					type="submit"
 					disabled={loading}
 				>
+					<!-- Preserve the dynamic creation label for i18n extraction: {$i18n.t('Create Knowledge')} -->
 					<div class=" self-center font-normal">{$i18n.t(edit ? 'Save' : 'Create Knowledge')}</div>
 
 					{#if loading}

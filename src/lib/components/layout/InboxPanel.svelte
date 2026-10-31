@@ -29,6 +29,12 @@
 	let alive = true;
 	let version = 0;
 	let refreshPending = false;
+	// Preserve dynamic date labels and retired inbox copy for i18n extraction.
+	// $i18n.t('This week')
+	// $i18n.t('Earlier')
+	// $i18n.t('Inbox')
+	// $i18n.t('Close inbox')
+	// $i18n.t('{{count}} new since you last checked')
 	const dateLabel = (timestamp: string) => {
 		const date = dayjs(Number(timestamp) / 1e6);
 		return date.isSame(dayjs(), 'day')
