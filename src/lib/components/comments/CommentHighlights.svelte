@@ -21,6 +21,7 @@
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import CommentComposer from './CommentComposer.svelte';
+	import CommentReplyComposer from './CommentReplyComposer.svelte';
 	import { scrollToComment } from '$lib/utils';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
@@ -224,7 +225,7 @@
 		hovered = [];
 	};
 	const leave = () => {
-		if (!$commentSelectionDraft) hide();
+		if (!$commentSelectionDraft && !preview?.contains(document.activeElement)) hide();
 	};
 	const reveal = async (items: LocatedComment[], rect: DOMRect) => {
 		referenceRect = rect;
@@ -249,7 +250,7 @@
 		);
 	};
 	const move = (event: MouseEvent) => {
-		if ($commentSelectionDraft) return;
+		if ($commentSelectionDraft || preview?.contains(document.activeElement)) return;
 		if (popup?.popper.contains(event.target as Node)) return;
 		if (event.buttons || !window.getSelection()?.isCollapsed) {
 			hide();
@@ -309,7 +310,11 @@
 			}
 			return;
 		}
-		if (event.key === 'Escape' && hovered.length) {
+		if (
+			event.key === 'Escape' &&
+			hovered.length &&
+			!document.getElementById('suggestions-container')
+		) {
 			event.stopPropagation();
 			hide();
 		}
@@ -322,7 +327,7 @@
 		}
 	};
 	const scroll = (event: Event) => {
-		if ($commentSelectionDraft) {
+		if ($commentSelectionDraft || preview?.contains(document.activeElement)) {
 			void popup?.popperInstance?.update();
 			return;
 		}
@@ -444,7 +449,7 @@
 			</div>
 		{/if}
 		{#each hovered as { comment } (comment.id)}
-			<div class="px-3 py-2">
+			<div class="w-80 max-w-[calc(100vw-24px)] px-3 py-2">
 				<div class="mb-2.5 flex min-w-0 items-center gap-2">
 					<ProfileImage
 						src={comment.user?.id
@@ -481,6 +486,16 @@
 					class="mt-2 p-0 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
 					on:click={() => open(comment)}>{$i18n.t('View comment')}</button
 				>
+				<div class="-mx-1 mt-2">
+					<CommentReplyComposer
+						{comment}
+						autofocus={false}
+						className=""
+						onCancel={null}
+						onSubmitted={hide}
+						onPosted={refresh}
+					/>
+				</div>
 			</div>
 		{/each}
 	</div>

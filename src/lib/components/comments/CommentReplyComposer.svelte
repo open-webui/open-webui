@@ -4,13 +4,16 @@
 	import { commentsRequest, resourceQuery, type ResourceComment } from '$lib/apis/comments';
 	import CommentComposer from './CommentComposer.svelte';
 	export let comment: ResourceComment;
-	export let onCancel: () => void;
+	export let autofocus = true;
+	export let className = 'px-3 py-2';
+	export let onCancel: (() => void) | null;
 	export let onSubmitted: (id: string) => void;
 	export let onPosted: (comment: ResourceComment) => void;
 	let postedComment: ResourceComment | null = null;
 	let composer: CommentComposer;
 	let container: HTMLDivElement;
 	onMount(() => {
+		if (!autofocus) return;
 		tick().then(() => {
 			container?.scrollIntoView({ block: 'nearest' });
 			composer?.focus();
@@ -18,7 +21,7 @@
 	});
 </script>
 
-<div class="px-3 py-2" bind:this={container}>
+<div class={className} bind:this={container}>
 	<CommentComposer
 		bind:this={composer}
 		resource={comment}

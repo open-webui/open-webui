@@ -101,7 +101,7 @@
 					: 'auto'}
 			class="relative {embedded
 				? ''
-				: `rounded-2xl border border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100/70 hover:dark:border-gray-800 focus-within:dark:border-gray-800/70 transition bg-white/5 dark:bg-gray-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
+				: `rounded-2xl border border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200/70 focus-within:border-gray-100/70 hover:dark:border-gray-800/70 focus-within:dark:border-gray-800/70 transition bg-white/5 dark:bg-gray-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
 			false)
 				? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
 				: ''}"
