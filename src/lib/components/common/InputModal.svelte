@@ -23,7 +23,7 @@
 	let inputElement;
 </script>
 
-<Drawer bind:show>
+<Drawer bind:show ariaLabel={$i18n.t('Input')}>
 	<div class="flex h-full min-h-screen flex-col" {oninput}>
 		<div
 			class=" sticky top-0 z-30 flex justify-between bg-white px-4.5 pt-3 pb-3 dark:bg-gray-900 dark:text-gray-100"

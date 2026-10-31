@@ -1512,6 +1512,7 @@ ${content}
 					<div class="flex min-h-0 flex-1">
 						<NotePanel
 							bind:show={showNoteTabs}
+							ariaLabel={$i18n.t('Pages')}
 							side="left"
 							panelWidth={280}
 							minWidth={180}
@@ -1659,7 +1660,7 @@ ${content}
 			</div>
 		{/if}
 	</div>
-	<NotePanel bind:show={showNoteChat} onClose={closeNotePanel}>
+	<NotePanel bind:show={showNoteChat} ariaLabel={$i18n.t('Chat')} onClose={closeNotePanel}>
 		<div class="flex items-center justify-between px-2 pt-2 pb-1 shrink-0">
 			<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 				{#each commentsEnabled ? ['Chat', 'Comments'] : ['Chat'] as tab}
