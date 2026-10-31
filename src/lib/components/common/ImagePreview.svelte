@@ -9,6 +9,7 @@
 	import { settings } from '$lib/stores';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import PanzoomContainer from '$lib/components/common/PanzoomContainer.svelte';
+	import * as FocusTrap from 'focus-trap';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let show = false;
@@ -18,6 +19,7 @@
 	const i18n = getContext('i18n');
 
 	let previewElement = null;
+	let focusTrap: FocusTrap.FocusTrap | null = null;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (
@@ -31,15 +33,24 @@
 
 	$: if (show && previewElement) {
 		document.body.appendChild(previewElement);
+		focusTrap = FocusTrap.createFocusTrap(previewElement, {
+			escapeDeactivates: false,
+			allowOutsideClick: true
+		});
+		focusTrap.activate();
 		window.addEventListener('keydown', handleKeyDown);
 		document.body.style.overflow = 'hidden';
 	} else if (previewElement) {
+		focusTrap?.deactivate();
+		focusTrap = null;
 		window.removeEventListener('keydown', handleKeyDown);
 		document.body.removeChild(previewElement);
 		document.body.style.overflow = 'unset';
 	}
 
 	onDestroy(() => {
+		focusTrap?.deactivate();
+		focusTrap = null;
 		window.removeEventListener('keydown', handleKeyDown);
 		show = false;
 
@@ -57,6 +68,10 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={previewElement}
+		role="dialog"
+		aria-modal="true"
+		aria-label={alt || $i18n.t('Image')}
+		tabindex="-1"
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
 	>
 		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
