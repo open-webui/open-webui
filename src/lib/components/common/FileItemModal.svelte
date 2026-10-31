@@ -253,7 +253,7 @@
 	});
 </script>
 
-<Modal bind:show size="lg">
+<Modal ariaLabel={item?.name ?? $i18n.t('File')} bind:show size="lg">
 	<div class=" px-4.5 py-3.5 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">
@@ -417,6 +417,7 @@
 						<div class="absolute top-2 right-2 z-10">
 							<Tooltip content={$i18n.t('Reset view')}>
 								<button
+									aria-label={$i18n.t('Reset view')}
 									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
 									on:click={resetImageView}
 								>

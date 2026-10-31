@@ -28,14 +28,19 @@
 	onMount(() => {});
 </script>
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Quick Actions')}
+	size="sm"
+	bind:show
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Quick Actions')}
 			</h1>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
@@ -93,6 +98,7 @@
 
 								{#if floatingActionButtons !== null}
 									<button
+										aria-label={$i18n.t('Add')}
 										class=""
 										type="button"
 										on:click={() => {

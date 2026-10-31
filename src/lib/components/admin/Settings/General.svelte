@@ -308,8 +308,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.general.folderMaxFileCount.label')}
 						description={$i18n.t('settings.admin.general.folderMaxFileCount.description')}
+						forId="folder-max-file-count"
 					>
 						<input
+							id="folder-max-file-count"
 							class={inputClass}
 							type="number"
 							min="0"
@@ -382,6 +384,20 @@
 					let:labelId
 				>
 					<Switch bind:state={adminConfig.ENABLE_NOTES} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.comments.label')}
+					description={$i18n.t('settings.admin.general.comments.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_COMMENTS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.notifications.label')}
+					description={$i18n.t('settings.admin.general.notifications.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_NOTIFICATIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.channels.label')}
@@ -464,8 +480,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.general.webuiUrl.label')}
 					description={$i18n.t('settings.admin.general.webuiUrl.description')}
+					forId="webui-url"
 				>
 					<input
+						id="webui-url"
 						class={inputClass}
 						type="text"
 						placeholder={`e.g.) "http://localhost:3000"`}

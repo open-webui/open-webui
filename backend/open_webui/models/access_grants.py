@@ -582,47 +582,17 @@ class AccessGrantsTable:
         - There's a grant for any of the user's groups with the requested permission
         """
         async with get_async_db_context(db) as db:
-            # Build conditions for matching grants
-            conditions = [
-                # Public access
-                and_(
-                    AccessGrant.principal_type == 'user',
-                    AccessGrant.principal_id == '*',
-                ),
-                # Direct user access
-                and_(
-                    AccessGrant.principal_type == 'user',
-                    AccessGrant.principal_id == user_id,
-                ),
-            ]
-
-            # Group access
             if user_group_ids is None:
                 from open_webui.models.groups import Groups
 
                 user_groups = await Groups.get_groups_by_member_id(user_id, db=db, include_inherited=True)
                 user_group_ids = {group.id for group in user_groups}
 
-            if user_group_ids:
-                conditions.append(
-                    and_(
-                        AccessGrant.principal_type == 'group',
-                        AccessGrant.principal_id.in_(user_group_ids),
-                    )
+            return bool(
+                await db.scalar(
+                    select(self.has_grant_expression(user_id, resource_type, resource_id, permission, user_group_ids))
                 )
-
-            result = await db.execute(
-                select(AccessGrant)
-                .filter(
-                    AccessGrant.resource_type == resource_type,
-                    AccessGrant.resource_id == resource_id,
-                    AccessGrant.permission == permission,
-                    or_(*conditions),
-                )
-                .limit(1)
             )
-            grant = result.scalars().first()
-            return grant is not None
 
     async def get_accessible_resource_ids(
         self,
@@ -766,122 +736,55 @@ class AccessGrantsTable:
             user_ids = await self.get_user_ids_by_access_grants(access_grants, permission, db=db)
             return previous_user_ids - user_ids
 
+    def has_grant_expression(self, user_id, resource_type, resource_id, permission='read', user_group_ids=()):
+        """SQL grant check for one resource or a correlated resource column; ownership is separate."""
+        return (
+            select(AccessGrant.id)
+            .where(
+                AccessGrant.resource_type == resource_type,
+                AccessGrant.resource_id == resource_id,
+                AccessGrant.permission == permission,
+                or_(
+                    and_(
+                        AccessGrant.principal_type == 'user',
+                        AccessGrant.principal_id.in_(['*', user_id] if user_id else ['*']),
+                    ),
+                    and_(AccessGrant.principal_type == 'group', AccessGrant.principal_id.in_(user_group_ids or ())),
+                ),
+            )
+            .correlate_except(AccessGrant)
+            .exists()
+        )
+
     def has_permission_filter(
         self,
-        db,
         query,
         DocumentModel,
         filter: dict,
         resource_type: str,
         permission: str = 'read',
+        *,
+        db,
     ):
-        """
-        Apply access control filtering to a SQLAlchemy query by JOINing with access_grant.
-
-        This replaces the old JSON-column-based filtering with a proper relational JOIN.
-
-        Note: This method builds SQLAlchemy expressions and does NOT perform I/O itself,
-        so it remains synchronous. The caller is responsible for executing the query
-        asynchronously with `await db.execute(...)`.
-        """
+        """Apply owner-or-grant filtering without loading resources or duplicating rows."""
+        if permission == 'read_only':
+            return self._has_read_only_permission_filter(query, DocumentModel, filter, resource_type, db=db)
         group_ids = filter.get('group_ids', [])
         user_id = filter.get('user_id')
-
-        if permission == 'read_only':
-            return self._has_read_only_permission_filter(db, query, DocumentModel, filter, resource_type)
-
-        # Build principal conditions
-        principal_conditions = []
-
-        if group_ids or user_id:
-            # Public access: user:* read
-            principal_conditions.append(
-                and_(
-                    AccessGrant.principal_type == 'user',
-                    AccessGrant.principal_id == '*',
-                )
-            )
-
-        if user_id:
-            # Owner always has access
-            principal_conditions.append(DocumentModel.user_id == user_id)
-
-            # Direct user grant
-            principal_conditions.append(
-                and_(
-                    AccessGrant.principal_type == 'user',
-                    AccessGrant.principal_id == user_id,
-                )
-            )
-
-        if group_ids:
-            # Group grants
-            principal_conditions.append(
-                and_(
-                    AccessGrant.principal_type == 'group',
-                    AccessGrant.principal_id.in_(group_ids),
-                )
-            )
-
-        if not principal_conditions:
+        if not group_ids and not user_id:
             return query
-
-        # LEFT JOIN access_grant and filter
-        # We use a subquery approach to avoid duplicates from multiple matching grants
-        from sqlalchemy import exists as sa_exists
-
-        grant_exists = (
-            select(AccessGrant.id)
-            .where(
-                AccessGrant.resource_type == resource_type,
-                AccessGrant.resource_id == DocumentModel.id,
-                AccessGrant.permission == permission,
-                or_(
-                    and_(
-                        AccessGrant.principal_type == 'user',
-                        AccessGrant.principal_id == '*',
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'user',
-                                AccessGrant.principal_id == user_id,
-                            )
-                        ]
-                        if user_id
-                        else []
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'group',
-                                AccessGrant.principal_id.in_(group_ids),
-                            )
-                        ]
-                        if group_ids
-                        else []
-                    ),
-                ),
-            )
-            .correlate(DocumentModel)
-            .exists()
-        )
-
-        # Owner OR has a matching grant
-        owner_or_grant = [grant_exists]
+        allowed = self.has_grant_expression(user_id, resource_type, DocumentModel.id, permission, group_ids)
         if user_id:
-            owner_or_grant.append(DocumentModel.user_id == user_id)
-
-        query = query.filter(or_(*owner_or_grant))
-        return query
+            allowed = or_(DocumentModel.user_id == user_id, allowed)
+        return query.filter(allowed)
 
     def _has_read_only_permission_filter(
         self,
-        db,
         query,
         DocumentModel,
         filter: dict,
         resource_type: str,
+        db,
     ):
         """
         Filter for items where user has read BUT NOT write access.
@@ -895,81 +798,8 @@ class AccessGrantsTable:
         group_ids = filter.get('group_ids', [])
         user_id = filter.get('user_id')
 
-        from sqlalchemy import exists as sa_exists
-
-        read_grant_exists = (
-            select(AccessGrant.id)
-            .where(
-                AccessGrant.resource_type == resource_type,
-                AccessGrant.resource_id == DocumentModel.id,
-                AccessGrant.permission == 'read',
-                or_(
-                    and_(
-                        AccessGrant.principal_type == 'user',
-                        AccessGrant.principal_id == '*',
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'user',
-                                AccessGrant.principal_id == user_id,
-                            )
-                        ]
-                        if user_id
-                        else []
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'group',
-                                AccessGrant.principal_id.in_(group_ids),
-                            )
-                        ]
-                        if group_ids
-                        else []
-                    ),
-                ),
-            )
-            .correlate(DocumentModel)
-            .exists()
-        )
-
-        write_grant_exists = (
-            select(AccessGrant.id)
-            .where(
-                AccessGrant.resource_type == resource_type,
-                AccessGrant.resource_id == DocumentModel.id,
-                AccessGrant.permission == 'write',
-                or_(
-                    and_(
-                        AccessGrant.principal_type == 'user',
-                        AccessGrant.principal_id == '*',
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'user',
-                                AccessGrant.principal_id == user_id,
-                            )
-                        ]
-                        if user_id
-                        else []
-                    ),
-                    *(
-                        [
-                            and_(
-                                AccessGrant.principal_type == 'group',
-                                AccessGrant.principal_id.in_(group_ids),
-                            )
-                        ]
-                        if group_ids
-                        else []
-                    ),
-                ),
-            )
-            .correlate(DocumentModel)
-            .exists()
-        )
+        read_grant_exists = self.has_grant_expression(user_id, resource_type, DocumentModel.id, 'read', group_ids)
+        write_grant_exists = self.has_grant_expression(user_id, resource_type, DocumentModel.id, 'write', group_ids)
 
         conditions = [read_grant_exists, ~write_grant_exists]
 

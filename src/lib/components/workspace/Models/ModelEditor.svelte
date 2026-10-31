@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -788,6 +792,7 @@
 	});
 </script>
 
+<Comments bind:view={comments} resourceType={admin || readOnly ? null : 'model'} modal={admin}>
 {#if loaded}
 	<DiffEditorModal
 		bind:show={showComparison}
@@ -889,6 +894,7 @@
 					<span>{$i18n.t('Back')}</span>
 				</button>
 			{/if}
+
 			{#if edit && model?.version_id && !readOnly}
 				<ModelHistory
 					bind:this={historyMenu}
@@ -900,19 +906,23 @@
 					onProduction={productionHandler}
 				/>
 			{/if}
-			{#if !historical && !readOnly}
-				<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
+			<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
+				{#if edit && model?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-2"
+						resource={{ resource_type: 'model', resource_id: model.id }}
+					/>{/if}
+				{#if !historical && !readOnly}
 					<LanguageModeSelect
 						bind:value={editingLocale}
 						{languages}
 						{translatedLocales}
 						className="w-fit"
 					/>
-					{#if $user?.permissions?.sharing?.models || $user?.role === 'admin'}
-						<AccessButton on:click={() => (showAccessControlModal = true)} />
-					{/if}
-				</div>
-			{/if}
+				{/if}
+
+				{#if !historical && !readOnly && ($user?.permissions?.sharing?.models || $user?.role === 'admin')}
+					<AccessButton on:click={() => (showAccessControlModal = true)} />
+				{/if}
+			</div>
 		</div>
 
 		{#if selectingVersion}
@@ -1141,6 +1151,7 @@
 															? 'min-h-6'
 															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={name || $i18n.t('Model Name')}
+														aria-label={$i18n.t('Model Name')}
 														value={localizedField('name')}
 														on:input={(e) =>
 															setLocalizedField(
@@ -1154,6 +1165,7 @@
 															? 'min-h-6'
 															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
 														placeholder={$i18n.t('Model Name')}
+														aria-label={$i18n.t('Model Name')}
 														bind:value={name}
 														required
 													/>
@@ -1224,6 +1236,7 @@
 													? 'min-h-6'
 													: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
 												placeholder={$i18n.t('Model ID')}
+												aria-label={$i18n.t('Model ID')}
 												bind:value={id}
 												disabled={edit}
 												required
@@ -1731,11 +1744,12 @@
 											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
 											<div class="flex min-w-0 items-center">
-												<div
+												<label
+													for="tts-voice-input"
 													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
 												>
 													{$i18n.t('TTS Voice')}
-												</div>
+												</label>
 											</div>
 											<TTSVoiceInput
 												className="w-full font-normal text-gray-900 dark:text-gray-100"
@@ -1833,3 +1847,4 @@
 		<span class="sr-only">{$i18n.t('Loading...')}</span>
 	</div>
 {/if}
+</Comments>

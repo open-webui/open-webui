@@ -5,7 +5,8 @@ import {
 	type Visibility
 } from '$lib/utils/ui-visibility';
 import { APP_NAME } from '$lib/constants';
-import { type Writable, derived, writable } from 'svelte/store';
+import { type Writable, derived, get, writable } from 'svelte/store';
+import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
@@ -175,7 +176,13 @@ export const showSearch = writable(false);
 export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
-export const showControls = writable(false);
+export const showControls = writable<
+	| boolean
+	| 'controls'
+	| 'files'
+	| 'comments'
+	| (CommentTarget & { tab: 'comments'; comment_id?: string })
+>(false);
 export const showEmbeds = writable(false);
 export const showOverview = writable(false);
 export const showArtifacts = writable(false);
@@ -407,6 +414,8 @@ type Config = {
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_notes?: boolean;
+		enable_comments?: boolean;
+		enable_notifications?: boolean;
 		enable_channels?: boolean;
 		enable_user_webhooks?: boolean;
 		enable_automations?: boolean;

@@ -63,6 +63,7 @@
 				<div class=" flex items-center self-center space-x-1.5">
 					<Tooltip content={$i18n.t('Unpin')} className="flex items-center">
 						<button
+							aria-label={$i18n.t('Unpin')}
 							class=" self-center dark:hover:text-white transition"
 							on:click={() => {
 								onUnpin();

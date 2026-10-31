@@ -79,13 +79,18 @@
 	};
 </script>
 
-<Modal bind:show size="md" className="rounded-2xl bg-white dark:bg-gray-900">
+<Modal
+	ariaLabel={$i18n.t('Import skills')}
+	bind:show
+	size="md"
+	className="rounded-2xl bg-white dark:bg-gray-900"
+>
 	<div class="flex max-h-[calc(100dvh-3rem)] flex-col text-gray-900 dark:text-gray-100">
 		<div class="flex shrink-0 items-center justify-between gap-3 px-4 pt-3 pb-2">
 			<h2 class="text-sm font-medium">{$i18n.t('Import skills')}</h2>
 			<button
 				type="button"
-				class="rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => (show = false)}
 			>

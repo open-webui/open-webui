@@ -305,6 +305,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'FILE_IMAGE_COMPRESSION_HEIGHT': 'file.image_compression_height',
     'FILE_IMAGE_COMPRESSION_WIDTH': 'file.image_compression_width',
     'FILE_MAX_COUNT': 'rag.file.max_count',
+    'KNOWLEDGE_MAX_UPLOAD_COUNT': 'knowledge.max_upload_count',
+    'KNOWLEDGE_MAX_FILE_COUNT': 'knowledge.max_file_count',
+    'KNOWLEDGE_MAX_FILE_SIZE': 'knowledge.max_file_size',
     'FILE_MAX_SIZE': 'rag.file.max_size',
     'FIRECRAWL_API_BASE_URL': 'web.loader.firecrawl_api_url',
     'FIRECRAWL_API_KEY': 'web.loader.firecrawl_api_key',
@@ -684,6 +687,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
+        'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
+        'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
         'FILE_IMAGE_COMPRESSION_HEIGHT': config['file.image_compression_height'],
         'ALLOWED_FILE_EXTENSIONS': config['rag.file.allowed_extensions'],
@@ -935,6 +941,9 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Union[int, str | None] = None
     FILE_MAX_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_UPLOAD_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_FILE_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_FILE_SIZE: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
     ALLOWED_FILE_EXTENSIONS: list[str] | None = None
@@ -998,9 +1007,34 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     }
     if form_data.RAG_TOKENIZER_MODEL is not None:
         updates['rag.tokenizer_model'] = form_data.RAG_TOKENIZER_MODEL.strip()
-    for field in ('FILE_MAX_SIZE', 'FILE_MAX_COUNT', 'FILE_IMAGE_COMPRESSION_WIDTH', 'FILE_IMAGE_COMPRESSION_HEIGHT'):
+    for field in (
+        'FILE_MAX_SIZE',
+        'FILE_MAX_COUNT',
+        'KNOWLEDGE_MAX_UPLOAD_COUNT',
+        'KNOWLEDGE_MAX_FILE_COUNT',
+        'KNOWLEDGE_MAX_FILE_SIZE',
+        'FILE_IMAGE_COMPRESSION_WIDTH',
+        'FILE_IMAGE_COMPRESSION_HEIGHT',
+    ):
         if getattr(form_data, field) == '':
             updates[RETRIEVAL_CONFIG_KEYS[field]] = None
+
+    for field, label in (
+        ('KNOWLEDGE_MAX_UPLOAD_COUNT', 'Knowledge batch upload limit'),
+        ('KNOWLEDGE_MAX_FILE_COUNT', 'Knowledge file count limit'),
+        ('KNOWLEDGE_MAX_FILE_SIZE', 'Knowledge file size limit'),
+    ):
+        value = getattr(form_data, field)
+        if field in form_data.model_fields_set and value is None:
+            updates[RETRIEVAL_CONFIG_KEYS[field]] = None
+        if value not in (None, ''):
+            try:
+                value = int(value)
+                if value <= 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                raise HTTPException(400, f'{label} must be a positive integer.')
+            updates[RETRIEVAL_CONFIG_KEYS[field]] = value
 
     # Unload the previous internal reranker before applying its new settings.
     if config['rag.reranking_engine'] == '':
@@ -1116,6 +1150,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
+        'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
+        'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
         'FILE_IMAGE_COMPRESSION_HEIGHT': config['file.image_compression_height'],
         'ALLOWED_FILE_EXTENSIONS': config['rag.file.allowed_extensions'],

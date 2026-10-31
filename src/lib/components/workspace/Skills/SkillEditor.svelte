@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 
@@ -341,6 +345,7 @@
 	}}
 />
 
+<Comments bind:view={comments} resourceType="skill">
 <div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
 	<form
 		inert={loading}
@@ -359,7 +364,11 @@
 				<span>{$i18n.t('Back')}</span>
 			</button>
 			<div class="flex shrink-0 items-center gap-1 pr-0.5">
+				{#if edit && skill?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-2"
+						resource={{ resource_type: 'skill', resource_id: skill.id }}
+					/>{/if}
 				<LanguageModeSelect bind:value={locale} translatedLocales={Object.keys(meta.i18n ?? {})} />
+
 				{#if !disabled}
 					{#if $user?.permissions?.sharing?.skills || $user?.role === 'admin'}
 						<AccessButton
@@ -638,3 +647,4 @@
 		{/if}
 	</form>
 </div>
+</Comments>

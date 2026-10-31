@@ -561,9 +561,9 @@
 			<div class="space-y-2">
 				<div>
 					<div class=" mb-2 text-sm font-normal flex items-center gap-1.5">
-						<div>
+						<label for="pull-model-tag">
 							{$i18n.t('Pull a model from Ollama.com')}
-						</div>
+						</label>
 
 						<div>
 							<Tooltip content={$i18n.t('Update All Models')} placement="top">
@@ -594,6 +594,7 @@
 					<div class="flex w-full">
 						<div class="flex-1 mr-2">
 							<input
+								id="pull-model-tag"
 								class={inputClass}
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'mistral:7b'
@@ -604,6 +605,7 @@
 						<Tooltip content={$i18n.t('Pull Model')} placement="top">
 							<button
 								class={iconButtonClass}
+								aria-label={$i18n.t('Pull Model')}
 								on:click={() => {
 									pullModelHandler();
 								}}
@@ -808,10 +810,13 @@
 				</div>
 
 				<div>
-					<div class=" mb-2 text-sm font-normal">{$i18n.t('Create a model')}</div>
+					<label for="create-model-tag" class="block mb-2 text-sm font-normal"
+						>{$i18n.t('Create a model')}</label
+					>
 					<div class="flex w-full">
 						<div class="flex-1 mr-2 flex flex-col gap-2">
 							<input
+								id="create-model-tag"
 								class={inputClass}
 								placeholder={$i18n.t('Enter model tag (e.g. {{modelTag}})', {
 									modelTag: 'my-modelfile'
@@ -824,6 +829,7 @@
 								bind:value={createModelObject}
 								class="{textareaClass} resize-none scrollbar-hidden"
 								rows="6"
+								aria-label={$i18n.t('Model JSON')}
 								placeholder={`e.g. {"model": "my-modelfile", "from": "ollama:7b"})`}
 								disabled={createModelLoading}
 							/>
@@ -962,6 +968,7 @@
 											type="url"
 											required
 											bind:value={modelFileUrl}
+											aria-label={$i18n.t('Type Hugging Face Resolve (Download) URL')}
 											placeholder={$i18n.t('Type Hugging Face Resolve (Download) URL')}
 										/>
 									</div>
@@ -970,7 +977,12 @@
 
 							{#if (modelUploadMode === 'file' && modelInputFile && modelInputFile.length > 0) || (modelUploadMode === 'url' && modelFileUrl !== '')}
 								<Tooltip content={$i18n.t('Upload Model')} placement="top">
-									<button class={iconButtonClass} type="submit" disabled={modelLoading}>
+									<button
+										class={iconButtonClass}
+										type="submit"
+										aria-label={$i18n.t('Upload Model')}
+										disabled={modelLoading}
+									>
 										{#if modelLoading}
 											<div class="self-center">
 												<svg

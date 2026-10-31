@@ -1,4 +1,21 @@
 <script lang="ts">
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
+	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
+	import {
+		config,
+		mobile,
+		models,
+		settings,
+		showSidebar,
+		socket,
+		user,
+		WEBUI_NAME,
+		pinnedNotes
+	} from '$lib/stores';
+	import CommentsPanel, {
+		type CommentsRequest
+	} from '$lib/components/comments/CommentsPanel.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import fileSaver from 'file-saver';
@@ -32,18 +49,6 @@
 	import { WEBUI_BASE_URL } from '$lib/constants';
 	import { uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
-
-	import {
-		config,
-		mobile,
-		models,
-		settings,
-		showSidebar,
-		socket,
-		user,
-		WEBUI_NAME,
-		pinnedNotes
-	} from '$lib/stores';
 
 	import { contentFiles, downloadNote } from './utils';
 	import NoteTabs from './NoteTabs.svelte';
@@ -120,6 +125,7 @@
 	let note = null;
 	let activePageId = '';
 	let activePage: NotePage;
+	let savedCommentHashes: Record<string, string> = {};
 	let pageBusy = false;
 	let showNoteTabs = false;
 	let noteTabsPreferenceReady = false;
@@ -279,6 +285,7 @@
 			previousPage = structuredClone(oldPage);
 		}
 		note.data.pages = incoming.map((remote) => {
+			savedCommentHashes[remote.id] = contentHash(noteCommentText(remote.content));
 			const local = previous.find((p) => p.id === remote.id);
 			if (local && local.generation > remote.generation)
 				return {
@@ -333,7 +340,32 @@
 	let displayMediaRecord = false;
 
 	let showNoteChat = false;
-	$: if (showNoteChat) showNoteTabs = false;
+	$: commentsEnabled = !!($config?.features?.enable_comments && $user && note?.id);
+	let currentNoteComments: CommentsRequest | null = null;
+	let linkedComment = '';
+	$: if (commentsEnabled && note?.id === $page.params.id && $page.url.href !== linkedComment) {
+		linkedComment = $page.url.href;
+		const comment_id = $page.url.searchParams.get('comment');
+		if (comment_id)
+			currentNoteComments = { resource_type: 'note', resource_id: note.id, comment_id };
+	}
+	$: if (currentNoteComments && (!commentsEnabled || currentNoteComments.resource_id !== note?.id))
+		currentNoteComments = null;
+	onMount(() => {
+		const close = (event: KeyboardEvent) => {
+			if (event.key === 'Escape' && currentNoteComments) closeNotePanel();
+		};
+		document.addEventListener('keydown', close);
+		return () => {
+			document.removeEventListener('keydown', close);
+		};
+	});
+	let noteCommentCount = 0;
+	$: if (currentNoteComments) showNoteChat = true;
+	const closeNotePanel = () => {
+		currentNoteComments = null;
+		showNoteChat = false;
+	};
 	let noteChatId = null;
 	let noteChatLoading = false;
 	let noteChats = [];
@@ -384,6 +416,9 @@
 			if (note?.id && note.id !== res.id) $socket?.emit('note:leave', { note_id: note.id });
 			previousPage = null;
 			note = res;
+			savedCommentHashes = Object.fromEntries(
+				res.data.pages.map((p: NotePage) => [p.id, contentHash(noteCommentText(p.content))])
+			);
 			const requested = $page.url.searchParams.get('page');
 			const remembered = localStorage.getItem(`note-page:${$user?.id}:${id}`);
 			activePageId = '';
@@ -774,7 +809,10 @@ ${content}
 			currentChatId: noteChatId,
 			sidebarOpen: showNoteChat
 		});
-		if (!note?.id || noteChatLoading) return;
+		if (!note?.id) return;
+		currentNoteComments = null;
+		showNoteChat = true;
+		if (noteChatLoading || noteChatId || noteChatDraftKey) return;
 
 		noteChatLoading = true;
 		const chat = await getNoteChatById(localStorage.token, note.id).catch((error) => {
@@ -961,6 +999,7 @@ ${content}
 			const local = note.data.pages.find((p) => p.id === remote.id);
 			if (!local || remote.revision < local.revision || remote.generation < local.generation)
 				return;
+			savedCommentHashes[remote.id] = contentHash(noteCommentText(remote.content));
 			if (
 				remote.id === activePageId &&
 				note.write_access &&
@@ -1113,6 +1152,7 @@ ${content}
 								type="text"
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
+								aria-label={$i18n.t('Title')}
 								disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
 									titleGenerating}
 								required
@@ -1323,6 +1363,14 @@ ${content}
 									>
 										<EllipsisHorizontal className="size-5" />
 									</button>
+									<svelte:fragment slot="actions" let:close>
+										<CommentButton
+											menu
+											onOpen={close}
+											onComment={(request) => (currentNoteComments = request)}
+											resource={{ resource_type: 'note', resource_id: note.id }}
+										/>
+									</svelte:fragment>
 								</NoteMenu>
 
 								{#if liveParticipants.length > 0}
@@ -1377,7 +1425,6 @@ ${content}
 										aria-expanded={showNoteTabs}
 										aria-controls="note-tabs-panel"
 										on:click={() => {
-											if (!showNoteTabs) showNoteChat = false;
 											showNoteTabs = !showNoteTabs;
 										}}
 										><span class="truncate"
@@ -1467,7 +1514,7 @@ ${content}
 							bind:show={showNoteTabs}
 							side="left"
 							panelWidth={280}
-							minWidth={240}
+							minWidth={180}
 							closeOnDragBelowMinWidth={false}
 							resizerId="note-tabs-resizer"
 							storageKey={`note-tabs-width:${$user?.id}`}
@@ -1505,60 +1552,81 @@ ${content}
 								? note.title || $i18n.t('Untitled')
 								: activePage?.title}
 						>
-							{#each [activePage] as renderedPage (`${note.id}:${renderedPage.id}:${renderedPage.generation}:${autoFormat}`)}
-								<RichTextInput
-									{autoFormat}
-									bind:this={inputElement}
-									on:editor={(event) => (editor = event.detail)}
-									id={`note-${note.id}-${renderedPage.id}`}
-									className="input-prose-sm px-0.5 flex-1 min-h-[12rem]"
-									json={true}
-									bind:value={renderedPage.content.json}
-									html={editorHtml}
-									documentId={activeDocumentId}
-									bind:cursorTarget
-									collaboration={true}
-									socket={$socket}
-									user={$user}
-									dragHandle={true}
-									link={true}
-									image={true}
-									attachments={true}
-									placeholder={$i18n.t('Write something...')}
-									editable={versionIdx === null && note?.write_access}
-									onSelectionUpdate={({ editor }) => {
-										const { from, to } = editor.state.selection;
-										const selectedText = editor.state.doc.textBetween(from, to, ' ');
+							<div
+								use:commentSurface={{
+									resource_type: 'note',
+									resource_id: note.id,
+									target_type: 'note_page',
+									target_id: activePageId,
+									surface_id: activePageId,
+									content_hash: note.write_access
+										? contentHash(noteCommentText(activePage.content))
+										: savedCommentHashes[activePageId],
+									enabled: versionIdx === null,
+									prepare: flushActivePage,
+									onComment: (target) =>
+										(currentNoteComments = {
+											resource_type: 'note',
+											resource_id: note.id,
+											...target
+										})
+								}}
+							>
+								{#each [activePage] as renderedPage (`${note.id}:${renderedPage.id}:${renderedPage.generation}:${autoFormat}`)}
+									<RichTextInput
+										{autoFormat}
+										bind:this={inputElement}
+										on:editor={(event) => (editor = event.detail)}
+										id={`note-${note.id}-${renderedPage.id}`}
+										className="input-prose-sm ps-4 pe-0.5 pt-2 flex-1 min-h-[12rem]"
+										json={true}
+										bind:value={renderedPage.content.json}
+										html={editorHtml}
+										documentId={activeDocumentId}
+										bind:cursorTarget
+										collaboration={true}
+										socket={$socket}
+										user={$user}
+										dragHandle={true}
+										link={true}
+										image={true}
+										attachments={true}
+										placeholder={$i18n.t('Write something...')}
+										editable={versionIdx === null && note?.write_access}
+										onSelectionUpdate={({ editor }) => {
+											const { from, to } = editor.state.selection;
+											const selectedText = editor.state.doc.textBetween(from, to, ' ');
 
-										if (selectedText.length === 0) {
-											selectedContent = null;
-										} else {
-											selectedContent = {
-												text: selectedText,
-												from: from,
-												to: to
-											};
-										}
-									}}
-									onChange={(content) => {
-										renderedPage.content.json = content.json;
-										renderedPage.content.html = content.html;
-										renderedPage.content.md = content.md;
-									}}
-									fileHandler={true}
-									onFileDrop={(currentEditor, files, pos) =>
-										inputFilesHandler(files, currentEditor, pos)}
-									onFilePaste={() => {}}
-									on:paste={(event) => {
-										const e = event.detail.event || event;
-										const pasted = Array.from(e.clipboardData?.files ?? []);
-										if (pasted.length) {
-											e.preventDefault();
-											inputFilesHandler(pasted);
-										}
-									}}
-								/>
-							{/each}
+											if (selectedText.length === 0) {
+												selectedContent = null;
+											} else {
+												selectedContent = {
+													text: selectedText,
+													from: from,
+													to: to
+												};
+											}
+										}}
+										onChange={(content) => {
+											renderedPage.content.json = content.json;
+											renderedPage.content.html = content.html;
+											renderedPage.content.md = content.md;
+										}}
+										fileHandler={true}
+										onFileDrop={(currentEditor, files, pos) =>
+											inputFilesHandler(files, currentEditor, pos)}
+										onFilePaste={() => {}}
+										on:paste={(event) => {
+											const e = event.detail.event || event;
+											const pasted = Array.from(e.clipboardData?.files ?? []);
+											if (pasted.length) {
+												e.preventDefault();
+												inputFilesHandler(pasted);
+											}
+										}}
+									/>
+								{/each}
+							</div>
 						</div>
 					</div>
 				</div>
@@ -1591,49 +1659,90 @@ ${content}
 			</div>
 		{/if}
 	</div>
-	<NotePanel bind:show={showNoteChat}>
-		{#if noteChatLoading}
-			<div class="flex h-full items-center justify-center">
-				<Spinner className="size-5" />
+	<NotePanel bind:show={showNoteChat} onClose={closeNotePanel}>
+		<div class="flex items-center justify-between px-2 pt-2 pb-1 shrink-0">
+			<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
+				{#each commentsEnabled ? ['Chat', 'Comments'] : ['Chat'] as tab}
+					<button
+						type="button"
+						aria-pressed={tab === 'Comments' ? !!currentNoteComments : !currentNoteComments}
+						class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {(
+							tab === 'Comments' ? !!currentNoteComments : !currentNoteComments
+						)
+							? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+						on:click={() =>
+							tab === 'Comments'
+								? (currentNoteComments = { resource_type: 'note', resource_id: note.id })
+								: openNoteChat()}
+					>
+						{$i18n.t(tab)}
+						{#if tab === 'Comments' && noteCommentCount > 0}<span
+								class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+								>{noteCommentCount}</span
+							>{/if}
+					</button>
+				{/each}
 			</div>
-		{:else if note && (noteChatId || noteChatDraftKey)}
-			<Chat
-				embedded={true}
-				chatIdProp={noteChatId ?? ''}
-				embeddedChats={noteChats}
-				embeddedDraftKey={noteChatDraftKey}
-				suggestedPrompts={noteChatSuggestedPrompts}
-				selectedText={selectedContent?.text ?? ''}
-				notePageId={activePageId}
-				noteFiles={noteAttachmentFiles}
-				onBeforeNoteSubmit={flushActivePage}
-				onInsertToNote={note?.write_access ? insertHandler : null}
-				onNewEmbeddedChat={createNoteChat}
-				onCreateEmbeddedChat={createNoteChatOnFirstMessage}
-				onSelectEmbeddedChat={(chatId) => {
-					if (!chatId || chatId === noteChatId) return;
-					noteChatId = chatId;
-					noteChatDraftKey = '';
-				}}
-				onDeleteEmbeddedChat={deleteNoteChat}
-				onEmbeddedChatTitle={(chatId, title) => {
-					noteChats = noteChats.map((chat) =>
-						chat.id === chatId
-							? {
-									...chat,
-									title,
-									chat: {
-										...(chat.chat ?? {}),
-										title
-									}
-								}
-							: chat
-					);
-				}}
-				onCloseEmbedded={() => {
-					showNoteChat = false;
-				}}
-			/>
+			<button
+				type="button"
+				aria-label={$i18n.t('Close')}
+				class="py-1 px-0 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+				on:click={closeNotePanel}><XMark className="size-4" /></button
+			>
+		</div>
+		{#if currentNoteComments}
+			<div class="flex-1 min-h-0">
+				{#key `${$user.id}:${note.id}:${currentNoteComments.comment_id ?? ''}`}
+					<CommentsPanel
+						embedded
+						bind:view={currentNoteComments}
+						onCountChange={(count) => (noteCommentCount = count)}
+					/>
+				{/key}
+			</div>
 		{/if}
+		<div class="flex-1 min-h-0" class:hidden={!!currentNoteComments}>
+			{#if noteChatLoading}
+				<div class="flex h-full items-center justify-center">
+					<Spinner className="size-5" />
+				</div>
+			{:else if note && (noteChatId || noteChatDraftKey)}
+				<Chat
+					embedded={true}
+					chatIdProp={noteChatId ?? ''}
+					embeddedChats={noteChats}
+					embeddedDraftKey={noteChatDraftKey}
+					suggestedPrompts={noteChatSuggestedPrompts}
+					selectedText={selectedContent?.text ?? ''}
+					notePageId={activePageId}
+					noteFiles={noteAttachmentFiles}
+					onBeforeNoteSubmit={flushActivePage}
+					onInsertToNote={note?.write_access ? insertHandler : null}
+					onNewEmbeddedChat={createNoteChat}
+					onCreateEmbeddedChat={createNoteChatOnFirstMessage}
+					onSelectEmbeddedChat={(chatId) => {
+						if (!chatId || chatId === noteChatId) return;
+						noteChatId = chatId;
+						noteChatDraftKey = '';
+					}}
+					onDeleteEmbeddedChat={deleteNoteChat}
+					onEmbeddedChatTitle={(chatId, title) => {
+						noteChats = noteChats.map((chat) =>
+							chat.id === chatId
+								? {
+										...chat,
+										title,
+										chat: {
+											...(chat.chat ?? {}),
+											title
+										}
+									}
+								: chat
+						);
+					}}
+				/>
+			{/if}
+		</div>
 	</NotePanel>
 </div>

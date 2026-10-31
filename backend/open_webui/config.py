@@ -996,6 +996,17 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
+KNOWLEDGE_MAX_UPLOAD_COUNT = (
+    int(os.getenv('KNOWLEDGE_MAX_UPLOAD_COUNT')) if os.getenv('KNOWLEDGE_MAX_UPLOAD_COUNT') else None
+)
+KNOWLEDGE_MAX_FILE_COUNT = int(os.getenv('KNOWLEDGE_MAX_FILE_COUNT')) if os.getenv('KNOWLEDGE_MAX_FILE_COUNT') else None
+KNOWLEDGE_MAX_FILE_SIZE = int(os.getenv('KNOWLEDGE_MAX_FILE_SIZE')) if os.getenv('KNOWLEDGE_MAX_FILE_SIZE') else None
+if KNOWLEDGE_MAX_UPLOAD_COUNT is not None and KNOWLEDGE_MAX_UPLOAD_COUNT <= 0:
+    raise ValueError('KNOWLEDGE_MAX_UPLOAD_COUNT must be a positive integer or unset')
+if KNOWLEDGE_MAX_FILE_COUNT is not None and KNOWLEDGE_MAX_FILE_COUNT <= 0:
+    raise ValueError('KNOWLEDGE_MAX_FILE_COUNT must be a positive integer or unset')
+if KNOWLEDGE_MAX_FILE_SIZE is not None and KNOWLEDGE_MAX_FILE_SIZE <= 0:
+    raise ValueError('KNOWLEDGE_MAX_FILE_SIZE must be a positive integer or unset')
 
 RAG_FILE_MAX_SIZE = int(os.getenv('RAG_FILE_MAX_SIZE')) if os.getenv('RAG_FILE_MAX_SIZE') else None
 
@@ -2115,6 +2126,9 @@ AUTOMATION_MIN_INTERVAL = os.getenv('AUTOMATION_MIN_INTERVAL', '')
 
 AUTOMATION_AUTH_TOKEN_EXPIRES_IN = os.getenv('AUTOMATION_AUTH_TOKEN_EXPIRES_IN', '1h')
 
+ENABLE_COMMENTS = os.getenv('ENABLE_COMMENTS', 'False').lower() == 'true'
+ENABLE_NOTIFICATIONS = os.getenv('ENABLE_NOTIFICATIONS', 'True').lower() == 'true'
+
 ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
@@ -3013,6 +3027,9 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
+    'knowledge.max_upload_count': KNOWLEDGE_MAX_UPLOAD_COUNT,
+    'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,
+    'knowledge.max_file_size': KNOWLEDGE_MAX_FILE_SIZE,
     'rag.file.max_size': RAG_FILE_MAX_SIZE,
     'file.image_compression_width': FILE_IMAGE_COMPRESSION_WIDTH,
     'file.image_compression_height': FILE_IMAGE_COMPRESSION_HEIGHT,
@@ -3242,6 +3259,8 @@ DEFAULT_CONFIG = {
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,
     'automations.auth_token_expires_in': AUTOMATION_AUTH_TOKEN_EXPIRES_IN,
     'notes.enable': ENABLE_NOTES,
+    'comments.enable': ENABLE_COMMENTS,
+    'notifications.enable': ENABLE_NOTIFICATIONS,
     'users.enable_status': ENABLE_USER_STATUS,
     'evaluation.arena.enable': ENABLE_EVALUATION_ARENA_MODELS,
     'evaluation.arena.models': EVALUATION_ARENA_MODELS,

@@ -308,9 +308,8 @@ async def toggle_function_by_id(
             data={'type': function.type, 'name': function.name},
         )
         await dispatch_event_functions(
-            request.app,
+            request,
             lifecycle_event,
-            request=request,
             extra_function_ids=[function.id] if not function.is_active else None,
         )
         schedule_webhook_dispatch(request.app, lifecycle_event)

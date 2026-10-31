@@ -3,6 +3,8 @@ import time
 from typing import Optional
 
 from fastapi import HTTPException
+from open_webui.models.notifications import emit_changes
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -499,10 +501,12 @@ class SkillsTable:
     async def delete_skill_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
+                recipients = await delete_resource_comments('skill', [id], db=db)
                 await db.execute(delete(AccessGrant).filter_by(resource_type='skill', resource_id=id))
                 await db.execute(delete(SkillHistory).filter_by(skill_id=id))
                 await db.execute(delete(Skill).filter_by(id=id))
                 await db.commit()
+                await emit_changes(recipients)
 
                 return True
         except Exception:

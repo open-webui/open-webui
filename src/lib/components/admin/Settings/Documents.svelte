@@ -282,6 +282,9 @@
 			// can distinguish "clear this field" from "don't change this field"
 			FILE_MAX_SIZE: RAGConfig.FILE_MAX_SIZE ?? '',
 			FILE_MAX_COUNT: RAGConfig.FILE_MAX_COUNT ?? '',
+			KNOWLEDGE_MAX_UPLOAD_COUNT: RAGConfig.KNOWLEDGE_MAX_UPLOAD_COUNT ?? '',
+			KNOWLEDGE_MAX_FILE_COUNT: RAGConfig.KNOWLEDGE_MAX_FILE_COUNT ?? '',
+			KNOWLEDGE_MAX_FILE_SIZE: RAGConfig.KNOWLEDGE_MAX_FILE_SIZE ?? '',
 			FILE_IMAGE_COMPRESSION_WIDTH: RAGConfig.FILE_IMAGE_COMPRESSION_WIDTH ?? '',
 			FILE_IMAGE_COMPRESSION_HEIGHT: RAGConfig.FILE_IMAGE_COMPRESSION_HEIGHT ?? '',
 			ALLOWED_FILE_EXTENSIONS: RAGConfig.ALLOWED_FILE_EXTENSIONS.split(',')
@@ -494,8 +497,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.documents.supportedMediaMimeTypes.label')}
 					description={$i18n.t('settings.admin.documents.supportedMediaMimeTypes.description')}
+					forId="supported-media-mime-types"
 				>
 					<input
+						id="supported-media-mime-types"
 						class={inputClass}
 						placeholder={$i18n.t('image/*, video/*')}
 						bind:value={RAGConfig.CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES}
@@ -525,8 +530,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.datalabMarkerApiBaseUrl.label')}
 						description={$i18n.t('settings.admin.documents.datalabMarkerApiBaseUrl.description')}
+						forId="datalab-marker-api-base-url"
 					>
 						<input
+							id="datalab-marker-api-base-url"
 							class={inputClass}
 							placeholder={$i18n.t('Enter Datalab Marker API Base URL')}
 							bind:value={RAGConfig.DATALAB_MARKER_API_BASE_URL}
@@ -548,6 +555,7 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.additionalConfig.label')}
 						description={$i18n.t('settings.admin.documents.additionalConfig.description')}
+						forId="datalab-marker-additional-config"
 					>
 						<Tooltip
 							content={$i18n.t(
@@ -557,6 +565,7 @@
 							className="w-full"
 						>
 							<Textarea
+								id="datalab-marker-additional-config"
 								className={textareaClass}
 								bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
 								placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
@@ -638,8 +647,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.documentLoaderUrl.label')}
 							description={$i18n.t('settings.admin.documents.documentLoaderUrl.description')}
+							forId="external-document-loader-url"
 						>
 							<input
+								id="external-document-loader-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter External Document Loader URL')}
 								bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_URL}
@@ -663,6 +674,7 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.headers.label')}
 						description={$i18n.t('settings.admin.documents.headers.description')}
+						forId="external-document-loader-headers"
 					>
 						<Tooltip
 							content={$i18n.t(
@@ -670,6 +682,7 @@
 							)}
 						>
 							<Textarea
+								id="external-document-loader-headers"
 								className={textareaClass}
 								bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS}
 								placeholder={$i18n.t('Enter additional headers in JSON format')}
@@ -707,8 +720,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.tikaServerUrl.label')}
 							description={$i18n.t('settings.admin.documents.tikaServerUrl.description')}
+							forId="tika-server-url"
 						>
 							<input
+								id="tika-server-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter Tika Server URL')}
 								bind:value={RAGConfig.TIKA_SERVER_URL}
@@ -717,8 +732,9 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.tikaServerVersion.label')}
 							description={$i18n.t('settings.admin.documents.tikaServerVersion.description')}
+							forId="tika-server-version"
 						>
-							<SettingsSelect bind:value={RAGConfig.TIKA_SERVER_VERSION}>
+							<SettingsSelect id="tika-server-version" bind:value={RAGConfig.TIKA_SERVER_VERSION}>
 								<option value="3">{$i18n.t('Tika 3.x')}</option>
 								<option value="4">{$i18n.t('Tika 4.x')}</option>
 							</SettingsSelect>
@@ -729,8 +745,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.doclingServerUrl.label')}
 							description={$i18n.t('settings.admin.documents.doclingServerUrl.description')}
+							forId="docling-server-url"
 						>
 							<input
+								id="docling-server-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter Docling Server URL')}
 								bind:value={RAGConfig.DOCLING_SERVER_URL}
@@ -752,8 +770,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.doclingParams.label')}
 						description={$i18n.t('settings.admin.documents.doclingParams.description')}
+						forId="docling-params"
 					>
 						<Textarea
+							id="docling-params"
 							className={textareaClass}
 							bind:value={RAGConfig.DOCLING_PARAMS}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
@@ -765,8 +785,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.endpoint.label')}
 							description={$i18n.t('settings.admin.documents.endpoint.description')}
+							forId="document-intelligence-endpoint"
 						>
 							<input
+								id="document-intelligence-endpoint"
 								class={inputClass}
 								placeholder={$i18n.t('Enter Document Intelligence Endpoint')}
 								bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_ENDPOINT}
@@ -788,8 +810,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.documentIntelligenceModel.label')}
 						description={$i18n.t('settings.admin.documents.documentIntelligenceModel.description')}
+						forId="document-intelligence-model"
 					>
 						<input
+							id="document-intelligence-model"
 							class={inputClass}
 							placeholder={$i18n.t('Enter Document Intelligence Model')}
 							bind:value={RAGConfig.DOCUMENT_INTELLIGENCE_MODEL}
@@ -800,8 +824,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.mistralOcrApiBaseUrl.label')}
 							description={$i18n.t('settings.admin.documents.mistralOcrApiBaseUrl.description')}
+							forId="mistral-ocr-api-base-url"
 						>
 							<input
+								id="mistral-ocr-api-base-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter Mistral API Base URL')}
 								bind:value={RAGConfig.MISTRAL_OCR_API_BASE_URL}
@@ -828,8 +854,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.mistralOcrParams.label')}
 						description={$i18n.t('settings.admin.documents.mistralOcrParams.description')}
+						forId="mistral-ocr-params"
 					>
 						<Textarea
+							id="mistral-ocr-params"
 							className={textareaClass}
 							bind:value={RAGConfig.MISTRAL_OCR_PARAMS}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
@@ -841,8 +869,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.paddleocrVlBaseUrl.label')}
 							description={$i18n.t('settings.admin.documents.paddleocrVlBaseUrl.description')}
+							forId="paddleocr-vl-base-url"
 						>
 							<input
+								id="paddleocr-vl-base-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter PaddleOCR-vl API Base URL')}
 								bind:value={RAGConfig.PADDLEOCR_VL_BASE_URL}
@@ -892,8 +922,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.apiUrl.label')}
 						description={$i18n.t('settings.admin.documents.apiUrl.description')}
+						forId="mineru-api-url"
 					>
 						<input
+							id="mineru-api-url"
 							class={inputClass}
 							placeholder={RAGConfig.MINERU_API_MODE === 'cloud'
 								? $i18n.t('https://mineru.net/api/v4')
@@ -932,8 +964,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.mineruParams.label')}
 						description={$i18n.t('settings.admin.documents.mineruParams.description')}
+						forId="mineru-params"
 					>
 						<Textarea
+							id="mineru-params"
 							className={textareaClass}
 							bind:value={RAGConfig.MINERU_PARAMS}
 							placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
@@ -944,8 +978,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.fileExtensions.label')}
 						description={$i18n.t('settings.admin.documents.fileExtensions.description')}
+						forId="mineru-file-extensions"
 					>
 						<input
+							id="mineru-file-extensions"
 							class={inputClass}
 							placeholder={$i18n.t('pdf, docx, pptx, xlsx')}
 							bind:value={RAGConfig.MINERU_FILE_EXTENSIONS}
@@ -985,8 +1021,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.tokenizerModel.label')}
 							description={$i18n.t('settings.admin.documents.tokenizerModel.description')}
+							forId="tokenizer-model"
 						>
 							<input
+								id="tokenizer-model"
 								class={inputClass}
 								placeholder={$i18n.t('Enter Tokenizer Model')}
 								bind:value={RAGConfig.RAG_TOKENIZER_MODEL}
@@ -1011,8 +1049,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.chunkSize.label')}
 							description={$i18n.t('settings.admin.documents.chunkSize.description')}
+							forId="chunk-size"
 						>
 							<input
+								id="chunk-size"
 								class={inputClass}
 								type="number"
 								placeholder={$i18n.t('Enter Chunk Size')}
@@ -1024,8 +1064,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.chunkOverlap.label')}
 							description={$i18n.t('settings.admin.documents.chunkOverlap.description')}
+							forId="chunk-overlap"
 						>
 							<input
+								id="chunk-overlap"
 								class={inputClass}
 								type="number"
 								placeholder={$i18n.t('Enter Chunk Overlap')}
@@ -1040,8 +1082,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.chunkMinSizeTarget.label')}
 							description={$i18n.t('settings.admin.documents.chunkMinSizeTarget.description')}
+							forId="chunk-min-size-target"
 						>
 							<input
+								id="chunk-min-size-target"
 								class={inputClass}
 								type="number"
 								placeholder={$i18n.t('Enter Chunk Min Size Target')}
@@ -1091,8 +1135,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.openaiurl.label')}
 								description={$i18n.t('settings.admin.documents.openaiurl.description')}
+								forId="embedding-openai-url"
 							>
 								<input
+									id="embedding-openai-url"
 									class={inputClass}
 									placeholder={$i18n.t('settings.admin.documents.openaiurl.label')}
 									bind:value={OpenAIUrl}
@@ -1116,8 +1162,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.ollamaurl.label')}
 								description={$i18n.t('settings.admin.documents.ollamaurl.description')}
+								forId="embedding-ollama-url"
 							>
 								<input
+									id="embedding-ollama-url"
 									class={inputClass}
 									placeholder={$i18n.t('settings.admin.documents.ollamaurl.label')}
 									bind:value={OllamaUrl}
@@ -1141,8 +1189,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.azureopenaiurl.label')}
 								description={$i18n.t('settings.admin.documents.azureopenaiurl.description')}
+								forId="embedding-azure-openai-url"
 							>
 								<input
+									id="embedding-azure-openai-url"
 									class={inputClass}
 									placeholder={$i18n.t('settings.admin.documents.azureopenaiurl.label')}
 									bind:value={AzureOpenAIUrl}
@@ -1162,8 +1212,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.version.label')}
 								description={$i18n.t('settings.admin.documents.version.description')}
+								forId="embedding-azure-openai-version"
 							>
 								<input
+									id="embedding-azure-openai-version"
 									class={inputClass}
 									placeholder={$i18n.t('settings.admin.documents.version.label')}
 									bind:value={AzureOpenAIVersion}
@@ -1176,9 +1228,11 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.embeddingModel.label')}
 						description={$i18n.t('settings.admin.documents.embeddingModel.description')}
+						forId="embedding-model"
 					>
 						<div class="flex w-full gap-2">
 							<input
+								id="embedding-model"
 								class={inputClass}
 								placeholder={RAG_EMBEDDING_ENGINE === 'ollama'
 									? $i18n.t('Set embedding model')
@@ -1368,8 +1422,10 @@
 										description={$i18n.t(
 											'settings.admin.documents.ragExternalRerankerUrl.description'
 										)}
+										forId="external-reranker-url"
 									>
 										<input
+											id="external-reranker-url"
 											class={inputClass}
 											placeholder={$i18n.t('settings.admin.documents.ragExternalRerankerUrl.label')}
 											bind:value={RAGConfig.RAG_EXTERNAL_RERANKER_URL}
@@ -1397,8 +1453,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.rerankingModel.label')}
 								description={$i18n.t('settings.admin.documents.rerankingModel.description')}
+								forId="reranking-model"
 							>
 								<input
+									id="reranking-model"
 									class={inputClass}
 									placeholder={$i18n.t('Set reranking model (e.g. {{model}})', {
 										model: 'BAAI/bge-reranker-v2-m3'
@@ -1427,8 +1485,10 @@
 						<AdminSettingField
 							label={$i18n.t('settings.admin.documents.topK.label')}
 							description={$i18n.t('settings.admin.documents.topK.description')}
+							forId="top-k"
 						>
 							<input
+								id="top-k"
 								class={inputClass}
 								type="number"
 								placeholder={$i18n.t('Enter Top K')}
@@ -1442,8 +1502,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.topKReranker.label')}
 								description={$i18n.t('settings.admin.documents.topKReranker.description')}
+								forId="top-k-reranker"
 							>
 								<input
+									id="top-k-reranker"
 									class={inputClass}
 									type="number"
 									placeholder={$i18n.t('Enter Top K Reranker')}
@@ -1456,8 +1518,10 @@
 							<AdminSettingField
 								label={$i18n.t('settings.admin.documents.relevanceThreshold.label')}
 								description={$i18n.t('settings.admin.documents.relevanceThreshold.description')}
+								forId="relevance-threshold"
 							>
 								<input
+									id="relevance-threshold"
 									class={inputClass}
 									type="number"
 									step="0.01"
@@ -1492,6 +1556,7 @@
 									<div class="flex-1">
 										<input
 											id="steps-range"
+											aria-label={$i18n.t('settings.admin.documents.bm25Weight.label')}
 											type="range"
 											min="0"
 											max="1"
@@ -1508,6 +1573,7 @@
 									</div>
 									<input
 										bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
+										aria-label={$i18n.t('settings.admin.documents.bm25Weight.label')}
 										type="number"
 										class="w-14 bg-transparent text-center text-xs outline-none"
 										min="0"
@@ -1523,6 +1589,7 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.documents.ragTemplate.label')}
 					description={$i18n.t('settings.admin.documents.ragTemplate.description')}
+					forId="rag-template"
 				>
 					<Tooltip
 						content={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
@@ -1530,6 +1597,7 @@
 						className="w-full"
 					>
 						<Textarea
+							id="rag-template"
 							className={textareaClass}
 							bind:value={RAGConfig.RAG_TEMPLATE}
 							placeholder={$i18n.t(
@@ -1552,8 +1620,10 @@
 				<AdminSettingField
 					label={$i18n.t('settings.admin.documents.allowedFileExtensions.label')}
 					description={$i18n.t('settings.admin.documents.allowedFileExtensions.description')}
+					forId="allowed-file-extensions"
 				>
 					<input
+						id="allowed-file-extensions"
 						class={inputClass}
 						type="text"
 						placeholder={$i18n.t('e.g. pdf, docx, txt')}
@@ -1566,8 +1636,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.maxUploadSize.label')}
 						description={$i18n.t('settings.admin.documents.maxUploadSize.description')}
+						forId="max-upload-size"
 					>
 						<input
+							id="max-upload-size"
 							class={inputClass}
 							type="number"
 							placeholder={$i18n.t('Leave empty for unlimited')}
@@ -1579,8 +1651,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.maxUploadCount.label')}
 						description={$i18n.t('settings.admin.documents.maxUploadCount.description')}
+						forId="max-upload-count"
 					>
 						<input
+							id="max-upload-count"
 							class={inputClass}
 							type="number"
 							placeholder={$i18n.t('Leave empty for unlimited')}
@@ -1591,12 +1665,66 @@
 					</AdminSettingField>
 				</div>
 
+				<AdminSettingField
+					label={$i18n.t('settings.admin.documents.knowledgeMaxUploadCount.label')}
+					description={$i18n.t('settings.admin.documents.knowledgeMaxUploadCount.description')}
+					forId="knowledge-max-upload-count"
+				>
+					<input
+						id="knowledge-max-upload-count"
+						class={inputClass}
+						type="number"
+						placeholder={$i18n.t('Leave empty for unlimited')}
+						bind:value={RAGConfig.KNOWLEDGE_MAX_UPLOAD_COUNT}
+						autocomplete="off"
+						min="1"
+						step="1"
+					/>
+				</AdminSettingField>
+
+				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.knowledgeMaxSize.label')}
+						description={$i18n.t('settings.admin.documents.knowledgeMaxSize.description')}
+						forId="knowledge-max-upload-file-size"
+					>
+						<input
+							id="knowledge-max-upload-file-size"
+							class={inputClass}
+							type="number"
+							placeholder={$i18n.t('Leave empty for unlimited')}
+							bind:value={RAGConfig.KNOWLEDGE_MAX_FILE_SIZE}
+							autocomplete="off"
+							min="1"
+							step="1"
+						/>
+					</AdminSettingField>
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.knowledgeMaxCount.label')}
+						description={$i18n.t('settings.admin.documents.knowledgeMaxCount.description')}
+						forId="knowledge-max-upload-file-count"
+					>
+						<input
+							id="knowledge-max-upload-file-count"
+							class={inputClass}
+							type="number"
+							placeholder={$i18n.t('Leave empty for unlimited')}
+							bind:value={RAGConfig.KNOWLEDGE_MAX_FILE_COUNT}
+							autocomplete="off"
+							min="1"
+							step="1"
+						/>
+					</AdminSettingField>
+				</div>
+
 				<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.imageCompressionWidth.label')}
 						description={$i18n.t('settings.admin.documents.imageCompressionWidth.description')}
+						forId="image-compression-width"
 					>
 						<input
+							id="image-compression-width"
 							class={inputClass}
 							type="number"
 							placeholder={$i18n.t('Leave empty for no compression')}
@@ -1608,8 +1736,10 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.documents.imageCompressionHeight.label')}
 						description={$i18n.t('settings.admin.documents.imageCompressionHeight.description')}
+						forId="image-compression-height"
 					>
 						<input
+							id="image-compression-height"
 							class={inputClass}
 							type="number"
 							placeholder={$i18n.t('Leave empty for no compression')}

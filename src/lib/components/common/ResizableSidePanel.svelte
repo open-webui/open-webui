@@ -14,7 +14,15 @@
 	export let subtleDivider = false;
 	export let className = '';
 	export let resizerId = 'controls-resizer';
+	export let portalTarget: string | null = null;
 	export let onClose: () => void = () => {};
+
+	const portal = (node: HTMLElement) => {
+		const target = portalTarget ? document.getElementById(portalTarget) : null;
+		if (!target) return;
+		target.appendChild(node);
+		return { destroy: () => node.remove() };
+	};
 
 	let panelElement: HTMLDivElement | null = null;
 	let isResizing = false;
@@ -147,6 +155,7 @@
 				? 'border-transparent! outline-none!'
 				: ''}"
 			id={resizerId}
+			use:portal
 			on:pointerdown={resizeStartHandler}
 			on:keydown={resizeKeyHandler}
 			role="separator"
@@ -172,7 +181,12 @@
 		</div>
 	{/if}
 
-	<div bind:this={panelElement} class={className} style="width: {width}px; flex: 0 0 {width}px;">
+	<div
+		use:portal
+		bind:this={panelElement}
+		class={className}
+		style="width: {width}px; flex: 0 0 {width}px;"
+	>
 		<slot />
 	</div>
 
@@ -183,6 +197,7 @@
 				? 'border-transparent! outline-none!'
 				: ''}"
 			id={resizerId}
+			use:portal
 			on:pointerdown={resizeStartHandler}
 			on:keydown={resizeKeyHandler}
 			role="separator"

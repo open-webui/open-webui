@@ -18,6 +18,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
+	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -164,6 +165,7 @@
 	};
 
 	const toggleOpenOnKeydown = (event: KeyboardEvent) => {
+		if (event.target !== event.currentTarget) return;
 		if (event.key !== 'Enter' && event.key !== ' ') {
 			return;
 		}
@@ -182,14 +184,18 @@
 			</div>
 			{#each embeds as embed, idx}
 				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
-					<FullHeightIframe
-						src={embed}
-						{args}
-						allowScripts={true}
-						allowForms={$settings?.iframeSandboxAllowForms ?? false}
-						allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
-						allowPopups={true}
-					/>
+					{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
+						{#key embed}<MCPApp app={embed} />{/key}
+					{:else if typeof embed === 'string'}
+						<FullHeightIframe
+							src={embed}
+							{args}
+							allowScripts={true}
+							allowForms={$settings?.iframeSandboxAllowForms ?? false}
+							allowSameOrigin={$settings?.iframeSandboxAllowSameOrigin ?? false}
+							allowPopups={true}
+						/>
+					{/if}
 				</div>
 			{/each}
 		</div>
@@ -199,6 +205,7 @@
 			class="{buttonClassName} w-full min-w-0 cursor-pointer"
 			role="button"
 			tabindex="0"
+			aria-expanded={open}
 			on:click={toggleOpen}
 			on:keydown={toggleOpenOnKeydown}
 		>

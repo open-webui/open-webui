@@ -104,6 +104,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
+from open_webui.utils.mcp.apps import MCPAppResult
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -736,6 +737,9 @@ async def process_tool_result(
     user=None,
 ):
     tool_result_embeds = []
+    if isinstance(tool_result, MCPAppResult):
+        tool_result_embeds.append(tool_result.embed)
+        tool_result = tool_result.context
     EXTERNAL_TOOL_TYPES = ('external', 'action', 'terminal')
 
     # Support (HTMLResponse, result_context) tuples: the optional second

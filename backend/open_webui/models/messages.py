@@ -2,6 +2,7 @@ import time
 import uuid
 from typing import Optional
 
+from open_webui.models.notifications import emit_changes
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
@@ -156,6 +157,10 @@ class MessageTable:
         form_data: MessageForm,
         channel_id: str,
         user_id: str,
+        *,
+        request=None,
+        event_actor=None,
+        event_source='api',
         db: Optional[AsyncSession] = None,
     ) -> Optional[MessageModel]:
         async with get_async_db_context(db) as db:
@@ -185,8 +190,25 @@ class MessageTable:
 
             db.add(result)
             from open_webui.utils.apps import publish_app_message_event
+            from open_webui.events import EVENTS, build_event, publish_event
+            from open_webui.utils.inbox import consume_event
+            from open_webui.models.notifications import emit_changes
 
+            await db.flush()
+            event = build_event(
+                request,
+                EVENTS.MESSAGE_CREATED,
+                actor=event_actor or {'id': user_id},
+                subject_id=result.id,
+                source=event_source,
+                data={'channel_id': channel_id, 'content_preview': result.content[:300]},
+                event_id=f'message:{result.id}:created',
+            )
+            recipients = await consume_event(event, db=db)
             await db.commit()
+            await emit_changes(recipients)
+            if request is not None:
+                await publish_event(request, event)
             await db.refresh(result)
             await publish_app_message_event(result, 'channel.message.created')
             return MessageModel.model_validate(result) if result else None
@@ -209,7 +231,21 @@ class MessageTable:
                 updated_at=now,
             )
             db.add(message)
+            from open_webui.events import EVENTS, build_event
+            from open_webui.utils.inbox import consume_event
+            from open_webui.models.notifications import emit_changes
+
+            await db.flush()
+            event = build_event(
+                None,
+                EVENTS.MESSAGE_CREATED,
+                subject_id=message.id,
+                actor={'id': app_id, 'type': 'app'},
+                event_id=f'message:{message.id}:created',
+            )
+            recipients = await consume_event(event, db=db)
             await db.commit()
+            await emit_changes(recipients)
             from open_webui.utils.apps import publish_app_message_event
 
             await publish_app_message_event(message, 'channel.message.created')
@@ -703,8 +739,14 @@ class MessageTable:
             from open_webui.utils.apps import publish_app_message_event
 
             messages = (await db.scalars(select(Message).filter_by(parent_id=id))).all()
+            from open_webui.models.notifications import delete_notifications
+
+            recipients = await delete_notifications(
+                object_type='message', object_ids=select(Message.id).where(Message.parent_id == id), db=db
+            )
             await db.execute(delete(Message).filter_by(parent_id=id))
             await db.commit()
+            await emit_changes(recipients)
             for message in messages:
                 await publish_app_message_event(message, 'channel.message.deleted')
             return True
@@ -714,12 +756,16 @@ class MessageTable:
             from open_webui.utils.apps import publish_app_message_event
 
             message = await db.get(Message, id)
+            from open_webui.models.notifications import delete_notifications
+
+            recipients = await delete_notifications(object_type='message', object_ids=[id], db=db)
             await db.execute(delete(Message).filter_by(id=id))
 
             # Delete all reactions to this message
             await db.execute(delete(MessageReaction).filter_by(message_id=id))
 
             await db.commit()
+            await emit_changes(recipients)
             if message:
                 await publish_app_message_event(message, 'channel.message.deleted')
             return True

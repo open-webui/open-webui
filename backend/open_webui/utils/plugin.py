@@ -475,7 +475,7 @@ async def install_tool_and_function_dependencies():
         return
 
     function_list = await Functions.get_functions(active_only=True) if ENABLE_FUNCTIONS else []
-    tool_list = await Tools.get_tools() if ENABLE_TOOLS else []
+    tool_list = await Tools.get_tools(active_only=True) if ENABLE_TOOLS else []
 
     all_dependencies = ''
     try:

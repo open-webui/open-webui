@@ -158,6 +158,7 @@
 							bind:value={query}
 							on:input={handleSearchInput}
 							placeholder={$i18n.t('Search')}
+							aria-label={$i18n.t('Search')}
 						/>
 					</div>
 				</div>
@@ -250,7 +251,7 @@
 											type="button"
 											aria-label={$i18n.t('Remove {{name}}', { name: app.name })}
 											disabled={!!removingApp}
-											class="rounded-lg p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition disabled:opacity-50"
+											class="rounded-lg py-1 transition disabled:opacity-50 hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 											on:click={async () => {
 												removingApp = app.id;
 												try {
@@ -308,7 +309,8 @@
 									{#if onRemove}
 										<div>
 											<button
-												class=" rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-850 transition disabled:opacity-50 disabled:cursor-not-allowed"
+												aria-label={$i18n.t('Remove {{name}}', { name: user.name })}
+												class="rounded-full py-1 transition disabled:opacity-50 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 												type="button"
 												disabled={user.id === $_user?.id}
 												on:click={() => {

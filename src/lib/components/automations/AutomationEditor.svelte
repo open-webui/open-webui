@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { formatSchedule } from '$lib/utils/schedule';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -42,6 +44,38 @@
 	let showEditModal = false;
 
 	let runs: AutomationRunModel[] = [];
+	let linkedRun: AutomationRunModel | null = null;
+	$: visibleRuns =
+		linkedRun && !runs.some((run) => run.id === linkedRun?.id)
+			? [...runs, linkedRun].sort((a, b) => b.created_at - a.created_at)
+			: runs;
+	let linkedRunId = '';
+	let alive = true;
+	onDestroy(() => {
+		alive = false;
+	});
+	$: if (($page.url.searchParams.get('run') ?? '') !== linkedRunId) {
+		linkedRunId = $page.url.searchParams.get('run') ?? '';
+		void revealRun(linkedRunId);
+	}
+	async function revealRun(id: string) {
+		linkedRun = null;
+		if (!id) return;
+		try {
+			const response = await fetch(
+				`${WEBUI_API_BASE_URL}/automations/${encodeURIComponent(automation.id)}/runs/${encodeURIComponent(id)}`,
+				{ headers: { Authorization: `Bearer ${localStorage.token}` } }
+			);
+			if (!response.ok) throw new Error($i18n.t('Run not found'));
+			const run = await response.json();
+			if (!alive || linkedRunId !== id) return;
+			linkedRun = run;
+			await tick();
+			document.getElementById('inbox-automation-run')?.scrollIntoView({ block: 'center' });
+		} catch (error) {
+			if (alive && linkedRunId === id) toast.error(String(error));
+		}
+	}
 	let runsLoading = false;
 	let hasMoreRuns = true;
 	let runsPage = 0;
@@ -309,18 +343,21 @@
 	<div class="px-4 py-2">
 		<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">{$i18n.t('Runs')}</div>
 		<div class="overflow-y-auto scrollbar-hidden" on:scroll={onScroll}>
-			{#if runsLoading && runs.length === 0}
+			{#if runsLoading && visibleRuns.length === 0}
 				<div class="flex justify-center py-8">
 					<Spinner className="size-4" />
 				</div>
-			{:else if runs.length === 0}
+			{:else if visibleRuns.length === 0}
 				<div class="py-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 					{$i18n.t('No runs yet')}
 				</div>
 			{:else}
 				<div>
-					{#each runs as run}
-						<div class="flex h-7 items-center gap-2 text-xs">
+					{#each visibleRuns as run}
+						<div
+							id={run.id === linkedRun?.id ? 'inbox-automation-run' : undefined}
+							class="flex h-7 items-center gap-2 text-xs"
+						>
 							<span
 								class="h-1.5 w-1.5 shrink-0 rounded-full {run.status === 'success'
 									? 'bg-emerald-500'

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	import { page } from '$app/stores';
 	import { user, config } from '$lib/stores';
@@ -12,8 +12,14 @@
 
 	let automation: AutomationResponse | null = null;
 	let loaded = false;
+	let ready = false;
+	let loadingId = '';
 
-	$: automationId = $page.params.id;
+	$: automationId = $page.params.id ?? '';
+	$: if (ready && automationId !== loadingId) {
+		loadingId = automationId;
+		void loadAutomation(automationId);
+	}
 
 	onMount(async () => {
 		if (
@@ -24,11 +30,19 @@
 			return;
 		}
 
-		if (automationId) {
-			const res = await getAutomationById(localStorage.token, automationId).catch((error) => {
-				toast.error(`${error}`);
+		ready = true;
+	});
+	onDestroy(() => {
+		ready = false;
+	});
+	async function loadAutomation(id: string) {
+		loaded = false;
+		if (id) {
+			const res = await getAutomationById(localStorage.token, id).catch((error) => {
+				if (ready && loadingId === id) toast.error(`${error}`);
 				return null;
 			});
+			if (!ready || loadingId !== id) return;
 
 			if (res) {
 				automation = res;
@@ -39,11 +53,11 @@
 		} else {
 			goto('/automations');
 		}
-	});
+	}
 </script>
 
 {#if loaded && automation}
-	<AutomationEditor {automation} />
+	{#key automation.id}<AutomationEditor {automation} />{/key}
 {:else}
 	<div class="flex h-full w-full items-center justify-center">
 		<Spinner className="size-5" />

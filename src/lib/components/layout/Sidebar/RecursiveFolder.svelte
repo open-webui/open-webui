@@ -817,7 +817,7 @@
 				</button>
 
 				<div
-					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 pr-6 text-start"
+					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start"
 				>
 					{#if edit}
 						<input
@@ -842,7 +842,7 @@
 									e.currentTarget.blur();
 								}
 							}}
-							class="w-full h-full bg-transparent outline-hidden"
+							class="w-full h-full pr-6 bg-transparent outline-hidden"
 						/>
 					{:else}
 						<LinkPreview.Root
@@ -854,7 +854,7 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5"
+								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5 pr-6"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									if (clickTimer) {

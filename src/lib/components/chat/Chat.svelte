@@ -7,7 +7,7 @@
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	import { goto, beforeNavigate } from '$app/navigation';
+	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
@@ -950,7 +950,7 @@
 	};
 
 	const initEmbeddedDraft = async () => {
-		chatLoadController.abort();
+		startChatLoad();
 		modelDefaults = null;
 		terminalContext = null;
 		clearTimeout(saveControlsTimer);
@@ -1929,15 +1929,6 @@
 			});
 		}
 
-		const pageSubscribe = page.subscribe(async (p) => {
-			if (p.url.pathname === '/' || p.url.pathname.startsWith('/folders/')) {
-				await tick();
-				initNewChat();
-			}
-
-			stopAudio();
-		});
-
 		const showControlsSubscribe = showControls.subscribe((value) => {
 			if (!value) {
 				showCallOverlay.set(false);
@@ -1999,7 +1990,6 @@
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
 				}
-				pageSubscribe();
 				showControlsSubscribe();
 				showArtifactsSubscribe();
 				selectedFolderSubscribe();
@@ -2479,7 +2469,16 @@
 		});
 		return () => bridge?.end();
 	});
-	beforeNavigate(() => {
+	// Only real navigation resets the chat; shallow sidebar state changes must preserve it.
+	afterNavigate(async ({ to }) => {
+		if (to?.url.pathname === '/' || to?.url.pathname.startsWith('/folders/')) {
+			await tick();
+			initNewChat();
+		}
+		stopAudio();
+	});
+	beforeNavigate(({ from, to }) => {
+		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;
 		bridge?.end();
 		pendingUrlActions = null;
 	});
@@ -2619,10 +2618,14 @@
 	};
 
 	const initNewChat = async () => {
-		chatLoadController.abort();
+		loading = true;
+		if (!embedded && ($showControls === 'comments' || typeof $showControls === 'object'))
+			showControls.set(false);
+		const signal = startChatLoad();
 		modelDefaults = null;
 		clearTimeout(saveControlsTimer);
 		await saveControls();
+		if (signal.aborted) return;
 		if ($chatId) terminalContext = null;
 		cancelBrowserInteractions();
 		bridge?.end();
@@ -2662,6 +2665,7 @@
 
 		const defaultModels = normalizeSelectedModels();
 
+		let modelSearch = '';
 		const openModelSelectorWithSearch = async (modelId: string) => {
 			const modelSelectorButton = document.getElementById('model-selector-model-button');
 			modelSelectorButton?.click();
@@ -2688,7 +2692,7 @@
 			if (urlModels.length === 1) {
 				if (!$models.find((m) => m.id === urlModels[0])) {
 					// Model not found; open model selector and prefill
-					await openModelSelectorWithSearch(urlModels[0]);
+					modelSearch = urlModels[0];
 				} else {
 					// Model found; set it as selected
 					selectedModels = urlModels;
@@ -2766,8 +2770,12 @@
 		const previousChatId = $chatId;
 		const previousMessageId = history.currentId;
 		await resetInput();
+		if (signal.aborted) return;
 		// A chat opened or a message sent in the meantime keeps its id and history
-		if (($chatId && $chatId !== previousChatId) || history.currentId !== previousMessageId) return;
+		if (($chatId && $chatId !== previousChatId) || history.currentId !== previousMessageId) {
+			loading = false;
+			return;
+		}
 		await chatId.set('');
 		await chatTitle.set('');
 
@@ -2827,6 +2835,10 @@
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
 		}
+
+		loading = false;
+		await tick();
+		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
 		if ($desktopEvent) {
@@ -5062,13 +5074,13 @@
 <audio id="audioElement" style="display: none;"></audio>
 
 {#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
-	<Modal bind:show={showChatVariablesModal} size="md">
+	<Modal ariaLabel={$i18n.t('Chat Variables')} bind:show={showChatVariablesModal} size="md">
 		<div>
 			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
 				<div class="self-center text-sm font-medium">{$i18n.t('Chat Variables')}</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 					on:click={() => {
 						showChatVariablesModal = false;
 					}}
@@ -5226,24 +5238,28 @@
 		: ' '} w-full max-w-full min-w-0 flex flex-col"
 	id={chatContainerId}
 >
-	{#if !loading}
-		<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
-			{#if backgroundImage}
-				<div
-					class="pointer-events-none absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
-					style="background-image: url({backgroundImage})"
-				/>
-				<div
-					class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
-				></div>
-			{/if}
+	<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
+		{#if backgroundImage}
+			<div
+				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
+				style="background-image: url({backgroundImage})"
+			/>
+			<div
+				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white to-white/85 dark:from-gray-900 dark:to-gray-900/90 z-0"
+			></div>
+		{/if}
 
-			<div class="w-full h-full flex">
-				<div class="h-full flex relative max-w-full min-w-0 flex-1 flex-col">
+		<div class="w-full h-full flex">
+			<div class="h-full flex relative max-w-full min-w-0 flex-1 flex-col">
+				{#if loading}
+					<div class="flex items-center justify-center h-full w-full">
+						<Spinner className="size-5" />
+					</div>
+				{:else}
 					<FilesOverlay show={dragged} />
 					{#if embedded}
 						<div
-							class="h-10 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
+							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
 						>
 							<div class="flex min-w-0 items-center gap-2">
 								<EmbeddedChatHistoryDropdown
@@ -5257,16 +5273,16 @@
 									onDeleteChat={onDeleteEmbeddedChat}
 								/>
 							</div>
-							<Tooltip content={$i18n.t('Close')} placement="bottom">
-								<button
-									type="button"
-									class="rounded-md p-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-white"
-									on:click={() => onCloseEmbedded?.()}
-									aria-label={$i18n.t('Close')}
-								>
-									<XMark className="size-4" strokeWidth="2" />
-								</button>
-							</Tooltip>
+							{#if onCloseEmbedded}<Tooltip content={$i18n.t('Close')} placement="bottom">
+									<button
+										type="button"
+										class="rounded-md py-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-white px-0"
+										on:click={() => onCloseEmbedded?.()}
+										aria-label={$i18n.t('Close')}
+									>
+										<XMark className="size-4" strokeWidth="2" />
+									</button>
+								</Tooltip>{/if}
 						</div>
 					{:else}
 						<Navbar
@@ -5627,45 +5643,39 @@
 							</div>
 						{/if}
 					</div>
-				</div>
-
-				{#if !embedded}
-					<ChatControls
-						bind:terminalContext
-						bind:history
-						bind:chatFiles
-						bind:params
-						onParamChange={saveParam}
-						bind:files
-						chatId={$chatId}
-						chatUser={chatOwner}
-						modelId={selectedModelIds?.at(0) ?? null}
-						models={selectedModelIds.reduce((a, e, i, arr) => {
-							const model = $models.find((m) => m.id === e);
-							if (model) {
-								return [...a, model];
-							}
-							return a;
-						}, [])}
-						submitPrompt={submitHandler}
-						onAskFile={askFile}
-						{stopResponse}
-						{bridge}
-						bind:callMode
-						{showMessage}
-						{eventTarget}
-						{codeInterpreterEnabled}
-					/>
 				{/if}
 			</div>
+
+			{#if !embedded}
+				<ChatControls
+					bind:terminalContext
+					bind:history
+					bind:chatFiles
+					bind:params
+					onParamChange={saveParam}
+					bind:files
+					chatId={$chatId}
+					chatUser={chatOwner}
+					modelId={selectedModelIds?.at(0) ?? null}
+					models={selectedModelIds.reduce((a, e, i, arr) => {
+						const model = $models.find((m) => m.id === e);
+						if (model) {
+							return [...a, model];
+						}
+						return a;
+					}, [])}
+					submitPrompt={submitHandler}
+					onAskFile={askFile}
+					{stopResponse}
+					{bridge}
+					bind:callMode
+					{showMessage}
+					{eventTarget}
+					{codeInterpreterEnabled}
+				/>
+			{/if}
 		</div>
-	{:else if loading}
-		<div class=" flex items-center justify-center h-full w-full">
-			<div class="m-auto">
-				<Spinner className="size-5" />
-			</div>
-		</div>
-	{/if}
+	</div>
 </div>
 
 <style>

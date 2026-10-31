@@ -226,7 +226,7 @@
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
 		<div
-			class="sticky top-0 flex min-h-10 items-center justify-between border-b border-gray-100/60 px-4 py-1.5 dark:border-gray-800/40"
+			class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5"
 		>
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
@@ -234,7 +234,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-300"
+					class="flex h-7 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-0"
 					on:click={() => {
 						onClose();
 					}}
@@ -248,7 +248,7 @@
 			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
 			bind:this={messagesContainerElement}
 		>
-			<div class="pt-3">
+			<div>
 				{#if searchAnchor}<div class="px-3 py-2 text-xs text-gray-500 flex justify-between">
 						<span>{$i18n.t('Showing search match')}</span><button
 							class="underline"

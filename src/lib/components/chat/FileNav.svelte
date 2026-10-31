@@ -325,7 +325,7 @@
 	let error: string | null = null;
 
 	// ── Browser view state ──────────────────────────────────────────────
-	type SortMode = 'name' | 'size' | 'date';
+	type SortMode = 'name' | 'size' | 'date' | 'created';
 	type BrowserRow = FileEntry & {
 		fullPath: string;
 		parentPath: string;
@@ -391,6 +391,13 @@
 		return [...items].sort((a, b) => {
 			// Directories always first
 			if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+			if (mode === 'created') {
+				// Older servers and some filesystems do not expose creation time.
+				if (a.created == null && b.created != null) return 1;
+				if (a.created != null && b.created == null) return -1;
+				const cmp = (a.created ?? 0) - (b.created ?? 0) || a.name.localeCompare(b.name);
+				return asc ? cmp : -cmp;
+			}
 			if (mode === 'date') {
 				if (a.modified !== undefined && b.modified !== undefined) {
 					return asc ? a.modified - b.modified : b.modified - a.modified;
@@ -536,6 +543,7 @@
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
@@ -959,6 +967,7 @@
 		}
 		filePdfData = null;
 		fileSqliteData = null;
+		fileModelData = null;
 		fileDocxData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
@@ -1141,6 +1150,7 @@
 			fileAudioUrl: null,
 			filePdfData: null,
 			fileSqliteData: null,
+			fileModelData: null,
 			fileDocxData: null,
 			fileOfficeHtml: null,
 			fileOfficeSlides: null,
@@ -1182,14 +1192,22 @@
 				chatId ?? undefined
 			);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
-		} else if (isSqlite(filePath)) {
+		} else if (
+			isSqlite(filePath) ||
+			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
+		) {
 			const result = await downloadFileBlob(
 				terminal.url,
 				terminal.key,
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) next.fileSqliteData = await result.blob.arrayBuffer();
+			if (result) {
+				const data = await result.blob.arrayBuffer();
+				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
+					next.fileModelData = data;
+				else next.fileSqliteData = data;
+			}
 		} else if (isOffice(filePath)) {
 			const ext = getFileExt(filePath);
 			try {
@@ -1278,6 +1296,7 @@
 		fileAudioUrl = next.fileAudioUrl;
 		filePdfData = next.filePdfData;
 		fileSqliteData = next.fileSqliteData;
+		fileModelData = next.fileModelData;
 		fileDocxData = next.fileDocxData;
 		fileOfficeHtml = next.fileOfficeHtml;
 		fileOfficeSlides = next.fileOfficeSlides;
@@ -1295,6 +1314,7 @@
 				next.fileAudioUrl,
 				next.filePdfData,
 				next.fileSqliteData,
+				next.fileModelData,
 				next.fileDocxData,
 				next.fileOfficeHtml,
 				next.fileOfficeSlides
@@ -2047,6 +2067,7 @@
 				{canGoForward}
 				{sortBy}
 				{sortAsc}
+				showDateAdded
 				{showHidden}
 				viewMode={isSearching ? null : viewMode}
 				onViewModeChange={changeViewMode}
@@ -2216,6 +2237,7 @@
 						type="text"
 						class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
 						placeholder={$i18n.t('Search files and contents')}
+						aria-label={$i18n.t('Search files and contents')}
 						bind:value={searchQuery}
 					/>
 					{#if searchQuery}
@@ -2349,6 +2371,7 @@
 						{fileAudioUrl}
 						{filePdfData}
 						{fileSqliteData}
+						{fileModelData}
 						{fileDocxData}
 						{fileContent}
 						{fileOfficeHtml}
@@ -2631,7 +2654,8 @@
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
 									onToggleExpand={toggleExpand}
-									showDate={sortBy === 'date'}
+									showDate={sortBy === 'date' || sortBy === 'created'}
+									dateField={sortBy === 'created' ? 'created' : 'modified'}
 									{showHidden}
 									parentWritable={currentWritable}
 								/>

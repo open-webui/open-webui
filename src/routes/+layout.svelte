@@ -1,4 +1,5 @@
 <script>
+	import CommentsHost from '$lib/components/comments/CommentsHost.svelte';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
@@ -1511,19 +1512,24 @@
 {/if}
 
 {#if loaded}
-	{#if mfaManagement}
-		<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
-	{:else if $isApp}
-		<div class="flex flex-row h-screen">
-			<AppSidebar />
+	<div class="flex h-dvh w-full overflow-hidden">
+		<div class="min-w-0 flex-1">
+			{#if mfaManagement}
+				<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
+			{:else if $isApp}
+				<div class="flex flex-row h-screen">
+					<AppSidebar />
 
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+					<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+						<slot />
+					</div>
+				</div>
+			{:else}
 				<slot />
-			</div>
+			{/if}
 		</div>
-	{:else}
-		<slot />
-	{/if}
+		<CommentsHost />
+	</div>
 {/if}
 
 {#if $config?.features.enable_community_sharing}

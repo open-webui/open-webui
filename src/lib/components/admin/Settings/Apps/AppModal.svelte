@@ -209,7 +209,17 @@
 	)}
 	on:confirm={destructive}
 />
-<Modal size="sm" bind:show>
+<Modal
+	ariaLabel={showScopes
+		? scopeMode === 'requested'
+			? $i18n.t('Requested scopes')
+			: $i18n.t('Scopes')
+		: app
+			? $i18n.t('Configure app')
+			: $i18n.t('Add app')}
+	size="sm"
+	bind:show
+>
 	<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
 		<h1 class="text-lg font-medium self-center font-primary">
 			{showScopes

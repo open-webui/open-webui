@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	export let onComment: (request: CommentsRequest) => void;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
+	export let resourceId = '';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext } from 'svelte';
 
@@ -69,6 +73,12 @@
 
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
+			<CommentButton {onComment}
+				modal
+				menu
+				resource={{ resource_type: 'tool', resource_id: resourceId }}
+				onOpen={() => (show = false)}
+			/>
 			{#if accessHandler}
 				<button
 					type="button"

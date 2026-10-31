@@ -2,7 +2,7 @@
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { folders, settings, tags } from '$lib/stores';
+	import { folders, mobile, settings, tags } from '$lib/stores';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -52,6 +52,8 @@
 	let panel: 'filters' | 'actions' | 'types' | null = null;
 	let input: HTMLInputElement;
 	let list: HTMLDivElement;
+	let panelMenu: HTMLDivElement;
+	let panelTrigger: HTMLElement | null = null;
 	let request: AbortController | undefined;
 	let timer: ReturnType<typeof setTimeout>;
 	let generation = 0;
@@ -88,9 +90,11 @@
 	const quietButton =
 		'focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.6875rem] font-normal text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200';
 	$: if (show && typeof window !== 'undefined') {
+		const savedPreview = localStorage.getItem('searchPreview');
 		preview =
-			window.matchMedia('(min-width: 1024px)').matches &&
-			localStorage.getItem('searchPreview') !== 'false';
+			savedPreview === null
+				? window.matchMedia('(min-width: 768px)').matches
+				: savedPreview === 'true';
 	}
 	$: schedule(show, query, kind, sharing, scope);
 
@@ -191,6 +195,20 @@
 		input.focus();
 	}
 
+	async function togglePanel(name: 'filters' | 'actions' | 'types') {
+		if (panel === name) {
+			const restoreFocus = panelMenu?.contains(document.activeElement);
+			panel = null;
+			if (restoreFocus) panelTrigger?.focus();
+			return;
+		}
+		panelTrigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		panel = name;
+		if ($mobile) return;
+		await tick();
+		panelMenu?.querySelector<HTMLElement>('button:not([disabled])')?.focus();
+	}
+
 	function close() {
 		show = false;
 		suggesting = false;
@@ -233,11 +251,17 @@
 				return;
 			}
 		}
+		if (event.key === 'Escape' && panel && panelMenu?.contains(event.target as Node)) {
+			event.stopPropagation();
+			panel = null;
+			panelTrigger?.focus();
+			return;
+		}
 		if (event.key === 'Escape') return;
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 			event.preventDefault();
 			event.stopPropagation();
-			panel = panel === 'actions' ? null : 'actions';
+			togglePanel('actions');
 			return;
 		}
 		if (panel || (event.target !== input && event.target !== list)) return;
@@ -343,7 +367,7 @@
 				on:blur={() => (suggesting = false)}
 			/>
 			{#if query}<button
-					class={quietButton}
+					class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 					aria-label={$i18n.t('Clear search')}
 					on:click={() => {
 						query = '';
@@ -355,7 +379,7 @@
 				aria-label={`${$i18n.t('Content type')}: ${$i18n.t(kind === 'all' ? 'Everything' : labels[kind])}`}
 				data-search-panel
 				aria-expanded={panel === 'types'}
-				on:click={() => (panel = panel === 'types' ? null : 'types')}
+				on:click={() => togglePanel('types')}
 				>{$i18n.t(kind === 'all' ? 'Everything' : labels[kind])}<ChevronDown
 					className="size-2.5"
 				/></button
@@ -365,11 +389,12 @@
 				aria-label={$i18n.t('Filters')}
 				data-search-panel
 				aria-expanded={panel === 'filters'}
-				on:click={() => (panel = panel === 'filters' ? null : 'filters')}
-				><Adjustments className="size-3.5" /></button
+				on:click={() => togglePanel('filters')}><Adjustments className="size-3.5" /></button
 			>
-			<button class={quietButton} aria-label={$i18n.t('Close search')} on:click={close}
-				><XMark className="size-3.5" /></button
+			<button
+				class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				aria-label={$i18n.t('Close search')}
+				on:click={close}><XMark className="size-3.5" /></button
 			>
 		</div>
 		{#if sharing !== 'all' || scope}
@@ -419,7 +444,7 @@
 			</div>
 		{/if}
 		{#if panel === 'types'}
-			<div class="absolute top-10 right-12 z-10" data-search-panel>
+			<div class="absolute top-10 right-12 z-10" data-search-panel bind:this={panelMenu}>
 				<DropdownMenu className="min-w-32 font-normal"
 					><button
 						on:click={() => {
@@ -447,7 +472,11 @@
 			</div>
 		{/if}
 		{#if panel === 'filters'}
-			<div class="absolute right-2 top-10 z-10 w-52 max-w-[calc(100%-1rem)]" data-search-panel>
+			<div
+				class="absolute right-2 top-10 z-10 w-52 max-w-[calc(100%-1rem)]"
+				data-search-panel
+				bind:this={panelMenu}
+			>
 				<DropdownMenu>
 					<DropdownSub maxWidth={208} contentClass="w-52 font-normal">
 						<button
@@ -705,7 +734,11 @@
 				</section>
 			{/if}
 		</div>
-		{#if panel === 'actions'}<div class="absolute bottom-9 right-1 z-10" data-search-panel>
+		{#if panel === 'actions'}<div
+				class="absolute bottom-9 right-1 z-10"
+				data-search-panel
+				bind:this={panelMenu}
+			>
 				<DropdownMenu className="min-w-56 font-normal"
 					>{#if selected}<button
 							on:click={() => {
@@ -750,7 +783,7 @@
 					class={quietButton}
 					data-search-panel
 					aria-expanded={panel === 'actions'}
-					on:click={() => (panel = panel === 'actions' ? null : 'actions')}
+					on:click={() => togglePanel('actions')}
 					>{$i18n.t('Actions')}<span class="text-[0.625rem] text-gray-400">⌘K</span></button
 				>
 			</div>

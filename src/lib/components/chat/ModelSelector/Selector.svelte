@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
 	import { autoUpdate, computePosition, flip, offset, shift, size } from '@floating-ui/dom';
@@ -963,7 +966,9 @@
 								aria-autocomplete="list"
 								aria-expanded={filteredItems.length + downloadTargets.length > 0}
 								aria-controls="model-selector-list"
-								aria-activedescendant={filteredItems.length + downloadTargets.length > 0
+								aria-activedescendant={filteredItems.length + downloadTargets.length > 0 &&
+								(selectedModelIdx >= filteredItems.length ||
+									(selectedModelIdx >= visibleStart && selectedModelIdx < visibleEnd))
 									? `model-option-${selectedModelIdx}`
 									: undefined}
 								on:keydown={(e) => {
@@ -989,6 +994,18 @@
 									} else {
 										// if the user types something, reset to the top selection.
 										selectedModelIdx = 0;
+									}
+
+									if (
+										listContainer &&
+										selectedModelIdx < filteredItems.length &&
+										(selectedModelIdx < visibleStart || selectedModelIdx >= visibleEnd)
+									) {
+										listScrollTop = Math.max(
+											0,
+											selectedModelIdx * ITEM_HEIGHT - 128 + ITEM_HEIGHT / 2
+										);
+										listContainer.scrollTop = listScrollTop;
 									}
 
 									const item = document.querySelector(`[data-arrow-selected="true"]`);
@@ -1108,7 +1125,7 @@
 								<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
-									<ModelItem
+									<ModelItem onComment={(request) => (comments = request)}
 										bind:selectedModelIdx
 										{item}
 										{index}
@@ -1312,3 +1329,5 @@
 		</div>
 	{/if}
 </div>
+
+<Comments modal bind:view={comments} />

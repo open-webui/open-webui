@@ -74,7 +74,7 @@
 	};
 </script>
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('Set your status')} size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
@@ -82,7 +82,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -114,13 +114,13 @@
 									emoji = name;
 								}}
 							>
-								<div class=" flex items-center">
+								<button type="button" aria-label={$i18n.t('Emoji')} class=" flex items-center">
 									{#if emoji}
 										<Emoji shortCode={emoji} />
 									{:else}
 										<FaceSmile />
 									{/if}
-								</div>
+								</button>
 							</EmojiPicker>
 
 							<input
@@ -135,6 +135,7 @@
 
 							<button
 								type="button"
+								aria-label={$i18n.t('Clear')}
 								on:click={() => {
 									emoji = '';
 									message = '';

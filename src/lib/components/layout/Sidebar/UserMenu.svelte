@@ -277,6 +277,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('workspace')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -325,6 +328,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('notes')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -373,6 +379,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('calendar')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -421,6 +430,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('automations')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -469,6 +481,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('playground')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"

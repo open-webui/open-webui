@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	export let onComment: (request: CommentsRequest) => void;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
+	export let resourceId = '';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
 	import { getContext, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -52,6 +56,12 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			<CommentButton {onComment}
+				modal
+				menu
+				resource={{ resource_type: 'knowledge', resource_id: resourceId }}
+				onOpen={() => (show = false)}
+			/>
 			{#if accessHandler}
 				<button
 					type="button"

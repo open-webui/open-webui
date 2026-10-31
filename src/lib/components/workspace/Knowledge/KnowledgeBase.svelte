@@ -1,8 +1,13 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 
 	import { onMount, getContext, onDestroy } from 'svelte';
+	import KnowledgeEditor from './KnowledgeEditor.svelte';
 	import KnowledgeBrowser from './KnowledgeBase/Browser.svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -16,6 +21,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import {
 		addFileToKnowledgeById,
+		validateKnowledgeUpload,
 		getKnowledgeById,
 		resetKnowledgeById,
 		updateKnowledgeById,
@@ -31,6 +37,11 @@
 	import { computeFileHash } from '$lib/utils/hash';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
 
 	import AddTextContentModal from './KnowledgeBase/AddTextContentModal.svelte';
 
@@ -51,12 +62,14 @@
 	let showAccessControlModal = false;
 	let savedAccessGrants = [];
 	let showResetConfirm = false;
+	let showSettings = false;
 
 	type DirectoryFileEntry = { path: string; filename: string; file: File };
 	type DirectoryManifestEntry = DirectoryFileEntry & { checksum: string; size: number };
 
 	type Knowledge = {
 		id: string;
+		user_id: string;
 		name: string;
 		description: string;
 		data: {
@@ -125,6 +138,30 @@
 		return file;
 	};
 
+	const validateUpload = async (
+		count: number,
+		removedFileIds: string[] = [],
+		fileSize?: number
+	) => {
+		if (!knowledge) return false;
+		if (count === 0) return true;
+		// Preserve the previous upload limit message for i18n extraction.
+		// $i18n.t('You can only upload a maximum of {{maxCount}} file(s) per batch.')
+		try {
+			await validateKnowledgeUpload(
+				localStorage.token,
+				knowledge.id,
+				count,
+				removedFileIds,
+				fileSize
+			);
+			return true;
+		} catch (error) {
+			toast.error(`${error}`);
+			return false;
+		}
+	};
+
 	const uploadWeb = async (urls) => {
 		const targetDirectoryId = currentDirectoryId;
 		if (!knowledge) {
@@ -135,6 +172,7 @@
 		if (!Array.isArray(urls)) {
 			urls = [urls];
 		}
+		if (!(await validateUpload(urls.length))) return;
 
 		const newFileItems = urls.map((url) => ({
 			type: 'file',
@@ -331,6 +369,14 @@
 
 	// Rows go up front because each upload waits until its file is processed.
 	const uploadFiles = async (files: File[]) => {
+		if (
+			!(await validateUpload(
+				files.length,
+				[],
+				files.reduce((size, file) => Math.max(size, file.size), 0)
+			))
+		)
+			return;
 		const uploads: { file: File; fileItem: { itemId: string; directory_id: string | null } }[] = [];
 		for (const file of files) {
 			const fileItem = createFileItem(file);
@@ -529,6 +575,14 @@
 
 	const uploadDirectoryEntries = async (entries: DirectoryFileEntry[]) => {
 		if (!knowledge) return;
+		if (
+			!(await validateUpload(
+				entries.length,
+				[],
+				entries.reduce((size, entry) => Math.max(size, entry.file.size), 0)
+			))
+		)
+			return;
 		const targetDirectoryId = currentDirectoryId;
 		const targetPath = breadcrumbs.map((crumb) => crumb.name).join('/');
 		const getDirectoryUploadPath = (path: string) =>
@@ -603,6 +657,7 @@
 				...diff.deleted.map((d: any) => d.file_id),
 				...diff.modified.map((m: any) => m.stale_file_id)
 			];
+			if (!(await validateUpload(diff.added.length + diff.modified.length, staleFileIds))) return;
 
 			if (staleFileIds.length > 0 || diff.rmdir.length > 0) {
 				syncing = $i18n.t('Removing {{count}} stale files...', { count: staleFileIds.length });
@@ -779,6 +834,18 @@
 						}
 					}
 
+					// A mixed drop is one batch, even though its upload paths differ.
+					if (
+						!(await validateUpload(
+							looseFiles.length + directoryEntries.length,
+							[],
+							directoryEntries.reduce(
+								(size, entry) => Math.max(size, entry.file.size),
+								looseFiles.reduce((size, file) => Math.max(size, file.size), 0)
+							)
+						))
+					)
+						return;
 					await uploadFiles(looseFiles);
 
 					if (directoryEntries.length > 0) {
@@ -874,6 +941,7 @@
 	}}
 />
 
+<Comments bind:view={comments} resourceType="knowledge">
 <div class="flex h-full min-h-0 w-full flex-col overflow-hidden" id="collection-container">
 	{#if id && knowledge}
 		<AccessControlModal
@@ -909,12 +977,48 @@
 				><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 			>
 			<!-- Previous file count label: {$i18n.t('{{COUNT}} files')} -->
-			{#if knowledge.write_access}{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}<AccessButton
-						on:click={() => {
-							savedAccessGrants = structuredClone(knowledge.access_grants ?? []);
-							showAccessControlModal = true;
-						}}
-					/>{/if}{:else}<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+			<div class="flex items-center gap-2">
+				{#if !isExternalKnowledge && knowledge?.id}<CommentButton onComment={(request) => (comments = request)} wrapperClassName="me-1"
+						resource={{ resource_type: 'knowledge', resource_id: knowledge.id }}
+					/>{/if}
+				{#if !isExternalKnowledge && (knowledge.user_id === $user?.id || $user?.role === 'admin')}
+					<Dropdown closeOnSelect align="end">
+						<button
+							type="button"
+							aria-label={$i18n.t('More Options')}
+							class="flex size-6 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+						>
+							<EllipsisHorizontal className="size-4" />
+						</button>
+						<div slot="content">
+							<DropdownMenu className="min-w-36">
+								<button
+									type="button"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+									on:click={() => {
+										showSettings = true;
+									}}
+								>
+									<Cog6 className="size-3.5" />
+									{$i18n.t('Settings')}
+								</button>
+							</DropdownMenu>
+						</div>
+					</Dropdown>
+				{/if}
+				{#if knowledge.write_access}
+					{#if $user?.permissions?.sharing?.knowledge || $user?.role === 'admin'}
+						<AccessButton
+							on:click={() => {
+								savedAccessGrants = structuredClone(knowledge.access_grants ?? []);
+								showAccessControlModal = true;
+							}}
+						/>
+					{/if}
+				{:else}
+					<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>
+				{/if}
+			</div>
 		</div>
 		<div class="shrink-0 px-1 pb-2.5">
 			<input
@@ -1037,6 +1141,30 @@
 		</div>
 	{:else}<Spinner className="size-5" />{/if}
 </div>
+</Comments>
+
+<Modal bind:show={showSettings} size="md" ariaLabel={$i18n.t('Settings')}>
+	{#if knowledge}
+		<KnowledgeEditor
+			modal
+			edit
+			{knowledge}
+			onBack={() => {
+				showSettings = false;
+			}}
+			onSaved={(saved) => {
+				if (!knowledge) return;
+				knowledge = {
+					...knowledge,
+					name: saved.name,
+					description: saved.description,
+					meta: saved.meta
+				};
+				showSettings = false;
+			}}
+		/>
+	{/if}
+</Modal>
 
 <ConfirmDialog
 	bind:show={showResetConfirm}

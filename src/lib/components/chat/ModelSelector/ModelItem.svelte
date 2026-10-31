@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	export let onComment: (request: CommentsRequest) => void;
 	import { marked } from 'marked';
 
 	import { getContext, tick } from 'svelte';
@@ -317,7 +319,7 @@
 		{/if}
 
 		{#if !selectionOnly}
-			<ModelItemMenu
+			<ModelItemMenu {onComment}
 				bind:show={showMenu}
 				model={item.model}
 				{pinModelHandler}

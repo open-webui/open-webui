@@ -399,3 +399,22 @@ async def get_automation_runs(
     automation = await Automations.get_by_id(id, db=db)
     check_automation_access(automation, user)
     return await AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
+
+
+@router.get('/{id}/runs/{run_id}', response_model=AutomationRunModel)
+async def get_automation_run(
+    request: Request,
+    id: str,
+    run_id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.models.automations import AutomationRun
+
+    await check_automations_permission(request, user)
+    automation = await Automations.get_by_id(id, db=db)
+    check_automation_access(automation, user)
+    run = await db.get(AutomationRun, run_id)
+    if not run or run.automation_id != id:
+        raise HTTPException(404, 'Run not found')
+    return AutomationRunModel.model_validate(run)

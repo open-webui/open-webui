@@ -5,11 +5,11 @@ import logging
 import re
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, CACHE_DIR, IFRAME_CSP
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_SSL,
@@ -39,6 +39,8 @@ from open_webui.utils.access_control import (
     validate_access_grants,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.mcp.apps import app_csp, ui_resource_uri, verify_app_binding
+from open_webui.utils.mcp.client import tool_visible_to
 from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
@@ -51,7 +53,7 @@ from open_webui.utils.plugin import (
 )
 from open_webui.utils.tools import connect_mcp_server, get_tool_servers
 from open_webui.utils.tools import get_tool_specs as get_local_tool_specs
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -95,6 +97,7 @@ async def get_tools(
         tools_cache = get_tools_cache(request)
         for tool in await Tools.get_tools(
             defer_content=True,
+            active_only=True,
             db=db,
             user_id=None if bypass_access_control else user.id,
             user_group_ids=user_group_ids,
@@ -244,6 +247,85 @@ async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_us
 ############################
 
 
+class MCPAppRPCForm(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    tool_name: str
+    binding: str = Field(min_length=64, max_length=64, pattern='^[a-f0-9]{64}$')
+    method: Literal['tools/call', 'resources/read', 'resources/list', 'ui/resource']
+    params: dict
+
+    @model_validator(mode='after')
+    def validate_params(self):
+        params = self.params
+        keys = {
+            'tools/call': {'name', 'arguments'},
+            'resources/read': {'uri'},
+            'resources/list': {'cursor'},
+            'ui/resource': set(),
+        }
+        if params.keys() - keys[self.method]:
+            raise ValueError('Invalid app request parameters')
+        if self.method == 'tools/call' and (
+            not isinstance(params.get('name'), str) or not isinstance(params.get('arguments', {}), dict)
+        ):
+            raise ValueError('Invalid tool call')
+        if self.method == 'resources/read' and not isinstance(params.get('uri'), str):
+            raise ValueError('Invalid resource URI')
+        if (
+            self.method == 'resources/list'
+            and params.get('cursor') is not None
+            and not isinstance(params['cursor'], str)
+        ):
+            raise ValueError('Invalid resource cursor')
+        return self
+
+
+@router.post('/id/{id}/mcp/app/rpc')
+async def mcp_app_rpc(request: Request, id: str, form_data: MCPAppRPCForm, user=Depends(get_verified_user)):
+    server_id = id.removeprefix('server:mcp:')
+    if not id.startswith('server:mcp:') or not verify_app_binding(server_id, form_data.tool_name, form_data.binding):
+        raise HTTPException(status_code=403, detail='Invalid app binding. Run the tool again.')
+    params = form_data.params
+
+    try:
+        async with asyncio.timeout(60):
+            connection = await connect_mcp_server(request, server_id, user, {})
+            if connection is None:
+                raise HTTPException(status_code=404, detail='Tool not found')
+            client, _ = connection
+            try:
+                origin = client.tool_definitions.get(form_data.tool_name)
+                if not origin or not ui_resource_uri(origin) or not tool_visible_to(origin, 'model'):
+                    raise HTTPException(status_code=403, detail='App tool is unavailable')
+                if form_data.method == 'ui/resource':
+                    document, ui = await client.read_ui_resource(ui_resource_uri(origin))
+                    return {
+                        'html': document,
+                        'ui': ui,
+                        'tool': origin,
+                        'csp': app_csp(ui),
+                        'additional_csp': IFRAME_CSP,
+                    }
+                if form_data.method == 'tools/call':
+                    target = client.tool_definitions.get(params['name'])
+                    if not target or not tool_visible_to(target, 'app'):
+                        raise HTTPException(status_code=403, detail='Tool is unavailable to this app')
+                    return await client.call_tool_raw(params['name'], params.get('arguments', {}))
+                if form_data.method == 'resources/read':
+                    return await client.read_resource(params['uri'])
+                result = await client.client.list_resources(cursor=params.get('cursor'))
+                return result.model_dump(mode='json', by_alias=True, exclude_none=True)
+            finally:
+                await client.disconnect()
+    except HTTPException:
+        raise
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail='MCP app request timed out')
+    except Exception as error:
+        log.warning('MCP app request failed: %s', type(error).__name__)
+        raise HTTPException(status_code=502, detail='MCP app request failed')
+
+
 @router.get('/list', response_model=list[ToolAccessResponse])
 async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_TOOLS:
@@ -283,6 +365,38 @@ async def get_tool_list(user=Depends(get_verified_user), db: AsyncSession = Depe
             )
         )
     return result
+
+
+@router.post('/id/{id}/toggle', response_model=ToolResponse)
+async def toggle_tool_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    tool = await Tools.get_tool_by_id(id, db=db)
+    if tool is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    if not (
+        (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL)
+        or tool.user_id == user.id
+        or await AccessGrants.has_access(
+            user_id=user.id, resource_type='tool', resource_id=id, permission='write', db=db
+        )
+    ):
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.UNAUTHORIZED)
+
+    tool = await Tools.toggle_tool_by_id(id, db=db)
+    if tool is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    await publish_event(
+        request,
+        EVENTS.TOOL_ENABLED if tool.is_active else EVENTS.TOOL_DISABLED,
+        actor=user,
+        subject_id=tool.id,
+        data={'name': tool.name},
+    )
+    return tool
 
 
 ############################

@@ -373,7 +373,7 @@
 
 		$socket?.on('events:channel', channelEventHandler);
 
-		mediaQuery = window.matchMedia('(min-width: 1024px)');
+		mediaQuery = window.matchMedia('(min-width: 768px)');
 
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
@@ -553,6 +553,7 @@
 				bind:width={threadPanelWidth}
 				minWidth={320}
 				maxWidth={640}
+				minSiblingWidth={360}
 				className="h-full"
 			>
 				<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">

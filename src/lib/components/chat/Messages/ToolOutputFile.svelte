@@ -37,6 +37,7 @@
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileContent: string | null = null;
 	let fileOfficeHtml: string | null = null;
@@ -75,6 +76,7 @@
 		? 'h-[22rem]'
 		: isPdf(path) ||
 			  isOffice(path) ||
+			  ['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getExt(path)) ||
 			  getExt(path) === 'html' ||
 			  getExt(path) === 'htm' ||
 			  getExt(path) === 'svg'
@@ -120,6 +122,7 @@
 		fileAudioUrl = null;
 		filePdfData = null;
 		fileSqliteData = null;
+		fileModelData = null;
 		fileDocxData = null;
 		fileContent = null;
 		fileOfficeHtml = null;
@@ -165,6 +168,10 @@
 				if (isImage(path)) fileImageUrl = url;
 				else if (isVideo(path)) fileVideoUrl = url;
 				else fileAudioUrl = url;
+			} else if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getExt(path))) {
+				const result = await blobForPreview();
+				if (!result) throw new Error(t('Preview failed'));
+				fileModelData = await result.blob.arrayBuffer();
 			} else if (isPdf(path) || isSqlite(path) || isOffice(path)) {
 				const ext = getExt(path);
 
@@ -316,9 +323,11 @@
 					{fileAudioUrl}
 					{filePdfData}
 					{fileSqliteData}
+					{fileModelData}
 					{fileDocxData}
 					{fileContent}
-					baseUrl={previewBaseUrl}
+					baseUrl={fileId ? '' : previewBaseUrl}
+					{chatId}
 					apiKey={terminal?.key ?? ''}
 					{fileOfficeHtml}
 					{fileOfficeSlides}
@@ -329,7 +338,7 @@
 					onSheetChange={loadExcelSheet}
 					readOnly={true}
 				/>
-				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileDocxData === null && fileContent === null && fileOfficeHtml === null && fileOfficeSlides === null}
+				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileModelData === null && fileDocxData === null && fileContent === null && fileOfficeHtml === null && fileOfficeSlides === null}
 					<div
 						class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400"
 					>

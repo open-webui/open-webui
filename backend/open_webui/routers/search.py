@@ -339,7 +339,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             .exists()
         )
         stmt = AccessGrants.has_permission_filter(
-            db, select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read'
+            select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read', db=db
         )
         stmt = stmt.where(sharing_filter(Note.user_id))
         stmt = apply_match(

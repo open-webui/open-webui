@@ -8,6 +8,8 @@ from typing import Literal, Optional
 
 import markdown
 from bs4 import BeautifulSoup
+from open_webui.models.notifications import emit_changes
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -842,9 +844,11 @@ class NoteTable:
         try:
             async with get_async_db_context(db) as db:
                 await AccessGrants.revoke_all_access('note', id, db=db)
+                recipients = await delete_resource_comments('note', [id], db=db)
                 await db.execute(delete(PinnedNote).filter(PinnedNote.note_id == id))
                 await db.execute(delete(Note).filter(Note.id == id))
                 await db.commit()
+                await emit_changes(recipients)
                 return True
         except Exception:
             return False

@@ -1,3 +1,4 @@
+import type { ResourceComment } from '$lib/apis/comments';
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
@@ -2495,7 +2496,10 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	stores: {
+		showControls: Pick<Writable<boolean>, 'set'>;
+		showFileNavPath: Writable<FileNavOpenRequest | null>;
+	},
 	options: { page?: unknown } = {}
 ) => {
 	if (path) {
@@ -2504,3 +2508,49 @@ export const displayFileHandler = (
 		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };
+
+export function groupReplies(items: ResourceComment[], parentId: string) {
+	const children = new Map<string, ResourceComment[]>();
+	for (const comment of [...items].sort(
+		(a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id)
+	)) {
+		const target = comment.reply_to_id ?? parentId;
+		const siblings = children.get(target) ?? [];
+		siblings.push(comment);
+		children.set(target, siblings);
+	}
+	return children;
+}
+
+export function scrollToComment(id: string) {
+	const element = document.getElementById(`comment-${id}`);
+	element?.scrollIntoView({ block: 'center' });
+	element?.animate([{ backgroundColor: '#a5a5c544' }, { backgroundColor: 'transparent' }], {
+		duration: 2200
+	});
+}
+
+export function commentLink(
+	comment: Pick<
+		ResourceComment,
+		'id' | 'resource_type' | 'resource_id' | 'target_type' | 'target_id'
+	>
+) {
+	const query = new URLSearchParams({ comment: comment.id });
+	let path = '/';
+	if (comment.resource_type === 'chat') path = `/c/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'note') path = `/notes/${encodeURIComponent(comment.resource_id)}`;
+	if (['model', 'skill', 'tool'].includes(comment.resource_type)) {
+		path = `/workspace/${comment.resource_type}s/edit`;
+		query.set('id', comment.resource_id);
+	}
+	if (comment.resource_type === 'prompt')
+		path = `/workspace/prompts/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'knowledge')
+		path = `/workspace/knowledge/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.target_type === 'chat_message' && comment.target_id)
+		query.set('message', comment.target_id);
+	if (comment.target_type === 'note_page' && comment.target_id)
+		query.set('page', comment.target_id);
+	return `${path}?${query}`;
+}

@@ -12,6 +12,7 @@
 	export let resizerId = 'controls-resizer';
 	export let storageKey = '';
 	export let floating = false;
+	export let onClose: () => void = () => {};
 
 	let mediaQuery: MediaQueryList;
 	let largeScreen = false;
@@ -21,7 +22,7 @@
 	};
 
 	onMount(() => {
-		mediaQuery = window.matchMedia('(min-width: 1000px)');
+		mediaQuery = window.matchMedia('(min-width: 768px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 	});
@@ -37,6 +38,7 @@
 			{show}
 			onClose={() => {
 				show = false;
+				onClose();
 			}}
 		>
 			<div class="h-screen max-h-dvh flex flex-col">
@@ -55,6 +57,7 @@
 		subtleDivider={floating}
 		minSiblingWidth={360}
 		{closeOnDragBelowMinWidth}
+		{onClose}
 		className="h-full z-10"
 	>
 		<div class="flex h-full max-h-full min-h-full">

@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
 	import { marked } from 'marked';
 	import Sortable from 'sortablejs';
 	import fileSaver from 'file-saver';
@@ -843,11 +846,12 @@
 							class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
 							bind:value={searchValue}
 							placeholder={$i18n.t('Search Models')}
+							aria-label={$i18n.t('Search Models')}
 						/>
 						{#if searchValue}
 							<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 								<button
-									class="p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+									class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 									aria-label={$i18n.t('Clear search')}
 									on:click={() => {
 										searchValue = '';
@@ -1127,6 +1131,7 @@
 									{#if shiftKey}
 										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 											<button
+												aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
 												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
 												on:click={() => {
@@ -1239,7 +1244,7 @@
 										</svg>
 									</button>
 
-									<ModelMenu
+									<ModelMenu onComment={(request) => (comments = request)}
 										user={$user}
 										{model}
 										deleteLabel={canResetModel(model) ? $i18n.t('Reset') : $i18n.t('Delete')}
@@ -1369,3 +1374,5 @@
 		<Spinner className="size-5" />
 	</div>
 {/if}
+
+<Comments modal bind:view={comments} />

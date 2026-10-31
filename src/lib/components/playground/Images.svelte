@@ -135,6 +135,7 @@
 							<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
 								{#each generatedImages as image, index}
 									<button
+										aria-label={$i18n.t('Download')}
 										class="relative group cursor-pointer"
 										on:click={() => downloadImage(image.url, index)}
 									>
@@ -218,6 +219,9 @@
 							bind:value={prompt}
 							class=" w-full h-full bg-transparent resize-none outline-hidden text-sm"
 							placeholder={sourceImages.length > 0
+								? $i18n.t('Describe the edit...')
+								: $i18n.t('Describe the image...')}
+							aria-label={sourceImages.length > 0
 								? $i18n.t('Describe the edit...')
 								: $i18n.t('Describe the image...')}
 							on:input={resizePromptTextarea}

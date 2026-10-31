@@ -1,14 +1,17 @@
 <script context="module" lang="ts">
-	let savedTab: 'controls' | 'files' | 'overview' = 'controls';
+	let savedTab: 'controls' | 'files' = 'controls';
 </script>
 
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
 	import {
 		config,
+		temporaryChatEnabled,
 		terminalServers,
 		showControls,
+		showOverview,
 		showSidebar,
 		mobile,
 		showCallOverlay,
@@ -20,6 +23,12 @@
 		user
 	} from '$lib/stores';
 
+	import { commentsRequest, resourceQuery } from '$lib/apis/comments';
+	import CommentsPanel, {
+		type CommentsRequest
+	} from '$lib/components/comments/CommentsPanel.svelte';
+	import { page } from '$app/stores';
+
 	import Controls from './Controls/Controls.svelte';
 	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
@@ -30,6 +39,8 @@
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
+	import Modal from '../common/Modal.svelte';
+	import XMark from '../icons/XMark.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext('i18n');
@@ -37,7 +48,7 @@
 	export let history;
 	export let models = [];
 
-	export let chatId = null;
+	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
 
@@ -65,11 +76,13 @@
 	let controlsWidth = 300;
 	let viewportWidth = 0;
 
-	// Tab state for Controls+Files panel
-	let activeTab = savedTab;
+	// Tab state for the controls panel
+	let activeTab: typeof savedTab | 'comments' = savedTab;
+	$: if (typeof $showControls === 'string') activeTab = $showControls;
+	else if (typeof $showControls === 'object') activeTab = $showControls.tab;
 	// svelte-ignore reactive_declaration_module_script_dependency
 	$: {
-		savedTab = activeTab;
+		if (activeTab !== 'comments') savedTab = activeTab;
 	}
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
@@ -97,30 +110,80 @@
 	$: showFilesTab =
 		terminalFilesAvailable ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
-	$: showOverviewTab = hasMessages;
+	$: if (!hasMessages) showOverview.set(false);
+	$: showCommentsTab = !!(
+		$config?.features?.enable_comments &&
+		$user &&
+		isSavedChatId(chatId) &&
+		!$temporaryChatEnabled
+	);
+	let commentCount: number | null = null;
+	let countVersion = 0;
+	const setCommentCount = (total: number) => {
+		++countVersion;
+		commentCount = total;
+	};
+	const loadCommentCount = async (id: string) => {
+		const version = ++countVersion;
+		commentCount = null;
+		try {
+			const result = await commentsRequest<{ total: number }>(
+				`/?${resourceQuery({ resource_type: 'chat', resource_id: id })}&limit=1`
+			);
+			if (version === countVersion) commentCount = result.total;
+		} catch {
+			/* The comments panel handles access errors when opened. */
+		}
+	};
+	$: if (showCommentsTab && $showControls) loadCommentCount(chatId);
+	let linkedComment = '';
+	$: if (showCommentsTab && chatId === $page.params.id && $page.url.href !== linkedComment) {
+		linkedComment = $page.url.href;
+		const comment_id = $page.url.searchParams.get('comment');
+		if (comment_id) showControls.set({ tab: 'comments', comment_id });
+	}
+	let currentComments: CommentsRequest | null = null;
+	$: currentComments =
+		showCommentsTab && chatId
+			? {
+					resource_type: 'chat',
+					resource_id: chatId,
+					...(typeof $showControls === 'object' ? $showControls : {})
+				}
+			: null;
+	$: if ($showControls === 'comments' || typeof $showControls === 'object') {
+		showArtifacts.set(false);
+		showEmbeds.set(false);
+		showCallOverlay.set(false);
+	}
+	beforeNavigate(({ from, to }) => {
+		if (from?.url.pathname === to?.url.pathname) return;
+		showOverview.set(false);
+		if (activeTab === 'comments' && $showControls)
+			showControls.set(to?.route.id === '/(app)/c/[id]' ? 'comments' : false);
+	});
+	onDestroy(() => {
+		++countVersion;
+		showOverview.set(false);
+	});
 
 	// Tab fallback: if active tab becomes hidden, switch to next available
-	$: if (!showOverviewTab && activeTab === 'overview') activeTab = 'controls';
+	$: if (!showCommentsTab && activeTab === 'comments') activeTab = 'controls';
 	$: if (!showFilesTab && activeTab === 'files') activeTab = 'controls';
 	$: if (!showControlsTab && activeTab === 'controls') {
 		if (showFilesTab) activeTab = 'files';
-		else if (showOverviewTab) activeTab = 'overview';
+		else if (showCommentsTab && $showControls) showControls.set('comments');
 	}
 
 	// Auto-close if there are no visible tabs
-	$: if (!showControlsTab && !showFilesTab && !showOverviewTab) {
+	$: if (!showControlsTab && !showFilesTab && !showCommentsTab) {
 		showControls.set(false);
 	}
 
 	// Auto-switch to Files tab when display_file is triggered
 	$: if ($showFileNavPath && terminalFilesAvailable) {
 		activeTab = 'files';
-		showControls.set(true);
-	}
-
-	// Keep Files selected when a terminal is active; opening the panel is handled by selection UI.
-	$: if ($selectedTerminalId && terminalFilesAvailable) {
-		activeTab = 'files';
+		showControls.set('files');
 	}
 
 	// Clear selected direct terminal if user lost permission
@@ -211,12 +274,47 @@
 
 <svelte:window bind:innerWidth={viewportWidth} />
 
+<Modal
+	bind:show={$showOverview}
+	size="full"
+	ariaLabel={$i18n.t('Overview')}
+	containerClassName="p-2 sm:p-6"
+	className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden"
+>
+	<div class="flex h-[calc(100dvh-1rem-2px)] sm:h-[calc(100dvh-3rem-2px)] flex-col">
+		<div class="flex items-center justify-between px-4 py-3 shrink-0">
+			<h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Overview')}</h2>
+			<button
+				class="rounded-lg p-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+				aria-label={$i18n.t('Close')}
+				on:click={() => showOverview.set(false)}
+			>
+				<XMark className="size-5" />
+			</button>
+		</div>
+		<div class="flex-1 min-h-0">
+			<Overview
+				{history}
+				{chatUser}
+				onNodeClick={(e: any) => {
+					const { node } = e;
+					history.messages[node.data.message.id].favorite = node.data.message.favorite
+						? true
+						: null;
+					showOverview.set(false);
+					showMessage(node.data.message, true);
+				}}
+			/>
+		</div>
+	</div>
+</Modal>
+
 {#if !largeScreen}
 	<MobileSwipePanel
-		open={$showControls}
+		open={!!$showControls}
 		enabled={$mobile}
 		side="right"
-		blocked={$showSidebar || (!showControlsTab && !showFilesTab && !showOverviewTab)}
+		blocked={$showSidebar || (!showControlsTab && !showFilesTab && !showCommentsTab)}
 		startTarget="#chat-container"
 		width={viewportWidth}
 		onOpenChange={(open) => showControls.set(open)}
@@ -256,7 +354,7 @@
 					{:else if $showArtifacts}
 						<Artifacts {history} />
 					{:else}
-						<!-- Controls + Files tabs -->
+						<!-- Controls, Files, and Comments tabs -->
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
@@ -267,7 +365,7 @@
 											'controls'
 												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => (activeTab = 'controls')}
+											on:click={() => showControls.set('controls')}
 										>
 											{$i18n.t('Controls')}
 										</button>
@@ -278,25 +376,28 @@
 											'files'
 												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => (activeTab = 'files')}
+											on:click={() => showControls.set('files')}
 										>
 											{$i18n.t('Files')}
 										</button>
 									{/if}
-									{#if showOverviewTab}
+									{#if showCommentsTab}
 										<button
-											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-											'overview'
+											class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+											'comments'
 												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => (activeTab = 'overview')}
+											on:click={() => showControls.set('comments')}
 										>
-											{$i18n.t('Overview')}
+											{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
+													class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+													>{commentCount}</span
+												>{/if}
 										</button>
 									{/if}
 								</div>
 								<button
-									class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
+									class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
 									on:click={() => showControls.set(false)}
 									aria-label={$i18n.t('Close')}
 								>
@@ -314,21 +415,18 @@
 							</div>
 
 							<div
-								class="flex-1 min-h-0 {activeTab === 'overview'
-									? 'h-full'
-									: activeTab === 'controls'
-										? 'overflow-y-auto px-3 pt-1'
-										: ''}"
+								class="flex-1 min-h-0 {activeTab === 'controls' ? 'overflow-y-auto px-3 pt-1' : ''}"
 							>
-								{#if activeTab === 'overview'}
-									<Overview
-										{history}
-										{chatUser}
-										onNodeClick={(e) => {
-											const node = e.node;
-											showMessage(node.data.message, true);
-										}}
-									/>
+								{#if activeTab === 'comments'}
+									{#if currentComments}
+										{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+											<CommentsPanel
+												embedded={true}
+												bind:view={currentComments}
+												onCountChange={setCommentCount}
+											/>
+										{/key}
+									{/if}
 								{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
 									<FileNav {onAskFile} {chatId} bind:terminalContext />
 								{:else if activeTab === 'files' && codeInterpreterEnabled}
@@ -345,9 +443,9 @@
 	</MobileSwipePanel>
 {:else}
 	<ResizableSidePanel
-		open={$showControls}
+		open={!!$showControls}
 		bind:width={controlsWidth}
-		minWidth={300}
+		minWidth={280}
 		minSiblingWidth={360}
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"
@@ -380,7 +478,7 @@
 				{:else if $showArtifacts}
 					<Artifacts {history} overlay={dragged} />
 				{:else}
-					<!-- Controls + Files tabs -->
+					<!-- Controls, Files, and Comments tabs -->
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
@@ -391,7 +489,7 @@
 										'controls'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => (activeTab = 'controls')}
+										on:click={() => showControls.set('controls')}
 									>
 										{$i18n.t('Controls')}
 									</button>
@@ -402,25 +500,28 @@
 										'files'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => (activeTab = 'files')}
+										on:click={() => showControls.set('files')}
 									>
 										{$i18n.t('Files')}
 									</button>
 								{/if}
-								{#if showOverviewTab}
+								{#if showCommentsTab}
 									<button
-										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-										'overview'
+										class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+										'comments'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => (activeTab = 'overview')}
+										on:click={() => showControls.set('comments')}
 									>
-										{$i18n.t('Overview')}
+										{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
+												class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+												>{commentCount}</span
+											>{/if}
 									</button>
 								{/if}
 							</div>
 							<button
-								class="p-1 rounded-lg text-gray-500 dark:text-gray-400"
+								class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
 								on:click={() => showControls.set(false)}
 								aria-label={$i18n.t('Close')}
 							>
@@ -438,26 +539,18 @@
 						</div>
 
 						<div
-							class="flex-1 min-h-0 {activeTab === 'overview'
-								? 'h-full'
-								: activeTab === 'controls'
-									? 'overflow-y-auto px-3 pt-1'
-									: ''}"
+							class="flex-1 min-h-0 {activeTab === 'controls' ? 'overflow-y-auto px-3 pt-1' : ''}"
 						>
-							{#if activeTab === 'overview'}
-								<Overview
-									{history}
-									{chatUser}
-									onNodeClick={(e) => {
-										const node = e.node;
-										if (node?.data?.message?.favorite) {
-											history.messages[node.data.message.id].favorite = true;
-										} else {
-											history.messages[node.data.message.id].favorite = null;
-										}
-										showMessage(node.data.message, true);
-									}}
-								/>
+							{#if activeTab === 'comments'}
+								{#if currentComments}
+									{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+										<CommentsPanel
+											embedded={true}
+											bind:view={currentComments}
+											onCountChange={setCommentCount}
+										/>
+									{/key}
+								{/if}
 							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
 								<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
 							{:else if activeTab === 'files' && codeInterpreterEnabled}
