@@ -671,6 +671,7 @@
 				: ''}"
 		>
 			<input
+				aria-label={$i18n.t('Rename')}
 				id="chat-title-input-{id}"
 				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"

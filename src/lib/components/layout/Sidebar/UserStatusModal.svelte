@@ -124,6 +124,7 @@
 							</EmojiPicker>
 
 							<input
+								aria-label={$i18n.t('Status')}
 								id="status-message"
 								type="text"
 								bind:value={message}

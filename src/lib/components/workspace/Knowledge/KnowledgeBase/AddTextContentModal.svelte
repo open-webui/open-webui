@@ -74,6 +74,7 @@
 
 					<div class=" flex-1 w-full h-full">
 						<textarea
+							aria-label={$i18n.t('Content')}
 							class="w-full h-full min-h-[12.5rem] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
 							bind:value={content}
 							placeholder={$i18n.t('Write something...')}

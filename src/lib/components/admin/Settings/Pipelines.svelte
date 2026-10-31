@@ -335,9 +335,11 @@
 					<AdminSettingField
 						label={$i18n.t('settings.admin.pipelines.githubUrl.label')}
 						description={`${$i18n.t('Pipelines are a plugin system with arbitrary code execution.')} ${$i18n.t("Don't fetch random pipelines from sources you don't trust.")}`}
+						forId="pipelines-github-url"
 					>
 						<div class="flex gap-2">
 							<input
+								id="pipelines-github-url"
 								class={inputClass}
 								placeholder={$i18n.t('Enter GitHub Raw URL')}
 								bind:value={pipelineDownloadUrl}
