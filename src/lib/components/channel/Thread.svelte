@@ -17,6 +17,7 @@
 
 	export let threadId = null;
 	export let channel = null;
+	export let chatInputElement = null;
 
 	export let onClose = () => {};
 	export let onPin = () => {};
@@ -27,7 +28,6 @@
 	let top = false;
 
 	let messagesContainerElement = null;
-	let chatInputElement = null;
 
 	let replyToMessage = null;
 
