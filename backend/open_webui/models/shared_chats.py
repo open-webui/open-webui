@@ -3,7 +3,6 @@ import time
 import uuid
 from typing import Literal, Optional
 
-from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Text, delete, select
@@ -215,7 +214,6 @@ class SharedChatsTable:
         """Delete a shared chat by its share token."""
         try:
             async with get_async_db_context(db) as db:
-                await delete_resource_comments(db, 'shared_chat', select(SharedChat.id).filter_by(id=share_id))
                 await db.execute(delete(SharedChat).filter_by(id=share_id))
                 await db.commit()
                 return True
@@ -226,7 +224,6 @@ class SharedChatsTable:
         """Delete all shared chats for a given original chat."""
         try:
             async with get_async_db_context(db) as db:
-                await delete_resource_comments(db, 'shared_chat', select(SharedChat.id).filter_by(chat_id=chat_id))
                 await db.execute(delete(SharedChat).filter_by(chat_id=chat_id))
                 await db.commit()
                 return True
@@ -237,7 +234,6 @@ class SharedChatsTable:
         """Delete all shared chats created by a user."""
         try:
             async with get_async_db_context(db) as db:
-                await delete_resource_comments(db, 'shared_chat', select(SharedChat.id).filter_by(user_id=user_id))
                 await db.execute(delete(SharedChat).filter_by(user_id=user_id))
                 await db.commit()
                 return True

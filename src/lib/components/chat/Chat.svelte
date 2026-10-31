@@ -7,7 +7,7 @@
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 
-	import { goto, beforeNavigate } from '$app/navigation';
+	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
@@ -1929,15 +1929,6 @@
 			});
 		}
 
-		const pageSubscribe = page.subscribe(async (p) => {
-			if (p.url.pathname === '/' || p.url.pathname.startsWith('/folders/')) {
-				await tick();
-				initNewChat();
-			}
-
-			stopAudio();
-		});
-
 		const showControlsSubscribe = showControls.subscribe((value) => {
 			if (!value) {
 				showCallOverlay.set(false);
@@ -1999,7 +1990,6 @@
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
 				}
-				pageSubscribe();
 				showControlsSubscribe();
 				showArtifactsSubscribe();
 				selectedFolderSubscribe();
@@ -2478,6 +2468,14 @@
 			error: (message) => toast.error(message)
 		});
 		return () => bridge?.end();
+	});
+	// Only real navigation resets the chat; shallow sidebar state changes must preserve it.
+	afterNavigate(async ({ to }) => {
+		if (to?.url.pathname === '/' || to?.url.pathname.startsWith('/folders/')) {
+			await tick();
+			initNewChat();
+		}
+		stopAudio();
 	});
 	beforeNavigate(({ from, to }) => {
 		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;

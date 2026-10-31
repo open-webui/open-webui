@@ -379,7 +379,7 @@ async def ws_terminal(
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 
-    app = ws.scope.get('app')
+    request = Request({**ws.scope, 'type': 'http', 'method': 'GET'})
     opened = False
     session = aiohttp.ClientSession()
     try:
@@ -401,7 +401,7 @@ async def ws_terminal(
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': ''}))
 
             await publish_event(
-                app,
+                request,
                 EVENTS.TERMINAL_SESSION_OPENED,
                 actor=user,
                 subject_id=session_id,
@@ -470,7 +470,7 @@ async def ws_terminal(
         await session.close()
         if opened:
             await publish_event(
-                app,
+                request,
                 EVENTS.TERMINAL_SESSION_CLOSED,
                 actor=user,
                 subject_id=session_id,

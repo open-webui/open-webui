@@ -21,6 +21,7 @@
 	import CommentComposer from './CommentComposer.svelte';
 	import CommentReplyComposer from './CommentReplyComposer.svelte';
 	import { scrollToComment } from '$lib/utils';
+	import { v4 as uuidv4 } from 'uuid';
 	export let view: CommentsRequest;
 	export let embedded = false;
 	export let modal = false;
@@ -38,9 +39,11 @@
 		chat: 'Chat'
 	};
 	let resource: CommentResource | null = null;
+	const subscriptionId = uuidv4();
 	let title = '';
 	$: if (resource && total !== null) window.dispatchEvent(new Event('comments:updated'));
 	let composerVersion = 0;
+	let composer: CommentComposer;
 	let loadedCount = 0;
 	let items: ResourceComment[] = [];
 	let cursor: string | null = null;
@@ -113,9 +116,13 @@
 	};
 	const join = () => {
 		if (resource)
-			connection?.emit('comments:join', resource, (result: { error?: string }) => {
-				if (result?.error) fail(new CommentError(403, result.error));
-			});
+			connection?.emit(
+				'comments:join',
+				{ ...resource, subscription_id: subscriptionId },
+				(result: { error?: string }) => {
+					if (result?.error) fail(new CommentError(403, result.error));
+				}
+			);
 	};
 	const changed = (data: CommentResource) => {
 		if (
@@ -130,8 +137,13 @@
 		join();
 		refresh();
 	};
-	const unavailable = () =>
-		fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
+	const unavailable = (data: CommentResource) => {
+		if (
+			data?.resource_type === resource?.resource_type &&
+			data?.resource_id === resource?.resource_id
+		)
+			fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
+	};
 	const revealLinkedComment = () => {
 		if (!alive || loading || !revealPending || !linkedCommentId) return;
 		if (commentList?.querySelector('[aria-busy="true"]')) return;
@@ -193,6 +205,7 @@
 		setup();
 	});
 	$: if ($socket !== connection) {
+		connection?.emit('comments:leave', { subscription_id: subscriptionId });
 		connection?.off('comments:changed', changed);
 		connection?.off('connect', reconnect);
 		connection?.off('comments:unavailable', unavailable);
@@ -205,7 +218,7 @@
 	onDestroy(() => {
 		alive = false;
 		clearTimeout(refreshTimer);
-		connection?.emit('comments:leave');
+		connection?.emit('comments:leave', { subscription_id: subscriptionId });
 		connection?.off('comments:changed', changed);
 		connection?.off('connect', reconnect);
 		connection?.off('comments:unavailable', unavailable);
@@ -309,9 +322,11 @@
 		<div class="shrink-0 px-3 pt-1 pb-3 mt-2">
 			{#key `${resourceQuery(resource)}:${composerVersion}`}
 				<CommentComposer
+					bind:this={composer}
 					onSubmitted={async () => {
 						composerVersion++;
 						await tick();
+						if (alive) composer?.focus();
 						if (alive && linkedCommentId)
 							document
 								.getElementById(`comment-${linkedCommentId}`)

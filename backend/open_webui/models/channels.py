@@ -3,6 +3,7 @@ import time
 import uuid
 from typing import Optional
 
+from open_webui.models.notifications import emit_changes
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import (
     AccessGrantModel,
@@ -963,8 +964,12 @@ class ChannelTable:
     async def delete_channel_by_id(self, id: str, db: Optional[AsyncSession] = None) -> bool:
         async with get_async_db_context(db) as db:
             await AccessGrants.revoke_all_access('channel', id, db=db)
+            from open_webui.models.notifications import delete_notifications
+
+            recipients = await delete_notifications(resource_type='channel', resource_ids=[id], db=db)
             await db.execute(delete(Channel).filter(Channel.id == id))
             await db.commit()
+            await emit_changes(recipients)
             return True
 
     ####################

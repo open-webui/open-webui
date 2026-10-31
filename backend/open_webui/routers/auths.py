@@ -129,6 +129,7 @@ ADMIN_CONFIG_KEYS = {
     'ENABLE_AUTOMATIONS': 'automations.enable',
     'ENABLE_CHANNELS': 'channels.enable',
     'ENABLE_COMMENTS': 'comments.enable',
+    'ENABLE_NOTIFICATIONS': 'notifications.enable',
     'ENABLE_ENCRYPTED_CHANNELS': 'channels.encryption.enable',
     'ENABLE_APPS': 'apps.enable',
     'CHANNEL_MODEL_RESPONSE_MODE': 'channels.model_response_mode',
@@ -1190,6 +1191,7 @@ class AdminConfig(MfaConfigForm):
     ENABLE_AUTOMATIONS: bool
     ENABLE_CHANNELS: bool
     ENABLE_COMMENTS: bool = False
+    ENABLE_NOTIFICATIONS: bool = True
     ENABLE_ENCRYPTED_CHANNELS: bool = False
     ENABLE_APPS: bool = False
     CHANNEL_MODEL_RESPONSE_MODE: str = 'thread'
@@ -1245,6 +1247,8 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         updates.pop('channels.encryption.enable', None)
     if 'ENABLE_COMMENTS' not in form_data.model_fields_set:
         updates.pop('comments.enable', None)
+    if 'ENABLE_NOTIFICATIONS' not in form_data.model_fields_set:
+        updates.pop('notifications.enable', None)
     if 'ENABLE_APPS' not in form_data.model_fields_set:
         updates.pop('apps.enable', None)
     if 'I18N' not in form_data.model_fields_set:

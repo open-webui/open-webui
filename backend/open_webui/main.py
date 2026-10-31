@@ -392,7 +392,18 @@ async def lifespan(app: FastAPI):
     await validate_mfa_configuration()
     await initialize_runtime_config(app)
     await migrate_legacy_webhook_config()
-    await publish_event(app, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
+    request = Request(
+        {
+            'type': 'http',
+            'method': 'GET',
+            'path': '/internal',
+            'query_string': b'',
+            'headers': [],
+            'scheme': 'http',
+            'app': app,
+        }
+    )
+    await publish_event(request, EVENTS.SYSTEM_STARTUP_STARTED, source='system')
 
     license_task = None
     if LICENSE_KEY:
@@ -503,11 +514,11 @@ async def lifespan(app: FastAPI):
             log.warning(f'License data retrieval failed during startup: {e}')
 
     app.state.startup_complete = True
-    await publish_event(app, EVENTS.SYSTEM_STARTUP_COMPLETED, source='system')
+    await publish_event(request, EVENTS.SYSTEM_STARTUP_COMPLETED, source='system')
 
     yield
 
-    await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_STARTED, source='system')
+    await publish_event(request, EVENTS.SYSTEM_SHUTDOWN_STARTED, source='system')
     await app_connections.close()
 
     # Shutdown: clean up shared resources
@@ -529,7 +540,7 @@ async def lifespan(app: FastAPI):
     app.state.periodic_session_pool_cleanup.cancel()
     app.state.scheduler_worker_loop.cancel()
 
-    await publish_event(app, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
+    await publish_event(request, EVENTS.SYSTEM_SHUTDOWN_COMPLETED, source='system')
 
 
 # ENABLE_ORJSON: orjson for request-body parsing and JSONResponse bodies;
@@ -2358,6 +2369,7 @@ async def get_app_config(request: Request):
         'automations.enable',
         'notes.enable',
         'comments.enable',
+        'notifications.enable',
         'chat.context_compaction.enable',
         'chat.tool_permissions.enable',
         'web.search.enable',
@@ -2466,6 +2478,7 @@ async def get_app_config(request: Request):
                     'enable_automations': config.get('automations.enable'),
                     'enable_notes': config.get('notes.enable'),
                     'enable_comments': config.get('comments.enable'),
+                    'enable_notifications': config.get('notifications.enable'),
                     'enable_context_compaction': config.get('chat.context_compaction.enable'),
                     'enable_tool_permissions': config.get('chat.tool_permissions.enable'),
                     'enable_web_search': config.get('web.search.enable'),
@@ -2621,7 +2634,7 @@ async def get_event_webhooks_api(user=Depends(get_admin_user)):
 
 
 @app.post('/api/events/webhooks')
-async def create_event_webhook(form_data: EventWebhookForm, user=Depends(get_admin_user)):
+async def create_event_webhook(request: Request, form_data: EventWebhookForm, user=Depends(get_admin_user)):
     try:
         webhook = await upsert_event_webhook(
             {
@@ -2636,7 +2649,7 @@ async def create_event_webhook(form_data: EventWebhookForm, user=Depends(get_adm
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     await publish_event(
-        app,
+        request,
         EVENTS.CONFIG_WEBHOOK_UPDATED,
         actor=user,
         subject_id=webhook['id'],
@@ -2652,7 +2665,9 @@ async def create_event_webhook(form_data: EventWebhookForm, user=Depends(get_adm
 
 
 @app.put('/api/events/webhooks/{webhook_id}')
-async def update_event_webhook(webhook_id: str, form_data: EventWebhookUpdateForm, user=Depends(get_admin_user)):
+async def update_event_webhook(
+    request: Request, webhook_id: str, form_data: EventWebhookUpdateForm, user=Depends(get_admin_user)
+):
     webhooks = await get_event_webhooks()
     existing = next((webhook for webhook in webhooks if webhook.get('id') == webhook_id), None)
     if not existing:
@@ -2670,7 +2685,7 @@ async def update_event_webhook(webhook_id: str, form_data: EventWebhookUpdateFor
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     await publish_event(
-        app,
+        request,
         EVENTS.CONFIG_WEBHOOK_UPDATED,
         actor=user,
         subject_id=webhook_id,
@@ -2686,13 +2701,13 @@ async def update_event_webhook(webhook_id: str, form_data: EventWebhookUpdateFor
 
 
 @app.delete('/api/events/webhooks/{webhook_id}')
-async def delete_event_webhook_api(webhook_id: str, user=Depends(get_admin_user)):
+async def delete_event_webhook_api(request: Request, webhook_id: str, user=Depends(get_admin_user)):
     deleted = await delete_event_webhook(webhook_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Webhook not found')
 
     await publish_event(
-        app,
+        request,
         EVENTS.CONFIG_WEBHOOK_UPDATED,
         actor=user,
         subject_id=webhook_id,

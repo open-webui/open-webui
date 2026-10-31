@@ -393,6 +393,13 @@
 					<Switch bind:state={adminConfig.ENABLE_COMMENTS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
 				<AdminSettingRow
+					label={$i18n.t('settings.admin.general.notifications.label')}
+					description={$i18n.t('settings.admin.general.notifications.description')}
+					let:labelId
+				>
+					<Switch bind:state={adminConfig.ENABLE_NOTIFICATIONS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.channels.label')}
 					description={$i18n.t('settings.admin.general.channels.description')}
 					let:labelId

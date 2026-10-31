@@ -9,6 +9,7 @@ from typing import Optional
 
 log = logging.getLogger(__name__)
 
+from open_webui.models.notifications import emit_changes
 from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -645,9 +646,10 @@ class PromptsTable:
                     await PromptHistories.delete_history_by_prompt_id(prompt.id, db=session)
                     await AccessGrants.revoke_all_access('prompt', prompt.id, db=session)
 
-                    await delete_resource_comments(session, 'prompt', [prompt.id])
+                    recipients = await delete_resource_comments('prompt', [prompt.id], db=session)
                     await session.delete(prompt)
                     await session.commit()
+                    await emit_changes(recipients)
                     return True
                 return False
         except Exception:
@@ -663,9 +665,10 @@ class PromptsTable:
                     await PromptHistories.delete_history_by_prompt_id(prompt.id, db=session)
                     await AccessGrants.revoke_all_access('prompt', prompt.id, db=session)
 
-                    await delete_resource_comments(session, 'prompt', [prompt.id])
+                    recipients = await delete_resource_comments('prompt', [prompt.id], db=session)
                     await session.delete(prompt)
                     await session.commit()
+                    await emit_changes(recipients)
                     return True
                 return False
         except Exception as err:

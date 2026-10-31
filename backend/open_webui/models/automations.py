@@ -3,6 +3,7 @@ import time
 from typing import Literal, Optional
 from uuid import uuid4
 
+from open_webui.models.notifications import emit_changes
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict
@@ -291,8 +292,12 @@ class AutomationTable:
             row = await db.get(Automation, id)
             if not row:
                 return False
+            from open_webui.models.notifications import delete_notifications
+
+            recipients = await delete_notifications(resource_type='automation', resource_ids=[id], db=db)
             await db.delete(row)
             await db.commit()
+            await emit_changes(recipients)
             return True
 
     async def claim_due(self, now_ns: int, limit: int = 10, db: Optional[AsyncSession] = None) -> list[AutomationModel]:
@@ -361,6 +366,9 @@ class AutomationRunTable:
         status: str,
         chat_id: Optional[str] = None,
         error: Optional[str] = None,
+        *,
+        request=None,
+        event_actor=None,
         db: Optional[AsyncSession] = None,
     ) -> AutomationRunModel:
         async with get_async_db_context(db) as db:
@@ -373,7 +381,37 @@ class AutomationRunTable:
                 created_at=int(time.time_ns()),
             )
             db.add(row)
+            await db.flush()
+            event = None
+            recipients = set()
+            if status == 'error':
+                from open_webui.events import EVENTS, build_event, publish_event
+                from open_webui.utils.inbox import consume_event
+                from open_webui.models.notifications import emit_changes
+
+                automation = await db.get(Automation, automation_id)
+                if automation:
+                    event = build_event(
+                        request,
+                        EVENTS.AUTOMATION_RUN_FAILED,
+                        actor=event_actor,
+                        subject_id=automation_id,
+                        event_id=f'automation-run:{row.id}',
+                        data={
+                            'run_id': row.id,
+                            'name': automation.name,
+                            'error': error,
+                            'user_id': automation.user_id,
+                            'message': f'{automation.name}: {error}',
+                            **({'chat_id': chat_id} if chat_id else {}),
+                        },
+                    )
+                    recipients = await consume_event(event, db=db)
             await db.commit()
+            if event is not None:
+                await emit_changes(recipients)
+                if request is not None:
+                    await publish_event(request, event)
             return AutomationRunModel.model_validate(row)
 
     async def get_latest(self, automation_id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationRunModel]:
@@ -434,8 +472,16 @@ class AutomationRunTable:
 
     async def delete_by_automation(self, automation_id: str, db: Optional[AsyncSession] = None) -> int:
         async with get_async_db_context(db) as db:
+            from open_webui.models.notifications import delete_notifications
+
+            recipients = await delete_notifications(
+                object_type='automation_run',
+                object_ids=select(AutomationRun.id).where(AutomationRun.automation_id == automation_id),
+                db=db,
+            )
             result = await db.execute(delete(AutomationRun).filter_by(automation_id=automation_id))
             await db.commit()
+            await emit_changes(recipients)
             return result.rowcount
 
     async def get_runs_by_user_range(

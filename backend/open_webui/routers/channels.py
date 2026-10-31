@@ -1428,7 +1428,9 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
-        message = await Messages.insert_new_message(form_data, channel.id, user.id, db=db)
+        message = await Messages.insert_new_message(
+            form_data, channel.id, user.id, request=request, event_actor=user, db=db
+        )
         if message:
             if channel.type in ['group', 'dm']:
                 members = await Channels.get_members_by_channel_id(channel.id, db=db)
@@ -1521,16 +1523,6 @@ async def post_new_message(
 
         background_tasks.add_task(background_handler)
 
-        await publish_event(
-            request,
-            EVENTS.MESSAGE_CREATED,
-            actor=user,
-            subject_id=message.id,
-            data={
-                'channel_id': channel.id,
-                'content_preview': message.content[:300],
-            },
-        )
         return message
 
     except HTTPException as e:
@@ -2308,6 +2300,9 @@ async def post_webhook_message(
         MessageForm(content=form_data.content, meta={'webhook': {'id': webhook.id}}),
         webhook.channel_id,
         webhook.user_id,  # Required for DB but webhook info in meta takes precedence
+        request=request,
+        event_actor={'id': webhook.id, 'name': webhook.name, 'role': 'webhook', 'type': 'webhook'},
+        event_source='channel_webhook',
         db=db,
     )
 
@@ -2351,12 +2346,4 @@ async def post_webhook_message(
         to=f'channel:{channel.id}',
     )
 
-    await publish_event(
-        request,
-        EVENTS.MESSAGE_CREATED,
-        actor={'id': webhook.id, 'name': webhook.name, 'role': 'webhook', 'type': 'webhook'},
-        subject_id=message.id,
-        source='channel_webhook',
-        data={'channel_id': channel.id, 'content_preview': form_data.content[:300]},
-    )
     return {'success': True, 'message_id': message.id}

@@ -861,6 +861,9 @@ class UsersTable:
             from open_webui.models.comments import cleanup_comments_for_deleted_user
 
             await cleanup_comments_for_deleted_user(session, id)
+            from open_webui.models.notifications import delete_user_notifications
+
+            await delete_user_notifications(id, db=session)
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
             return True

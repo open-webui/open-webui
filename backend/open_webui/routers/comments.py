@@ -3,6 +3,7 @@ import time
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from open_webui.models.notifications import emit_changes
 from open_webui.internal.db import get_async_session
 from open_webui.models.comments import (
     Comment,
@@ -21,6 +22,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from open_webui.events import EVENTS, build_event, publish_event
+from open_webui.utils.inbox import mentioned_users
+from open_webui.models.notifications import delete_notifications
 
 router = APIRouter()
 write_limiter = RateLimiter(30, 60)
@@ -193,7 +198,21 @@ async def create_comment(
     db.add(comment)
     await db.flush()
     response = (await comment_responses(db, [comment], user, resource.user_id))[0]
+    from open_webui.utils.inbox import consume_event
+    from open_webui.models.notifications import emit_changes
+
+    event = build_event(
+        request,
+        EVENTS.COMMENT_CREATED,
+        actor=user,
+        subject_id=comment.id,
+        subject_type='comment',
+        event_id=f'comment:{comment.id}:created',
+    )
+    recipients = await consume_event(event, db=db)
     await db.commit()
+    await emit_changes(recipients)
+    await publish_event(request, event)
     await changed(form.resource_type, form.resource_id)
     return response
 
@@ -262,7 +281,21 @@ async def reply(
     db.add(comment)
     await db.flush()
     response = (await comment_responses(db, [comment], user, resource.user_id))[0]
+    from open_webui.utils.inbox import consume_event
+    from open_webui.models.notifications import emit_changes
+
+    event = build_event(
+        request,
+        EVENTS.COMMENT_CREATED,
+        actor=user,
+        subject_id=comment.id,
+        subject_type='comment',
+        event_id=f'comment:{comment.id}:created',
+    )
+    recipients = await consume_event(event, db=db)
     await db.commit()
+    await emit_changes(recipients)
+    await publish_event(request, event)
     await changed(parent.resource_type, parent.resource_id)
     return response
 
@@ -281,6 +314,7 @@ async def edit(
         raise HTTPException(403, 'Cannot edit this comment')
     if str(comment.updated_at) != form.etag:
         raise HTTPException(409, 'Comment changed. Reload before editing.')
+    previous_content = comment.content
     result = await db.execute(
         update(Comment)
         .where(Comment.id == id, Comment.updated_at == int(form.etag), Comment.deleted_at.is_(None))
@@ -291,7 +325,22 @@ async def edit(
         raise HTTPException(409, 'Comment changed. Reload before editing.')
     await db.refresh(comment)
     response = (await comment_responses(db, [comment], user, resource.user_id))[0]
+    from open_webui.utils.inbox import consume_event
+    from open_webui.models.notifications import emit_changes
+
+    event = build_event(
+        request,
+        EVENTS.COMMENT_UPDATED,
+        actor=user,
+        subject_id=comment.id,
+        subject_type='comment',
+        event_id=f'comment:{comment.id}:{comment.updated_at}',
+        data={'previous_mentions': sorted(mentioned_users(previous_content))},
+    )
+    recipients = await consume_event(event, db=db)
     await db.commit()
+    await emit_changes(recipients)
+    await publish_event(request, event)
     await changed(comment.resource_type, comment.resource_id)
     return response
 
@@ -321,8 +370,10 @@ async def remove(
     if result.rowcount != 1:
         raise HTTPException(409, 'Comment changed. Reload before deleting.')
     await db.execute(delete(CommentReaction).where(CommentReaction.comment_id == id))
+    recipients = await delete_notifications(object_type='comment', object_ids=[id], db=db)
     # Keep thread and quoted-reply references intact, without retaining deleted text.
     await db.commit()
+    await emit_changes(recipients)
     await changed(kind, resource_id)
     return True
 

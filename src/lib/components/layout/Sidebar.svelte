@@ -69,6 +69,17 @@
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
+	import InboxButton from './InboxButton.svelte';
+	import InboxHost from './InboxHost.svelte';
+	import InboxPanel from './InboxPanel.svelte';
+	let inboxHost: InboxHost;
+	let inboxPanel: InboxPanel;
+	$: inboxOpened =
+		$config?.features?.enable_notifications &&
+		!!$page.state.inbox &&
+		$page.state.inboxUserId === $user?.id;
+	import InboxBadge from './InboxBadge.svelte';
+	import { inboxCount } from '$lib/stores/inbox';
 	import UserMenu from './Sidebar/UserMenu.svelte';
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -686,7 +697,7 @@
 	};
 
 	const onKeyDown = (e) => {
-		if (e.key === 'Escape' && $selectedChatIds.size > 0 && !showDeleteSelectedConfirm) {
+		if (e.key === 'Escape' && !inboxOpened && $selectedChatIds.size > 0 && !showDeleteSelectedConfirm) {
 			e.preventDefault();
 			chatSelection.clear();
 		}
@@ -716,6 +727,7 @@
 
 	const MIN_WIDTH = 220;
 	const MAX_WIDTH = 480;
+	const MOBILE_WIDTH = 280;
 
 	let isResizing = false;
 	let activePointerId: number | null = null;
@@ -1031,11 +1043,15 @@
 	on:pointercancel={resizeEndHandler}
 />
 
+{#if $config?.features?.enable_notifications}
+	{#key $user?.id}<InboxHost bind:this={inboxHost} panel={inboxPanel} />{/key}
+{/if}
+
 <MobileSwipePanel
 	open={$showSidebar}
 	enabled={$mobile}
 	blocked={!!$showControls}
-	width={$sidebarWidth}
+	width={$mobile ? MOBILE_WIDTH : $sidebarWidth}
 	onOpenChange={(open) => showSidebar.set(open)}
 	let:visible
 	let:progress
@@ -1082,7 +1098,7 @@
 			class="w-[calc(42px*var(--app-text-scale,1))] shrink-0 py-[calc(0.25rem*var(--app-text-scale,1))] px-[calc(0.25rem*var(--app-text-scale,1))] flex flex-col justify-between text-gray-700 dark:text-gray-300 hover:bg-gray-50/30 dark:hover:bg-gray-800/30 h-full z-10 transition-all border-e-[0.5px] border-gray-50 dark:border-gray-850/30"
 			id="sidebar"
 			role="navigation"
-			aria-label={$i18n.t('Chat history')}
+			aria-label={$i18n.t(inboxOpened ? 'Notifications' : 'Chat history')}
 		>
 			<div
 				class="flex flex-col flex-1 {isWindows ? 'cursor-pointer' : 'cursor-[e-resize]'}"
@@ -1100,13 +1116,14 @@
 					>
 						<button
 							bind:this={openSidebarButton}
+							id="sidebar-open-button"
 							class="flex size-8.5 items-center justify-center transition group {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[e-resize]'}"
-							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							aria-label={`${$i18n.t('Open Sidebar')}${$config?.features?.enable_notifications && $inboxCount ? ` · ${$i18n.t('Notifications')} (${$inboxCount})` : ''}`}
 						>
 							<div
-								class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
+								class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 							>
 								<!-- LICENSE covers this Open WebUI sidebar logo.
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -1118,6 +1135,7 @@
 								/>
 
 								<Sidebar className="size-4 hidden group-hover:flex" />
+								<InboxBadge className="-top-0.5 -translate-x-0.5 text-[0.5625rem]" />
 							</div>
 						</button>
 					</Tooltip>
@@ -1278,7 +1296,7 @@
 					: ''} shrink-0 text-gray-700 dark:text-gray-300 text-[0.8125rem] leading-5 fixed top-0 left-0 overflow-x-hidden
         "
 			style={$mobile
-				? panelStyle
+				? `${panelStyle} --sidebar-width: ${MOBILE_WIDTH}px;`
 				: `width: ${$showSidebar ? 'var(--sidebar-width)' : '0'}; transition: width 250ms cubic-bezier(0.22, 1, 0.36, 1);`}
 			data-state={$showSidebar}
 		>
@@ -1306,48 +1324,63 @@
 						/>
 					</a>
 
-					<a href="/" class="flex flex-1 px-0.5" on:click={newChatHandler}>
+					<a href="/" class="flex min-w-0 flex-1 px-0.5" on:click={newChatHandler}>
 						<!-- LICENSE covers this Open WebUI sidebar name.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 						<div
 							id="sidebar-webui-name"
-							class=" self-center font-normal text-gray-700 dark:text-gray-200"
+							class=" self-center truncate font-normal text-gray-700 dark:text-gray-200"
 						>
 							{$WEBUI_NAME}
 						</div>
 					</a>
-					<Tooltip
-						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-						placement="bottom"
-					>
-						<button
-							bind:this={closeSidebarButton}
-							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
-								? 'cursor-pointer'
-								: 'cursor-[w-resize]'}"
-							on:click={async () => {
-								showSidebar.set(!$showSidebar);
-								await tick();
-								openSidebarButton?.focus();
-							}}
-							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+					<div class="flex shrink-0 items-center gap-px">
+						{#if $config?.features?.enable_notifications}<InboxButton onClose={() => inboxHost.close()} />{/if}
+						<Tooltip
+							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							placement="bottom"
 						>
-							<div class=" self-center">
-								<Sidebar className="size-4" />
-							</div>
-						</button>
-					</Tooltip>
+							<button
+								bind:this={closeSidebarButton}
+								class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
+									? 'cursor-pointer'
+									: 'cursor-[w-resize]'}"
+								on:click={async () => {
+									showSidebar.set(!$showSidebar);
+									await tick();
+									openSidebarButton?.focus();
+								}}
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							>
+								<div class=" self-center">
+									<Sidebar className="size-4" />
+								</div>
+							</button>
+						</Tooltip>
+					</div>
 
 					<div
-						class="{scrollTop > 0
+						class="{!inboxOpened && scrollTop > 0
 							? 'visible'
 							: 'invisible'} sidebar-bg-gradient-to-b bg-linear-to-b from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mb-6"
 					></div>
 				</div>
 
+				{#if $config?.features?.enable_notifications}
+					{#key $user?.id}
+						<InboxPanel
+							bind:this={inboxPanel}
+							active={inboxOpened}
+							onClose={() => void inboxHost.close()}
+							onSelect={(item) => inboxHost.select(item)}
+						/>
+					{/key}
+				{/if}
+
 				<div
 					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
+					style:display={inboxOpened ? 'none' : undefined}
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {
 							scrollTop = 0;
@@ -1867,7 +1900,7 @@
 				</div>
 
 				<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">
-					{#if $selectedChatIds.size > 0}
+					{#if !inboxOpened && $selectedChatIds.size > 0}
 						<div
 							class="flex items-center justify-between gap-1 px-2 py-0.5 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 							aria-busy={$selectionBusy}

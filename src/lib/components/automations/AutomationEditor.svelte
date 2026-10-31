@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { formatSchedule } from '$lib/utils/schedule';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import dayjs from 'dayjs';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -42,6 +44,34 @@
 	let showEditModal = false;
 
 	let runs: AutomationRunModel[] = [];
+	let linkedRun: AutomationRunModel | null = null;
+	let linkedRunId = '';
+	let alive = true;
+	onDestroy(() => {
+		alive = false;
+	});
+	$: if (($page.url.searchParams.get('run') ?? '') !== linkedRunId) {
+		linkedRunId = $page.url.searchParams.get('run') ?? '';
+		void revealRun(linkedRunId);
+	}
+	async function revealRun(id: string) {
+		linkedRun = null;
+		if (!id) return;
+		try {
+			const response = await fetch(
+				`${WEBUI_API_BASE_URL}/automations/${encodeURIComponent(automation.id)}/runs/${encodeURIComponent(id)}`,
+				{ headers: { Authorization: `Bearer ${localStorage.token}` } }
+			);
+			if (!response.ok) throw new Error($i18n.t('Run not found'));
+			const run = await response.json();
+			if (!alive || linkedRunId !== id) return;
+			linkedRun = run;
+			await tick();
+			document.getElementById('inbox-automation-run')?.scrollIntoView({ block: 'center' });
+		} catch (error) {
+			if (alive && linkedRunId === id) toast.error(String(error));
+		}
+	}
 	let runsLoading = false;
 	let hasMoreRuns = true;
 	let runsPage = 0;
@@ -307,6 +337,15 @@
 	<hr class="my-1.5 border-gray-50/60 dark:border-gray-850/25" />
 
 	<div class="px-4 py-2">
+		{#if linkedRun}<div
+				id="inbox-automation-run"
+				class="mb-3 rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-xs"
+			>
+				<div class="mb-1 font-medium">
+					{$i18n.t('Automation failed')} · {formatTime(linkedRun.created_at)}
+				</div>
+				<p class="whitespace-pre-wrap break-words text-red-500">{linkedRun.error}</p>
+			</div>{/if}
 		<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">{$i18n.t('Runs')}</div>
 		<div class="overflow-y-auto scrollbar-hidden" on:scroll={onScroll}>
 			{#if runsLoading && runs.length === 0}

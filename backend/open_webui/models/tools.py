@@ -8,6 +8,7 @@ import time
 from fastapi import HTTPException
 
 # local imports
+from open_webui.models.notifications import emit_changes
 from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
@@ -425,12 +426,13 @@ class ToolsTable:
     async def delete_tool_by_id(self, id, db=None):
         async with get_async_db_context(db) as session:
             try:
-                await delete_resource_comments(session, 'tool', [id])
+                recipients = await delete_resource_comments('tool', [id], db=session)
                 await self._lock_tool(session, id)
                 await session.execute(delete(AccessGrant).filter_by(resource_type='tool', resource_id=id))
                 await session.execute(delete(ToolHistory).filter_by(tool_id=id))
                 await session.execute(delete(Tool).filter_by(id=id))
                 await session.commit()
+                await emit_changes(recipients)
                 return True
             except Exception:
                 await session.rollback()

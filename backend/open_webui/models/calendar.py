@@ -3,6 +3,7 @@ import time
 from typing import Optional
 from uuid import uuid4
 
+from open_webui.models.notifications import emit_changes
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
@@ -408,8 +409,12 @@ class CalendarTable:
                 await db.execute(delete(CalendarEvent).filter(CalendarEvent.calendar_id == id))
 
                 # Delete calendar
+                from open_webui.models.notifications import delete_notifications
+
+                recipients = await delete_notifications(resource_type='calendar', resource_ids=[id], db=db)
                 await db.execute(delete(Calendar).filter(Calendar.id == id))
                 await db.commit()
+                await emit_changes(recipients)
 
             # Revoke access grants in a separate transaction to avoid
             # write-lock contention on SQLite when session sharing is off.
@@ -772,8 +777,12 @@ class CalendarEventTable:
         try:
             async with get_async_db_context(db) as db:
                 await db.execute(delete(CalendarEventAttendee).filter(CalendarEventAttendee.event_id == id))
+                from open_webui.models.notifications import delete_notifications
+
+                recipients = await delete_notifications(object_type='calendar_event', object_ids=[id], db=db)
                 await db.execute(delete(CalendarEvent).filter(CalendarEvent.id == id))
                 await db.commit()
+                await emit_changes(recipients)
                 return True
         except Exception:
             return False

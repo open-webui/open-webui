@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { WEBUI_NAME, config, mobile, showSidebar, user } from '$lib/stores';
 	import {
 		getCalendars,
@@ -201,6 +202,35 @@
 			? `${DAY_NAMES[currentDate.getDay()]}, ${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getDate()}, ${currentDate.getFullYear()}`
 			: `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
+	async function openLinkedEvent(id: string | null) {
+		if (!id) {
+			showEventModal = false;
+			return;
+		}
+		try {
+			const event = await getCalendarEventById(localStorage.token, id);
+			if (new URL(location.href).searchParams.get('event') !== id) return;
+			currentDate = new Date(event.start_at / 1e6);
+			editEvent = event;
+			defaultStartAt = null;
+			showEventModal = true;
+			await refresh();
+		} catch (error) {
+			if (new URL(location.href).searchParams.get('event') === id) toast.error(String(error));
+		}
+	}
+
+	function closeLinkedEvent() {
+		if (!$page.url.searchParams.has('event')) return;
+		const url = new URL($page.url);
+		url.searchParams.delete('event');
+		void goto(url, { replaceState: true, noScroll: true, keepFocus: true, state: $page.state });
+	}
+
+	afterNavigate(({ to }) => {
+		if (loaded) void openLinkedEvent(to?.url.searchParams.get('event') ?? null);
+	});
+
 	onMount(async () => {
 		if (
 			!$config?.features?.enable_calendar ||
@@ -213,6 +243,7 @@
 		await loadCalendars();
 		await refresh();
 		loaded = true;
+		await openLinkedEvent($page.url.searchParams.get('event'));
 	});
 </script>
 
@@ -229,6 +260,7 @@
 	{calendars}
 	{defaultCalendarId}
 	{defaultStartAt}
+	on:close={closeLinkedEvent}
 	on:save={() => refresh()}
 	on:delete={() => refresh()}
 />

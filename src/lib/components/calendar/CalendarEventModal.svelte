@@ -22,6 +22,11 @@
 	export let defaultCalendarId: string = '';
 	export let defaultStartAt: number | null = null;
 
+	function close() {
+		show = false;
+		dispatch('close');
+	}
+
 	let title = '';
 	let description = '';
 	let calendarId = '';
@@ -170,7 +175,7 @@
 				if (result) {
 					toast.success($i18n.t('Event updated'));
 					dispatch('save', result);
-					show = false;
+					close();
 				}
 			} else {
 				const form: CalendarEventForm = {
@@ -188,7 +193,7 @@
 				if (result) {
 					toast.success($i18n.t('Event created'));
 					dispatch('save', result);
-					show = false;
+					close();
 				}
 			}
 		} catch (err) {
@@ -205,7 +210,7 @@
 			await deleteCalendarEvent(localStorage.token, event.id);
 			toast.success($i18n.t('Event deleted'));
 			dispatch('delete', event);
-			show = false;
+			close();
 		} catch (err) {
 			toast.error(`${err}`);
 		} finally {
@@ -214,7 +219,7 @@
 	};
 </script>
 
-<Modal ariaLabel={title || $i18n.t('Event')} size="md" bind:show>
+<Modal ariaLabel={title || $i18n.t('Event')} size="md" bind:show onRequestClose={close}>
 	<div>
 		<div class="dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
@@ -358,7 +363,7 @@
 				<button
 					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
 					type="button"
-					on:click={() => (show = false)}
+					on:click={close}
 				>
 					{$i18n.t('Cancel')}
 				</button>

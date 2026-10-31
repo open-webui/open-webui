@@ -11,6 +11,7 @@ import uuid
 from typing import Any, Literal
 
 # local imports
+from open_webui.models.notifications import emit_changes
 from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
 from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db, get_async_db_context
@@ -2815,9 +2816,10 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
-                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(id=id))
+                recipients = await delete_resource_comments('chat', select(Chat.id).filter_by(id=id), db=session)
                 await session.execute(delete(Chat).filter_by(id=id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True and await self.delete_shared_chat_by_chat_id(id, db=session)
         except Exception:
@@ -2828,9 +2830,12 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
-                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(id=id, user_id=user_id))
+                recipients = await delete_resource_comments(
+                    'chat', select(Chat.id).filter_by(id=id, user_id=user_id), db=session
+                )
                 await session.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True and await self.delete_shared_chat_by_chat_id(id, db=session)
         except Exception:
@@ -2850,9 +2855,12 @@ class ChatTable:
                 await session.execute(
                     delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
-                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(user_id=user_id))
+                recipients = await delete_resource_comments(
+                    'chat', select(Chat.id).filter_by(user_id=user_id), db=session
+                )
                 await session.execute(delete(Chat).filter_by(user_id=user_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True
         except Exception:
@@ -2870,11 +2878,16 @@ class ChatTable:
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
-                await delete_resource_comments(session, 'chat', chat_ids_stmt)
+                recipients = await delete_resource_comments('chat', chat_ids_stmt, db=session)
                 await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
-                await delete_resource_comments(session, 'chat', select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id))
+                recipients.update(
+                    await delete_resource_comments(
+                        'chat', select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id), db=session
+                    )
+                )
                 await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True
         except Exception:
@@ -2903,7 +2916,6 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as session:
                 # Delete shared_chat rows for this user's chats
-                await delete_resource_comments(session, 'shared_chat', select(SharedChatTable.id).filter_by(user_id=user_id))
                 await session.execute(delete(SharedChatTable).filter_by(user_id=user_id))
 
                 # Clear share_id on all of this user's chats

@@ -137,27 +137,21 @@ async def comment_responses(db: AsyncSession, comments: list[Comment], user, own
     ]
 
 
-async def delete_resource_comments(db: AsyncSession, resource_type: str, resource_ids):
+async def delete_resource_comments(resource_type: str, resource_ids, db: AsyncSession):
     """Lock resources before cleanup so concurrent comment creation cannot leave orphans."""
     from open_webui.utils.comments import resource_models
 
-    # Retain cleanup for legacy snapshot comments when their shared chat is deleted.
-    if resource_type == 'shared_chat':
-        from open_webui.models.shared_chats import SharedChat
-
-        model = SharedChat
-    else:
-        model = resource_models()[resource_type]
+    model = resource_models()[resource_type]
     ids = list((await db.scalars(select(model.id).where(model.id.in_(resource_ids)).with_for_update())).all())
     if not ids:
-        return
-    if resource_type == 'chat':
-        from open_webui.models.shared_chats import SharedChat
+        return set()
+    from open_webui.models.notifications import delete_notifications
 
-        await delete_resource_comments(db, 'shared_chat', select(SharedChat.id).where(SharedChat.chat_id.in_(ids)))
+    recipients = await delete_notifications(resource_type=resource_type, resource_ids=ids, db=db)
     comment_ids = select(Comment.id).where(Comment.resource_type == resource_type, Comment.resource_id.in_(ids))
     await db.execute(delete(CommentReaction).where(CommentReaction.comment_id.in_(comment_ids)))
     await db.execute(delete(Comment).where(Comment.resource_type == resource_type, Comment.resource_id.in_(ids)))
+    return recipients
 
 
 async def cleanup_comments_for_deleted_user(db: AsyncSession, user_id: str):
