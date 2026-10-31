@@ -94,15 +94,6 @@ known_source_ext = [
     'svg',
 ]
 
-known_archive_ext = {'docx', 'epub', 'odt', 'pptx', 'xlsx'}
-known_archive_content_types = {
-    'application/epub+zip',
-    'application/vnd.oasis.opendocument.text',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-}
-
 
 class ExcelLoader:
     """Fallback Excel loader using pandas when unstructured is not installed."""
@@ -538,28 +529,26 @@ class Loader:
     def _get_loader(self, filename: str, file_content_type: str, file_path: str):
         file_ext = filename.split('.')[-1].lower()
 
-        is_zip = False
-        try:
-            with zipfile.ZipFile(file_path) as archive:
-                uncompressed_size = sum(entry.file_size for entry in archive.infolist())
-            is_zip = True
-        except (zipfile.BadZipFile, OSError):
-            uncompressed_size = 0
-
-        if is_zip or file_ext in known_archive_ext or file_content_type in known_archive_content_types:
+        if zipfile.is_zipfile(file_path):
             max_file_size = self.config['rag.file.max_size']
             try:
                 max_file_size_bytes = int(max_file_size) * 1024 * 1024 if max_file_size else 100 * 1024 * 1024
             except (TypeError, ValueError):
                 max_file_size_bytes = 100 * 1024 * 1024
 
-            if max_file_size_bytes > 0 and is_zip:
-                max_bytes = min(
-                    max(10 * 1024 * 1024, os.path.getsize(file_path) * 100),
-                    max_file_size_bytes,
-                )
-                if uncompressed_size > max_bytes:
-                    raise ValueError('Document archive is too large after decompression')
+            if max_file_size_bytes > 0:
+                try:
+                    with zipfile.ZipFile(file_path) as archive:
+                        uncompressed_size = sum(entry.file_size for entry in archive.infolist())
+                except (zipfile.BadZipFile, OSError):
+                    pass
+                else:
+                    max_bytes = min(
+                        max(10 * 1024 * 1024, os.path.getsize(file_path) * 100),
+                        max_file_size_bytes,
+                    )
+                    if uncompressed_size > max_bytes:
+                        raise ValueError('Document archive is too large after decompression')
 
         if (
             self.engine == 'external'
