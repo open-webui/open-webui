@@ -9,6 +9,7 @@
 		type InboxPage
 	} from '$lib/apis/notifications/inbox';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Loader from '$lib/components/common/Loader.svelte';
 	import Bell from '$lib/components/icons/Bell.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -21,7 +22,6 @@
 	let cursor: string | null = null;
 	let loading = true;
 	let loaded = false;
-	let loadingMore = false;
 	let error = '';
 	let selecting: string | null = null;
 	let acknowledgedAt: string | undefined;
@@ -51,9 +51,9 @@
 		}).format(value);
 	};
 	const load = async (more = false) => {
+		if (more && (loading || !active || !cursor || error)) return;
 		const request = ++version;
 		loading = true;
-		loadingMore = more;
 		try {
 			const result = await inboxRequest<InboxPage>(
 				!opened ? '/open' : more && cursor ? `?cursor=${encodeURIComponent(cursor)}` : '',
@@ -82,7 +82,6 @@
 		} finally {
 			if (alive && request === version) {
 				loading = false;
-				loadingMore = false;
 				if (refreshPending && opened) {
 					refreshPending = false;
 					void load();
@@ -230,12 +229,15 @@
 				class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
 			>
 				{$i18n.t('No notifications found.')}
-			</p>{:else if cursor}<button
-				type="button"
-				class="mx-2.5 my-3 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-				disabled={loading}
-				on:click={() => load(true)}>{$i18n.t(loadingMore ? 'Loading...' : 'Load more')}</button
-			>{:else if items.length}<p
+			</p>{:else if cursor && active && !error}<Loader on:visible={() => load(true)}>
+				<div
+					role="status"
+					class="flex items-center justify-center gap-2 py-4 text-xs text-gray-500 dark:text-gray-400"
+				>
+					<Spinner className="size-4" />
+					<span>{$i18n.t('Loading...')}</span>
+				</div>
+			</Loader>{:else if !cursor && items.length}<p
 				class="px-4 py-4 text-center text-[0.6875rem] text-gray-400 dark:text-gray-500"
 			>
 				{$i18n.t('You have reached the end.')}
