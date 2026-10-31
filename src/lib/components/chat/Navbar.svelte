@@ -280,7 +280,7 @@
 											await temporaryChatEnabled.set(!$temporaryChatEnabled);
 										}
 
-										if ($page.url.pathname !== '/') {
+										if ($page.url.pathname !== '/' && !$page.url.pathname.startsWith('/folders/')) {
 											await goto('/');
 										}
 
