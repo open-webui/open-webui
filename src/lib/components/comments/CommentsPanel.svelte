@@ -144,15 +144,16 @@
 		)
 			fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
 	};
-	const revealLinkedComment = () => {
-		if (!alive || loading || !revealPending || !linkedCommentId) return;
-		if (commentList?.querySelector('[aria-busy="true"]')) return;
+	const revealInitialPosition = () => {
+		if (!alive || loading || !revealPending || !commentList) return;
+		if (commentList.querySelector('[aria-busy="true"]')) return;
 		revealPending = false;
-		scrollToComment(linkedCommentId);
+		if (linkedCommentId) scrollToComment(linkedCommentId);
+		else commentList.scrollTop = commentList.scrollHeight;
 	};
 	const setup = async () => {
 		loading = true;
-		revealPending = !!view.comment_id;
+		revealPending = true;
 		try {
 			const context = await commentsRequest<CommentResource & { title: string }>(
 				`/context?${resourceQuery(view)}`
@@ -179,7 +180,7 @@
 			if (alive) loading = false;
 		}
 		await tick();
-		revealLinkedComment();
+		revealInitialPosition();
 	};
 	const more = async () => {
 		if (!resource || loadingMore) return;
@@ -306,7 +307,7 @@
 						onReply={reply}
 						onChange={refresh}
 						onError={fail}
-						onLoaded={revealLinkedComment}
+						onLoaded={revealInitialPosition}
 					/>
 				</div>
 			{/each}
