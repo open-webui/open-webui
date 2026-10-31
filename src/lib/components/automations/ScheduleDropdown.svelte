@@ -219,6 +219,7 @@
 		{#if frequency === 'CUSTOM'}
 			<div class="px-2 pb-2">
 				<input
+					aria-label={$i18n.t('Custom schedule')}
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
@@ -232,6 +233,7 @@
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input
+							aria-label={$i18n.t('Date')}
 							type="date"
 							bind:value={onceDate}
 							min={dayjs().format('YYYY-MM-DD')}

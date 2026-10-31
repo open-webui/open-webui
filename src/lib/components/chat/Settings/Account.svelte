@@ -412,7 +412,12 @@
 								description={$i18n.t('settings.personal.account.jwtToken.description')}
 							>
 								<div class="flex">
-									<SensitiveInput variant="settings" value={localStorage.token} readOnly={true} />
+									<SensitiveInput
+										variant="settings"
+										placeholder={$i18n.t('settings.personal.account.jwtToken.label')}
+										value={localStorage.token}
+										readOnly={true}
+									/>
 
 									<button
 										type="button"
@@ -470,7 +475,12 @@
 							>
 								<div class="flex">
 									{#if APIKey}
-										<SensitiveInput variant="settings" value={APIKey} readOnly={true} />
+										<SensitiveInput
+											variant="settings"
+											placeholder={$i18n.t('settings.personal.account.apiKey.label')}
+											value={APIKey}
+											readOnly={true}
+										/>
 
 										<button
 											type="button"

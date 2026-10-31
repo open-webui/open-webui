@@ -302,7 +302,12 @@
 									{#if rotatedAPIKey}
 										<div class="space-y-1.5">
 											<div class="flex items-center gap-2">
-												<SensitiveInput variant="settings" value={rotatedAPIKey} readOnly={true} />
+												<SensitiveInput
+													variant="settings"
+													placeholder={$i18n.t('API Key')}
+													value={rotatedAPIKey}
+													readOnly={true}
+												/>
 												<button
 													type="button"
 													class="shrink-0 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
