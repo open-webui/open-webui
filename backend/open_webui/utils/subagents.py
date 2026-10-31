@@ -18,6 +18,7 @@ from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
+from open_webui.utils.models import get_all_models, get_filtered_models
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
 
@@ -71,6 +72,21 @@ async def _build_request(source: Request, user_id: str, *, internal: bool) -> Re
     if internal:
         request.state.internal = True
     return request
+
+
+async def get_subagent_models(request: Request, user: UserModel) -> list[dict]:
+    configured_models = await Config.get('subagents.models')
+    if not configured_models:
+        return []
+    models = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
+    subagent_models = []
+    for entry in configured_models:
+        model = models.get(entry.get('id'))
+        if not model:
+            continue
+        description = entry.get('description') or model.get('info', {}).get('meta', {}).get('description') or ''
+        subagent_models.append({'id': model['id'], 'name': model.get('name', model['id']), 'description': description})
+    return subagent_models
 
 
 async def process_pending_internal_messages(
@@ -282,6 +298,7 @@ async def delegate(
     background: bool,
     *,
     file_ids: list[str] | None = None,
+    model_id: str | None = None,
     request: Request,
     user_data: dict,
     metadata: dict,
@@ -343,6 +360,16 @@ async def delegate(
         return 'Error: model context is required.'
     if run.get('direct'):
         return 'Error: sub-agents are unavailable for direct connections.'
+    if model_id:
+        subagent_models = await get_subagent_models(request, UserModel(**user_data))
+        available_model_ids = [model['id'] for model in subagent_models]
+        if model_id not in available_model_ids:
+            return (
+                f'Error: model {model_id} is not available for sub-agents. '
+                f'Available models: {", ".join(available_model_ids) or "none"}. '
+                'Omit model_id to use the current model.'
+            )
+    model_id = model_id or run['model_id']
     delegated_files = []
     if file_ids:
         requested_file_ids = {str(file_id) for file_id in file_ids if file_id}
@@ -405,7 +432,7 @@ async def delegate(
             'role': 'user',
             'content': prompt,
             'timestamp': int(time.time()),
-            'models': [run['model_id']],
+            'models': [model_id],
             **({'files': prompt_files} if prompt_files else {}),
         }
         chat = await Chats.insert_new_chat(
@@ -415,7 +442,7 @@ async def delegate(
                 chat={
                     'id': chat_id,
                     'title': f'Sub-agent: {task[:60]}',
-                    'models': [run['model_id']],
+                    'models': [model_id],
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
@@ -427,7 +454,7 @@ async def delegate(
                                 'role': 'assistant',
                                 'content': '',
                                 'done': False,
-                                'model': run['model_id'],
+                                'model': model_id,
                                 'timestamp': int(time.time()),
                             },
                         },
@@ -472,7 +499,7 @@ async def delegate(
                 str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
             )
             form_data = {
-                'model': run['model_id'],
+                'model': model_id,
                 'params': chat_context.get('params') or {},
                 'messages': add_or_update_system_message(
                     subagent_system_prompt,

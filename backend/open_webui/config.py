@@ -2113,6 +2113,16 @@ ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
 
 ENABLE_SUBAGENTS = os.getenv('ENABLE_SUBAGENTS', 'False').lower() == 'true'
+try:
+    subagents_models = JSONCodec.loads(os.getenv('SUBAGENTS_MODELS', '[]'))
+    if not isinstance(subagents_models, list) or not all(isinstance(entry, dict) for entry in subagents_models):
+        raise ValueError('SUBAGENTS_MODELS must be a JSON list of objects')
+except Exception as e:
+    log.exception('Error loading SUBAGENTS_MODELS: %s', e)
+    subagents_models = []
+
+SUBAGENTS_MODELS = subagents_models
+
 SUBAGENTS_BACKGROUND_ENABLED = os.getenv('SUBAGENTS_BACKGROUND_ENABLED', 'False').lower() == 'true'
 SUBAGENTS_MAX_CONCURRENT = int(os.getenv('SUBAGENTS_MAX_CONCURRENT', '20'))
 SUBAGENTS_MAX_ASYNC = int(os.getenv('SUBAGENTS_MAX_ASYNC', '20'))
@@ -3249,6 +3259,7 @@ DEFAULT_CONFIG = {
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
     'subagents.enable': ENABLE_SUBAGENTS,
+    'subagents.models': SUBAGENTS_MODELS,
     'subagents.background_enabled': SUBAGENTS_BACKGROUND_ENABLED,
     'subagents.max_concurrent': SUBAGENTS_MAX_CONCURRENT,
     'subagents.max_async': SUBAGENTS_MAX_ASYNC,
