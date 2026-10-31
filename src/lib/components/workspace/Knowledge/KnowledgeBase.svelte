@@ -1097,6 +1097,7 @@
 							<div class="text-xs">{$i18n.t('Test Query')}</div>
 							<div class="flex gap-2">
 								<input
+									aria-label={$i18n.t('Test Query')}
 									class="w-full text-xs rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
 									bind:value={externalTestQuery}
 									placeholder={$i18n.t('Ask this knowledge source a test question')}

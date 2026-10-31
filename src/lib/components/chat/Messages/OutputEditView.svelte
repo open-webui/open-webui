@@ -271,6 +271,7 @@
 					<div class="flex-1 min-w-0">
 						{#if di.type === 'message'}
 							<textarea
+								aria-label={$i18n.t('Text')}
 								use:fitContent
 								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] p-1.5 rounded-lg"
 								value={getMessageText(di.item)}
@@ -283,6 +284,7 @@
 							/>
 						{:else if di.type === 'reasoning'}
 							<textarea
+								aria-label={$i18n.t('Thought')}
 								use:fitContent
 								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.9375rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
 								value={getReasoningText(di.item)}

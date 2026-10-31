@@ -716,7 +716,11 @@
 	</div>
 
 	<div class="flex items-center gap-1.5">
-		<input type="checkbox" bind:checked={deleteFolderContents} />
+		<input
+			aria-label={$i18n.t('Delete all contents inside this folder')}
+			type="checkbox"
+			bind:checked={deleteFolderContents}
+		/>
 
 		<div class="text-xs text-gray-500">
 			{$i18n.t('Delete all contents inside this folder')}
@@ -821,6 +825,7 @@
 				>
 					{#if edit}
 						<input
+							aria-label={$i18n.t('Rename')}
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}

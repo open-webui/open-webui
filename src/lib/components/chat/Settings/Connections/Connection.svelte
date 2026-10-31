@@ -82,6 +82,7 @@
 		<Tooltip content={(config?.enable ?? true) ? $i18n.t('Enabled') : $i18n.t('Disabled')}>
 			<Switch
 				bind:state={config.enable}
+				ariaLabel={$i18n.t('Enabled')}
 				on:change={() => {
 					config.enable = config.enable ?? false;
 					onSubmit({ url, key, config });

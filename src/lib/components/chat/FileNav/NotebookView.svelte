@@ -283,6 +283,7 @@
 				{#if editingCell[i]}
 					<!-- svelte-ignore a11y-autofocus -->
 					<textarea
+						aria-label={$i18n.t('Markdown')}
 						class="nb-edit-textarea text-sm"
 						bind:value={editedSources[i]}
 						on:input={autoResize}

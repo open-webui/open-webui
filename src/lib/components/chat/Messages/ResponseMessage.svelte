@@ -794,6 +794,7 @@
 								{:else}
 									<!-- Legacy textarea for messages without output -->
 									<textarea
+										aria-label={$i18n.t('Message')}
 										id="message-edit-{message.id}"
 										bind:this={editTextAreaElement}
 										class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"

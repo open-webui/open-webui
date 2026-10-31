@@ -452,6 +452,7 @@
 						{#if renaming}
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
 							<input
+								aria-label={$i18n.t('Rename')}
 								bind:this={renameInput}
 								bind:value={renameValue}
 								class="flex-1 text-xs bg-transparent outline-hidden text-gray-800 dark:text-gray-200 min-w-0 {variant ===

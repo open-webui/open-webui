@@ -201,6 +201,7 @@
 		<!-- URL bar -->
 		<form class="flex-1 min-w-0" on:submit|preventDefault={navigateUrl}>
 			<input
+				aria-label={$i18n.t('URL')}
 				type="text"
 				bind:value={urlInput}
 				class="w-full text-[0.6875rem] font-mono bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1 outline-hidden focus:border-gray-400 dark:focus:border-gray-500 text-gray-600 dark:text-gray-300 transition"

@@ -1799,6 +1799,7 @@
 								{#if showPreview}
 									<div class="pt-2">
 										<textarea
+											aria-label={$i18n.t('JSON Preview')}
 											class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
 											rows="8"
 											value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
