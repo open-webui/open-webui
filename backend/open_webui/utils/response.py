@@ -1,4 +1,5 @@
 from numbers import Number
+from typing import AsyncIterator
 from uuid import uuid4
 
 from open_webui.utils.json_codec import JSONCodec
@@ -231,6 +232,16 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
     return result
 
 
+def convert_responses_usage_to_openai(usage: dict | None) -> dict:
+    if not usage:
+        return {}
+    return {
+        **usage,
+        'prompt_tokens': usage.get('input_tokens', 0),
+        'completion_tokens': usage.get('output_tokens', 0),
+    }
+
+
 def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     model = ollama_response.get('model', 'ollama')
     message_content = ollama_response.get('message', {}).get('content', '')
@@ -297,6 +308,95 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         yield line
 
     yield 'data: [DONE]\n\n'
+
+
+async def convert_streaming_response_responses_to_openai(body_iterator: AsyncIterator) -> AsyncIterator[str | bytes]:
+    """Translate Responses API events into Chat Completions chunks; other lines pass through."""
+    completion_id = f'chatcmpl-{str(uuid4())}'
+    model = ''
+    tool_call_indexes = {}
+    first = True
+    is_responses_stream = False
+    async for line in body_iterator:
+        text = line.decode('utf-8', 'replace') if isinstance(line, bytes) else line
+        # Event names would mislabel the translated chunks.
+        if text.startswith('event:') and text.removeprefix('event:').strip().startswith('response.'):
+            continue
+
+        try:
+            data = JSONCodec.loads(text.removeprefix('data:').strip()) if text.startswith('data:') else None
+        except JSONCodec.JSONDecodeError:
+            data = None
+        event_type = data.get('type', '') if isinstance(data, dict) else ''
+        if not event_type.startswith('response.') and not (event_type == 'error' and is_responses_stream):
+            yield line
+            continue
+
+        if event_type in ('response.failed', 'error'):
+            error = data.get('response', {}).get('error', {}) if event_type == 'response.failed' else data
+            yield f'data: {JSONCodec.dumps({"error": error})}\n\n'
+            yield 'data: [DONE]\n\n'
+            continue
+
+        if event_type == 'response.created':
+            model = data.get('response', {}).get('model', '')
+            is_responses_stream = True
+            continue
+
+        output_index = data.get('output_index')
+        delta = data.get('delta')
+        is_final = event_type in ('response.completed', 'response.incomplete')
+        content = None
+        reasoning_content = None
+        tool_calls = None
+        usage = None
+        if event_type == 'response.output_text.delta' and delta:
+            content = delta
+        elif event_type in ('response.reasoning_text.delta', 'response.reasoning_summary_text.delta') and delta:
+            reasoning_content = delta
+        elif event_type == 'response.output_item.added' and data.get('item', {}).get('type') == 'function_call':
+            item = data['item']
+            tool_call_indexes[output_index] = len(tool_call_indexes)
+            tool_calls = [
+                {
+                    'index': tool_call_indexes[output_index],
+                    'id': item.get('call_id', ''),
+                    'type': 'function',
+                    'function': {'name': item.get('name', ''), 'arguments': item.get('arguments', '')},
+                }
+            ]
+        elif event_type == 'response.function_call_arguments.delta':
+            tool_calls = [
+                {
+                    'index': tool_call_indexes.get(output_index, 0),
+                    'function': {'arguments': delta},
+                }
+            ]
+        elif is_final:
+            usage = convert_responses_usage_to_openai(data.get('response', {}).get('usage'))
+        else:
+            continue
+
+        chunk = openai_chat_chunk_message_template(
+            model, content, reasoning_content, tool_calls, usage, message_id=completion_id
+        )
+
+        if first:
+            chunk['choices'][0]['delta']['role'] = 'assistant'
+            first = False
+
+        if event_type == 'response.incomplete':
+            incomplete_reason = (data.get('response', {}).get('incomplete_details') or {}).get('reason')
+            chunk['choices'][0]['finish_reason'] = (
+                'content_filter' if incomplete_reason == 'content_filter' else 'length'
+            )
+        elif is_final and tool_call_indexes:
+            chunk['choices'][0]['finish_reason'] = 'tool_calls'
+
+        yield f'data: {JSONCodec.dumps(chunk)}\n\n'
+
+        if is_final:
+            yield 'data: [DONE]\n\n'
 
 
 def convert_embedding_response_ollama_to_openai(response) -> dict:

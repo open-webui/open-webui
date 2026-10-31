@@ -131,6 +131,7 @@ from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import (
+    convert_streaming_response_responses_to_openai,
     get_response_delta_key,
     handle_responses_streaming_event,
     merge_usage,
@@ -6534,7 +6535,7 @@ async def streaming_chat_response_handler(response, ctx):
                 log_model_usage(request, user, form_data['model'], current_usage)
 
         return StreamingResponse(
-            stream_wrapper(response.body_iterator, events),
+            stream_wrapper(convert_streaming_response_responses_to_openai(response.body_iterator), events),
             headers=dict(response.headers),
             background=response.background,
         )
