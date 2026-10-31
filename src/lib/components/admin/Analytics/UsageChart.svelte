@@ -541,9 +541,9 @@
 				class="overflow-y-auto overscroll-contain"
 				style:height={`${Math.min(visibleIds.length * activityRowHeight, 336)}px`}
 				style:max-height="50vh"
-				on:scroll={() => {
-					if (activityScrollTop !== activityViewport.scrollTop) {
-						activityScrollTop = activityViewport.scrollTop;
+				on:scroll={(e) => {
+					if (activityScrollTop !== e.currentTarget.scrollTop) {
+						activityScrollTop = e.currentTarget.scrollTop;
 						hideTooltip();
 					}
 				}}
