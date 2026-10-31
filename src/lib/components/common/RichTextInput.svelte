@@ -834,6 +834,7 @@
 	});
 
 	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
+	import BlockHandle from './RichTextInput/BlockHandle.svelte';
 
 	const ListItemDragHandle = Extension.create({
 		name: 'listItemDragHandle',
@@ -1549,3 +1550,7 @@
 	dir="auto"
 	class="relative w-full min-w-full {className} {!editable ? 'cursor-not-allowed' : ''}"
 />
+
+{#if dragHandle && editor && editable}
+	<BlockHandle {editor} />
+{/if}
