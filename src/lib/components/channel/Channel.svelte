@@ -88,6 +88,7 @@
 	let scrollEnd = true;
 	let messagesContainerElement = null;
 	let chatInputElement = null;
+	let threadChatInputElement = null;
 
 	let top = false;
 
@@ -475,8 +476,10 @@
 									await tick();
 									chatInputElement?.focus();
 								}}
-								onThread={(id) => {
+								onThread={async (id) => {
 									threadId = id;
+									await tick();
+									threadChatInputElement?.focus();
 								}}
 								onPin={pinHandler}
 								onLoad={async () => {
@@ -539,6 +542,7 @@
 						<Thread
 							{threadId}
 							{channel}
+							bind:chatInputElement={threadChatInputElement}
 							onPin={pinHandler}
 							onClose={() => {
 								threadId = null;
@@ -560,6 +564,7 @@
 					<Thread
 						{threadId}
 						{channel}
+						bind:chatInputElement={threadChatInputElement}
 						onPin={pinHandler}
 						onClose={() => {
 							threadId = null;
