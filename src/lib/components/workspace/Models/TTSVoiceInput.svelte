@@ -28,6 +28,7 @@
 	let inputElement: HTMLInputElement | null = null;
 	let popupElement: HTMLDivElement | null = null;
 	let suggestionsOpen = false;
+	let suggestionIndex = -1;
 
 	$: query = value.trim().toLowerCase();
 	$: matchedVoices = (voices ?? []).filter((voice) => {
@@ -40,6 +41,7 @@
 		);
 	});
 	$: optionVoices = selectedIds === null ? matchedVoices.slice(0, 8) : matchedVoices;
+	$: optionOffset = selectedIds !== null && matchedVoices.length > 0 ? 1 : 0;
 	$: if (suggestionsOpen && optionVoices.length > 0) {
 		tick().then(positionPopup);
 	}
@@ -106,9 +108,16 @@
 	aria-autocomplete="list"
 	aria-controls={listboxId}
 	aria-expanded={suggestionsOpen && optionVoices.length > 0}
+	aria-activedescendant={suggestionsOpen &&
+	optionVoices.length > 0 &&
+	suggestionIndex >= 0 &&
+	suggestionIndex < optionVoices.length + optionOffset
+		? `${listboxId}-${suggestionIndex}`
+		: undefined}
 	autocomplete="off"
 	on:focus={() => {
 		suggestionsOpen = true;
+		suggestionIndex = -1;
 		positionPopup();
 	}}
 	on:click={() => {
@@ -117,11 +126,37 @@
 	}}
 	on:input={() => {
 		suggestionsOpen = true;
+		suggestionIndex = -1;
 		positionPopup();
 	}}
 	on:keydown={(event) => {
-		if (event.key === 'Escape') {
+		if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+			if (optionVoices.length === 0) return;
+			event.preventDefault();
+			suggestionsOpen = true;
+			suggestionIndex = Math.max(
+				0,
+				Math.min(
+					optionVoices.length + optionOffset - 1,
+					suggestionIndex + (event.key === 'ArrowDown' ? 1 : -1)
+				)
+			);
+			tick().then(() =>
+				document
+					.getElementById(`${listboxId}-${suggestionIndex}`)
+					?.scrollIntoView({ block: 'nearest' })
+			);
+		} else if (event.key === 'Enter' && suggestionsOpen && suggestionIndex >= 0) {
+			event.preventDefault();
+			if (suggestionIndex < optionOffset) {
+				enableVoices();
+			} else if (optionVoices[suggestionIndex - optionOffset]) {
+				selectVoice(optionVoices[suggestionIndex - optionOffset]);
+			}
+			suggestionIndex = -1;
+		} else if (event.key === 'Escape') {
 			suggestionsOpen = false;
+			suggestionIndex = -1;
 		}
 	}}
 	on:blur={() => {
@@ -146,8 +181,13 @@
 			{#if matchedVoices.length > 0}
 				<button
 					type="button"
-					class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[0.3125rem] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+					id="{listboxId}-0"
+					class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[0.3125rem] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800 {suggestionIndex ===
+					0
+						? 'bg-gray-50 dark:bg-gray-800'
+						: ''}"
 					role="option"
+					tabindex="-1"
 					on:mousedown={(event) => {
 						event.preventDefault();
 					}}
@@ -161,12 +201,17 @@
 				</button>
 			{/if}
 		{/if}
-		{#each optionVoices as voice (voice.id)}
+		{#each optionVoices as voice, index (voice.id)}
 			<button
 				type="button"
-				class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[0.3125rem] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+				id="{listboxId}-{index + optionOffset}"
+				class="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-[0.3125rem] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800 {suggestionIndex ===
+				index + optionOffset
+					? 'bg-gray-50 dark:bg-gray-800'
+					: ''}"
 				role="option"
 				aria-selected={selectedIds?.includes(voice.id) ?? value === voice.id}
+				tabindex="-1"
 				on:mousedown={(event) => {
 					event.preventDefault();
 				}}
