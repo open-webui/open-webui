@@ -135,6 +135,7 @@
 
 							<button
 								type="button"
+								aria-label={$i18n.t('Clear')}
 								on:click={() => {
 									emoji = '';
 									message = '';

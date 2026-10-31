@@ -824,6 +824,7 @@
 												/>
 												<button
 													type="button"
+													aria-label={$i18n.t('Remove')}
 													class="text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition px-1"
 													on:click={() =>
 														(policyEnvPairs = policyEnvPairs.filter((_, i) => i !== idx))}

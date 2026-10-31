@@ -135,6 +135,7 @@
 							<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
 								{#each generatedImages as image, index}
 									<button
+										aria-label={$i18n.t('Download')}
 										class="relative group cursor-pointer"
 										on:click={() => downloadImage(image.url, index)}
 									>

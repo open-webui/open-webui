@@ -743,6 +743,7 @@
 					<div class="flex gap-1 items-center">
 						<Tooltip content={$i18n.t('Configure')}>
 							<button
+								aria-label={$i18n.t('Configure')}
 								class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
 								on:click={() => editWebhook(webhook)}
 								type="button"
