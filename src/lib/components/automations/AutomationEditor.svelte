@@ -45,6 +45,10 @@
 
 	let runs: AutomationRunModel[] = [];
 	let linkedRun: AutomationRunModel | null = null;
+	$: visibleRuns =
+		linkedRun && !runs.some((run) => run.id === linkedRun?.id)
+			? [...runs, linkedRun].sort((a, b) => b.created_at - a.created_at)
+			: runs;
 	let linkedRunId = '';
 	let alive = true;
 	onDestroy(() => {
@@ -337,29 +341,23 @@
 	<hr class="my-1.5 border-gray-50/60 dark:border-gray-850/25" />
 
 	<div class="px-4 py-2">
-		{#if linkedRun}<div
-				id="inbox-automation-run"
-				class="mb-3 rounded-xl border border-gray-200 dark:border-gray-700 p-3 text-xs"
-			>
-				<div class="mb-1 font-medium">
-					{$i18n.t('Automation failed')} · {formatTime(linkedRun.created_at)}
-				</div>
-				<p class="whitespace-pre-wrap break-words text-red-500">{linkedRun.error}</p>
-			</div>{/if}
 		<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">{$i18n.t('Runs')}</div>
 		<div class="overflow-y-auto scrollbar-hidden" on:scroll={onScroll}>
-			{#if runsLoading && runs.length === 0}
+			{#if runsLoading && visibleRuns.length === 0}
 				<div class="flex justify-center py-8">
 					<Spinner className="size-4" />
 				</div>
-			{:else if runs.length === 0}
+			{:else if visibleRuns.length === 0}
 				<div class="py-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
 					{$i18n.t('No runs yet')}
 				</div>
 			{:else}
 				<div>
-					{#each runs as run}
-						<div class="flex h-7 items-center gap-2 text-xs">
+					{#each visibleRuns as run}
+						<div
+							id={run.id === linkedRun?.id ? 'inbox-automation-run' : undefined}
+							class="flex h-7 items-center gap-2 text-xs"
+						>
 							<span
 								class="h-1.5 w-1.5 shrink-0 rounded-full {run.status === 'success'
 									? 'bg-emerald-500'

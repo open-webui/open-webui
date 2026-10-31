@@ -7,6 +7,7 @@
 	import { mentionAttributes } from '$lib/utils/channelMentions';
 	import { channels, models, config } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
@@ -203,99 +204,98 @@
 </script>
 
 {#if filteredItems.length}
-	<div
-		class="mention-list text-black dark:text-white rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-1"
-		id="suggestions-container"
-	>
-		<div class="overflow-y-auto scrollbar-thin max-h-60">
-			{#each filteredItems as item, i}
-				{#if i === 0 || item?.type !== filteredItems[i - 1]?.type}
-					<div class="px-2 text-xs text-gray-500 py-1">
-						{#if item?.type === 'user'}
-							{$i18n.t('Users')}
-						{:else if item?.type === 'model'}
-							{$i18n.t('Models')}
-						{:else if item?.type === 'app'}
-							{$i18n.t('Apps')}
-						{:else if item?.type === 'channel'}
-							{$i18n.t('Channels')}
-						{/if}
-					</div>
-				{/if}
-
-				<Tooltip content={item?.id} placement="top-start">
-					<button
-						type="button"
-						on:click={() => select(i)}
-						on:mousemove={() => {
-							selectedIndex = i;
-						}}
-						class="flex items-center justify-between px-2.5 py-1.5 rounded-xl w-full text-left {i ===
-						selectedIndex
-							? 'bg-gray-50 dark:bg-gray-800 selected-command-option-button'
-							: ''}"
-						data-selected={i === selectedIndex}
-					>
-						{#if item.type === 'channel'}
-							<div class=" size-4 justify-center flex items-center mr-0.5">
-								{#if isPublicChannel(item?.data)}
-									<Hashtag className="size-3" strokeWidth="2.5" />
-								{:else}
-									<Lock className="size-[0.9375rem]" strokeWidth="2" />
-								{/if}
-							</div>
-						{:else if item.type === 'app'}
-							{#if item.profile_image_url}
-								<ProfileImage
-									src={item.profile_image_url}
-									allowExternal
-									className="size-5 mr-2 rounded-lg!"
-								/>
-							{:else}<Grid className="size-4 mr-2" />{/if}
-						{:else if item.type === 'model'}
-							<img
-								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
-								alt={item?.data?.name ?? item.id}
-								class="rounded-full size-5 items-center mr-2"
-								on:error={(e) => {
-									// LICENSE covers this Open WebUI fallback logo.
-									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
-								}}
-							/>
-						{:else if item.type === 'user'}
-							<img
-								src={`${WEBUI_API_BASE_URL}/users/${item.id}/profile/image`}
-								alt={item?.label ?? item.id}
-								class="rounded-full size-5 items-center mr-2"
-								on:error={(e) => {
-									// LICENSE covers this Open WebUI fallback logo.
-									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
-								}}
-							/>
-						{/if}
-
-						<div class="truncate flex-1 pr-2">
-							{item.label}
-						</div>
-
-						<div class="shrink-0 text-xs text-gray-500">
-							{#if item.type === 'user'}
-								{$i18n.t('User')}
-							{:else if item.type === 'model'}
-								{$i18n.t('Model')}
-							{:else if item.type === 'app'}
-								{$i18n.t('App')}
-							{:else if item.type === 'channel'}
-								{$i18n.t('Channel')}
+	<div class="mention-list" id="suggestions-container">
+		<DropdownMenu className="w-72 max-w-[calc(100vw-1rem)] overflow-x-hidden font-sans text-xs">
+			<div class="overflow-y-auto overflow-x-hidden scrollbar-thin max-h-60">
+				{#each filteredItems as item, i}
+					{#if i === 0 || item?.type !== filteredItems[i - 1]?.type}
+						<div class="app-muted mb-0.5 px-2 pt-1 pb-0.5 text-[0.625rem] leading-none">
+							{#if item?.type === 'user'}
+								{$i18n.t('Users')}
+							{:else if item?.type === 'model'}
+								{$i18n.t('Models')}
+							{:else if item?.type === 'app'}
+								{$i18n.t('Apps')}
+							{:else if item?.type === 'channel'}
+								{$i18n.t('Channels')}
 							{/if}
 						</div>
-					</button>
-				</Tooltip>
-			{/each}
-		</div>
+					{/if}
+
+					<Tooltip content={item?.id} placement="top-start">
+						<button
+							type="button"
+							on:click={() => select(i)}
+							on:mousemove={() => {
+								selectedIndex = i;
+							}}
+							class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {i ===
+							selectedIndex
+								? 'app-interactive-active selected-command-option-button'
+								: ''}"
+							data-selected={i === selectedIndex}
+						>
+							{#if item.type === 'channel'}
+								<div class="app-icon-muted flex w-4 shrink-0 items-center justify-center">
+									{#if isPublicChannel(item?.data)}
+										<Hashtag className="size-3.5" strokeWidth="1.6" />
+									{:else}
+										<Lock className="size-3.5" strokeWidth="1.6" />
+									{/if}
+								</div>
+							{:else if item.type === 'app'}
+								{#if item.profile_image_url}
+									<ProfileImage
+										src={item.profile_image_url}
+										allowExternal
+										className="size-4 shrink-0 rounded-sm!"
+									/>
+								{:else}<Grid className="app-icon-muted size-4 shrink-0" />{/if}
+							{:else if item.type === 'model'}
+								<img
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
+									alt={item?.data?.name ?? item.id}
+									class="size-4 shrink-0 rounded-full object-cover"
+									on:error={(e) => {
+										// LICENSE covers this Open WebUI fallback logo.
+										// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+										// https://docs.openwebui.com/license.
+										e.currentTarget.src = '/favicon.png';
+									}}
+								/>
+							{:else if item.type === 'user'}
+								<img
+									src={`${WEBUI_API_BASE_URL}/users/${item.id}/profile/image`}
+									alt={item?.label ?? item.id}
+									class="size-4 shrink-0 rounded-full object-cover"
+									on:error={(e) => {
+										// LICENSE covers this Open WebUI fallback logo.
+										// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+										// https://docs.openwebui.com/license.
+										e.currentTarget.src = '/favicon.png';
+									}}
+								/>
+							{/if}
+
+							<div class="min-w-0 flex-1 truncate">
+								{item.label}
+							</div>
+
+							<div class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">
+								{#if item.type === 'user'}
+									{$i18n.t('User')}
+								{:else if item.type === 'model'}
+									{$i18n.t('Model')}
+								{:else if item.type === 'app'}
+									{$i18n.t('App')}
+								{:else if item.type === 'channel'}
+									{$i18n.t('Channel')}
+								{/if}
+							</div>
+						</button>
+					</Tooltip>
+				{/each}
+			</div>
+		</DropdownMenu>
 	</div>
 {/if}

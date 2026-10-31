@@ -100,7 +100,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+<div class="app-muted mb-0.5 px-2 pt-1 pb-0.5 text-[0.625rem] leading-none">
 	{$i18n.t('Skills')}
 </div>
 
@@ -113,9 +113,9 @@
 			tippyOptions={{ maxWidth: '20rem' }}
 		>
 			<button
-				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {skillIdx ===
+				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-xs transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {skillIdx ===
 				selectedIdx
-					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
+					? 'app-interactive-active selected-command-option-button'
 					: ''}"
 				type="button"
 				on:click={() => {
@@ -127,14 +127,14 @@
 				on:focus={() => {}}
 				data-selected={skillIdx === selectedIdx}
 			>
-				<div class="flex w-full min-w-0 items-center text-black dark:text-gray-100">
-					<div class="mr-2 flex size-4.5 shrink-0 items-center justify-center">
+				<div class="flex w-full min-w-0 items-center gap-2">
+					<div class="app-icon-muted flex w-4 shrink-0 items-center justify-center">
 						<Cube className="size-3.5" />
 					</div>
 					<div class="truncate min-w-0 flex-1">
 						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
-					<div class="ml-2 max-w-24 shrink-0 truncate text-xs text-gray-500 dark:text-gray-400">
+					<div class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">
 						{skill.source === 'terminal' ? $i18n.t('Terminal') : skill.id}
 					</div>
 				</div>
