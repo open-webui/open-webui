@@ -1,6 +1,6 @@
 <h1 align="center">Open WebUI</h1>
 
-<p align="center">A self-hosted AI platform for Ollama and OpenAI-compatible APIs.</p>
+<p align="center">Open WebUI is <strong>a home for AI</strong>: an extensible, easy-to-use, self-hosted platform built to run entirely offline. Connect local models through Ollama or use OpenAI-compatible APIs for local and cloud models.</p>
 
 ![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
