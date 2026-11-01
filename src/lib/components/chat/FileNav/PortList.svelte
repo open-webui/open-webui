@@ -56,14 +56,14 @@
 	});
 </script>
 
-<div class="px-2 py-1">
+<div class="px-2">
 	<div
-		class="flex items-center gap-1 w-full text-xs font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-100"
+		class="flex h-7 items-center gap-1 w-full text-[11px] leading-4 font-normal text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-100"
 	>
-		<button class="flex flex-1 items-center gap-1" on:click={() => (expanded = !expanded)}>
+		<button class="flex h-full flex-1 items-center gap-1.5" on:click={() => (expanded = !expanded)}>
 			<Icon
 				name="chevron-down"
-				size={12}
+				size={13}
 				strokeWidth={1.4}
 				class="transition-transform {expanded ? '' : '-rotate-90'}"
 			/>
@@ -98,7 +98,7 @@
 			{:else}
 				{#each ports as port}
 					<div
-						class="flex h-7 items-center w-full gap-2 px-1.5 text-xs rounded-lg group"
+						class="flex h-7 items-center w-full gap-2 text-[11px] leading-4 rounded-lg group"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-2 self-stretch"

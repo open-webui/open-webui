@@ -164,16 +164,12 @@
 				{#if running}<span class="tabular-nums text-gray-400">{running}</span>{/if}
 			</button>
 		{:else}
-			<span class="flex shrink-0 items-center gap-1.5 px-2">
-				<Icon name="terminal" size={13} />
-				<span>{$i18n.t('Sessions')}</span>
-			</span>
 			<div
 				role="tablist"
 				tabindex="-1"
 				aria-label={$i18n.t('Sessions')}
 				on:keydown={navigate}
-				class="terminal-tabs flex h-full min-w-0 flex-1 items-stretch overflow-x-auto"
+				class="terminal-tabs flex h-full min-w-0 items-stretch overflow-x-auto"
 			>
 				{#each tabs as tab (tab.id)}
 					<div
@@ -211,12 +207,15 @@
 		{/if}
 		<button
 			on:click={() => (expanded ? (expanded = false) : select(activeId))}
-			class="tab-button flex h-7 w-7 shrink-0 items-center justify-center"
+			class="tab-button flex h-7 min-w-7 shrink-0 items-center justify-end"
+			class:flex-1={expanded}
 			aria-expanded={expanded}
 			title={expanded ? $i18n.t('Collapse sessions') : $i18n.t('Expand sessions')}
 			aria-label={expanded ? $i18n.t('Collapse sessions') : $i18n.t('Expand sessions')}
 		>
-			<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
+			<span class="flex h-7 w-7 items-center justify-center">
+				<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
+			</span>
 		</button>
 	</div>
 	<div
