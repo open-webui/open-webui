@@ -726,7 +726,8 @@
 
 	const MIN_WIDTH = 220;
 	const MAX_WIDTH = 480;
-	const MOBILE_WIDTH = 280;
+	let viewportWidth = 320;
+	$: mobileWidth = Math.min(MAX_WIDTH, Math.max(0, viewportWidth - 40));
 
 	let isResizing = false;
 	let activePointerId: number | null = null;
@@ -1033,6 +1034,7 @@
 />
 
 <svelte:window
+	bind:innerWidth={viewportWidth}
 	on:pointermove={(e) => {
 		if (!isResizing) return;
 		if (activePointerId !== null && e.pointerId !== activePointerId) return;
@@ -1050,7 +1052,7 @@
 	open={$showSidebar}
 	enabled={$mobile}
 	blocked={!!$showControls}
-	width={$mobile ? MOBILE_WIDTH : $sidebarWidth}
+	width={$mobile ? mobileWidth : $sidebarWidth}
 	onOpenChange={(open) => showSidebar.set(open)}
 	let:visible
 	let:progress
@@ -1289,7 +1291,7 @@
 				: `bg-gray-50 dark:bg-gray-950 z-50 ${$showSidebar ? '' : 'pointer-events-none'}`} shrink-0 text-gray-700 dark:text-gray-300 text-[0.8125rem] leading-5 fixed top-0 left-0 overflow-x-hidden
         "
 			style={$mobile
-				? `${panelStyle} --sidebar-width: ${MOBILE_WIDTH}px;`
+				? `${panelStyle} --sidebar-width: ${mobileWidth}px;`
 				: `width: ${$showSidebar ? 'var(--sidebar-width)' : '0'}; transition: width 250ms cubic-bezier(0.22, 1, 0.36, 1);`}
 			data-state={$showSidebar}
 		>
