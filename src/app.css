@@ -660,7 +660,8 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	@apply dark:bg-gray-800 bg-gray-50;
 }
 
-.tiptap pre {
+.tiptap pre,
+.tiptap pre.hljs {
 	border-radius: 0.5rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
@@ -675,56 +676,12 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	@apply font-mono rounded-md text-gray-800 bg-gray-50 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
 }
 
-/* Code styling */
-.hljs-comment,
-.hljs-quote {
-	color: #616161;
+:where(html:not(.dark)) .tiptap {
+	@import 'highlight.js/styles/github.css';
 }
 
-.hljs-variable,
-.hljs-template-variable,
-.hljs-attribute,
-.hljs-tag,
-.hljs-regexp,
-.hljs-link,
-.hljs-name,
-.hljs-selector-id,
-.hljs-selector-class {
-	color: #f98181;
-}
-
-.hljs-number,
-.hljs-meta,
-.hljs-built_in,
-.hljs-builtin-name,
-.hljs-literal,
-.hljs-type,
-.hljs-params {
-	color: #fbbc88;
-}
-
-.hljs-string,
-.hljs-symbol,
-.hljs-bullet {
-	color: #b9f18d;
-}
-
-.hljs-title,
-.hljs-section {
-	color: #faf594;
-}
-
-.hljs-keyword,
-.hljs-selector-tag {
-	color: #70cff8;
-}
-
-.hljs-emphasis {
-	font-style: italic;
-}
-
-.hljs-strong {
-	font-weight: 700;
+:where(html.dark) .tiptap {
+	@import 'highlight.js/styles/github-dark.css';
 }
 
 /* Table styling for tiptap editors */

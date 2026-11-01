@@ -212,6 +212,7 @@
 					document,
 					DOMSerializer.fromSchema(editor.schema).nodes[node.type.name](node)
 				);
+				(pre as HTMLElement).classList.add('hljs');
 				(pre as HTMLElement).style.margin = '0';
 				const button = document.createElement('button');
 				button.type = 'button';
