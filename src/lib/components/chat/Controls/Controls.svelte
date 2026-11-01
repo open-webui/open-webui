@@ -61,11 +61,11 @@
 					title={$i18n.t('Files')}
 					bind:open={showFiles}
 					onChange={setOpen('files')}
-					buttonClassName="w-full"
+					buttonClassName={compactSectionButtonClass}
 					chevronClassName="size-2.5"
 					chevronStrokeWidth="2"
 				>
-					<div class="flex flex-col gap-1 mt-1.5" slot="content">
+					<div class="flex flex-col gap-1 pt-1 pb-1 text-xs" slot="content">
 						{#each chatFiles as file, fileIdx}
 							<FileItem
 								className="w-full"
