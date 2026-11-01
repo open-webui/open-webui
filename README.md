@@ -14,9 +14,9 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
-## Installation
+### Installation
 
-### Python
+#### Python
 
 Requires Python 3.12.
 
@@ -27,7 +27,7 @@ open-webui serve
 
 Then open [http://localhost:8080](http://localhost:8080).
 
-### Docker
+#### Docker
 
 ```bash
 docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
@@ -54,11 +54,13 @@ Add these options to `docker run` before the image name as needed:
 
 See the [Docker installation guide](https://docs.openwebui.com/getting-started/quick-start/) for setup instructions and configuration options.
 
-### Desktop App
+#### Desktop App
 
 [Download the native desktop app](https://github.com/open-webui/desktop) for macOS, Windows, and Linux.
 
-## Ecosystem
+**[Read the docs →](https://docs.openwebui.com/getting-started/)**
+
+### Ecosystem
 
 - [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals): The action layer that turns Open WebUI into a full agent harness, with enterprise orchestration for per-user workspaces.
 - [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Mirror folders, repos, buckets, and wikis into Open WebUI Knowledge Bases with incremental sync.
@@ -66,29 +68,29 @@ See the [Docker installation guide](https://docs.openwebui.com/getting-started/q
 
 See the [ecosystem documentation](https://docs.openwebui.com/ecosystem/) for details.
 
-## Troubleshooting and Updates
+### Troubleshooting and Updates
 
 See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
 
-## Documentation
+### Documentation
 
 See the [docs](https://docs.openwebui.com/) for configuration and usage, and the [roadmap](https://docs.openwebui.com/roadmap/) for planned work.
 
 For Docker Compose, Kubernetes, and other setups, see the [installation docs](https://docs.openwebui.com/getting-started/).
 
-## Support
+### Support
 
 [Open an issue](https://github.com/open-webui/open-webui/issues), [start a discussion](https://github.com/open-webui/open-webui/discussions), or join us on [Discord](https://discord.gg/5rJgQTnV4s).
 
-## Security
+### Security
 
 Report vulnerabilities privately through [GitHub security advisories](https://github.com/open-webui/open-webui/security). Security reports are accepted only through GitHub.
 
-## License
+### License
 
 Includes code under the Open WebUI License, which requires preserving the Open WebUI branding, and prior contributions under their original licenses. See [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) for terms and history.
 
-## Star History
+### Star History
 
 <a href="https://star-history.com/#open-webui/open-webui&Date">
   <picture>
