@@ -597,7 +597,7 @@
 								>{/if}
 						</button>
 						{#if tab.untitled || dirtyFiles[tab.id]}<span
-								class="size-1.5 shrink-0 rounded-full bg-gray-400"
+								class="ms-1 size-1.5 shrink-0 rounded-full bg-gray-400"
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						<button
