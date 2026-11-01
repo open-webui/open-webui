@@ -2,7 +2,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showSidebar, socket, user } from '$lib/stores';
+	import { mobile, showControls, showSidebar, socket, user } from '$lib/stores';
+	import { commentLink } from '$lib/utils';
 	import { refreshInboxCount, setInboxCount } from '$lib/stores/inbox';
 	import { inboxRequest, type InboxItem } from '$lib/apis/notifications/inbox';
 	import InboxPanel from './InboxPanel.svelte';
@@ -42,7 +43,19 @@
 		}
 		const state = { inbox: $page.state.inbox, inboxUserId: $page.state.inboxUserId };
 		if ($mobile) showSidebar.set(false);
-		if (current.object_type === 'comment') {
+		if (current.object_type === 'comment' && current.resource_type === 'chat') {
+			await goto(
+				commentLink({
+					id: current.object_id!,
+					resource_type: 'chat',
+					resource_id: current.resource_id!,
+					target_type: current.data.target_type ?? null,
+					target_id: current.data.target_id ?? null
+				}),
+				{ state }
+			);
+			showControls.set({ tab: 'comments', comment_id: current.object_id! });
+		} else if (current.object_type === 'comment') {
 			comments = {
 				resource_type: current.resource_type as CommentsRequest['resource_type'],
 				resource_id: current.resource_id!,
