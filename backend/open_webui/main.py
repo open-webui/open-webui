@@ -701,6 +701,8 @@ async def initialize_runtime_config(app: FastAPI):
                         f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
                     )
 
+    await app.state.oauth_manager.load_providers()
+
     arena_models = await Config.get('evaluation.arena.models', []) or []
     if any('access_control' in m.get('meta', {}) for m in arena_models):
         for model in arena_models:
