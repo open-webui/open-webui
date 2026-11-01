@@ -56,7 +56,9 @@
 	<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
 	<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
 {/if}
-<nav class="sticky top-0 z-30 w-full px-3 py-1 -mb-8 flex items-center drag-region flex-col">
+<nav
+	class="sticky top-0 z-30 w-full px-1.5 md:px-3 py-1 -mb-8 flex items-center drag-region flex-col"
+>
 	<div
 		id="navbar-bg-gradient-to-b"
 		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
@@ -68,7 +70,7 @@
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
-						: ''} col-start-1 row-start-1 mr-1.5 mt-0.5 self-center flex flex-none items-center text-gray-600 dark:text-gray-400"
+						: ''} col-start-1 row-start-1 mr-1.5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
 				>
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}

@@ -156,7 +156,7 @@
 
 <nav
 	class="sticky top-0 z-30 w-full {$mobile
-		? 'pt-0.5'
+		? 'pt-1.5'
 		: ''} pb-1 -mb-12 flex flex-col items-center drag-region"
 >
 	<div class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
@@ -170,7 +170,7 @@
 		<div class=" flex max-w-full w-full mx-auto bg-transparent">
 			<div class="flex items-center w-full max-w-full">
 				{#if $mobile && !$showSidebar}
-					<div class="mr-1 flex flex-none items-center self-center">
+					<div class="mr-1 flex flex-none items-center self-start">
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
 								id="sidebar-toggle-button"

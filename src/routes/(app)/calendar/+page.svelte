@@ -274,10 +274,12 @@
 >
 	{#if loaded}
 		<!-- Top Navbar — spans above sidebar and calendar -->
-		<nav class="px-3 pt-2 pb-2 backdrop-blur-xl drag-region select-none shrink-0">
+		<nav
+			class="px-1.5 pt-1.5 pb-2 md:px-3 md:pt-2 backdrop-blur-xl drag-region select-none shrink-0"
+		>
 			<div class="flex items-center gap-0.5 md:gap-1">
 				{#if $mobile}
-					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">
 						<Tooltip
 							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							interactive={true}
