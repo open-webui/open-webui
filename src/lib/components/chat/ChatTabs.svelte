@@ -108,6 +108,7 @@
 	> = {};
 	let dirtyFiles: Record<string, boolean> = {};
 	let fileContexts: Record<string, TerminalContext | null> = {};
+	let gitDirectories: Record<string, string | null> = {};
 	let panelTarget: HTMLElement | null = null;
 	let initialized = false;
 	let tabsChatId = chatId;
@@ -304,6 +305,7 @@
 			tabs = removeTab(tabs, id);
 			delete dirtyFiles[id];
 			delete fileContexts[id];
+			delete gitDirectories[id];
 			if (!tabs.tabs.length) showTabs.set(false);
 			await tick();
 			document.getElementById(domId(tabs.activeId))?.focus();
@@ -467,6 +469,7 @@
 				tabs = removeTab(tabs, tab.id);
 				delete dirtyFiles[tab.id];
 				delete fileContexts[tab.id];
+				delete gitDirectories[tab.id];
 			}
 		}
 	};
@@ -519,6 +522,7 @@
 			tabs = emptyTabs();
 			dirtyFiles = {};
 			fileContexts = {};
+			gitDirectories = {};
 			initialized = false;
 			commentTarget = {};
 		}
@@ -901,6 +905,7 @@
 						overlay={dragged}
 						{chatId}
 						bind:terminalContext={fileContexts[tab.id]}
+						bind:gitDirectory={gitDirectories[tab.id]}
 					/>
 				{:else if tab.kind === 'files' && codeInterpreterEnabled}
 					<PyodideFileNav overlay={dragged} />
@@ -920,7 +925,7 @@
 			bind:hideWhitespace={gitHideWhitespace}
 			connection={gitConnection}
 			{chatId}
-			directory={terminalContext?.currentDirectory ?? '.'}
+			directory={gitDirectories[tabs.activeId] ?? terminalContext?.currentDirectory ?? '.'}
 			active={!!$showTabs}
 			onOpenFile={(path) => openFile(path, gitConnection.selector)}
 			onOpenDirectory={(path) => openFiles(gitConnection.selector, path)}

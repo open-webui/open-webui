@@ -170,7 +170,7 @@
 				aria-pressed={gitDiffOpen}
 				on:click={onToggleGitDiff}
 			>
-				<Icon name="git-diff" size={18} strokeWidth={1.6} />
+				<Icon name="git-diff" size={16} strokeWidth={1.4} />
 			</button>
 		</Tooltip>
 	{/if}
@@ -187,7 +187,7 @@
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
-			<Icon name="refresh" size={11} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
+			<Icon name="refresh" size={10} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
 		</button>
 	</Tooltip>
 	{#if !selectedFile}

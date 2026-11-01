@@ -68,6 +68,7 @@
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
+	export let gitDirectory: string | null = null;
 	export let gitConnection: TerminalConnection | null = null;
 	export let gitDiffMode: 'unified' | 'split' = 'unified';
 	export let gitHideWhitespace = false;
@@ -1023,6 +1024,7 @@
 		selectedFileWritable = true;
 		clearFilePreview();
 		clearSelection();
+		if (!options.preserveTree || directory !== currentPath) gitDirectory = directory;
 		currentPath = directory;
 		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		savedPath = directory;
@@ -1087,6 +1089,7 @@
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
+		gitDirectory = directory;
 		saveTreeState();
 
 		const result = await fetchExpandedDir(directory);
