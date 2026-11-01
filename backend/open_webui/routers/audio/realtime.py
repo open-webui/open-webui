@@ -142,9 +142,17 @@ class CallProtocol:
             return event
         if kind == 'conversation.item.truncate' and set(event) == {'type', 'item_id', 'content_index', 'audio_end_ms'}:
             samples = self.audio.get((event['item_id'], event['content_index']))
+            # A truncate is a playback-position hint from the client's audio worklet, not a
+            # call-lifecycle decision. The client reports positions from its own buffered
+            # playback and can name an item this connection never streamed, so an
+            # out-of-range value is expected rather than fatal. Dropping or clamping it
+            # keeps the call alive; raising here destroyed the whole session mid-call.
+            if samples is None:
+                return []
             end = event['audio_end_ms']
-            if samples is None or type(end) is not int or not 0 <= end <= samples * 1000 // 24000:
-                raise ValueError('Invalid playback position')
+            if type(end) is not int or end < 0:
+                end = 0
+            event['audio_end_ms'] = min(end, samples * 1000 // 24000)
             return event
         if kind == 'bridge.context' and set(event) == {'type', 'messages'}:
             messages = event['messages']
