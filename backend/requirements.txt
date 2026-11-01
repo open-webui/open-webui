@@ -42,7 +42,7 @@ hiredis==3.4.2
 pytz==2026.2
 
 loguru==0.7.3
-asgiref==3.11.1
+asgiref==3.13.0
 
 # AI libraries
 tiktoken==0.13.0
