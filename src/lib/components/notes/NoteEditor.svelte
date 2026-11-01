@@ -1580,6 +1580,7 @@ ${content}
 										id={`note-${note.id}-${renderedPage.id}`}
 										className="input-prose-sm ps-4 pe-0.5 pt-2 flex-1 min-h-[12rem]"
 										json={true}
+										copyCodeBlocks={true}
 										bind:value={renderedPage.content.json}
 										html={editorHtml}
 										documentId={activeDocumentId}

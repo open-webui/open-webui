@@ -193,6 +193,7 @@
 	import Code from '@tiptap/extension-code';
 	import Italic from '@tiptap/extension-italic';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+	import { codeBlockWithCopy } from './RichTextInput/CodeBlockWithCopy';
 
 	// WORKAROUND: TipTap's default Code mark input rule regex captures the
 	// character before the opening backtick, causing it to be deleted.
@@ -270,6 +271,7 @@
 	};
 
 	export let richText = true;
+	export let copyCodeBlocks = false;
 	export let autoFormat = true;
 	export let dragHandle = false;
 	export let link = false;
@@ -943,7 +945,10 @@
 
 				...(richText
 					? [
-							CodeBlockLowlight.configure({
+							(copyCodeBlocks
+								? codeBlockWithCopy((key) => $i18n.t(key))
+								: CodeBlockLowlight
+							).configure({
 								lowlight
 							}),
 							Typography,
