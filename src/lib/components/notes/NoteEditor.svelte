@@ -129,7 +129,7 @@
 	let pageBusy = false;
 	let showNoteTabs = false;
 	let noteTabsPreferenceReady = false;
-	$: if (noteTabsPreferenceReady && $user?.id) {
+	$: if (noteTabsPreferenceReady && !$mobile && $user?.id) {
 		localStorage.setItem(`note-tabs-open:${$user.id}`, String(showNoteTabs));
 	}
 	const pendingFileUploads = new Set<Promise<any>>();
@@ -1023,7 +1023,7 @@ ${content}
 	};
 
 	onMount(async () => {
-		showNoteTabs = localStorage.getItem(`note-tabs-open:${$user?.id}`) === 'true';
+		showNoteTabs = !$mobile && localStorage.getItem(`note-tabs-open:${$user?.id}`) === 'true';
 		noteTabsPreferenceReady = true;
 		await tick();
 

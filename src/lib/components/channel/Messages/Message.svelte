@@ -71,13 +71,13 @@
 
 	let showButtons = false;
 
-	// Preserve the CSS anchor while letting actions escape the message scroll container.
-	const portalActions = (node: HTMLElement, keepOpen: boolean) => {
+	// The top layer escapes scroll clipping without moving actions out of the message's tab order.
+	const positionActions = (node: HTMLElement, keepOpen: boolean) => {
 		const anchor = node.parentElement!;
 		const messageElement = anchor.parentElement!;
 		let cleanup: (() => void) | undefined;
 		let destroyed = false;
-		document.body.appendChild(node);
+		node.showPopover();
 
 		const update = () => {
 			if (destroyed) return;
@@ -116,7 +116,6 @@
 				for (const element of [messageElement, node]) {
 					for (const event of events) element.removeEventListener(event, scheduleUpdate);
 				}
-				node.remove();
 			}
 		};
 	};
@@ -272,9 +271,10 @@
 			{#if !edit && !disabled && !$$slots.header}
 				<div class="absolute right-1 -top-3">
 					<div
-						use:portalActions={showButtons}
+						use:positionActions={showButtons}
+						popover="manual"
 						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
-						style="opacity: 0; pointer-events: none;"
+						style="inset: auto; margin: 0; color: inherit; opacity: 0; pointer-events: none;"
 					>
 						<slot name="actions">
 							{#if onReaction}
