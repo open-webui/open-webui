@@ -2490,7 +2490,7 @@
 										<button
 											type="button"
 											id="input-menu-button"
-											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+											class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 											aria-label={$i18n.t('More')}
 										>
 											<PlusAlt className="size-5" />
@@ -2540,7 +2540,7 @@
 											<button
 												type="button"
 												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 												aria-label={$i18n.t('Integrations')}
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />

@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 	const i18n: any = getContext('i18n');
-	const dispatch = createEventDispatcher();
 
 	import {
 		artifactCode,
@@ -16,7 +15,6 @@
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import { injectCsp } from '$lib/utils/csp';
 
-	import XMark from '../icons/XMark.svelte';
 	import ArrowsPointingOut from '../icons/ArrowsPointingOut.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
@@ -128,10 +126,10 @@
 	class=" w-full h-full relative flex flex-col bg-white dark:bg-gray-850"
 	id="artifacts-container"
 >
-	<div class="w-full h-full flex flex-col flex-1 relative">
+	<div class="w-full min-h-0 flex flex-col flex-1 relative">
 		{#if contents.length > 0}
 			<div
-				class="pointer-events-auto z-20 flex justify-between items-center p-2.5 font-primar text-gray-900 dark:text-white"
+				class="pointer-events-auto z-20 shrink-0 flex justify-between items-center px-2.5 pb-2.5 font-primar text-gray-900 dark:text-white"
 			>
 				<div class="flex-1 flex items-center justify-between pr-1">
 					<div class="flex items-center space-x-2">
@@ -225,18 +223,6 @@
 						{/if}
 					</div>
 				</div>
-
-				<button
-					aria-label={$i18n.t('Close')}
-					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-					on:click={() => {
-						dispatch('close');
-						showTabs.set(false);
-						showArtifacts.set(false);
-					}}
-				>
-					<XMark className="size-3.5 text-gray-900 dark:text-white" />
-				</button>
 			</div>
 		{/if}
 
@@ -244,7 +230,7 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div class="flex-1 w-full h-full">
+		<div class="flex-1 w-full min-h-0">
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">

@@ -7,6 +7,7 @@
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { beforeNavigate } from '$app/navigation';
 	import {
+		artifactContents,
 		config,
 		temporaryChatEnabled,
 		terminalServers,
@@ -20,7 +21,8 @@
 		settings,
 		showFileNavPath,
 		selectedTerminalId,
-		user
+		user,
+		visibleControls
 	} from '$lib/stores';
 
 	import { commentsRequest, resourceQuery } from '$lib/apis/comments';
@@ -145,7 +147,7 @@
 					...(typeof $showTabs === 'object' ? $showTabs : {})
 				}
 			: null;
-	$: if ($showTabs === 'comments' || typeof $showTabs === 'object') {
+	$: if ($showTabs === 'files' || $showTabs === 'comments' || typeof $showTabs === 'object') {
 		showArtifacts.set(false);
 		showEmbeds.set(false);
 		showCallOverlay.set(false);
@@ -161,11 +163,21 @@
 		showOverview.set(false);
 	});
 
-	$: sidePanelAvailable = showFilesTab || showCommentsTab || specialPanel;
+	$: showArtifactsTab = ($artifactContents ?? []).length > 0 && $visibleControls['chat.artifacts'];
+	$: sidePanelAvailable = showFilesTab || showCommentsTab || showArtifactsTab || specialPanel;
 
 	// Keep the remaining side-pane tabs available after moving Controls into the composer.
 	$: if (!showCommentsTab && activeTab === 'comments') activeTab = 'files';
 	$: if (!showFilesTab && showCommentsTab && activeTab === 'files') activeTab = 'comments';
+	$: if (
+		$showTabs &&
+		!$showEmbeds &&
+		!$showCallOverlay &&
+		!showFilesTab &&
+		!showCommentsTab &&
+		showArtifactsTab
+	)
+		showArtifacts.set(true);
 	$: if (!sidePanelAvailable) showTabs.set(false);
 
 	// Auto-switch to Files tab when display_file is triggered
@@ -340,29 +352,43 @@
 						</div>
 					{:else if $showEmbeds}
 						<Embeds />
-					{:else if $showArtifacts}
-						<Artifacts {history} />
 					{:else}
-						<!-- Files and Comments tabs -->
+						<!-- Files, Artifacts, and Comments tabs -->
 						<div class="flex flex-col h-full min-h-0">
 							<!-- Tab bar -->
 							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 									{#if showFilesTab}
 										<button
-											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-											'files'
+											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
+											activeTab === 'files'
 												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => showTabs.set('files')}
+											on:click={() => {
+												showArtifacts.set(false);
+												showTabs.set('files');
+											}}
 										>
 											{$i18n.t('Files')}
 										</button>
 									{/if}
+									{#if showArtifactsTab}
+										<button
+											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {$showArtifacts
+												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+											on:click={() => {
+												showTabs.set(true);
+												showArtifacts.set(true);
+											}}
+										>
+											{$i18n.t('Artifacts')}
+										</button>
+									{/if}
 									{#if showCommentsTab}
 										<button
-											class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-											'comments'
+											class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
+											activeTab === 'comments'
 												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 											on:click={() => showTabs.set('comments')}
@@ -393,7 +419,9 @@
 							</div>
 
 							<div class="flex-1 min-h-0">
-								{#if activeTab === 'comments'}
+								{#if $showArtifacts}
+									<Artifacts {history} />
+								{:else if activeTab === 'comments'}
 									{#if currentComments}
 										{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 											<CommentsPanel
@@ -449,29 +477,43 @@
 					</div>
 				{:else if $showEmbeds}
 					<Embeds overlay={dragged} />
-				{:else if $showArtifacts}
-					<Artifacts {history} overlay={dragged} />
 				{:else}
-					<!-- Files and Comments tabs -->
+					<!-- Files, Artifacts, and Comments tabs -->
 					<div class="flex flex-col h-full min-h-0">
 						<!-- Tab bar -->
 						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
 							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
 								{#if showFilesTab}
 									<button
-										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-										'files'
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
+										activeTab === 'files'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => showTabs.set('files')}
+										on:click={() => {
+											showArtifacts.set(false);
+											showTabs.set('files');
+										}}
 									>
 										{$i18n.t('Files')}
 									</button>
 								{/if}
+								{#if showArtifactsTab}
+									<button
+										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {$showArtifacts
+											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+										on:click={() => {
+											showTabs.set(true);
+											showArtifacts.set(true);
+										}}
+									>
+										{$i18n.t('Artifacts')}
+									</button>
+								{/if}
 								{#if showCommentsTab}
 									<button
-										class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
-										'comments'
+										class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
+										activeTab === 'comments'
 											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
 											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 										on:click={() => showTabs.set('comments')}
@@ -502,7 +544,9 @@
 						</div>
 
 						<div class="flex-1 min-h-0">
-							{#if activeTab === 'comments'}
+							{#if $showArtifacts}
+								<Artifacts {history} overlay={dragged} />
+							{:else if activeTab === 'comments'}
 								{#if currentComments}
 									{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 										<CommentsPanel

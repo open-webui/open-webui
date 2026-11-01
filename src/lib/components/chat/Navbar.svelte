@@ -10,6 +10,7 @@
 		chatTitle as _chatTitle,
 		config,
 		mobile,
+		selectedTerminalId,
 		settings,
 		showSidebar,
 		showTabs,
@@ -368,16 +369,18 @@
 						</Menu>
 					{/if}
 
-					<Tooltip content={$i18n.t('Tabs')}>
-						<button
-							class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
-							on:click={() => showTabs.set(!$showTabs)}
-							aria-label={$i18n.t('Tabs')}
-							aria-expanded={!!$showTabs}
-						>
-							<SplitPanel className="size-5" strokeWidth="1" />
-						</button>
-					</Tooltip>
+					{#if history.currentId || $selectedTerminalId}
+						<Tooltip content={$i18n.t('Tabs')}>
+							<button
+								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								on:click={() => showTabs.set(!$showTabs)}
+								aria-label={$i18n.t('Tabs')}
+								aria-expanded={!!$showTabs}
+							>
+								<SplitPanel className="size-5" strokeWidth="1" />
+							</button>
+						</Tooltip>
+					{/if}
 				</div>
 			</div>
 		</div>
