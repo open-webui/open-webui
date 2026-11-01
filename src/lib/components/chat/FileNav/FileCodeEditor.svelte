@@ -72,14 +72,18 @@
 		editor.focus();
 	};
 
+	let languageGeneration = 0;
 	const detectLanguage = async (path: string | null) => {
-		if (!path) return;
-		const match = LanguageDescription.matchFilename(languages, path);
-		if (match) {
-			const lang = await match.load();
-			if (lang && editor) {
-				editor.dispatch({ effects: editorLanguage.reconfigure(lang) });
+		const version = ++languageGeneration;
+		const match = path ? LanguageDescription.matchFilename(languages, path) : null;
+		editor?.dispatch({ effects: editorLanguage.reconfigure([]) });
+		try {
+			const language = await match?.load();
+			if (version === languageGeneration && editor && language) {
+				editor.dispatch({ effects: editorLanguage.reconfigure(language) });
 			}
+		} catch {
+			// Keep the file editable if a language chunk cannot be loaded.
 		}
 	};
 
@@ -102,7 +106,7 @@
 	}
 
 	// React to filePath changes for language detection
-	$: if (editor && filePath) {
+	$: if (editor) {
 		detectLanguage(filePath);
 	}
 
@@ -159,7 +163,6 @@
 			parent: container
 		});
 
-		detectLanguage(filePath);
 		revealSearchTarget();
 
 		// Watch dark mode

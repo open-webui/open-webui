@@ -1,5 +1,9 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
+	import type { GitStatus } from '$lib/apis/terminal/git';
+	let gitStatus: GitStatus | null = null;
+	let gitDiffMode: 'unified' | 'split' = 'unified';
+	let gitHideWhitespace = false;
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import Sortable from 'sortablejs';
 	import { beforeNavigate, goto } from '$app/navigation';
@@ -684,7 +688,9 @@
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
 	class="h-full w-full min-h-0 flex flex-col"
-	style:--chat-tabs-dark-background={largeScreen ? 'var(--color-gray-900)' : 'var(--color-gray-850)'}
+	style:--chat-tabs-dark-background={largeScreen
+		? 'var(--color-gray-900)'
+		: 'var(--color-gray-850)'}
 	id="controls-container"
 >
 	<div class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none">
@@ -873,6 +879,14 @@
 					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
 					<FileNav
+						gitStatus={gitConnection && gitConnection.selector === tab.terminalId
+							? gitStatus
+							: null}
+						gitConnection={gitConnection && gitConnection.selector === tab.terminalId
+							? gitConnection
+							: null}
+						{gitDiffMode}
+						{gitHideWhitespace}
 						bind:this={fileViews[tab.id]}
 						bind:dirty={dirtyFiles[tab.id]}
 						terminalId={tab.terminalId}
@@ -901,6 +915,9 @@
 	</div>
 	{#if gitConnection}
 		<GitBar
+			bind:status={gitStatus}
+			bind:diffMode={gitDiffMode}
+			bind:hideWhitespace={gitHideWhitespace}
 			connection={gitConnection}
 			{chatId}
 			directory={terminalContext?.currentDirectory ?? '.'}

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
+	import type { TerminalConnection } from '$lib/apis/terminal';
+	import type { GitStatus } from '$lib/apis/terminal/git';
+	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
@@ -64,6 +67,10 @@
 
 	export let overlay = false;
 	export let active = true;
+	export let gitStatus: GitStatus | null = null;
+	export let gitConnection: TerminalConnection | null = null;
+	export let gitDiffMode: 'unified' | 'split' = 'unified';
+	export let gitHideWhitespace = false;
 	export let terminalId: string | null = null;
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
@@ -547,6 +554,19 @@
 
 	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
+	let showGitDiff = false;
+	let gitFileKey = '';
+	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
+		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
+		showGitDiff = false;
+	}
+	$: currentGitFile =
+		gitStatus?.is_repo && gitStatus.root && selectedFile
+			? (gitStatus.files.find(
+					(file) =>
+						normalizePath(`${gitStatus!.root}/${file.path}`) === normalizePath(selectedFile!)
+				) ?? null)
+			: null;
 	let selectedFileWritable = true;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
@@ -2077,6 +2097,12 @@
 		{/if}
 
 		<FileNavToolbar
+			gitFile={currentGitFile}
+			gitDiffOpen={showGitDiff}
+			onToggleGitDiff={() => {
+				showGitDiff = !showGitDiff;
+				fileAsk = null;
+			}}
 			breadcrumbs={buildBreadcrumbs(currentPath)}
 			{selectedFile}
 			{loading}
@@ -2130,6 +2156,31 @@
 					</button>
 				</Tooltip>
 			{/if}
+			{#if fileContent !== null}
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						on:click={async () => {
+							if (await copyToClipboard(fileContent ?? '')) {
+								toast.success($i18n.t('Copied to clipboard'));
+							}
+						}}
+						aria-label={$i18n.t('Copy')}
+					>
+						<Icon name="copy" size={11} strokeWidth={1.4} />
+					</button>
+				</Tooltip>
+			{/if}
+			<Tooltip content={$i18n.t('Download')}>
+				<button
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					on:click={() => selectedFile && downloadFile(selectedFile)}
+					aria-label={$i18n.t('Download')}
+				>
+					<Icon name="download" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+
 			{#if isTextFile}
 				{#if isHtml && showRaw}
 					<Tooltip content={$i18n.t('Save')}>
@@ -2221,31 +2272,6 @@
 					</Tooltip>
 				{/if}
 			{/if}
-
-			{#if fileContent !== null}
-				<Tooltip content={$i18n.t('Copy')}>
-					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-						on:click={async () => {
-							if (await copyToClipboard(fileContent ?? '')) {
-								toast.success($i18n.t('Copied to clipboard'));
-							}
-						}}
-						aria-label={$i18n.t('Copy')}
-					>
-						<Icon name="copy" size={11} strokeWidth={1.4} />
-					</button>
-				</Tooltip>
-			{/if}
-			<Tooltip content={$i18n.t('Download')}>
-				<button
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-					on:click={() => selectedFile && downloadFile(selectedFile)}
-					aria-label={$i18n.t('Download')}
-				>
-					<Icon name="download" size={11} strokeWidth={1.4} />
-				</button>
-			</Tooltip>
 		</FileNavToolbar>
 
 		{#if !selectedFile && showSearch}
@@ -2353,65 +2379,80 @@
 			}}
 		>
 			{#if selectedFile !== null}
-				{#if supportsComments(selectedFile) && selectedTerminal}
-					{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
-						<CommentFilePreview
-							path={selectedFile}
-							baseUrl={selectedTerminal.url}
-							apiKey={selectedTerminal.key}
-							{chatId}
-							targetPage={documentTargetPage}
-							initialSheet={selectedExcelSheet}
-							onReady={() => {
-								openedFile = pendingFile;
-								publishFile();
-							}}
-							bind:currentSlide
-							bind:sheet={selectedExcelSheet}
-						/>
-					{/key}
-				{:else}
-					<FilePreview
-						bind:this={filePreviewRef}
-						bind:editing
-						bind:showRaw
-						bind:saving
-						bind:dirty
+				{#if showGitDiff}
+					<FileGitDiff
+						connection={gitConnection}
 						{chatId}
+						root={gitStatus?.root ?? currentPath}
+						file={currentGitFile}
+						active={active && !fileLoading}
+						mode={gitDiffMode}
+						hideWhitespace={gitHideWhitespace}
 						resourceVersion={commentGeneration}
-						onLocalLink={(path) => (onOpenFile ? onOpenFile(path) : showFileNavPath.set({ path }))}
-						bind:currentSlide
-						{selectedFile}
-						readOnly={!selectedFileWritable}
-						{fileLoading}
-						{fileImageUrl}
-						{fileVideoUrl}
-						{fileAudioUrl}
-						{filePdfData}
-						{fileSqliteData}
-						{fileModelData}
-						{fileDocxData}
-						{fileContent}
-						{fileOfficeHtml}
-						{fileOfficeSlides}
-						targetPage={documentTargetPage}
-						{excelSheetNames}
-						{selectedExcelSheet}
-						searchTarget={fileSearchTarget}
-						onSheetChange={async (sheet) => {
-							if (!excelWorkbook) return;
-							selectedExcelSheet = sheet;
-							const { excelToTable } = await import('$lib/utils/excelToTable');
-							const result = await excelToTable(excelWorkbook.Sheets[sheet]);
-							const DOMPurify = (await import('dompurify')).default;
-							fileOfficeHtml = DOMPurify.sanitize(result.html);
-						}}
-						baseUrl={previewBaseUrl}
-						apiKey={selectedTerminal?.key ?? ''}
-						overlay={overlay || isDraggingHandle}
-						onSave={saveFile}
 					/>
 				{/if}
+				<div class="h-full" class:hidden={showGitDiff}>
+					{#if supportsComments(selectedFile) && selectedTerminal}
+						{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+							<CommentFilePreview
+								path={selectedFile}
+								baseUrl={selectedTerminal.url}
+								apiKey={selectedTerminal.key}
+								{chatId}
+								targetPage={documentTargetPage}
+								initialSheet={selectedExcelSheet}
+								onReady={() => {
+									openedFile = pendingFile;
+									publishFile();
+								}}
+								bind:currentSlide
+								bind:sheet={selectedExcelSheet}
+							/>
+						{/key}
+					{:else}
+						<FilePreview
+							bind:this={filePreviewRef}
+							bind:editing
+							bind:showRaw
+							bind:saving
+							bind:dirty
+							{chatId}
+							resourceVersion={commentGeneration}
+							onLocalLink={(path) =>
+								onOpenFile ? onOpenFile(path) : showFileNavPath.set({ path })}
+							bind:currentSlide
+							{selectedFile}
+							readOnly={!selectedFileWritable}
+							{fileLoading}
+							{fileImageUrl}
+							{fileVideoUrl}
+							{fileAudioUrl}
+							{filePdfData}
+							{fileSqliteData}
+							{fileModelData}
+							{fileDocxData}
+							{fileContent}
+							{fileOfficeHtml}
+							{fileOfficeSlides}
+							targetPage={documentTargetPage}
+							{excelSheetNames}
+							{selectedExcelSheet}
+							searchTarget={fileSearchTarget}
+							onSheetChange={async (sheet) => {
+								if (!excelWorkbook) return;
+								selectedExcelSheet = sheet;
+								const { excelToTable } = await import('$lib/utils/excelToTable');
+								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
+								const DOMPurify = (await import('dompurify')).default;
+								fileOfficeHtml = DOMPurify.sanitize(result.html);
+							}}
+							baseUrl={previewBaseUrl}
+							apiKey={selectedTerminal?.key ?? ''}
+							overlay={overlay || isDraggingHandle}
+							onSave={saveFile}
+						/>
+					{/if}
+				</div>
 			{:else}
 				{#if isSearching}
 					{#if matchLoading}

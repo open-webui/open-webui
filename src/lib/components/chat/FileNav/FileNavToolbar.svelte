@@ -1,5 +1,9 @@
 <script lang="ts">
 	import { getContext, afterUpdate } from 'svelte';
+	import type { GitFile } from '$lib/apis/terminal/git';
+	export let gitFile: GitFile | null = null;
+	export let gitDiffOpen = false;
+	export let onToggleGitDiff: () => void = () => {};
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -141,8 +145,35 @@
 			<span class="text-xs shrink-0 p-0 text-gray-700 dark:text-gray-300">
 				{selectedFile.split('/').pop()}
 			</span>
+			{#if gitFile}
+				<span class="flex shrink-0 items-center gap-1 font-mono text-[0.625rem]">
+					{#if gitFile.binary}
+						<span class="text-gray-500 dark:text-gray-400"
+							>{gitFile.status === 'untracked' ? 'U' : gitFile.status[0].toUpperCase()}</span
+						>
+					{:else}
+						<span class="text-green-600 dark:text-green-400">+{gitFile.additions ?? 0}</span>
+						<span class="text-red-500 dark:text-red-400">-{gitFile.deletions ?? 0}</span>
+					{/if}
+				</span>
+			{/if}
 		{/if}
 	</div>
+	{#if selectedFile && (gitFile || gitDiffOpen)}
+		<Tooltip content={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}>
+			<button
+				type="button"
+				class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 {gitDiffOpen
+					? 'text-gray-800 dark:text-gray-200'
+					: 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}"
+				aria-label={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}
+				aria-pressed={gitDiffOpen}
+				on:click={onToggleGitDiff}
+			>
+				<Icon name="git-diff" size={18} strokeWidth={1.6} />
+			</button>
+		</Tooltip>
+	{/if}
 	{#if !writable}
 		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
 			{$i18n.t('Read-only')}

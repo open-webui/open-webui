@@ -26,10 +26,10 @@
 	export let onOpenFile: (path: string) => void = () => {};
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
-	let status: GitStatus | null = null;
+	export let status: GitStatus | null = null;
 	let expanded = false;
-	let diffMode: 'unified' | 'split' = 'unified';
-	let hideWhitespace = false;
+	export let diffMode: 'unified' | 'split' = 'unified';
+	export let hideWhitespace = false;
 	let view: 'changes' | 'history' | 'pull requests' = 'changes';
 	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
 	let prRoot = '';
@@ -556,9 +556,6 @@
 				aria-expanded={expanded}
 				on:click={toggle}
 			>
-				{#if status.ahead}<span class="shrink-0">↑{status.ahead}</span>{/if}{#if status.behind}<span
-						class="shrink-0">↓{status.behind}</span
-					>{/if}
 				{#if status.files.length}<span class="truncate"
 						>{status.files.length} {$i18n.t('changed')}</span
 					>{/if}
@@ -568,6 +565,14 @@
 						></span
 					>{/if}
 			</button>
+			{#if status.ahead || status.behind}
+				<span
+					class="flex shrink-0 items-center gap-1.5 text-[0.625rem] font-mono whitespace-nowrap"
+				>
+					{#if status.ahead}<span>↑{status.ahead}</span>{/if}
+					{#if status.behind}<span>↓{status.behind}</span>{/if}
+				</span>
+			{/if}
 			<Tooltip content={$i18n.t(syncLabel)}>
 				<button
 					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"

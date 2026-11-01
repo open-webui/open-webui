@@ -24,3 +24,28 @@ languages.push(
 		}
 	})
 );
+
+// Match Computer's Svelte editor: HTML with embedded script and style support.
+languages.push(
+	LanguageDescription.of({
+		name: 'Svelte',
+		extensions: ['svelte'],
+		load: () => import('@codemirror/lang-html').then((module) => module.html())
+	})
+);
+const shellLanguage = languages.find((language) => language.name === 'Shell');
+if (shellLanguage) {
+	(shellLanguage.extensions as string[]).push('zsh');
+	(shellLanguage.alias as string[]).push('bash', 'zsh');
+}
+const dockerLanguage = languages.find((language) => language.name === 'Dockerfile');
+if (dockerLanguage) {
+	(dockerLanguage.extensions as string[]).push('dockerfile');
+	languages.push(
+		LanguageDescription.of({
+			name: 'Containerfile',
+			filename: /^(?:Dockerfile|Containerfile)(?:\..+)?$/i,
+			load: () => dockerLanguage.load()
+		})
+	);
+}

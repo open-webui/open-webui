@@ -1,4 +1,10 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
+	import {
+		diffFilePath,
+		highlightDiffFile,
+		type HighlightSegment
+	} from '$lib/utils/gitDiffHighlight';
 	import { versionDiffHunks, type VersionDiffLine } from '../../workspace/common/versionDiff';
 	export let code = '';
 	export let mode: 'unified' | 'split' = 'unified';
@@ -7,16 +13,40 @@
 		.split(/(?=^diff --git )/m)
 		.filter(Boolean)
 		.map((content) => ({
-			path: content.match(/^\+\+\+ (?:b\/)?(.+)$/m)?.[1] ?? '',
+			path: diffFilePath(content),
 			headers: content.match(/^@@.*$/gm) ?? [],
 			hunks: versionDiffHunks(content)
 		}));
+	let highlighted = new Map<VersionDiffLine, HighlightSegment[]>();
+	let highlightGeneration = 0;
+	const highlight = async (entries: typeof files) => {
+		const version = ++highlightGeneration;
+		highlighted = new Map();
+		const result = new Map<VersionDiffLine, HighlightSegment[]>();
+		for (const file of entries) {
+			if (version !== highlightGeneration) return;
+			try {
+				const tokens = await highlightDiffFile(file.path, file.hunks);
+				if (version !== highlightGeneration) return;
+				for (const [line, segments] of tokens) result.set(line, segments);
+			} catch {
+				// Unrecognized languages still display the complete diff without syntax colors.
+			}
+		}
+		if (version === highlightGeneration) highlighted = result;
+	};
+	$: void highlight(files);
+	onDestroy(() => {
+		++highlightGeneration;
+	});
 </script>
 
 {#snippet text(line: VersionDiffLine | null)}
 	<code class="line-text"
-		>{#if line}{#each line.segments as segment}<span class:changed={segment.changed}
-					>{segment.text}</span
+		>{#if line}{#each (highlighted.get(line) ?? line.segments) as HighlightSegment[] as segment}<span
+					class:changed={segment.changed}
+					style:--diff-token-light={segment.light}
+					style:--diff-token-dark={segment.dark}>{segment.text}</span
 				>{/each}{#if line.noNewline}<span class="opacity-40" title="No newline at end of file">
 					↵</span
 				>{/if}{:else}{' '}{/if}</code
@@ -112,6 +142,12 @@
 	}
 	.removed .prefix {
 		color: var(--color-red-500);
+	}
+	.line-text span:not(.changed) {
+		color: var(--diff-token-light, inherit);
+	}
+	:global(.dark) .line-text span:not(.changed) {
+		color: var(--diff-token-dark, inherit);
 	}
 	.changed {
 		box-decoration-break: clone;
