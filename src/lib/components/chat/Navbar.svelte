@@ -156,10 +156,10 @@
 
 <nav
 	class="sticky top-0 z-30 w-full {$mobile
-		? 'pt-1.5'
-		: 'pt-0.5'} pb-1 -mb-12 flex flex-col items-center drag-region"
+		? 'pt-0.5'
+		: ''} pb-1 -mb-12 flex flex-col items-center drag-region"
 >
-	<div class="flex items-center w-full {$mobile ? 'px-2.5' : 'pl-1.5 pr-1'}">
+	<div class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
 			id="navbar-bg-gradient-to-b"
 			class="{chat?.id

@@ -696,7 +696,12 @@
 	};
 
 	const onKeyDown = (e) => {
-		if (e.key === 'Escape' && !inboxOpened && $selectedChatIds.size > 0 && !showDeleteSelectedConfirm) {
+		if (
+			e.key === 'Escape' &&
+			!inboxOpened &&
+			$selectedChatIds.size > 0 &&
+			!showDeleteSelectedConfirm
+		) {
 			e.preventDefault();
 			chatSelection.clear();
 		}
@@ -727,7 +732,7 @@
 	const MIN_WIDTH = 220;
 	const MAX_WIDTH = 480;
 	let viewportWidth = 320;
-	$: mobileWidth = Math.min(MAX_WIDTH, Math.max(0, viewportWidth - 40));
+	$: mobileWidth = Math.min(380, Math.max(0, viewportWidth - 40));
 
 	let isResizing = false;
 	let activePointerId: number | null = null;
@@ -1299,7 +1304,7 @@
 				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-gray-50 dark:border-gray-850/30"
 			>
 				<div
-					class="sidebar px-1 pt-1.5 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
+					class="sidebar px-0.75 pt-1 pb-1 flex justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10 -mb-2"
 				>
 					<a
 						class="flex items-center rounded-xl size-8.5 h-full justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
@@ -1331,7 +1336,9 @@
 						</div>
 					</a>
 					<div class="flex shrink-0 items-center gap-px">
-						{#if $config?.features?.enable_notifications}<InboxButton onClose={() => inboxHost.close()} />{/if}
+						{#if $config?.features?.enable_notifications}<InboxButton
+								onClose={() => inboxHost.close()}
+							/>{/if}
 						<Tooltip
 							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							placement="bottom"
