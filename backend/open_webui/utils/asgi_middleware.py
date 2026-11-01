@@ -42,10 +42,20 @@ from open_webui.internal.db import ScopedSession
 from open_webui.utils.auth import get_http_authorization_cred
 from open_webui.utils.security_headers import set_security_headers
 from starlette.datastructures import MutableHeaders
+from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 log = logging.getLogger(__name__)
+
+
+class BrowserCORSMiddleware(CORSMiddleware):
+    async def __call__(self, scope, receive, send):
+        # Sandboxed pages have an opaque origin; capability routes handle their own CORS.
+        if re.match(r'^/api/v1/terminals/[^/]+/browser/view/', scope.get('path', '')):
+            await self.app(scope, receive, send)
+        else:
+            await super().__call__(scope, receive, send)
 
 
 class AppHTTPMiddleware:

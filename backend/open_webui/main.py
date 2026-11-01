@@ -22,7 +22,6 @@ from fastapi import (
     applications,
     status,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -221,7 +220,7 @@ from open_webui.utils import logger
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
-from open_webui.utils.asgi_middleware import AppHTTPMiddleware
+from open_webui.utils.asgi_middleware import AppHTTPMiddleware, BrowserCORSMiddleware
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
 from open_webui.utils.auth import (
     create_admin_user,
@@ -874,7 +873,7 @@ app.add_middleware(AppHTTPMiddleware)
 
 
 app.add_middleware(
-    CORSMiddleware,
+    BrowserCORSMiddleware,
     allow_origins=CORS_ALLOW_ORIGIN,
     allow_credentials=True,
     allow_methods=['*'],

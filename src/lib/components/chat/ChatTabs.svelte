@@ -250,8 +250,13 @@
 			connection: { ...selectedConnection }
 		});
 	};
-	const openBrowser = (port?: number, selector = $selectedTerminalId, baseUrl?: string) => {
-		const url = port ? `http://localhost:${port}/` : undefined;
+	const openBrowser = (
+		port?: number,
+		selector = $selectedTerminalId,
+		baseUrl?: string,
+		initialUrl?: string
+	) => {
+		const url = initialUrl ?? (port ? `http://localhost:${port}/` : undefined);
 		const existing =
 			url &&
 			tabs.tabs.find(
@@ -825,6 +830,7 @@
 						{chatId}
 						active={!!$showTabs && tabs.activeId === tab.id}
 						initialUrl={tab.path ?? ''}
+						onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, tab.browserBaseUrl, url)}
 						overlay={dragged}
 						onNavigate={(path, label) => {
 							tabs = {

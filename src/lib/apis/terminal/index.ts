@@ -183,7 +183,16 @@ export const terminalRequest = async <T>(
 			...options.headers
 		}
 	});
-	if (!response.ok) throw new Error(`Terminal request failed (${response.status})`);
+	if (!response.ok) {
+		const body = await response.json().catch(() => null);
+		throw new Error(
+			typeof body?.detail === 'string'
+				? body.detail
+				: typeof body?.error === 'string'
+					? body.error
+					: `Terminal request failed (${response.status})`
+		);
+	}
 	return response.json();
 };
 
