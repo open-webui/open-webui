@@ -64,5 +64,13 @@ export function removeTab(state: PanelTabs, id: string): PanelTabs {
 	};
 }
 
+export function moveTab(state: PanelTabs, id: string, to: number): PanelTabs {
+	const from = state.tabs.findIndex((tab) => tab.id === id);
+	if (from < 0 || to < 0 || to >= state.tabs.length || from === to) return state;
+	const tabs = [...state.tabs];
+	tabs.splice(to, 0, tabs.splice(from, 1)[0]);
+	return { ...state, tabs };
+}
+
 export const fileTabId = (terminalId: string, path: string) =>
 	JSON.stringify(['file', terminalId, path]);

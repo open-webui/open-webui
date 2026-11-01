@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import Sortable from 'sortablejs';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import {
 		artifactContents,
@@ -33,6 +34,7 @@
 		openTab,
 		activateTab,
 		removeTab,
+		moveTab,
 		fileTabId,
 		type PanelTab
 	} from './ChatTabs/tabs';
@@ -292,10 +294,42 @@
 			closing.delete(id);
 		}
 	};
+	const sortableTabs = (node: HTMLElement) => {
+		let nextSibling: ChildNode | null = null;
+		const sortable = new Sortable(node, {
+			animation: 150,
+			direction: 'horizontal',
+			draggable: '[data-panel-tab]',
+			handle: '[role="tab"]',
+			delay: 200,
+			delayOnTouchOnly: true,
+			touchStartThreshold: 5,
+			ghostClass: 'opacity-40',
+			setData: (transfer, item) =>
+				transfer.setData('application/x-chat-panel-tab', item.dataset.panelTab ?? ''),
+			onStart: ({ item }) => {
+				nextSibling = item.nextSibling;
+				dragged = true;
+			},
+			onEnd: ({ item, from, newDraggableIndex }) => {
+				// Restore the DOM before Svelte reconciles its keyed tabs.
+				from.insertBefore(item, nextSibling?.parentNode === from ? nextSibling : null);
+				if (newDraggableIndex != null)
+					tabs = moveTab(tabs, item.dataset.panelTab!, newDraggableIndex);
+				dragged = false;
+			}
+		});
+		return { destroy: () => sortable.destroy() };
+	};
 	const navigateTabs = (event: KeyboardEvent) => {
 		if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab')
 			return;
 		const index = tabs.tabs.findIndex((tab) => tab.id === tabs.activeId);
+		if (event.altKey && event.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+			event.preventDefault();
+			tabs = moveTab(tabs, tabs.activeId, index + (event.key === 'ArrowLeft' ? -1 : 1));
+			return;
+		}
 		let next = index;
 		if (event.key === 'ArrowRight') next = (index + 1) % tabs.tabs.length;
 		else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.tabs.length) % tabs.tabs.length;
@@ -632,6 +666,7 @@
 		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
 			<div
 				role="tablist"
+				use:sortableTabs
 				tabindex="-1"
 				aria-label={$i18n.t('Tabs')}
 				on:keydown={navigateTabs}
@@ -639,6 +674,7 @@
 			>
 				{#each tabs.tabs as tab (tab.id)}
 					<div
+						data-panel-tab={tab.id}
 						class="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {tabs.activeId ===
 						tab.id
 							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200'
@@ -646,6 +682,7 @@
 					>
 						<button
 							role="tab"
+							aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
 							id={domId(tab.id)}
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={tabs.activeId === tab.id}
@@ -679,7 +716,7 @@
 					</div>
 				{/each}
 			</div>
-			<Dropdown align="end" closeOnSelect>
+			<Dropdown align="start" closeOnSelect>
 				<button
 					type="button"
 					class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
