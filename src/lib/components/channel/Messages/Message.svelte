@@ -15,7 +15,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
-	import { autoUpdate } from '@floating-ui/dom';
+	import { autoUpdate, computePosition } from '@floating-ui/dom';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -72,27 +72,28 @@
 	let showButtons = false;
 
 	// Preserve the CSS anchor while letting actions escape the message scroll container.
-	const portalActions = (node: HTMLElement, keepOpen: boolean) => {
+	const positionActions = (node: HTMLElement, keepOpen: boolean) => {
 		const anchor = node.parentElement!;
 		const messageElement = anchor.parentElement!;
 		let cleanup: (() => void) | undefined;
 		let destroyed = false;
-		document.body.appendChild(node);
 
 		const update = () => {
 			if (destroyed) return;
 			const visible =
 				keepOpen ||
-				[messageElement, node].some(
-					(element) => element.matches(':hover') || element.contains(document.activeElement)
-				);
+				messageElement.matches(':hover') ||
+				messageElement.contains(document.activeElement);
 			node.style.opacity = visible ? '1' : '0';
 			node.style.pointerEvents = visible ? 'auto' : 'none';
 			if (visible && !cleanup) {
 				cleanup = autoUpdate(messageElement, node, () => {
-					const rect = anchor.getBoundingClientRect();
-					node.style.left = `${rect.right - node.offsetWidth}px`;
-					node.style.top = `${rect.top}px`;
+					computePosition(anchor, node, { strategy: 'fixed', placement: 'bottom-end' }).then(
+						({ x, y }) => {
+							node.style.left = `${x}px`;
+							node.style.top = `${y}px`;
+						}
+					);
 				});
 			} else if (!visible) {
 				cleanup?.();
@@ -101,9 +102,7 @@
 		};
 		const scheduleUpdate = () => queueMicrotask(update);
 		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
-		for (const element of [messageElement, node]) {
-			for (const event of events) element.addEventListener(event, scheduleUpdate);
-		}
+		for (const event of events) messageElement.addEventListener(event, scheduleUpdate);
 		update();
 		return {
 			update(value: boolean) {
@@ -113,10 +112,7 @@
 			destroy() {
 				destroyed = true;
 				cleanup?.();
-				for (const element of [messageElement, node]) {
-					for (const event of events) element.removeEventListener(event, scheduleUpdate);
-				}
-				node.remove();
+				for (const event of events) messageElement.removeEventListener(event, scheduleUpdate);
 			}
 		};
 	};
@@ -265,14 +261,14 @@
 					} ${message?.is_pinned ? 'bg-yellow-100/20 dark:bg-yellow-100/5' : ''}`} {showUserProfile
 				? 'pt-2.5 pb-0.5'
 				: ''}"
-			style="transform: translateX({swipeOffsetX}px); {swipeOffsetX > 0
-				? ''
-				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
+			style={swipeOffsetX > 0
+				? `transform: translateX(${swipeOffsetX}px);`
+				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}
 		>
 			{#if !edit && !disabled && !$$slots.header}
 				<div class="absolute right-1 -top-3">
 					<div
-						use:portalActions={showButtons}
+						use:positionActions={showButtons}
 						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
 						style="opacity: 0; pointer-events: none;"
 					>

@@ -248,7 +248,7 @@
 			class="flex-1 min-h-0 w-full overflow-y-auto will-change-transform"
 			bind:this={messagesContainerElement}
 		>
-			<div>
+			<div class="pt-3">
 				{#if searchAnchor}<div class="px-3 py-2 text-xs text-gray-500 flex justify-between">
 						<span>{$i18n.t('Showing search match')}</span><button
 							class="underline"
