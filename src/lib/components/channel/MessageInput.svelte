@@ -37,7 +37,8 @@
 		getUserPosition,
 		getUserTimezone,
 		getWeekday,
-		extractCurlyBraceWords
+		extractCurlyBraceWords,
+		withDetectedImageMime
 	} from '$lib/utils';
 
 	import { getSessionUser } from '$lib/apis/auths';
@@ -379,20 +380,20 @@
 	};
 
 	const inputFilesHandler = async (inputFiles) => {
-		inputFiles.forEach(async (file) => {
+		inputFiles.forEach(async (inputFile) => {
 			console.info('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
+				name: inputFile.name,
+				type: inputFile.type,
+				size: inputFile.size,
+				extension: inputFile.name.split('.').at(-1)
 			});
 
 			if (
 				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+				inputFile.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
 				console.error('File exceeds max size limit:', {
-					fileSize: file.size,
+					fileSize: inputFile.size,
 					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
 				});
 				toast.error(
@@ -403,6 +404,9 @@
 				return;
 			}
 
+			// Some sources (e.g. macOS Photos) hand over images with no MIME type
+			// and no file extension, so sniff the content before routing.
+			const file = await withDetectedImageMime(inputFile);
 			const image = file.type.startsWith('image/') || isHeicImage(file);
 			uploadFileHandler(file, !image, image);
 		});
