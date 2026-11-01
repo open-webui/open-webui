@@ -5,7 +5,7 @@ python-multipart==0.0.32
 itsdangerous==2.2.0
 
 python-socketio==5.16.2
-orjson==3.11.9
+orjson==3.13.0
 cryptography==48.0.1
 pyotp==2.9.0
 qrcode==8.2
