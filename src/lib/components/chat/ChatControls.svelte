@@ -1,4 +1,5 @@
 <script context="module" lang="ts">
+	type PanelTab = 'files' | 'artifacts' | 'preview' | 'voice' | 'comments';
 	let savedTab: 'files' | 'comments' = 'files';
 </script>
 
@@ -9,6 +10,7 @@
 	import {
 		artifactContents,
 		config,
+		embed,
 		temporaryChatEnabled,
 		terminalServers,
 		showTabs,
@@ -74,12 +76,12 @@
 	let viewportWidth = 0;
 
 	// Tab state for the side panel
-	let activeTab: typeof savedTab = savedTab;
+	let activeTab: PanelTab = savedTab;
 	$: if ($showTabs === 'files' || $showTabs === 'comments') activeTab = $showTabs;
 	else if (typeof $showTabs === 'object') activeTab = $showTabs.tab;
 	// svelte-ignore reactive_declaration_module_script_dependency
 	$: {
-		if (activeTab !== 'comments') savedTab = activeTab;
+		if (activeTab === 'files') savedTab = activeTab;
 	}
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
@@ -150,8 +152,18 @@
 	$: if ($showTabs === 'files' || $showTabs === 'comments' || typeof $showTabs === 'object') {
 		showArtifacts.set(false);
 		showEmbeds.set(false);
-		showCallOverlay.set(false);
 	}
+	$: if ($showArtifacts) activeTab = 'artifacts';
+	$: if ($showEmbeds) activeTab = 'preview';
+	$: if ($showCallOverlay) activeTab = 'voice';
+
+	const selectTab = (tab: PanelTab) => {
+		showTabs.set(tab === 'files' || tab === 'comments' ? tab : true);
+		showArtifacts.set(tab === 'artifacts');
+		showEmbeds.set(tab === 'preview');
+		activeTab = tab;
+	};
+
 	beforeNavigate(({ from, to }) => {
 		if (from?.url.pathname === to?.url.pathname) return;
 		showOverview.set(false);
@@ -164,20 +176,19 @@
 	});
 
 	$: showArtifactsTab = ($artifactContents ?? []).length > 0 && $visibleControls['chat.artifacts'];
-	$: sidePanelAvailable = showFilesTab || showCommentsTab || showArtifactsTab || specialPanel;
-
-	// Keep the remaining side-pane tabs available after moving Controls into the composer.
-	$: if (!showCommentsTab && activeTab === 'comments') activeTab = 'files';
-	$: if (!showFilesTab && showCommentsTab && activeTab === 'files') activeTab = 'comments';
-	$: if (
-		$showTabs &&
-		!$showEmbeds &&
-		!$showCallOverlay &&
-		!showFilesTab &&
-		!showCommentsTab &&
-		showArtifactsTab
-	)
-		showArtifacts.set(true);
+	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
+	$: panelTabs = [
+		{ id: 'files', label: $i18n.t('Files'), available: showFilesTab },
+		{ id: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
+		{ id: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
+		{ id: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
+		{ id: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
+	].filter((tab) => tab.available) as { id: PanelTab; label: string; available: boolean }[];
+	$: sidePanelAvailable = panelTabs.length > 0;
+	$: if (sidePanelAvailable && !panelTabs.some((tab) => tab.id === activeTab)) {
+		activeTab = panelTabs[0].id;
+		if ($showTabs) selectTab(activeTab);
+	}
 	$: if (!sidePanelAvailable) showTabs.set(false);
 
 	// Auto-switch to Files tab when display_file is triggered
@@ -267,9 +278,6 @@
 	};
 
 	$: if (mounted && !chatId) closeHandler();
-
-	// Helper: is a "special" full-screen panel active?
-	$: specialPanel = $showCallOverlay || $showArtifacts || $showEmbeds;
 </script>
 
 <svelte:window bind:innerWidth={viewportWidth} />
@@ -309,6 +317,74 @@
 	</div>
 </Modal>
 
+{#snippet panelContent()}
+	<div class="flex flex-col h-full min-h-0">
+		<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
+			<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
+				{#each panelTabs as tab (tab.id)}
+					<button
+						class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+						tab.id
+							? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+						on:click={() => selectTab(tab.id)}
+					>
+						{tab.label}{#if tab.id === 'comments' && commentCount !== null && commentCount > 0}<span
+								class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+								>{commentCount}</span
+							>{/if}
+					</button>
+				{/each}
+			</div>
+			<button
+				class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0 shrink-0"
+				on:click={() => showTabs.set(false)}
+				aria-label={$i18n.t('Close')}
+			>
+				<XMark className="size-4" />
+			</button>
+		</div>
+
+		<div class="flex-1 min-h-0">
+			{#if $showCallOverlay}
+				<!-- Keep the call mounted while viewing another tab. -->
+				<div class="w-full h-full flex justify-center" class:hidden={activeTab !== 'voice'}>
+					<CallPanel
+						{bridge}
+						bind:callMode
+						bind:files
+						{submitPrompt}
+						{stopResponse}
+						{modelId}
+						{chatId}
+						{eventTarget}
+						on:close={() => showTabs.set(false)}
+					/>
+				</div>
+			{/if}
+			{#if activeTab === 'preview'}
+				<Embeds overlay={dragged} />
+			{:else if activeTab === 'artifacts'}
+				<Artifacts {history} overlay={dragged} />
+			{:else if activeTab === 'comments'}
+				{#if currentComments}
+					{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+						<CommentsPanel
+							embedded={true}
+							bind:view={currentComments}
+							onCountChange={setCommentCount}
+						/>
+					{/key}
+				{/if}
+			{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
+				<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
+			{:else if activeTab === 'files' && codeInterpreterEnabled}
+				<PyodideFileNav overlay={dragged} />
+			{/if}
+		</div>
+	</div>
+{/snippet}
+
 {#if !largeScreen}
 	<MobileSwipePanel
 		open={!!$showTabs}
@@ -334,111 +410,7 @@
 				className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
 			>
 				<div class="h-[100dvh] flex flex-col">
-					{#if $showCallOverlay}
-						<div
-							class="h-full max-h-[100dvh] bg-white text-gray-700 dark:bg-black dark:text-gray-300 flex justify-center"
-						>
-							<CallPanel
-								{bridge}
-								bind:callMode
-								bind:files
-								{submitPrompt}
-								{stopResponse}
-								{modelId}
-								{chatId}
-								{eventTarget}
-								on:close={() => showTabs.set(false)}
-							/>
-						</div>
-					{:else if $showEmbeds}
-						<Embeds />
-					{:else}
-						<!-- Files, Artifacts, and Comments tabs -->
-						<div class="flex flex-col h-full min-h-0">
-							<!-- Tab bar -->
-							<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
-								<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
-									{#if showFilesTab}
-										<button
-											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
-											activeTab === 'files'
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => {
-												showArtifacts.set(false);
-												showTabs.set('files');
-											}}
-										>
-											{$i18n.t('Files')}
-										</button>
-									{/if}
-									{#if showArtifactsTab}
-										<button
-											class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {$showArtifacts
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => {
-												showTabs.set(true);
-												showArtifacts.set(true);
-											}}
-										>
-											{$i18n.t('Artifacts')}
-										</button>
-									{/if}
-									{#if showCommentsTab}
-										<button
-											class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
-											activeTab === 'comments'
-												? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-												: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-											on:click={() => showTabs.set('comments')}
-										>
-											{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
-													class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
-													>{commentCount}</span
-												>{/if}
-										</button>
-									{/if}
-								</div>
-								<button
-									class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
-									on:click={() => showTabs.set(false)}
-									aria-label={$i18n.t('Close')}
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="1.5"
-										class="size-4"
-									>
-										<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-									</svg>
-								</button>
-							</div>
-
-							<div class="flex-1 min-h-0">
-								{#if $showArtifacts}
-									<Artifacts {history} />
-								{:else if activeTab === 'comments'}
-									{#if currentComments}
-										{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
-											<CommentsPanel
-												embedded={true}
-												bind:view={currentComments}
-												onCountChange={setCommentCount}
-											/>
-										{/key}
-									{/if}
-								{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-									<FileNav {onAskFile} {chatId} bind:terminalContext />
-								{:else if activeTab === 'files' && codeInterpreterEnabled}
-									<PyodideFileNav />
-								{/if}
-							</div>
-						</div>
-					{/if}
+					{@render panelContent()}
 				</div>
 			</Drawer>
 		{/if}
@@ -452,119 +424,8 @@
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"
 	>
-		<div class="flex h-full max-h-full min-h-full">
-			<div
-				class="w-full {specialPanel && !$showCallOverlay
-					? ' '
-					: 'bg-white dark:bg-gray-900'} z-40 pointer-events-auto {activeTab === 'files'
-					? ''
-					: 'overflow-y-auto'} scrollbar-hidden"
-				id="controls-container"
-			>
-				{#if $showCallOverlay}
-					<div class="w-full h-full flex justify-center">
-						<CallPanel
-							{bridge}
-							bind:callMode
-							bind:files
-							{submitPrompt}
-							{stopResponse}
-							{modelId}
-							{chatId}
-							{eventTarget}
-							on:close={() => showTabs.set(false)}
-						/>
-					</div>
-				{:else if $showEmbeds}
-					<Embeds overlay={dragged} />
-				{:else}
-					<!-- Files, Artifacts, and Comments tabs -->
-					<div class="flex flex-col h-full min-h-0">
-						<!-- Tab bar -->
-						<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
-							<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
-								{#if showFilesTab}
-									<button
-										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
-										activeTab === 'files'
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => {
-											showArtifacts.set(false);
-											showTabs.set('files');
-										}}
-									>
-										{$i18n.t('Files')}
-									</button>
-								{/if}
-								{#if showArtifactsTab}
-									<button
-										class="px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {$showArtifacts
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => {
-											showTabs.set(true);
-											showArtifacts.set(true);
-										}}
-									>
-										{$i18n.t('Artifacts')}
-									</button>
-								{/if}
-								{#if showCommentsTab}
-									<button
-										class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {!$showArtifacts &&
-										activeTab === 'comments'
-											? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-											: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-										on:click={() => showTabs.set('comments')}
-									>
-										{$i18n.t('Comments')}{#if commentCount !== null && commentCount > 0}<span
-												class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
-												>{commentCount}</span
-											>{/if}
-									</button>
-								{/if}
-							</div>
-							<button
-								class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0"
-								on:click={() => showTabs.set(false)}
-								aria-label={$i18n.t('Close')}
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.5"
-									class="size-4"
-								>
-									<path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-								</svg>
-							</button>
-						</div>
-
-						<div class="flex-1 min-h-0">
-							{#if $showArtifacts}
-								<Artifacts {history} overlay={dragged} />
-							{:else if activeTab === 'comments'}
-								{#if currentComments}
-									{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
-										<CommentsPanel
-											embedded={true}
-											bind:view={currentComments}
-											onCountChange={setCommentCount}
-										/>
-									{/key}
-								{/if}
-							{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-								<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
-							{:else if activeTab === 'files' && codeInterpreterEnabled}
-								<PyodideFileNav overlay={dragged} />
-							{/if}
-						</div>
-					</div>
-				{/if}
-			</div>
+		<div class="h-full w-full z-40 pointer-events-auto" id="controls-container">
+			{@render panelContent()}
 		</div>
 	</ResizableSidePanel>
 {/if}

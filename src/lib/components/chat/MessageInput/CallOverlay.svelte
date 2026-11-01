@@ -916,7 +916,7 @@
 {#if $showCallOverlay}
 	<!-- A media element can only have one Web Audio source, even after its context closes. -->
 	<audio bind:this={callAudioElement} class="hidden"></audio>
-	<div class="max-w-lg w-full h-full max-h-[100dvh] flex flex-col justify-between p-3 md:p-6">
+	<div class="max-w-lg w-full h-full max-h-[100dvh] flex flex-col justify-between px-3 pb-3 md:px-6 md:pb-6">
 		{#if camera}
 			<button
 				type="button"
