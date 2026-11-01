@@ -15,9 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
-# DB MODEL
-####################
+# DB model
 
 
 class OAuthSession(Base):
@@ -51,9 +49,7 @@ class OAuthSessionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class OAuthSessionResponse(BaseModel):

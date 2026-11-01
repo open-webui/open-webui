@@ -722,9 +722,7 @@ export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
 
-// ---------------------------------------------------------------------------
 // Notebook execution
-// ---------------------------------------------------------------------------
 
 export const createNotebookSession = async (
 	baseUrl: string,

@@ -6,7 +6,7 @@ from alembic import op  # noqa: E402 — alembic runtime context
 from sqlalchemy import inspect  # metadata inspection
 
 
-# --- database helper functions ---
+# Database helper functions
 def get_existing_tables() -> set[str]:
     """Return table names already present in the database."""
     conn = op.get_bind()

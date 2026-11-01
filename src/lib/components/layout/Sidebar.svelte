@@ -226,12 +226,7 @@
 		}
 	};
 
-	// Keep the optimistic sidebar highlight in sync with the active chat. Leaving the
-	// chat view (e.g. navigating to an admin page) clears chatId, and programmatic
-	// navigation such as cloning moves chatId to a different chat — in both cases the
-	// previously-selected item must not stay highlighted. The optimistic on-click
-	// highlight is preserved because a click sets selectedChatId without changing
-	// chatId, so this reactive only re-runs once chatId catches up to the same value.
+	// Follow chatId changes on navigation; preserve the click's optimistic highlight until chatId catches up.
 	$: selectedChatId = $chatId || null;
 
 	let showCreateChannel = false;
@@ -410,7 +405,7 @@
 					? [...folderMap[folder.parent_id].childrenIds, folder.id]
 					: [folder.id];
 
-				// Sort the children by updated_at field
+				// Recently updated folders get the front seats.
 				folderMap[folder.parent_id].childrenIds.sort((a, b) => {
 					return folderMap[b].updated_at - folderMap[a].updated_at;
 				});
@@ -445,10 +440,10 @@
 			return;
 		}
 
-		// Check for duplicate names in the same parent
+		// Check sibling names before adding another folder called "New folder".
 		const siblings = Object.values(folders).filter((folder) => folder.parent_id === parent_id);
 		if (siblings.find((folder) => folder.name.toLowerCase() === name.toLowerCase())) {
-			// If a folder with the same name already exists, append a number to the name
+			// Same name? Issue a numbered sequel.
 			let i = 1;
 			while (
 				siblings.find((folder) => folder.name.toLowerCase() === `${name} ${i}`.toLowerCase())
@@ -500,7 +495,7 @@
 	};
 
 	const initChatList = async () => {
-		// Reset pagination variables
+		// Mark the chat list as loading while tags, pinned notes, and chats refresh.
 		console.log('initChatList');
 		chatListReady = false;
 

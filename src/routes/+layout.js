@@ -1,16 +1,5 @@
-// if you want to generate a static html file
-// for your page.
-// Documentation: https://kit.svelte.dev/docs/page-options#prerender
-// export const prerender = true;
-
-// if you want to Generate a SPA
-// you have to set ssr to false.
-// This is not the case (so set as true or comment the line)
-// Documentation: https://kit.svelte.dev/docs/page-options#ssr
+// Render in the browser; server-side rendering is disabled.
 export const ssr = false;
 
-// How to manage the trailing slashes in the URLs
-// the URL for about page will be /about with 'ignore' (default)
-// the URL for about page will be /about/ with 'always'
-// https://kit.svelte.dev/docs/page-options#trailingslash
+// Accept URLs with or without a trailing slash.
 export const trailingSlash = 'ignore';

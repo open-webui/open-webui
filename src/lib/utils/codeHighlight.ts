@@ -57,10 +57,7 @@ const EXT_OVERRIDE: Record<string, string> = {
 	jsonl: 'jsonl'
 };
 
-// Common extensions that exactly match their Shiki language ID.
-// This replaces the runtime `bundledLanguages` import from shiki, which
-// pulled ~5-10MB of JavaScript into the initial page load just so
-// isCodeFile() could check extension support.
+// Keep extension IDs local to avoid loading Shiki's full language bundle just to recognize files.
 const KNOWN_LANG_IDS = new Set([
 	'ada',
 	'awk',

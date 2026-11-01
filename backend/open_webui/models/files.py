@@ -48,7 +48,7 @@ class FileModel(BaseModel):
     updated_at: int | None  # timestamp in epoch
 
 
-# --- metadata structures ---
+# Metadata structures
 class FileMeta(BaseModel):
     name: str | None = None
     content_type: str | None = None

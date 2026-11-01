@@ -20,8 +20,8 @@ const OPENAPI_HTTP_METHODS = new Set([
 	'trace'
 ]);
 
-// Every request sent from here is a petition. May it reach
-// the one for whom it was intended, and return answered.
+// Let every request reach its destination,
+// and let those who wait receive an answer worthy of their patience.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,

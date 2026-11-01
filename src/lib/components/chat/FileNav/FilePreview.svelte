@@ -206,7 +206,7 @@
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
 
-	// ── Shiki code highlighting (SVG only) ──────────────────────────────
+	// Shiki code highlighting (SVG only)
 	let highlightedHtml: string | null = null;
 	let highlightingFile: string | null = null;
 
@@ -231,7 +231,7 @@
 		highlightedHtml = null;
 	}
 
-	// ── JSON parsing ────────────────────────────────────────────────────
+	// JSON parsing
 	let parsedJson: unknown = undefined;
 	let jsonError: string | null = null;
 
@@ -248,7 +248,7 @@
 		jsonError = null;
 	}
 
-	// ── Notebook parsing ─────────────────────────────────────────────────
+	// Notebook parsing
 	let parsedNotebook: Record<string, unknown> | null = null;
 
 	$: if (isNotebook && fileContent !== null) {
@@ -691,7 +691,7 @@
 		padding-left: 1.5em;
 		margin: 0.5em 0;
 	}
-	/* ── Shiki code highlighting ─────────────────────────────────── */
+	/* Shiki code highlighting */
 	.shiki-preview :global(pre.shiki) {
 		margin: 0;
 		padding: 0.75rem 1rem;

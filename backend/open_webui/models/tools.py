@@ -66,9 +66,8 @@ class ToolModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # enables ORM mapping
 
 
-# --- tool request forms ---
+# Tool request forms
 # Forms
-####################
 
 
 class ToolUserModel(ToolModel):

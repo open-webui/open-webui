@@ -21,7 +21,7 @@
 	let viewMode: 'visual' | 'json' = 'visual';
 	let jsonError = '';
 
-	// --- CodeMirror ---
+	// CodeMirror
 	let cmContainer: HTMLDivElement;
 	let cmEditor: EditorView | null = null;
 	let editorTheme = new Compartment();
@@ -87,7 +87,7 @@
 
 	onDestroy(() => destroyCodeMirror());
 
-	// --- Display items ---
+	// Display items
 
 	interface DisplayItem {
 		type: 'message' | 'reasoning' | 'function_call' | 'code_interpreter' | 'openai_tool';
@@ -134,7 +134,7 @@
 
 	$: displayItems = buildDisplayItems(output);
 
-	// --- Helpers ---
+	// Helpers
 
 	function getMessageText(item: any): string {
 		return (item.content ?? [])

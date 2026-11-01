@@ -205,9 +205,7 @@ class AppInteractionForm(StrictModel):
     action_id: str = Field(min_length=1, max_length=100)
 
 
-####################
 # Forms
-####################
 
 
 class AppManifestForm(StrictModel):
@@ -244,9 +242,7 @@ class AppConnectionForm(StrictModel):
     api_key: SecretStr | None = Field(default=None, min_length=1, max_length=4096)
 
 
-####################
 # Responses
-####################
 
 
 class AppResponse(BaseModel):

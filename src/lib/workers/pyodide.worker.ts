@@ -13,9 +13,7 @@ declare global {
 	}
 }
 
-// ---------------------------------------------------------------------------
 // Pyodide bootstrap
-// ---------------------------------------------------------------------------
 
 let pyodideReady: Promise<void> | null = null;
 
@@ -46,23 +44,23 @@ async function loadPyodideAndPackages(packages: string[] = []) {
 		packages: ['micropip']
 	});
 
-	// Create the upload directory and mount IDBFS for persistence
+	// Give uploads an IDBFS home; RAM is a short-term rental.
 	const uploadDir = '/mnt/uploads';
 	self.pyodide.FS.mkdirTree(uploadDir);
 	self.pyodide.FS.mount(self.pyodide.FS.filesystems.IDBFS, {}, '/mnt');
 
-	// Load persisted files from IndexedDB
+	// Unpack the files IndexedDB kept between visits.
 	await new Promise<void>((resolve) => {
 		(self.pyodide.FS as any).syncfs(true, (err: Error | null) => {
 			if (err) {
 				console.error('Error syncing from IndexedDB:', err);
 			}
-			// Always resolve — missing data is fine on first run
+			// Continue startup even if restoring persisted files failed; the error is logged above.
 			resolve();
 		});
 	});
 
-	// Ensure /mnt/uploads still exists after sync (first-time init)
+	// First visit? Make sure /mnt/uploads has actually moved in.
 	try {
 		self.pyodide.FS.stat(uploadDir);
 	} catch {
@@ -104,9 +102,7 @@ function persistFS() {
 	});
 }
 
-// ---------------------------------------------------------------------------
 // FS operations
-// ---------------------------------------------------------------------------
 
 function fsUploadFiles(files: { name: string; data: ArrayBuffer }[], dir = '/mnt/uploads') {
 	try {
@@ -170,9 +166,7 @@ function fsMkdir(path: string) {
 	self.pyodide.FS.mkdirTree(path);
 }
 
-// ---------------------------------------------------------------------------
 // Code execution
-// ---------------------------------------------------------------------------
 
 async function executeCode(
 	id: string,
@@ -190,9 +184,9 @@ async function executeCode(
 	}
 
 	try {
-		// check if matplotlib is imported in the code
+		// Install the plotting hook when the source mentions matplotlib and the package is loaded.
 		if (code.includes('matplotlib') && 'matplotlib' in self.pyodide.loadedPackages) {
-			// Override plt.show() to return base64 image
+			// Override plt.show() to print a PNG data URL to stdout and clear the current figure.
 			await self.pyodide.runPythonAsync(`import base64
 import os
 from io import BytesIO
@@ -235,9 +229,7 @@ matplotlib.pyplot.show = show`);
 	self.postMessage({ id, result: self.result, stdout: self.stdout, stderr: self.stderr });
 }
 
-// ---------------------------------------------------------------------------
 // Message handler
-// ---------------------------------------------------------------------------
 
 self.onmessage = async (event) => {
 	const data = event.data;
@@ -321,23 +313,21 @@ self.onmessage = async (event) => {
 	}
 };
 
-// ---------------------------------------------------------------------------
 // Helpers
-// ---------------------------------------------------------------------------
 
 function processResult(result: any): any {
-	// Catch and always return JSON-safe string representations
+	// Convert proxies and nested values to JavaScript data; report conversion failures as text.
 	try {
 		if (result == null) {
-			// Handle null and undefined
+			// Null and undefined share one JSON address: null.
 			return null;
 		}
 		if (typeof result === 'string' || typeof result === 'number' || typeof result === 'boolean') {
-			// Handle primitive types directly
+			// Strings, numbers, and booleans already speak JSON.
 			return result;
 		}
 		if (typeof result === 'bigint') {
-			// Convert BigInt to a string for JSON-safe representation
+			// BigInt needs a string disguise to get past JSON.
 			return result.toString();
 		}
 		if (Array.isArray(result)) {
@@ -345,7 +335,7 @@ function processResult(result: any): any {
 			return result.map((item) => processResult(item));
 		}
 		if (typeof result.toJs === 'function') {
-			// If it's a Pyodide proxy object (e.g., Pandas DF, Numpy Array), convert to JS and process recursively
+			// Convert Python proxies; stringify if conversion still yields a proxy, otherwise recurse.
 			const converted = result.toJs();
 			return typeof converted?.toJs === 'function'
 				? converted.toString()

@@ -76,7 +76,7 @@ log = logging.getLogger(__name__)
 # cause, and let every message find the room it was meant for.
 REDIS = None
 
-# Configure CORS for Socket.IO
+# Socket.IO expects a wildcard string rather than a one-item wildcard list.
 SOCKETIO_CORS_ORIGINS = '*' if CORS_ALLOW_ORIGIN == ['*'] else CORS_ALLOW_ORIGIN
 
 # Large notes outgrow the 1 MB default; match uvicorn's 16 MiB websocket limit

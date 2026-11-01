@@ -744,16 +744,8 @@
 		if (isComposing) {
 			return true;
 		}
+		// On Safari, ignore one keydown within 500 ms of compositionend so confirming IME text adds no newline.
 		// See https://www.stum.de/2016/06/24/handling-ime-events-in-javascript/.
-		// On Japanese input method editors (IMEs), the Enter key is used to confirm character
-		// selection. On Safari, when Enter is pressed, compositionend and keydown events are
-		// emitted. The keydown event triggers newline insertion, which we don't want.
-		// This method returns true if the keydown event should be ignored.
-		// We only ignore it once, as pressing Enter a second time *should* insert a newline.
-		// Furthermore, the keydown event timestamp must be close to the compositionEndedAt timestamp.
-		// This guards against the case where compositionend is triggered without the keyboard
-		// (e.g. character confirmation may be done with the mouse), and keydown is triggered
-		// afterwards- we wouldn't want to ignore the keydown event in this case.
 		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
 			compositionEndedAt = -2e8;
 			return true;
@@ -977,19 +969,19 @@
 				video: { cursor: 'never' },
 				audio: false
 			});
-			// Once the user selects a screen, temporarily create a video element
+			// Borrow a video element for the selected screen; this is a one-frame production.
 			const video = document.createElement('video');
 			video.srcObject = mediaStream;
 			// Ensure the video loads without affecting user experience or tab switching
 			await video.play();
-			// Set up the canvas to match the video dimensions
+			// Match the canvas to the video; no surprise cropping in this photo booth.
 			const canvas = document.createElement('canvas');
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
+			// One frame, please. We are taking a screenshot, not directing a film.
 			const context = canvas.getContext('2d');
 			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
+			// Screenshot captured. Stop the tracks before this becomes a live broadcast.
 			mediaStream.getTracks().forEach((track) => track.stop());
 
 			// bring back focus to this current tab, so that the user can see the screen capture
@@ -1000,7 +992,7 @@
 			const blob = await (await fetch(imageUrl)).blob();
 			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
 			inputFilesHandler([file]);
-			// Clean memory: Clear video srcObject
+			// Release the video stream reference; the photo booth is closed.
 			video.srcObject = null;
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
@@ -1355,7 +1347,7 @@
 		);
 
 		if (res) {
-			// Clear the input content saved in session storage.
+			// The draft has become a note; session storage can stop keeping a spare.
 			sessionStorage.removeItem('chat-input');
 			goto(`/notes/${res.id}`);
 		}
@@ -1394,7 +1386,7 @@
 			try {
 				const data = JSON.parse(textData);
 				if (data.type === 'chat' && data.id) {
-					// Fetch the chat to get its title, then add as a reference chat
+					// Fetch the chat title so the attachment arrives with a name tag.
 					const chat = await getChatById(localStorage.token, data.id);
 					if (chat) {
 						const chatItem = {
@@ -1412,7 +1404,7 @@
 					e.stopPropagation();
 					return;
 				} else if (data.type === 'folder' && data.id) {
-					// Fetch the folder to get its name, then add as a reference folder
+					// Fetch the folder name; an ID alone makes a poor introduction.
 					const folder = await getFolderById(localStorage.token, data.id);
 					if (folder) {
 						const folderItem = {
@@ -1429,7 +1421,7 @@
 					e.stopPropagation();
 					return;
 				} else if (data.type === 'note' && data.id) {
-					// Fetch the note to get its title, then add as a reference note
+					// Fetch the note title before introducing it to the conversation.
 					const note = await getNoteById(localStorage.token, data.id);
 					if (note) {
 						const noteItem = {

@@ -178,7 +178,7 @@ _INITIAL_TABLES: list[tuple[str, list[sa.Column], list]] = [
 ]
 
 
-# --- migration execution ---
+# Migration execution
 def upgrade() -> None:  # deploy initial schema tables
     existing_tables = set(get_existing_tables())
     for name, columns, constraints in _INITIAL_TABLES:
@@ -186,7 +186,7 @@ def upgrade() -> None:  # deploy initial schema tables
             op.create_table(name, *columns, *constraints)
 
 
-# --- rollback function ---
+# Rollback function
 def downgrade() -> None:  # rollback initial schema tables
     for table_name, _, _ in reversed(_INITIAL_TABLES):
         op.drop_table(table_name)

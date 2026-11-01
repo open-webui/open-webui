@@ -90,8 +90,8 @@ router = APIRouter(route_class=MfaRoute)
 
 log = logging.getLogger(__name__)
 
-# Forgive us our failed attempts, as we forgive those
-# who exceed their allotted rate against this gate.
+# Let patience meet those who stumble at the gate,
+# and let those within rest safely through the night.
 signin_rate_limiter = RateLimiter(limit=5 * 3, window=60 * 3)
 # Best-effort throttle only: there is no caller identity before the provider answers,
 # and deployments may derive request.client from proxy headers.
@@ -242,9 +242,7 @@ async def get_session_user(
     return response_data
 
 
-############################
 # Update Profile
-############################
 
 
 @router.post('/update/profile', response_model=UserProfileImageResponse)
@@ -275,9 +273,7 @@ async def update_profile(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
-############################
 # Update Timezone
-############################
 
 
 class UpdateTimezoneForm(BaseModel):
@@ -309,9 +305,7 @@ async def update_timezone(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
-############################
 # Update Password
-############################
 
 
 @router.post('/update/password', response_model=bool)
@@ -406,9 +400,7 @@ def extract_group_cn_from_dn(group_dn: str) -> str | None:
     return None
 
 
-############################
 # LDAP Authentication
-############################
 @router.post('/ldap', response_model=SigninResult)
 async def ldap_auth(
     request: Request,
@@ -657,9 +649,7 @@ async def ldap_auth(
         raise HTTPException(400, detail='LDAP authentication failed.')
 
 
-############################
-# SignIn
-############################
+# Sign In
 
 
 @router.post('/signin', response_model=SigninResult)
@@ -790,9 +780,7 @@ async def signin(
         raise HTTPException(400, detail=ERROR_MESSAGES.INVALID_CRED)
 
 
-############################
-# SignUp
-############################
+# Sign Up
 
 
 async def signup_handler(
@@ -1016,9 +1004,7 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
     return JSONResponse(status_code=200, content={'status': True}, headers=response.headers)
 
 
-############################
 # OAuth Session Management
-############################
 
 
 @router.delete('/oauth/sessions/{provider:path}', response_model=bool)
@@ -1050,9 +1036,7 @@ async def delete_oauth_session_by_provider(
     return True
 
 
-############################
-# AddUser
-############################
+# Add User
 
 
 @router.post('/add', response_model=AddUserResponse, response_model_exclude_none=True)
@@ -1125,9 +1109,7 @@ async def add_user(
         raise HTTPException(500, detail='An internal error occurred while adding the user.')
 
 
-############################
-# GetAdminDetails
-############################
+# Get Admin Details
 
 
 @router.get('/admin/details')
@@ -1158,9 +1140,7 @@ async def get_admin_details(
         raise HTTPException(400, detail=ERROR_MESSAGES.ACTION_PROHIBITED)
 
 
-############################
-# ToggleSignUp
-############################
+# Toggle Sign Up
 
 
 @router.get('/admin/config')
@@ -1348,9 +1328,7 @@ async def update_ldap_config(request: Request, form_data: LdapConfigForm, user=D
     return {'ENABLE_LDAP': await Config.get('ldap.enable')}
 
 
-############################
 # API Key
-############################
 
 
 class OAuthConfigForm(BaseModel):
@@ -1568,9 +1546,7 @@ async def get_api_key(request: Request, user=Depends(get_current_user), db: Asyn
         raise HTTPException(404, detail=ERROR_MESSAGES.API_KEY_NOT_FOUND)
 
 
-############################
 # Token Exchange
-############################
 
 
 class TokenExchangeForm(BaseModel):

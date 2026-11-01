@@ -101,11 +101,7 @@ async def get_anthropic_models(url: str, key: str, user: UserModel = None) -> di
     return {'object': 'list', 'data': all_models}
 
 
-##############################
-#
 # Anthropic Messages API Conversion Utilities
-#
-##############################
 
 
 def _copy_cache_control(source: dict, target: dict) -> dict:
@@ -752,7 +748,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     }
                     yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
-                # --- Handle text content ---
+                # Handle text content
                 # Anthropic expects text blocks before tool blocks, so skip
                 # text deltas once any tool call has started.
                 content = delta.get('content')
@@ -782,7 +778,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                     }
                     yield f'event: content_block_delta\ndata: {JSONCodec.dumps(block_delta)}\n\n'.encode()
 
-                # --- Handle tool calls ---
+                # Handle tool calls
                 # Some providers put tool_calls on the final message object
                 # instead of the delta; fall back to that when needed.
                 tool_calls = delta.get('tool_calls') or []
@@ -903,7 +899,7 @@ async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str 
                                 except (JSONCodec.JSONDecodeError, ValueError):
                                     pass
 
-                # --- Handle finish reason ---
+                # Handle finish reason
                 if finish_reason is not None:
                     stop_reason_map = {
                         'stop': 'end_turn',

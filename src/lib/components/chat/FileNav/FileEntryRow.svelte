@@ -44,7 +44,7 @@
 	export let onMove: (sources: string[], destFolder: string) => void | Promise<void> = () => {};
 	export let onRename: (oldPath: string, newName: string) => void = () => {};
 
-	// ── Selection ─────────────────────────────────────────────────────────
+	// Selection
 	export let selected: boolean = false;
 	export let active = false;
 	export let selectionMode: boolean = false;
@@ -148,7 +148,7 @@
 		};
 	};
 
-	// ── Rename state ─────────────────────────────────────────────────────
+	// Rename state
 	let renaming = false;
 	let renameValue = '';
 	let renameInput: HTMLInputElement;
@@ -179,7 +179,7 @@
 		renameValue = '';
 	};
 
-	// ── Long-press for touch selection ───────────────────────────────────
+	// Long-press for touch selection
 	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let didLongPress = false;
 
@@ -213,7 +213,7 @@
 		clearExpandTimer();
 	});
 
-	// ── Click handler ────────────────────────────────────────────────────
+	// Click handler
 	const handleClick = (e: MouseEvent) => {
 		openPreview = false;
 		if (renaming) return;

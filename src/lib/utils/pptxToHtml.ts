@@ -1120,7 +1120,7 @@ export async function pptxToImages(
 	const zip = (await JSZip.loadAsync(buffer)) as ZipLike;
 	activeThemeColors = await readThemeColors(zip);
 
-	// ── Read slide dimensions from presentation.xml ──────────────────
+	// Read slide dimensions from presentation.xml
 	let slideW = 960;
 	let slideH = 540;
 	const presXml = zip.file('ppt/presentation.xml');
@@ -1134,7 +1134,7 @@ export async function pptxToImages(
 		}
 	}
 
-	// ── Collect media files (images) as base64 data URIs ─────────────
+	// Collect media files (images) as base64 data URIs
 	const media: Record<string, string> = {};
 	const mediaFiles = Object.keys(zip.files).filter((f) => f.startsWith('ppt/media/'));
 	await Promise.all(
@@ -1157,7 +1157,7 @@ export async function pptxToImages(
 		})
 	);
 
-	// ── Discover slide files ─────────────────────────────────────────
+	// Discover slide files
 	const slideFiles = await presentationSlides(new OfficePackage(zip as import('jszip')));
 
 	const images: string[] = [];
@@ -1174,7 +1174,7 @@ export async function pptxToImages(
 		const masterDoc = masterPath ? await readXml(zip, masterPath) : null;
 		const placeholderSources = [collectPlaceholders(layoutDoc), collectPlaceholders(masterDoc)];
 
-		// ── Create canvas and render slide ───────────────────────────
+		// Create canvas and render slide
 		const canvas = document.createElement('canvas');
 		canvas.width = slideW;
 		canvas.height = slideH;
@@ -1228,7 +1228,7 @@ export async function pptxToImages(
 				renderFill(ctx, shape.getElementsByTagName('p:spPr')[0], rect);
 			}
 
-			// ── Picture ──────────────────────────────────────────────
+			// Picture
 			const blipFill = shape.getElementsByTagName('p:blipFill')[0];
 			if (blipFill) {
 				const blip = blipFill.getElementsByTagName('a:blip')[0];
@@ -1248,7 +1248,7 @@ export async function pptxToImages(
 				continue;
 			}
 
-			// ── Text shape ───────────────────────────────────────────
+			// Text shape
 			const txBody = shape.getElementsByTagName('p:txBody')[0];
 			if (!txBody) continue;
 

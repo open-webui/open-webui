@@ -15,9 +15,8 @@ log = logging.getLogger(__name__)
 # Let the right tool be given for the work at hand,
 # not the one that flatters, but the one that serves.
 def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models) -> str:
-    # Set the task model
     task_model_id = default_model_id
-    # Check if the user has a custom task model and use that model
+    # Use an available task model override for the local or external connection.
     if models.get(task_model_id, {}).get('connection_type') == 'local':
         if task_model and task_model in models:
             task_model_id = task_model
@@ -85,7 +84,7 @@ async def prompt_template(template: str, user: Optional[Any] = None) -> str:
     # Get the current date
     current_date = datetime.now()
 
-    # Format the date to YYYY-MM-DD
+    # YYYY-MM-DD: one date format, fewer international incidents.
     formatted_date = current_date.strftime('%Y-%m-%d')
     formatted_time = current_date.strftime('%I:%M:%S %p')
     formatted_weekday = current_date.strftime('%A')

@@ -274,10 +274,8 @@ async def publish_chat_failed_event(request: Request, user: UserModel, metadata:
     )
 
 
-# We believe in one maker of all models, seen and unseen,
-# and in the reasoning which proceeds from the architect.
-# We look for the resurrection of dead processes and the
-# inference of the world to come.
+# Let every wandering thought find its closing tag,
+# and let the answer arrive before we forget the question.
 DEFAULT_REASONING_TAGS = [
     ('<think>', '</think>'),
     ('<thinking>', '</thinking>'),
@@ -2435,12 +2433,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
             else:
-                # Native FC: tool docstring can't be dynamic, so inject
-                # filesystem context into the system message for pyodide
-                # engine.  Appending to the system prompt (instead of the
-                # user message) keeps it in the stable cached prefix so
-                # providers with prefix caching don't re-bill the full
-                # conversation on every turn.
+                # Put dynamic Pyodide filesystem context in the system prompt to preserve prefix caching.
                 if engine != 'jupyter':
                     form_data['messages'] = add_or_update_system_message(
                         CODE_INTERPRETER_PYODIDE_PROMPT,
@@ -2631,10 +2624,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     prompt = get_last_user_message(form_data['messages'])
 
-    # Guard against empty user message after skill mention stripping.
-    # When a user selects a skill ($skill-name) without typing additional text,
-    # the stripped result is an empty string which causes 400 errors on providers
-    # that reject empty content blocks (e.g. AWS Bedrock ConverseStream).
+    # Supply fallback text for skill-only messages; some providers reject empty content.
     if not prompt or not prompt.strip():
         fallback = ', '.join([s.name for s in available_skills] + [s['name'] for s in terminal_skills])
         # Attachment-only messages keep their empty text, same as on models without skills.
@@ -4902,11 +4892,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                                 }
                                                             )
 
-                                    # Merge any metadata (usage, etc.)
-                                    # Strip 'done' — response.completed emits
-                                    # it but we may still need to execute tool
-                                    # calls. The outer middleware manages the
-                                    # actual completion signal.
+                                    # Merge metadata without 'done'; the outer middleware signals completion after tool calls.
                                     if response_metadata:
                                         if ENABLE_RESPONSES_API_STATEFUL:
                                             response_id = response_metadata.pop('response_id', None)
@@ -5352,13 +5338,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         # closure-cell str += recopies per chunk; append + join once at read is O(n)
                                         content_parts.append(value)
 
-                                        # Check if we're inside a tag-based block
-                                        # (reasoning, code_interpreter, or solution).
-                                        # If so, append to the existing in-progress
-                                        # item instead of creating a new message —
-                                        # otherwise tag_output_handler re-detects the
-                                        # start tag on every chunk and fragments the
-                                        # output.
+                                        # Continue the open tag block so its start tag is not re-detected on each chunk.
                                         last_item = output[-1] if output else None
                                         last_item_type = last_item.get('type', '') if last_item else ''
                                         inside_tag_block = (
@@ -6098,12 +6078,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
-                            # Save accumulated output and start fresh.
-                            # Responses API output_index values are relative
-                            # to the current response — a clean output list
-                            # keeps indices aligned. The display prefix
-                            # ensures the UI shows tool history during
-                            # streaming.
+                            # Reset response-relative output indices; keep prior output as the UI history prefix.
                             prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
@@ -6392,10 +6367,7 @@ async def streaming_chat_response_handler(response, ctx):
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
 
-                # Close the response body iterator to trigger cleanup
-                # in stream_wrapper's finally block and release the
-                # upstream connection.  Without this, the async
-                # generator is orphaned and may spin in anyio internals.
+                # Close the iterator so stream_wrapper's finally block releases the upstream connection.
                 if hasattr(response, 'body_iterator') and hasattr(response.body_iterator, 'aclose'):
                     try:
                         await asyncio.shield(response.body_iterator.aclose())

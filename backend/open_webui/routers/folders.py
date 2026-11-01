@@ -84,9 +84,7 @@ async def check_folders_permission(request: Request, user, db=None):
         )
 
 
-############################
 # Get Folders
-############################
 
 
 @router.get('/', response_model=list[FolderNameIdResponse])
@@ -142,9 +140,7 @@ async def get_folders(
     ]
 
 
-############################
 # Create Folder
-############################
 
 
 @router.post('/')
@@ -234,9 +230,7 @@ async def create_folder(
         )
 
 
-############################
 # Get Shared Folders
-############################
 
 
 @router.get('/shared')
@@ -287,9 +281,7 @@ async def get_shared_folders(
     return results
 
 
-############################
 # Get Folders By Id
-############################
 
 
 class FolderResponse(FolderModel):
@@ -327,9 +319,7 @@ async def get_folder_by_id(
     )
 
 
-############################
 # Update Folder Name By Id
-############################
 
 
 @router.post('/{id}/update')
@@ -416,9 +406,7 @@ async def update_folder_name_by_id(
             )
 
 
-############################
 # Update Folder Parent Id By Id
-############################
 
 
 class FolderParentIdForm(BaseModel):
@@ -478,9 +466,7 @@ async def update_folder_parent_id_by_id(
         )
 
 
-############################
 # Update Folder Is Expanded By Id
-############################
 
 
 class FolderIsExpandedForm(BaseModel):
@@ -522,9 +508,7 @@ async def update_folder_is_expanded_by_id(
         )
 
 
-############################
 # Update Folder Access By Id
-############################
 
 
 class FolderAccessGrantsForm(BaseModel):
@@ -584,9 +568,7 @@ async def update_folder_access_by_id(
     }
 
 
-############################
 # Get Shared Folder Chats
-############################
 
 
 @router.get('/{id}/shared/chats')
@@ -702,9 +684,7 @@ async def mark_folder_chats_read_by_id(
     }
 
 
-############################
 # Delete Folder By Id
-############################
 
 
 @router.delete('/{id}')

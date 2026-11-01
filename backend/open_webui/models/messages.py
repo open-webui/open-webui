@@ -12,9 +12,7 @@ from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, de
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
-####################
 # Message DB Schema
-####################
 
 
 class MessageReaction(Base):
@@ -89,9 +87,7 @@ class MessageModel(BaseModel):
         return str(self.updated_at)
 
 
-####################
 # Forms
-####################
 
 
 class MessageForm(BaseModel):

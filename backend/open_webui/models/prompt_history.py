@@ -11,9 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-####################
 # PromptHistory DB Schema
-####################
 
 
 class PromptHistory(Base):

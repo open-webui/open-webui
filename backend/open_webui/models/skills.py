@@ -18,9 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
-####################
 # Skills DB Schema
-####################
 
 
 class Skill(Base):
@@ -63,9 +61,7 @@ class SkillModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class SkillUserModel(SkillModel):

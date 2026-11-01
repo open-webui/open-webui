@@ -53,9 +53,7 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-############################
 # getKnowledgeBases
-############################
 
 PAGE_ITEM_COUNT = 30
 
@@ -79,9 +77,7 @@ async def delete_file_resource(file: FileModel, db: AsyncSession) -> bool:
     return result
 
 
-############################
 # Knowledge Base Embedding
-############################
 
 # Knowledge that sits unread serves no one. Let what is
 # stored here find the ones who need it.
@@ -311,9 +307,7 @@ async def search_knowledge_files(
     return await Knowledges.search_knowledge_files(filter=filter, skip=skip, limit=limit, db=db)
 
 
-############################
-# CreateNewKnowledge
-############################
+# Create New Knowledge
 
 
 @router.post('/create', response_model=KnowledgeResponse | None)
@@ -322,10 +316,7 @@ async def create_new_knowledge(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations (has_permission, filter_allowed_access_grants, insert_new_knowledge) manage their own sessions.
-    # This prevents holding a connection during embed_knowledge_base_metadata()
-    # which makes external embedding API calls (1-5+ seconds).
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     if user.role != 'admin' and not await has_permission(
         user.id, 'workspace.knowledge', await Config.get('user.permissions')
     ):
@@ -367,9 +358,7 @@ async def create_new_knowledge(
         )
 
 
-############################
-# ReindexKnowledgeFiles
-############################
+# Reindex Knowledge Files
 
 
 @router.post('/reindex', response_model=bool)
@@ -462,9 +451,7 @@ async def reindex_knowledge_files(
     return True
 
 
-############################
-# ReindexKnowledgeBases
-############################
+# Reindex Knowledge Bases
 
 
 @router.post('/metadata/reindex', response_model=dict)
@@ -495,9 +482,7 @@ async def reindex_knowledge_base_metadata_embeddings(
     return {'total': len(knowledge_bases), 'success': success_count}
 
 
-############################
 # External Knowledge Sources
-############################
 
 
 class ExternalKnowledgeSourceForm(BaseModel):
@@ -1079,9 +1064,7 @@ async def update_external_knowledge_source(
     return updated
 
 
-############################
-# GetKnowledgeById
-############################
+# Get Knowledge By Id
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
@@ -1131,9 +1114,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Asyn
         )
 
 
-############################
-# UpdateKnowledgeById
-############################
+# Update Knowledge By Id
 
 
 @router.post('/{id}/update', response_model=KnowledgeFilesResponse | None)
@@ -1143,10 +1124,7 @@ async def update_knowledge_by_id(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations manage their own short-lived sessions internally.
-    # This prevents holding a connection during embed_knowledge_base_metadata()
-    # which makes external embedding API calls (1-5+ seconds).
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -1203,9 +1181,7 @@ async def update_knowledge_by_id(
         )
 
 
-############################
-# UpdateKnowledgeAccessById
-############################
+# Update Knowledge Access By Id
 
 
 class KnowledgeAccessGrantsForm(BaseModel):
@@ -1267,9 +1243,7 @@ async def update_knowledge_access_by_id(
     return response
 
 
-############################
-# GetPendingKnowledgeFiles
-############################
+# Get Pending Knowledge Files
 
 
 @router.get('/{id}/files/pending')
@@ -1289,10 +1263,7 @@ async def get_pending_knowledge_files(
     When ``stream=true``, returns an SSE stream that polls every 3 seconds
     and emits the current pending file list.  Closes when no files remain.
     """
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations manage their own short-lived sessions internally.
-    # Holding a session here would keep a connection for the entire stream
-    # (up to an hour) and exhaust the connection pool under concurrent load.
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -1350,9 +1321,7 @@ async def get_pending_knowledge_files(
     )
 
 
-############################
-# GetKnowledgeFilesById
-############################
+# Get Knowledge Files By Id
 
 
 @router.get('/{id}/files', response_model=KnowledgeFileListResponse)
@@ -1419,9 +1388,7 @@ async def get_knowledge_files_by_id(
     return await Knowledges.search_files_by_id(id, user.id, filter=filter, skip=skip, limit=limit, db=db)
 
 
-############################
-# AddFileToKnowledge
-############################
+# Add File To Knowledge
 
 
 async def check_knowledge_upload_limits(
@@ -1681,9 +1648,7 @@ async def update_file_from_knowledge_by_id(
         )
 
 
-############################
-# RemoveFileFromKnowledge
-############################
+# Remove File From Knowledge
 
 
 @router.post('/{id}/file/remove', response_model=KnowledgeFilesResponse | None)
@@ -1770,9 +1735,7 @@ async def remove_file_from_knowledge_by_id(
         )
 
 
-############################
-# DeleteKnowledgeById
-############################
+# Delete Knowledge By Id
 
 
 @router.delete('/{id}/delete', response_model=bool)
@@ -1860,9 +1823,7 @@ async def delete_knowledge_by_id(
     return result
 
 
-############################
-# ResetKnowledgeById
-############################
+# Reset Knowledge By Id
 
 
 @router.post('/{id}/reset', response_model=KnowledgeResponse | None)
@@ -1922,9 +1883,7 @@ async def reset_knowledge_by_id(
     return knowledge
 
 
-############################
-# SyncKnowledgeDiff
-############################
+# Sync Knowledge Diff
 
 
 class FileManifestEntry(BaseModel):
@@ -1961,7 +1920,7 @@ async def sync_knowledge_diff(
     """
     await _verify_knowledge_write_access(id, user, db)
 
-    # ── Index existing state ──
+    # Index existing state
     existing_directories = await Knowledges.get_all_directories(id, db=db)
 
     # Build directory path lookups
@@ -2002,7 +1961,7 @@ async def sync_knowledge_diff(
             'checksum': stored_checksum,
         }
 
-    # ── Diff files ──
+    # Diff files
     added: list[dict] = []
     modified: list[dict] = []
     deleted: list[dict] = []
@@ -2046,7 +2005,7 @@ async def sync_knowledge_diff(
         db=db,
     )
 
-    # ── Diff directories ──
+    # Diff directories
     required_directory_paths: set[str] = set()
     for entry in form_data.manifest:
         if entry.path:
@@ -2070,9 +2029,7 @@ async def sync_knowledge_diff(
     )
 
 
-############################
-# SyncKnowledgeCleanup
-############################
+# Sync Knowledge Cleanup
 
 
 class SyncCleanupForm(BaseModel):
@@ -2093,7 +2050,7 @@ async def sync_knowledge_cleanup(
     """
     await _verify_knowledge_write_access(id, user, db)
 
-    # ── Remove deleted files ──
+    # Remove deleted files
     for file_id in form_data.file_ids:
         file = await Files.get_file_by_id(file_id, db=db)
         if not file:
@@ -2120,7 +2077,7 @@ async def sync_knowledge_cleanup(
         ):
             await delete_file_resource(file, db)
 
-    # ── Remove orphaned directories (children before parents) ──
+    # Remove orphaned directories (children before parents)
     for dir_id in reversed(form_data.dir_ids):
         # Only delete directories that belong to this knowledge base.
         directory = await Knowledges.get_directory_by_id(dir_id, db=db)
@@ -2131,9 +2088,7 @@ async def sync_knowledge_cleanup(
     return {'status': True}
 
 
-############################
-# AddFilesToKnowledge
-############################
+# Add Files To Knowledge
 
 
 @router.post('/{id}/files/batch/add', response_model=KnowledgeFilesResponse | None)
@@ -2276,9 +2231,7 @@ async def add_files_to_knowledge_batch(
     )
 
 
-############################
-# ExportKnowledgeById
-############################
+# Export Knowledge By Id
 
 
 @router.get('/{id}/export')
@@ -2324,9 +2277,7 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
     )
 
 
-############################
 # Directory endpoints
-############################
 
 
 class KnowledgeDirectoryCreateForm(BaseModel):

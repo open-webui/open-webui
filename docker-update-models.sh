@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
 # Pull the latest version of every model installed in the Ollama container.
-# ---------------------------------------------------------------------------
 
 readonly CONTAINER="${OLLAMA_CONTAINER:-ollama}"
 

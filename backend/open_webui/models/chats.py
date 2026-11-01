@@ -297,9 +297,7 @@ class ChatFileModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class ChatForm(BaseModel):

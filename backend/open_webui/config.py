@@ -57,9 +57,7 @@ class EndpointFilter(logging.Filter):
 
 logging.getLogger('uvicorn.access').addFilter(EndpointFilter())
 
-####################################
 # Initialization
-####################################
 
 
 def run_migrations():
@@ -92,9 +90,7 @@ async def import_legacy_config_json():
     os.rename(f'{DATA_DIR}/config.json', f'{DATA_DIR}/old_config.json')
 
 
-####################################
 # Static DIR
-####################################
 
 STATIC_DIR = Path(os.getenv('STATIC_DIR', OPEN_WEBUI_DIR / 'static')).resolve()
 STATIC_SOURCE_DIR = FRONTEND_BUILD_DIR / 'static'
@@ -151,7 +147,7 @@ if frontend_loader.exists():
         logging.error(f'An error occurred: {e}')
 
 
-# --- Storage Provider ---
+# Storage provider
 
 STORAGE_PROVIDER = os.getenv('STORAGE_PROVIDER', 'local')  # defaults to local, s3
 STORAGE_LOCAL_CACHE = os.getenv('STORAGE_LOCAL_CACHE', 'true').lower() == 'true'
@@ -173,25 +169,19 @@ AZURE_STORAGE_ENDPOINT = os.getenv('AZURE_STORAGE_ENDPOINT', None)
 AZURE_STORAGE_CONTAINER_NAME = os.getenv('AZURE_STORAGE_CONTAINER_NAME', None)
 AZURE_STORAGE_KEY = os.getenv('AZURE_STORAGE_KEY', None)
 
-####################################
 # File Upload DIR
-####################################
 
 UPLOAD_DIR = DATA_DIR / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
-####################################
 # Cache DIR
-####################################
 
 CACHE_DIR = DATA_DIR / 'cache'
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-####################################
 # CUSTOM_NAME (Legacy)
-####################################
 
 # LICENSE covers this legacy Open WebUI branding path.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -229,16 +219,12 @@ if CUSTOM_NAME:
         pass
 
 
-####################################
-# DIRECT CONNECTIONS
-####################################
+# Direct connections
 
 ENABLE_DIRECT_CONNECTIONS = os.getenv('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true'
 ENABLE_DIRECT_INTEGRATIONS = os.getenv('ENABLE_DIRECT_INTEGRATIONS', 'False').lower() == 'true'
 
-####################################
 # OLLAMA_BASE_URL
-####################################
 
 ENABLE_OLLAMA_API = os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true'
 
@@ -246,7 +232,7 @@ OLLAMA_API_BASE_URL = os.getenv('OLLAMA_API_BASE_URL', 'http://localhost:11434/a
 
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', '')
 if OLLAMA_BASE_URL:
-    # Remove trailing slash
+    # Trim the trailing slash; the next path will bring its own.
     OLLAMA_BASE_URL = OLLAMA_BASE_URL[:-1] if OLLAMA_BASE_URL.endswith('/') else OLLAMA_BASE_URL
 
 
@@ -317,9 +303,7 @@ if _ollama_api_configs:
     except (JSONCodec.JSONDecodeError, TypeError):
         log.warning('OLLAMA_API_CONFIGS is not valid JSON, ignoring')
 
-####################################
 # OPENAI_API
-####################################
 
 
 ENABLE_OPENAI_API = os.getenv('ENABLE_OPENAI_API', 'True').lower() == 'true'
@@ -373,16 +357,12 @@ except Exception:
 OPENAI_API_BASE_URL = 'https://api.openai.com/v1'
 
 
-####################################
-# MODELS
-####################################
+# Models
 
 ENABLE_BASE_MODELS_CACHE = os.getenv('ENABLE_BASE_MODELS_CACHE', 'False').lower() == 'true'
 
 
-####################################
 # TOOL_SERVERS
-####################################
 
 try:
     tool_server_connections = JSONCodec.loads(os.getenv('TOOL_SERVER_CONNECTIONS', '[]'))
@@ -395,9 +375,7 @@ TOOL_SERVER_CONNECTIONS = tool_server_connections
 
 OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 
-####################################
 # TERMINAL_SERVER
-####################################
 
 terminal_server_connections = JSONCodec.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
 
@@ -408,9 +386,7 @@ try:
 except Exception:
     TERMINAL_PROXY_HEADERS = {}
 
-####################################
 # Code Interpreter
-####################################
 
 ENABLE_CODE_EXECUTION = os.getenv('ENABLE_CODE_EXECUTION', 'True').lower() == 'true'
 
@@ -502,9 +478,7 @@ CODE_INTERPRETER_PYODIDE_PROMPT = """
 - Use `import os; os.listdir('/mnt/uploads')` to discover available files."""
 
 
-####################################
 # Vector Database
-####################################
 
 VECTOR_DB = os.getenv('VECTOR_DB', 'pgvector' if USE_SLIM else 'chroma')
 
@@ -841,9 +815,7 @@ VALKEY_HNSW_M = int(os.getenv('VALKEY_HNSW_M', '16'))
 VALKEY_HNSW_EF_CONSTRUCTION = int(os.getenv('VALKEY_HNSW_EF_CONSTRUCTION', '200'))
 VALKEY_HNSW_EF_RUNTIME = int(os.getenv('VALKEY_HNSW_EF_RUNTIME', '10'))
 
-####################################
 # Information Retrieval (RAG)
-####################################
 
 
 # If configured, Google Drive will be available as an upload option.
@@ -1182,9 +1154,7 @@ YOUTUBE_LOADER_LANGUAGE = os.getenv('YOUTUBE_LOADER_LANGUAGE', 'en').split(',')
 YOUTUBE_LOADER_PROXY_URL = os.getenv('YOUTUBE_LOADER_PROXY_URL', '')
 
 
-####################################
 # Web Search
-####################################
 
 ENABLE_WEB_SEARCH = os.getenv('ENABLE_WEB_SEARCH', 'False').lower() == 'true'
 
@@ -1374,9 +1344,7 @@ except JSONCodec.JSONDecodeError:
 
 LINKUP_SEARCH_PARAMS = linkup_search_params
 
-####################################
 # Images
-####################################
 
 ENABLE_IMAGE_GENERATION = os.getenv('ENABLE_IMAGE_GENERATION', '').lower() == 'true'
 
@@ -1584,9 +1552,7 @@ except JSONCodec.JSONDecodeError:
 
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
 
-####################################
 # Audio
-####################################
 
 # Transcription
 WHISPER_MODEL = os.getenv('WHISPER_MODEL', 'base')
@@ -1702,9 +1668,7 @@ AUDIO_TTS_MISTRAL_API_KEY = os.getenv('AUDIO_TTS_MISTRAL_API_KEY', '')
 
 AUDIO_TTS_MISTRAL_API_BASE_URL = os.getenv('AUDIO_TTS_MISTRAL_API_BASE_URL', 'https://api.mistral.ai/v1')
 
-####################################
-# WEBUI
-####################################
+# WebUI
 
 
 WEBUI_URL = os.getenv('WEBUI_URL', '')
@@ -2254,9 +2218,7 @@ SHOW_ADMIN_DETAILS = os.getenv('SHOW_ADMIN_DETAILS', 'true').lower() == 'true'
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', None)
 
 
-####################################
-# TASKS
-####################################
+# Tasks
 
 
 TASK_MODEL = os.getenv('TASK_MODEL', '')
@@ -2560,9 +2522,7 @@ Your task is to synthesize these responses into a single, high-quality response.
 Responses from models: {{responses}}"""
 
 
-####################################
 # Auth
-####################################
 
 ENABLE_API_KEYS = os.getenv('ENABLE_API_KEYS', 'False').lower() == 'true'
 
@@ -2588,9 +2548,7 @@ if JWT_EXPIRES_IN == '-1':
         '    See: https://docs.openwebui.com/reference/env-configuration\n'
     )
 
-####################################
 # OAuth config
-####################################
 
 # Master switch for OAuth/OIDC sign-in. Defaults to enabled so existing
 # deployments that already have a provider configured keep working; admins can
@@ -2898,9 +2856,7 @@ def load_oauth_providers():
 
 load_oauth_providers()
 
-####################################
 # LDAP
-####################################
 
 ENABLE_LDAP = os.getenv('ENABLE_LDAP', 'false').lower() == 'true'
 

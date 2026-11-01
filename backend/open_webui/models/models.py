@@ -67,7 +67,7 @@ def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
     return sanitized
 
 
-# --- Models DB Schema ---
+# Models DB schema
 
 
 ModelControlKey = Annotated[str, Field(pattern=re.compile(r'^(?!(?:constructor|prototype)\Z)[a-zA-Z][a-zA-Z0-9_-]*\Z'))]

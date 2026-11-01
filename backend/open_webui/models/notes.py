@@ -386,9 +386,7 @@ def matching_page(data: dict, query: str = '') -> dict:
     return pages[0]
 
 
-####################
 # Note DB Schema
-####################
 
 
 class Note(Base):
@@ -462,9 +460,7 @@ class PinnedNote(Base):
     created_at = Column(BigInteger, nullable=False)
 
 
-####################
 # Forms
-####################
 
 
 class NoteForm(BaseModel):

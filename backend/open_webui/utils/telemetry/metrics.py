@@ -55,17 +55,7 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Sync DB helpers for OTel gauge callbacks
-#
-# The OTel Python SDK calls observable-instrument callbacks *synchronously*
-# from a background collection thread — async callbacks are NOT supported
-# (the SDK does not ``await`` the return value).
-#
-# Rather than bridging into the async event loop, we run plain synchronous
-# SQL queries using the sync engine that is already available at setup time.
-# This avoids any cross-thread / cross-loop concerns entirely.
-# ---------------------------------------------------------------------------
+# OTel gauge callbacks run synchronously on a collection thread, so use the sync DB engine.
 
 
 def _count_total_users(db_engine: Engine) -> Optional[int]:
@@ -168,10 +158,7 @@ def setup_metrics(app: FastAPI, resource: Resource, db_engine: Engine) -> None:
         unit='ms',
     )
 
-    # -- Observable gauge callbacks ----------------------------------------
-    # These are called synchronously by the OTel SDK from a background
-    # collection thread.  They use the sync DB engine directly — no async
-    # bridging required.
+    # Gauge callbacks use the sync DB engine on OTel's collection thread.
 
     def observe_total_users(
         options: metrics.CallbackOptions,

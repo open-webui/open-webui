@@ -2570,9 +2570,7 @@
 		artifactContents.set(contents);
 	};
 
-	//////////////////////////
 	// Web functions
-	//////////////////////////
 
 	const openCallOverlay = () => {
 		if (isShared) return;
@@ -3097,12 +3095,7 @@
 			});
 			lastScrollTop = messagesContainerElement.scrollTop;
 
-			// content-visibility: auto causes the initial scrollHeight to be based on
-			// estimated sizes (contain-intrinsic-size). After we scroll, previously
-			// off-screen messages become visible and the browser resolves their actual
-			// heights, which shifts scrollHeight. Re-layouts can cascade across frames
-			// (new sizes reveal more content, triggering further size resolution), so
-			// we re-scroll across two animation frames to land at the true bottom.
+			// Re-scroll over two frames as content-visibility resolves estimated message heights.
 			requestAnimationFrame(() => {
 				if (messagesContainerElement && autoScroll) {
 					messagesContainerElement.scrollTo({
@@ -3623,9 +3616,7 @@
 		bridge?.update();
 	};
 
-	//////////////////////////
 	// Chat functions
-	//////////////////////////
 
 	const submitPrompt = async (
 		inputContent: string,
@@ -3642,7 +3633,7 @@
 			)
 		);
 		chatFiles = chatFiles.filter(
-			// Remove duplicates
+			// One copy per attachment; the model does not need an encore.
 			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
 		);
 
@@ -4094,11 +4085,7 @@
 			history.messages[parentId].models = [...selectedModelIds];
 		}
 
-		// Create response messages for each selected model
-		// Build message_ids list: [{model_id, message_id, modelIdx}, ...]
-		// Uses an array instead of a dict to support duplicate model IDs in side-by-side chat.
-		// modelIdx identifies each side-by-side column so the backend can persist it; without
-		// it, duplicate models collapse into one another when the chat is reloaded.
+		// Use a message_ids array with modelIdx to preserve separate columns for duplicate models.
 		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
 			const model = $models.filter((m) => m.id === modelId).at(0);
@@ -4190,10 +4177,7 @@
 					primaryResponseMessageId,
 					_chatId,
 					{
-						// Always forward the message_ids list (not just for multi-model sends) so the
-						// backend persists each response's modelIdx — including single-column
-						// regenerations in a duplicate-model chat, which would otherwise lose their
-						// column identity and collapse on reload.
+						// Send message_ids even for single-column regenerations to preserve modelIdx on reload.
 						messageIdsList: messageIdsList.length > 0 ? messageIdsList : undefined,
 						regenerationPrompt,
 						regenerationMessageId
@@ -4298,7 +4282,7 @@
 					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
 			)
 		);
-		// Remove duplicates
+		// One copy per attachment; the model does not need an encore.
 		files = files.filter((item, index, array) => array.findIndex((i) => equal(i, item)) === index);
 
 		scrollToBottom();
@@ -4545,10 +4529,7 @@
 					onToolCallResolved(res);
 				}
 
-				// Finish new-chat setup even if an event already supplied the chat id.
-				// Only update if the user hasn't navigated to a different chat
-				// while the request was in flight (prevents overwriting $chatId
-				// and causing spurious toast notifications / state duplication).
+				// Finish new-chat setup only if navigation has not changed the active chat during the request.
 				if (
 					res.chat_id &&
 					history.messages[responseMessageId] &&
@@ -4587,10 +4568,7 @@
 						window.history.replaceState(window.history.state, '', `/c/${res.chat_id}`);
 						await refreshChatList(localStorage.token);
 
-						// Persist chat-level params (system prompt, advanced
-						// params) that the backend doesn't receive in the
-						// chat completion request.  Files are now persisted
-						// by the backend at chat creation time.
+						// Save chat params omitted from the completion request; the backend already saves files.
 						if (Object.keys(params).length > 0) {
 							await updateChatParams(localStorage.token, res.chat_id, params);
 						}

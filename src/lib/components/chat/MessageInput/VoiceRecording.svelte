@@ -162,11 +162,6 @@
 					// 	lastSoundTime = Date.now();
 					// }
 
-					// if (recording && Date.now() - lastSoundTime > 3000) {
-					// 	if ($settings?.speechAutoSend ?? false) {
-					// 		confirmRecording();
-					// 	}
-					// }
 				}
 
 				window.requestAnimationFrame(processFrame);

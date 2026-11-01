@@ -70,11 +70,9 @@ async def get_tool_module(request, tool_id, load_from_db=True):
     return tool_module
 
 
-############################
-# GetTools
+# Get Tools
 # The danger is not in having tools, but in reaching
 # for the wrong one. Let the choice here be deliberate.
-############################
 
 
 @router.get('/', response_model=list[ToolUserResponse])
@@ -242,9 +240,7 @@ async def get_tool_specs(request: Request, id: str, user=Depends(get_verified_us
         raise HTTPException(status_code=502, detail='Unable to load tools')
 
 
-############################
-# GetToolList
-############################
+# Get Tool List
 
 
 class MCPAppRPCForm(BaseModel):
@@ -399,9 +395,7 @@ async def toggle_tool_by_id(
     return tool
 
 
-############################
-# LoadFunctionFromLink
-############################
+# Load Function From Link
 
 
 class LoadUrlForm(BaseModel):
@@ -472,9 +466,7 @@ async def load_tool_from_url(request: Request, form_data: LoadUrlForm, user=Depe
         )
 
 
-############################
-# ExportTools
-############################
+# Export Tools
 
 
 @router.get('/export', response_model=list[ToolModel])
@@ -502,9 +494,7 @@ async def export_tools(
     )
 
 
-############################
-# CreateNewTools
-############################
+# Create New Tools
 
 
 @router.post('/create', response_model=ToolResponse | None)
@@ -591,9 +581,7 @@ async def create_new_tools(
         )
 
 
-############################
-# GetToolsById
-############################
+# Get Tools By Id
 
 
 @router.get('/id/{id}', response_model=ToolAccessResponse | None)
@@ -640,9 +628,7 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
         )
 
 
-############################
-# UpdateToolsById
-############################
+# Update Tools By Id
 
 
 @router.post('/id/{id}/update', response_model=ToolModel | None)
@@ -736,9 +722,7 @@ async def _update_tool(request, id, form_data, user, db, version_id=None):
         )
 
 
-############################
-# UpdateToolAccessById
-############################
+# Update Tool Access By Id
 
 
 class ToolAccessGrantsForm(BaseModel):
@@ -797,9 +781,7 @@ async def update_tool_access_by_id(
     return tools
 
 
-############################
-# DeleteToolsById
-############################
+# Delete Tools By Id
 
 
 @router.delete('/id/{id}/delete', response_model=bool)
@@ -849,9 +831,7 @@ async def delete_tools_by_id(
     return result
 
 
-############################
-# GetToolValves
-############################
+# Get Tool Valves
 
 
 @router.get('/id/{id}/valves', response_model=dict | None)
@@ -891,9 +871,7 @@ async def get_tools_valves_by_id(
         )
 
 
-############################
-# GetToolValvesSpec
-############################
+# Get Tool Valves Spec
 
 
 @router.get('/id/{id}/valves/spec', response_model=dict | None)
@@ -937,9 +915,7 @@ async def get_tools_valves_spec_by_id(
     return None
 
 
-############################
-# UpdateToolValves
-############################
+# Update Tool Valves
 
 
 @router.post('/id/{id}/valves/update', response_model=dict | None)
@@ -1002,9 +978,7 @@ async def update_tools_valves_by_id(
         )
 
 
-############################
-# ToolUserValves
-############################
+# Tool User Valves
 
 
 @router.get('/id/{id}/valves/user', response_model=dict | None)

@@ -61,12 +61,12 @@ def validate_image_url(url: str, *, file_only: bool = False) -> str:
             return url
         raise ValueError('Invalid background image URL: must reference an internal file.')
 
-    # --- Relative paths (exact match + anchored regex only) -----------
+    # Relative paths (exact match + anchored regex only)
 
     if not url or url in _SAFE_STATIC_PATHS or _USER_PROFILE_IMAGE_RE.match(url):
         return url
 
-    # --- Absolute URLs -------------------------------------------------
+    # Absolute URLs
 
     # urlparse normalises the scheme to lowercase, giving us
     # case-insensitive scheme matching for free.

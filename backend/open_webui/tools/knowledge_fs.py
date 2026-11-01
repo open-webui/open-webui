@@ -62,9 +62,7 @@ def match_budget():
         _active_budget.reset(token)
 
 
-# =============================================================================
-# SHARED REGEX UTILITIES — also used by builtin.py grep_knowledge_files
-# =============================================================================
+# Shared regex utilities — also used by builtin.py grep_knowledge_files
 
 
 def is_regex_pattern(pattern: str) -> bool:
@@ -173,9 +171,7 @@ def build_matcher(pattern: str, case_insensitive: bool = False, use_regex: bool 
         return (lambda line: sp in (line.lower() if case_insensitive else line)), None
 
 
-# =============================================================================
-# COMMAND PARSING
-# =============================================================================
+# Command parsing
 
 
 def _parse_pipeline(command: str) -> list[list[str]]:
@@ -248,9 +244,7 @@ def _extract_numeric_flag(tokens: list[str]) -> tuple[Optional[int], list[str]]:
     return num, remaining
 
 
-# =============================================================================
-# DIRECTORY TREE & PATH RESOLUTION
-# =============================================================================
+# Directory tree & path resolution
 
 
 async def _build_directory_tree(knowledge_id: str) -> dict:
@@ -344,9 +338,7 @@ def _get_files_under_dir(tree: dict, dir_id: str) -> list[dict]:
     return [f for f in tree['files'] if f['directory_id'] in target_ids]
 
 
-# =============================================================================
-# FILE RESOLUTION & ACCESS CONTROL
-# =============================================================================
+# File resolution & access control
 
 
 async def _get_accessible_kb_ids(
@@ -573,9 +565,7 @@ async def _get_file_content(file_id: str) -> str | None:
     return None
 
 
-# =============================================================================
-# COMMAND HANDLERS
-# =============================================================================
+# Command handlers
 
 
 async def _kb_ls(args: list[str], flags: set[str], user: dict, model_knowledge: list[dict] | None) -> str:
@@ -1063,9 +1053,7 @@ async def _kb_sed(
     return result
 
 
-# =============================================================================
-# PIPE EXECUTOR
-# =============================================================================
+# Pipe executor
 
 
 async def _kb_tree(args: list[str], flags: set[str], user: dict, model_knowledge: list[dict] | None) -> str:
@@ -1177,9 +1165,7 @@ async def _execute_pipeline(
     return piped_input or ''
 
 
-# =============================================================================
-# ENTRY POINT
-# =============================================================================
+# Entry point
 
 
 async def kb_exec(

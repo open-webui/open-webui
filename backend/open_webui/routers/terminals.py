@@ -480,9 +480,7 @@ async def proxy_terminal(
         return JSONResponse({'error': f'Terminal proxy error: {error}'}, status_code=502)
 
 
-# ---------------------------------------------------------------------------
 # WebSocket proxy for interactive terminal sessions
-# ---------------------------------------------------------------------------
 
 
 async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):

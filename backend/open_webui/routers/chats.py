@@ -251,11 +251,9 @@ async def require_chat_import_permission(request: Request, user, db: AsyncSessio
         )
 
 
-############################
-# GetChatList
+# Get Chat List
 # Let the record outlive the session, so that what was
 # learned here not need to be learned again.
-############################
 
 
 @router.get('/', response_model=list[ChatTitleIdResponse])
@@ -311,10 +309,8 @@ async def mark_chats_read_by_user_id(
     }
 
 
-############################
-# GetChatUsageStats
+# Get Chat Usage Stats
 # EXPERIMENTAL: may be removed in future releases
-############################
 
 
 @router.get('/stats/usage', response_model=ChatUsageStatsListResponse)
@@ -422,9 +418,7 @@ async def get_session_user_chat_usage_stats(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChatStatsExport
-############################
+# Get Chat Stats Export
 
 
 CHAT_EXPORT_PAGE_ITEM_COUNT = 10
@@ -478,7 +472,7 @@ def _process_chat_for_export(chat) -> ChatStatsExport | None:
 
                 export_messages[key] = message_stat
 
-                # --- Aggregation Logic (copied/adapted from usage stats) ---
+                # Aggregation logic (copied/adapted from usage stats)
                 role = message.get('role', '')
                 if role == 'user':
                     history_user_messages.append(message)
@@ -660,9 +654,7 @@ async def export_chat_stats(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetSingleChatStatsExport
-############################
+# Get Single Chat Stats Export
 
 
 @router.get('/stats/export/{chat_id}', response_model=ChatStatsExport | None)
@@ -743,9 +735,7 @@ async def delete_all_user_chats(
     return result
 
 
-############################
-# GetUserChatList
-############################
+# Get User Chat List
 
 
 @router.get('/list/user/{user_id}', response_model=list[ChatTitleIdResponse])
@@ -781,9 +771,7 @@ async def get_user_chat_list_by_user_id(
     return await add_active_state_to_chat_list(request, chats)
 
 
-############################
-# CreateNewChat
-############################
+# Create New Chat
 
 
 @router.post('/new', response_model=ChatResponse | None)
@@ -817,9 +805,7 @@ async def create_new_chat(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# ImportChats
-############################
+# Import Chats
 
 
 @router.post('/import', response_model=list[ChatResponse])
@@ -853,9 +839,7 @@ async def import_chats(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# ChatConfig
-############################
+# Chat Config
 
 
 @router.get('/config', response_model=ChatConfigForm)
@@ -892,9 +876,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     return await get_chat_config_values()
 
 
-############################
-# GetChats
-############################
+# Get Chats
 
 
 @router.get('/search', response_model=list[ChatTitleIdResponse])
@@ -936,9 +918,7 @@ async def get_chat_search_snippet(
     return snippets.get(id)
 
 
-############################
-# GetChatsByFolderId
-############################
+# Get Chats By Folder Id
 
 
 @router.get('/folder/{folder_id}', response_model=list[ChatResponse])
@@ -986,9 +966,7 @@ async def get_chat_list_by_folder_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetPinnedChats
-############################
+# Get Pinned Chats
 
 
 @router.get('/pinned', response_model=list[ChatTitleIdResponse])
@@ -999,9 +977,7 @@ async def get_user_pinned_chats(
     return await add_active_state_to_chat_list(request, chats)
 
 
-############################
-# GetChats
-############################
+# Get Chats
 
 CHAT_EXPORT_BATCH_SIZE = 100
 
@@ -1045,9 +1021,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
     )
 
 
-############################
-# GetArchivedChats
-############################
+# Get Archived Chats
 
 
 @router.get('/all/archived', response_model=list[ChatResponse])
@@ -1058,9 +1032,7 @@ async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSess
     ]
 
 
-############################
-# GetAllTags
-############################
+# Get All Tags
 
 
 @router.get('/all/tags', response_model=list[TagModel])
@@ -1073,9 +1045,7 @@ async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = 
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetAllChatsInDB
-############################
+# Get All Chats In DB
 
 
 @router.get('/all/db', response_model=list[ChatResponse])
@@ -1085,9 +1055,7 @@ async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSessio
     return [ChatResponse.model_validate(chat, from_attributes=True) for chat in await Chats.get_chats(db=db)]
 
 
-############################
-# GetArchivedChats
-############################
+# Get Archived Chats
 
 
 @router.get('/archived', response_model=list[ChatTitleIdResponse])
@@ -1124,9 +1092,7 @@ async def get_archived_session_user_chat_list(
     return await add_active_state_to_chat_list(request, chats)
 
 
-############################
-# GetArchivedChatsCount
-############################
+# Get Archived Chats Count
 
 
 @router.get('/archived/count', response_model=int)
@@ -1137,9 +1103,7 @@ async def get_archived_session_user_chat_count(
     return await Chats.count_archived_chats_by_user_id(user.id, db=db)
 
 
-############################
-# ArchiveAllChats
-############################
+# Archive All Chats
 
 
 @router.post('/archive/all', response_model=bool)
@@ -1152,9 +1116,7 @@ async def archive_all_chats(
     return result
 
 
-############################
-# UnarchiveAllChats
-############################
+# Unarchive All Chats
 
 
 @router.post('/unarchive/all', response_model=bool)
@@ -1173,9 +1135,7 @@ async def unarchive_all_chats(
     return result
 
 
-############################
-# UnshareAllChats
-############################
+# Unshare All Chats
 
 
 @router.delete('/share/all', response_model=bool)
@@ -1238,9 +1198,7 @@ async def get_shared_session_user_chat_list(
     )
 
 
-############################
-# GetSharedChatById
-############################
+# Get Shared Chat By Id
 
 
 @router.get('/share/{share_id}', response_model=ChatResponse | None)
@@ -1288,9 +1246,7 @@ async def get_shared_chat_by_id(
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
-############################
-# GetChatsByTags
-############################
+# Get Chats By Tags
 
 
 class TagForm(BaseModel):
@@ -1318,9 +1274,7 @@ async def get_user_chat_list_by_tag_name(
     return await add_active_state_to_chat_list(request, chats)
 
 
-############################
-# CompactChat
-############################
+# Compact Chat
 
 
 @router.post('/{id}/compact')
@@ -1372,9 +1326,7 @@ async def compact_chat_by_id(
     return result
 
 
-############################
-# GetChatById
-############################
+# Get Chat By Id
 
 
 @router.get('/{id}', response_model=ChatResponse | None)
@@ -1407,9 +1359,7 @@ async def get_chat_by_id(
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
-############################
-# UpdateChatById
-############################
+# Update Chat By Id
 
 
 @router.post('/{id}', response_model=ChatResponse | None)
@@ -1466,9 +1416,7 @@ async def update_chat_by_id(
         )
 
 
-############################
-# UpdateChatParams
-############################
+# Update Chat Params
 
 
 @router.patch('/{id}/params', response_model=dict)
@@ -1499,9 +1447,7 @@ async def update_chat_params(
     return chat.chat['params']
 
 
-############################
-# UpdateChatMessageById
-############################
+# Update Chat Message By Id
 class MessageForm(BaseModel):
     content: str | None = None
     voice: dict | None = None
@@ -1613,9 +1559,7 @@ async def delete_chat_message_by_id(
     return ChatResponse.model_validate(chat, from_attributes=True)
 
 
-############################
-# SendChatMessageEventById
-############################
+# Send Chat Message Event By Id
 class EventForm(BaseModel):
     type: str
     data: dict
@@ -1669,9 +1613,7 @@ async def send_chat_message_event_by_id(
         return False
 
 
-############################
-# DeleteChatById
-############################
+# Delete Chat By Id
 
 
 @router.delete('/{id}', response_model=bool)
@@ -1727,9 +1669,7 @@ async def delete_chat_by_id(
     return result
 
 
-############################
-# GetPinnedStatusById
-############################
+# Get Pinned Status By Id
 
 
 @router.get('/{id}/pinned', response_model=bool | None)
@@ -1743,9 +1683,7 @@ async def get_pinned_status_by_id(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# PinChatById
-############################
+# Pin Chat By Id
 
 
 @router.post('/{id}/pin', response_model=ChatResponse | None)
@@ -1767,9 +1705,7 @@ async def pin_chat_by_id(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# CloneChat
-############################
+# Clone Chat
 
 
 class CloneForm(BaseModel):
@@ -1956,9 +1892,7 @@ async def clone_chat_by_id(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# CloneSharedChatById
-############################
+# Clone Shared Chat By Id
 
 
 @router.post('/{id}/clone/shared', response_model=ChatResponse | None)
@@ -2040,9 +1974,7 @@ async def clone_shared_chat_by_id(
         )
 
 
-############################
-# ArchiveChat
-############################
+# Archive Chat
 
 
 @router.post('/{id}/archive', response_model=ChatResponse | None)
@@ -2076,7 +2008,7 @@ async def archive_chat_by_id(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-# --- Share Chat ---
+# Share chat
 
 
 @router.post('/{id}/share', response_model=ChatResponse | None)
@@ -2127,7 +2059,7 @@ async def share_chat_by_id(
     return ChatResponse.model_validate(chat, from_attributes=True)
 
 
-# --- Delete Shared Chat ---
+# Delete shared chat
 
 
 @router.delete('/{id}/share', response_model=bool | None)
@@ -2155,9 +2087,7 @@ async def delete_shared_chat_by_id(
     return True
 
 
-############################
-# UpdateSharedChatAccessById
-############################
+# Update Shared Chat Access By Id
 
 
 class ChatAccessGrantsForm(BaseModel):
@@ -2202,9 +2132,7 @@ async def update_shared_chat_access_by_id(
     return ChatResponse.model_validate(chat, from_attributes=True)
 
 
-############################
-# GetSharedChatAccessById
-############################
+# Get Shared Chat Access By Id
 
 
 @router.get('/shared/{id}/access', response_model=list)
@@ -2235,9 +2163,7 @@ async def get_shared_chat_access_by_id(
     ]
 
 
-############################
-# UpdateChatFolderIdById
-############################
+# Update Chat Folder Id By Id
 
 
 class ChatFolderIdForm(BaseModel):
@@ -2301,9 +2227,7 @@ async def update_chat_folder_id_by_id(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChatTagsById
-############################
+# Get Chat Tags By Id
 
 
 @router.get('/{id}/tags', response_model=list[TagModel])
@@ -2321,9 +2245,7 @@ async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: Asyn
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
 
-############################
-# AddChatTagById
-############################
+# Add Chat Tag By Id
 
 
 @router.post('/{id}/tags', response_model=list[TagModel])
@@ -2362,9 +2284,7 @@ async def add_tag_by_id_and_tag_name(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# DeleteChatTagById
-############################
+# Delete Chat Tag By Id
 
 
 @router.delete('/{id}/tags', response_model=list[TagModel])

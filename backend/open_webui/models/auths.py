@@ -207,7 +207,7 @@ class AddUserForm(SignupForm):
     role: str | None = 'pending'
 
 
-# --- data-access layer ---
+# Data-access layer
 
 
 class AuthsTable:
@@ -393,7 +393,7 @@ class AuthsTable:
             await session.commit()
             await Users.update_user_by_id(user_id, {'email': email}, db=session)
             return True
-        # --- password modification ---
+        # Password modification
 
     async def update_user_password_by_id(
         self,

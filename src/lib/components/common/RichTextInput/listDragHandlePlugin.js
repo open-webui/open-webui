@@ -192,7 +192,7 @@ export function listDragHandlePlugin(options = {}) {
 
 		return wantedType.create(newAttrs, Fragment.from(normalizedContent), itemNode.marks);
 	}
-	// ---------- decorations ----------
+	// Decorations
 	function buildHandleDecos(doc) {
 		const decos = [];
 		doc.descendants((node, pos) => {
@@ -269,7 +269,7 @@ export function listDragHandlePlugin(options = {}) {
 		return { ...li, dom, mode };
 	}
 
-	// ---------- state ----------
+	// State
 	const init = (state) => ({
 		decorations: buildHandleDecos(state.doc),
 		dragging: null, // {fromStart, startMouse:{x,y}, ghostEl, active}
@@ -312,7 +312,7 @@ export function listDragHandlePlugin(options = {}) {
 		return deco;
 	};
 
-	// ---------- helpers ----------
+	// Helpers
 	const setDrag = (view, dragging) =>
 		view.dispatch(view.state.tr.setMeta(listPointerDragKey, { type: 'set-drag', dragging }));
 	const setDrop = (view, drop) =>
@@ -422,7 +422,7 @@ export function listDragHandlePlugin(options = {}) {
 		if (ghost) ghost.style.transform = `translate(${Math.round(dx)}px, ${Math.round(dy)}px)`;
 	};
 
-	// ---------- plugin ----------
+	// Plugin
 	return new Plugin({
 		key: listPointerDragKey,
 		state: { init: (_, state) => init(state), apply },

@@ -60,14 +60,14 @@ generate() {
     WORK_DIR="$(mktemp -d)"
     trap 'rm -rf "$WORK_DIR"' RETURN
 
-    # --- Python: resolve all transitive deps without installing ---
+    # Python: resolve all transitive deps without installing
     dim "Resolving Python transitive deps (uv pip compile)..."
     uv pip compile "$ROOT_DIR/backend/requirements.txt" \
         --python-version 3.12 \
         --quiet \
         > "$WORK_DIR/requirements-resolved.txt" 2>/dev/null
 
-    # --- JavaScript: package-lock.json is already fully resolved ---
+    # JavaScript: package-lock.JSON is already fully resolved
     if [[ -f "$ROOT_DIR/package-lock.json" ]]; then
         cp "$ROOT_DIR/package-lock.json" "$WORK_DIR/package-lock.json"
         # Syft needs package.json alongside the lockfile
@@ -76,7 +76,7 @@ generate() {
         warn "package-lock.json not found — JS deps will be skipped"
     fi
 
-    # --- Scan only the resolved files ---
+    # Scan only the resolved files
     dim "Scanning resolved manifests with Syft..."
     syft scan "dir:$WORK_DIR" \
         --output "cyclonedx-json=$OUTPUT" \
@@ -175,7 +175,7 @@ else:
 "
 }
 
-# --- Main ---
+# Main
 cd "$ROOT_DIR"
 TARGET="${1:-generate}"
 

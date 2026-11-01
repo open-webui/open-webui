@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
 # Pull and run the official Ollama container with optional GPU support.
-# ---------------------------------------------------------------------------
 
 readonly CONTAINER="ollama"
 readonly HOST_PORT="${OLLAMA_PORT:-11434}"

@@ -60,13 +60,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-##########################################
-#
 # Utility functions
 # Let the responses returned through this gate be worth
 # the question that summoned them.
-#
-##########################################
 
 # Headers that become stale after aiohttp auto-decompresses the upstream
 # response body.  Forwarding them verbatim causes desktop / programmatic
@@ -150,11 +146,7 @@ def openai_reasoning_model_handler(payload):
     return payload
 
 
-##########################################
-#
 # API routes
-#
-##########################################
 
 router = APIRouter()
 
@@ -1412,10 +1404,7 @@ async def generate_chat_completion(
     if not await Config.get('openai.enable'):
         raise HTTPException(status_code=503, detail='OpenAI API is disabled')
 
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations (get_model_by_id, AccessGrants.has_access) manage their own short-lived sessions.
-    # This prevents holding a connection during the entire LLM call (30-60+ seconds),
-    # which would exhaust the connection pool under concurrent load.
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
 
     # bypass_filter and bypass_system_prompt are read from request.state to prevent
     # external clients from setting them via query parameter. Only internal

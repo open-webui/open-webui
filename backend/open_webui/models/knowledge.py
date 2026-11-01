@@ -41,11 +41,9 @@ log = logging.getLogger(__name__)
 # Columns the knowledge base list may be ordered by; anything else falls back to the default.
 KNOWLEDGE_SORTABLE_FIELDS = {'name', 'created_at', 'updated_at'}
 
-####################
 # Knowledge DB Schema
 # Let what was gathered here outlast the one who gathered it,
 # and still teach when the builder is gone.
-####################
 
 
 class Knowledge(Base):
@@ -149,9 +147,7 @@ class KnowledgeDirectoryForm(BaseModel):
     parent_id: Optional[str] = None
 
 
-####################
 # Forms
-####################
 class KnowledgeUserModel(KnowledgeModel):
     user: Optional[UserResponse] = None
     file_count: int | None = None
@@ -554,12 +550,12 @@ class KnowledgeTable:
                     .filter(KnowledgeFile.knowledge_id == knowledge_id)
                 )
 
-                # Filter by directory_id (None = root level)
+                # Omit directory_id to include all directories; supply it to restrict the listing.
                 directory_id = filter.get('directory_id') if filter else None
                 if directory_id:
                     stmt = stmt.filter(KnowledgeFile.directory_id == directory_id)
                 elif filter and 'directory_id' in filter:
-                    # Explicit None = root level only
+                    # A supplied but falsy directory_id selects root-level files only.
                     stmt = stmt.filter(KnowledgeFile.directory_id.is_(None))
 
                 # Default sort: updated_at descending
@@ -885,7 +881,7 @@ class KnowledgeTable:
             except Exception:
                 return False
 
-    # ── Directory CRUD ────────────────────────────────────────────────
+    # Directory CRUD
 
     async def create_directory(
         self,

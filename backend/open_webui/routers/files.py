@@ -57,11 +57,9 @@ router = APIRouter()
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.json_codec import JSONCodec
 
-############################
 # Upload File
 # What was entrusted here was given in good faith. Let it
 # be returned the same way, whole and undiminished.
-############################
 
 
 def _is_text_file(file_path: str, chunk_size: int = 8192) -> bool:
@@ -183,10 +181,7 @@ async def process_uploaded_file(
                 )
             ):
                 if content_type.startswith('video/'):
-                    # Videos are stored as-is for downstream multimodal
-                    # processing (Tools, vision models). Attempting text
-                    # extraction causes "Timeout reached while detecting
-                    # encoding" errors.
+                    # Keep videos for multimodal processing; text extraction can time out detecting their encoding.
                     log.info('Video file detected (%s), skipping text extraction', content_type)
                 else:
                     raise Exception(f'File type {content_type} is not supported for processing')
@@ -507,9 +502,7 @@ async def upload_file_handler(
         )
 
 
-############################
 # List Files
-############################
 
 
 PAGE_SIZE = 50
@@ -535,9 +528,7 @@ async def list_files(
     return result
 
 
-############################
 # Search Files
-############################
 
 
 async def _search_files(filename: str, content: bool, skip: int, limit: int, user_id: str | None, db: AsyncSession):
@@ -583,9 +574,7 @@ async def search_user_files(
     return await _search_files(filename, content, skip, limit, user.id, db)
 
 
-############################
 # Count Files
-############################
 
 
 @router.get('/count', response_model=int)
@@ -605,9 +594,7 @@ async def count_user_files(
     return await Files.count_files_by_user_id(user_id=user.id, db=db)
 
 
-############################
 # Delete All Files
-############################
 
 
 @router.delete('/all')
@@ -635,9 +622,7 @@ async def delete_all_files(
         )
 
 
-############################
 # Get File By Id
-############################
 
 
 @router.get('/{id}', response_model=Optional[FileModel])
@@ -665,10 +650,7 @@ async def get_file_process_status(
     stream: bool = Query(False),
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations manage their own short-lived sessions internally.
-    # Holding a session here would keep a connection for the entire stream
-    # (up to two hours) and exhaust the connection pool under concurrent load.
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     file = await Files.get_file_by_id(id)
 
     if not file:
@@ -718,9 +700,7 @@ async def get_file_process_status(
         )
 
 
-############################
 # Get File Data Content By Id
-############################
 
 
 @router.get('/{id}/data/content')
@@ -744,9 +724,7 @@ async def get_file_data_content_by_id(
         )
 
 
-############################
 # Update File Data Content By Id
-############################
 
 
 class ContentForm(BaseModel):
@@ -838,9 +816,7 @@ async def update_file_data_content_by_id(
         )
 
 
-############################
 # Get File Content By Id
-############################
 
 
 @router.get('/{id}/content')
@@ -1008,9 +984,7 @@ async def get_file_content_by_id(
         )
 
 
-############################
 # Rename File By Id
-############################
 
 
 class FileRenameForm(BaseModel):
@@ -1056,9 +1030,7 @@ async def rename_file_by_id(
         )
 
 
-############################
 # Delete File By Id
-############################
 
 
 @router.delete('/{id}')

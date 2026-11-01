@@ -39,9 +39,8 @@ class TagModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
-# --- tag schema forms ---
+# Tag schema forms
 # Forms
-####################
 
 
 class TagChatIdForm(BaseModel):

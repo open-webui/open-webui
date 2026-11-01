@@ -17,9 +17,7 @@ PRINCIPAL_TYPE_USER = 'user'
 WILDCARD_PRINCIPAL_ID = '*'
 
 
-####################
 # AccessGrant DB Schema
-####################
 
 
 class AccessGrant(Base):
@@ -75,9 +73,7 @@ class AccessGrantResponse(BaseModel):
         )
 
 
-####################
 # Conversion utilities
-####################
 
 
 def access_control_to_grants(
@@ -318,9 +314,7 @@ def grants_to_access_control(grants: list) -> Optional[dict]:
     return result
 
 
-####################
 # Table Operations
-####################
 
 
 class AccessGrantsTable:

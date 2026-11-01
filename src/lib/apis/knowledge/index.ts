@@ -1038,7 +1038,7 @@ export const exportKnowledgeById = async (token: string, id: string) => {
 	return res;
 };
 
-// ── Directory API ───────────────────────────────────────────────────
+// Directory API
 
 export const createKnowledgeDirectory = async (
 	token: string,

@@ -20,9 +20,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
-####################
 # Response Models
-####################
 
 
 class ModelAnalyticsEntry(BaseModel):
@@ -51,9 +49,7 @@ class UserAnalyticsResponse(BaseModel):
     total: int
 
 
-####################
 # Endpoints
-####################
 
 
 @router.get('/models', response_model=ModelAnalyticsResponse)
@@ -283,9 +279,7 @@ async def get_token_usage(
     )
 
 
-####################
 # Model Chats Browser
-####################
 
 
 class ModelChatEntry(BaseModel):
@@ -344,9 +338,7 @@ async def get_model_chats(
     )
 
 
-####################
 # Model Overview
-####################
 
 
 class HistoryEntry(BaseModel):
@@ -446,9 +438,7 @@ async def get_model_overview(
     return ModelOverviewResponse(history=history, tags=tags)
 
 
-####################
 # Session Explorer
-####################
 
 
 def require_session_access(user=Depends(get_admin_user)):

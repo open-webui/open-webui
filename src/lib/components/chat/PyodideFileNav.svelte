@@ -20,7 +20,7 @@
 
 	export let overlay = false;
 
-	// ── State ─────────────────────────────────────────────────────────────
+	// State
 	let currentPath = savedPyodidePath;
 	let entries: FileEntry[] = [];
 	let loading = false;
@@ -44,7 +44,7 @@
 	let newFileName = '';
 	let newFileInput: HTMLInputElement;
 
-	// ── Navigation history ──────────────────────────────────────────────────
+	// Navigation history
 	type NavEntry = { path: string; file: string | null };
 	let navHistory: NavEntry[] = [];
 	let navIndex = -1;
@@ -95,7 +95,7 @@
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const isImage = (path: string) => IMAGE_EXTS.has(path.split('.').pop()?.toLowerCase() ?? '');
 
-	// ── Worker management ─────────────────────────────────────────────────
+	// Worker management
 
 	function ensureWorker(): Worker {
 		let worker = $pyodideWorker;
@@ -127,7 +127,7 @@
 		});
 	}
 
-	// ── Breadcrumbs ───────────────────────────────────────────────────────
+	// Breadcrumbs
 
 	const buildBreadcrumbs = (path: string) => {
 		const parts = path.split('/').filter(Boolean);
@@ -143,7 +143,7 @@
 
 	$: breadcrumbs = buildBreadcrumbs(currentPath);
 
-	// ── Operations ────────────────────────────────────────────────────────
+	// Operations
 
 	const loadDir = async (path: string) => {
 		loading = true;
@@ -309,7 +309,7 @@
 		await loadDir(currentPath);
 	};
 
-	// ── Drag and drop ─────────────────────────────────────────────────────
+	// Drag and drop
 
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
@@ -328,7 +328,7 @@
 		if (droppedFiles.length) await uploadFiles(droppedFiles);
 	};
 
-	// ── Lifecycle ─────────────────────────────────────────────────────────
+	// Lifecycle
 
 	const onFilesChanged = async () => {
 		try {

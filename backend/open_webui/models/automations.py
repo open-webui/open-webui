@@ -13,9 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-####################
 # Automation DB Schema
-####################
 
 
 class Automation(Base):
@@ -56,9 +54,7 @@ class AutomationRun(Base):
     )
 
 
-####################
 # Pydantic Models
-####################
 
 
 class AutomationTerminalConfig(BaseModel):
@@ -125,9 +121,7 @@ class AutomationListResponse(BaseModel):
     total: int
 
 
-####################
-# AutomationTable
-####################
+# Automation Table
 
 
 class AutomationTable:
@@ -354,9 +348,7 @@ class AutomationTable:
             return [AutomationModel.model_validate(r) for r in claimed]
 
 
-####################
-# AutomationRunTable
-####################
+# Automation Run Table
 
 
 class AutomationRunTable:

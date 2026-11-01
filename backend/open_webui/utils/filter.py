@@ -207,8 +207,8 @@ async def process_filter_function(
     return form_data, valves_by_id, skip_files
 
 
-# Grant these filters the discernment to pass what serves
-# and refuse what harms, for every soul in the house.
+# Let these filters pass what helps and catch what harms,
+# and spare us the bug report that explains the difference.
 async def process_filter_functions(
     request,
     filter_context,

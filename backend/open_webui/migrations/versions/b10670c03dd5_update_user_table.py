@@ -20,7 +20,7 @@ down_revision: Union[str, None] = '2f1211949ecc'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# ── Ad-hoc table references for Core DML ─────────────────────────────────
+# Ad-hoc table references for Core DML
 # These are lightweight table() / column() references used only inside this
 # migration for SELECT / UPDATE / INSERT — they do NOT create or alter
 # anything on disk.
@@ -143,7 +143,7 @@ def upgrade() -> None:
     existing_tables = set(inspector.get_table_names())
     user_columns = {c['name'] for c in inspector.get_columns('user')}
 
-    # ── Add new columns (idempotent) ──────────────────────────────────
+    # Add new columns (idempotent)
     for col_name, col_type in [
         ('profile_banner_image_url', sa.Text()),
         ('timezone', sa.String()),
@@ -164,7 +164,7 @@ def upgrade() -> None:
     if isinstance(user_col_types.get('settings'), sa.Text):
         _convert_column_to_json('user', 'settings')
 
-    # ── Create api_key table (idempotent) ─────────────────────────────
+    # Create api_key table (idempotent)
     if 'api_key' not in existing_tables:
         op.create_table(
             'api_key',
@@ -178,7 +178,7 @@ def upgrade() -> None:
             sa.Column('updated_at', sa.BigInteger(), nullable=False),
         )
 
-    # ── Migrate oauth_sub → oauth JSON (only if old column still exists)
+    # Migrate oauth_sub → OAuth JSON (only if old column still exists)
     if 'oauth_sub' in user_columns:
         rows = conn.execute(sa.select(_user.c.id, _user.c.oauth_sub).where(_user.c.oauth_sub.is_not(None))).fetchall()
 
@@ -187,7 +187,7 @@ def upgrade() -> None:
                 provider, sub = oauth_sub.split('@', 1) if '@' in oauth_sub else ('oidc', oauth_sub)
                 conn.execute(sa.update(_user).where(_user.c.id == uid).values(oauth={provider: {'sub': sub}}))
 
-    # ── Migrate api_key column → api_key table (only if old column still exists)
+    # Migrate api_key column → api_key table (only if old column still exists)
     if 'api_key' in user_columns:
         rows = conn.execute(sa.select(_user.c.id, _user.c.api_key).where(_user.c.api_key.is_not(None))).fetchall()
         now = int(time.time())
@@ -204,7 +204,7 @@ def upgrade() -> None:
                     )
                 )
 
-    # ── Drop legacy columns (idempotent) ──────────────────────────────
+    # Drop legacy columns (idempotent)
     cols_to_drop = {'api_key', 'oauth_sub'} & user_columns
     if cols_to_drop:
         if conn.dialect.name == 'sqlite':
@@ -235,7 +235,7 @@ def downgrade() -> None:
 
     op.drop_column('user', 'oauth')
 
-    # --- Restore api_key field ---
+    # Restore api_key field
     op.add_column('user', sa.Column('api_key', sa.String(), nullable=True))
 
     keys = conn.execute(sa.select(_api_key.c.user_id, _api_key.c.key)).fetchall()

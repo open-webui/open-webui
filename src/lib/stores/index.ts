@@ -15,9 +15,7 @@ import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
 
-// What is held here is the only truth the house knows.
-// When it changes, let every room hear at once.
-// Backend
+// Backend identity and session state
 export const WEBUI_NAME = writable(APP_NAME);
 
 export const WEBUI_VERSION = writable(null);

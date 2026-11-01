@@ -135,13 +135,9 @@ log = logging.getLogger(__name__)
 
 TIKTOKEN_DISALLOWED_SPECIAL = ()
 
-##########################################
-#
 # Utility functions
-# Give us this day our relevant chunks, and lead us
-# not into hallucination, but deliver us from noise.
-#
-##########################################
+# Let us find what is true among the many voices,
+# and let us not mistake the loudest answer for the wisest.
 
 
 def get_ef(
@@ -240,11 +236,7 @@ def get_rf(
     return rf
 
 
-##########################################
-#
 # API routes
-#
-##########################################
 
 
 RETRIEVAL_CONFIG_KEYS = {
@@ -1243,11 +1235,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     }
 
 
-####################################
-#
 # Document process and retrieval
-#
-####################################
 
 
 def can_merge_chunks(a: Document, b: Document) -> bool:
@@ -2964,11 +2952,7 @@ async def query_collection_handler(
         )
 
 
-####################################
-#
 # Vector DB operations
-#
-####################################
 
 
 class DeleteForm(BaseModel):
@@ -3006,13 +2990,7 @@ async def delete_entries_from_collection(
                     detail=ERROR_MESSAGES.DEFAULT('File has no hash; cannot delete vector entries by hash.'),
                 )
 
-            # Pre-existing bug: this used `metadata=` which is not a
-            # parameter on `VectorDBBase.delete` nor on any backend
-            # implementation, so the call always raised TypeError that
-            # was silently swallowed by the surrounding `except
-            # Exception` and the endpoint reported `{'status': False}`
-            # for every request. Use `filter` to actually do what the
-            # endpoint name promises.
+            # Vector deletion accepts filter, not metadata; passing the wrong keyword raises TypeError.
             await ASYNC_VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 filter={'hash': hash},

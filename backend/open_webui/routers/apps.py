@@ -38,9 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter()
 
 
-############################
-# GetApps
-############################
+# Get Apps
 
 
 @router.get('', response_model=list[AppResponse])
@@ -57,9 +55,7 @@ async def get_apps(user=Depends(get_verified_user), db: AsyncSession = Depends(g
     ]
 
 
-############################
-# PreviewAppManifest
-############################
+# Preview App Manifest
 
 
 @router.post('/manifest/preview', response_model=Manifest)
@@ -96,9 +92,7 @@ async def preview_app_manifest(
         ) from None
 
 
-############################
-# CreateNewApp
-############################
+# Create New App
 
 
 @router.post('', response_model=AppResponse)
@@ -140,9 +134,7 @@ async def create_new_app(
     return get_app_response(app)
 
 
-############################
-# GetAppDetailsById
-############################
+# Get App Details By Id
 
 
 @router.get('/{app_id}', response_model=AppAccessResponse)
@@ -164,9 +156,7 @@ async def get_app_details_by_id(
     return result
 
 
-############################
-# UpdateAppById
-############################
+# Update App By Id
 
 
 @router.patch('/{app_id}', response_model=AppResponse)
@@ -207,9 +197,7 @@ async def update_app_by_id(
     return get_app_response(app)
 
 
-############################
-# ConnectAppById
-############################
+# Connect App By Id
 
 
 @router.post('/{app_id}/connect', response_model=AppResponse)
@@ -245,9 +233,7 @@ async def connect_app_by_id(
     return {**get_app_response(app), 'connection_status': 'connected'}
 
 
-############################
-# UninstallAppById
-############################
+# Uninstall App By Id
 
 
 @router.delete('/{app_id}', response_model=AppResponse)
@@ -257,9 +243,7 @@ async def uninstall_app_by_id(app_id: str, user=Depends(get_admin_user), db: Asy
     return get_app_response(app)
 
 
-############################
-# CreateAppInteraction
-############################
+# Create App Interaction
 
 
 @router.post('/{app_id}/interactions')

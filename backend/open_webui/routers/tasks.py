@@ -99,11 +99,7 @@ async def get_task_model_generation_config(default_model_id: str, models) -> tup
     )
 
 
-##################################
-#
 # Task Endpoints
-#
-##################################
 
 
 @router.get('/config')

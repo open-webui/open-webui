@@ -19,11 +19,6 @@ const ALLOWED_SURROUNDING_CHARS =
 // markdown rendering time to be spent in KaTeX regex compilation.
 const ALLOWED_SURROUNDING_CHARS_REGEX = new RegExp(`[${ALLOWED_SURROUNDING_CHARS}]`, 'u');
 
-// const DELIMITER_LIST = [
-//     { left: '$$', right: '$$', display: false },
-//     { left: '$', right: '$', display: false },
-// ];
-
 // const inlineRule = /^(\${1,2})(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n\$]))\1(?=[\s?!\.,:？！。，：]|$)/;
 // const blockRule = /^(\${1,2})\n((?:\\[^]|[^\\])+?)\n\1(?:\n|$)/;
 

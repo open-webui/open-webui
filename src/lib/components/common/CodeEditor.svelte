@@ -264,10 +264,10 @@ print("${endTag}")
 
 		_value = value;
 
-		// Check if html class has dark mode
+		// Match the page theme; surprise floodlights are not an editor feature.
 		isDarkMode = document.documentElement.classList.contains('dark');
 
-		// python code editor, highlight python code
+		// Assemble the editor with the configured language and extensions.
 		codeEditor = new EditorView({
 			state: EditorState.create({
 				doc: _value,

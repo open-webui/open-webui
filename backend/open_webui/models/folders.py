@@ -12,11 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-####################
 # Folder DB Schema
 # Let every room in this house shelter someone who needs it,
 # and let no chamber stand empty while there is want.
-####################
 
 
 class Folder(Base):
@@ -78,9 +76,7 @@ class SharedFolderResponse(BaseModel):
     updated_at: int
 
 
-####################
 # Forms
-####################
 
 
 class FolderForm(BaseModel):

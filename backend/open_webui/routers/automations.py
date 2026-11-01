@@ -37,9 +37,7 @@ router = APIRouter()
 PAGE_ITEM_COUNT = 30
 
 
-############################
 # Helpers
-############################
 
 
 async def check_automations_permission(request, user):
@@ -154,9 +152,7 @@ async def enrich_automation(automation: AutomationModel, db: AsyncSession, tz: s
     )
 
 
-############################
 # GetAutomationItems (paginated)
-############################
 
 
 @router.get('/list')
@@ -200,9 +196,7 @@ async def get_automation_items(
     }
 
 
-############################
-# CreateNewAutomation
-############################
+# Create New Automation
 
 
 @router.post('/create', response_model=AutomationResponse)
@@ -238,9 +232,7 @@ async def create_new_automation(
     return response
 
 
-############################
-# GetAutomationById
-############################
+# Get Automation By Id
 
 
 @router.get('/{id}', response_model=AutomationResponse)
@@ -256,9 +248,7 @@ async def get_automation_by_id(
     return await enrich_automation(automation, db, tz=user.timezone)
 
 
-############################
-# UpdateAutomationById
-############################
+# Update Automation By Id
 
 
 @router.post('/{id}/update', response_model=AutomationResponse)
@@ -298,9 +288,7 @@ async def update_automation_by_id(
     return response
 
 
-############################
-# ToggleAutomationById
-############################
+# Toggle Automation By Id
 
 
 @router.post('/{id}/toggle', response_model=AutomationResponse)
@@ -326,9 +314,7 @@ async def toggle_automation_by_id(
     return response
 
 
-############################
-# RunAutomationById
-############################
+# Run Automation By Id
 
 
 @router.post('/{id}/run')
@@ -353,9 +339,7 @@ async def run_automation_by_id(
     return await enrich_automation(automation, db, tz=user.timezone)
 
 
-############################
-# DeleteAutomationById
-############################
+# Delete Automation By Id
 
 
 @router.delete('/{id}/delete')
@@ -381,9 +365,7 @@ async def delete_automation_by_id(
     return result
 
 
-############################
-# GetAutomationRuns
-############################
+# Get Automation Runs
 
 
 @router.get('/{id}/runs', response_model=list[AutomationRunModel])

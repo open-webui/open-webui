@@ -46,7 +46,7 @@
 	const toStr = (s: string[] | string | undefined): string =>
 		Array.isArray(s) ? s.join('') : (s ?? '');
 
-	// ── Syntax highlighting ──────────────────────────────────────────────
+	// Syntax highlighting
 	let highlightedCells: Record<number, string> = {};
 
 	const highlightCell = async (index: number, code: string, language: string) => {
@@ -73,7 +73,7 @@
 		});
 	}
 
-	// ── Markdown / output helpers ────────────────────────────────────────
+	// Markdown / output helpers
 	const renderMarkdown = (src: string): string =>
 		DOMPurify.sanitize(marked.parse(src, { async: false }) as string);
 
@@ -102,7 +102,7 @@
 		return null;
 	};
 
-	// ── Cell editing ─────────────────────────────────────────────────────
+	// Cell editing
 	let editingCell: Record<number, boolean> = {};
 	let editedSources: Record<number, string> = {};
 
@@ -120,7 +120,7 @@
 		highlightCell(index, toStr(cells[index].source), lang);
 	};
 
-	// ── Session / kernel ─────────────────────────────────────────────────
+	// Session / kernel
 	let sessionId: string | null = null;
 	let kernelReady = false;
 	let kernelStarting = false;

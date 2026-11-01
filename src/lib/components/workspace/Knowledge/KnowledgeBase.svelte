@@ -632,14 +632,14 @@
 		if (!pendingSyncFiles?.length) return;
 
 		try {
-			// ── 2. Compute checksums ──
+			// 2. Compute checksums
 			syncing = $i18n.t('Computing checksums ({{count}} files)', {
 				count: pendingSyncFiles.length
 			});
 			const manifest = await buildDirectoryManifest(pendingSyncFiles);
 			pendingSyncFiles = null;
 
-			// ── 3. Diff against knowledge base ──
+			// 3. Diff against knowledge base
 			syncing = $i18n.t('Comparing with knowledge base...');
 			const diff = await syncKnowledgeDiff(
 				localStorage.token,
@@ -652,7 +652,7 @@
 				return;
 			}
 
-			// ── 4. Cleanup — remove deleted + stale modified files first ──
+			// 4. Cleanup — remove deleted + stale modified files first
 			const staleFileIds = [
 				...diff.deleted.map((d: any) => d.file_id),
 				...diff.modified.map((m: any) => m.stale_file_id)
@@ -665,10 +665,10 @@
 				browser?.clearRemovedSelection(staleFileIds);
 			}
 
-			// ── 5. mkdir — create missing directories (parents first) ──
+			// 5. Mkdir — create missing directories (parents first)
 			const directoryIdByPath = await createMissingDirectories(diff);
 
-			// ── 6. Upload added + modified files ──
+			// 6. Upload added + modified files
 			const filesToUpload = manifest.filter(
 				(entry) =>
 					diff.added.some((a: any) => a.filename === entry.filename && a.path === entry.path) ||
@@ -679,7 +679,7 @@
 				entry.path ? directoryIdByPath[entry.path] : null
 			);
 
-			// ── 7. Report ──
+			// 7. Report
 			if (failedCount === 0) {
 				toast.success(
 					$i18n.t(

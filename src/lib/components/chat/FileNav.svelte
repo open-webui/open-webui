@@ -268,7 +268,7 @@
 		await tick();
 	};
 
-	// ── Sessions panel state ────────────────────────────────────────────
+	// Sessions panel state
 	let terminalExpanded = false;
 	let hasSessions = false;
 	let terminalHeight = 200; // px, default when expanded
@@ -326,7 +326,7 @@
 		window.addEventListener('mouseup', onMouseUp);
 	};
 
-	// ── Directory state ──────────────────────────────────────────────────
+	// Directory state
 	let currentPath = savedPath;
 	let fileRoot: TerminalFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
@@ -334,7 +334,7 @@
 	let loading = false;
 	let error: string | null = null;
 
-	// ── Browser view state ──────────────────────────────────────────────
+	// Browser view state
 	type SortMode = 'name' | 'size' | 'date' | 'created';
 	type BrowserRow = FileEntry & {
 		fullPath: string;
@@ -504,7 +504,7 @@
 		localStorage.setItem('fileNav:viewMode', mode);
 	};
 
-	// ── Navigation history ──────────────────────────────────────────────
+	// Navigation history
 	type NavEntry = { path: string; file: string | null };
 	let navHistory: NavEntry[] = [];
 	let navIndex = -1;
@@ -552,7 +552,7 @@
 		navigatingHistory = false;
 	};
 
-	// ── File preview state ───────────────────────────────────────────────
+	// File preview state
 	let selectedFile: string | null = null;
 	let showGitDiff = false;
 	let gitFileKey = '';
@@ -582,7 +582,7 @@
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
 
-	// ── Office preview state ────────────────────────────────────────────
+	// Office preview state
 	let fileOfficeHtml: string | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let currentSlide = 0;
@@ -590,7 +590,7 @@
 	let selectedExcelSheet = '';
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
-	// ── File preview toolbar state (bound from FilePreview) ─────────────
+	// File preview toolbar state (bound from FilePreview)
 	let editing = false;
 	let showRaw = false;
 	let saving = false;
@@ -612,7 +612,7 @@
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
 
-	// ── Upload / folder creation ─────────────────────────────────────────
+	// Upload / folder creation
 	let isDragOver = false;
 	let uploading = false;
 	let creatingFolder = false;
@@ -623,12 +623,12 @@
 	let newFileInput: HTMLInputElement;
 	let directoryUploadInput: HTMLInputElement;
 
-	// ── Delete confirmation ──────────────────────────────────────────────
+	// Delete confirmation
 	let deleteTarget: { path: string; name: string } | null = null;
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	// ── Terminal resolution ──────────────────────────────────────────────
+	// Terminal resolution
 	let selectedTerminal: { url: string; key: string } | null = null;
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
@@ -721,7 +721,7 @@
 		}
 	}
 
-	// ── Helpers ──────────────────────────────────────────────────────────
+	// Helpers
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
 	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
@@ -965,7 +965,7 @@
 		);
 	};
 
-	// ── File preview management ──────────────────────────────────────────
+	// File preview management
 	const clearFilePreview = () => {
 		commentGeneration++;
 		fileSearchTarget = null;
@@ -995,7 +995,7 @@
 		excelWorkbook = null;
 	};
 
-	// ── Directory operations ─────────────────────────────────────────────
+	// Directory operations
 	const loadDir = async (
 		path: string,
 		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
@@ -1421,7 +1421,7 @@
 		}
 	};
 
-	// ── Drag-and-drop upload ─────────────────────────────────────────────
+	// Drag-and-drop upload
 	type UploadEntry = { path: string; file?: File };
 
 	async function readDroppedFiles(data: DataTransfer): Promise<UploadEntry[]> {
@@ -1537,7 +1537,7 @@
 		directoryUploadInput.click();
 	};
 
-	// ── Folder creation ──────────────────────────────────────────────────
+	// Folder creation
 	const startNewFolderIn = async (path: string) => {
 		if (await loadDir(path)) await startNewFolder();
 	};
@@ -1572,7 +1572,7 @@
 		await refreshBrowser();
 	};
 
-	// ── File creation ────────────────────────────────────────────────────
+	// File creation
 	const startNewFileIn = async (path: string) => {
 		if (await loadDir(path)) await startNewFile();
 	};
@@ -1609,7 +1609,7 @@
 		await refreshBrowser();
 	};
 
-	// ── Delete ───────────────────────────────────────────────────────────
+	// Delete
 	const handleDelete = async (path: string, name: string) => {
 		const terminal = selectedTerminal;
 		if (!terminal || !currentWritable) return;
@@ -1630,7 +1630,7 @@
 		showDeleteConfirm = true;
 	};
 
-	// ── Move (drag-and-drop) ────────────────────────────────────────────
+	// Move (drag-and-drop)
 	const sourceParentPath = (source: string) => {
 		const cleanSource = normalizePath(source).replace(/\/$/, '');
 		const index = cleanSource.lastIndexOf('/');
@@ -1683,7 +1683,7 @@
 		}
 	};
 
-	// ── Rename ──────────────────────────────────────────────────────────
+	// Rename
 	const handleRename = async (oldPath: string, newName: string) => {
 		const terminal = selectedTerminal;
 		if (!terminal || !newName || !currentWritable) return;
@@ -1709,7 +1709,7 @@
 		await refreshBrowser();
 	};
 
-	// ── Multi-select ────────────────────────────────────────────────────
+	// Multi-select
 	let selectedEntries: Set<string> = new Set();
 	let lastClickedIndex: number | null = null;
 	let selectionMode = false;
@@ -1853,7 +1853,7 @@
 		}
 	};
 
-	// ── Lifecycle ────────────────────────────────────────────────────────
+	// Lifecycle
 	onMount(() => {
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';

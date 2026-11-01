@@ -237,7 +237,7 @@ class ValkeyClient(VectorDBBase):
         except Exception:
             pass
 
-    # ----- version checks ----------------------------------------------------
+    # Version checks
 
     @staticmethod
     def _parse_semver(version_str: str) -> tuple[int, int, int] | None:

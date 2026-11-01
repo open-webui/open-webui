@@ -59,9 +59,8 @@ class PromptModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
-# --- form / schema definitions ---
+# Form / schema definitions
 # Forms
-####################
 
 
 class PromptUserResponse(PromptModel):
@@ -196,7 +195,7 @@ class PromptsTable:
             if match is None:
                 return
             return await self._to_prompt_model(match, db=session)
-        # --- context manager always returns above ---
+        # Context manager always returns above
         return
 
     async def get_prompts(self, db: AsyncSession | None = None) -> list[PromptUserResponse]:

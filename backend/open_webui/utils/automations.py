@@ -56,9 +56,7 @@ TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
 
 
-############################
 # Worker Loop
-############################
 
 
 # Keep the old name as an alias so any stale imports still work.
@@ -87,7 +85,7 @@ async def scheduler_worker_loop(app) -> None:
     while True:
         try:
             now = time.monotonic()
-            # ── Timers ──
+            # Timers
             try:
                 from open_webui.utils.timers import claim_due_timers, execute_due_timer
 
@@ -102,7 +100,7 @@ async def scheduler_worker_loop(app) -> None:
             # Jitter to spread automation/calendar load across instances; timers keep a tight poll.
             next_scheduler_poll = now + SCHEDULER_POLL_INTERVAL + random.uniform(0, 2)
 
-            # ── Automations ──
+            # Automations
             if await Config.get('automations.enable'):
                 try:
                     async with get_async_db() as db:
@@ -114,7 +112,7 @@ async def scheduler_worker_loop(app) -> None:
                 except Exception:
                     log.exception('Scheduler: automation error')
 
-            # ── Calendar Alerts ──
+            # Calendar alerts
             if await Config.get('calendar.enable'):
                 try:
                     await _check_calendar_alerts(app)
@@ -127,9 +125,7 @@ async def scheduler_worker_loop(app) -> None:
         await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
 
 
-##########################
 # Execute
-####################
 
 
 def _build_request(
@@ -540,9 +536,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             raise
 
 
-####################
 # Internals
-####################
 
 
 async def _check_calendar_alerts(app) -> None:

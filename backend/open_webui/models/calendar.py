@@ -31,9 +31,7 @@ log = logging.getLogger(__name__)
 MIN_CALENDAR_RRULE_INTERVAL_SECONDS = 24 * 60 * 60
 
 
-####################
 # Calendar DB Schema
-####################
 
 
 class Calendar(Base):
@@ -98,9 +96,7 @@ class CalendarEventAttendee(Base):
     )
 
 
-####################
 # Pydantic Models
-####################
 
 
 class CalendarModel(BaseModel):
@@ -159,9 +155,7 @@ class CalendarEventAttendeeModel(BaseModel):
     updated_at: int
 
 
-####################
 # Forms
-####################
 
 
 class CalendarForm(BaseModel):
@@ -228,9 +222,7 @@ class RSVPForm(BaseModel):
     status: str  # 'accepted' | 'declined' | 'tentative' | 'pending'
 
 
-####################
 # Response Models
-####################
 
 
 class CalendarEventUserResponse(CalendarEventModel):
@@ -242,9 +234,7 @@ class CalendarEventListResponse(BaseModel):
     total: int
 
 
-####################
 # Table Operations
-####################
 
 
 class CalendarTable:

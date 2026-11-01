@@ -33,7 +33,7 @@ self.onmessage = async (event) => {
 
 	if (type === 'generate') {
 		if (!isInitialized || !tts) {
-			// Ensure model is initialized
+			// No model, no monologue. Report that before asking it to speak.
 			self.postMessage({ status: 'generate:error', error: 'TTS model not initialized' });
 			return;
 		}

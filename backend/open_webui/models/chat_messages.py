@@ -32,9 +32,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-####################
 # Helpers
-####################
 
 
 def _normalize_timestamp(timestamp: Optional[int]) -> float:
@@ -43,11 +41,11 @@ def _normalize_timestamp(timestamp: Optional[int]) -> float:
     if timestamp is None:
         return now
 
-    # Convert milliseconds to seconds if needed
+    # Treat values above the seconds-range cutoff as milliseconds.
     if timestamp > 10_000_000_000:
         timestamp = timestamp / 1000
 
-    # Validate: must be after 2020 and not in the future (with 1 day tolerance)
+    # Accept timestamps from 2020-01-01 through one day ahead of now, inclusive.
     min_valid = 1577836800  # 2020-01-01 00:00:00 UTC
     max_valid = now + 86400  # 1 day in the future (clock skew tolerance)
 
@@ -157,9 +155,7 @@ def _extract_tool_names(value: Any) -> list[str]:
     return names
 
 
-####################
 # ChatMessage DB Schema
-####################
 
 
 class ChatMessage(Base):
@@ -210,9 +206,7 @@ class ChatMessage(Base):
     )
 
 
-####################
 # Pydantic Models
-####################
 
 
 class ChatMessageModel(BaseModel):
@@ -239,9 +233,7 @@ class ChatMessageModel(BaseModel):
     updated_at: int
 
 
-####################
 # Table Operations
-####################
 
 
 class ChatMessageTable:

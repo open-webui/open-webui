@@ -34,9 +34,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
-####################
 # Channel DB Schema
-####################
 
 
 class Channel(Base):
@@ -226,9 +224,7 @@ class ChannelWebhookModel(BaseModel):
     updated_at: int  # timestamp in epoch (time_ns)
 
 
-####################
 # Forms
-####################
 
 
 class ChannelResponse(ChannelModel):
@@ -794,7 +790,7 @@ class ChannelTable:
             allowed_channels = []
 
             for channel in channels:
-                # --- Case A: group or dm => user must be an active member ---
+                # Case a: group or dm => user must be an active member
                 if channel.type in ['group', 'dm']:
                     result = await db.execute(
                         select(ChannelMember)
@@ -810,7 +806,7 @@ class ChannelTable:
                         allowed_channels.append(await self._to_channel_model(channel, db=db))
                     continue
 
-                # --- Case B: standard channel => rely on ACL permissions ---
+                # Case b: standard channel => rely on acl permissions
                 stmt = select(Channel).filter(Channel.id == channel.id)
 
                 stmt = self._has_permission(
@@ -972,9 +968,7 @@ class ChannelTable:
             await emit_changes(recipients)
             return True
 
-    ####################
     # Webhook Methods
-    ####################
 
     async def insert_webhook(
         self,
