@@ -12,7 +12,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
-![Open WebUI Demo](https://community.s3.openwebui.com/uploads/users/6d849fdd-b93f-411e-a611-eb25c73f1154/2026/10/25aebd3e-1d1c-4177-98b3-317ce60f75e9.gif)
+![Open WebUI Demo](https://cdn.openwebui.com/open-webui-demo.gif)
 
 ## Installation
 
