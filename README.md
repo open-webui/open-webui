@@ -14,7 +14,7 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
-**[Explore Open WebUI →](https://docs.openwebui.com/)**
+[Explore Open WebUI →](https://docs.openwebui.com/)
 
 ### Installation
 
@@ -60,7 +60,7 @@ See the [Docker installation guide](https://docs.openwebui.com/getting-started/q
 
 [Download the native desktop app](https://github.com/open-webui/desktop) for macOS, Windows, and Linux.
 
-**[Read the docs →](https://docs.openwebui.com/getting-started/)**
+[Read the docs →](https://docs.openwebui.com/getting-started/)
 
 ### Ecosystem
 
