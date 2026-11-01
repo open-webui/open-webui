@@ -1,12 +1,7 @@
-<script context="module" lang="ts">
-	type PanelTab = 'files' | 'artifacts' | 'preview' | 'voice' | 'comments';
-	let savedTab: 'files' | 'comments' = 'files';
-</script>
-
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import {
 		artifactContents,
 		config,
@@ -33,6 +28,25 @@
 	} from '$lib/components/comments/CommentsPanel.svelte';
 	import { page } from '$app/stores';
 
+	import {
+		emptyTabs,
+		openTab,
+		activateTab,
+		removeTab,
+		fileTabId,
+		type PanelTab
+	} from './ChatControls/tabs';
+	import {
+		resolveTerminalConnection,
+		terminalRequest,
+		type TerminalConnection
+	} from '$lib/apis/terminal';
+	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
+	import Icon from './FileNav/Icon.svelte';
+	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
+	import UntitledFile from './ChatControls/UntitledFile.svelte';
+	import XTerminal from './XTerminal.svelte';
 	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
@@ -46,10 +60,9 @@
 	import XMark from '../icons/XMark.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<any>('i18n');
 
 	export let history;
-	let sidePanelAvailable = false;
 
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
@@ -64,7 +77,7 @@
 		| null = null;
 	export let stopResponse: Function;
 	export let showMessage: Function;
-	export let files;
+	export let files: any[];
 	export let modelId;
 
 	export let codeInterpreterEnabled = false;
@@ -75,14 +88,167 @@
 	let controlsWidth = 300;
 	let viewportWidth = 0;
 
-	// Tab state for the side panel
-	let activeTab: PanelTab = savedTab;
-	$: if ($showTabs === 'files' || $showTabs === 'comments') activeTab = $showTabs;
-	else if (typeof $showTabs === 'object') activeTab = $showTabs.tab;
-	// svelte-ignore reactive_declaration_module_script_dependency
-	$: {
-		if (activeTab === 'files') savedTab = activeTab;
+	let tabs = emptyTabs();
+	let fileViews: Record<
+		string,
+		{
+			hasUnsavedChanges: () => boolean;
+			requestClose: () => Promise<boolean>;
+			browseDirectory?: (path: string) => unknown;
+			revealPage?: (page: number | null) => void;
+		}
+	> = {};
+	let dirtyFiles: Record<string, boolean> = {};
+	let fileContexts: Record<string, TerminalContext | null> = {};
+	let panelTarget: HTMLElement | null = null;
+	let initialized = false;
+	let tabsChatId = chatId;
+	let terminalSequence = 0;
+	let commentTarget: { comment_id?: string } = {};
+	let closing = new Set<string>();
+	let navigationApproved = false;
+	let selectedConnection: TerminalConnection | null = null;
+	let terminalEnabled = false;
+	let featureVersion = 0;
+
+	// Move a single mounted panel between desktop, mobile, and its hidden parking spot.
+	const placePanel = (node: HTMLElement, target: HTMLElement | null) => {
+		const home = node.parentElement!;
+		const move = (destination: HTMLElement | null) => {
+			const parent = destination ?? home;
+			if (node.parentElement !== parent) parent.appendChild(node);
+		};
+		move(target);
+		return { update: move, destroy: () => node.remove() };
+	};
+	const tabIcon = (kind: PanelTab['kind']) =>
+		({
+			files: 'folder',
+			file: 'page',
+			terminal: 'terminal',
+			artifacts: 'code',
+			preview: 'browser',
+			voice: 'microphone',
+			comments: 'chat-bubble'
+		})[kind];
+	const domId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
+	$: activeTabId = tabs.activeId;
+	$: activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+	$: terminalContext = fileContexts[tabs.activeId] ?? activeTab?.context ?? null;
+	$: if (activeTabId && panelTarget) {
+		const id = activeTabId;
+		void tick().then(() =>
+			document.getElementById(domId(id))?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+		);
 	}
+
+	const selectTab = (id: string) => {
+		tabs = activateTab(tabs, id);
+		showTabs.set(true);
+	};
+	const openPanel = (tab: PanelTab) => {
+		initialized = true;
+		tabs = openTab(tabs, tab);
+		showTabs.set(true);
+	};
+	const openFiles = (selector = $selectedTerminalId, directory?: string) => {
+		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
+		const id = selector ? `files:${selector}` : 'files';
+		openPanel({
+			id,
+			kind: 'files',
+			label: $i18n.t('Files'),
+			terminalId: selector ?? undefined,
+			path: directory
+		});
+		if (directory) void fileViews[id]?.browseDirectory?.(directory);
+	};
+	const openFile = (path: string, selector: string, page?: number | null) => {
+		if (!terminalAccessible(selector)) return;
+		path = path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
+		const id =
+			tabs.tabs.find(
+				(tab) =>
+					tab.kind === 'file' && !tab.untitled && tab.terminalId === selector && tab.path === path
+			)?.id ?? fileTabId(selector, path);
+		openPanel({
+			id,
+			kind: 'file',
+			label: path.split('/').pop() || path,
+			terminalId: selector,
+			path,
+			page
+		});
+		if (page != null) fileViews[id]?.revealPage?.(page);
+	};
+	const newFile = () => {
+		if (!terminalFilesAvailable || !selectedConnection) return;
+		let number = 1;
+		while (tabs.tabs.some((tab) => tab.untitled && tab.label === `Untitled-${number}`)) number++;
+		openPanel({
+			id: crypto.randomUUID(),
+			kind: 'file',
+			label: `Untitled-${number}`,
+			terminalId: selectedConnection.selector,
+			connection: { ...selectedConnection },
+			untitled: true,
+			context: activeTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
+		});
+	};
+	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments') => {
+		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
+		const view = availableViews.find((view) => view.kind === kind)!;
+		openPanel({ id: kind, kind, label: view.label });
+	};
+	const newTerminal = () => {
+		if (!terminalEnabled || !selectedConnection) return;
+		openPanel({
+			id: crypto.randomUUID(),
+			kind: 'terminal',
+			label: `${$i18n.t('Terminal')} ${++terminalSequence}`,
+			terminalId: selectedConnection.selector,
+			connection: { ...selectedConnection }
+		});
+	};
+	const closeTab = async (id: string) => {
+		if (closing.has(id)) return;
+		closing.add(id);
+		try {
+			const tab = tabs.tabs.find((item) => item.id === id);
+			if (!tab) return;
+			if (fileViews[id]?.hasUnsavedChanges()) {
+				selectTab(id);
+				if (!(await fileViews[id].requestClose())) return;
+			}
+			if (tab.kind === 'voice') {
+				bridge?.end();
+				showCallOverlay.set(false);
+			}
+			if (tab.kind === 'artifacts') showArtifacts.set(false);
+			if (tab.kind === 'preview') showEmbeds.set(false);
+			tabs = removeTab(tabs, id);
+			delete dirtyFiles[id];
+			delete fileContexts[id];
+			await tick();
+			document.getElementById(domId(tabs.activeId))?.focus();
+		} finally {
+			closing.delete(id);
+		}
+	};
+	const navigateTabs = (event: KeyboardEvent) => {
+		if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab')
+			return;
+		const index = tabs.tabs.findIndex((tab) => tab.id === tabs.activeId);
+		let next = index;
+		if (event.key === 'ArrowRight') next = (index + 1) % tabs.tabs.length;
+		else if (event.key === 'ArrowLeft') next = (index - 1 + tabs.tabs.length) % tabs.tabs.length;
+		else if (event.key === 'Home') next = 0;
+		else if (event.key === 'End') next = tabs.tabs.length - 1;
+		else return;
+		event.preventDefault();
+		selectTab(tabs.tabs[next].id);
+		document.getElementById(domId(tabs.tabs[next].id))?.focus();
+	};
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
@@ -133,7 +299,7 @@
 			/* The comments panel handles access errors when opened. */
 		}
 	};
-	$: if (showCommentsTab && $showTabs) loadCommentCount(chatId);
+	$: if (showCommentsTab && $showTabs && chatId) loadCommentCount(chatId);
 	let linkedComment = '';
 	$: if (showCommentsTab && chatId === $page.params.id && $page.url.href !== linkedComment) {
 		linkedComment = $page.url.href;
@@ -146,56 +312,152 @@
 			? {
 					resource_type: 'chat',
 					resource_id: chatId,
-					...(typeof $showTabs === 'object' ? $showTabs : {})
+					...commentTarget
 				}
 			: null;
-	$: if ($showTabs === 'files' || $showTabs === 'comments' || typeof $showTabs === 'object') {
+	$: showArtifactsTab = ($artifactContents ?? []).length > 0 && $visibleControls['chat.artifacts'];
+	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
+	$: availableViews = [
+		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
+		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
+		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
+		{ kind: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
+		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
+	];
+
+	$: directTerminals =
+		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
+	const terminalAccessible = (selector: string) => {
+		if (!$config?.features?.enable_tool_servers) return false;
+		const system = ($terminalServers ?? []).find((terminal) => terminal.id === selector);
+		if (system)
+			return (
+				chatContextAvailable(system) &&
+				!(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId))
+			);
+		return !!(
+			$config?.features?.enable_direct_integrations &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true)) &&
+			directTerminals.some((terminal) => terminal.url === selector)
+		);
+	};
+	const pruneTabs = () => {
+		for (const tab of tabs.tabs) {
+			const available = tab.terminalId
+				? terminalAccessible(tab.terminalId)
+				: availableViews.some((view) => view.kind === tab.kind && view.available);
+			if (!available) tabs = removeTab(tabs, tab.id);
+		}
+	};
+	$: {
+		availableViews;
+		$terminalServers;
+		$settings;
+		$config;
+		$user;
+		chatId;
+		pruneTabs();
+	}
+	const checkTerminal = async () => {
+		const version = ++featureVersion;
+		terminalEnabled = false;
+		selectedConnection =
+			terminalFilesAvailable && mounted
+				? resolveTerminalConnection(
+						$selectedTerminalId,
+						$terminalServers ?? [],
+						directTerminals,
+						localStorage.token ?? ''
+					)
+				: null;
+		if (!selectedConnection) return;
+		try {
+			const result = await terminalRequest<{ features?: { terminal?: boolean } }>(
+				selectedConnection,
+				chatId,
+				'/api/config'
+			);
+			if (version === featureVersion) terminalEnabled = result.features?.terminal !== false;
+		} catch {
+			/* Files remain available when interactive terminals are disabled. */
+		}
+	};
+	$: {
+		terminalFilesAvailable;
+		$selectedTerminalId;
+		$terminalServers;
+		$settings;
+		mounted;
+		chatId;
+		void checkTerminal();
+	}
+
+	$: if (chatId !== tabsChatId) {
+		if (tabsChatId !== null || !chatId) {
+			tabs = emptyTabs();
+			dirtyFiles = {};
+			fileContexts = {};
+			initialized = false;
+			commentTarget = {};
+		}
+		tabsChatId = chatId;
+	}
+	$: if ($showTabs === true && !initialized && showFilesTab) {
+		initialized = true;
+		openFiles();
+	}
+	$: if ($showTabs === 'files' && showFilesTab) openFiles();
+	$: if (
+		($showTabs === 'comments' || (typeof $showTabs === 'object' && $showTabs)) &&
+		showCommentsTab
+	) {
+		commentTarget = typeof $showTabs === 'object' ? $showTabs : {};
+		openFeature('comments');
+	}
+	$: if ($showArtifacts && showArtifactsTab) {
+		openFeature('artifacts');
 		showArtifacts.set(false);
+	}
+	$: if ($showEmbeds && showPreviewTab) {
+		openFeature('preview');
 		showEmbeds.set(false);
 	}
-	$: if ($showArtifacts) activeTab = 'artifacts';
-	$: if ($showEmbeds) activeTab = 'preview';
-	$: if ($showCallOverlay) activeTab = 'voice';
+	$: if ($showCallOverlay) openFeature('voice');
+	$: if ($showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
+		const request = $showFileNavPath;
+		showFileNavPath.set(null);
+		openFile(
+			typeof request === 'string' ? request : request.path,
+			$selectedTerminalId,
+			typeof request === 'string' ? null : request.page
+		);
+	}
 
-	const selectTab = (tab: PanelTab) => {
-		showTabs.set(tab === 'files' || tab === 'comments' ? tab : true);
-		showArtifacts.set(tab === 'artifacts');
-		showEmbeds.set(tab === 'preview');
-		activeTab = tab;
-	};
-
-	beforeNavigate(({ from, to }) => {
-		if (from?.url.pathname === to?.url.pathname) return;
+	beforeNavigate(({ from, to, cancel, willUnload }) => {
+		if (navigationApproved || from?.url.pathname === to?.url.pathname) return;
 		showOverview.set(false);
-		if (activeTab === 'comments' && $showTabs)
-			showTabs.set(to?.route.id === '/(app)/c/[id]' ? 'comments' : false);
+		const dirtyTabs = tabs.tabs.filter((tab) => fileViews[tab.id]?.hasUnsavedChanges());
+		if (!dirtyTabs.length) return;
+		cancel();
+		if (willUnload || !to) return;
+		void (async () => {
+			for (const tab of dirtyTabs) {
+				selectTab(tab.id);
+				if (!(await fileViews[tab.id].requestClose())) return;
+			}
+			navigationApproved = true;
+			try {
+				await goto(to.url);
+			} finally {
+				navigationApproved = false;
+			}
+		})();
 	});
 	onDestroy(() => {
 		++countVersion;
+		++featureVersion;
 		showOverview.set(false);
 	});
-
-	$: showArtifactsTab = ($artifactContents ?? []).length > 0 && $visibleControls['chat.artifacts'];
-	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
-	$: panelTabs = [
-		{ id: 'files', label: $i18n.t('Files'), available: showFilesTab },
-		{ id: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
-		{ id: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
-		{ id: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
-		{ id: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
-	].filter((tab) => tab.available) as { id: PanelTab; label: string; available: boolean }[];
-	$: sidePanelAvailable = panelTabs.length > 0;
-	$: if (sidePanelAvailable && !panelTabs.some((tab) => tab.id === activeTab)) {
-		activeTab = panelTabs[0].id;
-		if ($showTabs) selectTab(activeTab);
-	}
-	$: if (!sidePanelAvailable) showTabs.set(false);
-
-	// Auto-switch to Files tab when display_file is triggered
-	$: if ($showFileNavPath && terminalFilesAvailable) {
-		activeTab = 'files';
-		showTabs.set('files');
-	}
 
 	// Clear selected direct terminal if user lost permission
 	$: if (
@@ -210,22 +472,8 @@
 		selectedTerminalId.set(null);
 	}
 
-	const handleMediaQuery = async (e) => {
-		if (e.matches) {
-			largeScreen = true;
-			if ($showCallOverlay) {
-				showCallOverlay.set(false);
-				await tick();
-				showCallOverlay.set(true);
-			}
-		} else {
-			largeScreen = false;
-			if ($showCallOverlay) {
-				showCallOverlay.set(false);
-				await tick();
-				showCallOverlay.set(true);
-			}
-		}
+	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
+		largeScreen = event.matches;
 	};
 
 	const onMouseDown = () => {
@@ -267,17 +515,6 @@
 			document.removeEventListener('mouseup', onMouseUp);
 		};
 	});
-
-	const closeHandler = () => {
-		if (!largeScreen) {
-			showTabs.set(false);
-		}
-		showArtifacts.set(false);
-		showEmbeds.set(false);
-		if ($showCallOverlay) showCallOverlay.set(false);
-	};
-
-	$: if (mounted && !chatId) closeHandler();
 </script>
 
 <svelte:window bind:innerWidth={viewportWidth} />
@@ -317,38 +554,108 @@
 	</div>
 </Modal>
 
-{#snippet panelContent()}
-	<div class="flex flex-col h-full min-h-0">
-		<div class="flex items-center justify-between px-2 pt-2 pb-2 shrink-0">
-			<div class="flex gap-1 min-w-0 overflow-x-auto scrollbar-hidden">
-				{#each panelTabs as tab (tab.id)}
-					<button
-						class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {activeTab ===
+<div
+	class:hidden={!panelTarget}
+	use:placePanel={panelTarget}
+	class="h-full w-full min-h-0 flex flex-col"
+	id="controls-container"
+>
+	<div class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none">
+		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
+			<div
+				role="tablist"
+				tabindex="-1"
+				aria-label={$i18n.t('Tabs')}
+				on:keydown={navigateTabs}
+				class="panel-tab-strip flex items-center gap-0.5 min-w-0 overflow-x-auto"
+			>
+				{#each tabs.tabs as tab (tab.id)}
+					<div
+						class="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {tabs.activeId ===
 						tab.id
-							? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
+							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200'
 							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-						on:click={() => selectTab(tab.id)}
 					>
-						{tab.label}{#if tab.id === 'comments' && commentCount !== null && commentCount > 0}<span
-								class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
-								>{commentCount}</span
-							>{/if}
-					</button>
+						<button
+							role="tab"
+							id={domId(tab.id)}
+							aria-controls={`${domId(tab.id)}-view`}
+							aria-selected={tabs.activeId === tab.id}
+							tabindex={tabs.activeId === tab.id ? 0 : -1}
+							title={tab.path ?? tab.label}
+							class="flex h-full items-center gap-1.5 min-w-0"
+							on:click={() => selectTab(tab.id)}
+						>
+							{#if tab.kind === 'file'}
+								<FileTypeIcon name={tab.label} />
+							{:else}
+								<Icon name={tabIcon(tab.kind)} size={14} />
+							{/if}
+							<span class="max-w-30 overflow-hidden text-ellipsis">{tab.label}</span>
+							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
+									>{commentCount}</span
+								>{/if}
+						</button>
+						{#if tab.untitled || dirtyFiles[tab.id]}<span
+								class="size-1.5 shrink-0 rounded-full bg-gray-400"
+								aria-label={$i18n.t('Unsaved changes')}
+							></span>{/if}
+						<button
+							type="button"
+							class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+							aria-label={tab.kind === 'voice'
+								? $i18n.t('End call')
+								: `${$i18n.t('Close')} ${tab.label}`}
+							on:click={() => closeTab(tab.id)}><Icon name="xmark" size={12} /></button
+						>
+					</div>
 				{/each}
 			</div>
-			<button
-				class="py-1 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 px-0 shrink-0"
-				on:click={() => showTabs.set(false)}
-				aria-label={$i18n.t('Close')}
-			>
-				<XMark className="size-4" />
-			</button>
+			<Dropdown align="end" closeOnSelect>
+				<button
+					type="button"
+					class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+					aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
+				>
+				<div slot="content">
+					<DropdownMenu className="w-48">
+						{#if terminalFilesAvailable}<button on:click={newFile}
+								><Icon name="page" size={14} />{$i18n.t('New File')}</button
+							>{/if}
+						{#if terminalEnabled}<button on:click={newTerminal}
+								><Icon name="terminal" size={14} />{$i18n.t('New Terminal')}</button
+							>{/if}
+						{#each availableViews.filter((view) => view.kind !== 'files' && view.kind !== 'voice' && view.available) as view}
+							<button
+								on:click={() =>
+									openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments')}
+								><Icon
+									name={tabIcon(view.kind as PanelTab['kind'])}
+									size={14}
+								/>{view.label}</button
+							>
+						{/each}
+					</DropdownMenu>
+				</div>
+			</Dropdown>
 		</div>
-
-		<div class="flex-1 min-h-0">
-			{#if $showCallOverlay}
-				<!-- Keep the call mounted while viewing another tab. -->
-				<div class="w-full h-full flex justify-center" class:hidden={activeTab !== 'voice'}>
+		<button
+			type="button"
+			class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+			on:click={() => showTabs.set(false)}
+			aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
+		>
+	</div>
+	<div class="relative flex-1 min-h-0">
+		{#each tabs.tabs as tab (tab.id)}
+			<div
+				id={`${domId(tab.id)}-view`}
+				role="tabpanel"
+				aria-labelledby={domId(tab.id)}
+				class="h-full w-full min-h-0"
+				class:hidden={tabs.activeId !== tab.id}
+			>
+				{#if tab.kind === 'voice'}
 					<CallPanel
 						{bridge}
 						bind:callMode
@@ -356,41 +663,99 @@
 						{submitPrompt}
 						{stopResponse}
 						{modelId}
-						{chatId}
+						chatId={chatId ?? ''}
 						{eventTarget}
-						on:close={() => showTabs.set(false)}
+						on:close={() => closeTab(tab.id)}
 					/>
-				</div>
-			{/if}
-			{#if activeTab === 'preview'}
-				<Embeds overlay={dragged} />
-			{:else if activeTab === 'artifacts'}
-				<Artifacts {history} overlay={dragged} />
-			{:else if activeTab === 'comments'}
-				{#if currentComments}
-					{#key `${$user.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+				{:else if tab.kind === 'preview'}
+					<Embeds overlay={dragged} />
+				{:else if tab.kind === 'artifacts'}
+					<Artifacts overlay={dragged} />
+				{:else if tab.kind === 'comments' && currentComments}
+					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel
 							embedded={true}
 							bind:view={currentComments}
 							onCountChange={setCommentCount}
 						/>
 					{/key}
+				{:else if tab.kind === 'terminal' && tab.connection}
+					<XTerminal
+						connection={tab.connection}
+						{chatId}
+						active={!!$showTabs && tabs.activeId === tab.id}
+						overlay={dragged}
+					/>
+				{:else if tab.untitled && tab.connection}
+					<UntitledFile
+						bind:this={fileViews[tab.id]}
+						bind:dirty={dirtyFiles[tab.id]}
+						label={tab.label}
+						connection={tab.connection}
+						{chatId}
+						initialDirectory={tab.context?.currentDirectory}
+						isOpen={(path) =>
+							tabs.tabs.some(
+								(item) =>
+									item.id !== tab.id &&
+									item.kind === 'file' &&
+									!item.untitled &&
+									item.terminalId === tab.terminalId &&
+									item.path === path
+							)}
+						onSaved={(path) => {
+							tabs = {
+								...tabs,
+								tabs: tabs.tabs.map((item) =>
+									item.id === tab.id
+										? {
+												...item,
+												untitled: false,
+												dirty: false,
+												path,
+												label: path.split('/').pop() || path
+											}
+										: item
+								)
+							};
+						}}
+					/>
+				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
+					<FileNav
+						bind:this={fileViews[tab.id]}
+						bind:dirty={dirtyFiles[tab.id]}
+						terminalId={tab.terminalId}
+						initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
+						initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
+						active={!!$showTabs && tabs.activeId === tab.id}
+						manageFileRequests={false}
+						showTerminalDock={false}
+						onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
+						onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
+						{onAskFile}
+						overlay={dragged}
+						{chatId}
+						bind:terminalContext={fileContexts[tab.id]}
+					/>
+				{:else if tab.kind === 'files' && codeInterpreterEnabled}
+					<PyodideFileNav overlay={dragged} />
 				{/if}
-			{:else if activeTab === 'files' && terminalFilesAvailable && $selectedTerminalId}
-				<FileNav {onAskFile} overlay={dragged} {chatId} bind:terminalContext />
-			{:else if activeTab === 'files' && codeInterpreterEnabled}
-				<PyodideFileNav overlay={dragged} />
-			{/if}
-		</div>
+			</div>
+		{/each}
+		{#if !tabs.tabs.length}<div
+				class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
+			>
+				{$i18n.t('Open a tab using the + menu.')}
+			</div>{/if}
 	</div>
-{/snippet}
+</div>
 
 {#if !largeScreen}
 	<MobileSwipePanel
 		open={!!$showTabs}
 		enabled={$mobile}
 		side="right"
-		blocked={$showSidebar || !sidePanelAvailable}
+		blocked={$showSidebar}
 		startTarget="#chat-container"
 		width={viewportWidth}
 		onOpenChange={(open) => showTabs.set(open)}
@@ -409,9 +774,7 @@
 				swipeSide={$mobile ? 'right' : undefined}
 				className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
 			>
-				<div class="h-[100dvh] flex flex-col">
-					{@render panelContent()}
-				</div>
+				<div bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>
 		{/if}
 	</MobileSwipePanel>
@@ -424,8 +787,15 @@
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"
 	>
-		<div class="h-full w-full z-40 pointer-events-auto" id="controls-container">
-			{@render panelContent()}
-		</div>
+		<div bind:this={panelTarget} class="h-full w-full z-40 pointer-events-auto"></div>
 	</ResizableSidePanel>
 {/if}
+
+<style>
+	.panel-tab-strip {
+		scrollbar-width: none;
+	}
+	.panel-tab-strip::-webkit-scrollbar {
+		display: none;
+	}
+</style>

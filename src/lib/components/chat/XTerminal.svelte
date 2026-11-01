@@ -20,6 +20,7 @@
 	let fitAddon: FitAddon;
 	let ws: WebSocket | null = null;
 	let resizeObserver: ResizeObserver;
+	let themeObserver: MutationObserver;
 	let pingInterval: ReturnType<typeof setInterval>;
 	let destroyed = false;
 	let sessionId = '';
@@ -45,6 +46,25 @@
 
 	function fit() {
 		if (active && terminalEl?.clientWidth && terminalEl?.clientHeight) fitAddon?.fit();
+	}
+
+	function updateTheme() {
+		if (!term) return;
+		term.options.theme = document.documentElement.classList.contains('dark')
+			? {
+					background: '#000000',
+					foreground: '#c0c0c0',
+					cursor: '#ffffff',
+					cursorAccent: '#000000',
+					selectionBackground: '#444444'
+				}
+			: {
+					background: '#ffffff',
+					foreground: '#171717',
+					cursor: '#171717',
+					cursorAccent: '#ffffff',
+					selectionBackground: '#bfdbfe'
+				};
 	}
 
 	async function connect() {
@@ -119,13 +139,14 @@
 			fontSize: 13,
 			fontFamily:
 				"'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace",
-			theme: {
-				background: '#000000',
-				foreground: '#c0c0c0',
-				cursor: '#ffffff',
-				selectionBackground: '#444444'
-			},
+			minimumContrastRatio: 4.5,
 			scrollback: 5000
+		});
+		updateTheme();
+		themeObserver = new MutationObserver(updateTheme);
+		themeObserver.observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['class']
 		});
 		fitAddon = new FitAddon();
 		term.loadAddon(fitAddon);
@@ -155,12 +176,13 @@
 		disconnect();
 		ws?.close();
 		resizeObserver?.disconnect();
+		themeObserver?.disconnect();
 		term?.dispose();
 		term = null;
 	});
 </script>
 
-<div class="h-full min-h-0 relative">
+<div class="h-full min-h-0 relative bg-white dark:bg-black">
 	<div
 		bind:this={terminalEl}
 		class="absolute inset-0 px-0.5"

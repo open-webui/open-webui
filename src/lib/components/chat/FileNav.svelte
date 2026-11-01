@@ -1,16 +1,3 @@
-<script context="module">
-	// Keep keys in nested template expressions visible to i18next-parser.
-	// $i18n.t("Unknown error");
-
-	// Persists across mount/unmount cycles (module-level, not per-instance)
-	let savedPath = '/';
-	let savedFileRoot = null;
-	/** @type {Map<string, string[]>} */
-	const treeExpandedCache = new Map();
-	/** @type {Map<string, [string, any[]][]>} */
-	const treeContentsCache = new Map();
-</script>
-
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
@@ -70,9 +57,25 @@
 	import PortPreview from './FileNav/PortPreview.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
+	// Directory and preview state belong to this tab, including its terminal connection.
+	let savedPath = '/';
+	let savedFileRoot: TerminalFileRoot | null = null;
+	const treeExpandedCache = new Map<string, string[]>();
+	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
+
 	const i18n = getContext<Readable<I18n>>('i18n');
 
 	export let overlay = false;
+	export let active = true;
+	export let terminalId: string | null = null;
+	export let initialFile: { path: string; page?: number | null } | null = null;
+	export let initialDirectory: string | null = null;
+	export let manageFileRequests = true;
+	export let showTerminalDock = true;
+	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
+	export let onBrowseDirectory: ((path: string) => void) | null = null;
+	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
+
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let onAskFile: ((instruction: string, file: FilesystemFile) => Promise<void>) | null =
@@ -138,7 +141,7 @@
 	let pendingFile: FilesystemFile | null = null;
 	let viewerLabel = '';
 	let loadGeneration = 0;
-	let dirty = false;
+	export let dirty = false;
 	let diskChanged = false;
 	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
 		null;
@@ -169,6 +172,13 @@
 		}
 		return true;
 	};
+	export const requestClose = () => protectBuffer();
+	export const hasUnsavedChanges = () => dirty || saving;
+	export const browseDirectory = (path: string) => loadDir(path);
+	export const revealPage = (page: number | null) => {
+		documentTargetPage = normalizeDocumentTargetPage(page);
+	};
+
 	const publishFile = () => {
 		if (!openedFile) return;
 		terminalContext = {
@@ -214,7 +224,7 @@
 		if (
 			!openedFile ||
 			openedFile.path !== target.path ||
-			openedFile.terminal_id !== $selectedTerminalId ||
+			openedFile.terminal_id !== effectiveTerminalId ||
 			openedFile.session_id !== chatId
 		)
 			throw new Error('The file or terminal changed. Open it again before sending.');
@@ -228,7 +238,7 @@
 		if (terminalContext) terminalContext = { ...terminalContext, file: null };
 	}
 	$: {
-		(selectedFile, $selectedTerminalId, chatId);
+		(selectedFile, effectiveTerminalId, chatId);
 		fileAsk = null;
 	}
 	$: viewerLabel = selectedExcelSheet
@@ -610,8 +620,8 @@
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	const getTerminal = (): { url: string; key: string } | null => {
-		const systemTerminal = $selectedTerminalId
-			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
+		const systemTerminal = effectiveTerminalId
+			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
 		const chatConfig = chatContext(systemTerminal);
 		isPerChatTerminal = !!systemTerminal && chatConfig?.context_id === 'chat_id';
@@ -624,7 +634,7 @@
 
 		const settingsValue: any = $settings;
 		const userTerminal = (settingsValue?.terminalServers ?? []).find(
-			(s: any) => s.url === $selectedTerminalId
+			(s: any) => s.url === effectiveTerminalId
 		);
 
 		const isSystem = !!systemTerminal;
@@ -638,11 +648,12 @@
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
-	let prevTerminalId = $selectedTerminalId;
+	let prevTerminalId = effectiveTerminalId;
 	let prevChatId = chatId;
 	let mounted = false;
+	let disposed = false;
 	$: {
-		($selectedTerminalId, $terminalServers, $settings);
+		(effectiveTerminalId, $terminalServers, $settings);
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 
@@ -651,10 +662,10 @@
 		if (chatChanged) prevChatId = chatId;
 
 		const terminalChanged =
-			terminal && (terminal.url !== prevTerminalUrl || $selectedTerminalId !== prevTerminalId);
+			terminal && (terminal.url !== prevTerminalUrl || effectiveTerminalId !== prevTerminalId);
 		if (terminalChanged) {
 			prevTerminalUrl = terminal.url;
-			prevTerminalId = $selectedTerminalId;
+			prevTerminalId = effectiveTerminalId;
 		}
 
 		if (chatChanged || terminalChanged || !terminal) {
@@ -685,6 +696,7 @@
 				(async () => {
 					if (terminalChanged) {
 						const config = await getTerminalConfig(terminal.url, terminal.key);
+						if (disposed) return;
 						terminalEnabled = config?.features?.terminal !== false;
 					}
 
@@ -982,9 +994,10 @@
 		path: string,
 		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
 	) => {
+		if (disposed) return;
 		if (!(await protectBuffer())) return;
 		const generation = ++loadGeneration;
-		const selector = $selectedTerminalId,
+		const selector = effectiveTerminalId,
 			session = chatId;
 		const terminal = selectedTerminal;
 		if (!terminal) return;
@@ -1006,17 +1019,17 @@
 		clearFilePreview();
 		clearSelection();
 		currentPath = directory;
-		terminalContext = { terminalId: $selectedTerminalId, currentDirectory: directory };
+		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		savedPath = directory;
 		pushNavHistory(directory);
 
 		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
-		if (generation !== loadGeneration || selector !== $selectedTerminalId || session !== chatId)
+		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
 			return;
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
+		if (!initialFile) setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -1087,11 +1100,17 @@
 		entry: FileEntry,
 		options: { page?: unknown; refresh?: boolean } = {}
 	) => {
+		if (disposed) return;
 		const fullPath =
 			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
 		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
 		if (entry.type === 'directory') {
 			await loadDir(fullPath);
+			return;
+		}
+
+		if (onOpenFile && !options.refresh && fullPath !== initialFile?.path) {
+			onOpenFile(fullPath, normalizeDocumentTargetPage(options.page));
 			return;
 		}
 
@@ -1111,14 +1130,14 @@
 		if (!terminal) return;
 
 		const generation = ++loadGeneration;
-		const selector = $selectedTerminalId!,
+		const selector = effectiveTerminalId!,
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
 				? { showRaw, currentSlide, selectedExcelSheet, scroll: viewerRoot?.scrollTop ?? 0 }
 				: null;
 		const current = () =>
-			generation === loadGeneration && selector === $selectedTerminalId && session === chatId;
+			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
 		openedFile = null;
 		if (terminalContext) terminalContext = { ...terminalContext, file: null };
 		dirty = false;
@@ -1565,7 +1584,7 @@
 		if (!name) return;
 
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || !currentWritable) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
 		const result = await uploadToTerminal(
@@ -1809,6 +1828,7 @@
 
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
+		if (!active) return;
 		// A close click may reach the window after its modal has already been destroyed.
 		if (
 			e.composedPath().some((node) => node instanceof Element && node.classList.contains('modal'))
@@ -1834,7 +1854,7 @@
 		let handledDisplayFile = false;
 
 		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
-			if (!request || !selectedTerminal || comparison) return;
+			if (!manageFileRequests || !active || !request || !selectedTerminal || comparison) return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			let filePath = typeof request === 'string' ? request : request.path;
@@ -1851,10 +1871,10 @@
 
 			// Always reload directory to ensure entries are fresh
 			if (!(await protectBuffer())) return;
-			const selector = $selectedTerminalId,
+			const selector = effectiveTerminalId,
 				session = chatId;
 			await loadDir(dir);
-			if (selector !== $selectedTerminalId || session !== chatId || currentPath !== dir || dirty)
+			if (selector !== effectiveTerminalId || session !== chatId || currentPath !== dir || dirty)
 				return;
 			await tick();
 
@@ -1868,7 +1888,7 @@
 		});
 
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
-			if (!filePath || !selectedTerminal) return;
+			if (!filePath || !selectedTerminal || effectiveTerminalId !== $selectedTerminalId) return;
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
@@ -1901,13 +1921,28 @@
 				terminalEnabled = config?.features?.terminal !== false;
 
 				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
 				savedPath =
-					terminalContext && terminalContext.terminalId === $selectedTerminalId
+					terminalContext && terminalContext.terminalId === effectiveTerminalId
 						? terminalContext.currentDirectory
 						: serverPath;
 				savedPath = clampToFileRoot(savedPath);
-				loadDir(savedPath, { restoreTree: true });
+				if (initialFile) {
+					const path = normalizePath(initialFile.path);
+					const slash = path.lastIndexOf('/');
+					await loadDir(slash > 0 ? path.slice(0, slash + 1) : '/');
+					await openEntry(
+						entries.find((entry) => entry.name === path.slice(slash + 1)) ?? {
+							name: path.slice(slash + 1),
+							type: 'file',
+							writable: currentWritable
+						},
+						{ page: initialFile.page }
+					);
+				} else {
+					await loadDir(initialDirectory ?? savedPath, { restoreTree: true });
+				}
 			})();
 		}
 
@@ -1923,6 +1958,7 @@
 
 		const onVisibilityChange = () => {
 			if (
+				active &&
 				document.visibilityState === 'visible' &&
 				!comparison &&
 				!selectedFile &&
@@ -1950,6 +1986,7 @@
 	});
 
 	onDestroy(() => {
+		disposed = true;
 		++loadGeneration;
 		dirtyChoice?.resolve('cancel');
 		clearMatchRequest();
@@ -1975,6 +2012,7 @@
 
 <svelte:window
 	on:keydown={(event) => {
+		if (!active) return;
 		if (event.key === 'Escape' && fileAsk) {
 			fileAsk = null;
 			event.preventDefault();
@@ -2063,8 +2101,8 @@
 				{selectedFile}
 				{loading}
 				writable={currentWritable}
-				{canGoBack}
-				{canGoForward}
+				canGoBack={!initialFile && canGoBack}
+				canGoForward={!initialFile && canGoForward}
 				{sortBy}
 				{sortAsc}
 				showDateAdded
@@ -2073,7 +2111,7 @@
 				onViewModeChange={changeViewMode}
 				onGoBack={goBack}
 				onGoForward={goForward}
-				onNavigate={loadDir}
+				onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
 				onRefresh={() => {
 					if (selectedFile) {
 						const fileName = selectedFile.split('/').pop() ?? '';
@@ -2361,7 +2399,7 @@
 						bind:dirty
 						{chatId}
 						resourceVersion={commentGeneration}
-						onLocalLink={(path) => showFileNavPath.set({ path })}
+						onLocalLink={(path) => (onOpenFile ? onOpenFile(path) : showFileNavPath.set({ path }))}
 						bind:currentSlide
 						{selectedFile}
 						readOnly={!selectedFileWritable}
@@ -2518,7 +2556,7 @@
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading || ($selectedTerminalId && $terminalServers === null)}
+				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
@@ -2530,7 +2568,7 @@
 					</div>
 				{/if}
 
-				{#if !isSearching && !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
+				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							class={viewMode === 'grid'
@@ -2686,7 +2724,7 @@
 		{/if}
 
 		<!-- Terminal bottom panel -->
-		{#if terminalEnabled}
+		{#if terminalEnabled && showTerminalDock}
 			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
@@ -2699,8 +2737,10 @@
 					</div>
 				{/if}
 
-				{#key JSON.stringify([chatId, $selectedTerminalId])}
+				{#key JSON.stringify([chatId, effectiveTerminalId])}
 					<TerminalDock
+						terminalId={effectiveTerminalId}
+						{active}
 						overlay={overlay || isDraggingHandle}
 						bind:expanded={terminalExpanded}
 						height={terminalHeight}

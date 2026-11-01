@@ -13,6 +13,8 @@
 	import Icon from './FileNav/Icon.svelte';
 
 	export let chatId: string | null = null;
+	export let terminalId: string | null = null;
+	export let active = true;
 	export let expanded = false;
 	export let height = 200;
 	export let overlay = false;
@@ -144,7 +146,7 @@
 
 	onMount(() => {
 		connection = resolveTerminalConnection(
-			$selectedTerminalId,
+			terminalId ?? $selectedTerminalId,
 			$terminalServers ?? [],
 			($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [],
 			localStorage.getItem('token') ?? ''
@@ -257,8 +259,15 @@
 			<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
 		</button>
 	</div>
-	<div style:height={`${height}px`} class="flex min-h-0 flex-col bg-black" class:hidden={!expanded}>
-		{#if error}<div class="shrink-0 truncate px-2 text-xs text-red-400" title={error}>
+	<div
+		style:height={`${height}px`}
+		class="flex min-h-0 flex-col bg-white dark:bg-black"
+		class:hidden={!expanded}
+	>
+		{#if error}<div
+				class="shrink-0 truncate px-2 text-xs text-red-600 dark:text-red-400"
+				title={error}
+			>
 				{error}
 			</div>{/if}
 		<div class="relative min-h-0 flex-1">
@@ -268,7 +277,7 @@
 						{connection}
 						{chatId}
 						{overlay}
-						active={expanded && activeId === 'shell'}
+						active={active && expanded && activeId === 'shell'}
 						bind:connected
 						bind:connecting
 					/>
@@ -284,7 +293,7 @@
 								{chatId}
 								{overlay}
 								readOnly
-								active={expanded && activeId === tab.id}
+								active={active && expanded && activeId === tab.id}
 							/>
 						</div>
 					{/if}
