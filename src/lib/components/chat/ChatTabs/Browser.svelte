@@ -40,6 +40,19 @@
 	let chromeForward = false;
 	let frameReady = false;
 	$: viewUrl = session && sessionConnection ? browserViewUrl(sessionConnection, session) : '';
+	$: if (session && sessionConnection) {
+		void updateBrowserSession(sessionConnection, sessionChatId, session.id, { active }).catch(
+			() => {}
+		);
+	}
+	$: if (session && sessionConnection && chatId && !sessionChatId) {
+		const savedChatId = chatId;
+		void updateBrowserSession(sessionConnection, sessionChatId, session.id, {
+			chat_id: savedChatId
+		})
+			.then(() => (sessionChatId = savedChatId))
+			.catch(() => {});
+	}
 	const persist = (url: string, title: string) => {
 		if (session && sessionConnection)
 			void updateBrowserSession(sessionConnection, sessionChatId, session.id, { url, title }).catch(

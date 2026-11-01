@@ -24,7 +24,10 @@ export const updateBrowserSession = (
 	connection: TerminalConnection,
 	chatId: string | null,
 	id: string,
-	fields: Partial<Pick<BrowserSession, 'url' | 'title' | 'mode'>>
+	fields: Partial<Pick<BrowserSession, 'url' | 'title' | 'mode'>> & {
+		active?: boolean;
+		chat_id?: string;
+	}
 ) =>
 	terminalRequest<BrowserSession>(
 		connection,
