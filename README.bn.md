@@ -2,18 +2,6 @@
 
 <p>Open WebUI হলো <a href="https://docs.openwebui.com/"><strong>AI-এর একটি আপন ঠিকানা</strong></a>: একটি সম্প্রসারণযোগ্য, সহজে ব্যবহারযোগ্য ও নিজে হোস্ট করা যায় এমন প্ল্যাটফর্ম, যা সম্পূর্ণ অফলাইনে চলার জন্য তৈরি। Ollama দিয়ে স্থানীয় মডেল সংযুক্ত করুন, অথবা স্থানীয় ও ক্লাউড মডেলের জন্য OpenAI-সামঞ্জস্যপূর্ণ API ব্যবহার করুন।</p>
 
-[![Open WebUI ডেমো](https://cdn.openwebui.com/open-webui-demo.gif)](https://docs.openwebui.com/)
-
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
-[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
-
 [English](README.md) |
 [简体中文](README.zh.md) |
 [繁體中文](README.zht.md) |
@@ -36,6 +24,18 @@
 [বাংলা](README.bn.md) |
 [Ελληνικά](README.gr.md) |
 [Tiếng Việt](README.vi.md)
+
+[![Open WebUI ডেমো](https://cdn.openwebui.com/open-webui-demo.gif)](https://docs.openwebui.com/)
+
+![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
+![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
+![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
+![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
+![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
+![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
+[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
+[![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
 [Open WebUI ঘুরে দেখুন →](https://docs.openwebui.com/)
 
