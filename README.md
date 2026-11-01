@@ -81,8 +81,6 @@ See the [ecosystem documentation](https://docs.openwebui.com/ecosystem/) for det
 
 See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
 
----
-
 ## What's Next?
 
 Discover upcoming features on our roadmap in the [Open WebUI Documentation](https://docs.openwebui.com/roadmap/).
