@@ -63,7 +63,8 @@
 		getUserPosition,
 		getUserTimezone,
 		getWeekday,
-		isRasterImageContentType
+		isRasterImageContentType,
+		withDetectedImageMime
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
@@ -1264,20 +1265,20 @@
 			return;
 		}
 
-		inputFiles.forEach(async (file) => {
+		inputFiles.forEach(async (inputFile) => {
 			console.log('Processing file:', {
-				name: file.name,
-				type: file.type,
-				size: file.size,
-				extension: file.name.split('.').at(-1)
+				name: inputFile.name,
+				type: inputFile.type,
+				size: inputFile.size,
+				extension: inputFile.name.split('.').at(-1)
 			});
 
 			if (
 				($config?.file?.max_size ?? null) !== null &&
-				file.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
+				inputFile.size > ($config?.file?.max_size ?? 0) * 1024 * 1024
 			) {
 				console.log('File exceeds max size limit:', {
-					fileSize: file.size,
+					fileSize: inputFile.size,
 					maxSize: ($config?.file?.max_size ?? 0) * 1024 * 1024
 				});
 				toast.error(
@@ -1287,6 +1288,10 @@
 				);
 				return;
 			}
+
+			// Some sources (e.g. macOS Photos) hand over images with no MIME type
+			// and no file extension, so sniff the content before routing.
+			const file = await withDetectedImageMime(inputFile);
 
 			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
