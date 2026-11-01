@@ -52,6 +52,7 @@ from open_webui.tools.builtin import (
     create_automation,
     create_calendar_event,
     create_tasks,
+    create_tool,
     delegate_task,
     delete_automation,
     delete_calendar_event,
@@ -886,6 +887,12 @@ async def get_builtin_tools(
             user.get('id', ''), 'workspace.skills', await Config.get('user.permissions')
         ):
             builtin_functions.append(create_skill)
+
+    if ENABLE_TOOLS and is_builtin_tool_enabled('tools'):
+        if user.get('role') == 'admin' or await has_permission(
+            user.get('id', ''), 'workspace.tools', await Config.get('user.permissions')
+        ):
+            builtin_functions.append(create_tool)
 
     # Task management - break down complex work into trackable steps
     # Task state is stored on the chats row; local/channel IDs do not have one.

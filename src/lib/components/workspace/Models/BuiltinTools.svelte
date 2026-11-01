@@ -87,6 +87,11 @@
 		skills: {
 			label: $i18n.t('settings.admin.models.builtinTools.skills.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.skills.description')
+		},
+		tools: {
+			label: $i18n.t('settings.admin.models.builtinTools.tools.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.tools.description'),
+			enabled: $config?.features?.enable_tools
 		}
 	};
 

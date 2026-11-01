@@ -3888,6 +3888,47 @@ async def grep_skill_files(
         return result
 
 
+async def create_tool(
+    id: str,
+    name: str,
+    description: str,
+    content: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """Create a private Python tool in the workspace.
+    Source must define a Tools class with public methods, type hints, and descriptive docstrings.
+    Use Valves or UserValves for credentials; do not embed secrets. Saving executes the Python module on the server.
+
+    :param id: Unique lowercase Python identifier for the toolkit.
+    :param name: Display name.
+    :param description: Short description of what the tool does.
+    :param content: Complete Python source, without Markdown fences.
+    """
+    try:
+        from types import SimpleNamespace
+
+        from open_webui.models.tools import ToolForm
+        from open_webui.routers.tools import create_new_tools
+        from open_webui.utils.access_control import has_permission
+
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        if __user__.get('role') != 'admin' and not await has_permission(
+            __user__['id'], 'workspace.tools', await Config.get('user.permissions')
+        ):
+            raise ValueError('Tool authoring permission required')
+        result = await create_new_tools(
+            __request__,
+            ToolForm(id=id, name=name, content=content, meta={'description': description}, access_grants=[]),
+            SimpleNamespace(**__user__),
+            None,
+        )
+        return JSONCodec.dumps({'id': result.id, 'url': '/workspace/tools/edit?id=' + result.id})
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
 async def create_skill(
     id: str,
     name: str,

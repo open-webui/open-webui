@@ -3242,6 +3242,8 @@
 	"settings.admin.models.builtinTools.time.description": "Get current time and perform date/time calculations",
 	"settings.admin.models.builtinTools.time.label": "Time & Calculation",
 	"settings.admin.models.builtinTools.title": "Builtin Tools",
+	"settings.admin.models.builtinTools.tools.description": "Create Python workspace tools from chat",
+	"settings.admin.models.builtinTools.tools.label": "Tool Creation",
 	"settings.admin.models.builtinTools.userInput.description": "Pause a response to ask the user a clarifying question",
 	"settings.admin.models.builtinTools.userInput.label": "Ask User",
 	"settings.admin.models.builtinTools.webSearch.description": "Search the web and fetch URLs",
