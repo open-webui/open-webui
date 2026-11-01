@@ -82,10 +82,11 @@
 		const update = () => {
 			if (destroyed) return;
 			const visible =
-				keepOpen ||
-				[messageElement, node].some(
-					(element) => element.matches(':hover') || element.contains(document.activeElement)
-				);
+				!showDeleteConfirmDialog &&
+				(keepOpen ||
+					[messageElement, node].some(
+						(element) => element.matches(':hover') || element.contains(document.activeElement)
+					));
 			node.style.opacity = visible ? '1' : '0';
 			node.style.pointerEvents = visible ? 'auto' : 'none';
 			if (visible && !cleanup) {
@@ -99,7 +100,7 @@
 				cleanup = undefined;
 			}
 		};
-		const scheduleUpdate = () => queueMicrotask(update);
+		const scheduleUpdate = () => requestAnimationFrame(update);
 		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
 		for (const element of [messageElement, node]) {
 			for (const event of events) element.addEventListener(event, scheduleUpdate);
