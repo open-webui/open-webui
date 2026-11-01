@@ -1381,7 +1381,7 @@
 				{/if}
 
 				<div
-					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-2.5 pb-2.5"
+					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 pt-1.5 pb-2.5"
 					style:display={inboxOpened ? 'none' : undefined}
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {
