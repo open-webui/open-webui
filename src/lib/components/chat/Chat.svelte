@@ -1929,14 +1929,6 @@
 			});
 		}
 
-		const showTabsSubscribe = showTabs.subscribe((value) => {
-			if (!value) {
-				showCallOverlay.set(false);
-				showArtifacts.set(false);
-				showEmbeds.set(false);
-			}
-		});
-
 		// the artifacts pane reads this list when it opens, which can be before the debounced rebuild
 		const showArtifactsSubscribe = showArtifacts.subscribe((value) => {
 			if (value) getContents();
@@ -1990,7 +1982,6 @@
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
 				}
-				showTabsSubscribe();
 				showArtifactsSubscribe();
 				selectedFolderSubscribe();
 
