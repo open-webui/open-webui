@@ -334,7 +334,8 @@ export class RealtimeCall {
 	private event(event: any) {
 		const type = event.type;
 		if (type === 'bridge.error') {
-			this.fail(event.message);
+			if (event.fatal === false) this.options.error(event.message);
+			else this.fail(event.message);
 			return;
 		}
 		if (type === 'bridge.pong') {
