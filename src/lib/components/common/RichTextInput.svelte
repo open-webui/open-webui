@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { toast } from 'svelte-sonner';
+	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
 	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
 
@@ -139,7 +141,14 @@
 	const componentContext = getAllContexts();
 	const eventDispatch = createEventDispatcher();
 
-	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
+	import {
+		Fragment,
+		DOMParser,
+		DOMSerializer,
+		Slice,
+		type Node,
+		type Schema
+	} from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
@@ -193,6 +202,44 @@
 	import Code from '@tiptap/extension-code';
 	import Italic from '@tiptap/extension-italic';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
+
+	const CopyableCodeBlock = CodeBlockLowlight.extend({
+		addNodeView() {
+			return ({ node, editor, getPos }) => {
+				const dom = document.createElement('div');
+				dom.className = 'relative my-6';
+				const { dom: pre, contentDOM } = DOMSerializer.renderSpec(
+					document,
+					DOMSerializer.fromSchema(editor.schema).nodes[node.type.name](node)
+				);
+				(pre as HTMLElement).style.margin = '0';
+				(pre as HTMLElement).style.paddingTop = '2.75rem';
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.contentEditable = 'false';
+				button.className =
+					'not-prose absolute end-2 top-2 rounded-lg px-2.5 py-1 text-xs font-normal text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-850';
+				button.textContent = $i18n.t('Copy');
+				button.onclick = async () => {
+					const pos = getPos();
+					if (typeof pos !== 'number') return;
+					const code = editor.state.doc.nodeAt(pos);
+					if (!code) return;
+					if (await copyToClipboard(code.textContent)) {
+						toast.success($i18n.t('Copied to clipboard'));
+					} else {
+						toast.error($i18n.t('Could not copy to clipboard. Please try again.'));
+					}
+				};
+				dom.append(button, pre);
+				return {
+					dom,
+					contentDOM: contentDOM as HTMLElement,
+					stopEvent: (event) => button.contains(event.target as globalThis.Node)
+				};
+			};
+		}
+	});
 
 	// WORKAROUND: TipTap's default Code mark input rule regex captures the
 	// character before the opening backtick, causing it to be deleted.
@@ -943,7 +990,7 @@
 
 				...(richText
 					? [
-							CodeBlockLowlight.configure({
+							CopyableCodeBlock.configure({
 								lowlight
 							}),
 							Typography,
