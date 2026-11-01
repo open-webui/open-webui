@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔃 **New chats stay in sync.** A chat started from the home page keeps syncing with the server again after it is created, so files removed in Chat Controls no longer come back after a reload and the owner of a chat shared with Allow replies gets Regenerate on other people's replies again. [#33377](https://github.com/open-webui/open-webui/pull/33377), [#33376](https://github.com/open-webui/open-webui/issues/33376)
 - 📂 **Temporary Chat on folder pages.** Turning Temporary Chat on or off on a folder's page, with the button at the top or with "/temporary", now keeps you on the folder page, so the next chat is still saved in the folder and gets its system prompt, default model and knowledge. [#33456](https://github.com/open-webui/open-webui/pull/33456), [#33448](https://github.com/open-webui/open-webui/issues/33448)
 - 🧵 **Thread reply focus.** Choosing Reply in Thread on a channel message now puts the cursor in the thread's reply box, also when the thread panel is already open. [#33467](https://github.com/open-webui/open-webui/pull/33467), [#33466](https://github.com/open-webui/open-webui/issues/33466)
+- 🪟 **Thread message actions visible.** Hovering the top message in a channel thread now shows its whole actions toolbar instead of cutting off its top half at the edge of the panel. [Commit](https://github.com/open-webui/open-webui/commit/08f197ad8d87b4f71be311888541c601942e96b9), [#33472](https://github.com/open-webui/open-webui/issues/33472)
 
 ### Changed
 
