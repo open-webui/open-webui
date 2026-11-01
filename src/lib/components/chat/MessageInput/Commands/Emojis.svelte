@@ -64,15 +64,15 @@
 </script>
 
 {#if filteredItems.length > 0}
-	<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+	<div class="app-muted mb-0.5 px-2 pt-1 pb-0.5 text-[0.625rem] leading-none">
 		{$i18n.t('Emojis')}
 	</div>
 
 	{#each filteredItems as emoji, emojiIdx}
 		<button
-			class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {emojiIdx ===
+			class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {emojiIdx ===
 			selectedIdx
-				? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
+				? 'app-interactive-active selected-command-option-button'
 				: ''}"
 			type="button"
 			on:click={() => {
@@ -84,14 +84,16 @@
 			on:focus={() => {}}
 			data-selected={emojiIdx === selectedIdx}
 		>
-			<div class="flex min-w-0 items-center gap-2 text-black dark:text-gray-100">
-				<img
-					src="{WEBUI_BASE_URL}/assets/emojis/{emoji.name.toLowerCase()}.svg"
-					alt={emoji.name}
-					class="size-4.5 flex-shrink-0"
-					loading="lazy"
-				/>
-				<div class="truncate text-[0.8125rem]">
+			<div class="flex w-full min-w-0 items-center gap-2">
+				<div class="flex w-4 shrink-0 items-center justify-center">
+					<img
+						src="{WEBUI_BASE_URL}/assets/emojis/{emoji.name.toLowerCase()}.svg"
+						alt={emoji.name}
+						class="size-3.5"
+						loading="lazy"
+					/>
+				</div>
+				<div class="truncate min-w-0 flex-1">
 					:{emoji.shortCodes[0]}:
 				</div>
 			</div>

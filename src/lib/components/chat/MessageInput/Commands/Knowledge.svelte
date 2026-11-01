@@ -156,7 +156,7 @@
 
 		{#if !['youtube', 'web'].includes(item.type)}
 			<button
-				class="flex h-6 w-full items-center justify-between rounded-xl px-2 text-left text-xs transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {idx ===
+				class="flex h-6 w-full items-center justify-between rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {idx ===
 				selectedIdx
 					? 'app-interactive-active selected-command-option-button'
 					: ''}"
@@ -210,7 +210,7 @@
 
 	{#if webUploadEnabled && isYoutubeUrl(query)}
 		<button
-			class="flex h-6 w-full items-center rounded-xl app-interactive-active px-2 text-left text-xs transition-colors duration-75 selected-command-option-button"
+			class="flex h-6 w-full items-center rounded-xl app-interactive-active px-2 text-left text-[0.8125rem] transition-colors duration-75 selected-command-option-button"
 			type="button"
 			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'youtube')}
 			on:click={() => {
@@ -242,7 +242,7 @@
 		</button>
 	{:else if webUploadEnabled && query.startsWith('http')}
 		<button
-			class="flex h-6 w-full items-center rounded-xl app-interactive-active px-2 text-left text-xs transition-colors duration-75 selected-command-option-button"
+			class="flex h-6 w-full items-center rounded-xl app-interactive-active px-2 text-left text-[0.8125rem] transition-colors duration-75 selected-command-option-button"
 			type="button"
 			data-selected={selectedIdx === filteredItems.findIndex((i) => i.type === 'web')}
 			on:click={() => {
