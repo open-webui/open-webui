@@ -429,7 +429,7 @@
 					bind:this={iframe}
 					src={frameUrl}
 					title={$i18n.t('Browser')}
-					class="block h-full w-full border-0 bg-white dark:bg-gray-900"
+					class="block h-full w-full border-0 bg-white"
 					sandbox="allow-scripts{!session && ($settings?.terminalPreviewAllowSameOrigin ?? false)
 						? ' allow-same-origin'
 						: ''} allow-forms allow-popups allow-modals allow-downloads"

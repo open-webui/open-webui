@@ -182,7 +182,9 @@
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
-			document.getElementById(domId(id))?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+			document
+				.getElementById(domId(id))
+				?.parentElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
 		);
 	}
 
