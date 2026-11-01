@@ -78,7 +78,7 @@ For Docker Compose, Kubernetes, and other setups, see the [installation docs](ht
 
 ## Support
 
-Ask questions in [Discord](https://discord.gg/5rJgQTnV4s) or [open an issue](https://github.com/open-webui/open-webui/issues).
+[Open an issue](https://github.com/open-webui/open-webui/issues), [start a discussion](https://github.com/open-webui/open-webui/discussions), or join us on [Discord](https://discord.gg/5rJgQTnV4s).
 
 ## Security
 
