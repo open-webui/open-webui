@@ -62,10 +62,6 @@ See the [Docker installation guide](https://docs.openwebui.com/getting-started/q
 
 We offer various installation alternatives, including non-Docker native installation methods, Docker Compose, Kustomize, and Helm. Visit our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/) or join our [Discord community](https://discord.gg/5rJgQTnV4s) for comprehensive guidance.
 
-### Troubleshooting and Updates
-
-See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
-
 Passionate about open-source AI? [Join our team →](https://careers.openwebui.com/)
 
 > [!TIP]
@@ -75,11 +71,15 @@ For more information, be sure to check out our [Open WebUI Documentation](https:
 
 ## Ecosystem
 
-- [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals)
-- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb)
-- [Open WebUI Computer](https://github.com/open-webui/computer)
+- [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals): The action layer that turns Open WebUI into a full agent harness, with enterprise orchestration for per-user workspaces.
+- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Mirror folders, repos, buckets, and wikis into Open WebUI Knowledge Bases with incremental sync.
+- [Open WebUI Computer](https://github.com/open-webui/computer): Your computer in any browser: files, editor, terminal, git, and optional AI agents, running on your real machine.
 
-See the [documentation](https://docs.openwebui.com/) for details.
+See the [ecosystem documentation](https://docs.openwebui.com/ecosystem/) for details.
+
+## Troubleshooting and Updates
+
+See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
 
 ---
 
