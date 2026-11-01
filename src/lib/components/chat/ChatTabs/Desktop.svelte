@@ -24,6 +24,15 @@
 	let connecting = false;
 	let retry: ReturnType<typeof setTimeout>;
 
+	const syncFullscreenCursor = () => {
+		const cursor = viewer?._cursor._canvas;
+		// noVNC's touch cursor lives on body, outside the fullscreen panel.
+		if (cursor?.isConnected) (fullscreen ? container : document.body).appendChild(cursor);
+	};
+	const fullscreenChanged = () => {
+		fullscreen = document.fullscreenElement === container;
+		syncFullscreenCursor();
+	};
 	const toggleFullscreen = async () => {
 		try {
 			if (document.fullscreenElement === container) await document.exitFullscreen();
@@ -55,11 +64,19 @@
 			socket = openTerminalSocket(connection, chatId, '/desktop/stream', (channel) => {
 				if (version !== generation) return;
 				viewer = new RFB(surface, channel);
+				const cursor = viewer._cursor;
+				const detachCursor = cursor.detach.bind(cursor);
+				cursor.detach = () => {
+					// noVNC removes this canvas from body, including on a server disconnect.
+					if (cursor._canvas.parentElement === container) document.body.appendChild(cursor._canvas);
+					detachCursor();
+				};
 				viewer.scaleViewport = true;
 				viewer.resizeSession = false;
 				viewer.qualityLevel = 6;
 				viewer.addEventListener('connect', () => {
 					status = '';
+					syncFullscreenCursor();
 				});
 				viewer.addEventListener('securityfailure', () => {
 					error = $i18n.t('Desktop connection failed.');
@@ -110,9 +127,7 @@
 	});
 </script>
 
-<svelte:document
-	on:fullscreenchange={() => (fullscreen = document.fullscreenElement === container)}
-/>
+<svelte:document on:fullscreenchange={fullscreenChanged} />
 
 <div bind:this={container} class="relative h-full w-full min-h-0 bg-white dark:bg-gray-900">
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -154,12 +169,12 @@
 	{#if fullscreenEnabled}
 		<button
 			type="button"
-			class="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/90 text-gray-600 shadow-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:bg-gray-900/90 dark:text-gray-300 dark:hover:bg-gray-800"
+			class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-gray-400/70 hover:bg-white/80 hover:text-gray-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-gray-900/80 dark:hover:text-gray-200 dark:focus-visible:bg-gray-900/80"
 			aria-label={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			title={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			on:click={toggleFullscreen}
 		>
-			<Icon name={fullscreen ? 'collapse' : 'expand'} size={16} />
+			<Icon name={fullscreen ? 'collapse' : 'expand'} size={12} />
 		</button>
 	{/if}
 	{#if overlay}<div class="absolute inset-0"></div>{/if}
