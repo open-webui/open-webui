@@ -152,7 +152,7 @@
 		"shiki": "^4.0.1",
 		"socket.io-client": "^4.8.3",
 		"sortablejs": "^1.15.6",
-		"sql.js": "^1.14.1",
+		"sql.js": "^1.15.2",
 		"svelte-sonner": "^0.3.19",
 		"three": "0.186.1",
 		"tippy.js": "^6.3.7",
