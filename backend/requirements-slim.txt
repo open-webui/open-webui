@@ -67,7 +67,7 @@ chardet==7.4.3
 Markdown==3.10.2
 beautifulsoup4==4.14.3
 lxml==6.1.1
-validators==0.35.0
+validators==0.36.0
 psutil==7.2.2
 
 pillow==13.0.0
