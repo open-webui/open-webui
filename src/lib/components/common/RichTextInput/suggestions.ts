@@ -50,6 +50,7 @@ export function getSuggestionRenderer(Component: any, ComponentProps = {}) {
 					interactive: true,
 					trigger: 'manual',
 					theme: 'transparent',
+					maxWidth: 'none',
 					placement: 'top-start',
 					offset: [-10, -2],
 					arrow: false,

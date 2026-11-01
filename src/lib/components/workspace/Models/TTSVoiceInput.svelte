@@ -59,11 +59,11 @@
 		if (!inputElement || !popupElement) return;
 
 		const rect = inputElement.getBoundingClientRect();
-		const width = Math.min(192, rect.width, window.innerWidth - 16);
+		popupElement.style.width = `${rect.width}px`;
+		const width = popupElement.offsetWidth;
 
 		popupElement.style.top = `${rect.bottom + 4}px`;
 		popupElement.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))}px`;
-		popupElement.style.width = `${width}px`;
 	};
 
 	const selectVoice = (voice: Voice) => {
@@ -173,7 +173,7 @@
 		use:portal
 		bind:this={popupElement}
 		id={listboxId}
-		class="fixed max-h-48 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0.5 shadow-lg dark:border-gray-800 dark:bg-gray-850"
+		class="fixed max-w-[min(12rem,calc(100vw-1rem))] max-h-48 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0.5 shadow-lg dark:border-gray-800 dark:bg-gray-850"
 		role="listbox"
 		style="z-index: 9999; top: 0; left: 0;"
 	>

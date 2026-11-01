@@ -46,7 +46,7 @@
 		if (!inputElement || !popupElement) return;
 		const rect = inputElement.getBoundingClientRect();
 		popupElement.style.top = `${rect.bottom + 4}px`;
-		popupElement.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 200))}px`;
+		popupElement.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - popupElement.offsetWidth - 8))}px`;
 	};
 
 	const addTag = (tagName = inputValue) => {

@@ -757,6 +757,10 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	@apply bg-transparent p-0 m-0 text-inherit;
 }
 
+.tippy-box[data-theme~='transparent'] > .tippy-content {
+	padding: 0;
+}
+
 /* This gives the remote user caret. The colors are automatically overwritten*/
 .ProseMirror-yjs-cursor {
 	position: relative;
