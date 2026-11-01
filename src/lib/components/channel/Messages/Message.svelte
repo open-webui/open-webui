@@ -15,6 +15,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
+	import { autoUpdate } from '@floating-ui/dom';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -69,6 +70,56 @@
 	export let onReaction: Function = () => {};
 
 	let showButtons = false;
+
+	// Preserve the CSS anchor while letting actions escape the message scroll container.
+	const portalActions = (node: HTMLElement, keepOpen: boolean) => {
+		const anchor = node.parentElement!;
+		const messageElement = anchor.parentElement!;
+		let cleanup: (() => void) | undefined;
+		let destroyed = false;
+		document.body.appendChild(node);
+
+		const update = () => {
+			if (destroyed) return;
+			const visible =
+				keepOpen ||
+				[messageElement, node].some(
+					(element) => element.matches(':hover') || element.contains(document.activeElement)
+				);
+			node.style.opacity = visible ? '1' : '0';
+			node.style.pointerEvents = visible ? 'auto' : 'none';
+			if (visible && !cleanup) {
+				cleanup = autoUpdate(messageElement, node, () => {
+					const rect = anchor.getBoundingClientRect();
+					node.style.left = `${rect.right - node.offsetWidth}px`;
+					node.style.top = `${rect.top}px`;
+				});
+			} else if (!visible) {
+				cleanup?.();
+				cleanup = undefined;
+			}
+		};
+		const scheduleUpdate = () => queueMicrotask(update);
+		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
+		for (const element of [messageElement, node]) {
+			for (const event of events) element.addEventListener(event, scheduleUpdate);
+		}
+		update();
+		return {
+			update(value: boolean) {
+				keepOpen = value;
+				update();
+			},
+			destroy() {
+				destroyed = true;
+				cleanup?.();
+				for (const element of [messageElement, node]) {
+					for (const event of events) element.removeEventListener(event, scheduleUpdate);
+				}
+				node.remove();
+			}
+		};
+	};
 
 	let edit = false;
 	let editedContent = null;
@@ -219,9 +270,11 @@
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
 			{#if !edit && !disabled && !$$slots.header}
-				<div class="absolute {showButtons ? '' : 'hover-reveal'} right-1 top-1 z-30">
+				<div class="absolute right-1 -top-3">
 					<div
-						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						use:portalActions={showButtons}
+						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						style="opacity: 0; pointer-events: none;"
 					>
 						<slot name="actions">
 							{#if onReaction}
