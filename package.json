@@ -29,7 +29,7 @@
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "3.2.2",
-		"@sveltejs/adapter-static": "^3.0.2",
+		"@sveltejs/adapter-static": "^4.0.0",
 		"@sveltejs/kit": "^2.5.27",
 		"@sveltejs/vite-plugin-svelte": "^4.0.0",
 		"@tailwindcss/container-queries": "^0.1.1",
