@@ -54,6 +54,7 @@
 	import Drawer from '../common/Drawer.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
+	import GitBar from './ChatTabs/GitBar.svelte';
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatTabs/Embeds.svelte';
 	import FileNav from './FileNav.svelte';
@@ -159,6 +160,16 @@
 	$: activeTabId = tabs.activeId;
 	$: activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
 	$: terminalContext = fileContexts[tabs.activeId] ?? activeTab?.context ?? null;
+	$: gitConnection =
+		mounted &&
+		tabs.tabs.length > 0 &&
+		(tabs.tabs.find((tab) => tab.id === tabs.activeId)?.connection ??
+			resolveTerminalConnection(
+				tabs.tabs.find((tab) => tab.id === tabs.activeId)?.terminalId ?? $selectedTerminalId,
+				$terminalServers ?? [],
+				directTerminals,
+				localStorage.token ?? ''
+			));
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -289,6 +300,7 @@
 			tabs = removeTab(tabs, id);
 			delete dirtyFiles[id];
 			delete fileContexts[id];
+			if (!tabs.tabs.length) showTabs.set(false);
 			await tick();
 			document.getElementById(domId(tabs.activeId))?.focus();
 		} finally {
@@ -886,6 +898,16 @@
 				{$i18n.t('Open a tab using the + menu.')}
 			</div>{/if}
 	</div>
+	{#if gitConnection}
+		<GitBar
+			connection={gitConnection}
+			{chatId}
+			directory={terminalContext?.currentDirectory ?? '.'}
+			active={!!$showTabs}
+			onOpenFile={(path) => openFile(path, gitConnection.selector)}
+			onOpenDirectory={(path) => openFiles(gitConnection.selector, path)}
+		/>
+	{/if}
 </div>
 
 {#if !largeScreen}
