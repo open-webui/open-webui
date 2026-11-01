@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import FrameCanvas from './FrameCanvas.svelte';
 	import type RFB from '@novnc/novnc';
 	export let streamUrl: string;
 	export let active = true;
@@ -15,6 +16,7 @@
 	export let onStatus: (status: string) => void = () => {};
 	let surface: HTMLDivElement;
 	let frame = '';
+	let frames: FrameCanvas;
 	let transport = '';
 	let vncSurface: HTMLDivElement;
 	let viewer: RFB | null = null;
@@ -109,7 +111,7 @@
 		(e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
 	const mouse = (event: MouseEvent, type: string) => {
 		if (transport === 'vnc') return;
-		const image = surface.querySelector(transport === 'vnc' ? 'canvas' : 'img');
+		const image = surface.querySelector(transport === 'jpeg' ? 'img' : 'canvas');
 		if (!image) return;
 		const box = image.getBoundingClientRect();
 		event.preventDefault();
@@ -165,8 +167,11 @@
 			const url = new URL(streamUrl, window.location.origin);
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			socket = new WebSocket(url);
+			const channel = socket;
+			socket.binaryType = 'arraybuffer';
 			socket.onopen = () => {
 				onError('');
+				command('frames');
 				resize();
 				command('quality', { quality });
 				command('visibility', { visible: active });
@@ -175,8 +180,17 @@
 					pendingNavigation = null;
 				}
 			};
-			socket.onmessage = (event) => {
+			socket.onmessage = async (event) => {
 				try {
+					if (event.data instanceof ArrayBuffer) {
+						await tick();
+						if (disposed || socket !== channel) return;
+						await frames.draw(event.data);
+						if (disposed || socket !== channel) return;
+						command('frameAck');
+						onStatus('');
+						return;
+					}
 					const message = JSON.parse(event.data);
 					if (message.type === 'frame' || message.type === 'state') {
 						hasConnected = true;
@@ -189,8 +203,8 @@
 						onState(message);
 						onError(message.error || '');
 					}
-				} catch {
-					/* Ignore malformed stream messages. */
+				} catch (error) {
+					onError(error instanceof Error ? error.message : String(error));
 				}
 			};
 			socket.onclose = (event) => {
@@ -247,7 +261,7 @@
 	on:wheel|preventDefault={(event) => {
 		if (transport === 'vnc') return;
 		const box = surface
-			.querySelector(transport === 'vnc' ? 'canvas' : 'img')
+			.querySelector(transport === 'jpeg' ? 'img' : 'canvas')
 			?.getBoundingClientRect();
 		if (!box) return;
 		command('mouse', {
@@ -262,6 +276,8 @@
 >
 	{#if transport === 'vnc'}
 		<div bind:this={vncSurface} class="vnc h-full w-full"></div>
+	{:else if transport === 'frames'}
+		<FrameCanvas bind:this={frames} />
 	{:else if frame}<img
 			src={frame}
 			alt="Browser page"

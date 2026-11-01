@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
+	import NativeDesktop from './NativeDesktop.svelte';
 	import { toast } from 'svelte-sonner';
 	import type RFB from '@novnc/novnc';
 	import Icon from '../FileNav/Icon.svelte';
@@ -16,6 +17,11 @@
 	let fullscreen = false;
 	let fullscreenEnabled = false;
 	let surface: HTMLDivElement;
+	let native: NativeDesktop;
+	let transport = 'vnc';
+	const send = (message: Record<string, unknown>) => {
+		if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
+	};
 	let socket: WebSocket | null = null;
 	let viewer: RFB | null = null;
 	let error = '';
@@ -58,30 +64,51 @@
 		error = '';
 		status = $i18n.t('Connecting…');
 		try {
-			const { default: RFB } = await import('@novnc/novnc');
-			await terminalRequest(connection, chatId, '/desktop');
+			const info = await terminalRequest(connection, chatId, '/desktop');
 			if (version !== generation) return;
-			socket = openTerminalSocket(connection, chatId, '/desktop/stream', (channel) => {
-				if (version !== generation) return;
-				viewer = new RFB(surface, channel);
-				const cursor = viewer._cursor;
-				const detachCursor = cursor.detach.bind(cursor);
-				cursor.detach = () => {
-					// noVNC removes this canvas from body, including on a server disconnect.
-					if (cursor._canvas.parentElement === container) document.body.appendChild(cursor._canvas);
-					detachCursor();
+			transport = info.transport ?? 'vnc';
+			await tick();
+			if (version !== generation) return;
+			if (transport === 'frames') {
+				socket = openTerminalSocket(connection, chatId, '/desktop/stream');
+				socket.onmessage = async (event) => {
+					if (version !== generation) return;
+					try {
+						await native.draw(event.data);
+						if (version !== generation) return;
+						send({ type: 'frameAck' });
+						status = '';
+					} catch (reason) {
+						if (version === generation)
+							error = reason instanceof Error ? reason.message : String(reason);
+					}
 				};
-				viewer.scaleViewport = true;
-				viewer.resizeSession = false;
-				viewer.qualityLevel = 6;
-				viewer.addEventListener('connect', () => {
-					status = '';
-					syncFullscreenCursor();
+			} else {
+				const { default: RFB } = await import('@novnc/novnc');
+				if (version !== generation) return;
+				socket = openTerminalSocket(connection, chatId, '/desktop/stream', (channel) => {
+					if (version !== generation) return;
+					viewer = new RFB(surface, channel);
+					const cursor = viewer._cursor;
+					const detachCursor = cursor.detach.bind(cursor);
+					cursor.detach = () => {
+						// noVNC removes this canvas from body, including on a server disconnect.
+						if (cursor._canvas.parentElement === container)
+							document.body.appendChild(cursor._canvas);
+						detachCursor();
+					};
+					viewer.scaleViewport = true;
+					viewer.resizeSession = false;
+					viewer.qualityLevel = 6;
+					viewer.addEventListener('connect', () => {
+						status = '';
+						syncFullscreenCursor();
+					});
+					viewer.addEventListener('securityfailure', () => {
+						error = $i18n.t('Desktop connection failed.');
+					});
 				});
-				viewer.addEventListener('securityfailure', () => {
-					error = $i18n.t('Desktop connection failed.');
-				});
-			});
+			}
 			socket.addEventListener('close', (event) => {
 				if (version !== generation) return;
 				viewer?.disconnect();
@@ -105,6 +132,10 @@
 		}
 	};
 	const paste = (text: string, shift = false) => {
+		if (transport === 'frames') {
+			send({ type: 'paste', text });
+			return;
+		}
 		if (!viewer) return;
 		viewer.clipboardPasteFrom(text);
 		viewer.sendKey(0xffe3, 'ControlLeft', true);
@@ -154,7 +185,9 @@
 					.catch(() => {});
 			}
 		}}
-	></div>
+	>
+		{#if transport === 'frames'}<NativeDesktop bind:this={native} {send} />{/if}
+	</div>
 	{#if status || error}
 		<div
 			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-sm text-gray-500 dark:bg-gray-900/90"
