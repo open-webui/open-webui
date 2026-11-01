@@ -516,7 +516,8 @@
 	}
 
 	$: if (chatId !== tabsChatId) {
-		if (tabsChatId !== null || !chatId) {
+		// A new chat keeps its tabs once its first message gives it an id.
+		if (tabsChatId || !chatId) {
 			tabs = emptyTabs();
 			dirtyFiles = {};
 			fileContexts = {};
