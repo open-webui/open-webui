@@ -689,9 +689,7 @@
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
 	class="h-full w-full min-h-0 flex flex-col"
-	style:--chat-tabs-dark-background={largeScreen
-		? 'var(--color-gray-900)'
-		: 'var(--color-gray-850)'}
+	style:--chat-tabs-dark-background={'var(--color-gray-900)'}
 	id="controls-container"
 >
 	<div class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none">
@@ -951,7 +949,7 @@
 				panelStyle={$mobile ? panelStyle : ''}
 				backdropStyle={$mobile ? backdropStyle : ''}
 				swipeSide={$mobile ? 'right' : undefined}
-				className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
+				className="min-h-[100dvh] !bg-white dark:!bg-gray-900"
 			>
 				<div use:preservePanel bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>
