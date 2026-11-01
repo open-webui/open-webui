@@ -216,7 +216,7 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, ticket: str, kind:
         connections = await Config.get('terminal_server.connections', []) or []
         connection = next((c for c in connections if c.get('id') == server_id), None)
         if (
-            kind not in ('ws', 'stream')
+            kind not in ('ws', 'stream', 'vnc')
             or not ENABLE_TOOL_SERVERS
             or not connection
             or not connection.get('enabled', True)
@@ -557,6 +557,11 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
 @router.websocket('/{server_id}/events')
 async def ws_events(ws: WebSocket, server_id: str):
     await _proxy_terminal_websocket(ws, server_id)
+
+
+@router.websocket('/{server_id}/desktop/stream')
+async def desktop_ws(ws: WebSocket, server_id: str):
+    await _proxy_terminal_websocket(ws, server_id, stream_path='desktop/stream')
 
 
 @router.websocket('/{server_id}/execute')

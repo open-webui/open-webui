@@ -81,6 +81,8 @@ export type ListeningPort = {
 
 export type TerminalFeatures = {
 	terminal?: boolean;
+	browser?: boolean;
+	desktop?: boolean;
 	git?: boolean;
 	events?: boolean;
 };

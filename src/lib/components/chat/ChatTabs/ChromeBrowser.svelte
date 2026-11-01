@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type RFB from '@novnc/novnc';
 	export let streamUrl: string;
 	export let active = true;
 	export let mobile = false;
@@ -14,6 +15,12 @@
 	export let onStatus: (status: string) => void = () => {};
 	let surface: HTMLDivElement;
 	let frame = '';
+	let transport = '';
+	let vncSurface: HTMLDivElement;
+	let viewer: RFB | null = null;
+	let vncSocket: WebSocket | null = null;
+	let vncGeneration = 0;
+	let vncRetry: ReturnType<typeof setTimeout>;
 	let width = 1024;
 	let height = 768;
 	let socket: WebSocket | null = null;
@@ -22,6 +29,58 @@
 	let attempts = 0;
 	let hasConnected = false;
 	let pendingNavigation: string | null = null;
+	const pressedModifiers = new Map<string, number>();
+	const releaseModifiers = () => {
+		for (const [code, keysym] of pressedModifiers) viewer?.sendKey(keysym, code, false);
+		pressedModifiers.clear();
+	};
+	const stopVnc = () => {
+		vncGeneration++;
+		clearTimeout(vncRetry);
+		releaseModifiers();
+		viewer?.disconnect();
+		viewer = null;
+		vncSocket?.close();
+		vncSocket = null;
+	};
+	const startVnc = async () => {
+		if (!active || disposed || vncSocket || transport !== 'vnc' || !vncSurface) return;
+		const generation = ++vncGeneration;
+		onError('');
+		onStatus('Connecting…');
+		try {
+			const { default: RFB } = await import('@novnc/novnc');
+			if (generation !== vncGeneration) return;
+			const url = new URL(streamUrl.replace(/\/stream$/, '/vnc'), window.location.origin);
+			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+			const channel = new WebSocket(url);
+			vncSocket = channel;
+			channel.onopen = () => {
+				if (generation !== vncGeneration) return;
+				viewer = new RFB(vncSurface, channel);
+				viewer.scaleViewport = true;
+				viewer.resizeSession = false;
+				viewer.qualityLevel = { low: 4, balanced: 6, crisp: 9 }[quality];
+				viewer.addEventListener('connect', () => onStatus(''));
+			};
+			channel.onclose = (event) => {
+				if (generation !== vncGeneration) return;
+				stopVnc();
+				if (event.code >= 4000 && event.code < 5000) {
+					onStatus('');
+					onError('Browser opened in another viewer. Reopen this tab.');
+				} else if (active && !disposed) {
+					onStatus('Reconnecting…');
+					vncRetry = setTimeout(startVnc, 2000);
+				}
+			};
+		} catch (error) {
+			if (generation === vncGeneration) {
+				onStatus('');
+				onError(error instanceof Error ? error.message : String(error));
+			}
+		}
+	};
 	export const command = (type: string, values: Record<string, unknown> = {}) => {
 		if (socket?.readyState === WebSocket.OPEN) {
 			socket.send(JSON.stringify({ type, ...values }));
@@ -43,10 +102,14 @@
 		resize();
 	}
 	$: if (socket) command('quality', { quality });
+	$: if (viewer) viewer.qualityLevel = { low: 4, balanced: 6, crisp: 9 }[quality];
+	$: if (active && transport === 'vnc' && vncSurface) void startVnc();
+	$: if (!active) stopVnc();
 	const modifiers = (e: MouseEvent | KeyboardEvent) =>
 		(e.altKey ? 1 : 0) | (e.ctrlKey ? 2 : 0) | (e.metaKey ? 4 : 0) | (e.shiftKey ? 8 : 0);
 	const mouse = (event: MouseEvent, type: string) => {
-		const image = surface.querySelector('img');
+		if (transport === 'vnc') return;
+		const image = surface.querySelector(transport === 'vnc' ? 'canvas' : 'img');
 		if (!image) return;
 		const box = image.getBoundingClientRect();
 		event.preventDefault();
@@ -62,6 +125,17 @@
 		});
 	};
 	const key = (event: KeyboardEvent, type: string) => {
+		if (transport === 'vnc') {
+			// Keep browser editing shortcuts on CDP; VNC handles pointer input directly.
+			event.stopPropagation();
+			const keysym = { Shift: 0xffe1, Control: 0xffe3, Alt: 0xffe9, Meta: 0xffeb }[event.key];
+			if (keysym) {
+				const down = type === 'keyDown';
+				viewer?.sendKey(keysym, event.code, down);
+				if (down) pressedModifiers.set(event.code, keysym);
+				else pressedModifiers.delete(event.code);
+			}
+		}
 		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') return;
 		event.preventDefault();
 		const editing =
@@ -107,10 +181,11 @@
 					if (message.type === 'frame' || message.type === 'state') {
 						hasConnected = true;
 						attempts = 0;
-						onStatus('');
+						if (message.type === 'frame' || message.transport !== 'vnc') onStatus('');
 					}
 					if (message.type === 'frame') frame = `data:image/jpeg;base64,${message.data}`;
 					if (message.type === 'state') {
+						transport = message.transport ?? 'jpeg';
 						onState(message);
 						onError(message.error || '');
 					}
@@ -120,6 +195,8 @@
 			};
 			socket.onclose = (event) => {
 				if (disposed) return;
+				stopVnc();
+				transport = '';
 				if (event.code >= 4000 && event.code < 5000) {
 					onStatus('');
 					onError(
@@ -142,10 +219,13 @@
 			onStatus('');
 			clearTimeout(retry);
 			observer.disconnect();
+			stopVnc();
 			socket?.close();
 		};
 	});
 </script>
+
+<svelte:window on:blur={releaseModifiers} />
 
 <div
 	bind:this={surface}
@@ -153,8 +233,9 @@
 	tabindex="0"
 	role="application"
 	aria-label="Browser page"
-	on:keydown={(event) => key(event, 'keyDown')}
-	on:keyup={(event) => key(event, 'keyUp')}
+	on:keydown|capture={(event) => key(event, 'keyDown')}
+	on:keyup|capture={(event) => key(event, 'keyUp')}
+	on:blur|capture={releaseModifiers}
 	on:paste={(event) => {
 		event.preventDefault();
 		command('paste', { text: event.clipboardData?.getData('text/plain') ?? '' });
@@ -164,7 +245,10 @@
 	on:mousemove={(event) => mouse(event, 'mouseMoved')}
 	on:contextmenu|preventDefault
 	on:wheel|preventDefault={(event) => {
-		const box = surface.querySelector('img')?.getBoundingClientRect();
+		if (transport === 'vnc') return;
+		const box = surface
+			.querySelector(transport === 'vnc' ? 'canvas' : 'img')
+			?.getBoundingClientRect();
 		if (!box) return;
 		command('mouse', {
 			event: 'mouseWheel',
@@ -176,7 +260,9 @@
 		});
 	}}
 >
-	{#if frame}<img
+	{#if transport === 'vnc'}
+		<div bind:this={vncSurface} class="vnc h-full w-full"></div>
+	{:else if frame}<img
 			src={frame}
 			alt="Browser page"
 			draggable="false"
@@ -184,3 +270,12 @@
 			style:aspect-ratio={`${width}/${height}`}
 		/>{/if}
 </div>
+
+<style>
+	.vnc > :global(div) {
+		background: transparent !important;
+	}
+	.vnc :global(canvas) {
+		margin: 0 auto !important;
+	}
+</style>

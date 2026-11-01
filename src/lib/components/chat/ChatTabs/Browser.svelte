@@ -297,6 +297,7 @@
 			<input
 				bind:this={addressInput}
 				bind:value={urlInput}
+				on:click={() => addressInput.select()}
 				aria-label={$i18n.t('URL')}
 				placeholder="https://example.com"
 				spellcheck="false"

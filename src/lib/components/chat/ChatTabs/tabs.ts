@@ -6,6 +6,7 @@ export type PanelTabKind =
 	| 'file'
 	| 'terminal'
 	| 'browser'
+	| 'desktop'
 	| 'artifacts'
 	| 'preview'
 	| 'voice'
