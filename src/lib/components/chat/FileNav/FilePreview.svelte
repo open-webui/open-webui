@@ -370,14 +370,14 @@
 			</div>
 			{#if excelSheetNames.length > 1}
 				<div
-					class="flex items-center gap-1 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 overflow-x-auto"
+					class="flex items-center gap-1 py-1.5 px-1.5 border-t border-gray-100/40 dark:border-gray-800/25 overflow-x-auto"
 				>
 					{#each excelSheetNames as sheet}
 						<button
-							class="shrink-0 px-3 py-1 text-xs rounded-md transition-colors
+							class="shrink-0 px-2 py-1 text-xs rounded-md transition-colors
 								{selectedExcelSheet === sheet
-								? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-normal'
-								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200 font-normal'
+								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 							on:click={() => onSheetChange?.(sheet)}
 						>
 							{sheet}
