@@ -68,7 +68,6 @@
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
-	export let gitDirectory: string | null = null;
 	export let gitConnection: TerminalConnection | null = null;
 	export let gitDiffMode: 'unified' | 'split' = 'unified';
 	export let gitHideWhitespace = false;
@@ -1024,9 +1023,10 @@
 		selectedFileWritable = true;
 		clearFilePreview();
 		clearSelection();
-		if (!options.preserveTree || directory !== currentPath) gitDirectory = directory;
+		if (!options.preserveTree || directory !== currentPath || !terminalContext) {
+			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		}
 		currentPath = directory;
-		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		savedPath = directory;
 		pushNavHistory(directory);
 
@@ -1089,7 +1089,7 @@
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
-		gitDirectory = directory;
+		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		saveTreeState();
 
 		const result = await fetchExpandedDir(directory);
@@ -2108,6 +2108,7 @@
 			}}
 			breadcrumbs={buildBreadcrumbs(currentPath)}
 			{selectedFile}
+			fileSize={openedFile?.size ?? pendingFile?.size}
 			{loading}
 			{showSearch}
 			onToggleSearch={toggleSearch}

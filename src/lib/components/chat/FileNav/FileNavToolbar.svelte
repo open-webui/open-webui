@@ -10,12 +10,14 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Icon from './Icon.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import { formatFileSize } from '$lib/utils';
 
 	export let dragType = 'application/x-terminal-file-move';
 	const i18n: any = getContext('i18n');
 
 	export let breadcrumbs: { label: string; path: string }[] = [];
 	export let selectedFile: string | null = null;
+	export let fileSize: number | undefined = undefined;
 	export let loading = false;
 	export let writable = true;
 	export let viewMode: 'grid' | 'list' | null = null;
@@ -159,6 +161,9 @@
 			{/if}
 		{/if}
 	</div>
+	{#if selectedFile && fileSize !== undefined}
+		<span class="shrink-0 text-[0.6875rem] text-gray-400">{formatFileSize(fileSize)}</span>
+	{/if}
 	{#if selectedFile && (gitFile || gitDiffOpen)}
 		<Tooltip content={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}>
 			<button
