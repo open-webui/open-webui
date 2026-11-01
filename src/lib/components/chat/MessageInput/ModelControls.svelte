@@ -124,7 +124,7 @@
 <Dropdown
 	align="end"
 	visualViewportAware
-	maxHeight="min(18rem, calc(100dvh - 2rem))"
+	maxHeight="min(21rem, calc(100dvh - 2rem))"
 	contentClass="overscroll-contain scrollbar-thin"
 	onOpenChange={(open) => {
 		active = null;
@@ -142,7 +142,7 @@
 	</Tooltip>
 	<div slot="content">
 		<DropdownMenu
-			className="w-70 max-w-[calc(100vw-2rem)] max-h-[min(18rem,calc(100dvh-2rem))] overflow-y-auto overscroll-contain scrollbar-thin"
+			className="w-70 max-w-[calc(100vw-2rem)] max-h-[min(21rem,calc(100dvh-2rem))] overflow-y-auto overscroll-contain scrollbar-thin"
 		>
 			{#if $mobile && active}
 				<button type="button" aria-label={$i18n.t('Back')} on:click={back}>
