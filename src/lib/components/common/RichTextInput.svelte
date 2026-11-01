@@ -213,7 +213,6 @@
 					DOMSerializer.fromSchema(editor.schema).nodes[node.type.name](node)
 				);
 				(pre as HTMLElement).style.margin = '0';
-				(pre as HTMLElement).style.paddingTop = '2.75rem';
 				const button = document.createElement('button');
 				button.type = 'button';
 				button.contentEditable = 'false';
