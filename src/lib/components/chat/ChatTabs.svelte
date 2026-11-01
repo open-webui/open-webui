@@ -266,7 +266,8 @@
 			label: port ? `localhost:${port}` : $i18n.t('Browser'),
 			path: url,
 			terminalId: selector ?? undefined,
-			browserBaseUrl: proxyBase
+			browserBaseUrl: proxyBase,
+			connection: connection ?? undefined
 		});
 	};
 	const closeTab = async (id: string) => {
@@ -305,13 +306,21 @@
 			delayOnTouchOnly: true,
 			touchStartThreshold: 5,
 			ghostClass: 'opacity-40',
-			setData: (transfer, item) =>
+			setData: (transfer: DataTransfer, item: HTMLElement) =>
 				transfer.setData('application/x-chat-panel-tab', item.dataset.panelTab ?? ''),
-			onStart: ({ item }) => {
+			onStart: ({ item }: { item: HTMLElement }) => {
 				nextSibling = item.nextSibling;
 				dragged = true;
 			},
-			onEnd: ({ item, from, newDraggableIndex }) => {
+			onEnd: ({
+				item,
+				from,
+				newDraggableIndex
+			}: {
+				item: HTMLElement;
+				from: HTMLElement;
+				newDraggableIndex?: number;
+			}) => {
 				// Restore the DOM before Svelte reconciles its keyed tabs.
 				from.insertBefore(item, nextSibling?.parentNode === from ? nextSibling : null);
 				if (newDraggableIndex != null)
@@ -574,10 +583,11 @@
 		largeScreen = event.matches;
 	};
 
-	const onMouseDown = () => {
-		dragged = true;
+	const onPointerDown = (event: PointerEvent) => {
+		if (event.target instanceof Element && event.target.closest('#controls-resizer'))
+			dragged = true;
 	};
-	const onMouseUp = () => {
+	const onPointerUp = () => {
 		dragged = false;
 	};
 
@@ -602,8 +612,9 @@
 		};
 		init();
 
-		document.addEventListener('mousedown', onMouseDown);
-		document.addEventListener('mouseup', onMouseUp);
+		document.addEventListener('pointerdown', onPointerDown);
+		document.addEventListener('pointerup', onPointerUp);
+		document.addEventListener('pointercancel', onPointerUp);
 
 		return () => {
 			unsubscribeVisibility();
@@ -613,8 +624,9 @@
 				showTabs.set(false);
 			}
 			mediaQuery.removeEventListener('change', handleMediaQuery);
-			document.removeEventListener('mousedown', onMouseDown);
-			document.removeEventListener('mouseup', onMouseUp);
+			document.removeEventListener('pointerdown', onPointerDown);
+			document.removeEventListener('pointerup', onPointerUp);
+			document.removeEventListener('pointercancel', onPointerUp);
 		};
 	});
 </script>
@@ -666,6 +678,7 @@
 		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
 			<div
 				role="tablist"
+				data-swipe-no-gesture
 				use:sortableTabs
 				tabindex="-1"
 				aria-label={$i18n.t('Tabs')}
@@ -790,6 +803,9 @@
 				{:else if tab.kind === 'browser'}
 					<Browser
 						baseUrl={tab.browserBaseUrl ?? ''}
+						connection={tab.connection ?? null}
+						{chatId}
+						active={!!$showTabs && tabs.activeId === tab.id}
 						initialUrl={tab.path ?? ''}
 						overlay={dragged}
 						onNavigate={(path, label) => {
@@ -854,7 +870,6 @@
 						showTerminalDock={tab.kind === 'files'}
 						onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
 						onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
-						onOpenPort={(port, baseUrl) => openBrowser(port, tab.terminalId, baseUrl)}
 						{onAskFile}
 						overlay={dragged}
 						{chatId}

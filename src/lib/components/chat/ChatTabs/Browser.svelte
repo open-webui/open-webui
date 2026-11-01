@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { getPortProxyUrl } from '$lib/apis/terminal';
+	import { getPortProxyUrl, type TerminalConnection } from '$lib/apis/terminal';
+	import PortList from '../FileNav/PortList.svelte';
 	import { settings } from '$lib/stores';
 	import Icon from '../FileNav/Icon.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 
 	const i18n = getContext<any>('i18n');
 	export let baseUrl = '';
+	export let connection: TerminalConnection | null = null;
+	export let chatId: string | null = null;
+	export let active = true;
 	export let initialUrl = '';
 	export let overlay = false;
 	export let onNavigate: (url: string, label: string) => void = () => {};
@@ -192,8 +196,25 @@
 						: ''} allow-forms allow-popups allow-modals allow-downloads"
 					on:load={loaded}
 				></iframe>{/key}
-		{:else}<div class="flex h-full items-center justify-center text-xs text-gray-400">
-				{$i18n.t('Enter a URL to browse.')}
+		{:else}<div class="flex h-full overflow-y-auto px-6 py-8">
+				<div class="m-auto w-full max-w-xs">
+					<div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+						<Icon name="browser" size={18} strokeWidth={1.4} class="text-gray-400" />
+						{$i18n.t('Browser')}
+					</div>
+					{#if connection}
+						<div class="mt-6">
+							<PortList
+								baseUrl={connection.baseUrl}
+								previewBaseUrl={baseUrl}
+								apiKey={connection.key}
+								{chatId}
+								{active}
+								on:previewPort={(event) => navigate(`http://localhost:${event.detail}/`)}
+							/>
+						</div>
+					{/if}
+				</div>
 			</div>{/if}
 	</div>
 </div>

@@ -52,8 +52,6 @@
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
-	import PortList from './FileNav/PortList.svelte';
-	import Browser from './ChatTabs/Browser.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
 	// Directory and preview state belong to this tab, including its terminal connection.
@@ -73,7 +71,6 @@
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
-	export let onOpenPort: ((port: number, baseUrl: string) => void) | null = null;
 	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
 
 	export let chatId: string | null = null;
@@ -233,10 +230,6 @@
 		return structuredClone(openedFile);
 	};
 
-	$: if (previewPort !== null && openedFile) {
-		openedFile = null;
-		if (terminalContext) terminalContext = { ...terminalContext, file: null };
-	}
 	$: {
 		(selectedFile, effectiveTerminalId, chatId);
 		fileAsk = null;
@@ -555,7 +548,6 @@
 	// ── File preview state ───────────────────────────────────────────────
 	let selectedFile: string | null = null;
 	let selectedFileWritable = true;
-	let previewPort: number | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
 	let fileVideoUrl: string | null = null;
@@ -681,7 +673,6 @@
 			comparison = null;
 			pinnedComparison = null;
 		}
-		if (chatChanged || terminalChanged || !terminal) previewPort = null;
 
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
@@ -795,13 +786,12 @@
 		terminal: { url: string; key: string } | null,
 		path: string,
 		hiddenVisible: boolean,
-		activeFile: string | null,
-		activePort: number | null
+		activeFile: string | null
 	) => {
 		clearMatchRequest();
 		matchRequestId += 1;
 		const requestId = matchRequestId;
-		if (!query || !terminal || activeFile || activePort !== null) {
+		if (!query || !terminal || activeFile) {
 			resetMatches();
 			return;
 		}
@@ -841,14 +831,7 @@
 		}, 200);
 	};
 
-	$: queueFileSearch(
-		searchText,
-		selectedTerminal,
-		currentPath,
-		showHidden,
-		selectedFile,
-		previewPort
-	);
+	$: queueFileSearch(searchText, selectedTerminal, currentPath, showHidden, selectedFile);
 
 	const loadMoreMatches = async () => {
 		const offset = nextMatchOffset;
@@ -1018,7 +1001,6 @@
 		error = null;
 		selectedFile = null;
 		selectedFileWritable = true;
-		previewPort = null;
 		clearFilePreview();
 		clearSelection();
 		currentPath = directory;
@@ -2094,249 +2076,247 @@
 			</div>
 		{/if}
 
-		{#if previewPort === null}
-			<FileNavToolbar
-				breadcrumbs={buildBreadcrumbs(currentPath)}
-				{selectedFile}
-				{loading}
-				{showSearch}
-				onToggleSearch={toggleSearch}
-				writable={currentWritable}
-				canGoBack={!initialFile && canGoBack}
-				canGoForward={!initialFile && canGoForward}
-				{sortBy}
-				{sortAsc}
-				showDateAdded
-				{showHidden}
-				viewMode={isSearching ? null : viewMode}
-				onViewModeChange={changeViewMode}
-				onGoBack={goBack}
-				onGoForward={goForward}
-				onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
-				onRefresh={() => {
-					if (selectedFile) {
-						const fileName = selectedFile.split('/').pop() ?? '';
-						openEntry({ name: fileName, type: 'file', size: 0 });
-					} else {
-						refreshBrowser();
-					}
-				}}
-				onNewFolder={startNewFolder}
-				onNewFile={startNewFile}
-				onUploadFiles={handleUploadFiles}
-				onUploadFolder={() => openUploadPicker(true)}
-				onDownloadDir={() => downloadFile(currentPath)}
-				onMove={handleMovePaths}
-				onSort={toggleSort}
-				onToggleHidden={toggleHidden}
-			>
-				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
-					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
+		<FileNavToolbar
+			breadcrumbs={buildBreadcrumbs(currentPath)}
+			{selectedFile}
+			{loading}
+			{showSearch}
+			onToggleSearch={toggleSearch}
+			writable={currentWritable}
+			canGoBack={!initialFile && canGoBack}
+			canGoForward={!initialFile && canGoForward}
+			{sortBy}
+			{sortAsc}
+			showDateAdded
+			{showHidden}
+			viewMode={isSearching ? null : viewMode}
+			onViewModeChange={changeViewMode}
+			onGoBack={goBack}
+			onGoForward={goForward}
+			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
+			onRefresh={() => {
+				if (selectedFile) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					openEntry({ name: fileName, type: 'file', size: 0 });
+				} else {
+					refreshBrowser();
+				}
+			}}
+			onNewFolder={startNewFolder}
+			onNewFile={startNewFile}
+			onUploadFiles={handleUploadFiles}
+			onUploadFolder={() => openUploadPicker(true)}
+			onDownloadDir={() => downloadFile(currentPath)}
+			onMove={handleMovePaths}
+			onSort={toggleSort}
+			onToggleHidden={toggleHidden}
+		>
+			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
+					<button
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						on:click={async () => {
+							if (!(await protectBuffer())) return;
+							if (editing) filePreviewRef?.cancelEdit();
+							showRaw = !showRaw;
+						}}
+						aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
+					>
+						{#if showRaw}
+							<Icon name="eye" size={11} strokeWidth={1.4} />
+						{:else}
+							<Icon name="code" size={11} strokeWidth={1.4} />
+						{/if}
+					</button>
+				</Tooltip>
+			{/if}
+			{#if isTextFile}
+				{#if isHtml && showRaw}
+					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-							on:click={async () => {
-								if (!(await protectBuffer())) return;
-								if (editing) filePreviewRef?.cancelEdit();
-								showRaw = !showRaw;
-							}}
-							aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
 						>
-							{#if showRaw}
-								<Icon name="eye" size={11} strokeWidth={1.4} />
+							{#if saving}
+								<Spinner className="size-3.5" />
 							{:else}
-								<Icon name="code" size={11} strokeWidth={1.4} />
+								<Icon name="check" size={11} strokeWidth={1.7} />
 							{/if}
 						</button>
 					</Tooltip>
-				{/if}
-				{#if isTextFile}
-					{#if isHtml && showRaw}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if isHtml}
-						<!-- HTML preview mode: no edit/save buttons -->
-					{:else if isMarkdown && showRaw}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if isMarkdown}
-						<!-- Markdown preview mode: no edit/save buttons -->
-					{:else if isCode}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if editing}
-						<Tooltip content={$i18n.t('Cancel')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-								on:click={() => filePreviewRef?.cancelEdit()}
-								aria-label={$i18n.t('Cancel')}
-							>
-								<Icon name="xmark" size={11} strokeWidth={1.7} />
-							</button>
-						</Tooltip>
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else}
-						<Tooltip content={$i18n.t('Edit')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.startEdit()}
-								disabled={!selectedFileWritable}
-								aria-label={$i18n.t('Edit')}
-							>
-								<Icon name="pencil" size={11} strokeWidth={1.4} />
-							</button>
-						</Tooltip>
-					{/if}
-				{/if}
-
-				{#if fileContent !== null}
-					<Tooltip content={$i18n.t('Copy')}>
+				{:else if isHtml}
+					<!-- HTML preview mode: no edit/save buttons -->
+				{:else if isMarkdown && showRaw}
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else if isMarkdown}
+					<!-- Markdown preview mode: no edit/save buttons -->
+				{:else if isCode}
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else if editing}
+					<Tooltip content={$i18n.t('Cancel')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-							on:click={async () => {
-								if (await copyToClipboard(fileContent ?? '')) {
-									toast.success($i18n.t('Copied to clipboard'));
-								}
-							}}
-							aria-label={$i18n.t('Copy')}
+							on:click={() => filePreviewRef?.cancelEdit()}
+							aria-label={$i18n.t('Cancel')}
 						>
-							<Icon name="copy" size={11} strokeWidth={1.4} />
+							<Icon name="xmark" size={11} strokeWidth={1.7} />
+						</button>
+					</Tooltip>
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else}
+					<Tooltip content={$i18n.t('Edit')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() => filePreviewRef?.startEdit()}
+							disabled={!selectedFileWritable}
+							aria-label={$i18n.t('Edit')}
+						>
+							<Icon name="pencil" size={11} strokeWidth={1.4} />
 						</button>
 					</Tooltip>
 				{/if}
-				<Tooltip content={$i18n.t('Download')}>
+			{/if}
+
+			{#if fileContent !== null}
+				<Tooltip content={$i18n.t('Copy')}>
 					<button
 						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-						on:click={() => selectedFile && downloadFile(selectedFile)}
-						aria-label={$i18n.t('Download')}
-					>
-						<Icon name="download" size={11} strokeWidth={1.4} />
-					</button>
-				</Tooltip>
-			</FileNavToolbar>
-
-			{#if !selectedFile && showSearch}
-				<div
-					class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
-				>
-					<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
-					<input
-						bind:this={searchInput}
-						type="text"
-						class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
-						placeholder={$i18n.t('Search files and contents')}
-						aria-label={$i18n.t('Search files and contents')}
-						bind:value={searchQuery}
-						on:keydown={(event) => {
-							if (event.key === 'Escape') {
-								event.preventDefault();
-								event.stopPropagation();
-								void toggleSearch();
+						on:click={async () => {
+							if (await copyToClipboard(fileContent ?? '')) {
+								toast.success($i18n.t('Copied to clipboard'));
 							}
 						}}
-					/>
-					{#if searchQuery}
-						<button
-							class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={() => (searchQuery = '')}
-							aria-label={$i18n.t('Clear search')}
-						>
-							<Icon name="xmark" size={11} strokeWidth={1.5} />
-						</button>
-					{/if}
-				</div>
-			{/if}
-
-			{#if pinnedComparison}
-				<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
-					<Tooltip content={pinnedComparison.path}>
-						<span class="block max-w-[16rem] truncate"
-							>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
-						>
-					</Tooltip>
-					<button
-						type="button"
-						class="shrink-0 hover:text-gray-900 dark:hover:text-white"
-						aria-label={$i18n.t('Clear comparison selection')}
-						on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
+						aria-label={$i18n.t('Copy')}
 					>
-				</div>
+						<Icon name="copy" size={11} strokeWidth={1.4} />
+					</button>
+				</Tooltip>
 			{/if}
+			<Tooltip content={$i18n.t('Download')}>
+				<button
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					on:click={() => selectedFile && downloadFile(selectedFile)}
+					aria-label={$i18n.t('Download')}
+				>
+					<Icon name="download" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+		</FileNavToolbar>
 
-			<!-- Bulk action bar -->
-			{#if selectedCount > 0 && !isSearching}
-				<BulkActionBar
-					count={selectedCount}
-					{canCompare}
-					onCompare={() => {
-						if (canCompare)
-							openComparison([
-								comparisonFile(comparisonEntries[0]),
-								comparisonFile(comparisonEntries[1])
-							]);
+		{#if !selectedFile && showSearch}
+			<div
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
+			>
+				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
+				<input
+					bind:this={searchInput}
+					type="text"
+					class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
+					placeholder={$i18n.t('Search files and contents')}
+					aria-label={$i18n.t('Search files and contents')}
+					bind:value={searchQuery}
+					on:keydown={(event) => {
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							event.stopPropagation();
+							void toggleSearch();
+						}
 					}}
-					canDelete={selectedEntriesWritable}
-					onDelete={() => {
-						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
-						showDeleteConfirm = true;
-					}}
-					onDownload={bulkDownload}
-					onSelectAll={selectAll}
-					onClear={clearSelection}
 				/>
-			{/if}
+				{#if searchQuery}
+					<button
+						class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+						on:click={() => (searchQuery = '')}
+						aria-label={$i18n.t('Clear search')}
+					>
+						<Icon name="xmark" size={11} strokeWidth={1.5} />
+					</button>
+				{/if}
+			</div>
+		{/if}
+
+		{#if pinnedComparison}
+			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+				<Tooltip content={pinnedComparison.path}>
+					<span class="block max-w-[16rem] truncate"
+						>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
+					>
+				</Tooltip>
+				<button
+					type="button"
+					class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+					aria-label={$i18n.t('Clear comparison selection')}
+					on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
+				>
+			</div>
+		{/if}
+
+		<!-- Bulk action bar -->
+		{#if selectedCount > 0 && !isSearching}
+			<BulkActionBar
+				count={selectedCount}
+				{canCompare}
+				onCompare={() => {
+					if (canCompare)
+						openComparison([
+							comparisonFile(comparisonEntries[0]),
+							comparisonFile(comparisonEntries[1])
+						]);
+				}}
+				canDelete={selectedEntriesWritable}
+				onDelete={() => {
+					deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+					showDeleteConfirm = true;
+				}}
+				onDownload={bulkDownload}
+				onSelectAll={selectAll}
+				onClear={clearSelection}
+			/>
 		{/if}
 
 		{#if diskChanged}<div
@@ -2366,22 +2346,13 @@
 				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
-				if (comparison || selectedFile || previewPort !== null || isSearching) return;
+				if (comparison || selectedFile || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
 				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
-			{#if previewPort !== null}
-				<Browser
-					baseUrl={previewBaseUrl}
-					initialUrl={`http://localhost:${previewPort}/`}
-					overlay={overlay || isDraggingHandle}
-					onClose={() => {
-						previewPort = null;
-					}}
-				/>
-			{:else if selectedFile !== null}
+			{#if selectedFile !== null}
 				{#if supportsComments(selectedFile) && selectedTerminal}
 					{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 						<CommentFilePreview
@@ -2712,29 +2683,6 @@
 				{/if}
 			{/if}
 		</div>
-
-		<!-- Port detection -->
-		{#if selectedTerminal && !selectedFile && previewPort === null && !isSearching}
-			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
-				{#key JSON.stringify([chatId, selectedTerminal.url])}
-					<PortList
-						baseUrl={selectedTerminal.url}
-						{previewBaseUrl}
-						apiKey={selectedTerminal.key}
-						{chatId}
-						on:previewPort={(e) => {
-							if (onOpenPort) {
-								onOpenPort(e.detail, previewBaseUrl);
-								return;
-							}
-							selectedFile = null;
-							clearFilePreview();
-							previewPort = e.detail;
-						}}
-					/>
-				{/key}
-			</div>
-		{/if}
 
 		<!-- Read-only session output -->
 		{#if showTerminalDock}
