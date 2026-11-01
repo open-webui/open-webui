@@ -373,7 +373,7 @@
 					aria-label={$i18n.t('Switch branch')}
 					disabled={busy}
 					><Icon name="git-branch" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-600 dark:text-gray-400 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300 font-mono"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-600 dark:text-gray-400 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300"
 						>{branchLabel}</span
 					><Icon name="chevron-down" size={9} /></button
 				>
@@ -482,7 +482,7 @@
 					disabled={busy}
 				>
 					<Icon name="folder" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-500 dark:text-gray-500 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300 font-mono"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-500 dark:text-gray-500 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300"
 						>{status.root?.split('/').pop()}</span
 					><Icon name="chevron-down" size={9} />
 				</button>
@@ -926,11 +926,10 @@
 										>{selected?.path ??
 											`${selectedCommit?.short_hash} · ${selectedCommit?.message}`}</span
 									>
-									{#if diff && !loadingDiff}<span
-											class="ml-2 shrink-0 text-green-600 dark:text-green-400"
-											>+{diffStats.additions}</span
-										><span class="shrink-0 text-red-500 dark:text-red-400"
-											>-{diffStats.deletions}</span
+									{#if diff && !loadingDiff}<span class="flex shrink-0 items-center gap-1"
+											><span class="text-green-600 dark:text-green-400">+{diffStats.additions}</span
+											><span class="text-red-500 dark:text-red-400">-{diffStats.deletions}</span
+											></span
 										>{/if}
 								</div>
 								<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden text-[0.6875rem]">

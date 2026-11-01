@@ -113,34 +113,17 @@
 	.removed .prefix {
 		color: var(--color-red-500);
 	}
-	.git-diff:not(.split) .added {
-		box-shadow: inset 0.1875rem 0 0 #22c55e;
-	}
-	.git-diff:not(.split) .removed {
-		background-image: repeating-linear-gradient(
-			-45deg,
-			#ef4444 0,
-			#ef4444 1px,
-			transparent 1px,
-			transparent 0.1875rem
-		);
-		background-position: left top;
-		background-repeat: repeat-y;
-		background-size: 0.1875rem 0.1875rem;
-	}
 	.changed {
-		border-radius: 0.125rem;
 		box-decoration-break: clone;
 		-webkit-box-decoration-break: clone;
-		padding: 0.0625rem 0.125rem;
 	}
 	.added .changed {
-		background: rgba(22, 163, 74, 0.38);
-		box-shadow: inset 0 -0.125rem 0 rgba(21, 128, 61, 0.42);
+		background: rgba(21, 128, 61, 0.85);
+		color: #fff;
 	}
 	.removed .changed {
-		background: rgba(220, 38, 38, 0.32);
-		box-shadow: inset 0 -0.125rem 0 rgba(185, 28, 28, 0.38);
+		background: rgba(185, 28, 28, 0.85);
+		color: #fff;
 	}
 	:global(.dark) .git-diff {
 		color: var(--color-gray-400);
@@ -153,21 +136,10 @@
 		background-color: #ef444426;
 		color: var(--color-red-300);
 	}
-	:global(.dark) .git-diff:not(.split) .added {
-		box-shadow: inset 0.1875rem 0 0 #4ade80;
-	}
 	:global(.dark) .added .prefix {
 		color: var(--color-green-400);
 	}
 	:global(.dark) .removed .prefix {
 		color: var(--color-red-400);
-	}
-	:global(.dark) .added .changed {
-		background: rgba(34, 197, 94, 0.42);
-		box-shadow: inset 0 -0.125rem 0 rgba(134, 239, 172, 0.5);
-	}
-	:global(.dark) .removed .changed {
-		background: rgba(248, 113, 113, 0.4);
-		box-shadow: inset 0 -0.125rem 0 rgba(252, 165, 165, 0.48);
 	}
 </style>
