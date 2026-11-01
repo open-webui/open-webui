@@ -25,6 +25,16 @@
 	let destroyed = false;
 	let sessionId = '';
 	const terminalOwner = Symbol();
+	let reportedActive: boolean | null = null;
+
+	function reportActivity(visible: boolean) {
+		if (readOnly || !connected || ws?.readyState !== WebSocket.OPEN) return;
+		const isActive = visible && !document.hidden;
+		if (reportedActive === isActive) return;
+		ws.send(JSON.stringify({ type: 'activity', active: isActive }));
+		reportedActive = isActive;
+	}
+	const reportVisibility = () => reportActivity(active);
 
 	function disconnect() {
 		connectedUserTerminals.update((entries) => {
@@ -33,6 +43,7 @@
 		});
 		connected = false;
 		connecting = false;
+		reportedActive = null;
 		clearInterval(pingInterval);
 	}
 
@@ -101,6 +112,7 @@
 				}
 				connected = true;
 				connecting = false;
+				reportActivity(active);
 				fit();
 				if (active) term?.focus();
 				if (term) ws?.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
@@ -131,8 +143,10 @@
 	}
 
 	$: if (active && term) requestAnimationFrame(fit);
+	$: if (connected) reportActivity(active);
 
 	onMount(() => {
+		document.addEventListener('visibilitychange', reportVisibility);
 		term = new Terminal({
 			allowTransparency: true,
 			cursorBlink: !readOnly,
@@ -173,6 +187,7 @@
 	});
 
 	onDestroy(() => {
+		document.removeEventListener('visibilitychange', reportVisibility);
 		destroyed = true;
 		disconnect();
 		ws?.close();
