@@ -2,7 +2,6 @@
 	import { getContext, onDestroy } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { mobile } from '$lib/stores';
-	import { createFocusTrap } from 'focus-trap';
 	import Files from './Files.svelte';
 	import FileViewer from './FileViewer.svelte';
 	import AddContentMenu from './AddContentMenu.svelte';
@@ -89,11 +88,6 @@
 				goto(navigation.to!.url.href).finally(() => (allowNavigation = false));
 			});
 	});
-	const trapFocus = (node: HTMLElement) => {
-		const trap = createFocusTrap(node, { escapeDeactivates: false });
-		trap.activate();
-		return { destroy: () => trap.deactivate() };
-	};
 	onDestroy(() => clearTimeout(debounce));
 </script>
 
@@ -123,15 +117,12 @@
 			resizerId="knowledge-files-resizer">{@render sidebar()}</ResizableSidePanel
 		>{@render viewer()}{/if}
 </div>
-{#if $mobile}<Drawer show={drawerOpen} className="h-full" onRequestClose={close}
-		><div
-			class="h-full"
-			role="dialog"
-			aria-modal="true"
-			aria-label={$i18n.t('File preview')}
-			tabindex="-1"
-			use:trapFocus
-		>
+{#if $mobile}<Drawer
+		show={drawerOpen}
+		className="h-full"
+		ariaLabel={$i18n.t('File preview')}
+		onRequestClose={close}
+		><div class="h-full">
 			{@render viewer()}
 		</div></Drawer
 	>{/if}

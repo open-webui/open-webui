@@ -325,6 +325,7 @@
 		{#if visible}
 			<Drawer
 				show={true}
+				ariaLabel={$i18n.t('Controls')}
 				onClose={() => showControls.set(false)}
 				onRequestClose={() => showControls.set(false)}
 				panelStyle={$mobile ? panelStyle : ''}

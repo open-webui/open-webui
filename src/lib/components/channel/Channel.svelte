@@ -534,6 +534,7 @@
 			{#if threadId !== null}
 				<Drawer
 					show={threadId !== null}
+					ariaLabel={$i18n.t('Thread')}
 					onClose={() => {
 						threadId = null;
 					}}

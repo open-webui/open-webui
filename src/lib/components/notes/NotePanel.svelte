@@ -13,6 +13,7 @@
 	export let storageKey = '';
 	export let floating = false;
 	export let onClose: () => void = () => {};
+	export let ariaLabel: string | undefined = undefined;
 
 	let mediaQuery: MediaQueryList;
 	let largeScreen = false;
@@ -36,6 +37,7 @@
 	{#if show}
 		<Drawer
 			{show}
+			{ariaLabel}
 			onClose={() => {
 				show = false;
 				onClose();

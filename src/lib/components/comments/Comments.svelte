@@ -83,7 +83,7 @@
 					</div>
 				</Modal>
 			{:else if $mobile}
-				<Drawer show={true} onClose={() => (view = null)}>
+				<Drawer show={true} ariaLabel={$i18n.t('Comments')} onClose={() => (view = null)}>
 					<div class="h-dvh"><CommentsPanel bind:view onClose={() => (view = null)} /></div>
 				</Drawer>
 			{:else}

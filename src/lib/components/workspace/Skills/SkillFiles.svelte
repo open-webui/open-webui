@@ -3,7 +3,6 @@
 	import { onDestroy, getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
-	import { createFocusTrap } from 'focus-trap';
 	import { mobile } from '$lib/stores';
 	import Drawer from '$lib/components/common/Drawer.svelte';
 	import ResizableSidePanel from '$lib/components/common/ResizableSidePanel.svelte';
@@ -181,16 +180,7 @@
 		value = content;
 		flush();
 	};
-	const fileDrawer = (node: HTMLElement) => {
-		const trap = createFocusTrap(node, { escapeDeactivates: false });
-		trap.activate();
-		return {
-			destroy: () => {
-				flush();
-				trap.deactivate();
-			}
-		};
-	};
+	const fileDrawer = () => ({ destroy: flush });
 	$: if (!$mobile) showFileDrawer = false;
 	$: if (loadedPath && value !== loadedValue && !readOnly) {
 		dirty = true;
@@ -570,15 +560,8 @@
 </div>
 
 {#if $mobile}
-	<Drawer bind:show={showFileDrawer} className="h-full" onClose={flush}>
-		<div
-			class="h-full"
-			role="dialog"
-			aria-modal="true"
-			aria-label={selected}
-			tabindex="-1"
-			use:fileDrawer
-		>
+	<Drawer bind:show={showFileDrawer} className="h-full" ariaLabel={selected} onClose={flush}>
+		<div class="h-full" use:fileDrawer>
 			{@render fileContent()}
 		</div>
 	</Drawer>
