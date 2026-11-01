@@ -4,6 +4,7 @@
 	import {
 		gitRequest,
 		gitAction,
+		gitRemoteWebUrl,
 		type GitStatus,
 		type GitFile,
 		type GitCommit,
@@ -11,6 +12,7 @@
 	} from '$lib/apis/terminal/git';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
+	import { parseDiffRows } from '../Messages/diff';
 	import Dropdown from '../../common/Dropdown.svelte';
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
@@ -34,6 +36,14 @@
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
 	let diff = '';
+	$: diffStats = parseDiffRows(diff).reduce(
+		(counts, row) => {
+			if (row.type === 'addition') counts.additions++;
+			if (row.type === 'deletion') counts.deletions++;
+			return counts;
+		},
+		{ additions: 0, deletions: 0 }
+	);
 	let commits: GitCommit[] = [];
 	let branches: GitBranch[] = [];
 	let branchSearch = '';
@@ -54,6 +64,7 @@
 	let summary = '';
 	let description = '';
 	let error = '';
+	let detectionError = '';
 	let busy = false;
 	let loadingDiff = false;
 	let confirmDiscard = false;
@@ -76,6 +87,16 @@
 	$: additions = status?.files.reduce((sum, file) => sum + file.additions, 0) ?? 0;
 	$: deletions = status?.files.reduce((sum, file) => sum + file.deletions, 0) ?? 0;
 	$: branchLabel = status?.branch === '(detached)' ? status.head?.slice(0, 7) : status?.branch;
+	$: remoteWebUrl = gitRemoteWebUrl(status?.remote_url);
+	$: remoteHost = remoteWebUrl ? new URL(remoteWebUrl).hostname : '';
+	$: remotePlatform =
+		remoteHost === 'github.com'
+			? 'GitHub'
+			: remoteHost.includes('gitlab')
+				? 'GitLab'
+				: remoteHost === 'bitbucket.org'
+					? 'Bitbucket'
+					: remoteHost;
 	$: syncAction = !status?.upstream
 		? 'publish'
 		: status.behind > 0
@@ -110,6 +131,7 @@
 		const task = gitRequest<GitStatus>(connection, chatId, directory, 'status')
 			.then((next) => {
 				if (current !== generation) return;
+				detectionError = '';
 				if (status?.root && status.root !== next.root) resetSelection();
 				status = next.is_repo ? next : null;
 				if (next.root && next.root !== prRoot) {
@@ -131,8 +153,11 @@
 				)
 					resetSelection();
 			})
-			.catch(() => {
-				if (current === generation) status = null;
+			.catch((reason) => {
+				if (current === generation) {
+					status = null;
+					detectionError = String(reason instanceof Error ? reason.message : reason);
+				}
 			})
 			.finally(() => {
 				if (current === generation) pending = null;
@@ -155,6 +180,7 @@
 			pending = null;
 			status = null;
 			error = '';
+			detectionError = '';
 			expanded = false;
 			showBranches =
 				showWorktrees =
@@ -278,9 +304,6 @@
 			files.flatMap((file) => [file.path, ...(file.original_path ? [file.original_path] : [])])
 		)
 	];
-	const openFile = () => {
-		if (selected && status?.root) onOpenFile(`${status.root}/${selected.path}`);
-	};
 	const toggle = () => {
 		expanded = !expanded;
 		if (expanded) {
@@ -343,14 +366,14 @@
 				}}
 			></div>
 		{/if}
-		<div class="flex min-w-0 items-center h-7 px-3 text-gray-400 dark:text-gray-600">
+		<div class="flex min-w-0 items-center h-7 pl-3 pr-1 text-gray-400 dark:text-gray-600">
 			<Dropdown side="top" maxHeight="15rem" bind:show={showBranches} onOpenChange={loadBranches}>
 				<button
-					class="flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 -ml-1.5 px-1.5 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-800/20 transition-colors duration-75"
+					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 -ml-1.5 px-1.5 rounded-md hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
 					aria-label={$i18n.t('Switch branch')}
 					disabled={busy}
 					><Icon name="git-branch" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-600 dark:text-gray-400 font-mono"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-600 dark:text-gray-400 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300 font-mono"
 						>{branchLabel}</span
 					><Icon name="chevron-down" size={9} /></button
 				>
@@ -454,12 +477,12 @@
 			</Dropdown>
 			<Dropdown side="top" maxHeight="15rem" bind:show={showWorktrees} onOpenChange={loadWorktrees}>
 				<button
-					class="flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 px-1.5 rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-800/20 transition-colors duration-75"
+					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 px-1.5 rounded-md hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
 					aria-label={$i18n.t('Worktrees')}
 					disabled={busy}
 				>
 					<Icon name="folder" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-500 dark:text-gray-500 font-mono"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-500 dark:text-gray-500 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300 font-mono"
 						>{status.root?.split('/').pop()}</span
 					><Icon name="chevron-down" size={9} />
 				</button>
@@ -545,22 +568,18 @@
 						></span
 					>{/if}
 			</button>
+			<Tooltip content={$i18n.t(syncLabel)}>
+				<button
+					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"
+					aria-label={$i18n.t(syncLabel)}
+					on:click={() => act(syncAction)}
+					disabled={busy}><Icon name={syncIcon} size={10} /></button
+				>
+			</Tooltip>
 			<button
-				class="flex shrink-0 items-center gap-1 h-6 px-2 rounded-md text-[0.6875rem] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 transition-colors duration-75"
-				on:click={() => act(syncAction)}
-				disabled={busy}
-				><Icon name={syncIcon} size={12} /><span class="whitespace-nowrap"
-					>{$i18n.t(syncLabel)}{syncAction === 'push'
-						? ` ↑${status.ahead}`
-						: syncAction === 'pull'
-							? ` ↓${status.behind}`
-							: ''}</span
-				></button
-			>
-			<button
-				class="flex h-6 w-3 items-center justify-center text-gray-300 dark:text-gray-700 ml-0.5 shrink-0"
+				class="flex h-6 w-5 items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-0.5 shrink-0"
 				aria-label={expanded ? $i18n.t('Collapse Git panel') : $i18n.t('Expand Git panel')}
-				on:click={toggle}><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={10} /></button
+				on:click={toggle}><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} /></button
 			>
 		</div>
 		{#if error}<div role="alert" class="px-3 py-2 text-xs text-red-500 break-words">
@@ -568,14 +587,14 @@
 			</div>{/if}
 		{#if expanded}
 			<div
-				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-gray-100 dark:border-white/4"
+				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-gray-100/50 dark:border-white/2"
 				style:height={`${height + 32}px`}
 			>
 				<div
-					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100 dark:border-white/4"
+					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 				>
 					{#each ['changes', 'history', ...(prCapabilities?.available ? ['pull requests'] : [])] as section}<button
-							class="px-2.5 h-6 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
+							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
 								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
 								: 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}"
@@ -595,10 +614,22 @@
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
+					{#if remoteWebUrl}
+						<Tooltip content={$i18n.t('View on {{platform}}', { platform: remotePlatform })}>
+							<a
+								href={remoteWebUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label={$i18n.t('View on {{platform}}', { platform: remotePlatform })}
+								class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+								><Icon name="external-link" size={10} /></a
+							>
+						</Tooltip>
+					{/if}
 					<Dropdown side="top" align="end">
 						<button
-							class="flex items-center justify-center w-6 h-6 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/6"
-							aria-label={$i18n.t('Diff settings')}><Icon name="settings" size={12} /></button
+							class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							aria-label={$i18n.t('Diff settings')}><Icon name="settings" size={10} /></button
 						>
 						<div slot="content">
 							<DropdownMenu className="w-48"
@@ -662,14 +693,14 @@
 							{#if view === 'changes'}
 								{#if status.files.length}
 									<button
-										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100 dark:border-white/4 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
+										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100/50 dark:border-white/2 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
 										disabled={busy}
 										aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
 										on:click={() =>
 											act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
 									>
 										<span
-											class="flex items-center justify-center w-3 h-3 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
+											class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
 												? 'bg-gray-800 dark:bg-white'
 												: someStaged
 													? 'bg-gray-400 dark:bg-gray-500'
@@ -697,7 +728,7 @@
 												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
 										>
 											<button
-												class="flex items-center justify-center w-3 h-3 rounded border shrink-0 border-gray-300 dark:border-gray-600 {file.staged
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {file.staged
 													? 'bg-gray-800 dark:bg-white'
 													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
 												disabled={busy}
@@ -711,20 +742,27 @@
 														class="text-white dark:text-black"
 													/>{/if}
 											</button>
-											<button
-												class="flex min-w-0 flex-1 items-center gap-1.5 text-left h-full"
-												aria-label={`${$i18n.t('View changes')} ${file.path}`}
-												on:click={() => selectFile(file, file.staged)}
-											>
-												{#if file.path.includes('/')}<span
+											<div class="flex min-w-0 flex-1 items-center gap-0.5 h-full">
+												{#if file.path.includes('/')}<button
 														class="min-w-0 truncate text-[0.625rem] text-gray-400 dark:text-gray-600"
-														>{file.path.slice(0, file.path.lastIndexOf('/') + 1)}</span
+														aria-label={`${$i18n.t('View changes')} ${file.path}`}
+														on:click={() => selectFile(file, file.staged)}
+														>{file.path.slice(0, file.path.lastIndexOf('/') + 1)}</button
 													>{/if}
-												<span
-													class="min-w-0 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200"
-													>{file.path.split('/').pop()}</span
+												<button
+													class="min-w-0 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200 hover:underline"
+													aria-label={`${$i18n.t('Open file')} ${file.path}`}
+													on:click={() => {
+														if (status?.root)
+															onOpenFile(`${status.root.replace(/\/$/, '')}/${file.path}`);
+													}}>{file.path.split('/').pop()}</button
 												>
-											</button>
+												<button
+													class="min-w-0 flex-1 self-stretch"
+													aria-label={`${$i18n.t('View changes')} ${file.path}`}
+													on:click={() => selectFile(file, file.staged)}
+												></button>
+											</div>
 											{#if file.binary}<span
 													class="text-[0.625rem] font-mono font-normal text-gray-400"
 													title={file.status}
@@ -775,7 +813,7 @@
 										</div>{/if}
 								</div>
 								<form
-									class="border-t border-gray-100 dark:border-white/4 px-2 pb-1.5 shrink-0"
+									class="border-t border-gray-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
 									on:submit|preventDefault={() =>
 										act('commit', {
 											message: [summary.trim(), description.trim()].filter(Boolean).join('\n\n')
@@ -789,7 +827,7 @@
 											bind:value={summary}
 										/>
 										<textarea
-											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100 dark:border-white/4"
+											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100/50 dark:border-white/2"
 											rows="3"
 											aria-label={$i18n.t('Description')}
 											placeholder={$i18n.t('Description')}
@@ -816,29 +854,30 @@
 							{:else}
 								<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 									{#each commits as commit, index}<div
-											class="group flex min-w-0 items-center border-b border-gray-50 dark:border-white/3 transition-colors duration-75 {selectedCommit?.hash === commit.hash
+											class="group flex min-w-0 items-center border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selectedCommit?.hash ===
+											commit.hash
 												? 'bg-gray-100/40 dark:bg-gray-800/25'
 												: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
 										>
-											<Tooltip content={commit.hash} className="flex min-w-0 flex-1"><button
-												class="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left"
-												on:click={() => selectCommit(commit)}
-											>
-												{#if index < status.ahead}<span
-														class="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 shrink-0"
-														title={$i18n.t('Unpushed')}
-													></span>{/if}
-												<div class="flex flex-col min-w-0 flex-1">
-													<span class="text-xs text-gray-800 dark:text-gray-200 truncate"
-														>{commit.message}</span
-													><span
-														class="text-[0.625rem] text-gray-400 dark:text-gray-600 font-mono truncate"
-														>{commit.author} · {relativeTime(
-															commit.date
-														)}</span
-													>
-												</div>
-											</button></Tooltip><Dropdown side="top" align="end" closeOnSelect
+											<Tooltip content={commit.hash} className="flex min-w-0 flex-1"
+												><button
+													class="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1.5 text-left"
+													on:click={() => selectCommit(commit)}
+												>
+													{#if index < status.ahead}<span
+															class="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 shrink-0"
+															title={$i18n.t('Unpushed')}
+														></span>{/if}
+													<div class="flex flex-col min-w-0 flex-1">
+														<span class="text-xs text-gray-800 dark:text-gray-200 truncate"
+															>{commit.message}</span
+														><span
+															class="text-[0.625rem] text-gray-400 dark:text-gray-600 font-mono truncate"
+															>{commit.author} · {relativeTime(commit.date)}</span
+														>
+													</div>
+												</button></Tooltip
+											><Dropdown side="top" align="end" closeOnSelect
 												><button
 													class="flex items-center justify-center w-5 h-5 mr-1 rounded shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 													aria-label={`${$i18n.t('Commit actions')} ${commit.short_hash}`}
@@ -877,7 +916,7 @@
 						>
 							{#if selected || selectedCommit}
 								<div
-									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100 dark:border-white/4 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
 								>
 									<button
 										class="git-back"
@@ -887,10 +926,11 @@
 										>{selected?.path ??
 											`${selectedCommit?.short_hash} · ${selectedCommit?.message}`}</span
 									>
-									{#if selected}<button
-											class="shrink-0"
-											aria-label={$i18n.t('Open file')}
-											on:click={openFile}><Icon name="external-link" size={12} /></button
+									{#if diff && !loadingDiff}<span
+											class="ml-2 shrink-0 text-green-600 dark:text-green-400"
+											>+{diffStats.additions}</span
+										><span class="shrink-0 text-red-500 dark:text-red-400"
+											>-{diffStats.deletions}</span
 										>{/if}
 								</div>
 								<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden text-[0.6875rem]">
@@ -921,6 +961,20 @@
 			</div>
 		{/if}
 	</section>
+{:else if detectionError}
+	<div
+		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-gray-200 dark:border-white/6 px-3 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+	>
+		<Icon name="git-branch" size={12} />
+		<Tooltip content={detectionError} className="min-w-0 flex-1"
+			><span>{$i18n.t('Git unavailable')}</span></Tooltip
+		>
+		<button
+			class="flex h-6 w-6 items-center justify-center rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-800/20"
+			aria-label={$i18n.t('Retry Git detection')}
+			on:click={() => refresh(true)}><Icon name="refresh" size={12} /></button
+		>
+	</div>
 {/if}
 
 <ConfirmDialog
@@ -975,7 +1029,7 @@
 		.git-list.showing-diff {
 			display: flex;
 			flex: 0 0 240px;
-			border-inline-end: 1px solid #80808018;
+			border-inline-end: 1px solid #8080800c;
 		}
 		.git-detail {
 			display: flex;

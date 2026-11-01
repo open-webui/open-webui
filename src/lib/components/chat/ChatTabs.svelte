@@ -684,6 +684,7 @@
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
 	class="h-full w-full min-h-0 flex flex-col"
+	style:--chat-tabs-dark-background={largeScreen ? 'var(--color-gray-900)' : 'var(--color-gray-850)'}
 	id="controls-container"
 >
 	<div class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none">

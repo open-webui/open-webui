@@ -36,13 +36,13 @@
 <div class="git-diff font-mono text-[0.6875rem] leading-[1.125rem]" class:split={mode === 'split'}>
 	{#each files as file}
 		{#if files.length > 1}<div
-				class="px-2 py-1 text-[0.625rem] text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-white/4"
+				class="sticky top-0 z-10 bg-white dark:bg-[var(--chat-tabs-dark-background,var(--color-gray-900))] px-2 py-1 text-[0.625rem] text-gray-500 dark:text-gray-400 border-b border-gray-100/50 dark:border-white/2"
 			>
 				{file.path}
 			</div>{/if}
 		{#each file.hunks as hunk, index}
 			<div
-				class="border-b border-gray-100 bg-gray-50 px-2 py-0.5 text-gray-400 dark:border-white/4 dark:bg-white/3 dark:text-gray-600"
+				class="border-b border-gray-100/50 bg-gray-50 px-2 py-0.5 text-gray-400 dark:border-white/2 dark:bg-white/3 dark:text-gray-600"
 			>
 				{file.headers[index]}
 			</div>
@@ -73,6 +73,7 @@
 	.line {
 		display: flex;
 		min-width: 0;
+		min-height: 1.125rem;
 	}
 	.prefix {
 		width: 1.25rem;
@@ -96,14 +97,14 @@
 		overflow-wrap: anywhere;
 	}
 	.split-row > .line + .line {
-		border-left: 1px solid #80808018;
+		border-left: 1px solid #8080800c;
 	}
 	.added {
-		background: var(--color-green-100);
+		background-color: var(--color-green-100);
 		color: var(--color-green-900);
 	}
 	.removed {
-		background: var(--color-red-100);
+		background-color: var(--color-red-100);
 		color: var(--color-red-900);
 	}
 	.added .prefix {
@@ -112,21 +113,61 @@
 	.removed .prefix {
 		color: var(--color-red-500);
 	}
+	.git-diff:not(.split) .added {
+		box-shadow: inset 0.1875rem 0 0 #22c55e;
+	}
+	.git-diff:not(.split) .removed {
+		background-image: repeating-linear-gradient(
+			-45deg,
+			#ef4444 0,
+			#ef4444 1px,
+			transparent 1px,
+			transparent 0.1875rem
+		);
+		background-position: left top;
+		background-repeat: repeat-y;
+		background-size: 0.1875rem 0.1875rem;
+	}
+	.changed {
+		border-radius: 0.125rem;
+		box-decoration-break: clone;
+		-webkit-box-decoration-break: clone;
+		padding: 0.0625rem 0.125rem;
+	}
 	.added .changed {
-		background: #16a34a35;
+		background: rgba(22, 163, 74, 0.38);
+		box-shadow: inset 0 -0.125rem 0 rgba(21, 128, 61, 0.42);
 	}
 	.removed .changed {
-		background: #dc262630;
+		background: rgba(220, 38, 38, 0.32);
+		box-shadow: inset 0 -0.125rem 0 rgba(185, 28, 28, 0.38);
 	}
 	:global(.dark) .git-diff {
 		color: var(--color-gray-400);
 	}
 	:global(.dark) .added {
-		background: #22c55e26;
+		background-color: #22c55e26;
 		color: var(--color-green-300);
 	}
 	:global(.dark) .removed {
-		background: #ef444426;
+		background-color: #ef444426;
 		color: var(--color-red-300);
+	}
+	:global(.dark) .git-diff:not(.split) .added {
+		box-shadow: inset 0.1875rem 0 0 #4ade80;
+	}
+	:global(.dark) .added .prefix {
+		color: var(--color-green-400);
+	}
+	:global(.dark) .removed .prefix {
+		color: var(--color-red-400);
+	}
+	:global(.dark) .added .changed {
+		background: rgba(34, 197, 94, 0.42);
+		box-shadow: inset 0 -0.125rem 0 rgba(134, 239, 172, 0.5);
+	}
+	:global(.dark) .removed .changed {
+		background: rgba(248, 113, 113, 0.4);
+		box-shadow: inset 0 -0.125rem 0 rgba(252, 165, 165, 0.48);
 	}
 </style>

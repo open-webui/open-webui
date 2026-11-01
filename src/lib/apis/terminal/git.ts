@@ -18,6 +18,7 @@ export type GitStatus = {
 	branch: string;
 	head?: string;
 	upstream?: string;
+	remote_url?: string;
 	ahead: number;
 	behind: number;
 	files: GitFile[];
@@ -30,6 +31,22 @@ export type GitCommit = {
 	message: string;
 };
 export type GitBranch = { name: string; current: boolean; upstream: string; is_local?: boolean };
+
+export function gitRemoteWebUrl(remote = ''): string {
+	const scp = remote.match(/^[^/@:\s]+@([^/:\s]+):(.+)$/);
+	try {
+		const url = new URL(scp ? `https://${scp[1]}/${scp[2]}` : remote);
+		if (url.protocol === 'ssh:') {
+			return new URL(`https://${url.hostname}${url.pathname.replace(/\.git\/?$/, '')}`).href;
+		}
+		if (!['http:', 'https:'].includes(url.protocol)) return '';
+		url.username = url.password = url.search = url.hash = '';
+		url.pathname = url.pathname.replace(/\.git\/?$/, '');
+		return url.href;
+	} catch {
+		return '';
+	}
+}
 
 export async function gitRequest<T>(
 	connection: TerminalConnection,
@@ -53,8 +70,17 @@ export async function gitRequest<T>(
 	});
 	if (!response.ok) {
 		const error = await response.json().catch(() => null);
+		if (response.status === 404 && error?.detail === 'Not Found') {
+			throw new Error(
+				'Git support is unavailable on this connection. Update and restart Open Terminal.'
+			);
+		}
 		throw new Error(
-			typeof error?.detail === 'string' ? error.detail : `Git request failed (${response.status})`
+			typeof error?.detail === 'string'
+				? error.detail
+				: typeof error?.error === 'string'
+					? error.error
+					: `Git request failed (${response.status})`
 		);
 	}
 	return response.json();

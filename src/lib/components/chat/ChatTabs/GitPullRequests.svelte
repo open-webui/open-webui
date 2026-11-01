@@ -162,7 +162,7 @@
 		class="pr-list flex min-h-0 min-w-0 flex-1 flex-col"
 		class:has-selection={!!selected || creating || editing}
 	>
-		<div class="border-b border-gray-100 p-2 dark:border-white/4">
+		<div class="border-b border-gray-100/50 p-2 dark:border-white/2">
 			<div class="flex min-w-0 items-center gap-1">
 				{#each ['open', 'closed', 'all'] as option}<button
 						class="h-6 rounded-md px-2 text-[0.6875rem] font-normal transition-colors duration-75 {state ===
@@ -213,7 +213,7 @@
 				</p>{:else}{#each prs.filter((pr) => `${pr.number} ${pr.title}`
 						.toLowerCase()
 						.includes(search.toLowerCase())) as pr}<button
-						class="flex min-w-0 items-center gap-1.5 w-full px-2.5 py-1.5 text-left border-b border-gray-50 dark:border-white/3 {selected?.number ===
+						class="flex min-w-0 items-center gap-1.5 w-full px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 {selected?.number ===
 						pr.number
 							? 'bg-gray-100/40 dark:bg-gray-800/25'
 							: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
@@ -238,7 +238,7 @@
 		class:has-selection={!!selected || creating || editing}
 	>
 		<div
-			class="flex items-center gap-2 px-2 h-7 shrink-0 border-b border-gray-100 dark:border-white/4 text-gray-500 dark:text-gray-400"
+			class="flex items-center gap-2 px-2 h-7 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-gray-500 dark:text-gray-400"
 		>
 			{#if selected || creating || editing}<button
 					class="pr-back"
@@ -327,7 +327,7 @@
 			</form>
 		{:else if selected}
 			<div
-				class="flex gap-1 px-2 h-7 items-center shrink-0 border-b border-gray-100 dark:border-white/4"
+				class="flex gap-1 px-2 h-7 items-center shrink-0 border-b border-gray-100/50 dark:border-white/2"
 			>
 				{#each ['summary', 'code', 'checks', 'activity'] as tab}<button
 						class="h-5 rounded px-1.5 text-[0.625rem] font-normal {view === tab
@@ -372,7 +372,7 @@
 								class="truncate">{selected.mergeable ?? 'unknown'}</span
 							>
 						</div>
-						<div class="mt-2 border-t border-gray-100 pt-2 dark:border-white/4">
+						<div class="mt-2 border-t border-gray-100/50 pt-2 dark:border-white/2">
 							<div class="mb-1 text-[0.625rem] uppercase text-gray-300 dark:text-gray-600">
 								{$i18n.t('Description')}
 							</div>
@@ -383,7 +383,7 @@
 							</div>
 						</div>
 						<div
-							class="mt-2 flex flex-wrap gap-1 border-t border-gray-100 pt-2 dark:border-white/4"
+							class="mt-2 flex flex-wrap gap-1 border-t border-gray-100/50 pt-2 dark:border-white/2"
 						>
 							{#if selected.state === 'OPEN'}<button
 									class="pr-action"
@@ -417,7 +417,7 @@
 					</div>
 				{:else if view === 'checks'}<div class="min-h-0">
 						{#each selected.statusCheckRollup ?? [] as check}<div
-								class="flex items-center justify-between gap-2 border-b border-gray-50 px-2.5 py-1.5 dark:border-white/3"
+								class="flex items-center justify-between gap-2 border-b border-gray-50/50 px-2.5 py-1.5 dark:border-white/2"
 							>
 								<span class="truncate">{check.name ?? check.context}</span><span
 									class="text-gray-400 text-[10px]"
@@ -488,7 +488,7 @@
 		.pr-list.has-selection {
 			display: flex;
 			flex: 0 0 240px;
-			border-inline-end: 1px solid #80808018;
+			border-inline-end: 1px solid #8080800c;
 		}
 		.pr-detail {
 			display: flex;
