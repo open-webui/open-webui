@@ -5,6 +5,7 @@ export type PanelTabKind =
 	| 'files'
 	| 'file'
 	| 'terminal'
+	| 'browser'
 	| 'artifacts'
 	| 'preview'
 	| 'voice'
@@ -19,6 +20,7 @@ export type PanelTab = {
 	dirty?: boolean;
 	untitled?: boolean;
 	connection?: TerminalConnection;
+	browserBaseUrl?: string;
 	context?: TerminalContext | null;
 };
 export type PanelTabs = { tabs: PanelTab[]; activeId: string; history: string[] };

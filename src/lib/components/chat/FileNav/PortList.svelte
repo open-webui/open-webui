@@ -98,7 +98,7 @@
 			{:else}
 				{#each ports as port}
 					<div
-						class="flex h-7 items-center w-full gap-2 px-1.5 text-xs rounded-lg hover:bg-gray-50/40 dark:hover:bg-white/4 transition-colors duration-75 group"
+						class="flex h-7 items-center w-full gap-2 px-1.5 text-xs rounded-lg group"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-2 self-stretch"

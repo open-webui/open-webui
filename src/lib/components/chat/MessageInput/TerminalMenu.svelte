@@ -127,7 +127,7 @@
 	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
 		disabled
 			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-			: `text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 cursor-pointer ${
+			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
 					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
 				}`
 	}`;

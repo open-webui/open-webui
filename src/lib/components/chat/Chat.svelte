@@ -126,7 +126,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
-	import ChatControls from './ChatControls.svelte';
+	import ChatTabs from './ChatTabs.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ElicitationDialog from './ElicitationDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -5647,7 +5647,7 @@
 			</div>
 
 			{#if !embedded}
-				<ChatControls
+				<ChatTabs
 					bind:terminalContext
 					bind:history
 					bind:files

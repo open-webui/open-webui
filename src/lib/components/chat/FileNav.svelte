@@ -16,7 +16,6 @@
 	} from '$lib/stores';
 	import {
 		getCwd,
-		getTerminalConfig,
 		getFileMatches,
 		listFiles,
 		readFile,
@@ -54,7 +53,7 @@
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import PortList from './FileNav/PortList.svelte';
-	import PortPreview from './FileNav/PortPreview.svelte';
+	import Browser from './ChatTabs/Browser.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
 	// Directory and preview state belong to this tab, including its terminal connection.
@@ -74,6 +73,7 @@
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
+	export let onOpenPort: ((port: number, baseUrl: string) => void) | null = null;
 	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
 
 	export let chatId: string | null = null;
@@ -268,12 +268,12 @@
 		await tick();
 	};
 
-	// ── Terminal panel state ────────────────────────────────────────────
+	// ── Sessions panel state ────────────────────────────────────────────
 	let terminalExpanded = false;
+	let hasSessions = false;
 	let terminalHeight = 200; // px, default when expanded
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
-	let terminalEnabled = true;
 	type ComparisonFile = { name: string; path: string; size?: number };
 	let pinnedComparison: ComparisonFile | null = null;
 	let comparison: {
@@ -359,6 +359,15 @@
 	let loadingDirs: Set<string> = new Set();
 	let directoryMenu: { x: number; y: number } | null = null;
 	let searchQuery = '';
+	let showSearch = false;
+	let searchInput: HTMLInputElement;
+	const toggleSearch = async () => {
+		showSearch = !showSearch;
+		if (!showSearch) searchQuery = '';
+		await tick();
+		if (showSearch) searchInput?.focus();
+		else containerEl?.querySelector<HTMLButtonElement>('[data-file-search-toggle]')?.focus();
+	};
 	let matchResults: TerminalFileMatch[] | null = null;
 	let matchLoading = false;
 	let matchLoadingMore = false;
@@ -694,12 +703,6 @@
 				entries = [];
 				resetTreeState();
 				(async () => {
-					if (terminalChanged) {
-						const config = await getTerminalConfig(terminal.url, terminal.key);
-						if (disposed) return;
-						terminalEnabled = config?.features?.terminal !== false;
-					}
-
 					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
 					loadDir(savedPath);
 				})();
@@ -1916,10 +1919,6 @@
 			loading = true;
 
 			void (async () => {
-				// Discover server features on initial mount
-				const config = await getTerminalConfig(terminal.url, terminal.key);
-				terminalEnabled = config?.features?.terminal !== false;
-
 				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
 				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
@@ -2100,6 +2099,8 @@
 				breadcrumbs={buildBreadcrumbs(currentPath)}
 				{selectedFile}
 				{loading}
+				{showSearch}
+				onToggleSearch={toggleSearch}
 				writable={currentWritable}
 				canGoBack={!initialFile && canGoBack}
 				canGoForward={!initialFile && canGoForward}
@@ -2132,7 +2133,7 @@
 				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 							on:click={async () => {
 								if (!(await protectBuffer())) return;
 								if (editing) filePreviewRef?.cancelEdit();
@@ -2152,7 +2153,7 @@
 					{#if isHtml && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() =>
 									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
@@ -2170,7 +2171,7 @@
 					{:else if isMarkdown && showRaw}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() =>
 									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
@@ -2188,7 +2189,7 @@
 					{:else if isCode}
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() =>
 									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
@@ -2204,7 +2205,7 @@
 					{:else if editing}
 						<Tooltip content={$i18n.t('Cancel')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 								on:click={() => filePreviewRef?.cancelEdit()}
 								aria-label={$i18n.t('Cancel')}
 							>
@@ -2213,7 +2214,7 @@
 						</Tooltip>
 						<Tooltip content={$i18n.t('Save')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() =>
 									filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
 								disabled={saving || !selectedFileWritable}
@@ -2229,7 +2230,7 @@
 					{:else}
 						<Tooltip content={$i18n.t('Edit')}>
 							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 								on:click={() => filePreviewRef?.startEdit()}
 								disabled={!selectedFileWritable}
 								aria-label={$i18n.t('Edit')}
@@ -2243,7 +2244,7 @@
 				{#if fileContent !== null}
 					<Tooltip content={$i18n.t('Copy')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 							on:click={async () => {
 								if (await copyToClipboard(fileContent ?? '')) {
 									toast.success($i18n.t('Copied to clipboard'));
@@ -2257,7 +2258,7 @@
 				{/if}
 				<Tooltip content={$i18n.t('Download')}>
 					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 						on:click={() => selectedFile && downloadFile(selectedFile)}
 						aria-label={$i18n.t('Download')}
 					>
@@ -2266,17 +2267,25 @@
 				</Tooltip>
 			</FileNavToolbar>
 
-			{#if !selectedFile}
+			{#if !selectedFile && showSearch}
 				<div
 					class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
 				>
 					<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
 					<input
+						bind:this={searchInput}
 						type="text"
 						class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
 						placeholder={$i18n.t('Search files and contents')}
 						aria-label={$i18n.t('Search files and contents')}
 						bind:value={searchQuery}
+						on:keydown={(event) => {
+							if (event.key === 'Escape') {
+								event.preventDefault();
+								event.stopPropagation();
+								void toggleSearch();
+							}
+						}}
 					/>
 					{#if searchQuery}
 						<button
@@ -2364,9 +2373,9 @@
 			}}
 		>
 			{#if previewPort !== null}
-				<PortPreview
+				<Browser
 					baseUrl={previewBaseUrl}
-					port={previewPort}
+					initialUrl={`http://localhost:${previewPort}/`}
 					overlay={overlay || isDraggingHandle}
 					onClose={() => {
 						previewPort = null;
@@ -2714,6 +2723,10 @@
 						apiKey={selectedTerminal.key}
 						{chatId}
 						on:previewPort={(e) => {
+							if (onOpenPort) {
+								onOpenPort(e.detail, previewBaseUrl);
+								return;
+							}
 							selectedFile = null;
 							clearFilePreview();
 							previewPort = e.detail;
@@ -2723,9 +2736,12 @@
 			</div>
 		{/if}
 
-		<!-- Terminal bottom panel -->
-		{#if terminalEnabled && showTerminalDock}
-			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
+		<!-- Read-only session output -->
+		{#if showTerminalDock}
+			<div
+				class:hidden={!hasSessions}
+				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -2741,6 +2757,7 @@
 					<TerminalDock
 						terminalId={effectiveTerminalId}
 						{active}
+						bind:hasSessions
 						overlay={overlay || isDraggingHandle}
 						bind:expanded={terminalExpanded}
 						height={terminalHeight}

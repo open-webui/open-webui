@@ -19,6 +19,8 @@
 
 	export let onNavigate: (path: string) => void = () => {};
 	export let onRefresh: () => void = () => {};
+	export let showSearch = false;
+	export let onToggleSearch: (() => void) | null = null;
 	export let onNewFolder: () => void = () => {};
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
@@ -65,7 +67,7 @@
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoBack
-					? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
 					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 				on:click={onGoBack}
 				disabled={!canGoBack}
@@ -80,7 +82,7 @@
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoForward
-					? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
 					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 				on:click={onGoForward}
 				disabled={!canGoForward}
@@ -150,7 +152,7 @@
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
 			type="button"
-			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
@@ -162,7 +164,7 @@
 			<Tooltip content={$i18n.t('Sort')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Sort')}
 				>
 					<Icon name="sort" size={11} strokeWidth={1.4} />
@@ -256,11 +258,25 @@
 				</DropdownMenu>
 			</div>
 		</Dropdown>
+		{#if onToggleSearch}
+			<Tooltip content={$i18n.t('Search')}>
+				<button
+					type="button"
+					data-file-search-toggle
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					aria-label={$i18n.t('Search')}
+					aria-expanded={showSearch}
+					on:click={onToggleSearch}
+				>
+					<Icon name="search" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+		{/if}
 		<Dropdown bind:show={actionsMenuOpen} align="end" sideOffset={4}>
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Actions')}
 				>
 					<Icon name="three-dots" size={11} strokeWidth={1.4} />

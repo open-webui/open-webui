@@ -18,9 +18,8 @@
 	export let expanded = false;
 	export let height = 200;
 	export let overlay = false;
-	export let connected = false;
-	export let connecting = false;
 	export let running = 0;
+	export let hasSessions = false;
 
 	const i18n = getContext<Readable<{ t: (key: string) => string }>>('i18n');
 	type Tab = TerminalProcess & {
@@ -31,9 +30,7 @@
 	};
 	let connection: TerminalConnection | null = null;
 	let tabs: Tab[] = [];
-	let activeId = 'shell';
-	let shellOpened = false;
-	let shellDismissed = false;
+	let activeId = '';
 	let error = '';
 	let panes: Record<string, XTerminal> = {};
 	const dismissed = new Set<string>();
@@ -41,11 +38,13 @@
 	let polling = false;
 	let disposed = false;
 
-	$: if (expanded && activeId === 'shell') shellOpened = true;
+	$: if (active) void tick().then(poll);
+	$: if (expanded) void tick().then(poll);
+	$: hasSessions = tabs.length > 0;
 	$: running = tabs.filter((tab) => tab.status === 'running' && tab.available).length;
 
 	async function poll() {
-		if (!connection || polling || disposed || document.hidden) return;
+		if (!connection || !active || polling || disposed || document.hidden) return;
 		polling = true;
 		try {
 			const processes = await terminalRequest<TerminalProcess[]>(connection, chatId, '/execute', {
@@ -64,6 +63,7 @@
 					];
 				}
 			}
+			if (!tabs.some((tab) => tab.id === activeId)) activeId = tabs[0]?.id ?? '';
 			const tab = tabs.find((tab) => tab.id === activeId);
 			if (expanded && tab?.available && !tab.finished) {
 				await tick();
@@ -88,7 +88,7 @@
 								exit_code: result.exit_code,
 								offset: result.next_offset,
 								loaded: true,
-								finished: result.status === 'done'
+								finished: result.status !== 'running'
 							}
 						: item
 				);
@@ -103,10 +103,6 @@
 	function select(id: string) {
 		expanded = true;
 		activeId = id;
-		if (id === 'shell') {
-			shellOpened = true;
-			shellDismissed = false;
-		}
 		tick().then(poll);
 	}
 
@@ -114,21 +110,12 @@
 		dismissed.add(id);
 		tabs = tabs.filter((tab) => tab.id !== id);
 		delete panes[id];
-		if (activeId === id) activeId = shellOpened ? 'shell' : (tabs[0]?.id ?? '');
-		if (!activeId) expanded = false;
-	}
-
-	function closeShell() {
-		shellOpened = false;
-		shellDismissed = true;
-		connected = false;
-		connecting = false;
-		activeId = tabs[0]?.id ?? '';
+		if (activeId === id) activeId = tabs[0]?.id ?? '';
 		if (!activeId) expanded = false;
 	}
 
 	function navigate(event: KeyboardEvent) {
-		const ids = [...(!shellDismissed ? ['shell'] : []), ...tabs.map((tab) => tab.id)];
+		const ids = tabs.map((tab) => tab.id);
 		const index = ids.indexOf(activeId);
 		let next: string | undefined;
 		if (event.key === 'ArrowRight') next = ids[(index + 1) % ids.length];
@@ -169,52 +156,25 @@
 	>
 		{#if !expanded}
 			<button
-				on:click={() => select(activeId || 'shell')}
+				on:click={() => select(activeId)}
 				class="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left hover:text-gray-900 dark:hover:text-gray-100"
 			>
 				<Icon name="terminal" size={13} />
-				<span>{$i18n.t('Terminal')}</span>
+				<span>{$i18n.t('Sessions')}</span>
 				{#if running}<span class="tabular-nums text-gray-400">{running}</span>{/if}
 			</button>
 		{:else}
+			<span class="flex shrink-0 items-center gap-1.5 px-2">
+				<Icon name="terminal" size={13} />
+				<span>{$i18n.t('Sessions')}</span>
+			</span>
 			<div
 				role="tablist"
 				tabindex="-1"
-				aria-label={$i18n.t('Terminal')}
+				aria-label={$i18n.t('Sessions')}
 				on:keydown={navigate}
 				class="terminal-tabs flex h-full min-w-0 flex-1 items-stretch overflow-x-auto"
 			>
-				{#if !shellDismissed}
-					<div
-						class="terminal-tab group flex shrink-0 items-center border-b"
-						class:selected={activeId === 'shell'}
-					>
-						<button
-							role="tab"
-							data-tab="shell"
-							aria-selected={activeId === 'shell'}
-							tabindex={activeId === 'shell' ? 0 : -1}
-							on:click={() => select('shell')}
-							class="tab-button flex h-full items-center gap-1.5 pl-2 pr-1"
-							title={$i18n.t('Shell')}
-						>
-							<Icon name="terminal" size={12} /><span>{$i18n.t('Shell')}</span>
-						</button>
-						{#if shellOpened}<button
-								on:click={closeShell}
-								class="tab-close mr-1 flex h-5 w-4 items-center justify-center"
-								title={$i18n.t('Close terminal')}
-								aria-label={$i18n.t('Close terminal')}><Icon name="xmark" size={10} /></button
-							>{/if}
-					</div>
-				{:else}
-					<button
-						class="tab-button flex w-7 shrink-0 items-center justify-center"
-						on:click={() => select('shell')}
-						title={$i18n.t('Open terminal')}
-						aria-label={$i18n.t('Open terminal')}><Icon name="plus" size={12} /></button
-					>
-				{/if}
 				{#each tabs as tab (tab.id)}
 					<div
 						class="terminal-tab group flex shrink-0 items-center border-b"
@@ -250,18 +210,18 @@
 			</div>
 		{/if}
 		<button
-			on:click={() => (expanded ? (expanded = false) : select(activeId || 'shell'))}
+			on:click={() => (expanded ? (expanded = false) : select(activeId))}
 			class="tab-button flex h-7 w-7 shrink-0 items-center justify-center"
 			aria-expanded={expanded}
-			title={expanded ? $i18n.t('Collapse terminal') : $i18n.t('Expand terminal')}
-			aria-label={expanded ? $i18n.t('Collapse terminal') : $i18n.t('Expand terminal')}
+			title={expanded ? $i18n.t('Collapse sessions') : $i18n.t('Expand sessions')}
+			aria-label={expanded ? $i18n.t('Collapse sessions') : $i18n.t('Expand sessions')}
 		>
 			<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
 		</button>
 	</div>
 	<div
 		style:height={`${height}px`}
-		class="flex min-h-0 flex-col bg-white dark:bg-black"
+		class="flex min-h-0 flex-col bg-white dark:bg-transparent"
 		class:hidden={!expanded}
 	>
 		{#if error}<div
@@ -271,18 +231,6 @@
 				{error}
 			</div>{/if}
 		<div class="relative min-h-0 flex-1">
-			{#if connection && shellOpened}
-				<div class="absolute inset-0" class:hidden={activeId !== 'shell'}>
-					<XTerminal
-						{connection}
-						{chatId}
-						{overlay}
-						active={active && expanded && activeId === 'shell'}
-						bind:connected
-						bind:connecting
-					/>
-				</div>
-			{/if}
 			{#if connection}
 				{#each tabs as tab (tab.id)}
 					{#if tab.loaded || activeId === tab.id}

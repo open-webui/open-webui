@@ -54,7 +54,7 @@
 	});
 
 	$: if (show && modalElement) {
-		document.body.appendChild(modalElement);
+		if (modalElement.parentElement !== document.body) document.body.appendChild(modalElement);
 		if (!focusTrap) {
 			focusTrap = FocusTrap.createFocusTrap(modalElement, {
 				escapeDeactivates: false,

@@ -52,10 +52,10 @@
 		if (!term) return;
 		term.options.theme = document.documentElement.classList.contains('dark')
 			? {
-					background: '#000000',
+					background: '#00000000',
 					foreground: '#c0c0c0',
 					cursor: '#ffffff',
-					cursorAccent: '#000000',
+					cursorAccent: '#171717',
 					selectionBackground: '#444444'
 				}
 			: {
@@ -134,6 +134,7 @@
 
 	onMount(() => {
 		term = new Terminal({
+			allowTransparency: true,
 			cursorBlink: !readOnly,
 			disableStdin: readOnly,
 			fontSize: 13,
@@ -182,10 +183,16 @@
 	});
 </script>
 
-<div class="h-full min-h-0 relative bg-white dark:bg-black">
+<div class="terminal-view h-full min-h-0 relative bg-white dark:bg-transparent">
 	<div
 		bind:this={terminalEl}
-		class="absolute inset-0 px-0.5"
+		class="absolute inset-0 pl-2 pr-0.5"
 		class:pointer-events-none={overlay}
 	></div>
 </div>
+
+<style>
+	.terminal-view :global(.xterm-viewport) {
+		background-color: transparent;
+	}
+</style>

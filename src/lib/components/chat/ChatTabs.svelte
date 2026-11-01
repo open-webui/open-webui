@@ -35,7 +35,7 @@
 		removeTab,
 		fileTabId,
 		type PanelTab
-	} from './ChatControls/tabs';
+	} from './ChatTabs/tabs';
 	import {
 		resolveTerminalConnection,
 		terminalRequest,
@@ -44,15 +44,16 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
-	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
-	import UntitledFile from './ChatControls/UntitledFile.svelte';
+	import { fileIconName } from './FileNav/fileIcon';
+	import UntitledFile from './ChatTabs/UntitledFile.svelte';
+	import Browser from './ChatTabs/Browser.svelte';
 	import XTerminal from './XTerminal.svelte';
 	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import Artifacts from './Artifacts.svelte';
-	import Embeds from './ChatControls/Embeds.svelte';
+	import Embeds from './ChatTabs/Embeds.svelte';
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
@@ -110,22 +111,43 @@
 	let selectedConnection: TerminalConnection | null = null;
 	let terminalEnabled = false;
 	let featureVersion = 0;
+	let releasePanel: (target: HTMLElement) => void = () => {};
+	const preservePanel = (target: HTMLElement) => ({ destroy: () => releasePanel(target) });
 
 	// Move a single mounted panel between desktop, mobile, and its hidden parking spot.
 	const placePanel = (node: HTMLElement, target: HTMLElement | null) => {
 		const home = node.parentElement!;
 		const move = (destination: HTMLElement | null) => {
-			const parent = destination ?? home;
-			if (node.parentElement !== parent) parent.appendChild(node);
+			const parent = (destination ?? home) as HTMLElement & {
+				moveBefore?: (node: Node, before: Node | null) => void;
+			};
+			if (node.parentElement === parent) return;
+			if (parent.moveBefore && node.isConnected && parent.isConnected)
+				parent.moveBefore(node, null);
+			else parent.appendChild(node);
 		};
-		move(target);
-		return { update: move, destroy: () => node.remove() };
+		releasePanel = (target) => {
+			if (node.parentElement === target) move(null);
+		};
+		const update = (destination: HTMLElement | null) => {
+			if (!destination) {
+				move(null);
+				return;
+			}
+			// Wait until the drawer has attached its destination to the document.
+			void tick().then(() => {
+				if ($showTabs && panelTarget === destination && destination.isConnected) move(destination);
+			});
+		};
+		update(target);
+		return { update, destroy: () => node.remove() };
 	};
 	const tabIcon = (kind: PanelTab['kind']) =>
 		({
 			files: 'folder',
 			file: 'page',
 			terminal: 'terminal',
+			browser: 'browser',
 			artifacts: 'code',
 			preview: 'browser',
 			voice: 'microphone',
@@ -208,6 +230,41 @@
 			label: `${$i18n.t('Terminal')} ${++terminalSequence}`,
 			terminalId: selectedConnection.selector,
 			connection: { ...selectedConnection }
+		});
+	};
+	const openBrowser = (port?: number, selector = $selectedTerminalId, baseUrl?: string) => {
+		const url = port ? `http://localhost:${port}/` : undefined;
+		const existing =
+			url &&
+			tabs.tabs.find(
+				(tab) => tab.kind === 'browser' && tab.terminalId === selector && tab.path === url
+			);
+		if (existing) {
+			selectTab(existing.id);
+			return;
+		}
+		const connection = selector
+			? resolveTerminalConnection(
+					selector,
+					$terminalServers ?? [],
+					directTerminals,
+					localStorage.token ?? ''
+				)
+			: null;
+		if (selector && !terminalAccessible(selector)) return;
+		const terminal = ($terminalServers ?? []).find((item) => item.id === selector);
+		const proxyBase =
+			baseUrl ??
+			(connection && chatContextNeedsSavedChat(terminal) && chatId
+				? `${connection.baseUrl}/chats/${encodeURIComponent(chatId)}`
+				: connection?.baseUrl);
+		openPanel({
+			id: crypto.randomUUID(),
+			kind: 'browser',
+			label: port ? `localhost:${port}` : $i18n.t('Browser'),
+			path: url,
+			terminalId: selector ?? undefined,
+			browserBaseUrl: proxyBase
 		});
 	};
 	const closeTab = async (id: string) => {
@@ -344,13 +401,19 @@
 	const pruneTabs = () => {
 		for (const tab of tabs.tabs) {
 			const available = tab.terminalId
-				? terminalAccessible(tab.terminalId)
-				: availableViews.some((view) => view.kind === tab.kind && view.available);
-			if (!available) tabs = removeTab(tabs, tab.id);
+				? !!$selectedTerminalId && terminalAccessible(tab.terminalId)
+				: tab.kind === 'browser' ||
+					availableViews.some((view) => view.kind === tab.kind && view.available);
+			if (!available) {
+				tabs = removeTab(tabs, tab.id);
+				delete dirtyFiles[tab.id];
+				delete fileContexts[tab.id];
+			}
 		}
 	};
 	$: {
 		availableViews;
+		$selectedTerminalId;
 		$terminalServers;
 		$settings;
 		$config;
@@ -473,6 +536,7 @@
 	}
 
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
+		if (panelTarget && largeScreen !== event.matches) releasePanel(panelTarget);
 		largeScreen = event.matches;
 	};
 
@@ -484,6 +548,9 @@
 	};
 
 	onMount(() => {
+		const unsubscribeVisibility = showTabs.subscribe((visible) => {
+			if (!visible && panelTarget) releasePanel(panelTarget);
+		});
 		const mediaQuery = window.matchMedia('(min-width: 768px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
@@ -505,6 +572,7 @@
 		document.addEventListener('mouseup', onMouseUp);
 
 		return () => {
+			unsubscribeVisibility();
 			isDestroyed = true;
 			mounted = false;
 			if (!largeScreen) {
@@ -555,8 +623,8 @@
 </Modal>
 
 <div
-	class:hidden={!panelTarget}
-	use:placePanel={panelTarget}
+	class:hidden={!$showTabs || !panelTarget}
+	use:placePanel={$showTabs ? panelTarget : null}
 	class="h-full w-full min-h-0 flex flex-col"
 	id="controls-container"
 >
@@ -587,7 +655,7 @@
 							on:click={() => selectTab(tab.id)}
 						>
 							{#if tab.kind === 'file'}
-								<FileTypeIcon name={tab.label} />
+								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
@@ -625,6 +693,9 @@
 						{#if terminalEnabled}<button on:click={newTerminal}
 								><Icon name="terminal" size={14} />{$i18n.t('New Terminal')}</button
 							>{/if}
+						<button on:click={() => openBrowser()}
+							><Icon name="browser" size={14} />{$i18n.t('Browser')}</button
+						>
 						{#each availableViews.filter((view) => view.kind !== 'files' && view.kind !== 'voice' && view.available) as view}
 							<button
 								on:click={() =>
@@ -679,6 +750,20 @@
 							onCountChange={setCommentCount}
 						/>
 					{/key}
+				{:else if tab.kind === 'browser'}
+					<Browser
+						baseUrl={tab.browserBaseUrl ?? ''}
+						initialUrl={tab.path ?? ''}
+						overlay={dragged}
+						onNavigate={(path, label) => {
+							tabs = {
+								...tabs,
+								tabs: tabs.tabs.map((item) =>
+									item.id === tab.id ? { ...item, path, label } : item
+								)
+							};
+						}}
+					/>
 				{:else if tab.kind === 'terminal' && tab.connection}
 					<XTerminal
 						connection={tab.connection}
@@ -729,9 +814,10 @@
 						initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
 						active={!!$showTabs && tabs.activeId === tab.id}
 						manageFileRequests={false}
-						showTerminalDock={false}
+						showTerminalDock={tab.kind === 'files'}
 						onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
 						onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
+						onOpenPort={(port, baseUrl) => openBrowser(port, tab.terminalId, baseUrl)}
 						{onAskFile}
 						overlay={dragged}
 						{chatId}
@@ -774,7 +860,7 @@
 				swipeSide={$mobile ? 'right' : undefined}
 				className="min-h-[100dvh] !bg-white dark:!bg-gray-850"
 			>
-				<div bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
+				<div use:preservePanel bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>
 		{/if}
 	</MobileSwipePanel>
@@ -787,7 +873,11 @@
 		storageKey="chatControlsSize"
 		className="h-full z-10 bg-white dark:bg-gray-900"
 	>
-		<div bind:this={panelTarget} class="h-full w-full z-40 pointer-events-auto"></div>
+		<div
+			use:preservePanel
+			bind:this={panelTarget}
+			class="h-full w-full z-40 pointer-events-auto"
+		></div>
 	</ResizableSidePanel>
 {/if}
 
