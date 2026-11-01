@@ -14,6 +14,29 @@
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
+[English](README.md) |
+[简体中文](README.zh.md) |
+[繁體中文](README.zht.md) |
+[한국어](README.ko.md) |
+[Deutsch](README.de.md) |
+[Español](README.es.md) |
+[Français](README.fr.md) |
+[Italiano](README.it.md) |
+[Dansk](README.da.md) |
+[日本語](README.ja.md) |
+[Polski](README.pl.md) |
+[Русский](README.ru.md) |
+[Bosanski](README.bs.md) |
+[العربية](README.ar.md) |
+[Norsk](README.no.md) |
+[Português (Brasil)](README.br.md) |
+[ไทย](README.th.md) |
+[Türkçe](README.tr.md) |
+[Українська](README.uk.md) |
+[বাংলা](README.bn.md) |
+[Ελληνικά](README.gr.md) |
+[Tiếng Việt](README.vi.md)
+
 [Explore Open WebUI →](https://docs.openwebui.com/)
 
 ### Installation
