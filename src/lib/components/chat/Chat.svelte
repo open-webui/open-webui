@@ -28,7 +28,7 @@
 		user,
 		socket,
 		audioQueue,
-		showControls,
+		showTabs,
 		showCallOverlay,
 		temporaryChatEnabled,
 		mobile,
@@ -1286,7 +1286,7 @@
 		if (type === 'terminal:display_file') {
 			if (!data?.path) return;
 			if ($settings?.terminalFileDisplay === 'inline') return;
-			displayFileHandler(data.path, { showControls, showFileNavPath }, { page: data?.page });
+			displayFileHandler(data.path, { showTabs, showFileNavPath }, { page: data?.page });
 		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
 			if (!data?.path) return;
 			showFileNavDir.set(data.path);
@@ -1929,7 +1929,7 @@
 			});
 		}
 
-		const showControlsSubscribe = showControls.subscribe((value) => {
+		const showTabsSubscribe = showTabs.subscribe((value) => {
 			if (!value) {
 				showCallOverlay.set(false);
 				showArtifacts.set(false);
@@ -1990,7 +1990,7 @@
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
 				}
-				showControlsSubscribe();
+				showTabsSubscribe();
 				showArtifactsSubscribe();
 				selectedFolderSubscribe();
 
@@ -2614,13 +2614,13 @@
 		}
 
 		showCallOverlay.set(true);
-		showControls.set(true);
+		showTabs.set(true);
 	};
 
 	const initNewChat = async () => {
 		loading = true;
-		if (!embedded && ($showControls === 'comments' || typeof $showControls === 'object'))
-			showControls.set(false);
+		if (!embedded && ($showTabs === 'comments' || typeof $showTabs === 'object'))
+			showTabs.set(false);
 		const signal = startChatLoad();
 		modelDefaults = null;
 		clearTimeout(saveControlsTimer);
@@ -2754,7 +2754,7 @@
 		}
 
 		if ($mobile) {
-			await showControls.set(false);
+			await showTabs.set(false);
 		}
 		await showCallOverlay.set(false);
 		await showArtifacts.set(false);
@@ -5433,6 +5433,9 @@
 										{taskIds}
 										bind:selectedModels
 										onModelSelect={saveControls}
+										bind:chatFiles
+										bind:params
+										onParamChange={saveParam}
 										bind:files
 										bind:prompt
 										bind:autoScroll
@@ -5531,6 +5534,9 @@
 										{taskIds}
 										bind:selectedModels
 										onModelSelect={saveControls}
+										bind:chatFiles
+										bind:params
+										onParamChange={saveParam}
 										bind:files
 										bind:prompt
 										bind:autoScroll
@@ -5596,6 +5602,9 @@
 									{history}
 									bind:selectedModels
 									onModelSelect={saveControls}
+									bind:chatFiles
+									bind:params
+									onParamChange={saveParam}
 									bind:messageInput
 									bind:files
 									bind:prompt
@@ -5650,20 +5659,10 @@
 				<ChatControls
 					bind:terminalContext
 					bind:history
-					bind:chatFiles
-					bind:params
-					onParamChange={saveParam}
 					bind:files
 					chatId={$chatId}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
-					models={selectedModelIds.reduce((a, e, i, arr) => {
-						const model = $models.find((m) => m.id === e);
-						if (model) {
-							return [...a, model];
-						}
-						return a;
-					}, [])}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}
 					{stopResponse}

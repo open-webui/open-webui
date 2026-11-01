@@ -28,7 +28,7 @@
 	let showFiles = getOpen('files');
 	let showValves = getOpen('valves', false);
 	let showSystemPrompt = getOpen('systemPrompt');
-	let showAdvancedParams = getOpen('advancedParams');
+	let showAdvancedParams = false;
 
 	const compactSectionButtonClass =
 		'w-full py-1 text-xs font-normal text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition cursor-pointer select-none';
@@ -135,7 +135,6 @@
 				<Collapsible
 					title={$i18n.t('Advanced Params')}
 					bind:open={showAdvancedParams}
-					onChange={setOpen('advancedParams')}
 					buttonClassName={compactSectionButtonClass}
 					chevronClassName="size-2.5"
 					chevronStrokeWidth="2"
@@ -144,7 +143,7 @@
 						class="pt-1 pb-1 text-xs [&_label]:truncate [&_label]:pb-1 [&_label]:-mb-1 [&_label+div]:shrink-0 [&_.inline-tooltip_label]:cursor-help!"
 						slot="content"
 					>
-						<div>
+						<div class="[&>div]:space-y-0 [&>div>div]:py-0">
 							<AdvancedParams
 								admin={$user?.role === 'admin'}
 								custom={true}

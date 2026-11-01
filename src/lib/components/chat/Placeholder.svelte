@@ -47,6 +47,9 @@
 	export let atSelectedModel: Model | undefined;
 	export let selectedModels: [''];
 	export let onModelSelect: (models: string[]) => void = () => {};
+	export let chatFiles: any[] = [];
+	export let params: Record<string, any> = {};
+	export let onParamChange: (key: string, value: unknown) => void = () => {};
 
 	export let history;
 	export let chatId = '';
@@ -264,6 +267,9 @@
 						{history}
 						bind:selectedModels
 						{onModelSelect}
+						bind:chatFiles
+						bind:params
+						{onParamChange}
 						bind:files
 						bind:prompt
 						bind:autoScroll

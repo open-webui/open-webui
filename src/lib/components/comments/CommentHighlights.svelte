@@ -2,7 +2,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import tippy, { type Instance } from 'tippy.js';
 	import dayjs from '$lib/dayjs';
-	import { socket, user, showControls } from '$lib/stores';
+	import { socket, user, showTabs } from '$lib/stores';
 	import {
 		commentsRequest,
 		resourceQuery,
@@ -68,7 +68,7 @@
 				: located.filter(
 						({ comment }) =>
 							comment.id ===
-							(typeof $showControls === 'object' ? $showControls.comment_id : undefined)
+							(typeof $showTabs === 'object' ? $showTabs.comment_id : undefined)
 					)
 			).map(({ range }) => range)
 		);
@@ -272,7 +272,7 @@
 	const open = async (comment: ResourceComment) => {
 		hide();
 		if (comment.resource_type === 'chat') {
-			showControls.set({ tab: 'comments', comment_id: comment.id });
+			showTabs.set({ tab: 'comments', comment_id: comment.id });
 		} else {
 			const surface = surfaces.find(
 				([, options]) =>

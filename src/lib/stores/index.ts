@@ -176,9 +176,8 @@ export const showSearch = writable(false);
 export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 
-export const showControls = writable<
+export const showTabs = writable<
 	| boolean
-	| 'controls'
 	| 'files'
 	| 'comments'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })

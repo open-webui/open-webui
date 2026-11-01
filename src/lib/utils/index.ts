@@ -2497,13 +2497,13 @@ export const formatSkillName = (name) => {
 export const displayFileHandler = (
 	path: string,
 	stores: {
-		showControls: Pick<Writable<boolean>, 'set'>;
+		showTabs: Pick<Writable<boolean>, 'set'>;
 		showFileNavPath: Writable<FileNavOpenRequest | null>;
 	},
 	options: { page?: unknown } = {}
 ) => {
 	if (path) {
-		stores.showControls.set(true);
+		stores.showTabs.set(true);
 		const page = normalizeDocumentTargetPage(options.page);
 		stores.showFileNavPath.set(page ? { path, page } : path);
 	}

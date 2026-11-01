@@ -10,7 +10,7 @@
 		config,
 		settings,
 		showArtifacts,
-		showControls,
+		showTabs,
 		artifactContents
 	} from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
@@ -97,7 +97,7 @@
 			console.log('Artifact contents updated:', newContents);
 
 			if (newContents.length === 0) {
-				showControls.set(false);
+				showTabs.set(false);
 				showArtifacts.set(false);
 				selectedContentIdx = 0;
 			} else if (newContents.length > contents.length) {
@@ -231,7 +231,7 @@
 					class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 					on:click={() => {
 						dispatch('close');
-						showControls.set(false);
+						showTabs.set(false);
 						showArtifacts.set(false);
 					}}
 				>

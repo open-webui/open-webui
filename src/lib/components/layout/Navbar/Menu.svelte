@@ -10,7 +10,7 @@
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	import {
-		showControls,
+		showTabs,
 		showOverview,
 		showArtifacts,
 		mobile,
@@ -417,7 +417,7 @@
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 					id="chat-artifacts-button"
 					on:click={async () => {
-						await showControls.set(true);
+						await showTabs.set(true);
 						await showArtifacts.set(true);
 						await showEmbeds.set(false);
 					}}
@@ -445,7 +445,7 @@
 
 			{#if chat?.id && !$temporaryChatEnabled}
 				<CommentButton
-					onComment={() => showControls.set('comments')}
+					onComment={() => showTabs.set('comments')}
 					menu
 					resource={{ resource_type: 'chat', resource_id: chat.id }}
 					onOpen={() => (show = false)}

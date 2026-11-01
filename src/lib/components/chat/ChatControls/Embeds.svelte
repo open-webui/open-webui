@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { embed, showControls, showEmbeds } from '$lib/stores';
+	import { embed, showTabs, showEmbeds } from '$lib/stores';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -62,7 +62,7 @@
 				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
 				aria-label={$i18n.t('Close embed')}
 				on:click={() => {
-					showControls.set(false);
+					showTabs.set(false);
 					showEmbeds.set(false);
 					embed.set(null);
 				}}

@@ -10,7 +10,7 @@
 	import {
 		settings,
 		selectedTerminalId,
-		showControls,
+		showTabs,
 		showFileNavPath,
 		terminalServers
 	} from '$lib/stores';
@@ -237,7 +237,7 @@
 
 	function openInFiles() {
 		if (unavailable || !path) return;
-		showControls.set(true);
+		showTabs.set(true);
 		showFileNavPath.set(targetPage ? { path, page: targetPage } : path);
 	}
 

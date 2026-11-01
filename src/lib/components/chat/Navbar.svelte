@@ -11,8 +11,8 @@
 		config,
 		mobile,
 		settings,
-		showControls,
 		showSidebar,
+		showTabs,
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
@@ -36,7 +36,7 @@
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
-	import Knobs from '../icons/Knobs.svelte';
+	import SplitPanel from '../icons/SplitPanel.svelte';
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import { createMessagesList } from '$lib/utils';
@@ -368,19 +368,16 @@
 						</Menu>
 					{/if}
 
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.controls ?? true)}
-						<Tooltip content={$i18n.t('Controls')}>
-							<button
-								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
-								on:click={async () => {
-									await showControls.set(!$showControls);
-								}}
-								aria-label={$i18n.t('Controls')}
-							>
-								<Knobs className="size-5" strokeWidth="1" />
-							</button>
-						</Tooltip>
-					{/if}
+					<Tooltip content={$i18n.t('Tabs')}>
+						<button
+							class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+							on:click={() => showTabs.set(!$showTabs)}
+							aria-label={$i18n.t('Tabs')}
+							aria-expanded={!!$showTabs}
+						>
+							<SplitPanel className="size-5" strokeWidth="1" />
+						</button>
+					</Tooltip>
 				</div>
 			</div>
 		</div>

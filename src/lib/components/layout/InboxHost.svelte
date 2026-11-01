@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showControls, showSidebar, socket, user } from '$lib/stores';
+	import { mobile, showTabs, showSidebar, socket, user } from '$lib/stores';
 	import { commentLink } from '$lib/utils';
 	import { refreshInboxCount, setInboxCount } from '$lib/stores/inbox';
 	import { inboxRequest, type InboxItem } from '$lib/apis/notifications/inbox';
@@ -54,7 +54,7 @@
 				}),
 				{ state }
 			);
-			showControls.set({ tab: 'comments', comment_id: current.object_id! });
+			showTabs.set({ tab: 'comments', comment_id: current.object_id! });
 		} else if (current.object_type === 'comment') {
 			comments = {
 				resource_type: current.resource_type as CommentsRequest['resource_type'],

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { config, user, showControls } from '$lib/stores';
+	import { config, user, showTabs } from '$lib/stores';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import CommentHighlights from './CommentHighlights.svelte';
 	import { selectedComment, commentSelectionDraft } from './anchors';
@@ -63,10 +63,10 @@
 	on:keydown={(event) => {
 		if (event.key === 'Escape') {
 			if (
-				($showControls === 'comments' || typeof $showControls === 'object') &&
+				($showTabs === 'comments' || typeof $showTabs === 'object') &&
 				!document.querySelector('.modal, [aria-modal="true"]')
 			)
-				showControls.set(false);
+				showTabs.set(false);
 			selection = null;
 		}
 	}}

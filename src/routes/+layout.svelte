@@ -35,7 +35,7 @@
 		channelRequestQueues,
 		terminalServers,
 		connectedUserTerminals,
-		showControls,
+		showTabs,
 		showFileNavPath,
 		showFileNavDir,
 		pyodideWorker,
@@ -558,7 +558,7 @@
 				if (result?.exists !== false) {
 					displayFileHandler(
 						result?.path ?? params.path,
-						{ showControls, showFileNavPath },
+						{ showTabs, showFileNavPath },
 						{ page: params?.page }
 					);
 				}

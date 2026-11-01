@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
-	import { config, showCallOverlay, showControls } from '$lib/stores';
+	import { config, showCallOverlay, showTabs } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import CallOverlay from './CallOverlay.svelte';
 	import BridgeCallOverlay from './CallOverlay/BridgeCallOverlay.svelte';
@@ -19,7 +19,7 @@
 
 	const close = () => {
 		showCallOverlay.set(false);
-		showControls.set(false);
+		showTabs.set(false);
 	};
 
 	onMount(() => {

@@ -13,7 +13,7 @@
 		mobile,
 		settings,
 		showArtifacts,
-		showControls,
+		showTabs,
 		showEmbeds
 	} from '$lib/stores';
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
@@ -177,7 +177,7 @@
 				autoOpenedArtifactIds.add(artifactId);
 				await tick();
 				showArtifacts.set(true);
-				showControls.set(true);
+				showTabs.set(true);
 			}
 		}
 	);
@@ -186,7 +186,7 @@
 		async (/** @type {string} */ value) => {
 			console.log('Preview', value);
 			await artifactCode.set(/** @type {any} */ (value));
-			await showControls.set(true);
+			await showTabs.set(true);
 			await showArtifacts.set(true);
 			await showEmbeds.set(false);
 		}
