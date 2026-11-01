@@ -48,7 +48,7 @@ asgiref==3.11.1
 tiktoken==0.13.0
 mcp==2.3.0
 
-openai==2.29.0
+openai==3.41.0
 anthropic==0.86.0
 
 langchain-core==1.4.8
