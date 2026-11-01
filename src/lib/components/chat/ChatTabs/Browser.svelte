@@ -196,14 +196,14 @@
 						: ''} allow-forms allow-popups allow-modals allow-downloads"
 					on:load={loaded}
 				></iframe>{/key}
-		{:else}<div class="flex h-full overflow-y-auto px-6 py-8">
+		{:else}<div class="flex h-full overflow-y-auto px-6 pt-8 pb-20">
 				<div class="m-auto w-full max-w-xs">
 					<div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
 						<Icon name="browser" size={18} strokeWidth={1.4} class="text-gray-400" />
 						{$i18n.t('Browser')}
 					</div>
 					{#if connection}
-						<div class="mt-6">
+						<div class="mt-3">
 							<PortList
 								baseUrl={connection.baseUrl}
 								previewBaseUrl={baseUrl}
