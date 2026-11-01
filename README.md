@@ -1,6 +1,6 @@
-<h1 align="center">Open WebUI</h1>
+<h2>Open WebUI</h2>
 
-<p align="center">Open WebUI is <a href="https://docs.openwebui.com/"><strong>a home for AI</strong></a>: an extensible, easy-to-use, self-hosted platform built to run entirely offline. Connect local models through Ollama or use OpenAI-compatible APIs for local and cloud models.</p>
+<p>Open WebUI is <a href="https://docs.openwebui.com/"><strong>a home for AI</strong></a>: an extensible, easy-to-use, self-hosted platform built to run entirely offline. Connect local models through Ollama or use OpenAI-compatible APIs for local and cloud models.</p>
 
 ![Open WebUI Demo](https://cdn.openwebui.com/open-webui-demo.gif)
 
