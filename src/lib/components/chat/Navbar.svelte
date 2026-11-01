@@ -328,7 +328,7 @@
 								}}
 								aria-label={$i18n.t('New Chat')}
 							>
-								<ChatPlus className="size-4.5" strokeWidth="1.5" />
+								<ChatPlus className="size-4" strokeWidth="1.5" />
 							</button>
 						</Tooltip>
 					{/if}
@@ -377,7 +377,7 @@
 								aria-label={$i18n.t('Tabs')}
 								aria-expanded={!!$showTabs}
 							>
-								<SplitPanel className="size-5" strokeWidth="1" />
+								<SplitPanel className="size-4.5" strokeWidth="1" />
 							</button>
 						</Tooltip>
 					{/if}

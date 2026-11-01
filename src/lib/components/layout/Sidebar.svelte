@@ -1159,7 +1159,7 @@
 								<div
 									class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 								>
-									<EditPencilIcon className="size-4" strokeWidth="1.5" />
+									<EditPencilIcon className="size-[15px]" strokeWidth="1.5" />
 								</div>
 							</a>
 						</Tooltip>
@@ -1395,7 +1395,7 @@
 								aria-label={$i18n.t('New Chat')}
 							>
 								<div class="self-center flex size-4 shrink-0 items-center justify-center">
-									<EditPencilIcon className=" size-4" strokeWidth="1.5" />
+									<EditPencilIcon className="size-[15px]" strokeWidth="1.5" />
 								</div>
 
 								<div class="flex flex-1 self-center translate-y-[0.5px]">
