@@ -1114,7 +1114,7 @@ ${content}
 
 <div class="w-full h-full flex">
 	<div class="h-full flex flex-col min-w-0 flex-1 relative">
-		<div class="relative flex-1 w-full h-full flex justify-center pt-2" id="note-editor">
+		<div class="relative flex-1 w-full h-full flex justify-center pt-1.5 md:pt-2" id="note-editor">
 			{#if loading}
 				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 					<div class="m-auto">
@@ -1123,7 +1123,7 @@ ${content}
 				</div>
 			{:else if note && activePage}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
-					<div class="shrink-0 w-full flex justify-between items-center px-3">
+					<div class="shrink-0 w-full flex justify-between items-center px-1.5 md:px-3">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile}
 								<Tooltip
