@@ -1,10 +1,11 @@
-import type { TerminalConnection } from './index';
+import type { ListeningPort, TerminalConnection } from './index';
+import { openTerminalSocket } from './socket';
 
-export function watchTerminalFiles(
+function watchTerminalEvents(
 	connection: TerminalConnection,
 	chatId: string | null,
-	directory: string,
-	onChange: () => void,
+	subscription: { path?: string; ports?: boolean },
+	onMessage: (message: any) => void,
 	onError: (message: string) => void
 ) {
 	let stopped = false;
@@ -12,26 +13,18 @@ export function watchTerminalFiles(
 	let retry: ReturnType<typeof setTimeout>;
 	let retryDelay = 1000;
 	const connect = () => {
-		const url = new URL(`${connection.baseUrl.replace(/\/$/, '')}/files/events`, location.href);
-		url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-		socket = new WebSocket(url);
-		socket.onopen = () => {
-			socket.send(
-				JSON.stringify({ type: 'auth', token: connection.key.trim(), chat_id: chatId ?? '' })
-			);
-			socket.send(JSON.stringify({ type: 'subscribe', path: directory }));
-		};
+		socket = openTerminalSocket(connection, chatId, '/events', (socket) => {
+			socket.send(JSON.stringify({ type: 'subscribe', ...subscription }));
+		});
 		socket.onmessage = (event) => {
 			if (stopped) return;
 			try {
 				const message = JSON.parse(event.data);
-				if (message.type === 'ready') {
-					retryDelay = 1000;
-					onError('');
-					onChange();
-				} else if (message.type === 'change') onChange();
+				retryDelay = 1000;
+				onError('');
+				onMessage(message);
 			} catch {
-				/* Ignore frames that are not filesystem notifications. */
+				/* Ignore invalid event frames. */
 			}
 		};
 		socket.onclose = (event) => {
@@ -49,4 +42,39 @@ export function watchTerminalFiles(
 		socket.onopen = socket.onmessage = socket.onclose = null;
 		socket.close();
 	};
+}
+
+export function watchTerminalFiles(
+	connection: TerminalConnection,
+	chatId: string | null,
+	directory: string,
+	onChange: () => void,
+	onError: (message: string) => void
+) {
+	return watchTerminalEvents(
+		connection,
+		chatId,
+		{ path: directory },
+		(message) => {
+			if (message.type === 'fs:ready' || message.type === 'fs:change') onChange();
+		},
+		onError
+	);
+}
+
+export function watchTerminalPorts(
+	connection: TerminalConnection,
+	chatId: string | null,
+	onPorts: (ports: ListeningPort[]) => void,
+	onError: (message: string) => void
+) {
+	return watchTerminalEvents(
+		connection,
+		chatId,
+		{ ports: true },
+		(message) => {
+			if (message.type === 'ports:change') onPorts(message.ports);
+		},
+		onError
+	);
 }

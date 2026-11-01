@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { onDestroy, getContext, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { ListeningPort } from '$lib/apis/terminal';
-	import { getListeningPorts, getPortProxyUrl } from '$lib/apis/terminal';
+	import { getListeningPorts, getPortProxyUrl, getTerminalFeatures } from '$lib/apis/terminal';
+	import { watchTerminalPorts } from '$lib/apis/terminal/events';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Icon from './Icon.svelte';
 
@@ -16,24 +17,46 @@
 
 	let ports: ListeningPort[] = [];
 	let loading = false;
-	let pollTimer: ReturnType<typeof setInterval> | null = null;
+	let mounted = false;
+	let context = '';
+	let generation = 0;
+	let stopWatching: (() => void) | undefined;
 
 	const loadPorts = async () => {
+		const current = generation;
 		loading = true;
-		ports = await getListeningPorts(baseUrl, apiKey, chatId);
+		const next = await getListeningPorts(baseUrl, apiKey, chatId);
+		if (current !== generation) return;
+		ports = next;
 		loading = false;
 	};
 
-	const startPolling = () => {
-		stopPolling();
-		loadPorts();
-		pollTimer = setInterval(loadPorts, 5000);
-	};
-
-	const stopPolling = () => {
-		if (pollTimer) {
-			clearInterval(pollTimer);
-			pollTimer = null;
+	const configure = async (key: string, enabled: boolean) => {
+		const current = ++generation;
+		stopWatching?.();
+		stopWatching = undefined;
+		if (context !== key) ports = [];
+		context = key;
+		loading = false;
+		if (!enabled || !baseUrl) return;
+		const connection = { baseUrl, key: apiKey, selector: '', system: false };
+		const features = await getTerminalFeatures(connection, chatId);
+		if (current !== generation) return;
+		if (features.events === true) {
+			loading = true;
+			stopWatching = watchTerminalPorts(
+				connection,
+				chatId,
+				(next) => {
+					ports = next;
+					loading = false;
+				},
+				() => {
+					loading = false;
+				}
+			);
+		} else {
+			await loadPorts();
 		}
 	};
 
@@ -47,12 +70,13 @@
 	};
 
 	// Only discover ports while the browser start view is visible.
-	$: if (baseUrl && active) {
-		startPolling();
-	} else stopPolling();
-
+	$: configure(JSON.stringify([baseUrl, apiKey, chatId]), mounted && active);
+	onMount(() => {
+		mounted = true;
+	});
 	onDestroy(() => {
-		stopPolling();
+		++generation;
+		stopWatching?.();
 	});
 </script>
 

@@ -81,7 +81,28 @@ export type ListeningPort = {
 
 export type TerminalFeatures = {
 	terminal?: boolean;
+	git?: boolean;
+	events?: boolean;
 };
+
+// Missing flags mean unsupported; never probe a new endpoint on an older server.
+export async function getTerminalFeatures(
+	connection: TerminalConnection,
+	chatId: string | null,
+	signal?: AbortSignal
+): Promise<TerminalFeatures> {
+	try {
+		const result = await terminalRequest<{ features?: TerminalFeatures }>(
+			connection,
+			chatId,
+			'/api/config',
+			{ signal }
+		);
+		return result.features ?? {};
+	} catch {
+		return {};
+	}
+}
 
 export type TerminalFileRoot = {
 	path: string;

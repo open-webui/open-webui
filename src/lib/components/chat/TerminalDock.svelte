@@ -9,6 +9,7 @@
 		type TerminalProcess,
 		type TerminalProcessOutput
 	} from '$lib/apis/terminal';
+	import { readTerminalStream } from '$lib/apis/terminal/socket';
 	import XTerminal from './XTerminal.svelte';
 	import Icon from './FileNav/Icon.svelte';
 
@@ -37,14 +38,83 @@
 	const controller = new AbortController();
 	let polling = false;
 	let disposed = false;
+	let streaming = true;
+	let stopList: (() => void) | undefined;
+	let stopOutput: (() => void) | undefined;
+	let outputContext = '';
+	let interval: ReturnType<typeof setInterval> | undefined;
+
+	$: configureOutput(
+		streaming && active && expanded
+			? (tabs.find((tab) => tab.id === activeId && tab.available && !tab.finished)?.id ?? '')
+			: ''
+	);
+
+	function configureOutput(id: string) {
+		if (id === outputContext) return;
+		outputContext = id;
+		stopOutput?.();
+		stopOutput = undefined;
+		if (id && connection) {
+			stopOutput = readTerminalStream<TerminalProcessOutput>(
+				connection,
+				chatId,
+				() =>
+					`/execute/${encodeURIComponent(id)}/status?offset=${tabs.find((tab) => tab.id === id)?.offset ?? 0}&tail=1000`,
+				writeOutput,
+				(message) => {
+					error = message;
+				}
+			);
+		}
+	}
 
 	$: if (active) void tick().then(poll);
 	$: if (expanded) void tick().then(poll);
 	$: hasSessions = tabs.length > 0;
 	$: running = tabs.filter((tab) => tab.status === 'running' && tab.available).length;
 
+	function updateProcesses(processes: TerminalProcess[]) {
+		const live = new Map(processes.map((process) => [process.id, process]));
+		tabs = tabs.map((tab) => ({ ...tab, ...live.get(tab.id), available: live.has(tab.id) }));
+		const known = new Set(tabs.map((tab) => tab.id));
+		for (const process of processes) {
+			if (!known.has(process.id) && !dismissed.has(process.id)) {
+				tabs = [
+					...tabs,
+					{ ...process, offset: 0, loaded: false, available: true, finished: false }
+				];
+			}
+		}
+		if (!tabs.some((tab) => tab.id === activeId)) activeId = tabs[0]?.id ?? '';
+	}
+
+	async function writeOutput(result: TerminalProcessOutput) {
+		await tick();
+		const tab = tabs.find((item) => item.id === result.id);
+		if (!tab) return;
+		if (disposed || !panes[tab.id]) return;
+		if (!tab.loaded) {
+			panes[tab.id].write(`$ ${tab.command.replace(/\r?\n/g, '\r\n')}\r\n`);
+		}
+		if (result.truncated) panes[tab.id].write('\r\n[Earlier output omitted]\r\n');
+		panes[tab.id].write(result.output.map((entry) => entry.data).join(''));
+		tabs = tabs.map((item) =>
+			item.id === tab.id
+				? {
+						...item,
+						status: result.status,
+						exit_code: result.exit_code,
+						offset: result.next_offset,
+						loaded: true,
+						finished: result.status !== 'running'
+					}
+				: item
+		);
+	}
+
 	async function poll() {
-		if (!connection || !active || polling || disposed || document.hidden) return;
+		if (!connection || streaming || !active || polling || disposed || document.hidden) return;
 		polling = true;
 		try {
 			const processes = await terminalRequest<TerminalProcess[]>(connection, chatId, '/execute', {
@@ -52,18 +122,7 @@
 			});
 			if (disposed) return;
 			error = '';
-			const live = new Map(processes.map((process) => [process.id, process]));
-			tabs = tabs.map((tab) => ({ ...tab, ...live.get(tab.id), available: live.has(tab.id) }));
-			const known = new Set(tabs.map((tab) => tab.id));
-			for (const process of processes) {
-				if (!known.has(process.id) && !dismissed.has(process.id)) {
-					tabs = [
-						...tabs,
-						{ ...process, offset: 0, loaded: false, available: true, finished: false }
-					];
-				}
-			}
-			if (!tabs.some((tab) => tab.id === activeId)) activeId = tabs[0]?.id ?? '';
+			updateProcesses(processes);
 			const tab = tabs.find((tab) => tab.id === activeId);
 			if (expanded && tab?.available && !tab.finished) {
 				await tick();
@@ -74,24 +133,7 @@
 					`/execute/${encodeURIComponent(tab.id)}/status?wait=0&offset=${tab.offset}&tail=1000`,
 					{ signal: controller.signal }
 				);
-				if (disposed || !panes[tab.id]) return;
-				if (!tab.loaded) {
-					panes[tab.id].write(`$ ${tab.command.replace(/\r?\n/g, '\r\n')}\r\n`);
-				}
-				if (result.truncated) panes[tab.id].write('\r\n[Earlier output omitted]\r\n');
-				panes[tab.id].write(result.output.map((entry) => entry.data).join(''));
-				tabs = tabs.map((item) =>
-					item.id === tab.id
-						? {
-								...item,
-								status: result.status,
-								exit_code: result.exit_code,
-								offset: result.next_offset,
-								loaded: true,
-								finished: result.status !== 'running'
-							}
-						: item
-				);
+				await writeOutput(result);
 			}
 		} catch (cause) {
 			if (!disposed) error = String(cause);
@@ -138,13 +180,31 @@
 			($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [],
 			localStorage.getItem('token') ?? ''
 		);
-		poll();
-		const interval = setInterval(poll, 1000);
+		if (connection) {
+			stopList = readTerminalStream<TerminalProcess[]>(
+				connection,
+				chatId,
+				() => '/execute',
+				updateProcesses,
+				(message) => {
+					error = message;
+				},
+				() => {
+					if (disposed) return;
+					stopList?.();
+					streaming = false;
+					void poll();
+					interval = setInterval(poll, 1000);
+				}
+			);
+		}
 		document.addEventListener('visibilitychange', poll);
 		return () => {
 			disposed = true;
 			controller.abort();
 			clearInterval(interval);
+			stopList?.();
+			stopOutput?.();
 			document.removeEventListener('visibilitychange', poll);
 		};
 	});

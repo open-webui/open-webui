@@ -431,9 +431,21 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
     return user, connection
 
 
-@router.websocket('/{server_id}/files/events')
-async def ws_file_events(ws: WebSocket, server_id: str):
+@router.websocket('/{server_id}/events')
+async def ws_events(ws: WebSocket, server_id: str):
     await _proxy_terminal_websocket(ws, server_id)
+
+
+@router.websocket('/{server_id}/execute')
+async def ws_processes(ws: WebSocket, server_id: str):
+    await _proxy_terminal_websocket(ws, server_id, stream_path='execute')
+
+
+@router.websocket('/{server_id}/execute/{process_id}/status')
+async def ws_process_output(ws: WebSocket, server_id: str, process_id: str):
+    from urllib.parse import quote
+    await _proxy_terminal_websocket(ws, server_id,
+                                    stream_path=f'execute/{quote(process_id, safe="")}/status')
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -445,6 +457,7 @@ async def _proxy_terminal_websocket(
     ws: WebSocket,
     server_id: str,
     session_id: str | None = None,
+    stream_path: str = 'events',
 ):
     """Proxy terminal sessions and filesystem notifications to a terminal server.
 
@@ -470,6 +483,10 @@ async def _proxy_terminal_websocket(
     upstream_params = {}
     # For orchestrator-backed servers, pass user_id
     upstream_params['user_id'] = user.id
+    if stream_path.startswith('execute/'):
+        for key in ('offset', 'tail'):
+            if key in ws.query_params:
+                upstream_params[key] = ws.query_params[key]
     context_id = terminal_context_id(connection, {'chat_id': chat_id}, 'chat')
     upstream_headers = {'X-User-Id': user.id, 'X-Session-Id': chat_id}
     if terminal_context_config(connection, 'chat').get('context_id') == 'chat_id' and not context_id:
@@ -484,7 +501,7 @@ async def _proxy_terminal_websocket(
     # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
     upstream_path = (
         f'api/terminals/{urllib.parse.quote(session_id, safe="")}'
-        if session_id is not None else 'files/events'
+        if session_id is not None else stream_path
     )
     upstream_url = f'{ws_base}/{upstream_path}'
     if upstream_params:
@@ -549,8 +566,9 @@ async def _proxy_terminal_websocket(
                             aiohttp.WSMsgType.ERROR,
                         ):
                             break
-                    if session_id is None and upstream.close_code and 4000 <= upstream.close_code < 5000:
-                        await ws.close(code=upstream.close_code)
+                    if session_id is None:
+                        code = upstream.close_code or 1011
+                        await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
                 except Exception:
                     pass
 
@@ -580,6 +598,13 @@ async def _proxy_terminal_websocket(
                 await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
+        if session_id is None:
+            status = getattr(e, 'status', None)
+            code = {401: 4001, 403: 4003, 404: 4004}.get(status, 1011)
+            try:
+                await ws.close(code=code)
+            except Exception:
+                pass
     finally:
         await session.close()
         if opened:

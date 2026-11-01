@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import type { TerminalConnection } from '$lib/apis/terminal';
+	import { getTerminalFeatures, type TerminalConnection } from '$lib/apis/terminal';
 	import { watchTerminalFiles } from '$lib/apis/terminal/events';
 	import {
 		gitRequest,
@@ -80,6 +80,8 @@
 	let diffGeneration = 0;
 	let stopWatching: (() => void) | undefined;
 	let watchError = '';
+	let gitEnabled = false;
+	let configuration = 0;
 	let pending: Promise<void> | null = null;
 	let syncAction: 'publish' | 'pull' | 'push' | 'fetch';
 	$: staged = status?.files.filter((file) => file.staged) ?? [];
@@ -127,7 +129,8 @@
 		body?: Record<string, unknown>
 	) => gitRequest<T>(connection!, chatId, status?.root ?? directory, operation, params, body);
 	const refresh = (force = false): Promise<void> => {
-		if (!connection || !active || (!force && document.hidden)) return Promise.resolve();
+		if (!connection || !active || !gitEnabled || (!force && document.hidden))
+			return Promise.resolve();
 		if (pending) return pending;
 		const current = generation;
 		const task = gitRequest<GitStatus>(connection, chatId, directory, 'status')
@@ -174,10 +177,12 @@
 		diff = '';
 		loadingDiff = false;
 	};
-	const configure = (key: string, enabled: boolean) => {
+	const configure = async (key: string, enabled: boolean) => {
+		const version = ++configuration;
 		stopWatching?.();
 		stopWatching = undefined;
 		watchError = '';
+		gitEnabled = false;
 		if (key !== context) {
 			context = key;
 			++generation;
@@ -201,7 +206,15 @@
 			resetSelection();
 		}
 		if (enabled && connection) {
+			const features = await getTerminalFeatures(connection, chatId);
+			if (version !== configuration || !mounted) return;
+			gitEnabled = features.git === true;
+			if (!gitEnabled) {
+				status = null;
+				return;
+			}
 			void refresh();
+			if (features.events !== true) return;
 			const current = generation;
 			stopWatching = watchTerminalFiles(
 				connection,
@@ -335,6 +348,8 @@
 		return () => document.removeEventListener('visibilitychange', visibility);
 	});
 	onDestroy(() => {
+		mounted = false;
+		++configuration;
 		++generation;
 		++diffGeneration;
 		stopWatching?.();

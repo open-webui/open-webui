@@ -5,6 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
+	import { openTerminalSocket } from '$lib/apis/terminal/socket';
 	import { connectedUserTerminals } from '$lib/stores';
 
 	export let connection: TerminalConnection;
@@ -94,32 +95,27 @@
 				);
 				return;
 			}
-			const url = new URL(
-				`${connection.baseUrl}/api/terminals/${encodeURIComponent(sessionId)}`,
-				location.href
-			);
-			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-			ws = new WebSocket(url);
-			ws.binaryType = 'arraybuffer';
-			ws.onopen = () => {
-				if (destroyed) return;
-				ws?.send(
-					JSON.stringify({ type: 'auth', token: connection.key.trim(), chat_id: chatId ?? '' })
-				);
-				if (connection.selector && chatId) {
-					const shell = { terminalId: connection.selector, chatId };
-					connectedUserTerminals.update((entries) => entries.set(terminalOwner, shell));
+			ws = openTerminalSocket(
+				connection,
+				chatId,
+				`/api/terminals/${encodeURIComponent(sessionId)}`,
+				() => {
+					if (destroyed) return;
+					if (connection.selector && chatId) {
+						const shell = { terminalId: connection.selector, chatId };
+						connectedUserTerminals.update((entries) => entries.set(terminalOwner, shell));
+					}
+					connected = true;
+					connecting = false;
+					reportActivity(active);
+					fit();
+					if (active) term?.focus();
+					if (term) ws?.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+					pingInterval = setInterval(() => {
+						if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+					}, 25000);
 				}
-				connected = true;
-				connecting = false;
-				reportActivity(active);
-				fit();
-				if (active) term?.focus();
-				if (term) ws?.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
-				pingInterval = setInterval(() => {
-					if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
-				}, 25000);
-			};
+			);
 			ws.onmessage = (event) => {
 				if (destroyed) return;
 				if (event.data instanceof ArrayBuffer) term?.write(new Uint8Array(event.data));
