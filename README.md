@@ -86,10 +86,6 @@ For Docker Compose, Kubernetes, and other setups, see the [installation docs](ht
 
 Report vulnerabilities privately through [GitHub security advisories](https://github.com/open-webui/open-webui/security). Security reports are accepted only through GitHub.
 
-### License
-
-Includes code under the Open WebUI License, which requires preserving the Open WebUI branding, and prior contributions under their original licenses. See [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) for terms and history.
-
 ### Star History
 
 <a href="https://star-history.com/#open-webui/open-webui&Date">
@@ -99,6 +95,10 @@ Includes code under the Open WebUI License, which requires preserving the Open W
     <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
   </picture>
 </a>
+
+#### License
+
+Includes code under the Open WebUI License, which requires preserving the Open WebUI branding, and prior contributions under their original licenses. See [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) for terms and history.
 
 [Enterprise](https://docs.openwebui.com/enterprise) · [Careers](https://careers.openwebui.com/) · [Sponsor](https://github.com/sponsors/open-webui)
 
