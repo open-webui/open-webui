@@ -431,13 +431,22 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
     return user, connection
 
 
+@router.websocket('/{server_id}/files/events')
+async def ws_file_events(ws: WebSocket, server_id: str):
+    await _proxy_terminal_websocket(ws, server_id)
+
+
 @router.websocket('/{server_id}/api/terminals/{session_id}')
-async def ws_terminal(
+async def ws_terminal(ws: WebSocket, server_id: str, session_id: str):
+    await _proxy_terminal_websocket(ws, server_id, session_id)
+
+
+async def _proxy_terminal_websocket(
     ws: WebSocket,
     server_id: str,
-    session_id: str,
+    session_id: str | None = None,
 ):
-    """Proxy an interactive WebSocket terminal session to a terminal server.
+    """Proxy terminal sessions and filesystem notifications to a terminal server.
 
     Uses first-message auth: the client sends ``{"type": "auth", "token": "<jwt>"}``
     as its first message. The proxy validates the JWT, then connects to the
@@ -473,9 +482,11 @@ async def ws_terminal(
 
     # Encode session_id as an opaque path segment so it cannot smuggle '?'/'#'/'&' (at any
     # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
-    safe_session_id = urllib.parse.quote(session_id, safe='')
-
-    upstream_url = f'{ws_base}/api/terminals/{safe_session_id}'
+    upstream_path = (
+        f'api/terminals/{urllib.parse.quote(session_id, safe="")}'
+        if session_id is not None else 'files/events'
+    )
+    upstream_url = f'{ws_base}/{upstream_path}'
     if upstream_params:
         upstream_url += f'?{urllib.parse.urlencode(upstream_params)}'
 
@@ -500,15 +511,16 @@ async def ws_terminal(
             else:
                 await upstream.send_str(_json.dumps({'type': 'auth', 'token': ''}))
 
-            await publish_event(
-                request,
-                EVENTS.TERMINAL_SESSION_OPENED,
-                actor=user,
-                subject_id=session_id,
-                subject_type='terminal.session',
-                data={'server_id': server_id},
-            )
-            opened = True
+            if session_id is not None:
+                await publish_event(
+                    request,
+                    EVENTS.TERMINAL_SESSION_OPENED,
+                    actor=user,
+                    subject_id=session_id,
+                    subject_type='terminal.session',
+                    data={'server_id': server_id},
+                )
+                opened = True
 
             async def _client_to_upstream():
                 """Forward client → upstream."""
@@ -537,6 +549,8 @@ async def ws_terminal(
                             aiohttp.WSMsgType.ERROR,
                         ):
                             break
+                    if session_id is None and upstream.close_code and 4000 <= upstream.close_code < 5000:
+                        await ws.close(code=upstream.close_code)
                 except Exception:
                     pass
 

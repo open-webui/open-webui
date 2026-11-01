@@ -162,7 +162,7 @@
 		{/if}
 	</div>
 	{#if selectedFile && fileSize !== undefined}
-		<span class="shrink-0 text-[0.6875rem] text-gray-400">{formatFileSize(fileSize)}</span>
+		<span class="shrink-0 me-1 text-[0.6875rem] text-gray-400/75">{formatFileSize(fileSize)}</span>
 	{/if}
 	{#if selectedFile && (gitFile || gitDiffOpen)}
 		<Tooltip content={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}>

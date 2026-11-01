@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import type { TerminalConnection } from '$lib/apis/terminal';
+	import { watchTerminalFiles } from '$lib/apis/terminal/events';
 	import {
 		gitRequest,
 		gitAction,
@@ -77,7 +78,8 @@
 	let context = '';
 	let generation = 0;
 	let diffGeneration = 0;
-	let timer: ReturnType<typeof setInterval> | undefined;
+	let stopWatching: (() => void) | undefined;
+	let watchError = '';
 	let pending: Promise<void> | null = null;
 	let syncAction: 'publish' | 'pull' | 'push' | 'fetch';
 	$: staged = status?.files.filter((file) => file.staged) ?? [];
@@ -173,7 +175,9 @@
 		loadingDiff = false;
 	};
 	const configure = (key: string, enabled: boolean) => {
-		clearInterval(timer);
+		stopWatching?.();
+		stopWatching = undefined;
+		watchError = '';
 		if (key !== context) {
 			context = key;
 			++generation;
@@ -196,11 +200,22 @@
 			view = 'changes';
 			resetSelection();
 		}
-		if (enabled) {
+		if (enabled && connection) {
 			void refresh();
-			timer = setInterval(() => {
-				if (!busy) void refresh();
-			}, 5000);
+			const current = generation;
+			stopWatching = watchTerminalFiles(
+				connection,
+				chatId,
+				directory,
+				async () => {
+					// An event arriving during a status request must refresh after that request.
+					await pending;
+					if (current === generation) await refresh();
+				},
+				(message) => {
+					watchError = message;
+				}
+			);
 		}
 	};
 	$: configure(JSON.stringify([connection, chatId, directory]), mounted && active);
@@ -322,13 +337,13 @@
 	onDestroy(() => {
 		++generation;
 		++diffGeneration;
-		clearInterval(timer);
+		stopWatching?.();
 	});
 </script>
 
 {#if status?.is_repo}
 	<section
-		class="git-panel relative shrink-0 border-t border-gray-200 dark:border-white/6"
+		class="git-panel relative shrink-0 border-t border-gray-100/50 dark:border-white/2"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -338,7 +353,7 @@
 				aria-orientation="horizontal"
 				aria-valuenow={height}
 				tabindex="0"
-				class="absolute inset-x-0 -top-[0.1875rem] h-[0.375rem] z-20 cursor-row-resize touch-none hover:bg-gray-200/50 dark:hover:bg-white/8"
+				class="absolute inset-x-0 -top-px h-px z-20 cursor-row-resize touch-none border-t border-transparent hover:border-gray-200 dark:hover:border-gray-800 transition"
 				on:pointerdown={(event) => {
 					event.preventDefault();
 					(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -364,7 +379,9 @@
 						);
 					}
 				}}
-			></div>
+			>
+				<span class="absolute inset-x-0 -top-1.5 -bottom-1.5 bg-transparent"></span>
+			</div>
 		{/if}
 		<div class="flex min-w-0 items-center h-7 pl-3 pr-1 text-gray-400 dark:text-gray-600">
 			<Dropdown side="top" maxHeight="15rem" bind:show={showBranches} onOpenChange={loadBranches}>
@@ -573,7 +590,9 @@
 					{#if status.behind}<span>↓{status.behind}</span>{/if}
 				</span>
 			{/if}
-			<Tooltip content={$i18n.t(syncLabel)}>
+			<Tooltip
+				content={[$i18n.t(syncLabel), ...(watchError ? [$i18n.t(watchError)] : [])].join('\n')}
+			>
 				<button
 					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"
 					aria-label={$i18n.t(syncLabel)}
@@ -967,7 +986,7 @@
 	</section>
 {:else if detectionError}
 	<div
-		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-gray-200 dark:border-white/6 px-3 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-gray-100/50 dark:border-white/2 px-3 text-[0.6875rem] text-gray-500 dark:text-gray-400"
 	>
 		<Icon name="git-branch" size={12} />
 		<Tooltip content={detectionError} className="min-w-0 flex-1"
