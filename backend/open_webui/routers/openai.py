@@ -1384,6 +1384,17 @@ def convert_responses_result(response: dict) -> dict:
                 }
             )
 
+    if response.get('status') == 'incomplete':
+        incomplete_reason = response.get('incomplete_details', {}).get('reason')
+        if incomplete_reason == 'max_output_tokens':
+            finish_reason = 'length'
+        elif incomplete_reason == 'content_filter':
+            finish_reason = 'content_filter'
+        else:
+            finish_reason = 'tool_calls' if tool_calls else 'stop'
+    else:
+        finish_reason = 'tool_calls' if tool_calls else 'stop'
+
     return {
         'id': response.get('id', ''),
         'object': 'chat.completion',
@@ -1396,7 +1407,7 @@ def convert_responses_result(response: dict) -> dict:
                     'content': content,
                     **({'tool_calls': tool_calls} if tool_calls else {}),
                 },
-                'finish_reason': 'tool_calls' if tool_calls else 'stop',
+                'finish_reason': finish_reason,
             }
         ],
         'usage': response.get('usage', {}),
