@@ -14,6 +14,7 @@
 		temporaryChatEnabled,
 		terminalServers,
 		showTabs,
+		sideChatRequest,
 		showOverview,
 		showSidebar,
 		mobile,
@@ -574,10 +575,20 @@
 		else if (options.length === 1) options[0]();
 		hasOpenedTabs = true;
 	}
+	$: if (
+		!(
+			$user?.role === 'admin' ||
+			($user?.role === 'user' &&
+				($user.permissions?.chat?.temporary ?? true) &&
+				($user.permissions?.chat?.side_chat ?? false))
+		) &&
+		$sideChatRequest?.parentId === chatId
+	) sideChatRequest.set(null);
 	$: if ($showTabs === 'files' && showFilesTab) openFiles();
 	$: if ($showTabs === 'side' && chatId && hasMessages) {
-		openFeature('side');
-		showTabs.set(true);
+		if (canSideChat) openFeature('side');
+		else sideChatRequest.set(null);
+		showTabs.set(tabs.tabs.length > 0);
 	}
 	$: if (
 		($showTabs === 'comments' || (typeof $showTabs === 'object' && $showTabs)) &&

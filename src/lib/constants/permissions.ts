@@ -58,6 +58,7 @@ export const DEFAULT_PERMISSIONS = {
 		call: true,
 		multiple_models: true,
 		temporary: true,
+		side_chat: false,
 		temporary_enforced: false
 	},
 	features: {

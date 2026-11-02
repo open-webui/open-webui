@@ -198,14 +198,9 @@
 
 	onMount(() => {
 		const socketInstance = $socket;
-		const scheduleAccessRefresh = () => {
-			socketInstance?.off('connect', refreshAccess);
-			socketInstance?.once('connect', refreshAccess);
-		};
-		socketInstance?.on('access:updated', scheduleAccessRefresh);
+		socketInstance?.on('access:updated', refreshAccess);
 		return () => {
-			socketInstance?.off('access:updated', scheduleAccessRefresh);
-			socketInstance?.off('connect', refreshAccess);
+			socketInstance?.off('access:updated', refreshAccess);
 		};
 	});
 

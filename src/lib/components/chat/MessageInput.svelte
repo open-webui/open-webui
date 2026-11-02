@@ -203,6 +203,16 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: canSide =
+		($_user?.role === 'admin' ||
+			($_user?.role === 'user' &&
+				($_user.permissions?.chat?.temporary ?? true) &&
+				($_user.permissions?.chat?.side_chat ?? false))) &&
+		!embedded &&
+		selectedModels.length === 1 &&
+		!!selectedModelIds[0] &&
+		!!chatId &&
+		!!history?.currentId;
 	$: canComments = !!(
 		!embedded &&
 		$config?.features?.enable_comments &&
@@ -1626,7 +1636,7 @@
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
 					canComments: () => canComments,
-					canSide: () => !embedded && selectedModels.length === 1 && !!selectedModelIds[0] && !!chatId && !!history?.currentId,
+					canSide: () => canSide,
 					canFork: () =>
 						!!history?.currentId &&
 						!isTemporary &&
@@ -1641,6 +1651,7 @@
 					onStatus: statusHandler,
 					onComments: openComments,
 					onSide: () => {
+						if (!canSide) return;
 						sideChatRequest.set({ parentId: chatId, prompt: '' });
 						showTabs.set('side');
 					},

@@ -249,6 +249,7 @@ class ChatPermissions(BaseModel):
     call: bool = True
     multiple_models: bool = True
     temporary: bool = True
+    side_chat: bool = False
     temporary_enforced: bool = False
 
 
@@ -424,6 +425,12 @@ async def get_default_user_permissions(request: Request, user=Depends(get_admin_
 async def update_default_user_permissions(request: Request, form_data: UserPermissions, user=Depends(get_admin_user)):
     user_permissions = form_data.model_dump(by_alias=True)
     await Config.upsert({'user.permissions': user_permissions})
+    from open_webui.socket.main import sio
+
+    try:
+        await sio.emit('access:updated', {})
+    except Exception:
+        log.exception('Unable to refresh default user permissions')
     await publish_event(
         request,
         EVENTS.USER_PERMISSIONS_UPDATED,

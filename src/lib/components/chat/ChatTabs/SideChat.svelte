@@ -3,6 +3,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import {
 		socket,
+		user,
 		openTemporaryChatIds,
 		sideChatRequest,
 		models,
@@ -28,6 +29,11 @@
 	export let modelId: string;
 	export let systemPrompt = '';
 	const i18n = getContext<any>('i18n');
+	$: sideChatAllowed =
+		$user?.role === 'admin' ||
+		($user?.role === 'user' &&
+			($user.permissions?.chat?.temporary ?? true) &&
+			($user.permissions?.chat?.side_chat ?? false));
 	// Snapshot the active branch once; later parent edits and streaming stay in the parent.
 	const context = (() => {
 		const branch: any[] = [];
@@ -115,7 +121,8 @@
 			callback &&
 			['request:user_input', 'request:elicitation', 'confirmation', 'input'].includes(type)
 		) {
-			if (data?.tool_call && toolApprovalMode === 'full') callback(true);
+			if (!sideChatAllowed) callback({ status: 'cancelled', answers: {} });
+			else if (data?.tool_call && toolApprovalMode === 'full') callback(true);
 			else
 				interactions = [
 					...interactions,
@@ -159,10 +166,10 @@
 	};
 
 	const reconnect = async () => {
-		if (!id || !$socket?.id) return;
+		if (!sideChatAllowed || !id || !$socket?.id) return;
 		try {
 			const result = await resumeTemporaryChat(localStorage.token, id, $socket.id);
-			if (disposed) return;
+			if (disposed || !sideChatAllowed) return;
 			for (const stream of result.streams) {
 				const message = messages.find((m) => m.id === stream.message_id);
 				if (message && !message.done) message.output = stream.output;
@@ -184,6 +191,7 @@
 	};
 
 	const send = async () => {
+		if (!sideChatAllowed) return;
 		const question = draft.trim();
 		if ((!question && !files.length) || busy) return;
 		if (!atSelectedModel && selectedModels.length !== 1) {
@@ -204,7 +212,8 @@
 			openTemporaryChatIds.update((ids) => new Set([...ids, id]));
 		}
 		await tick();
-		if (!(await input.uploadPendingFiles(id)) || busy) return;
+		if (!sideChatAllowed) return;
+		if (!(await input?.uploadPendingFiles(id)) || busy || !sideChatAllowed) return;
 		const userMessage = {
 			id: uuidv4(),
 			parentId: messages.at(-1)?.id ?? null,
@@ -325,10 +334,15 @@
 		}
 	};
 
+	$: if (!sideChatAllowed) {
+		cancelInteractions();
+		if (busy) void stop();
+	}
+
 	$: if (ready && $sideChatRequest?.parentId === parentId) {
 		const pending = $sideChatRequest;
 		sideChatRequest.set(null);
-		if (pending.prompt) {
+		if (sideChatAllowed && pending.prompt) {
 			draft = pending.prompt;
 			input?.setText(draft);
 			if (!busy) void send();
@@ -408,40 +422,46 @@
 	</div>
 	<div class="shrink-0 pb-2 z-10">
 		{#if error}<p role="alert" class="px-4 py-2 text-xs text-red-500">{error}</p>{/if}
-		<MessageInput
-			bind:this={input}
-			bind:prompt={draft}
-			bind:autoScroll
-			chatId={id}
-			history={sideHistory}
-			bind:selectedModels
-			multipleModels={false}
-			bind:atSelectedModel
-			bind:files
-			bind:params
-			bind:selectedToolIds
-			bind:selectedSkillIds
-			bind:selectedFilterIds
-			bind:webSearchEnabled
-			bind:imageGenerationEnabled
-			bind:codeInterpreterEnabled
-			{toolApprovalMode}
-			onToolApprovalModeChange={(mode: string) => {
-				params = { ...params, tool_approval_mode: mode };
-			}}
-			{askUser}
-			dropzoneId={`${inputId}-pane`}
-			{inputId}
-			{messagesContainerId}
-			temporary={true}
-			embedded
-			callEnabled={false}
-			terminalSelectionEnabled={false}
-			generating={busy}
-			stopResponse={stop}
-			createMessagePair={() => {}}
-			on:submit={() => void send()}
-		/>
+		{#if sideChatAllowed}
+			<MessageInput
+				bind:this={input}
+				bind:prompt={draft}
+				bind:autoScroll
+				chatId={id}
+				history={sideHistory}
+				bind:selectedModels
+				multipleModels={false}
+				bind:atSelectedModel
+				bind:files
+				bind:params
+				bind:selectedToolIds
+				bind:selectedSkillIds
+				bind:selectedFilterIds
+				bind:webSearchEnabled
+				bind:imageGenerationEnabled
+				bind:codeInterpreterEnabled
+				{toolApprovalMode}
+				onToolApprovalModeChange={(mode: string) => {
+					params = { ...params, tool_approval_mode: mode };
+				}}
+				{askUser}
+				dropzoneId={`${inputId}-pane`}
+				{inputId}
+				{messagesContainerId}
+				temporary={true}
+				embedded
+				callEnabled={false}
+				terminalSelectionEnabled={false}
+				generating={busy}
+				stopResponse={stop}
+				createMessagePair={() => {}}
+				on:submit={() => void send()}
+			/>
+		{:else}
+			<p role="status" class="px-4 py-2 text-xs text-gray-500">
+				{$i18n.t('You do not have permission to use side chat.')}
+			</p>
+		{/if}
 	</div>
 </div>
 

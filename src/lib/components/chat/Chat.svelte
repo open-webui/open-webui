@@ -434,6 +434,11 @@
 	$: isShared = chat != null && chat.user_id !== $user?.id;
 	$: if (isShared && $showCallOverlay) showCallOverlay.set(false);
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	$: sideChatAllowed =
+		$user?.role === 'admin' ||
+		($user?.role === 'user' &&
+			($user.permissions?.chat?.temporary ?? true) &&
+			($user.permissions?.chat?.side_chat ?? false));
 	let cloning = false;
 
 	const cloneSharedChat = async () => {
@@ -3931,6 +3936,10 @@
 			return { status: 'rejected' };
 		}
 		const sideCommand = String(userPrompt).trim().match(/^\/(?:side|btw)(?:\s+([\s\S]*))?$/i);
+		if (sideCommand && !sideChatAllowed) {
+			toast.error($i18n.t('You do not have permission to use side chat.'));
+			return { status: 'rejected' };
+		}
 		if (sideCommand && !embedded && $chatId && history.currentId) {
 			if (selectedModels.length !== 1 || !selectedModelIds[0]) {
 				toast.error($i18n.t('Select only one model to open a side chat.'));
@@ -5676,7 +5685,7 @@
 					chatId={$chatId}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
-					canSideChat={selectedModels.length === 1 && !!selectedModelIds[0]}
+					canSideChat={sideChatAllowed && selectedModels.length === 1 && !!selectedModelIds[0]}
 					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}
