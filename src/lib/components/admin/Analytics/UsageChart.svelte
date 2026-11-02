@@ -657,7 +657,6 @@
 				type="button"
 				class="flex min-w-0 max-w-full items-center gap-1.5 py-1 text-left hover:text-gray-900 dark:hover:text-gray-100"
 				style:opacity={selectedModel && selectedModel !== id ? 0.45 : 1}
-				aria-label={`${name(id)} — ${$i18n.t('Select to isolate model')}`}
 				aria-pressed={selectedModel === id}
 				on:click={() => isolate(id)}
 			>
@@ -669,6 +668,7 @@
 						$i18n.language
 					)}>{number(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0))}</span
 				>
+				<span class="sr-only">{$i18n.t('Select to isolate model')}</span>
 			</button>
 		{/each}
 	</div>
