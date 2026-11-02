@@ -1828,6 +1828,7 @@
 	"Models imported successfully": "",
 	"Models Public Sharing": "",
 	"Models Sharing": "",
+	"Models this model can delegate to. Users must have access to them. Leave empty to use the current model.": "Models this model can delegate to. Users must have access to them. Leave empty to use the current model.",
 	"Modified": "",
 	"Mojeek": "",
 	"Mon": "",

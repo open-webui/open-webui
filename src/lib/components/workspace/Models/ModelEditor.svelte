@@ -13,7 +13,7 @@
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { config, models, tools, functions, user, settings } from '$lib/stores';
+	import { config, models, tools, functions, user, settings, visibleControls } from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -37,6 +37,7 @@
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
 	import SkillsSelector from '$lib/components/workspace/Models/SkillsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
@@ -203,6 +204,7 @@
 			background_image_url: null as string | null,
 			voice: undefined as { voice?: string } | undefined,
 			voice_avatar: null as VoiceAvatarConfig | null,
+			subagents: undefined as { model_ids: string[] } | undefined,
 			description: '',
 			i18n: {} as Record<string, Record<string, any>>,
 			suggestion_prompts: null,
@@ -231,6 +233,7 @@
 
 	let knowledge = [];
 	let toolIds = [];
+	let subagents = { model_ids: [] as string[] };
 	let skillIds = [];
 	let skillsList = [];
 
@@ -239,7 +242,7 @@
 
 	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
-	let builtinTools = {};
+	let builtinTools: Record<string, boolean> = {};
 
 	let actionIds = [];
 	let accessGrants: any[] = [];
@@ -412,6 +415,11 @@
 		if (edit) delete modelInfo.access_grants;
 		else modelInfo.access_grants = accessGrants;
 		modelInfo.meta.capabilities = capabilities;
+		if (subagents.model_ids.length > 0) {
+			modelInfo.meta.subagents = { model_ids: subagents.model_ids };
+		} else {
+			delete modelInfo.meta.subagents;
+		}
 
 		if (enableDescription) {
 			modelInfo.meta.description =
@@ -715,6 +723,7 @@
 			});
 
 			toolIds = model?.meta?.toolIds ?? [];
+			subagents = { model_ids: model?.meta?.subagents?.model_ids ?? [] };
 			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
@@ -1695,6 +1704,45 @@
 										bind:builtinTools
 										disabled={readOnly}
 									/>
+									{#if $config?.features?.enable_subagents && capabilities.builtin_tools && builtinTools.subagents !== false && $visibleControls['model_editor.tools.subagents']}
+										<ModelSettingsSection
+											label={$i18n.t('settings.admin.models.builtinTools.subagents.label')}
+											description={$i18n.t(
+												'Models this model can delegate to. Users must have access to them. Leave empty to use the current model.'
+											)}
+											summary={subagents.model_ids
+												.map((id) => $models.find((model) => model.id === id)?.name || id)
+												.join(', ') || $i18n.t('Current Model')}
+										>
+											<TypeaheadSelector
+												id="model-subagents"
+												label={$i18n.t('Models')}
+												items={($models ?? [])
+													.filter((model) => !('direct' in model && model.direct))
+													.map((model) => ({
+														id: model.id,
+														name: model.name,
+														meta: model.info?.meta
+													}))}
+												selectedIds={subagents.model_ids}
+												disabled={readOnly}
+												placeholder={$i18n.t('Search Models')}
+												emptyLabel={$i18n.t('No models found')}
+												variant="dropdown"
+												on:select={(e) => {
+													subagents.model_ids = subagents.model_ids.includes(e.detail.id)
+														? subagents.model_ids.filter((id) => id !== e.detail.id)
+														: [...subagents.model_ids, e.detail.id];
+												}}
+												on:enableall={(e) => {
+													subagents.model_ids = [
+														...new Set([...subagents.model_ids, ...e.detail.map((model) => model.id)])
+													];
+												}}
+												on:clear={() => (subagents.model_ids = [])}
+											/>
+										</ModelSettingsSection>
+									{/if}
 									<ModelSettingsSection
 										label={$i18n.t('Voice')}
 										description={$i18n.t(

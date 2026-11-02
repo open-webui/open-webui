@@ -110,6 +110,10 @@ class ModelVoice(BaseModel):
     voice: str | None = Field(default=None, min_length=1, max_length=200, pattern=r'^\S+$')
 
 
+class ModelSubagents(BaseModel):
+    model_ids: list[str] = Field(default_factory=list)
+
+
 class ModelAvatarAnimation(BaseModel):
     model_config = ConfigDict(extra='forbid')
     file_id: str = Field(pattern=r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$')
@@ -151,6 +155,7 @@ class ModelMeta(BaseModel):
     i18n: dict[str, Any] | None = None
     capabilities: dict | None = None
     knowledge: list[Any] | None = None
+    subagents: ModelSubagents | None = None
     voice: ModelVoice | None = None
     voice_avatar: ModelVoiceAvatar | None = None
 

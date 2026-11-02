@@ -18,6 +18,7 @@ from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
+from open_webui.utils.models import get_filtered_models
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
 
@@ -43,6 +44,22 @@ _background_active: set[str] = set()
 _background_lock = asyncio.Lock()
 _foreground_semaphore: asyncio.Semaphore | None = None
 _parent_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+
+
+async def get_subagent_models(request: Request, user: UserModel, model: dict) -> list[dict]:
+    subagents = (model.get('info', {}).get('meta') or {}).get('subagents') or {}
+    model_ids = subagents.get('model_ids') or []
+    if not model_ids:
+        return []
+    candidates = [model for model_id, model in request.app.state.MODELS.items() if model_id in model_ids]
+    return [
+        {
+            'id': model['id'],
+            'name': model.get('name', model['id']),
+            'description': (model.get('info', {}).get('meta') or {}).get('description') or '',
+        }
+        for model in await get_filtered_models(candidates, user)
+    ]
 
 
 async def _build_request(source: Request, user_id: str, *, internal: bool) -> Request:
@@ -282,6 +299,7 @@ async def delegate(
     background: bool,
     *,
     file_ids: list[str] | None = None,
+    model_id: str | None = None,
     request: Request,
     user_data: dict,
     metadata: dict,
@@ -343,6 +361,16 @@ async def delegate(
         return 'Error: model context is required.'
     if run.get('direct'):
         return 'Error: sub-agents are unavailable for direct connections.'
+    if model_id:
+        available_models = await get_subagent_models(request, UserModel(**user_data), metadata.get('model') or {})
+        available_ids = [model['id'] for model in available_models]
+        if model_id not in available_ids:
+            return (
+                f'Error: model {model_id} is not available for sub-agents. '
+                f'Available models: {", ".join(available_ids) or "none"}. '
+                'Omit model_id to use the current model.'
+            )
+    model_id = model_id or run['model_id']
     delegated_files = []
     if file_ids:
         requested_file_ids = {str(file_id) for file_id in file_ids if file_id}
@@ -405,7 +433,7 @@ async def delegate(
             'role': 'user',
             'content': prompt,
             'timestamp': int(time.time()),
-            'models': [run['model_id']],
+            'models': [model_id],
             **({'files': prompt_files} if prompt_files else {}),
         }
         chat = await Chats.insert_new_chat(
@@ -415,7 +443,7 @@ async def delegate(
                 chat={
                     'id': chat_id,
                     'title': f'Sub-agent: {task[:60]}',
-                    'models': [run['model_id']],
+                    'models': [model_id],
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
@@ -427,7 +455,7 @@ async def delegate(
                                 'role': 'assistant',
                                 'content': '',
                                 'done': False,
-                                'model': run['model_id'],
+                                'model': model_id,
                                 'timestamp': int(time.time()),
                             },
                         },
@@ -472,7 +500,7 @@ async def delegate(
                 str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
             )
             form_data = {
-                'model': run['model_id'],
+                'model': model_id,
                 'params': chat_context.get('params') or {},
                 'messages': add_or_update_system_message(
                     subagent_system_prompt,

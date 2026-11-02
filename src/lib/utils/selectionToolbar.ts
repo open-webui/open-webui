@@ -5,6 +5,7 @@ export function positionSelectionToolbar(node: HTMLElement, range: Range | null)
 	let cleanup = () => {};
 	const update = (range: Range | null) => {
 		cleanup();
+		cleanup = () => {};
 		if (!range) return;
 		let active = true;
 		const reference = {

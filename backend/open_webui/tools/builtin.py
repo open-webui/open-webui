@@ -1776,6 +1776,7 @@ async def delegate_task(
     context: str = '',
     file_ids: list[str] | None = None,
     background: bool = False,
+    model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -1783,13 +1784,14 @@ async def delegate_task(
     __message_id__: str = None,
 ) -> str:
     """
-    Delegate focused work to a parallel sub-agent using the current model and tools.
+    Delegate focused work to a parallel sub-agent using the current tools.
 
     :param task: The specific task for the sub-agent to complete
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
+    :param model_id: ID of an available sub-agent model. Omit to use the current model
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
     if __request__ is None:
@@ -1804,6 +1806,7 @@ async def delegate_task(
         context,
         background,
         file_ids=file_ids,
+        model_id=model_id,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},
