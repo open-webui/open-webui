@@ -788,6 +788,18 @@
 				aria-label={$i18n.t('Tabs')}
 				on:keydown={navigateTabs}
 				class="panel-tab-strip flex items-center gap-0.5 min-w-0 overflow-x-auto"
+				on:wheel|nonpassive={(event) => {
+					const strip = event.currentTarget;
+					if (
+						event.ctrlKey ||
+						event.shiftKey ||
+						Math.abs(event.deltaY) <= Math.abs(event.deltaX) ||
+						strip.scrollWidth <= strip.clientWidth
+					) return;
+					const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+					event.preventDefault();
+					strip.scrollLeft += event.deltaY * unit;
+				}}
 			>
 				{#each tabs.tabs as tab (tab.id)}
 					<div
