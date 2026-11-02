@@ -403,12 +403,12 @@
 						<td class="px-3 py-1 min-w-[5rem] w-20">
 							<button
 								class="text-xs font-normal leading-4 capitalize transition {roleClass(user.role)}"
-								aria-label={$i18n.t('Change User Role')}
 								on:click={() => {
 									selectedUser = user;
 									showEditUserModal = !showEditUserModal;
 								}}
 							>
+								<span class="sr-only">{$i18n.t('Change User Role')}</span>
 								{$i18n.t(user.role)}
 							</button>
 						</td>

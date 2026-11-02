@@ -1421,13 +1421,12 @@ ${content}
 								<div class="min-w-0 max-w-40 pl-2 pr-1">
 									<button
 										class="flex max-w-full items-center gap-1 bg-transparent text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition"
-										aria-label={$i18n.t('Toggle pages')}
 										aria-expanded={showNoteTabs}
 										aria-controls="note-tabs-panel"
 										on:click={() => {
 											showNoteTabs = !showNoteTabs;
 										}}
-										><span class="truncate"
+										><span class="sr-only">{$i18n.t('Toggle pages')}</span><span class="truncate"
 											>{activePage?.id === 'main' && activePage.inherit_note_title !== false
 												? note.title || $i18n.t('Untitled')
 												: activePage?.title}</span
