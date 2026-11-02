@@ -10,7 +10,8 @@ export type PanelTabKind =
 	| 'artifacts'
 	| 'preview'
 	| 'voice'
-	| 'comments';
+	| 'comments'
+	| 'side';
 export type PanelTab = {
 	id: string;
 	kind: PanelTabKind;

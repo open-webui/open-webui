@@ -29,6 +29,7 @@
 		socket,
 		audioQueue,
 		showTabs,
+		sideChatRequest,
 		showCallOverlay,
 		temporaryChatEnabled,
 		mobile,
@@ -74,6 +75,7 @@
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { resumeTemporaryChat } from '$lib/apis';
 	import {
 		applyResponseStreamEvent,
 		getOutputText,
@@ -1456,6 +1458,7 @@
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
 
 	const chatEventHandler = async (event, cb) => {
+		if (isTemporaryChatId(event.chat_id) && event.chat_id !== $chatId) return;
 		if (event?.data?.type === 'chat:presence') {
 			if (!$socket?.connected || event.chat_id !== $chatId || event.chat_id !== joinedChatId)
 				return;
@@ -1889,7 +1892,32 @@
 
 	const handleSocketConnect = async () => {
 		clearTyping();
-		if (!$chatId || $temporaryChatEnabled) return;
+		if (!$chatId || !$socket?.id) return;
+		if (isTemporaryChatId($chatId)) {
+			const id = $chatId;
+			try {
+				const result = await resumeTemporaryChat(localStorage.token, id, $socket.id);
+				if ($chatId !== id) return;
+				taskIds = result.task_ids.length ? result.task_ids : null;
+				for (const stream of result.streams) {
+					const message = history.messages[stream.message_id];
+					if (message && !message.done) message.output = stream.output;
+				}
+
+				if (!taskIds) {
+					for (const message of Object.values(history.messages) as any[]) {
+						if (message.role === 'assistant' && !message.done) {
+							message.done = true;
+							message.error = { content: $i18n.t('Connection lost. Please retry.') };
+						}
+					}
+				}
+				history = history;
+			} catch (error) {
+				toast.error(getErrorMessage(error));
+			}
+			return;
+		}
 		joinedChatId = '';
 		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
 		const id = $chatId;
@@ -2608,7 +2636,7 @@
 
 	const initNewChat = async () => {
 		loading = true;
-		if (!embedded && ($showTabs === 'comments' || typeof $showTabs === 'object'))
+		if (!embedded && ($showTabs === 'comments' || $showTabs === 'side' || typeof $showTabs === 'object'))
 			showTabs.set(false);
 		const signal = startChatLoad();
 		modelDefaults = null;
@@ -3902,6 +3930,17 @@
 			messageInput?.openComments();
 			return { status: 'rejected' };
 		}
+		const sideCommand = String(userPrompt).trim().match(/^\/(?:side|btw)(?:\s+([\s\S]*))?$/i);
+		if (sideCommand && !embedded && $chatId && history.currentId) {
+			if (selectedModels.length !== 1 || !selectedModelIds[0]) {
+				toast.error($i18n.t('Select only one model to open a side chat.'));
+				return { status: 'rejected' };
+			}
+			clearCommandInput();
+			sideChatRequest.set({ parentId: $chatId, prompt: sideCommand[1] ?? '' });
+			showTabs.set('side');
+			return { status: 'rejected' };
+		}
 		if (String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
 			await handleForkChat();
@@ -4852,7 +4891,7 @@
 
 			selectedFolder.set(null);
 		} else {
-			_chatId = createTemporaryChatId($socket?.id);
+			_chatId = isTemporaryChatId(_chatId) ? _chatId : createTemporaryChatId($socket?.id);
 			await chatId.set(_chatId);
 		}
 		await tick();
@@ -5637,6 +5676,8 @@
 					chatId={$chatId}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
+					canSideChat={selectedModels.length === 1 && !!selectedModelIds[0]}
+					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}
 					{stopResponse}

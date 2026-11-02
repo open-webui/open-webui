@@ -178,6 +178,7 @@ export const showTabs = writable<
 	| boolean
 	| 'files'
 	| 'comments'
+	| 'side'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
@@ -199,6 +200,8 @@ export const artifactContents = writable(null);
 export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
+export const openTemporaryChatIds = writable<Set<string>>(new Set());
+export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
 // Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
 // Set by +layout.svelte, consumed and cleared by Chat.svelte.

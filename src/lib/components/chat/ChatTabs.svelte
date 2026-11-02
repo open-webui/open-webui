@@ -63,6 +63,7 @@
 	import GitBar from './ChatTabs/GitBar.svelte';
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatTabs/Embeds.svelte';
+	import SideChat from './ChatTabs/SideChat.svelte';
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
@@ -89,6 +90,8 @@
 	export let showMessage: Function;
 	export let files: any[];
 	export let modelId;
+	export let systemPrompt = '';
+	export let canSideChat = false;
 
 	export let codeInterpreterEnabled = false;
 
@@ -163,7 +166,8 @@
 			artifacts: 'code',
 			preview: 'browser',
 			voice: 'microphone',
-			comments: 'chat-bubble'
+			comments: 'chat-bubble',
+			side: 'chat-lines'
 		})[kind];
 	const domId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
@@ -242,7 +246,7 @@
 			context: activeTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
 		});
 	};
-	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments') => {
+	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side') => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		const view = availableViews.find((view) => view.kind === kind)!;
 		openPanel({ id: kind, kind, label: view.label });
@@ -460,6 +464,7 @@
 	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
 	$: availableViews = [
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
+		{ kind: 'side', label: $i18n.t('Side chat'), available: canSideChat && !!chatId && hasMessages },
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
 		{ kind: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
@@ -484,6 +489,8 @@
 	};
 	const pruneTabs = () => {
 		for (const tab of tabs.tabs) {
+			// An open side chat owns its model and context; changing the parent must not discard it.
+			if (tab.kind === 'side') continue;
 			const available = tab.terminalId
 				? !!$selectedTerminalId && terminalAccessible(tab.terminalId)
 				: availableViews.some((view) => view.kind === tab.kind && view.available);
@@ -556,7 +563,7 @@
 		const options = [
 			...availableViews.filter((view) => view.available).map((view) => () => {
 				if (view.kind === 'files') openFiles();
-				else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments');
+				else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
 			}),
 			...(terminalFilesAvailable ? [newFile] : []),
 			...(terminalEnabled ? [newTerminal] : []),
@@ -568,6 +575,10 @@
 		hasOpenedTabs = true;
 	}
 	$: if ($showTabs === 'files' && showFilesTab) openFiles();
+	$: if ($showTabs === 'side' && chatId && hasMessages) {
+		openFeature('side');
+		showTabs.set(true);
+	}
 	$: if (
 		($showTabs === 'comments' || (typeof $showTabs === 'object' && $showTabs)) &&
 		showCommentsTab
@@ -815,7 +826,7 @@
 						{#each availableViews.filter((view) => view.kind !== 'files' && view.kind !== 'voice' && view.available) as view}
 							<button
 								on:click={() =>
-									openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments')}
+									openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side')}
 							>
 								{#if view.kind === 'comments'}
 									<Annotation className="size-3.5 shrink-0" />
@@ -860,7 +871,9 @@
 					<Embeds overlay={dragged} />
 				{:else if tab.kind === 'artifacts'}
 					<Artifacts overlay={dragged} />
-				{:else if tab.kind === 'comments' && currentComments}
+			{:else if tab.kind === 'side' && chatId}
+				<SideChat parentId={chatId} {history} {modelId} {systemPrompt} />
+			{:else if tab.kind === 'comments' && currentComments}
 					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel
 							embedded={true}

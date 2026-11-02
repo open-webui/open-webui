@@ -23,6 +23,7 @@
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
@@ -35,6 +36,7 @@
 	export let compactDisabled = false;
 	export let canStatus = false;
 	export let canComments = false;
+	export let canSide = false;
 	export let canFork = false;
 	export let forkDisabled = false;
 	export let canTemporary = false;
@@ -57,6 +59,9 @@
 	$: contextCircleOffset = 50.27 * (1 - contextCirclePercent / 100);
 
 	$: commandItems = [
+		...(canSide && ['side', 'btw'].some((name) => name.startsWith(query.toLowerCase()))
+			? [{ type: 'command', data: { id: 'side' } }]
+			: []),
 		...(canTemporary && 'temporary'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'temporary' } }]
 			: []),
@@ -369,10 +374,10 @@
 					</span>
 				</button>
 			</Tooltip>
-		{:else if item.data.id === 'comments'}
+		{:else if item.data.id === 'comments' || item.data.id === 'side'}
 			<button
 				type="button"
-				aria-label={$i18n.t('Comments')}
+				aria-label={$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}
 				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
 					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 				on:mousedown={(e) => e.preventDefault()}
@@ -382,11 +387,15 @@
 				data-selected={commandIdx === selectedIdx}
 			>
 				<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
-					<Annotation className="size-3.5" />
+					{#if item.data.id === 'side'}
+						<Icon name="chat-lines" class="size-3.5" />
+					{:else}
+						<Annotation className="size-3.5" />
+					{/if}
 				</span>
 				<span class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
-					<span class="min-w-0 flex-1 truncate">{$i18n.t('Comments')}</span>
-					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/comments</span>
+					<span class="min-w-0 flex-1 truncate">{$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}</span>
+					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/{item.data.id}</span>
 				</span>
 			</button>
 		{:else if item.data.id === 'model'}

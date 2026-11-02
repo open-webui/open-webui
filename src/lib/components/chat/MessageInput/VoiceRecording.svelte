@@ -23,6 +23,7 @@
 
 	export let className = ' p-2.5 w-full max-w-full';
 
+	export let confirmButtonId = 'confirm-recording-button';
 	export let onCancel = () => {};
 	export let onConfirm = (data) => {};
 
@@ -262,7 +263,7 @@
 
 			if (document.activeElement === document.body || !document.activeElement?.checkVisibility()) {
 				await tick();
-				document.getElementById('confirm-recording-button')?.focus();
+				document.getElementById(confirmButtonId)?.focus();
 			}
 
 			await requestWakeLock();
@@ -637,7 +638,7 @@
 				</div>
 			{:else}
 				<button
-					id="confirm-recording-button"
+					id={confirmButtonId}
 					type="button"
 					aria-label={$i18n.t('Confirm recording')}
 					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"

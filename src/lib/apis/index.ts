@@ -395,6 +395,16 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string, signal?
 	return res;
 };
 
+export const resumeTemporaryChat = async (token: string, chatId: string, sessionId: string) => {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chatId)}/resume`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify({ session_id: sessionId })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const getToolServerData = async (token: string, url: string) => {
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	let error = null;

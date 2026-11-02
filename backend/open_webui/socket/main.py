@@ -56,12 +56,13 @@ from open_webui.tasks import (
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_verified_user_by_token
-from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.redis import (
     build_sentinel_kwargs,
     build_sentinel_url,
+    get_redis_client,
     get_redis_connection,
     get_sentinels_from_env,
 )
@@ -1601,6 +1602,10 @@ async def _make_channel_emitter(request_info):
 
 
 async def get_event_emitter(request_info, update_db=True):
+    from open_webui.utils.chat import get_temporary_chat
+
+    redis = get_redis_client(async_mode=True) if is_temporary_chat_id(request_info.get('chat_id')) else None
+
     # Channel mode: route pipeline output to channel message updates
     if (request_info.get('chat_id') or '').startswith('channel:'):
         return await _make_channel_emitter(request_info)
@@ -1620,6 +1625,11 @@ async def get_event_emitter(request_info, update_db=True):
             return
 
         room = f'user:{user_id}'
+        if is_temporary_chat_id(chat_id):
+            owner = await get_temporary_chat(redis, chat_id)
+            room = owner['session_id'] if owner and owner['user_id'] == user_id else request_info.get('session_id')
+            if not room or get_user_id_from_session_pool(room) != user_id:
+                return
         if event_data.get('type') != 'chat:messages':
             await sio.emit(
                 'events',
@@ -1791,8 +1801,18 @@ def get_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
 
 
 async def get_event_call(request_info):
+    from open_webui.utils.chat import get_temporary_chat
+
+    redis = get_redis_client(async_mode=True) if is_temporary_chat_id(request_info.get('chat_id')) else None
+
     async def __event_caller__(event_data):
         session_id = request_info['session_id']
+        if is_temporary_chat_id(request_info['chat_id']):
+            owner = await get_temporary_chat(redis, request_info['chat_id'])
+            if owner and owner['user_id'] == request_info['user_id']:
+                session_id = request_info['session_id'] = owner['session_id']
+                if 'session_id' in (event_data.get('data') or {}):
+                    event_data = {**event_data, 'data': {**event_data['data'], 'session_id': session_id}}
 
         # session_id is client-supplied; only the requesting user's own live session may be targeted.
         session = SESSION_POOL.get(session_id)
@@ -1824,7 +1844,7 @@ async def get_event_call(request_info):
         can_resume = (
             is_input_request
             and 'session_id' not in (event_data.get('data') or {})
-            and is_saved_chat_id(request_info['chat_id'])
+            and (is_saved_chat_id(request_info['chat_id']) or is_temporary_chat_id(request_info['chat_id']))
         )
         try:
             async with asyncio.timeout(timeout):
@@ -1859,9 +1879,19 @@ async def get_event_call(request_info):
                         async with asyncio.timeout(60):
                             while True:
                                 # Redis session scans are synchronous; keep them off the event loop.
-                                next_session_id = await asyncio.to_thread(
-                                    get_user_chat_session_id, request_info['user_id'], request_info['chat_id']
-                                )
+                                if is_temporary_chat_id(request_info['chat_id']):
+                                    owner = await get_temporary_chat(redis, request_info['chat_id'])
+                                    next_session_id = (
+                                        owner['session_id']
+                                        if owner and owner['user_id'] == request_info['user_id']
+                                        else None
+                                    )
+                                    if get_user_id_from_session_pool(next_session_id) != request_info['user_id']:
+                                        next_session_id = None
+                                else:
+                                    next_session_id = await asyncio.to_thread(
+                                        get_user_chat_session_id, request_info['user_id'], request_info['chat_id']
+                                    )
                                 if next_session_id is not None:
                                     session_id = request_info['session_id'] = next_session_id
                                     break
