@@ -192,7 +192,7 @@
 		<div
 			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-sm text-gray-500 dark:bg-gray-900/90"
 		>
-			<span>{error || status}</span>
+			<span class={error ? '' : 'text-xs text-gray-400 dark:text-gray-500'}>{error || status}</span>
 			{#if error}<button
 					class="text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white"
 					on:click={connect}>{$i18n.t('Retry')}</button
