@@ -1116,7 +1116,7 @@
 						<button
 							bind:this={openSidebarButton}
 							id="sidebar-open-button"
-							class="flex size-8.5 items-center justify-center transition group {isWindows
+							class="flex size-8.5 shrink-0 items-center justify-center transition group {isWindows
 								? 'cursor-pointer'
 								: 'cursor-[e-resize]'}"
 							aria-label={`${$i18n.t('Open Sidebar')}${$config?.features?.enable_notifications && $inboxCount ? ` · ${$i18n.t('Notifications')} (${$inboxCount})` : ''}`}
