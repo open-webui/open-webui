@@ -55,6 +55,7 @@ router = APIRouter()
 
 CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_MODEL': 'chat.context_compaction.model',
+    'CONTEXT_COMPACTION_MODEL_PARAMS': 'chat.context_compaction.model.params',
     'ENABLE_CONTEXT_COMPACTION': 'chat.context_compaction.enable',
     'CONTEXT_COMPACTION_TOKEN_THRESHOLD': 'chat.context_compaction.token_threshold',
     'CONTEXT_COMPACTION_TOKEN_CAP': 'chat.context_compaction.token_cap',
@@ -209,6 +210,7 @@ async def get_folder_unread_counts(user_id: str, db: AsyncSession | None = None)
 
 class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_MODEL: str | None = ''
+    CONTEXT_COMPACTION_MODEL_PARAMS: dict | None = None
     ENABLE_CONTEXT_COMPACTION: bool
     CONTEXT_COMPACTION_TOKEN_THRESHOLD: int | None = None
     CONTEXT_COMPACTION_TOKEN_CAP: int | None = None
@@ -881,6 +883,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
             {
                 **form_data.model_dump(),
                 'CONTEXT_COMPACTION_MODEL': form_data.CONTEXT_COMPACTION_MODEL or '',
+                'CONTEXT_COMPACTION_MODEL_PARAMS': form_data.CONTEXT_COMPACTION_MODEL_PARAMS or {},
                 'CONTEXT_COMPACTION_TOKEN_THRESHOLD': threshold,
                 'CONTEXT_COMPACTION_TOKEN_CAP': token_cap,
                 'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': retention_percentage,

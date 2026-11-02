@@ -401,6 +401,7 @@ async def _generate_summary(
     task_config = await Config.get_many(
         'task.model.params',
         'chat.context_compaction.model',
+        'chat.context_compaction.model.params',
     )
     context_compaction_model = task_config.get('chat.context_compaction.model')
     task_model_id = context_compaction_model if context_compaction_model in models else model_id
@@ -425,13 +426,11 @@ async def _generate_summary(
     prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
     prompt = await prompt_template(prompt, user)
 
-    task_model_params = task_config.get('task.model.params') or {}
-    if not isinstance(task_model_params, dict):
-        task_model_params = {}
-    task_model_params = {key: value for key, value in task_model_params.items() if value is not None and value != ''}
-    task_model_params = task_model_params or {
-        'max_tokens': models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
-    }
+    task_model_params = _resolve_context_compaction_model_params(
+        task_config.get('task.model.params'),
+        task_config.get('chat.context_compaction.model.params'),
+        models[task_model_id].get('info', {}).get('params', {}),
+    )
 
     payload = {
         'model': task_model_id,
@@ -481,6 +480,25 @@ def _response_text(response: Any) -> str:
             if isinstance(content, dict):
                 parts.append(content.get('text') or content.get('content') or '')
     return '\n'.join(part for part in parts if part)
+
+
+def _resolve_context_compaction_model_params(
+    task_model_params: Any,
+    context_compaction_model_params: Any,
+    model_params: Any,
+) -> dict[str, Any]:
+    """Merge task defaults with context-compaction overrides for the summary request."""
+    params = {}
+    if isinstance(task_model_params, dict):
+        params.update(task_model_params)
+    if isinstance(context_compaction_model_params, dict):
+        params.update(context_compaction_model_params)
+
+    params = {key: value for key, value in params.items() if value is not None and value != ''}
+    if not params:
+        max_tokens = model_params.get('max_tokens', 1000) if isinstance(model_params, dict) else 1000
+        return {'max_tokens': max_tokens}
+    return params
 
 
 def _estimate_messages_tokens(messages: list[dict]) -> int:

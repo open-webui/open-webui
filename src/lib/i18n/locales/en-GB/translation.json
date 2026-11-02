@@ -3098,6 +3098,7 @@
 	"settings.admin.interface.contextCompaction.label": "",
 	"settings.admin.interface.contextCompactionModel.description": "",
 	"settings.admin.interface.contextCompactionModel.label": "",
+	"settings.admin.interface.contextCompactionModelParameters.label": "Context Compaction Model Parameters",
 	"settings.admin.interface.contextCompactionPrompt.description": "",
 	"settings.admin.interface.contextCompactionPrompt.label": "",
 	"settings.admin.interface.externalTaskModel.label": "",

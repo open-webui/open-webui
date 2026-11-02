@@ -2259,6 +2259,14 @@ TASK_MODEL_PARAMS = task_model_params
 
 CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 
+try:
+    context_compaction_model_params = JSONCodec.loads(os.getenv('CONTEXT_COMPACTION_MODEL_PARAMS', '{}'))
+except Exception as e:
+    log.exception(f'Error loading CONTEXT_COMPACTION_MODEL_PARAMS: {e}')
+    context_compaction_model_params = {}
+
+CONTEXT_COMPACTION_MODEL_PARAMS = context_compaction_model_params
+
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
 
 ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
@@ -3256,6 +3264,7 @@ DEFAULT_CONFIG = {
     'task.model.external': TASK_MODEL_EXTERNAL,
     'task.model.params': TASK_MODEL_PARAMS,
     'chat.context_compaction.model': CONTEXT_COMPACTION_MODEL,
+    'chat.context_compaction.model.params': CONTEXT_COMPACTION_MODEL_PARAMS,
     'chat.context_compaction.enable': ENABLE_CONTEXT_COMPACTION,
     'chat.context_compaction.token_threshold': CONTEXT_COMPACTION_TOKEN_THRESHOLD,
     'chat.context_compaction.token_cap': CONTEXT_COMPACTION_TOKEN_CAP,

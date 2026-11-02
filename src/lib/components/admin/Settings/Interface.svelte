@@ -48,6 +48,7 @@
 
 	let chatConfig = {
 		CONTEXT_COMPACTION_MODEL: '',
+		CONTEXT_COMPACTION_MODEL_PARAMS: {} as Record<string, any>,
 		ENABLE_CONTEXT_COMPACTION: false,
 		CONTEXT_COMPACTION_TOKEN_THRESHOLD: 80000,
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
@@ -61,6 +62,7 @@
 	};
 	let toolSearchAlwaysLoaded = '';
 	let showTaskParameters = false;
+	let showContextCompactionParameters = false;
 	let visibility: Visibility = { ...($appConfig?.ui?.visibility ?? {}) };
 
 	const configuredParams = (params: Record<string, any> = {}) =>
@@ -81,6 +83,9 @@
 				updateTaskConfig(localStorage.token, taskConfigPayload),
 				updateChatConfig(localStorage.token, {
 					...chatConfig,
+					CONTEXT_COMPACTION_MODEL_PARAMS: configuredParams(
+						chatConfig.CONTEXT_COMPACTION_MODEL_PARAMS
+					),
 					TOOL_SEARCH_ALWAYS_LOADED: toolSearchAlwaysLoaded
 						.split(',')
 						.map((item) => item.trim())
@@ -153,6 +158,8 @@
 				getChatConfig(localStorage.token)
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
+			chatConfig.CONTEXT_COMPACTION_MODEL_PARAMS =
+				chatConfig.CONTEXT_COMPACTION_MODEL_PARAMS ?? {};
 			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 
 			workspaceModels = await getBaseModels(localStorage.token);
@@ -341,6 +348,33 @@
 							{/each}
 						</SettingsSelect>
 					</AdminSettingField>
+
+					<div class="mt-2.5">
+						<button
+							class="flex w-full items-center justify-between gap-4 py-0.5 text-left"
+							type="button"
+							on:click={() => {
+								showContextCompactionParameters = !showContextCompactionParameters;
+							}}
+						>
+							<span class="text-xs text-gray-600 dark:text-gray-400">
+								{$i18n.t('settings.admin.interface.contextCompactionModelParameters.label')}
+							</span>
+							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								{showContextCompactionParameters ? $i18n.t('Close') : $i18n.t('Configure')}
+							</span>
+						</button>
+
+						{#if showContextCompactionParameters}
+							<div class="max-h-[24rem] overflow-y-auto pb-2 pr-1 scrollbar-hover">
+								<AdvancedParams
+									admin={true}
+									custom={true}
+									bind:params={chatConfig.CONTEXT_COMPACTION_MODEL_PARAMS}
+								/>
+							</div>
+						{/if}
+					</div>
 
 					<AdminSettingField
 						label={$i18n.t('settings.admin.interface.tokenThreshold.label')}

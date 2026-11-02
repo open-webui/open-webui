@@ -3098,6 +3098,7 @@
 	"settings.admin.interface.contextCompaction.label": "Context Compaction",
 	"settings.admin.interface.contextCompactionModel.description": "Choose a dedicated model for context compaction summaries. Current Model follows the active chat model.",
 	"settings.admin.interface.contextCompactionModel.label": "Context Compaction Model",
+	"settings.admin.interface.contextCompactionModelParameters.label": "Context Compaction Model Parameters",
 	"settings.admin.interface.contextCompactionPrompt.description": "Controls how older messages are rewritten into a running summary.",
 	"settings.admin.interface.contextCompactionPrompt.label": "Context Compaction Prompt",
 	"settings.admin.interface.externalTaskModel.label": "External Task Model",
