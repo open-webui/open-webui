@@ -155,7 +155,7 @@
 						>
 					{:else}
 						<span class="text-green-600 dark:text-green-400">+{gitFile.additions ?? 0}</span>
-						<span class="text-red-500 dark:text-red-400">-{gitFile.deletions ?? 0}</span>
+						<span class="text-gray-500 dark:text-gray-400">-{gitFile.deletions ?? 0}</span>
 					{/if}
 				</span>
 			{/if}

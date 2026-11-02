@@ -58,7 +58,7 @@
 
 	<Tooltip content={$i18n.t('Delete')}>
 		<button
-			class="flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-red-500 disabled:opacity-30 disabled:hover:text-gray-400"
+			class="flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:text-gray-400"
 			on:click={onDelete}
 			disabled={!canDelete}
 			aria-label={$i18n.t('Delete')}

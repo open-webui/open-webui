@@ -47,9 +47,11 @@
 		}
 		while (branch.at(-1)?.role === 'assistant' && !branch.at(-1)?.done) branch.pop();
 		return structuredClone(
-			branch.map(({ role, content, output, files }) => ({
+			branch.map(({ id, role, content, output, files, contextSummary }) => ({
+				id,
 				role,
 				files,
+				contextSummary,
 				...(output?.length && role === 'assistant' ? { output } : { content: content ?? '' })
 			}))
 		);
@@ -113,6 +115,13 @@
 	const receive = (event: any, callback?: (value: any) => void) => {
 		if (!id || event.chat_id !== id) return;
 		const { type, data } = event.data ?? {};
+		if (type === 'context_compaction') {
+			const checkpoint = [...context, ...messages].find(
+				(message) => message.id === data.checkpoint_message_id
+			);
+			if (checkpoint && data.context_summary) checkpoint.contextSummary = data.context_summary;
+			return;
+		}
 		if (type === 'request:interaction:done') {
 			interactions = interactions.filter((item) => item.id !== data.interaction_id);
 			return;
@@ -240,12 +249,19 @@
 		if (messages.length) messages.at(-1).childrenIds.push(userMessage.id);
 		const conversation = [...context, ...messages, userMessage].map((message) => {
 			if (message.role === 'assistant' && message.output?.length)
-				return { role: message.role, output: message.output };
+				return {
+					id: message.id,
+					role: message.role,
+					output: message.output,
+					contextSummary: message.contextSummary
+				};
 			const images = (message.files ?? []).filter(
 				(file: any) => file.type === 'image' || isRasterImageContentType(file.content_type)
 			);
 			return {
+				id: message.id,
 				role: message.role,
+				contextSummary: message.contextSummary,
 				content: images.length
 					? [
 							{ type: 'text', text: message.content ?? '' },
@@ -274,6 +290,7 @@
 			chat_id: id,
 			session_id: $socket.id,
 			id: answer.id,
+			user_message: userMessage,
 			params: { ...params, tool_approval_mode: toolApprovalMode },
 			files: requestFiles,
 			tool_ids: selectedToolIds.filter((id) => !id.startsWith('direct_server:')),
@@ -421,7 +438,7 @@
 		{/if}
 	</div>
 	<div class="shrink-0 pb-2 z-10">
-		{#if error}<p role="alert" class="px-4 py-2 text-xs text-red-500">{error}</p>{/if}
+		{#if error}<p role="alert" class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{error}</p>{/if}
 		{#if sideChatAllowed}
 			<MessageInput
 				bind:this={input}

@@ -407,7 +407,7 @@
 			>{/if}
 	</div>
 	{#if error}
-		<p role="alert" class="px-2 py-1 text-xs text-red-500">{error}</p>
+		<p role="alert" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">{error}</p>
 	{:else if connectionStatus}
 		<p role="status" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
 			{$i18n.t(connectionStatus)}

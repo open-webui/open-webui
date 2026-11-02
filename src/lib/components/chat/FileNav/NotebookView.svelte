@@ -269,7 +269,7 @@
 
 		{#if kernelError}
 			<div
-				class="px-2 py-1 text-[0.65rem] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
+				class="px-2 py-1 text-[0.65rem] text-gray-500 dark:text-gray-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
 			>
 				{kernelError}
 			</div>

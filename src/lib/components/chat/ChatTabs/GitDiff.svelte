@@ -135,13 +135,13 @@
 	}
 	.removed {
 		background-color: var(--color-red-100);
-		color: var(--color-red-900);
+		color: var(--color-gray-600);
 	}
 	.added .prefix {
 		color: var(--color-green-600);
 	}
 	.removed .prefix {
-		color: var(--color-red-500);
+		color: var(--color-gray-500);
 	}
 	.git-diff:not(.split) .added {
 		box-shadow: inset 0.1875rem 0 0 #22c55e;
@@ -196,12 +196,12 @@
 	}
 	:global(.dark) .removed {
 		background-color: #ef444426;
-		color: var(--color-red-300);
+		color: var(--color-gray-400);
 	}
 	:global(.dark) .added .prefix {
 		color: var(--color-green-400);
 	}
 	:global(.dark) .removed .prefix {
-		color: var(--color-red-400);
+		color: var(--color-gray-400);
 	}
 </style>

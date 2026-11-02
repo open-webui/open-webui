@@ -66,7 +66,7 @@
 	aria-label={$i18n.t('File changes')}
 	aria-busy={loading}
 >
-	{#if error}<div role="alert" class="p-3 text-xs text-red-500">
+	{#if error}<div role="alert" class="p-3 text-xs text-gray-500 dark:text-gray-400">
 			{error}<button
 				class="ml-2 underline"
 				on:click={() =>

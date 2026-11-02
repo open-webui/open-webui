@@ -356,7 +356,7 @@
 						: undefined}
 				/>
 			{:catch}
-				<div class="p-4 text-sm text-red-500">{$i18n.t('Preview failed')}</div>
+				<div class="p-4 text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Preview failed')}</div>
 			{/await}
 		{/key}
 	{:else if fileSqliteData !== null}
@@ -516,7 +516,7 @@
 			</div>
 		{:else if isJson && !showRaw && jsonError}
 			<div class="p-3 text-xs">
-				<div class="text-red-500 mb-2">
+				<div class="text-gray-500 dark:text-gray-400 mb-2">
 					{$i18n.t('JSON parse error: {{error}}', { error: jsonError })}
 				</div>
 				<pre

@@ -262,7 +262,7 @@
 	>
 		{#if loading}<div class="flex justify-center py-5"><Spinner className="size-5" /></div>{/if}
 		{#if error}<div class="px-4 py-2">
-				<p role="alert" class="text-xs text-red-500">{error}</p>
+				<p role="alert" class="text-xs text-gray-500 dark:text-gray-400">{error}</p>
 				<button
 					type="button"
 					class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

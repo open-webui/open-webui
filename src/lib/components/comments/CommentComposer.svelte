@@ -171,7 +171,7 @@
 					/>
 				</div>
 			</div>
-			{#if error}<p role="alert" class="py-1 text-xs text-red-500">{error}</p>{/if}
+			{#if error}<p role="alert" class="py-1 text-xs text-gray-500 dark:text-gray-400">{error}</p>{/if}
 			<div class="absolute {embedded ? 'bottom-0 end-0' : 'bottom-2 end-2.5'} flex items-center">
 				<div class="flex items-center gap-2">
 					<button

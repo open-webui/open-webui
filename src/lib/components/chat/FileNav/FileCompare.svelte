@@ -237,7 +237,7 @@
 				>+{result.additions}</span
 			>
 			<span
-				class="text-red-500 dark:text-red-400"
+				class="text-gray-500 dark:text-gray-400"
 				aria-label={$i18n.t('{{count}} removed lines', { count: result.deletions })}
 				>−{result.deletions}</span
 			>
@@ -395,7 +395,7 @@
 	}
 	.removed {
 		background-color: var(--color-red-100);
-		color: var(--color-red-900);
+		color: var(--color-gray-600);
 		background-image: repeating-linear-gradient(
 			-45deg,
 			#ef4444 0,
@@ -411,7 +411,7 @@
 		color: var(--color-green-600);
 	}
 	.removed .marker {
-		color: var(--color-red-500);
+		color: var(--color-gray-500);
 	}
 	.added .changed {
 		background: rgb(22 163 74 / 0.38);
@@ -428,13 +428,13 @@
 	}
 	:global(.dark) .removed {
 		background-color: color-mix(in oklab, var(--color-red-500) 15%, transparent);
-		color: var(--color-red-300);
+		color: var(--color-gray-400);
 	}
 	:global(.dark) .added .marker {
 		color: var(--color-green-400);
 	}
 	:global(.dark) .removed .marker {
-		color: var(--color-red-400);
+		color: var(--color-gray-400);
 	}
 	:global(.dark) .number {
 		color: var(--color-gray-600);

@@ -203,7 +203,7 @@
 		</div>
 		{#if error && !selected && !creating && !editing}<p
 				role="alert"
-				class="px-2 py-1 text-red-500 break-words"
+				class="px-2 py-1 text-gray-500 dark:text-gray-400 break-words"
 			>
 				{error}
 			</p>{/if}
@@ -281,7 +281,7 @@
 					</div></Dropdown
 				>{/if}
 		</div>
-		{#if error}<p role="alert" class="px-3 py-1 text-red-500 break-words">{error}</p>{/if}
+		{#if error}<p role="alert" class="px-3 py-1 text-gray-500 dark:text-gray-400 break-words">{error}</p>{/if}
 		{#if creating || editing}
 			<form
 				class="min-h-0 overflow-y-auto px-3 py-2 space-y-2"
@@ -404,7 +404,7 @@
 										}}>{$i18n.t(method[0].toUpperCase() + method.slice(1))}</button
 									>{/each}
 								<button
-									class="pr-action text-red-500"
+									class="pr-action text-gray-500 dark:text-gray-400"
 									disabled={busy}
 									on:click={() => confirm('close')}>{$i18n.t('Close')}</button
 								>
