@@ -975,6 +975,9 @@
 		font-weight: 400;
 		color: var(--color-gray-500);
 	}
+	:global(:where(html.high-contrast:not(.dark))) .analytics-tab {
+		color: var(--color-gray-700);
+	}
 	.analytics-tab:hover,
 	.tab-selected {
 		color: var(--color-gray-900);
