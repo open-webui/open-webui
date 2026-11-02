@@ -619,6 +619,9 @@ async def get_shared_folder_chats(
     user_ids.update(uid for ids in participant_ids.values() for uid in ids)
     users = await Users.get_users_by_user_ids(list(user_ids), db=db) if user_ids else []
     names = {u.id: u.name for u in users}
+    pending_approval_ids = await ChatMessages.get_chat_ids_with_pending_approval(
+        [chat['id'] for chat in chats], db=db
+    )
     for chat in chats:
         uid = chat['user_id']
         chat['owner_name'] = names.get(uid, 'Unknown')
@@ -632,6 +635,7 @@ async def get_shared_folder_chats(
             ),
         )
         chat['active'] = False
+        chat['pending_approval'] = chat['id'] in pending_approval_ids
         if chat['user_id'] != user.id:
             chat['last_read_at'] = chat['updated_at']
         if await has_active_tasks(request.app.state.redis, chat['id']):

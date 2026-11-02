@@ -136,6 +136,7 @@
 						updatedAt={chat.updated_at}
 						lastReadAt={chat.last_read_at}
 						active={chat.active ?? false}
+						pendingApproval={chat.pending_approval ?? false}
 						ownerName={chat.owner_name}
 						participants={chat.participants ?? []}
 						ownerUserId={chat.user_id}

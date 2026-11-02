@@ -383,7 +383,7 @@
 					chats = mergeFolderChats(chats ?? [], [chat]);
 				}
 			},
-			setChatActive: (chatId, active) => {
+			setChatActive: (chatId, active, pendingApproval) => {
 				if (chats) {
 					let found = false;
 					chats = sortFolderChats(
@@ -392,7 +392,7 @@
 								return chat;
 							}
 							found = true;
-							return { ...chat, active };
+							return { ...chat, active, pending_approval: pendingApproval };
 						})
 					);
 					return found;
@@ -1023,6 +1023,7 @@
 										updatedAt={chat.updated_at}
 										lastReadAt={chat.last_read_at}
 										active={chat.active ?? false}
+										pendingApproval={chat.pending_approval ?? false}
 										ownerName={chat.owner_name ?? null}
 										participants={chat.participants ?? []}
 										ownerUserId={folders[folderId]?.showOwnerInfo ||

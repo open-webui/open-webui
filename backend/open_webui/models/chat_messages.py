@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
-from open_webui.utils.session_records import normalize_tool_output, recorded_timestamp
+from open_webui.utils.session_records import has_pending_tool_approval, normalize_tool_output, recorded_timestamp
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import (
     JSON,
@@ -355,6 +355,20 @@ class ChatMessageTable:
         async with get_async_db_context(db) as db:
             message = await db.get(ChatMessage, id)
             return ChatMessageModel.model_validate(message) if message else None
+
+    async def get_chat_ids_with_pending_approval(
+        self, chat_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> set[str]:
+        if not chat_ids:
+            return set()
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChatMessage.chat_id, ChatMessage.output)
+                .where(ChatMessage.chat_id.in_(chat_ids))
+                .where(ChatMessage.role == 'assistant')
+                .where(ChatMessage.done.is_(False))
+            )
+            return {chat_id for chat_id, output in result.all() if has_pending_tool_approval(output)}
 
     async def has_unfinished_assistant_by_chat_id(
         self,

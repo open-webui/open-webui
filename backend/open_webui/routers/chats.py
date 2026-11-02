@@ -179,7 +179,9 @@ def set_message_authors(chat: dict, user: UserModel) -> None:
 async def add_active_state_to_chat_list(
     request: Request, chat_list: list[ChatTitleIdResponse]
 ) -> list[ChatTitleIdResponse]:
+    pending_approval_ids = await ChatMessages.get_chat_ids_with_pending_approval([chat.id for chat in chat_list])
     for chat in chat_list:
+        chat.pending_approval = chat.id in pending_approval_ids
         chat.active = False
         if not await has_active_tasks(request.app.state.redis, chat.id):
             continue

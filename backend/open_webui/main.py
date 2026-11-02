@@ -2238,6 +2238,7 @@ async def stop_tasks_by_chat_id_endpoint(request: Request, chat_id: str, user=De
             if event_emitter:
                 await event_emitter({'type': 'chat:completion', 'data': {'done': True, 'output': output}})
                 await event_emitter({'type': 'chat:tasks:cancel'})
+                await event_emitter({'type': 'chat:active', 'data': {'active': False}})
 
     return result
 

@@ -3327,6 +3327,9 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
         },
         touch=False,
     )
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:active', 'data': {'active': True}})
 
 
 def get_response_data(response):

@@ -37,6 +37,7 @@ from open_webui.env import (
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -1623,6 +1624,13 @@ async def get_event_emitter(request_info, update_db=True):
 
         if internal and event_data.get('type') == 'notification':
             return
+
+        if event_data.get('type') == 'chat:active' and is_saved_chat_id(chat_id):
+            pending_approval_ids = await ChatMessages.get_chat_ids_with_pending_approval([chat_id])
+            event_data = {
+                **event_data,
+                'data': {**(event_data.get('data') or {}), 'pending_approval': chat_id in pending_approval_ids},
+            }
 
         room = f'user:{user_id}'
         if is_temporary_chat_id(chat_id):

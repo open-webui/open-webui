@@ -258,7 +258,7 @@
 		{
 			setFolderItems?: () => unknown;
 			upsertChat?: (chat: Record<string, unknown>) => unknown;
-			setChatActive?: (chatId: string, active: boolean) => boolean;
+			setChatActive?: (chatId: string, active: boolean, pendingApproval: boolean) => boolean;
 			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
 			setAllChatsRead?: () => unknown;
 		}
@@ -912,6 +912,7 @@
 			type: string;
 			data: {
 				active?: boolean;
+				pending_approval?: boolean;
 				folder_id?: string | null;
 				last_read_at?: number;
 				folder_unread_counts?: Record<string, number>;
@@ -921,10 +922,12 @@
 		if (event.data?.type === 'chat:active') {
 			const eventData = event.data.data ?? {};
 			const active = eventData.active ?? false;
-			const found = setChatActive(event.chat_id, active);
+			const pendingApproval = eventData.pending_approval ?? false;
+			const found = setChatActive(event.chat_id, active, pendingApproval);
 			let foundInFolder = false;
 			for (const folder of Object.values(folderRegistry)) {
-				foundInFolder = folder?.setChatActive?.(event.chat_id, active) || foundInFolder;
+				foundInFolder =
+					folder?.setChatActive?.(event.chat_id, active, pendingApproval) || foundInFolder;
 			}
 			if (!foundInFolder && active && eventData.folder_id) {
 				await folderRegistry[eventData.folder_id]?.setFolderItems?.();
@@ -1778,6 +1781,7 @@
 														updatedAt={chat.updated_at}
 														lastReadAt={chat.last_read_at}
 														active={chat.active ?? false}
+														pendingApproval={chat.pending_approval ?? false}
 														{shiftKey}
 														selected={selectedChatId === chat.id}
 														on:select={() => {
@@ -1846,6 +1850,7 @@
 													updatedAt={chat.updated_at}
 													lastReadAt={chat.last_read_at}
 													active={chat.active ?? false}
+													pendingApproval={chat.pending_approval ?? false}
 													{shiftKey}
 													selected={selectedChatId === chat.id}
 													on:select={() => {
