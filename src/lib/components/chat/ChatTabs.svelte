@@ -482,6 +482,16 @@
 		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
 	];
 
+	$: showFilesMenuItem =
+		showFilesTab &&
+		!tabs.tabs.some(
+			(tab) => tab.id === ($selectedTerminalId ? `files:${$selectedTerminalId}` : 'files')
+		);
+	$: newTabViews = availableViews.filter(
+		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
+	);
+	$: canOpenNewTab = showFilesMenuItem || terminalFilesAvailable || newTabViews.length > 0;
+
 	$: directTerminals =
 		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
@@ -499,6 +509,7 @@
 		);
 	};
 	const pruneTabs = () => {
+		const hadTabs = tabs.tabs.length > 0;
 		for (const tab of tabs.tabs) {
 			// An open side chat owns its model and context; changing the parent must not discard it.
 			if (tab.kind === 'side') continue;
@@ -511,6 +522,7 @@
 				delete fileContexts[tab.id];
 			}
 		}
+		if (hadTabs && !tabs.tabs.length) showTabs.set(false);
 	};
 	$: {
 		availableViews;
@@ -819,46 +831,50 @@
 					</div>
 				{/each}
 			</div>
-			<Dropdown align="start" closeOnSelect>
-				<button
-					type="button"
-					class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
-					aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
-				>
-				<div slot="content">
-					<DropdownMenu className="w-48">
-						{#if showFilesTab && !tabs.tabs.some((tab) => tab.id === ($selectedTerminalId ? `files:${$selectedTerminalId}` : 'files'))}
-							<button on:click={() => openFiles()}
-								><Icon name="folder" size={14} />{$i18n.t('Files')}</button
-							>
-						{/if}
-						{#if terminalFilesAvailable}<button on:click={newFile}
-								><Icon name="page" size={14} />{$i18n.t('New File')}</button
-							>{/if}
-						{#if terminalEnabled}<button on:click={newTerminal}
-								><Icon name="terminal" size={14} />{$i18n.t('New Terminal')}</button
-							>{/if}
-						{#if browserEnabled}<button on:click={() => openBrowser()}
-								><Icon name="browser" size={14} />{$i18n.t('Browser')}</button
-							>{/if}
-						{#if desktopEnabled}<button on:click={openDesktop}
-								><Icon name="monitor" size={14} />{$i18n.t('Desktop')}</button
-							>{/if}
-						{#each availableViews.filter((view) => view.kind !== 'files' && view.kind !== 'voice' && view.available) as view}
-							<button
-								on:click={() =>
-									openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side')}
-							>
-								{#if view.kind === 'comments'}
-									<Annotation className="size-3.5 shrink-0" />
-								{:else}
-									<Icon name={tabIcon(view.kind as PanelTab['kind'])} size={14} />
-								{/if}{view.label}
-							</button>
-						{/each}
-					</DropdownMenu>
-				</div>
-			</Dropdown>
+			{#if canOpenNewTab}
+				<Dropdown align="start" closeOnSelect>
+					<button
+						type="button"
+						class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+						aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
+					>
+					<div slot="content">
+						<DropdownMenu className="w-48">
+							{#if showFilesMenuItem}
+								<button on:click={() => openFiles()}
+									><Icon name="folder" size={14} />{$i18n.t('Files')}</button
+								>
+							{/if}
+							{#if terminalFilesAvailable}<button on:click={newFile}
+									><Icon name="page" size={14} />{$i18n.t('New File')}</button
+								>{/if}
+							{#if terminalEnabled}<button on:click={newTerminal}
+									><Icon name="terminal" size={14} />{$i18n.t('New Terminal')}</button
+								>{/if}
+							{#if browserEnabled}<button on:click={() => openBrowser()}
+									><Icon name="browser" size={14} />{$i18n.t('Browser')}</button
+								>{/if}
+							{#if desktopEnabled}<button on:click={openDesktop}
+									><Icon name="monitor" size={14} />{$i18n.t('Desktop')}</button
+								>{/if}
+							{#each newTabViews as view}
+								<button
+									on:click={() =>
+										openFeature(
+											view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side'
+										)}
+								>
+									{#if view.kind === 'comments'}
+										<Annotation className="size-3.5 shrink-0" />
+									{:else}
+										<Icon name={tabIcon(view.kind as PanelTab['kind'])} size={14} />
+									{/if}{view.label}
+								</button>
+							{/each}
+						</DropdownMenu>
+					</div>
+				</Dropdown>
+			{/if}
 		</div>
 		<button
 			type="button"
@@ -999,7 +1015,7 @@
 				{/if}
 			</div>
 		{/each}
-		{#if !tabs.tabs.length}<div
+		{#if !tabs.tabs.length && canOpenNewTab}<div
 				class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
 			>
 				{$i18n.t('Open a tab using the + menu.')}
