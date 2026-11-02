@@ -31,7 +31,7 @@ from open_webui.utils.tools import (
     set_terminal_servers,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 router = APIRouter()
 
@@ -799,11 +799,27 @@ async def set_models_config(request: Request, form_data: ModelsConfigForm, user=
 class SubagentsConfigForm(BaseModel):
     ENABLE_SUBAGENTS: bool
     SUBAGENTS_BACKGROUND_ENABLED: bool
-    SUBAGENTS_MAX_CONCURRENT: int
-    SUBAGENTS_MAX_ASYNC: int
-    SUBAGENTS_MAX_ITERATIONS: int
-    SUBAGENTS_MAX_OUTPUT: int
+    SUBAGENTS_MAX_CONCURRENT: int | None = Field(default=None, gt=0)
+    SUBAGENTS_MAX_ASYNC: int | None = Field(default=None, gt=0)
+    SUBAGENTS_MAX_ITERATIONS: int | None = Field(default=None, gt=0)
+    SUBAGENTS_MAX_OUTPUT: int | None = Field(default=None, gt=0)
     SUBAGENTS_SYSTEM_PROMPT: str
+
+    @field_validator(
+        'SUBAGENTS_MAX_CONCURRENT',
+        'SUBAGENTS_MAX_ASYNC',
+        'SUBAGENTS_MAX_ITERATIONS',
+        'SUBAGENTS_MAX_OUTPUT',
+        mode='before',
+    )
+    @classmethod
+    def normalize_limit(cls, value):
+        return None if value == '' else value
+
+    @field_validator('SUBAGENTS_MAX_CONCURRENT', 'SUBAGENTS_MAX_ASYNC', mode='before')
+    @classmethod
+    def normalize_legacy_unlimited(cls, value):
+        return None if value == -1 else value
 
 
 @router.get('/subagents', response_model=SubagentsConfigForm)

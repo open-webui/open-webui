@@ -322,13 +322,21 @@ async def delegate(
         'subagents.max_output',
         'subagents.system_prompt',
     )
-    max_concurrent = int(config.get('subagents.max_concurrent') or 20)
-    max_async = int(config.get('subagents.max_async') or 20)
-    max_iterations = int(config.get('subagents.max_iterations') or 30)
-    max_output = int(config.get('subagents.max_output') or 30_000)
-    if max_concurrent != -1:
+    max_concurrent = config.get('subagents.max_concurrent')
+    max_concurrent = int(max_concurrent) if max_concurrent else None
+    max_async = config.get('subagents.max_async')
+    max_async = int(max_async) if max_async else None
+    max_iterations = config.get('subagents.max_iterations')
+    max_iterations = int(max_iterations) if max_iterations else None
+    max_output = config.get('subagents.max_output')
+    max_output = int(max_output) if max_output else None
+    if max_concurrent == -1:
+        max_concurrent = None
+    elif max_concurrent is not None:
         max_concurrent = max(1, max_concurrent)
-    if max_async != -1:
+    if max_async == -1:
+        max_async = None
+    elif max_async is not None:
         max_async = max(1, max_async)
 
     if background and not config.get('subagents.background_enabled'):
@@ -406,13 +414,13 @@ async def delegate(
     foreground_semaphore = None
     if background:
         async with _background_lock:
-            if max_async != -1 and len(_background_active) >= max_async:
+            if max_async is not None and len(_background_active) >= max_async:
                 return (
                     f'Error: Async subagent capacity reached ({max_async} running). '
                     'Wait for one to finish or increase subagents.max_async.'
                 )
             _background_active.add(delegation_id)
-    elif max_concurrent != -1:
+    elif max_concurrent is not None:
         if _foreground_semaphore is None:
             _foreground_semaphore = asyncio.Semaphore(max_concurrent)
         foreground_semaphore = _foreground_semaphore
@@ -551,7 +559,7 @@ async def delegate(
                     for part in item.get('content') or []
                     if part.get('type') == 'output_text'
                 )
-            if len(summary) > max_output:
+            if max_output is not None and len(summary) > max_output:
                 summary = f'{summary[:max_output]}\n\n[output truncated]'
             error = message.get('error')
             if isinstance(error, dict):
