@@ -3897,6 +3897,11 @@
 			handleStatusCommand();
 			return { status: 'rejected' };
 		}
+		if (String(userPrompt).trim() === '/comments') {
+			clearCommandInput();
+			messageInput?.openComments();
+			return { status: 'rejected' };
+		}
 		if (String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
 			await handleForkChat();

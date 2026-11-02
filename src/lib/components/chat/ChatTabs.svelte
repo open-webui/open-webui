@@ -50,6 +50,7 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
+	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './ChatTabs/UntitledFile.svelte';
 	import Browser from './ChatTabs/Browser.svelte';
@@ -761,6 +762,8 @@
 						>
 							{#if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
+							{:else if tab.kind === 'comments'}
+								<Annotation className="size-3.5 shrink-0" />
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
@@ -813,11 +816,13 @@
 							<button
 								on:click={() =>
 									openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments')}
-								><Icon
-									name={tabIcon(view.kind as PanelTab['kind'])}
-									size={14}
-								/>{view.label}</button
 							>
+								{#if view.kind === 'comments'}
+									<Annotation className="size-3.5 shrink-0" />
+								{:else}
+									<Icon name={tabIcon(view.kind as PanelTab['kind'])} size={14} />
+								{/if}{view.label}
+							</button>
 						{/each}
 					</DropdownMenu>
 				</div>

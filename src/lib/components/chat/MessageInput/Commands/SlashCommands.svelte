@@ -22,6 +22,7 @@
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
+	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 
@@ -33,6 +34,7 @@
 	export let canCompare = false;
 	export let compactDisabled = false;
 	export let canStatus = false;
+	export let canComments = false;
 	export let canFork = false;
 	export let forkDisabled = false;
 	export let canTemporary = false;
@@ -66,6 +68,9 @@
 			: []),
 		...(canStatus && $visibleControls['chat.status'] && 'status'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'status' } }]
+			: []),
+		...(canComments && 'comments'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'comments' } }]
 			: []),
 		...($visibleControls['chat.model_command'] && 'model'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'model' } }]
@@ -364,6 +369,26 @@
 					</span>
 				</button>
 			</Tooltip>
+		{:else if item.data.id === 'comments'}
+			<button
+				type="button"
+				aria-label={$i18n.t('Comments')}
+				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
+				on:mousedown={(e) => e.preventDefault()}
+				on:click={() => onSelect(item)}
+				on:mouseenter={() => (selectedIdx = commandIdx)}
+				on:focus={() => {}}
+				data-selected={commandIdx === selectedIdx}
+			>
+				<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
+					<Annotation className="size-3.5" />
+				</span>
+				<span class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
+					<span class="min-w-0 flex-1 truncate">{$i18n.t('Comments')}</span>
+					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/comments</span>
+				</span>
+			</button>
 		{:else if item.data.id === 'model'}
 			<Tooltip content={$i18n.t('Show or switch the current model.')} placement="top">
 				<button

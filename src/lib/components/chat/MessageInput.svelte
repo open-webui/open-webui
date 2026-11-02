@@ -196,6 +196,16 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: canComments = !!(
+		!embedded &&
+		$config?.features?.enable_comments &&
+		$_user &&
+		isSavedChatId(chatId) &&
+		!$temporaryChatEnabled
+	);
+	export const openComments = () => {
+		if (canComments) showTabs.set('comments');
+	};
 	$: hasChatContent = history?.currentId
 		? createMessagesList(history, history.currentId).some(
 				(message) =>
@@ -1576,6 +1586,7 @@
 							'compact',
 							'fork',
 							'status',
+							'comments',
 							'model',
 							'compare',
 							'settings',
@@ -1604,6 +1615,7 @@
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
+					canComments: () => canComments,
 					canFork: () =>
 						!!history?.currentId &&
 						!$temporaryChatEnabled &&
@@ -1616,6 +1628,7 @@
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
+					onComments: openComments,
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
 					onCompare: openComparison,
