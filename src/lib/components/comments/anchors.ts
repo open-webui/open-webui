@@ -147,7 +147,7 @@ export function selectedComment() {
 			source: sha256(text),
 			content_hash: options.content_hash
 		};
-		return { options, anchor, rect: range.getBoundingClientRect() };
+		return { options, anchor, range, rect: range.getBoundingClientRect() };
 	}
 	return null;
 }

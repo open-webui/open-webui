@@ -92,6 +92,7 @@
 	} | null = null;
 	// Keep typing from invalidating the keyed selection and remounting the input.
 	let fileAskInput = '';
+	let usingFileAsk = false;
 	let asking = false;
 	const positionFileAsk = (node: HTMLFormElement, anchor: Range | HTMLElement) => {
 		document.body.appendChild(node);
@@ -192,6 +193,7 @@
 		};
 	};
 	const captureSelection = () => {
+		if (!active || usingFileAsk) return;
 		const selection = window.getSelection();
 		if (!onAskFile || !openedFile || !selection?.rangeCount || selection.isCollapsed) return;
 		const range = selection.getRangeAt(0);
@@ -2014,6 +2016,13 @@
 	}}
 />
 
+<svelte:document
+	on:selectionchange={captureSelection}
+	on:focusin={(event) => {
+		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+	}}
+/>
+
 <svelte:window
 	on:keydown={(event) => {
 		if (!active) return;
@@ -2023,9 +2032,9 @@
 		} else handleKeydown(event);
 	}}
 	on:click={handleWindowClick}
-	on:pointerdown={(event) => {
-		if (fileAsk && !dirtyChoice && !(event.target as Element)?.closest('[data-file-ask]'))
-			fileAsk = null;
+	on:pointerdown|capture={(event) => {
+		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+		if (fileAsk && !dirtyChoice && !usingFileAsk) fileAsk = null;
 	}}
 />
 
@@ -2368,8 +2377,6 @@
 		<!-- Content -->
 		<div
 			bind:this={viewerRoot}
-			on:mouseup={captureSelection}
-			on:keyup={captureSelection}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();

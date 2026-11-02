@@ -105,9 +105,14 @@
 	export let onToolCallResolved = (e) => {};
 	export let onSetInputText = (text) => {};
 
+	/** @type {HTMLDivElement | undefined} */
 	let contentContainerElement;
+	/** @type {{ closeHandler: () => void } | undefined} */
 	let floatingButtonsElement;
+	/** @type {Range | null} */
 	let floatingButtonsRange = null;
+	let selectedText = '';
+	let usingFloatingButtons = false;
 
 	let sourceIds = [];
 	$: getSourceIds(sources);
@@ -192,65 +197,41 @@
 		}
 	);
 
-	const updateButtonPosition = (event) => {
-		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
+	const updateSelection = () => {
+		if (usingFloatingButtons) return;
+		const selection = window.getSelection();
+		const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
 		if (
-			!contentContainerElement?.contains(event.target) &&
-			!buttonsContainerElement?.contains(event.target)
+			!selection ||
+			!range ||
+			!selection.toString().trim() ||
+			!contentContainerElement?.contains(range.startContainer) ||
+			!contentContainerElement.contains(range.endContainer)
 		) {
 			closeFloatingButtons();
 			return;
 		}
-
-		setTimeout(async () => {
-			await tick();
-
-			if (!contentContainerElement?.contains(event.target)) return;
-
-			let selection = window.getSelection();
-
-			if (selection.toString().trim().length > 0) {
-				floatingButtonsRange = selection.getRangeAt(0);
-				commentSelection = $config?.features?.enable_comments && $user ? selectedComment() : null;
-				positionFloatingButtons();
-			} else {
-				closeFloatingButtons();
-			}
-		}, 0);
+		floatingButtonsElement?.closeHandler();
+		selectedText = selection.toString();
+		floatingButtonsRange = range.cloneRange();
+		commentSelection = $config?.features?.enable_comments && $user ? selectedComment() : null;
 	};
 
-	const positionFloatingButtons = () => {
-		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
-		if (!floatingButtonsRange || !buttonsContainerElement) return;
-
-		const rect = floatingButtonsRange.getBoundingClientRect();
-		const parentRect = contentContainerElement.getBoundingClientRect();
-
-		buttonsContainerElement.style.display = 'block';
-
-		// Calculate space available on the right
-		const spaceOnRight = parentRect.right - rect.left;
-		let halfScreenWidth = $mobile ? window.innerWidth / 2 : window.innerWidth / 3;
-
-		if (spaceOnRight < halfScreenWidth) {
-			const right = document.documentElement.clientWidth - rect.right;
-			buttonsContainerElement.style.right = `${right}px`;
-			buttonsContainerElement.style.left = 'auto'; // Reset left
-		} else {
-			// Enough space, position using 'left'
-			buttonsContainerElement.style.left = `${rect.left}px`;
-			buttonsContainerElement.style.right = 'auto'; // Reset right
+	/** @param {Event} event */
+	const toolbarInteractionHandler = (event) => {
+		if (!(event.target instanceof Node)) return;
+		const toolbar = document.getElementById(`floating-buttons-${id}`);
+		// Keep the snapshot while a touch focuses an action or its question input.
+		usingFloatingButtons = !!toolbar?.contains(event.target);
+		if (!usingFloatingButtons && !contentContainerElement?.contains(event.target)) {
+			closeFloatingButtons();
 		}
-		buttonsContainerElement.style.top = `${rect.bottom + 5}px`; // +5 to add some spacing
 	};
 
 	const closeFloatingButtons = () => {
 		commentSelection = null;
 		floatingButtonsRange = null;
-		const buttonsContainerElement = document.getElementById(`floating-buttons-${id}`);
-		if (buttonsContainerElement) {
-			buttonsContainerElement.style.display = 'none';
-		}
+		selectedText = '';
 
 		if (floatingButtonsElement) {
 			// check if closeHandler is defined
@@ -274,8 +255,9 @@
 
 	function attachListeners() {
 		if (!listenersAttached && contentContainerElement) {
-			contentContainerElement.addEventListener('mouseup', updateButtonPosition);
-			document.addEventListener('mouseup', updateButtonPosition);
+			document.addEventListener('selectionchange', updateSelection);
+			document.addEventListener('pointerdown', toolbarInteractionHandler, true);
+			document.addEventListener('focusin', toolbarInteractionHandler, true);
 			document.addEventListener('keydown', keydownHandler);
 			listenersAttached = true;
 		}
@@ -283,8 +265,9 @@
 
 	function detachListeners() {
 		if (listenersAttached) {
-			contentContainerElement?.removeEventListener('mouseup', updateButtonPosition);
-			document.removeEventListener('mouseup', updateButtonPosition);
+			document.removeEventListener('selectionchange', updateSelection);
+			document.removeEventListener('pointerdown', toolbarInteractionHandler, true);
+			document.removeEventListener('focusin', toolbarInteractionHandler, true);
 			document.removeEventListener('keydown', keydownHandler);
 			listenersAttached = false;
 		}
@@ -300,8 +283,6 @@
 		detachListeners();
 	});
 </script>
-
-<svelte:window on:scroll|capture={positionFloatingButtons} on:resize={positionFloatingButtons} />
 
 <div bind:this={contentContainerElement}>
 	{#if output?.length}
@@ -408,6 +389,8 @@
 {#if floatingButtons}
 	<FloatingButtons
 		bind:this={floatingButtonsElement}
+		range={floatingButtonsRange}
+		{selectedText}
 		{id}
 		actions={$settings?.floatingActionButtons ?? []}
 		onComment={commentSelection
