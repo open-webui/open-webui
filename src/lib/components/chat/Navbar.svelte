@@ -189,7 +189,7 @@
 				{/if}
 
 				<div
-					class="flex-1 min-w-0 overflow-hidden max-w-full mt-0.5 py-0.5 pl-1 {$showSidebar
+					class="flex-1 min-w-0 overflow-hidden max-w-full md:mt-0.5 md:py-0.5 pl-1 {$showSidebar
 						? 'ml-1'
 						: ''}"
 				>
@@ -199,7 +199,7 @@
 								<input
 									bind:this={chatTitleInput}
 									bind:value={chatTitle}
-									class="min-w-0 flex-1 bg-transparent py-1 text-[0.9375rem] font-normal text-gray-700 outline-hidden dark:text-gray-300"
+									class="min-w-0 flex-1 bg-transparent md:py-1 text-[0.9375rem] font-normal text-gray-700 outline-hidden dark:text-gray-300"
 									aria-label={$i18n.t('Title')}
 									placeholder={generating ? $i18n.t('Generating...') : ''}
 									disabled={generating}
@@ -233,7 +233,7 @@
 								</Tooltip>
 							{:else}
 								<h1
-									class="min-w-0 truncate py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+									class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
 								>
 									{title || chat?.chat?.title || $i18n.t('New Chat')}
 								</h1>
@@ -256,7 +256,7 @@
 						<h1 class="sr-only">{$i18n.t('New Chat')}</h1>
 						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
 							<div
-								class="min-w-0 truncate py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+								class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
 							>
 								{$i18n.t('New Chat')}
 							</div>
