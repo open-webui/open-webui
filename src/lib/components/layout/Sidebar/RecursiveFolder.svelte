@@ -383,7 +383,7 @@
 					chats = mergeFolderChats(chats ?? [], [chat]);
 				}
 			},
-			setChatActive: (chatId, active, pendingApproval) => {
+			setChatActive: (chatId, active, pendingApproval = false) => {
 				if (chats) {
 					let found = false;
 					chats = sortFolderChats(

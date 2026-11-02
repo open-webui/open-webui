@@ -3,6 +3,7 @@ import { getChatList, getPinnedChatList } from '$lib/apis/chats';
 
 type ChatListItem = {
 	id: string;
+	pending_approval?: boolean;
 	[key: string]: unknown;
 };
 

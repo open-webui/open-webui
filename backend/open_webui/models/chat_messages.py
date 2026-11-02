@@ -357,7 +357,7 @@ class ChatMessageTable:
             return ChatMessageModel.model_validate(message) if message else None
 
     async def get_chat_ids_with_pending_approval(
-        self, chat_ids: list[str], db: Optional[AsyncSession] = None
+        self, chat_ids: list[str], db: AsyncSession | None = None
     ) -> set[str]:
         if not chat_ids:
             return set()
