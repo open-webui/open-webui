@@ -232,6 +232,58 @@ async def get_terminal_json(
     return None
 
 
+async def filter_user_terminal_tools(request, user, tools: dict, metadata: dict, extra_params: dict):
+    """Let Open Terminal, which owns the shells, confirm availability for this user and chat."""
+    terminal_id = metadata.get('terminal_id')
+    shell_tools = {
+        name: tool
+        for name, tool in tools.items()
+        if name in {'read_user_terminal', 'send_user_terminal_input'}
+        and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
+    }
+    selected = {
+        name: tool
+        for name, tool in shell_tools.items()
+        if terminal_id
+        and (
+            tool.get('tool_id') == f'terminal:{terminal_id}'
+            or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
+        )
+    }
+    available = False
+    if selected and not metadata.get('automation_id') and not metadata.get('internal'):
+        available = any(
+            tool.get('user_shell_tools') == 'always'
+            or (tool.get('direct') and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always')
+            for tool in selected.values()
+        )
+        if not available and metadata.get('chat_id'):
+            try:
+                # This endpoint checks ownership, a live process, and a connected shell.
+                # Its output is discarded; the model must explicitly read the terminal.
+                async with asyncio.timeout(5):
+                    state = await get_terminal_json(request, user, metadata, '/api/terminals/user/output', extra_params)
+                available = isinstance(state, dict) and isinstance(state.get('output'), str)
+            except Exception as error:
+                log.debug('User terminal availability check failed (%s)', type(error).__name__)
+
+    for name in shell_tools:
+        if not available or name not in selected:
+            tools.pop(name)
+
+    if available and 'read_user_terminal' in selected:
+        tool = selected['read_user_terminal']
+        tools['read_user_terminal'] = {
+            **tool,
+            'spec': {
+                **tool['spec'],
+                'description': tool['spec'].get('description', '')
+                + "\nReads the user's Open WebUI Terminal tab, separate from the Desktop. "
+                'Use this tool when the user refers to an open terminal tab.',
+            },
+        }
+
+
 async def upload_files_to_terminal(request, user, files: list[dict], metadata: dict, extra_params: dict):
     """Copy Open WebUI files to the selected terminal, adding terminal_path or terminal_error to each entry."""
     if not metadata.get('terminal_id') or not files:

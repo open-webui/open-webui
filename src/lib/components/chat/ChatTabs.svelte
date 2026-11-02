@@ -103,6 +103,16 @@
 	let viewportWidth = 0;
 
 	let tabs = emptyTabs();
+	let terminalViews: Record<string, XTerminal> = {};
+	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
+	export async function bindTerminalChat(id: string) {
+		await tick();
+		await Promise.all(
+			tabs.tabs
+				.filter((tab) => tab.kind === 'terminal')
+				.map((tab) => terminalViews[tab.id]?.bindChat(id))
+		);
+	}
 	let fileViews: Record<
 		string,
 		{
@@ -919,6 +929,7 @@
 					/>
 				{:else if tab.kind === 'terminal' && tab.connection}
 					<XTerminal
+						bind:this={terminalViews[tab.id]}
 						connection={tab.connection}
 						{chatId}
 						active={!!$showTabs && tabs.activeId === tab.id}

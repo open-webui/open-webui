@@ -151,7 +151,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.terminals import upload_files_to_terminal
+from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
@@ -2871,61 +2871,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ):
                     tools_dict[name] = {**tools_dict[name], 'file_tool': tool_dict}
 
-        # Connections can keep shell tools advertised across browser disconnects for prompt caching.
-        shell_tools = {
-            name: tool
-            for name, tool in tools_dict.items()
-            if name in {'read_user_terminal', 'send_user_terminal_input'}
-            and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
-        }
-        selected = {
-            name: tool
-            for name, tool in shell_tools.items()
-            if terminal_id
-            and (
-                tool.get('tool_id') == f'terminal:{terminal_id}'
-                or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
-            )
-        }
-        connected = (
-            any(
-                tool.get('user_shell_tools') == 'always'
-                or (
-                    tool.get('direct')
-                    and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always'
-                )
-                for tool in selected.values()
-            )
-            and not metadata.get('automation_id')
-            and not metadata.get('internal')
-        )
-        if (
-            selected
-            and not connected
-            and event_caller
-            and metadata.get('session_id')
-            and metadata.get('chat_id')
-            and not metadata.get('automation_id')
-            and not metadata.get('internal')
-        ):
-            try:
-                state = await asyncio.wait_for(
-                    event_caller(
-                        {
-                            'type': 'request:terminal:state',
-                            'data': {'terminal_id': terminal_id, 'session_id': metadata['session_id']},
-                        }
-                    ),
-                    timeout=2,
-                )
-                connected = isinstance(state, dict) and state.get('connected') is True
-            except Exception:
-                # Old/disconnected browsers cannot confirm availability; other tools still work.
-                pass
-
-        for name in shell_tools:
-            if not connected or name not in selected:
-                tools_dict.pop(name)
+        await filter_user_terminal_tools(request, user, tools_dict, metadata, extra_params)
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers

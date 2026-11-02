@@ -5,8 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import '@xterm/xterm/css/xterm.css';
 	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
-	import { openTerminalSocket } from '$lib/apis/terminal/socket';
-	import { connectedUserTerminals } from '$lib/stores';
+	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
 
 	export let connection: TerminalConnection;
 	export let chatId: string | null = null;
@@ -25,8 +24,28 @@
 	let pingInterval: ReturnType<typeof setInterval>;
 	let destroyed = false;
 	let sessionId = '';
-	const terminalOwner = Symbol();
+	let sessionChatId = chatId;
+	let bindingChat: Promise<void> | null = null;
+	let finishConnection: (ready: boolean) => void;
+	const connectionReady = new Promise<boolean>((resolve) => (finishConnection = resolve));
 	let reportedActive: boolean | null = null;
+
+	export async function bindChat(id: string) {
+		if (readOnly || destroyed || sessionChatId === id) return;
+		if (sessionChatId) throw new Error('Terminal already belongs to another chat');
+		if (!(await connectionReady) || !ws) throw new Error('Terminal is not connected');
+		if (!bindingChat) {
+			bindingChat = assignTerminalChat(ws, id)
+				.then(() => {
+					sessionChatId = id;
+				})
+				.finally(() => {
+					bindingChat = null;
+				});
+		}
+		await bindingChat;
+		if (sessionChatId !== id) throw new Error('Terminal already belongs to another chat');
+	}
 
 	function reportActivity(visible: boolean) {
 		if (readOnly || !connected || ws?.readyState !== WebSocket.OPEN) return;
@@ -38,10 +57,7 @@
 	const reportVisibility = () => reportActivity(active);
 
 	function disconnect() {
-		connectedUserTerminals.update((entries) => {
-			entries.delete(terminalOwner);
-			return entries;
-		});
+		finishConnection(false);
 		connected = false;
 		connecting = false;
 		reportedActive = null;
@@ -82,14 +98,19 @@
 	async function connect() {
 		connecting = true;
 		try {
-			const session = await terminalRequest<{ id: string }>(connection, chatId, '/api/terminals', {
-				method: 'POST'
-			});
+			const session = await terminalRequest<{ id: string }>(
+				connection,
+				sessionChatId,
+				'/api/terminals',
+				{
+					method: 'POST'
+				}
+			);
 			sessionId = session.id;
 			if (destroyed) {
 				await terminalRequest(
 					connection,
-					chatId,
+					sessionChatId,
 					`/api/terminals/${encodeURIComponent(sessionId)}`,
 					{ method: 'DELETE' }
 				);
@@ -97,15 +118,12 @@
 			}
 			ws = openTerminalSocket(
 				connection,
-				chatId,
+				sessionChatId,
 				`/api/terminals/${encodeURIComponent(sessionId)}`,
 				() => {
 					if (destroyed) return;
-					if (connection.selector && chatId) {
-						const shell = { terminalId: connection.selector, chatId };
-						connectedUserTerminals.update((entries) => entries.set(terminalOwner, shell));
-					}
 					connected = true;
+					finishConnection(true);
 					connecting = false;
 					reportActivity(active);
 					fit();
@@ -118,6 +136,13 @@
 			);
 			ws.onmessage = (event) => {
 				if (destroyed) return;
+				if (typeof event.data === 'string') {
+					try {
+						if (JSON.parse(event.data).type === 'chat') return;
+					} catch {
+						/* Render non-JSON terminal output below. */
+					}
+				}
 				if (event.data instanceof ArrayBuffer) term?.write(new Uint8Array(event.data));
 				else write(event.data);
 			};
@@ -140,6 +165,9 @@
 
 	$: if (active && term) requestAnimationFrame(fit);
 	$: if (connected) reportActivity(active);
+	$: if (connected && chatId && !sessionChatId) {
+		void bindChat(chatId).catch((error) => write(`\r\n[${error}]\r\n`));
+	}
 
 	onMount(() => {
 		document.addEventListener('visibilitychange', reportVisibility);

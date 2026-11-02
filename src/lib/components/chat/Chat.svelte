@@ -3430,7 +3430,7 @@
 				scrollToBottom();
 			}
 
-			if (messages.length === 0) {
+			if (!$chatId) {
 				await initChatHandler(history);
 			} else {
 				await saveChatHandler($chatId, history);
@@ -3494,7 +3494,7 @@
 			scrollToBottom();
 		}
 
-		if (messages.length === 0) {
+		if (!$chatId) {
 			await initChatHandler(history);
 		} else {
 			await saveChatHandler($chatId, history);
@@ -3861,6 +3861,8 @@
 		prompt = '';
 	};
 
+	let terminalTabs: ChatTabs;
+
 	const getChatId = async (_history: typeof history) => {
 		let _chatId = $chatId;
 		// Empty embedded drafts create their backing chat only when the first message is sent.
@@ -3887,8 +3889,13 @@
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
+			if (!_chatId && terminalTabs?.hasTerminals()) {
+				_chatId = await initChatHandler(_history);
+			}
 			await tick();
 		}
+		if (history !== _history) return null;
+		if (_chatId) await terminalTabs?.bindTerminalChat(_chatId);
 		return _chatId;
 	};
 
@@ -5683,6 +5690,7 @@
 					bind:history
 					bind:files
 					chatId={$chatId}
+					bind:this={terminalTabs}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
 					canSideChat={sideChatAllowed && selectedModels.length === 1 && !!selectedModelIds[0]}

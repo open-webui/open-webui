@@ -1,5 +1,40 @@
 import type { TerminalConnection } from './index';
 
+export function assignTerminalChat(socket: WebSocket, chatId: string): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const finish = (error?: Error) => {
+			clearTimeout(timeout);
+			socket.removeEventListener('message', onMessage);
+			socket.removeEventListener('close', onClose);
+			if (error) reject(error);
+			else resolve();
+		};
+		const onMessage = (event: MessageEvent) => {
+			if (typeof event.data !== 'string') return;
+			try {
+				const data = JSON.parse(event.data);
+				if (data.type !== 'chat') return;
+				if (data.error) finish(new Error(String(data.error)));
+				else if (data.chat_id === chatId) finish();
+			} catch {
+				// Terminal output is not a control message.
+			}
+		};
+		const onClose = () => finish(new Error('Terminal disconnected before joining the chat'));
+		const timeout = setTimeout(
+			() => finish(new Error('Terminal did not confirm the chat update')),
+			10000
+		);
+		socket.addEventListener('message', onMessage);
+		socket.addEventListener('close', onClose);
+		try {
+			socket.send(JSON.stringify({ type: 'chat', chat_id: chatId }));
+		} catch (error) {
+			finish(error instanceof Error ? error : new Error(String(error)));
+		}
+	});
+}
+
 export function openTerminalSocket(
 	connection: TerminalConnection,
 	chatId: string | null,
