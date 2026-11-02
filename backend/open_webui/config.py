@@ -951,6 +951,16 @@ PADDLEOCR_VL_BASE_URL = os.getenv('PADDLEOCR_VL_BASE_URL', 'http://localhost:808
 
 PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
 
+MINICPM_OCR_BASE_URL = os.getenv('MINICPM_OCR_BASE_URL', '')
+
+MINICPM_OCR_API_KEY = os.getenv('MINICPM_OCR_API_KEY', '')
+
+MINICPM_OCR_MODEL = os.getenv('MINICPM_OCR_MODEL', 'minicpm-ocr')
+
+MINICPM_OCR_TIMEOUT = os.getenv('MINICPM_OCR_TIMEOUT', '120')
+
+MINICPM_OCR_PROMPT = os.getenv('MINICPM_OCR_PROMPT', 'Text Recognition:')
+
 BYPASS_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
 
 
@@ -2982,6 +2992,11 @@ DEFAULT_CONFIG = {
     'rag.mistral_ocr_params': MISTRAL_OCR_PARAMS,
     'rag.paddleocr_vl_base_url': PADDLEOCR_VL_BASE_URL,
     'rag.paddleocr_vl_token': PADDLEOCR_VL_TOKEN,
+    'rag.minicpm_ocr_base_url': MINICPM_OCR_BASE_URL,
+    'rag.minicpm_ocr_api_key': MINICPM_OCR_API_KEY,
+    'rag.minicpm_ocr_model': MINICPM_OCR_MODEL,
+    'rag.minicpm_ocr_timeout': MINICPM_OCR_TIMEOUT,
+    'rag.minicpm_ocr_prompt': MINICPM_OCR_PROMPT,
     'rag.bypass_embedding_and_retrieval': BYPASS_EMBEDDING_AND_RETRIEVAL,
     'rag.top_k': RAG_TOP_K,
     'rag.top_k_reranker': RAG_TOP_K_RERANKER,

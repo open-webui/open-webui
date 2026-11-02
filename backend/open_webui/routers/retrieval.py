@@ -329,6 +329,11 @@ RETRIEVAL_CONFIG_KEYS = {
     'OLLAMA_CLOUD_WEB_SEARCH_API_KEY': 'web.search.ollama_cloud_api_key',
     'PADDLEOCR_VL_BASE_URL': 'rag.paddleocr_vl_base_url',
     'PADDLEOCR_VL_TOKEN': 'rag.paddleocr_vl_token',
+    'MINICPM_OCR_BASE_URL': 'rag.minicpm_ocr_base_url',
+    'MINICPM_OCR_API_KEY': 'rag.minicpm_ocr_api_key',
+    'MINICPM_OCR_MODEL': 'rag.minicpm_ocr_model',
+    'MINICPM_OCR_TIMEOUT': 'rag.minicpm_ocr_timeout',
+    'MINICPM_OCR_PROMPT': 'rag.minicpm_ocr_prompt',
     'PDF_EXTRACT_IMAGES': 'rag.pdf_extract_images',
     'PDF_LOADER_MODE': 'rag.pdf_loader_mode',
     'PERPLEXITY_API_KEY': 'web.search.perplexity_api_key',
@@ -655,6 +660,11 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'MISTRAL_OCR_PARAMS': config['rag.mistral_ocr_params'],
         'PADDLEOCR_VL_BASE_URL': config['rag.paddleocr_vl_base_url'],
         'PADDLEOCR_VL_TOKEN': config['rag.paddleocr_vl_token'],
+        'MINICPM_OCR_BASE_URL': config['rag.minicpm_ocr_base_url'],
+        'MINICPM_OCR_API_KEY': config['rag.minicpm_ocr_api_key'],
+        'MINICPM_OCR_MODEL': config['rag.minicpm_ocr_model'],
+        'MINICPM_OCR_TIMEOUT': config['rag.minicpm_ocr_timeout'],
+        'MINICPM_OCR_PROMPT': config['rag.minicpm_ocr_prompt'],
         # MinerU settings
         'MINERU_API_MODE': config['rag.mineru_api_mode'],
         'MINERU_API_URL': config['rag.mineru_api_url'],
@@ -905,6 +915,11 @@ class ConfigForm(BaseModel):
     MISTRAL_OCR_PARAMS: dict | None = None
     PADDLEOCR_VL_BASE_URL: str | None = None
     PADDLEOCR_VL_TOKEN: str | None = None
+    MINICPM_OCR_BASE_URL: str | None = None
+    MINICPM_OCR_API_KEY: str | None = None
+    MINICPM_OCR_MODEL: str | None = None
+    MINICPM_OCR_TIMEOUT: int | None = None
+    MINICPM_OCR_PROMPT: str | None = None
 
     # MinerU settings
     MINERU_API_MODE: str | None = None
@@ -1120,6 +1135,11 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'MISTRAL_OCR_PARAMS': config['rag.mistral_ocr_params'],
         'PADDLEOCR_VL_BASE_URL': config['rag.paddleocr_vl_base_url'],
         'PADDLEOCR_VL_TOKEN': config['rag.paddleocr_vl_token'],
+        'MINICPM_OCR_BASE_URL': config['rag.minicpm_ocr_base_url'],
+        'MINICPM_OCR_API_KEY': config['rag.minicpm_ocr_api_key'],
+        'MINICPM_OCR_MODEL': config['rag.minicpm_ocr_model'],
+        'MINICPM_OCR_TIMEOUT': config['rag.minicpm_ocr_timeout'],
+        'MINICPM_OCR_PROMPT': config['rag.minicpm_ocr_prompt'],
         # MinerU settings
         'MINERU_API_MODE': config['rag.mineru_api_mode'],
         'MINERU_API_URL': config['rag.mineru_api_url'],

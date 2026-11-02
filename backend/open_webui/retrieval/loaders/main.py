@@ -27,6 +27,7 @@ from open_webui.retrieval.loaders.local import (
     UnstructuredLoader,
 )
 from open_webui.retrieval.loaders.mineru import MinerULoader
+from open_webui.retrieval.loaders.minicpm_ocr import MINICPM_OCR_SUPPORTED_EXTENSIONS, MiniCPMOCRLoader
 from open_webui.retrieval.loaders.mistral import MistralLoader
 from open_webui.retrieval.loaders.paddleocr_vl import PADDLEOCR_VL_SUPPORTED_EXTENSIONS, PaddleOCRVLLoader
 from open_webui.retrieval.loaders.pdf import PDFLoader
@@ -708,6 +709,19 @@ class Loader:
                 api_url=self.config['rag.paddleocr_vl_base_url'],
                 token=self.config['rag.paddleocr_vl_token'],
                 file_path=file_path,
+            )
+        elif (
+            self.engine == 'minicpm_ocr'
+            and self.config['rag.minicpm_ocr_base_url']
+            and file_ext in MINICPM_OCR_SUPPORTED_EXTENSIONS
+        ):
+            loader = MiniCPMOCRLoader(
+                base_url=self.config['rag.minicpm_ocr_base_url'],
+                file_path=file_path,
+                api_key=self.config['rag.minicpm_ocr_api_key'],
+                model=self.config['rag.minicpm_ocr_model'],
+                timeout=self.config['rag.minicpm_ocr_timeout'],
+                prompt=self.config['rag.minicpm_ocr_prompt'],
             )
         else:
             if USE_SLIM:

@@ -229,6 +229,13 @@
 			toast.error($i18n.t('PaddleOCR-vl API URL required.'));
 			return;
 		}
+		if (
+			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'minicpm_ocr' &&
+			RAGConfig.MINICPM_OCR_BASE_URL === ''
+		) {
+			toast.error($i18n.t('MiniCPM OCR API URL required.'));
+			return;
+		}
 
 		if (
 			RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru' &&
@@ -490,6 +497,7 @@
 						<option value="document_intelligence">{$i18n.t('Document Intelligence')}</option>
 						<option value="mistral_ocr">{$i18n.t('Mistral OCR')}</option>
 						<option value="paddleocr_vl">{$i18n.t('PaddleOCR-vl')}</option>
+						<option value="minicpm_ocr">{$i18n.t('MiniCPM OCR')}</option>
 						<option value="mineru">{$i18n.t('MinerU')}</option>
 					</SettingsSelect>
 				</AdminSettingRow>
@@ -890,6 +898,70 @@
 							/>
 						</AdminSettingField>
 					</div>
+				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'minicpm_ocr'}
+					<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+						<AdminSettingField
+							label={$i18n.t('settings.admin.documents.minicpmOcrBaseUrl.label')}
+							description={$i18n.t('settings.admin.documents.minicpmOcrBaseUrl.description')}
+							forId="minicpm-ocr-base-url"
+						>
+							<input
+								id="minicpm-ocr-base-url"
+								class={inputClass}
+								placeholder="http://localhost:8000/v1"
+								bind:value={RAGConfig.MINICPM_OCR_BASE_URL}
+							/>
+						</AdminSettingField>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.documents.minicpmOcrApiKey.label')}
+							description={$i18n.t('settings.admin.documents.minicpmOcrApiKey.description')}
+						>
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('Enter MiniCPM OCR API Key')}
+								bind:value={RAGConfig.MINICPM_OCR_API_KEY}
+								required={false}
+							/>
+						</AdminSettingField>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.documents.minicpmOcrModel.label')}
+							description={$i18n.t('settings.admin.documents.minicpmOcrModel.description')}
+							forId="minicpm-ocr-model"
+						>
+							<input
+								id="minicpm-ocr-model"
+								class={inputClass}
+								placeholder="minicpm-ocr"
+								bind:value={RAGConfig.MINICPM_OCR_MODEL}
+							/>
+						</AdminSettingField>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.documents.minicpmOcrPrompt.label')}
+							description={$i18n.t('settings.admin.documents.minicpmOcrPrompt.description')}
+							forId="minicpm-ocr-prompt"
+						>
+							<input
+								id="minicpm-ocr-prompt"
+								class={inputClass}
+								placeholder="Text Recognition:"
+								bind:value={RAGConfig.MINICPM_OCR_PROMPT}
+							/>
+						</AdminSettingField>
+					</div>
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.documents.minicpmOcrTimeout.label')}
+						description={$i18n.t('settings.admin.documents.minicpmOcrTimeout.description')}
+						let:labelId
+					>
+						<input
+							id={`${labelId}-control`}
+							class="w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+							type="number"
+							min="1"
+							bind:value={RAGConfig.MINICPM_OCR_TIMEOUT}
+							placeholder="120"
+						/>
+					</AdminSettingRow>
 				{:else if RAGConfig.CONTENT_EXTRACTION_ENGINE === 'mineru'}
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.documents.apiMode.label')}
