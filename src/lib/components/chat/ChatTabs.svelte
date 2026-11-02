@@ -127,7 +127,6 @@
 	let panelTarget: HTMLElement | null = null;
 	let tabsChatId = chatId;
 	let hasOpenedTabs = false;
-	let terminalSequence = 0;
 	let commentTarget: { comment_id?: string } = {};
 	let closing = new Set<string>();
 	let navigationApproved = false;
@@ -264,10 +263,15 @@
 	};
 	const newTerminal = () => {
 		if (!terminalEnabled || !selectedConnection) return;
+		let terminalNumber = 1;
+		while (tabs.tabs.some((tab) => tab.kind === 'terminal' && tab.terminalNumber === terminalNumber)) {
+			terminalNumber++;
+		}
 		openPanel({
 			id: crypto.randomUUID(),
 			kind: 'terminal',
-			label: `${$i18n.t('Terminal')} ${++terminalSequence}`,
+			label: `${$i18n.t('Terminal')} ${terminalNumber}`,
+			terminalNumber,
 			terminalId: selectedConnection.selector,
 			connection: { ...selectedConnection }
 		});
