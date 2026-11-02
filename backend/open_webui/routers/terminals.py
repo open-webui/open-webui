@@ -562,6 +562,11 @@ async def desktop_ws(ws: WebSocket, server_id: str):
     await _proxy_terminal_websocket(ws, server_id, stream_path='desktop/stream')
 
 
+@router.websocket('/{server_id}/desktop/audio')
+async def desktop_audio_ws(ws: WebSocket, server_id: str):
+    await _proxy_terminal_websocket(ws, server_id, stream_path='desktop/audio')
+
+
 @router.websocket('/{server_id}/execute')
 async def ws_processes(ws: WebSocket, server_id: str):
     await _proxy_terminal_websocket(ws, server_id, stream_path='execute')
