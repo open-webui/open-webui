@@ -295,9 +295,9 @@
 									aria-label={$i18n.t(`Temporary Chat`)}
 								>
 									{#if $temporaryChatEnabled}
-										<ChatBubbleDottedChecked className="size-4.5" strokeWidth="1.5" />
+										<ChatBubbleDottedChecked className="size-4" strokeWidth="1.5" />
 									{:else}
-										<ChatBubbleDotted className="size-4.5" strokeWidth="1.5" />
+										<ChatBubbleDotted className="size-4" strokeWidth="1.5" />
 									{/if}
 								</button>
 							</Tooltip>
