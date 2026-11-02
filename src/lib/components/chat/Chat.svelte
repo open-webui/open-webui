@@ -5702,7 +5702,7 @@
 </div>
 
 <style>
-	::-webkit-scrollbar {
+	:global(:where(html:not(.native-scrollbars))) ::-webkit-scrollbar {
 		height: 0.5rem;
 		width: 0.5rem;
 	}

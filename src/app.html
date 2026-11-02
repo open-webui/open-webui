@@ -47,6 +47,13 @@
 		<script>
 			// On page load or when changing themes, best to add inline in `head` to avoid FOUC
 			(() => {
+				document.documentElement.classList.toggle(
+					'native-scrollbars',
+					/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+						// iPadOS can report a desktop Mac user agent.
+						(/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1)
+				);
+
 				const metaThemeColorTag = document.querySelector('meta[name="theme-color"]');
 				const prefersDarkTheme = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
