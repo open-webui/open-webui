@@ -1335,7 +1335,20 @@
 					return imageUrl;
 				};
 
-				const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
+				let imageFile = file;
+				if (isHeicImage(file)) {
+					try {
+						imageFile = await convertHeicToJpeg(file);
+					} catch (error) {
+						// The in-browser HEIC decoder (heic2any/libheif WASM) does not
+						// support every HEVC variant (e.g. iPhone Main 10). Attach the
+						// original file as a document instead of dropping it.
+						console.error('Failed to convert HEIC to JPEG', error);
+						toast.error($i18n.t("Couldn't display this HEIC image, attaching it as a document instead"));
+						uploadFileHandler(file, false);
+						return;
+					}
+				}
 				let reader = new FileReader();
 
 				reader.onload = async (event) => {

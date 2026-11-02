@@ -458,16 +458,15 @@
 			}
 			return imageUrl;
 		};
-		const imageFile = isHeicImage(file) ? await convertHeicToJpeg(file) : file;
 		const imageUrl = await new Promise<string>((resolve, reject) => {
 			const reader = new FileReader();
 			reader.onload = () => resolve(reader.result as string);
 			reader.onerror = () => reject(reader.error);
-			reader.readAsDataURL(imageFile);
+			reader.readAsDataURL(file);
 		});
 		const compressed = await compressImageHandler(imageUrl, $settings, $config);
 		const blob = await (await fetch(compressed as string)).blob();
-		return new File([blob], imageFile.name, { type: imageFile.type });
+		return new File([blob], file.name, { type: file.type });
 	};
 
 	const uploadFileHandler = async (file: File, process = true, prepareImage = false) => {
@@ -475,6 +474,17 @@
 		const targetQueueKey = queueKey;
 		const senderId = $user?.id;
 		const tempItemId = uuidv4();
+
+		// Convert HEIC up front so a decode failure can fall back to a
+		// document attachment instead of dropping the file.
+		if (prepareImage && isHeicImage(file)) {
+			try {
+				file = await convertHeicToJpeg(file);
+			} catch (error) {
+				console.error('Failed to convert HEIC to JPEG', error);
+				toast.error($i18n.t("Couldn't display this HEIC image, attaching it as a document instead"));
+			}
+		}
 		const fileItem: any = {
 			type: 'file',
 			file: '',
