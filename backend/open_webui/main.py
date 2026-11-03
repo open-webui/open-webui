@@ -1506,7 +1506,7 @@ async def chat_completion(
 
                         asyncio.create_task(run_initial_title_generation())
                 else:
-                    chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
+                    chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write', chat=existing_chat)
                     if not chat:
                         raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
 
