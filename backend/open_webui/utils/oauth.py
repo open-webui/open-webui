@@ -1100,7 +1100,7 @@ class OAuthClientManager:
             # Get the OAuth session
             session = await OAuthSessions.get_session_by_provider_and_user_id(client_id, user_id)
             if not session:
-                log.warning(f'No OAuth session found for user {user_id}, client_id {client_id}')
+                log.debug('No OAuth session found for user %s, client_id %s', user_id, client_id)
                 return None
 
             if (
