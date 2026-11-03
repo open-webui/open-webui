@@ -35,10 +35,10 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import check_model_access, get_all_models
-from open_webui.utils.payload import apply_system_prompt_to_body, convert_payload_openai_to_ollama
+from open_webui.utils.payload import apply_system_prompt_to_body, convert_chat_completions_payload_to_ollama
 from open_webui.utils.response import (
-    convert_response_ollama_to_openai,
-    convert_streaming_response_ollama_to_openai,
+    convert_ollama_response_to_chat_completions,
+    convert_ollama_stream_to_chat_completions,
 )
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
@@ -350,7 +350,7 @@ async def generate_chat_completion(
                 request.state.bypass_system_prompt = True
 
             # Using /ollama/api/chat endpoint
-            form_data = convert_payload_openai_to_ollama(form_data)
+            form_data = convert_chat_completions_payload_to_ollama(form_data)
             response = await generate_ollama_chat_completion(
                 request=request,
                 form_data=form_data,
@@ -359,12 +359,12 @@ async def generate_chat_completion(
             if form_data.get('stream'):
                 response.headers['content-type'] = 'text/event-stream'
                 return StreamingResponse(
-                    convert_streaming_response_ollama_to_openai(response),
+                    convert_ollama_stream_to_chat_completions(response),
                     headers=dict(response.headers),
                     background=response.background,
                 )
             else:
-                return convert_response_ollama_to_openai(response)
+                return convert_ollama_response_to_chat_completions(response)
         else:
             return await generate_openai_chat_completion(
                 request=request,

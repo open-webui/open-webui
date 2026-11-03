@@ -103,8 +103,8 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
-from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.mcp.apps import MCPAppResult
+from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -131,6 +131,7 @@ from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import (
+    convert_responses_stream_to_chat_completions,
     get_response_delta_key,
     handle_responses_streaming_event,
     merge_usage,
@@ -6455,7 +6456,7 @@ async def streaming_chat_response_handler(response, ctx):
                 log_model_usage(request, user, form_data['model'], current_usage)
 
         return StreamingResponse(
-            stream_wrapper(response.body_iterator, events),
+            convert_responses_stream_to_chat_completions(stream_wrapper(response.body_iterator, events)),
             headers=dict(response.headers),
             background=response.background,
         )

@@ -1914,10 +1914,10 @@ app.state.CHAT_COMPLETION_HANDLER = chat_completion
 
 
 from open_webui.utils.anthropic import (
-    convert_anthropic_to_openai_payload,
-    convert_openai_to_anthropic_response,
+    convert_anthropic_payload_to_chat_completions,
+    convert_chat_completions_response_to_anthropic,
+    convert_chat_completions_stream_to_anthropic,
     is_anthropic_messages_passthrough,
-    openai_stream_to_anthropic_stream,
 )
 
 
@@ -2040,7 +2040,7 @@ async def generate_messages(
         passthrough_params = api_config.get('passthrough_params') or []
 
     # Translate Anthropic into OpenAI before sending it through the house plumbing.
-    openai_payload = convert_anthropic_to_openai_payload(form_data, passthrough_params)
+    openai_payload = convert_anthropic_payload_to_chat_completions(form_data, passthrough_params)
 
     # Route through the existing chat_completion handler
     response = await chat_completion(request, openai_payload, user)
@@ -2049,7 +2049,9 @@ async def generate_messages(
     if isinstance(response, StreamingResponse):
         # Streaming response: wrap the generator to convert SSE format
         return StreamingResponse(
-            openai_stream_to_anthropic_stream(response.body_iterator, model=requested_model, input_tokens=input_tokens),
+            convert_chat_completions_stream_to_anthropic(
+                response.body_iterator, model=requested_model, input_tokens=input_tokens
+            ),
             media_type='text/event-stream',
             headers={
                 'Cache-Control': 'no-cache',
@@ -2057,7 +2059,9 @@ async def generate_messages(
             },
         )
     elif isinstance(response, dict):
-        return convert_openai_to_anthropic_response(response, model=requested_model, input_tokens=input_tokens)
+        return convert_chat_completions_response_to_anthropic(
+            response, model=requested_model, input_tokens=input_tokens
+        )
     else:
         # Passthrough for error responses (JSONResponse, PlainTextResponse, etc.)
         return response

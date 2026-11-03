@@ -775,7 +775,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
     return messages
 
 
-def openai_chat_message_template(model: str, message_id: str | None = None):
+def chat_completion_template(model: str, message_id: str | None = None):
     return {
         'id': message_id if message_id else f'{model}-{str(uuid.uuid4())}',
         'created': int(time.time()),
@@ -784,7 +784,7 @@ def openai_chat_message_template(model: str, message_id: str | None = None):
     }
 
 
-def openai_chat_chunk_message_template(
+def chat_completion_chunk_template(
     model: str,
     content: str | None = None,
     reasoning_content: str | None = None,
@@ -792,7 +792,7 @@ def openai_chat_chunk_message_template(
     usage: dict | None = None,
     message_id: str | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model, message_id)
+    template = chat_completion_template(model, message_id)
     template['object'] = 'chat.completion.chunk'
 
     template['choices'][0]['index'] = 0
@@ -815,14 +815,14 @@ def openai_chat_chunk_message_template(
     return template
 
 
-def openai_chat_completion_message_template(
+def chat_completion_message_template(
     model: str,
     message: str | None = None,
     reasoning_content: str | None = None,
     tool_calls: list[dict] | None = None,
     usage: dict | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model)
+    template = chat_completion_template(model)
     template['object'] = 'chat.completion'
     if message is not None:
         template['choices'][0]['message'] = {

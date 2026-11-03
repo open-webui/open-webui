@@ -114,7 +114,7 @@ def _has_cache_control(blocks: list) -> bool:
     return any(isinstance(block, dict) and 'cache_control' in block for block in blocks)
 
 
-def _finalize_openai_content(blocks: list) -> str | list:
+def _finalize_chat_completions_content(blocks: list) -> str | list:
     if not blocks:
         return ''
 
@@ -131,7 +131,7 @@ def is_anthropic_messages_passthrough(url: str, api_config: dict | None = None) 
     return is_anthropic_url(url or '') or provider == 'litellm'
 
 
-def convert_anthropic_to_openai_payload(
+def convert_anthropic_payload_to_chat_completions(
     anthropic_payload: dict, passthrough_params: list[str] | str | None = None
 ) -> dict:
     """
@@ -170,7 +170,7 @@ def convert_anthropic_to_openai_payload(
                     )
                 elif isinstance(block, str):
                     openai_content.append({'type': 'text', 'text': block})
-            messages.append({'role': 'system', 'content': _finalize_openai_content(openai_content)})
+            messages.append({'role': 'system', 'content': _finalize_chat_completions_content(openai_content)})
 
     # Convert messages
     for msg in anthropic_payload.get('messages', []):
@@ -362,13 +362,13 @@ def convert_anthropic_to_openai_payload(
                 # Assistant message with tool calls
                 msg_dict = {'role': role}
                 if openai_content:
-                    msg_dict['content'] = _finalize_openai_content(openai_content)
+                    msg_dict['content'] = _finalize_chat_completions_content(openai_content)
                 else:
                     msg_dict['content'] = ''
                 msg_dict['tool_calls'] = tool_calls
                 messages.append(msg_dict)
             elif openai_content or role == 'assistant':
-                messages.append({'role': role, 'content': _finalize_openai_content(openai_content)})
+                messages.append({'role': role, 'content': _finalize_chat_completions_content(openai_content)})
         else:
             messages.append({'role': role, 'content': str(content) if content else ''})
 
@@ -465,7 +465,7 @@ def convert_anthropic_to_openai_payload(
     return openai_payload
 
 
-def convert_openai_to_anthropic_response(
+def convert_chat_completions_response_to_anthropic(
     openai_response: dict, model: str = '', input_tokens: int | None = None
 ) -> dict:
     """
@@ -588,7 +588,9 @@ def convert_openai_to_anthropic_response(
     }
 
 
-async def openai_stream_to_anthropic_stream(openai_stream_generator, model: str = '', input_tokens: int | None = None):
+async def convert_chat_completions_stream_to_anthropic(
+    openai_stream_generator, model: str = '', input_tokens: int | None = None
+):
     """
     Convert an OpenAI SSE streaming response to Anthropic Messages SSE format.
 

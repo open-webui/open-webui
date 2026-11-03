@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import logging
 import re
+import time
 from typing import Optional
 from urllib.parse import quote, urlparse
 
@@ -48,6 +49,7 @@ from open_webui.utils.payload import (
     apply_model_params_to_body_openai,
     apply_system_prompt_to_body,
 )
+from open_webui.utils.response import convert_responses_usage_to_chat_completions, get_responses_finish_reason
 from open_webui.utils.session_pool import (
     cleanup_response,
     get_client_timeout,
@@ -1355,12 +1357,15 @@ def convert_responses_result(response: dict) -> dict:
     output_items = response.get('output', [])
 
     content = ''
+    refusal = ''
     tool_calls = []
     for item in output_items:
         if item.get('type') == 'message':
             for part in item.get('content', []):
                 if part.get('type') == 'output_text':
                     content += part.get('text', '')
+                elif part.get('type') == 'refusal':
+                    refusal += part.get('refusal', '')
         elif item.get('type') == 'function_call':
             arguments = item.get('arguments', '{}')
             if not isinstance(arguments, str):
@@ -1379,6 +1384,7 @@ def convert_responses_result(response: dict) -> dict:
     return {
         'id': response.get('id', ''),
         'object': 'chat.completion',
+        'created': response.get('created_at') or int(time.time()),
         'model': response.get('model', ''),
         'choices': [
             {
@@ -1386,12 +1392,13 @@ def convert_responses_result(response: dict) -> dict:
                 'message': {
                     'role': 'assistant',
                     'content': content,
+                    **({'refusal': refusal} if refusal else {}),
                     **({'tool_calls': tool_calls} if tool_calls else {}),
                 },
-                'finish_reason': 'tool_calls' if tool_calls else 'stop',
+                'finish_reason': get_responses_finish_reason(response, bool(tool_calls)),
             }
         ],
-        'usage': response.get('usage', {}),
+        'usage': convert_responses_usage_to_chat_completions(response.get('usage')) or None,
     }
 
 
