@@ -1442,11 +1442,16 @@ async def set_terminal_servers(request: Request):
 
         base_url = get_terminal_server_url(connection)
 
+        # Spec discovery has no user, so Session connections use the orchestrator key
+        auth_type = connection.get('auth_type', 'bearer')
+        if auth_type == 'session':
+            auth_type = 'bearer'
+
         server_configs.append(
             {
                 'url': base_url,
                 'key': normalize_bearer_token(connection.get('key', '')),
-                'auth_type': connection.get('auth_type', 'bearer'),
+                'auth_type': auth_type,
                 'path': connection.get('path', '/openapi.json'),
                 'spec_type': 'url',
                 # get_tool_servers_data reads config.enable to filter active servers
