@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 接著開啟 [http://localhost:3000](http://localhost:3000)。
 
-| 映像標籤 | 內容 |
-| --- | --- |
-| `:main` | 包含本機 AI 相依套件的標準映像 |
-| `:slim` | 輕量映像，透過外部服務處理嵌入、文件擷取與語音 |
-| `:cuda` | 支援 CUDA 加速的 Open WebUI |
-| `:ollama` | 內建 Ollama 的 Open WebUI |
-| `:dev` | 最新開發版本 |
+| 映像標籤  | 內容                                           |
+| --------- | ---------------------------------------------- |
+| `:main`   | 包含本機 AI 相依套件的標準映像                 |
+| `:slim`   | 輕量映像，透過外部服務處理嵌入、文件擷取與語音 |
+| `:cuda`   | 支援 CUDA 加速的 Open WebUI                    |
+| `:ollama` | 內建 Ollama 的 Open WebUI                      |
+| `:dev`    | 最新開發版本                                   |
 
 視需要在 `docker run` 的映像名稱前加入以下選項：
 
-| 選項 | 用途 |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 連接另一台伺服器上的 Ollama |
-| `-e OPENAI_API_KEY=your_secret_key` | 設定 OpenAI API 金鑰 |
-| `-e HF_HUB_OFFLINE=1` | 停用 Hugging Face 模型下載，以便離線使用 |
-| `--gpus all` | 為 `:cuda` 或 `:ollama` 啟用 Nvidia GPU 存取；需要 Nvidia Container Toolkit |
+| 選項                                                 | 用途                                                                        |
+| ---------------------------------------------------- | --------------------------------------------------------------------------- |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 連接另一台伺服器上的 Ollama                                                 |
+| `-e OPENAI_API_KEY=your_secret_key`                  | 設定 OpenAI API 金鑰                                                        |
+| `-e HF_HUB_OFFLINE=1`                                | 停用 Hugging Face 模型下載，以便離線使用                                    |
+| `--gpus all`                                         | 為 `:cuda` 或 `:ollama` 啟用 Nvidia GPU 存取；需要 Nvidia Container Toolkit |
 
 安裝步驟與設定選項請參閱 [Docker 安裝指南](https://docs.openwebui.com/getting-started/quick-start/)。
 

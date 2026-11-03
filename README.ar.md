@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 ثم افتح [http://localhost:3000](http://localhost:3000).
 
-| وسم الصورة | المحتوى |
-| --- | --- |
-| `:main` | صورة قياسية تتضمن اعتماديات الذكاء الاصطناعي المحلي |
-| `:slim` | صورة خفيفة تستخدم خدمات خارجية للتضمينات واستخراج محتوى المستندات والصوت |
-| `:cuda` | Open WebUI مع تسريع CUDA |
-| `:ollama` | Open WebUI مرفقًا معه Ollama |
-| `:dev` | أحدث نسخة تطوير |
+| وسم الصورة | المحتوى                                                                  |
+| ---------- | ------------------------------------------------------------------------ |
+| `:main`    | صورة قياسية تتضمن اعتماديات الذكاء الاصطناعي المحلي                      |
+| `:slim`    | صورة خفيفة تستخدم خدمات خارجية للتضمينات واستخراج محتوى المستندات والصوت |
+| `:cuda`    | Open WebUI مع تسريع CUDA                                                 |
+| `:ollama`  | Open WebUI مرفقًا معه Ollama                                             |
+| `:dev`     | أحدث نسخة تطوير                                                          |
 
 أضف هذه الخيارات إلى `docker run` قبل اسم الصورة حسب الحاجة:
 
-| الخيار | الغرض |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | الاتصال بـ Ollama على خادم آخر |
-| `-e OPENAI_API_KEY=your_secret_key` | تعيين مفتاح API الخاص بك لدى OpenAI |
-| `-e HF_HUB_OFFLINE=1` | تعطيل تنزيل نماذج Hugging Face للاستخدام دون اتصال |
-| `--gpus all` | تمكين الوصول إلى وحدة معالجة الرسوميات Nvidia مع `:cuda` أو `:ollama`؛ يتطلب Nvidia Container Toolkit |
+| الخيار                                               | الغرض                                                                                                 |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | الاتصال بـ Ollama على خادم آخر                                                                        |
+| `-e OPENAI_API_KEY=your_secret_key`                  | تعيين مفتاح API الخاص بك لدى OpenAI                                                                   |
+| `-e HF_HUB_OFFLINE=1`                                | تعطيل تنزيل نماذج Hugging Face للاستخدام دون اتصال                                                    |
+| `--gpus all`                                         | تمكين الوصول إلى وحدة معالجة الرسوميات Nvidia مع `:cuda` أو `:ollama`؛ يتطلب Nvidia Container Toolkit |
 
 راجع [دليل التثبيت باستخدام Docker](https://docs.openwebui.com/getting-started/quick-start/) للاطلاع على خطوات الإعداد وخيارات الضبط.
 

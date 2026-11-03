@@ -162,7 +162,6 @@
 					// if (domainData.some((value) => value > 0)) {
 					// 	lastSoundTime = Date.now();
 					// }
-
 				}
 
 				window.requestAnimationFrame(processFrame);

@@ -621,7 +621,10 @@
 				on:click={toggle}><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} /></button
 			>
 		</div>
-		{#if error}<div role="alert" class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 break-words">
+		{#if error}<div
+				role="alert"
+				class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 break-words"
+			>
 				{error}
 			</div>{/if}
 		{#if expanded}

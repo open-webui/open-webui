@@ -1125,7 +1125,8 @@
 								<div style="height: {visibleStart * ITEM_HEIGHT}px;" />
 								{#each filteredItems.slice(visibleStart, visibleEnd) as item, i (item.value)}
 									{@const index = visibleStart + i}
-									<ModelItem onComment={(request) => (comments = request)}
+									<ModelItem
+										onComment={(request) => (comments = request)}
 										bind:selectedModelIdx
 										{item}
 										{index}

@@ -709,8 +709,6 @@ async def add_members_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-
-
 class RemoveMembersForm(BaseModel):
     user_ids: list[str] = []
 

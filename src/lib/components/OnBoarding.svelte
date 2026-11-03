@@ -79,7 +79,9 @@
 						Open WebUI
 					</div>
 
-					<h1 class="m-0 max-w-3xl text-[22px] leading-[1.15] font-light tracking-tight lg:text-[33px]">
+					<h1
+						class="m-0 max-w-3xl text-[22px] leading-[1.15] font-light tracking-tight lg:text-[33px]"
+					>
 						{$i18n.t('Welcome to your AI home.')}
 					</h1>
 

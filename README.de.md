@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 Öffne anschließend [http://localhost:3000](http://localhost:3000).
 
-| Image-Tag | Inhalt |
-| --- | --- |
-| `:main` | Standard-Image mit Abhängigkeiten für lokale KI |
-| `:slim` | Schlankes Image mit externen Diensten für Embeddings, Dokumentenextraktion und Sprache |
-| `:cuda` | Open WebUI mit CUDA-Beschleunigung |
-| `:ollama` | Open WebUI mit integriertem Ollama |
-| `:dev` | Neuester Entwicklungsbuild |
+| Image-Tag | Inhalt                                                                                 |
+| --------- | -------------------------------------------------------------------------------------- |
+| `:main`   | Standard-Image mit Abhängigkeiten für lokale KI                                        |
+| `:slim`   | Schlankes Image mit externen Diensten für Embeddings, Dokumentenextraktion und Sprache |
+| `:cuda`   | Open WebUI mit CUDA-Beschleunigung                                                     |
+| `:ollama` | Open WebUI mit integriertem Ollama                                                     |
+| `:dev`    | Neuester Entwicklungsbuild                                                             |
 
 Füge diese Optionen bei Bedarf vor dem Image-Namen zu `docker run` hinzu:
 
-| Option | Zweck |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Verbindung zu Ollama auf einem anderen Server |
-| `-e OPENAI_API_KEY=your_secret_key` | OpenAI-API-Schlüssel festlegen |
-| `-e HF_HUB_OFFLINE=1` | Downloads von Hugging-Face-Modellen für den Offlinebetrieb deaktivieren |
-| `--gpus all` | Nvidia-GPU-Zugriff für `:cuda` oder `:ollama` aktivieren; erfordert das Nvidia Container Toolkit |
+| Option                                               | Zweck                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Verbindung zu Ollama auf einem anderen Server                                                    |
+| `-e OPENAI_API_KEY=your_secret_key`                  | OpenAI-API-Schlüssel festlegen                                                                   |
+| `-e HF_HUB_OFFLINE=1`                                | Downloads von Hugging-Face-Modellen für den Offlinebetrieb deaktivieren                          |
+| `--gpus all`                                         | Nvidia-GPU-Zugriff für `:cuda` oder `:ollama` aktivieren; erfordert das Nvidia Container Toolkit |
 
 Einrichtung und Konfigurationsoptionen findest du in der [Docker-Installationsanleitung](https://docs.openwebui.com/getting-started/quick-start/).
 

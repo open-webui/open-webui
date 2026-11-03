@@ -225,9 +225,7 @@
 
 {#if channel}
 	<div class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
-		<div
-			class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5"
-		>
+		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
 			<div>

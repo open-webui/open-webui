@@ -1304,10 +1304,14 @@
 				class=" my-auto flex flex-col justify-between h-screen max-h-[100dvh] w-[var(--sidebar-width)] overflow-x-hidden scrollbar-hidden z-50 border-e border-gray-50 dark:border-gray-850/30"
 			>
 				<div
-					class="sidebar {$mobile ? 'px-0.75 pt-1 pb-1 -mb-2' : 'px-1 pt-0.5 pb-0.5'} flex shrink-0 justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
+					class="sidebar {$mobile
+						? 'px-0.75 pt-1 pb-1 -mb-2'
+						: 'px-1 pt-0.5 pb-0.5'} flex shrink-0 justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
 				>
 					<a
-						class="flex items-center rounded-xl size-8.5 {$mobile ? 'h-full' : 'shrink-0'} justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
+						class="flex items-center rounded-xl size-8.5 {$mobile
+							? 'h-full'
+							: 'shrink-0'} justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
 						href="/"
 						draggable="false"
 						aria-label={$i18n.t('New Chat')}
@@ -1381,7 +1385,9 @@
 				{/if}
 
 				<div
-					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 {$mobile ? 'pt-1.5' : ''} pb-2.5"
+					class="relative flex flex-col flex-1 overflow-y-auto scrollbar-hidden space-y-1.5 {$mobile
+						? 'pt-1.5'
+						: ''} pb-2.5"
 					style:display={inboxOpened ? 'none' : undefined}
 					on:scroll={(e) => {
 						if (e.target.scrollTop === 0) {

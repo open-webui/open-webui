@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 그런 다음 [http://localhost:3000](http://localhost:3000)을 여세요.
 
-| 이미지 태그 | 구성 |
-| --- | --- |
-| `:main` | 로컬 AI 의존성이 포함된 표준 이미지 |
-| `:slim` | 임베딩, 문서 추출, 음성 처리에 외부 서비스를 사용하는 경량 이미지 |
-| `:cuda` | CUDA 가속을 지원하는 Open WebUI |
-| `:ollama` | Ollama가 포함된 Open WebUI |
-| `:dev` | 최신 개발 빌드 |
+| 이미지 태그 | 구성                                                              |
+| ----------- | ----------------------------------------------------------------- |
+| `:main`     | 로컬 AI 의존성이 포함된 표준 이미지                               |
+| `:slim`     | 임베딩, 문서 추출, 음성 처리에 외부 서비스를 사용하는 경량 이미지 |
+| `:cuda`     | CUDA 가속을 지원하는 Open WebUI                                   |
+| `:ollama`   | Ollama가 포함된 Open WebUI                                        |
+| `:dev`      | 최신 개발 빌드                                                    |
 
 필요에 따라 `docker run`의 이미지 이름 앞에 다음 옵션을 추가하세요.
 
-| 옵션 | 용도 |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 다른 서버의 Ollama에 연결 |
-| `-e OPENAI_API_KEY=your_secret_key` | OpenAI API 키 설정 |
-| `-e HF_HUB_OFFLINE=1` | 오프라인 사용을 위해 Hugging Face 모델 다운로드 비활성화 |
-| `--gpus all` | `:cuda` 또는 `:ollama`에서 Nvidia GPU 사용 활성화. Nvidia Container Toolkit 필요 |
+| 옵션                                                 | 용도                                                                             |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 다른 서버의 Ollama에 연결                                                        |
+| `-e OPENAI_API_KEY=your_secret_key`                  | OpenAI API 키 설정                                                               |
+| `-e HF_HUB_OFFLINE=1`                                | 오프라인 사용을 위해 Hugging Face 모델 다운로드 비활성화                         |
+| `--gpus all`                                         | `:cuda` 또는 `:ollama`에서 Nvidia GPU 사용 활성화. Nvidia Container Toolkit 필요 |
 
 설치 방법과 설정 옵션은 [Docker 설치 가이드](https://docs.openwebui.com/getting-started/quick-start/)를 참고하세요.
 

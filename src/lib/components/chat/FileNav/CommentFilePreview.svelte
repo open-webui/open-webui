@@ -318,7 +318,9 @@
 			selectedExcelSheet={sheet}
 			onSheetChange={setSheet}
 		/>
-	{:else if previewError}<p class="p-4 text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Preview failed')}</p>{/if}
+	{:else if previewError}<p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+			{$i18n.t('Preview failed')}
+		</p>{/if}
 	{#if unplaced.length || commentState === 'error' || commentState === 'partial'}
 		<button
 			type="button"

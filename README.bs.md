@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 Zatim otvorite [http://localhost:3000](http://localhost:3000).
 
-| Oznaka slike | Sadržaj |
-| --- | --- |
-| `:main` | Standardna slika sa zavisnostima za lokalni AI |
-| `:slim` | Lagana slika koja koristi vanjske servise za embeddinge, izdvajanje sadržaja dokumenata i govor |
-| `:cuda` | Open WebUI s CUDA ubrzanjem |
-| `:ollama` | Open WebUI s uključenom Ollamom |
-| `:dev` | Najnovija razvojna verzija |
+| Oznaka slike | Sadržaj                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| `:main`      | Standardna slika sa zavisnostima za lokalni AI                                                  |
+| `:slim`      | Lagana slika koja koristi vanjske servise za embeddinge, izdvajanje sadržaja dokumenata i govor |
+| `:cuda`      | Open WebUI s CUDA ubrzanjem                                                                     |
+| `:ollama`    | Open WebUI s uključenom Ollamom                                                                 |
+| `:dev`       | Najnovija razvojna verzija                                                                      |
 
 Po potrebi dodajte ove opcije u `docker run` prije naziva slike:
 
-| Opcija | Namjena |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Povezivanje s Ollamom na drugom serveru |
-| `-e OPENAI_API_KEY=your_secret_key` | Postavljanje OpenAI API ključa |
-| `-e HF_HUB_OFFLINE=1` | Isključivanje preuzimanja Hugging Face modela za rad offline |
-| `--gpus all` | Omogućavanje pristupa Nvidia GPU-u za `:cuda` ili `:ollama`; potreban je Nvidia Container Toolkit |
+| Opcija                                               | Namjena                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Povezivanje s Ollamom na drugom serveru                                                           |
+| `-e OPENAI_API_KEY=your_secret_key`                  | Postavljanje OpenAI API ključa                                                                    |
+| `-e HF_HUB_OFFLINE=1`                                | Isključivanje preuzimanja Hugging Face modela za rad offline                                      |
+| `--gpus all`                                         | Omogućavanje pristupa Nvidia GPU-u za `:cuda` ili `:ollama`; potreban je Nvidia Container Toolkit |
 
 Upute i opcije konfiguracije nalaze se u [vodiču za instalaciju putem Dockera](https://docs.openwebui.com/getting-started/quick-start/).
 

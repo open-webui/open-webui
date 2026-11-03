@@ -271,11 +271,7 @@ async def hydrate(rows, db):
     for row in rows:
         resource = objects.get(row.resource_type, {}).get(row.resource_id)
         obj = objects.get(row.object_type, {}).get(row.object_id)
-        title = (
-            getattr(resource, 'title', None)
-            or getattr(resource, 'name', None)
-            or ''
-        )
+        title = getattr(resource, 'title', None) or getattr(resource, 'name', None) or ''
         preview = (
             replace_mentions(getattr(obj, 'content', '') or '')[:300]
             if row.object_type in {'comment', 'message'}

@@ -55,9 +55,7 @@ STRIPPED_RESPONSE_HEADERS = frozenset(
 
 def _port_browser_html(body: bytes, prefix: str, port: int) -> bytes:
     """Keep port links inside the proxy and report navigation from sandboxed frames."""
-    config = json.dumps({'prefix': prefix, 'origin': f'http://localhost:{port}'}).replace(
-        '<', '\\u003c'
-    )
+    config = json.dumps({'prefix': prefix, 'origin': f'http://localhost:{port}'}).replace('<', '\\u003c')
     script = r"""
 (() => {
   const config = __CONFIG__;
@@ -119,7 +117,7 @@ def _port_browser_html(body: bytes, prefix: str, port: int) -> bytes:
     bridge = '<script>' + script + '</script>'
     head = re.search(r'<head\b[^>]*>', html, re.I)
     if head:
-        html = html[:head.end()] + bridge + html[head.end():]
+        html = html[: head.end()] + bridge + html[head.end() :]
     else:
         html = bridge + html
     return html.encode('utf-8')
@@ -248,7 +246,6 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, ticket: str, kind:
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 max_msg_size=16 * 1024 * 1024,
             ) as upstream:
-
                 tasks = [
                     asyncio.create_task(relay_from_browser(ws, upstream)),
                     asyncio.create_task(relay_to_browser(ws, upstream)),
@@ -380,7 +377,14 @@ async def proxy_terminal(
     # auth_type == "none": no Authorization header
 
     if browser_auth is not None:
-        for name in ('accept', 'origin', 'access-control-request-method', 'access-control-request-headers', 'last-event-id', 'range'):
+        for name in (
+            'accept',
+            'origin',
+            'access-control-request-method',
+            'access-control-request-headers',
+            'last-event-id',
+            'range',
+        ):
             if value := request.headers.get(name):
                 headers[name] = value
 
@@ -418,22 +422,18 @@ async def proxy_terminal(
         port_match = re.match(r'^proxy/(\d+)/', safe_path)
         port_prefix = None
         if port_match:
-            port_prefix = request.url.path[
-                :request.url.path.index('/proxy/') + len(port_match[0]) + 1
-            ]
+            port_prefix = request.url.path[: request.url.path.index('/proxy/') + len(port_match[0]) + 1]
             location = upstream_response.headers.get('location')
             if location:
                 remote_origin = f'http://localhost:{port_match[1]}'
-                destination = urlsplit(
-                    urljoin(f'{remote_origin}/{safe_path[len(port_match[0]):]}', location)
-                )
+                destination = urlsplit(urljoin(f'{remote_origin}/{safe_path[len(port_match[0]) :]}', location))
                 if destination.netloc == urlsplit(remote_origin).netloc:
                     filtered_headers = {
-                        key: value for key, value in filtered_headers.items()
-                        if key.lower() != 'location'
+                        key: value for key, value in filtered_headers.items() if key.lower() != 'location'
                     }
                     filtered_headers['Location'] = (
-                        port_prefix + destination.path.lstrip('/')
+                        port_prefix
+                        + destination.path.lstrip('/')
                         + (f'?{destination.query}' if destination.query else '')
                         + (f'#{destination.fragment}' if destination.fragment else '')
                     )
@@ -454,10 +454,16 @@ async def proxy_terminal(
 
         # Buffer text/JSON responses
         response_body = await upstream_response.read()
-        if safe_path.startswith('browser/sessions') and upstream_response.status < 300 and request.method in ('GET', 'POST', 'PATCH'):
+        if (
+            safe_path.startswith('browser/sessions')
+            and upstream_response.status < 300
+            and request.method in ('GET', 'POST', 'PATCH')
+        ):
             browser_session = json.loads(response_body)
             if isinstance(browser_session, dict) and browser_session.get('id') and browser_session.get('token'):
-                browser_session['token'] = browser_ticket(server_id, user.id, session_id or '', browser_session, headers, cookies)
+                browser_session['token'] = browser_ticket(
+                    server_id, user.id, session_id or '', browser_session, headers, cookies
+                )
                 response_body = json.dumps(browser_session).encode()
         if port_prefix and 'text/html' in upstream_content_type:
             response_body = _port_browser_html(response_body, port_prefix, int(port_match[1]))
@@ -575,8 +581,8 @@ async def ws_processes(ws: WebSocket, server_id: str):
 @router.websocket('/{server_id}/execute/{process_id}/status')
 async def ws_process_output(ws: WebSocket, server_id: str, process_id: str):
     from urllib.parse import quote
-    await _proxy_terminal_websocket(ws, server_id,
-                                    stream_path=f'execute/{quote(process_id, safe="")}/status')
+
+    await _proxy_terminal_websocket(ws, server_id, stream_path=f'execute/{quote(process_id, safe="")}/status')
 
 
 @router.websocket('/{server_id}/api/terminals/{session_id}')
@@ -631,8 +637,7 @@ async def _proxy_terminal_websocket(
     # Encode session_id as an opaque path segment so it cannot smuggle '?'/'#'/'&' (at any
     # decode depth) and inject an attacker-chosen user_id ahead of the one appended below.
     upstream_path = (
-        f'api/terminals/{urllib.parse.quote(session_id, safe="")}'
-        if session_id is not None else stream_path
+        f'api/terminals/{urllib.parse.quote(session_id, safe="")}' if session_id is not None else stream_path
     )
     upstream_url = f'{ws_base}/{upstream_path}'
     if upstream_params:

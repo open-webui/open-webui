@@ -281,7 +281,9 @@
 					</div></Dropdown
 				>{/if}
 		</div>
-		{#if error}<p role="alert" class="px-3 py-1 text-gray-500 dark:text-gray-400 break-words">{error}</p>{/if}
+		{#if error}<p role="alert" class="px-3 py-1 text-gray-500 dark:text-gray-400 break-words">
+				{error}
+			</p>{/if}
 		{#if creating || editing}
 			<form
 				class="min-h-0 overflow-y-auto px-3 py-2 space-y-2"

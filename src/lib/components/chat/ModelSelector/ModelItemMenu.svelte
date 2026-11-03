@@ -87,7 +87,8 @@
 			{/if}
 
 			{#if showComments}
-				<CommentButton {onComment}
+				<CommentButton
+					{onComment}
 					menu
 					resource={{ resource_type: 'model', resource_id: model?.id }}
 					className="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"

@@ -1168,9 +1168,7 @@ class SocketSessionEventSink:
         await disconnect_user_sessions(str(subject['id']))
 
 
-async def dispatch_event_functions(
-    request: Request, event: Event, extra_function_ids: list[str] | None = None
-) -> None:
+async def dispatch_event_functions(request: Request, event: Event, extra_function_ids: list[str] | None = None) -> None:
     if not ENABLE_FUNCTIONS:
         return
 

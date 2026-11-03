@@ -145,7 +145,6 @@
 
 				await getVoices();
 
-
 				// const blobUrl = URL.createObjectURL(await rawAudio.toBlob());
 				// const audio = new Audio(blobUrl);
 

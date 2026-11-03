@@ -960,7 +960,13 @@
 	}
 
 	// Clear selected terminal when model doesn't support terminal
-	$: if (terminalSelectionEnabled && inputId === 'chat-input' && $selectedTerminalId && selectedModelIds.length > 0 && terminalCapableModels.length === 0) {
+	$: if (
+		terminalSelectionEnabled &&
+		inputId === 'chat-input' &&
+		$selectedTerminalId &&
+		selectedModelIds.length > 0 &&
+		terminalCapableModels.length === 0
+	) {
 		selectedTerminalId.set(null);
 	}
 
@@ -1481,16 +1487,28 @@
 
 		if (
 			$settings?.keyboardShortcuts !== false &&
-			(recording || (document.activeElement?.closest('[data-composer-id]')?.getAttribute('data-composer-id') ?? 'chat-input') === inputId) &&
+			(recording ||
+				(document.activeElement?.closest('[data-composer-id]')?.getAttribute('data-composer-id') ??
+					'chat-input') === inputId) &&
 			matchKeybinding(e) === Shortcut.TOGGLE_DICTATION
 		) {
 			e.preventDefault();
 			if (recording) {
 				// Confirm and stop recording
-				document.getElementById(inputId === 'chat-input' ? 'confirm-recording-button' : `${inputId}-confirm-recording-button`)?.click();
+				document
+					.getElementById(
+						inputId === 'chat-input'
+							? 'confirm-recording-button'
+							: `${inputId}-confirm-recording-button`
+					)
+					?.click();
 			} else {
 				// Start recording (same logic as voice-input-button click)
-				document.getElementById(inputId === 'chat-input' ? 'voice-input-button' : `${inputId}-voice-input-button`)?.click();
+				document
+					.getElementById(
+						inputId === 'chat-input' ? 'voice-input-button' : `${inputId}-voice-input-button`
+					)
+					?.click();
 			}
 			return;
 		}
@@ -1939,7 +1957,9 @@
 
 					<div class={recording ? '' : 'hidden'}>
 						<VoiceRecording
-							confirmButtonId={inputId === 'chat-input' ? 'confirm-recording-button' : `${inputId}-confirm-recording-button`}
+							confirmButtonId={inputId === 'chat-input'
+								? 'confirm-recording-button'
+								: `${inputId}-confirm-recording-button`}
 							bind:recording
 							onCancel={async () => {
 								recording = false;
@@ -1970,7 +1990,9 @@
 						}}
 					>
 						<button
-							id={inputId === 'chat-input' ? 'generate-message-pair-button' : `${inputId}-generate-message-pair-button`}
+							id={inputId === 'chat-input'
+								? 'generate-message-pair-button'
+								: `${inputId}-generate-message-pair-button`}
 							type="button"
 							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
@@ -2336,13 +2358,17 @@
 															e.preventDefault();
 
 															const userMessageElement = [
-																...(document.getElementById(messagesContainerId)?.getElementsByClassName('user-message') ?? [])
+																...(document
+																	.getElementById(messagesContainerId)
+																	?.getElementsByClassName('user-message') ?? [])
 															]?.at(-1);
 
 															if (userMessageElement) {
 																userMessageElement.scrollIntoView({ block: 'center' });
 																const editButton = [
-																	...userMessageElement.getElementsByClassName('edit-user-message-button')
+																	...userMessageElement.getElementsByClassName(
+																		'edit-user-message-button'
+																	)
 																]?.at(-1);
 
 																editButton?.click();
@@ -2861,11 +2887,13 @@
 										</div>
 									{:else}
 										{#if !history?.currentId || history.messages[history.currentId]?.done == true}
-											{#if ($_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true))}
+											{#if $_user?.role === 'admin' || ($_user?.permissions?.chat?.stt ?? true)}
 												<!-- {$i18n.t('Record voice')} -->
 												<Tooltip content={$i18n.t('Dictate')}>
 													<button
-														id={inputId === 'chat-input' ? 'voice-input-button' : `${inputId}-voice-input-button`}
+														id={inputId === 'chat-input'
+															? 'voice-input-button'
+															: `${inputId}-voice-input-button`}
 														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
 														type="button"
 														on:click={async () => {
@@ -2979,7 +3007,9 @@
 												<!-- Preserve the former upload label for i18n extraction: $i18n.t('Waiting for upload...') -->
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
-														id={inputId === 'chat-input' ? 'send-message-button' : `${inputId}-send-message-button`}
+														id={inputId === 'chat-input'
+															? 'send-message-button'
+															: `${inputId}-send-message-button`}
 														aria-label={$i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0)
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '

@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 その後、[http://localhost:3000](http://localhost:3000) を開きます。
 
-| イメージタグ | 内容 |
-| --- | --- |
-| `:main` | ローカル AI 用の依存パッケージを含む標準イメージ |
-| `:slim` | 埋め込み、ドキュメント抽出、音声処理に外部サービスを使う軽量イメージ |
-| `:cuda` | CUDA アクセラレーション対応の Open WebUI |
-| `:ollama` | Ollama を同梱した Open WebUI |
-| `:dev` | 最新の開発ビルド |
+| イメージタグ | 内容                                                                 |
+| ------------ | -------------------------------------------------------------------- |
+| `:main`      | ローカル AI 用の依存パッケージを含む標準イメージ                     |
+| `:slim`      | 埋め込み、ドキュメント抽出、音声処理に外部サービスを使う軽量イメージ |
+| `:cuda`      | CUDA アクセラレーション対応の Open WebUI                             |
+| `:ollama`    | Ollama を同梱した Open WebUI                                         |
+| `:dev`       | 最新の開発ビルド                                                     |
 
 必要に応じて、`docker run` のイメージ名の前に以下のオプションを追加してください。
 
-| オプション | 用途 |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 別のサーバー上の Ollama に接続 |
-| `-e OPENAI_API_KEY=your_secret_key` | OpenAI API キーを設定 |
-| `-e HF_HUB_OFFLINE=1` | オフライン利用のため Hugging Face のモデルダウンロードを無効化 |
-| `--gpus all` | `:cuda` または `:ollama` で Nvidia GPU を利用。Nvidia Container Toolkit が必要 |
+| オプション                                           | 用途                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | 別のサーバー上の Ollama に接続                                                 |
+| `-e OPENAI_API_KEY=your_secret_key`                  | OpenAI API キーを設定                                                          |
+| `-e HF_HUB_OFFLINE=1`                                | オフライン利用のため Hugging Face のモデルダウンロードを無効化                 |
+| `--gpus all`                                         | `:cuda` または `:ollama` で Nvidia GPU を利用。Nvidia Container Toolkit が必要 |
 
 セットアップ手順と設定項目は [Docker インストールガイド](https://docs.openwebui.com/getting-started/quick-start/)をご覧ください。
 

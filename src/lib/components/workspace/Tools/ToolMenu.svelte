@@ -73,7 +73,8 @@
 
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
-			<CommentButton {onComment}
+			<CommentButton
+				{onComment}
 				modal
 				menu
 				resource={{ resource_type: 'tool', resource_id: resourceId }}

@@ -287,7 +287,11 @@
 		return Number.isFinite(threshold) && threshold > 0 ? threshold : null;
 	};
 
-	const getContextUsage = (chatHistory: typeof history, system: string, threshold: number | null) => {
+	const getContextUsage = (
+		chatHistory: typeof history,
+		system: string,
+		threshold: number | null
+	) => {
 		if (!chatHistory?.currentId) {
 			return null;
 		}

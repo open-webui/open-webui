@@ -1244,7 +1244,8 @@
 										</svg>
 									</button>
 
-									<ModelMenu onComment={(request) => (comments = request)}
+									<ModelMenu
+										onComment={(request) => (comments = request)}
 										user={$user}
 										{model}
 										deleteLabel={canResetModel(model) ? $i18n.t('Reset') : $i18n.t('Delete')}

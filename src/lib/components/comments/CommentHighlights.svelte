@@ -67,8 +67,7 @@
 				? hovered
 				: located.filter(
 						({ comment }) =>
-							comment.id ===
-							(typeof $showTabs === 'object' ? $showTabs.comment_id : undefined)
+							comment.id === (typeof $showTabs === 'object' ? $showTabs.comment_id : undefined)
 					)
 			).map(({ range }) => range)
 		);

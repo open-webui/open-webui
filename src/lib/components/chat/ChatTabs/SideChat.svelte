@@ -433,7 +433,9 @@
 		{/if}
 	</div>
 	<div class="shrink-0 pb-2 z-10">
-		{#if error}<p role="alert" class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">{error}</p>{/if}
+		{#if error}<p role="alert" class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+				{error}
+			</p>{/if}
 		{#if sideChatAllowed}
 			<MessageInput
 				bind:this={input}

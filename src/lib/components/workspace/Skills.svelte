@@ -352,391 +352,397 @@
 <h1 class="sr-only">{$i18n.t('Skills')}</h1>
 
 <Comments modal bind:view={comments} resourceType="skill">
-{#if loaded}
-	<ImportModal
-		bind:show={showImportFromLink}
-		loadUrlHandler={(url) => loadSkillByUrl(localStorage.token, url)}
-		transformResult={(packages) => packages}
-		successMessage={$i18n.t('Skills loaded for preview')}
-		onImport={(packages) => {
-			bundleFiles = [
-				new File([JSON.stringify(packages)], 'skills.json', { type: 'application/json' })
-			];
-			showImport = true;
-		}}
-	/>
-	<SkillImport
-		bind:show={showImport}
-		files={bundleFiles}
-		onImported={async () => {
-			toast.success($i18n.t('Skill imported successfully'));
-			page = 1;
-			await loadSkillItems();
-			_skills.set(await getSkills(localStorage.token));
-		}}
-	/>
-	<input
-		bind:this={importInputElement}
-		type="file"
-		accept=".md,.json,.zip,.skill"
-		multiple
-		hidden
-		on:change={() => {
-			bundleFiles = Array.from(importInputElement.files || []);
-			showImport = true;
-			importInputElement.value = '';
-		}}
-	/>
-	<input
-		bind:this={folderImportInput}
-		type="file"
-		webkitdirectory
-		multiple
-		hidden
-		on:change={() => {
-			bundleFiles = Array.from(folderImportInput.files || []);
-			showImport = true;
-			folderImportInput.value = '';
-		}}
-	/>
+	{#if loaded}
+		<ImportModal
+			bind:show={showImportFromLink}
+			loadUrlHandler={(url) => loadSkillByUrl(localStorage.token, url)}
+			transformResult={(packages) => packages}
+			successMessage={$i18n.t('Skills loaded for preview')}
+			onImport={(packages) => {
+				bundleFiles = [
+					new File([JSON.stringify(packages)], 'skills.json', { type: 'application/json' })
+				];
+				showImport = true;
+			}}
+		/>
+		<SkillImport
+			bind:show={showImport}
+			files={bundleFiles}
+			onImported={async () => {
+				toast.success($i18n.t('Skill imported successfully'));
+				page = 1;
+				await loadSkillItems();
+				_skills.set(await getSkills(localStorage.token));
+			}}
+		/>
+		<input
+			bind:this={importInputElement}
+			type="file"
+			accept=".md,.json,.zip,.skill"
+			multiple
+			hidden
+			on:change={() => {
+				bundleFiles = Array.from(importInputElement.files || []);
+				showImport = true;
+				importInputElement.value = '';
+			}}
+		/>
+		<input
+			bind:this={folderImportInput}
+			type="file"
+			webkitdirectory
+			multiple
+			hidden
+			on:change={() => {
+				bundleFiles = Array.from(folderImportInput.files || []);
+				showImport = true;
+				folderImportInput.value = '';
+			}}
+		/>
 
-	<div class="space-y-0">
-		<div class="flex h-8 w-full items-center gap-2">
-			<div class="flex min-w-0 flex-1">
-				<div class=" self-center ml-1 mr-3">
-					<Search className="size-3.5" />
-				</div>
-				<input
-					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
-					bind:value={query}
-					on:input={handleSearchInput}
-					aria-label={$i18n.t('Search Skills')}
-					placeholder={$i18n.t('Search Skills')}
-				/>
-				{#if query}
-					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-						<button
-							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
-							aria-label={$i18n.t('Clear search')}
-							on:click={() => {
-								query = '';
-								handleSearchInput();
-							}}
-						>
-							<XMark className="size-3" strokeWidth="2" />
-						</button>
+		<div class="space-y-0">
+			<div class="flex h-8 w-full items-center gap-2">
+				<div class="flex min-w-0 flex-1">
+					<div class=" self-center ml-1 mr-3">
+						<Search className="size-3.5" />
 					</div>
-				{/if}
-			</div>
-
-			<div
-				class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
-				bind:this={tagsContainerElement}
-				on:wheel={(e) => {
-					if (e.deltaY !== 0) {
-						e.preventDefault();
-						e.currentTarget.scrollLeft += e.deltaY;
-					}
-				}}
-			>
-				<div
-					class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
-				>
-					<ViewSelector
-						bind:value={viewOption}
-						align="end"
-						onChange={async (value) => {
-							localStorage.workspaceViewOption = value;
-							page = 1;
-							await tick();
-						}}
+					<input
+						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:value={query}
+						on:input={handleSearchInput}
+						aria-label={$i18n.t('Search Skills')}
+						placeholder={$i18n.t('Search Skills')}
 					/>
+					{#if query}
+						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
+							<button
+								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								aria-label={$i18n.t('Clear search')}
+								on:click={() => {
+									query = '';
+									handleSearchInput();
+								}}
+							>
+								<XMark className="size-3" strokeWidth="2" />
+							</button>
+						</div>
+					{/if}
 				</div>
-			</div>
-		</div>
 
-		{#if filteredItems === null || loading}
-			<div class="w-full h-full flex justify-center items-center my-16 mb-24">
-				<Spinner className="size-5" />
-			</div>
-		{:else if (filteredItems ?? []).length !== 0}
-			<div class="@container">
 				<div
-					class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+					class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
+					bind:this={tagsContainerElement}
+					on:wheel={(e) => {
+						if (e.deltaY !== 0) {
+							e.preventDefault();
+							e.currentTarget.scrollLeft += e.deltaY;
+						}
+					}}
 				>
-					<button
-						class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
-						type="button"
-						on:click={() => setSortKey('name')}
+					<div
+						class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
 					>
-						{$i18n.t('Name')}
-						{#if sortKey === 'name'}
-							{#if sortDirection === 'asc'}
-								<ChevronUp className="size-2" />
-							{:else}
-								<ChevronDown className="size-2" />
-							{/if}
-						{/if}
-					</button>
-
-					<div class="@max-[48rem]:hidden">{$i18n.t('Owner')}</div>
-
-					<button
-						class="@max-[36rem]:hidden flex min-w-0 items-center gap-1 py-0.5 text-left"
-						type="button"
-						on:click={() => setSortKey('updated_at')}
-					>
-						{$i18n.t('Updated at')}
-						{#if sortKey === 'updated_at'}
-							{#if sortDirection === 'asc'}
-								<ChevronUp className="size-2" />
-							{:else}
-								<ChevronDown className="size-2" />
-							{/if}
-						{/if}
-					</button>
-					<span class="sr-only">{$i18n.t('Actions')}</span>
-				</div>
-
-				<div class="grid gap-y-0.5">
-					{#each filteredItems as skill (skill.id)}
-						<div
-							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group cursor-pointer text-left"
-							role="presentation"
-							on:click={(e) => {
-								if (shouldIgnoreRowClick(e.target)) return;
-								openSkill(skill);
+						<ViewSelector
+							bind:value={viewOption}
+							align="end"
+							onChange={async (value) => {
+								localStorage.workspaceViewOption = value;
+								page = 1;
+								await tick();
 							}}
-						>
-							<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
-								<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-									<div class="flex min-w-0 items-center gap-2 overflow-hidden">
-										<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-											<Tooltip content={skill.id} className="min-w-0" placement="top-start">
-												<a
-													href={`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`}
-													class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
-													>{resolveLocalizedResource(skill, $i18n.language)}</a
-												>
-											</Tooltip>
-											{#if !skill.write_access}
-												<Badge type="subtle" content={$i18n.t('Read Only')} />
-											{/if}
+						/>
+					</div>
+				</div>
+			</div>
 
-											{#if !skill.is_active}
-												<Badge type="muted" content={$i18n.t('Inactive')} />
+			{#if filteredItems === null || loading}
+				<div class="w-full h-full flex justify-center items-center my-16 mb-24">
+					<Spinner className="size-5" />
+				</div>
+			{:else if (filteredItems ?? []).length !== 0}
+				<div class="@container">
+					<div
+						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+					>
+						<button
+							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
+							type="button"
+							on:click={() => setSortKey('name')}
+						>
+							{$i18n.t('Name')}
+							{#if sortKey === 'name'}
+								{#if sortDirection === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
+
+						<div class="@max-[48rem]:hidden">{$i18n.t('Owner')}</div>
+
+						<button
+							class="@max-[36rem]:hidden flex min-w-0 items-center gap-1 py-0.5 text-left"
+							type="button"
+							on:click={() => setSortKey('updated_at')}
+						>
+							{$i18n.t('Updated at')}
+							{#if sortKey === 'updated_at'}
+								{#if sortDirection === 'asc'}
+									<ChevronUp className="size-2" />
+								{:else}
+									<ChevronDown className="size-2" />
+								{/if}
+							{/if}
+						</button>
+						<span class="sr-only">{$i18n.t('Actions')}</span>
+					</div>
+
+					<div class="grid gap-y-0.5">
+						{#each filteredItems as skill (skill.id)}
+							<div
+								class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-12 rounded-lg py-1.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.03] group cursor-pointer text-left"
+								role="presentation"
+								on:click={(e) => {
+									if (shouldIgnoreRowClick(e.target)) return;
+									openSkill(skill);
+								}}
+							>
+								<div class="flex min-w-0 flex-1 items-center gap-1 overflow-hidden">
+									<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+										<div class="flex min-w-0 items-center gap-2 overflow-hidden">
+											<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+												<Tooltip content={skill.id} className="min-w-0" placement="top-start">
+													<a
+														href={`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`}
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														>{resolveLocalizedResource(skill, $i18n.language)}</a
+													>
+												</Tooltip>
+												{#if !skill.write_access}
+													<Badge type="subtle" content={$i18n.t('Read Only')} />
+												{/if}
+
+												{#if !skill.is_active}
+													<Badge type="muted" content={$i18n.t('Inactive')} />
+												{/if}
+											</div>
+										</div>
+
+										<div class="mt-0.5 min-w-0">
+											{#if resolveLocalizedResource(skill, $i18n.language, 'description')}
+												<Tooltip
+													content={resolveLocalizedResource(skill, $i18n.language, 'description')}
+													className="min-w-0"
+													placement="top-start"
+												>
+													<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
+														{resolveLocalizedResource(skill, $i18n.language, 'description')}
+													</div>
+												</Tooltip>
 											{/if}
 										</div>
 									</div>
-
-									<div class="mt-0.5 min-w-0">
-										{#if resolveLocalizedResource(skill, $i18n.language, 'description')}
-											<Tooltip
-												content={resolveLocalizedResource(skill, $i18n.language, 'description')}
-												className="min-w-0"
-												placement="top-start"
-											>
-												<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
-													{resolveLocalizedResource(skill, $i18n.language, 'description')}
-												</div>
-											</Tooltip>
-										{/if}
-									</div>
 								</div>
-							</div>
 
-							<div
-								class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400"
-							>
-								<ProfilePreview user={skill?.user ?? null} side="bottom" className="w-full min-w-0">
-									<span class="flex w-full min-w-0 items-center gap-2">
-										<ProfileImage
-											src={skill?.user?.id
-												? `/api/v1/users/${skill.user.id}/profile/image`
-												: '/user.png'}
-											className="size-5 shrink-0 rounded-full!"
-										/>
-										<span class="min-w-0 truncate">
-											{capitalizeFirstLetter(
-												skill?.user?.name ?? skill?.user?.email ?? $i18n.t('Deleted User')
-											)}
+								<div class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400">
+									<ProfilePreview
+										user={skill?.user ?? null}
+										side="bottom"
+										className="w-full min-w-0"
+									>
+										<span class="flex w-full min-w-0 items-center gap-2">
+											<ProfileImage
+												src={skill?.user?.id
+													? `/api/v1/users/${skill.user.id}/profile/image`
+													: '/user.png'}
+												className="size-5 shrink-0 rounded-full!"
+											/>
+											<span class="min-w-0 truncate">
+												{capitalizeFirstLetter(
+													skill?.user?.name ?? skill?.user?.email ?? $i18n.t('Deleted User')
+												)}
+											</span>
 										</span>
-									</span>
-								</ProfilePreview>
-							</div>
-							<Tooltip
-								content={dayjs((skill.updated_at ?? skill.created_at) * 1000)
-									.locale($i18n.language)
-									.format('LLLL')}
-								className="@max-[36rem]:hidden min-w-0"
-							>
-								<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
-									{dayjs((skill.updated_at ?? skill.created_at) * 1000)
-										.locale($i18n.language)
-										.fromNow()}
+									</ProfilePreview>
 								</div>
-							</Tooltip>
-							<div class="flex min-w-0 items-center justify-end gap-1.5">
-								{#if skill.write_access}
-									<div class="flex shrink-0 flex-row items-center self-center">
-										{#if shiftKey}
-											<Tooltip content={$i18n.t('Delete')}>
-												<button
-													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-													type="button"
-													aria-label={$i18n.t('Delete')}
-													on:click={(e) => {
-														e.preventDefault();
-														e.stopPropagation();
-														deleteHandler(skill);
-													}}
-												>
-													<GarbageBin className="size-4" />
-												</button>
-											</Tooltip>
-										{:else}
-											<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
-												<CommentButton onComment={(request) => (comments = request)}
-													modal
-													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-													resource={{ resource_type: 'skill', resource_id: skill.id }}
-												/>
-												<SkillMenu onComment={(request) => (comments = request)}
-													resourceId={skill.id}
-													shareHandler={() => shareHandler(skill)}
-													accessHandler={$user?.permissions?.sharing?.skills ||
-													$user?.role === 'admin'
-														? () => accessModal.open(skill.id)
-														: null}
-													show={openSkillMenuId === skill.id}
-													editHandler={() => {
-														goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
-													}}
-													cloneHandler={() => {
-														cloneHandler(skill);
-													}}
-													exportHandler={(format) => {
-														exportHandler(skill, format);
-													}}
-													deleteHandler={async () => {
-														selectedSkill = skill;
-														showDeleteConfirm = true;
-													}}
-													onClose={() => {
-														openSkillMenuId = null;
-													}}
-												>
+								<Tooltip
+									content={dayjs((skill.updated_at ?? skill.created_at) * 1000)
+										.locale($i18n.language)
+										.format('LLLL')}
+									className="@max-[36rem]:hidden min-w-0"
+								>
+									<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
+										{dayjs((skill.updated_at ?? skill.created_at) * 1000)
+											.locale($i18n.language)
+											.fromNow()}
+									</div>
+								</Tooltip>
+								<div class="flex min-w-0 items-center justify-end gap-1.5">
+									{#if skill.write_access}
+										<div class="flex shrink-0 flex-row items-center self-center">
+											{#if shiftKey}
+												<Tooltip content={$i18n.t('Delete')}>
 													<button
 														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 														type="button"
-														aria-label={$i18n.t('Skill Menu')}
+														aria-label={$i18n.t('Delete')}
 														on:click={(e) => {
 															e.preventDefault();
 															e.stopPropagation();
-															openSkillMenuId = openSkillMenuId === skill.id ? null : skill.id;
+															deleteHandler(skill);
 														}}
 													>
-														<EllipsisHorizontal className="size-4" />
+														<GarbageBin className="size-4" />
 													</button>
-												</SkillMenu>
-
-												<div
-													class="flex h-6 items-center"
-													role="presentation"
-													on:click={(e) => {
-														e.stopPropagation();
-														e.preventDefault();
-													}}
-												>
-													<Tooltip
-														content={skill.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+												</Tooltip>
+											{:else}
+												<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
+													<CommentButton
+														onComment={(request) => (comments = request)}
+														modal
+														className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														resource={{ resource_type: 'skill', resource_id: skill.id }}
+													/>
+													<SkillMenu
+														onComment={(request) => (comments = request)}
+														resourceId={skill.id}
+														shareHandler={() => shareHandler(skill)}
+														accessHandler={$user?.permissions?.sharing?.skills ||
+														$user?.role === 'admin'
+															? () => accessModal.open(skill.id)
+															: null}
+														show={openSkillMenuId === skill.id}
+														editHandler={() => {
+															goto(`/workspace/skills/edit?id=${encodeURIComponent(skill.id)}`);
+														}}
+														cloneHandler={() => {
+															cloneHandler(skill);
+														}}
+														exportHandler={(format) => {
+															exportHandler(skill, format);
+														}}
+														deleteHandler={async () => {
+															selectedSkill = skill;
+															showDeleteConfirm = true;
+														}}
+														onClose={() => {
+															openSkillMenuId = null;
+														}}
 													>
-														<Switch
-															bind:state={skill.is_active}
-															ariaLabel={$i18n.t('Enabled')}
-															on:change={async () => {
-																await toggleSkillById(localStorage.token, skill.id);
-																_skills.set(await getSkills(localStorage.token));
+														<button
+															class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+															type="button"
+															aria-label={$i18n.t('Skill Menu')}
+															on:click={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																openSkillMenuId = openSkillMenuId === skill.id ? null : skill.id;
 															}}
-														/>
-													</Tooltip>
-												</div>
-											</div>
-										{/if}
-									</div>
-								{/if}
-								{#if !skill.write_access}
-									<CommentButton onComment={(request) => (comments = request)}
-										modal
-										className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
-										resource={{ resource_type: 'skill', resource_id: skill.id }}
-									/>
-									<span class="size-6 shrink-0" aria-hidden="true"></span>
-									<div
-										class="flex h-6 items-center"
-										role="presentation"
-										on:click={(e) => {
-											e.stopPropagation();
-											e.preventDefault();
-										}}
-									>
-										<Switch
-											state={skill.is_active}
-											disabled
-											tooltip={$i18n.t('Read Only')}
-											ariaLabel={`${$i18n.t('Enabled')}: ${resolveLocalizedResource(skill, $i18n.language)}`}
-										/>
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
+														>
+															<EllipsisHorizontal className="size-4" />
+														</button>
+													</SkillMenu>
 
-			{#if total > 30}
-				<div class="flex justify-center mt-4 mb-2">
-					<Pagination bind:page count={total} perPage={30} />
+													<div
+														class="flex h-6 items-center"
+														role="presentation"
+														on:click={(e) => {
+															e.stopPropagation();
+															e.preventDefault();
+														}}
+													>
+														<Tooltip
+															content={skill.is_active ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+														>
+															<Switch
+																bind:state={skill.is_active}
+																ariaLabel={$i18n.t('Enabled')}
+																on:change={async () => {
+																	await toggleSkillById(localStorage.token, skill.id);
+																	_skills.set(await getSkills(localStorage.token));
+																}}
+															/>
+														</Tooltip>
+													</div>
+												</div>
+											{/if}
+										</div>
+									{/if}
+									{#if !skill.write_access}
+										<CommentButton
+											onComment={(request) => (comments = request)}
+											modal
+											className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											resource={{ resource_type: 'skill', resource_id: skill.id }}
+										/>
+										<span class="size-6 shrink-0" aria-hidden="true"></span>
+										<div
+											class="flex h-6 items-center"
+											role="presentation"
+											on:click={(e) => {
+												e.stopPropagation();
+												e.preventDefault();
+											}}
+										>
+											<Switch
+												state={skill.is_active}
+												disabled
+												tooltip={$i18n.t('Read Only')}
+												ariaLabel={`${$i18n.t('Enabled')}: ${resolveLocalizedResource(skill, $i18n.language)}`}
+											/>
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+
+				{#if total > 30}
+					<div class="flex justify-center mt-4 mb-2">
+						<Pagination bind:page count={total} perPage={30} />
+					</div>
+				{/if}
+			{:else}
+				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
+					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+						<div class="mb-1.5 text-sm">
+							{hasFilters ? $i18n.t('No skills found') : $i18n.t('No skills yet')}
+						</div>
+						<div class="text-center text-xs leading-5 text-gray-500">
+							{hasFilters
+								? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
+								: $i18n.t('Items you create or that are shared with you will appear here.')}
+						</div>
+					</div>
 				</div>
 			{/if}
-		{:else}
-			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-				<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
-					<div class="mb-1.5 text-sm">
-						{hasFilters ? $i18n.t('No skills found') : $i18n.t('No skills yet')}
-					</div>
-					<div class="text-center text-xs leading-5 text-gray-500">
-						{hasFilters
-							? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
-							: $i18n.t('Items you create or that are shared with you will appear here.')}
-					</div>
-				</div>
-			</div>
-		{/if}
-	</div>
-
-	<DeleteConfirmDialog
-		bind:show={showDeleteConfirm}
-		title={$i18n.t('Delete skill?')}
-		on:confirm={() => {
-			deleteHandler(selectedSkill);
-		}}
-	>
-		<div class=" text-sm text-gray-500 truncate">
-			{$i18n.t('This will delete')}
-			<span class="  font-normal">{resolveLocalizedResource(selectedSkill, $i18n.language)}</span>.
 		</div>
-	</DeleteConfirmDialog>
-	{#if $config?.features?.enable_community_sharing}
-		<CommunityDiscover
-			href="https://openwebui.com/search?type=skill"
-			title={$i18n.t('Discover a skill')}
-			description={$i18n.t('Discover, download, and explore community skills')}
-		/>
+
+		<DeleteConfirmDialog
+			bind:show={showDeleteConfirm}
+			title={$i18n.t('Delete skill?')}
+			on:confirm={() => {
+				deleteHandler(selectedSkill);
+			}}
+		>
+			<div class=" text-sm text-gray-500 truncate">
+				{$i18n.t('This will delete')}
+				<span class="  font-normal">{resolveLocalizedResource(selectedSkill, $i18n.language)}</span
+				>.
+			</div>
+		</DeleteConfirmDialog>
+		{#if $config?.features?.enable_community_sharing}
+			<CommunityDiscover
+				href="https://openwebui.com/search?type=skill"
+				title={$i18n.t('Discover a skill')}
+				description={$i18n.t('Discover, download, and explore community skills')}
+			/>
+		{/if}
+	{:else}
+		<div class="w-full h-full flex justify-center items-center">
+			<Spinner className="size-5" />
+		</div>
 	{/if}
-{:else}
-	<div class="w-full h-full flex justify-center items-center">
-		<Spinner className="size-5" />
-	</div>
-{/if}
 </Comments>

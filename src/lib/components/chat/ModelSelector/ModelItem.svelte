@@ -319,7 +319,8 @@
 		{/if}
 
 		{#if !selectionOnly}
-			<ModelItemMenu {onComment}
+			<ModelItemMenu
+				{onComment}
 				bind:show={showMenu}
 				model={item.model}
 				{pinModelHandler}

@@ -60,22 +60,22 @@ docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-
 
 Ardından [http://localhost:3000](http://localhost:3000) adresini açın.
 
-| İmaj etiketi | İçerik |
-| --- | --- |
-| `:main` | Yerel yapay zekâ bağımlılıklarını içeren standart imaj |
-| `:slim` | Gömme vektörleri, belge çıkarımı ve ses için harici hizmetler kullanan hafif imaj |
-| `:cuda` | CUDA hızlandırmalı Open WebUI |
-| `:ollama` | Ollama ile birlikte gelen Open WebUI |
-| `:dev` | En son geliştirme derlemesi |
+| İmaj etiketi | İçerik                                                                            |
+| ------------ | --------------------------------------------------------------------------------- |
+| `:main`      | Yerel yapay zekâ bağımlılıklarını içeren standart imaj                            |
+| `:slim`      | Gömme vektörleri, belge çıkarımı ve ses için harici hizmetler kullanan hafif imaj |
+| `:cuda`      | CUDA hızlandırmalı Open WebUI                                                     |
+| `:ollama`    | Ollama ile birlikte gelen Open WebUI                                              |
+| `:dev`       | En son geliştirme derlemesi                                                       |
 
 Gerektiğinde bu seçenekleri `docker run` komutunda imaj adından önce ekleyin:
 
-| Seçenek | Amaç |
-| --- | --- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Başka bir sunucudaki Ollama’ya bağlanma |
-| `-e OPENAI_API_KEY=your_secret_key` | OpenAI API anahtarınızı ayarlama |
-| `-e HF_HUB_OFFLINE=1` | Çevrimdışı kullanım için Hugging Face model indirmelerini devre dışı bırakma |
-| `--gpus all` | `:cuda` veya `:ollama` için Nvidia GPU erişimini etkinleştirme; Nvidia Container Toolkit gerektirir |
+| Seçenek                                              | Amaç                                                                                                |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Başka bir sunucudaki Ollama’ya bağlanma                                                             |
+| `-e OPENAI_API_KEY=your_secret_key`                  | OpenAI API anahtarınızı ayarlama                                                                    |
+| `-e HF_HUB_OFFLINE=1`                                | Çevrimdışı kullanım için Hugging Face model indirmelerini devre dışı bırakma                        |
+| `--gpus all`                                         | `:cuda` veya `:ollama` için Nvidia GPU erişimini etkinleştirme; Nvidia Container Toolkit gerektirir |
 
 Kurulum adımları ve yapılandırma seçenekleri için [Docker kurulum kılavuzuna](https://docs.openwebui.com/getting-started/quick-start/) bakın.
 

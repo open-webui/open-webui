@@ -56,7 +56,8 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
-			<CommentButton {onComment}
+			<CommentButton
+				{onComment}
 				modal
 				menu
 				resource={{ resource_type: 'knowledge', resource_id: resourceId }}

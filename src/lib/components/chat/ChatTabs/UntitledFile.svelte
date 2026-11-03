@@ -226,7 +226,9 @@
 					>
 				{/each}{/if}
 		</div>
-		{#if error}<p role="alert" class="py-2 text-xs text-gray-500 dark:text-gray-400">{error}</p>{/if}
+		{#if error}<p role="alert" class="py-2 text-xs text-gray-500 dark:text-gray-400">
+				{error}
+			</p>{/if}
 		<div class="flex items-center gap-2 pt-2">
 			<span class="min-w-0 flex-1 truncate text-xs text-gray-400" title={fullPath}>{fullPath}</span>
 			<button

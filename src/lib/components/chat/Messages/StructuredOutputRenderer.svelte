@@ -1,8 +1,5 @@
 <script lang="ts">
-	import {
-		commentSurface,
-		contentHash
-	} from '$lib/components/comments/anchors';
+	import { commentSurface, contentHash } from '$lib/components/comments/anchors';
 	import { getContext } from 'svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Image from '$lib/components/common/Image.svelte';
@@ -85,7 +82,8 @@
 			<div
 				class="markdown-prose"
 				use:commentSurface={{
-					resource_type: 'chat', resource_id: chatId,
+					resource_type: 'chat',
+					resource_id: chatId,
 					target_type: 'chat_message',
 					target_id: messageId,
 					surface_id: displayItem.id,
@@ -120,7 +118,8 @@
 			<div
 				class="whitespace-pre-wrap text-[0.9375rem]"
 				use:commentSurface={{
-					resource_type: 'chat', resource_id: chatId,
+					resource_type: 'chat',
+					resource_id: chatId,
 					target_type: 'chat_message',
 					target_id: messageId,
 					surface_id: displayItem.id,

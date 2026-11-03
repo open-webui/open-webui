@@ -1,8 +1,5 @@
 <script lang="ts">
-	import {
-		commentSurface,
-		contentHash
-	} from '$lib/components/comments/anchors';
+	import { commentSurface, contentHash } from '$lib/components/comments/anchors';
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 	import CopyIcon from '$lib/components/layout/Sidebar/icons/Copy.svelte';
 	import TrashIcon from '$lib/components/layout/Sidebar/icons/Trash.svelte';
@@ -443,7 +440,8 @@
 									<div
 										class="markdown-prose"
 										use:commentSurface={{
-											resource_type: 'chat', resource_id: chatId,
+											resource_type: 'chat',
+											resource_id: chatId,
 											target_type: 'chat_message',
 											target_id: message.id,
 											surface_id: 'content',
@@ -462,7 +460,8 @@
 									<div
 										class="whitespace-pre-wrap text-[0.9375rem]"
 										use:commentSurface={{
-											resource_type: 'chat', resource_id: chatId,
+											resource_type: 'chat',
+											resource_id: chatId,
 											target_type: 'chat_message',
 											target_id: message.id,
 											surface_id: 'content',

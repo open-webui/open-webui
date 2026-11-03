@@ -238,7 +238,9 @@
 					type="button"
 					aria-label={$i18n.t('Compact: shorten older messages so this chat can keep going.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
-						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''} disabled:opacity-50"
+						{commandIdx === selectedIdx
+						? 'app-interactive-active selected-command-option-button'
+						: ''} disabled:opacity-50"
 					disabled={compactDisabled}
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -294,7 +296,9 @@
 					type="button"
 					aria-label={$i18n.t('Fork: fork the current chat branch into a new chat.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
-						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''} disabled:opacity-50"
+						{commandIdx === selectedIdx
+						? 'app-interactive-active selected-command-option-button'
+						: ''} disabled:opacity-50"
 					disabled={forkDisabled}
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -394,7 +398,9 @@
 					{/if}
 				</span>
 				<span class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
-					<span class="min-w-0 flex-1 truncate">{$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}</span>
+					<span class="min-w-0 flex-1 truncate"
+						>{$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}</span
+					>
 					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/{item.data.id}</span>
 				</span>
 			</button>
