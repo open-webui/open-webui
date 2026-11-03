@@ -42,6 +42,8 @@
 	import { writable } from 'svelte/store';
 
 	const i18n: any = getContext('i18n');
+	// Preserve the former app sidebar label for i18n extraction.
+	// t('App navigation')
 
 	$: canImportChats = $user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true);
 

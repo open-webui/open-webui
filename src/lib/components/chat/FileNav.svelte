@@ -64,6 +64,8 @@
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
 
 	const i18n = getContext<Readable<I18n>>('i18n');
+	// Keep the error fallback discoverable by the i18n extractor.
+	// t('Unknown error')
 
 	export let overlay = false;
 	export let active = true;

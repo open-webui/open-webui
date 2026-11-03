@@ -4,6 +4,8 @@
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 
 	export let overlay = false;
+	// Preserve the former embed close label for i18n extraction.
+	// t('Close embed')
 
 	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId: string) => {
 		try {

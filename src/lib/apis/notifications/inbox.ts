@@ -49,6 +49,7 @@ export async function inboxRequest<T>(path: string, method = 'GET'): Promise<T> 
 // t('{{name}} replied')
 // t('{{name}} mentioned you')
 // t('Upcoming event')
+// t('Automation failed')
 // t('Announcement')
 export const inboxLabels: Record<string, string> = {
 	'comment.created': '{{name}} commented',

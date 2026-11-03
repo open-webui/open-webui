@@ -23,6 +23,12 @@
 	export let hasSessions = false;
 
 	const i18n = getContext<Readable<{ t: (key: string) => string }>>('i18n');
+	// Preserve former terminal controls for i18n extraction.
+	// t('Shell')
+	// t('Close terminal')
+	// t('Open terminal')
+	// t('Collapse terminal')
+	// t('Expand terminal')
 	type Tab = TerminalProcess & {
 		offset: number;
 		loaded: boolean;
