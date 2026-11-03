@@ -711,7 +711,7 @@ async def refresh_chat_access(chat_id=None):
                 key = (cid, session['id'])
                 if key not in access:
                     user = await Users.get_user_by_id(session['id'])
-                    access[key] = bool(user and await Chats.get_accessible_chat_by_id(cid, user))
+                    access[key] = bool(user and await Chats.has_chat_access(cid, user))
                 if not access[key]:
                     await sio.leave_room(sid, f'chat:{cid}')
                     chat_ids.add(cid)
@@ -891,7 +891,7 @@ async def chat_events(sid, data):
         if sid not in (get_room_sid_map(sio.manager, '/', room) or {}):
             return False
         sender = await Users.get_user_by_id(user['id'])
-        if not sender or not await Chats.get_accessible_chat_by_id(chat_id, sender, permission='write'):
+        if not sender or not await Chats.has_chat_access(chat_id, sender, permission='write'):
             return False
         await sio.emit(
             'events',
@@ -916,7 +916,7 @@ async def chat_events(sid, data):
                 await sio.leave_room(sid, f'chat:{chat_id}')
             else:
                 reader = await Users.get_user_by_id(user['id'])
-                if not reader or not await Chats.get_accessible_chat_by_id(chat_id, reader):
+                if not reader or not await Chats.has_chat_access(chat_id, reader):
                     return False
                 await sio.enter_room(sid, f'chat:{chat_id}')
             session = SESSION_POOL.get(sid)
