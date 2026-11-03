@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.models.notifications import emit_changes
+from open_webui.models.notifications import emit_changes, mark_resource_notifications_read
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import (
     AccessGrantModel,
@@ -678,7 +678,12 @@ class ChannelTable:
             membership.last_read_at = int(time.time_ns())
             membership.updated_at = int(time.time_ns())
 
+            changed = await mark_resource_notifications_read(
+                user_id=user_id, resource_type='channel', resource_id=channel_id, db=db
+            )
             await db.commit()
+            if changed:
+                await emit_changes({user_id})
             return True
 
     async def update_member_active_status(
