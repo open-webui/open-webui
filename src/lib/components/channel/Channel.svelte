@@ -141,6 +141,16 @@
 		);
 	};
 
+	const closeThread = async () => {
+		const messageId = threadId;
+		threadId = null;
+
+		await tick();
+		if (document.activeElement === document.body) {
+			document.querySelector<HTMLElement>(`#message-${messageId} .reply-in-thread-button`)?.focus();
+		}
+	};
+
 	const pinHandler = (
 		messageId: string,
 		pinned: boolean,
@@ -532,22 +542,14 @@
 
 		{#if !largeScreen}
 			{#if threadId !== null}
-				<Drawer
-					show={threadId !== null}
-					ariaLabel={$i18n.t('Thread')}
-					onClose={() => {
-						threadId = null;
-					}}
-				>
+				<Drawer show={threadId !== null} ariaLabel={$i18n.t('Thread')} onClose={closeThread}>
 					<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
 						<Thread
 							{threadId}
 							{channel}
 							bind:chatInputElement={threadChatInputElement}
 							onPin={pinHandler}
-							onClose={() => {
-								threadId = null;
-							}}
+							onClose={closeThread}
 						/>
 					</div>
 				</Drawer>
@@ -567,9 +569,7 @@
 						{channel}
 						bind:chatInputElement={threadChatInputElement}
 						onPin={pinHandler}
-						onClose={() => {
-							threadId = null;
-						}}
+						onClose={closeThread}
 					/>
 				</div>
 			</ResizableSidePanel>

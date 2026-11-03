@@ -122,6 +122,7 @@
 	};
 
 	let edit = false;
+	let editButtonElement: HTMLButtonElement;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
 	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
@@ -334,7 +335,7 @@
 								<Tooltip content={$i18n.t('Reply in Thread')}>
 									<button
 										aria-label={$i18n.t('Reply in Thread')}
-										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1 reply-in-thread-button"
 										on:click={() => {
 											onThread(message.id);
 										}}
@@ -348,6 +349,7 @@
 								{#if onEdit}
 									<Tooltip content={$i18n.t('Edit')}>
 										<button
+											bind:this={editButtonElement}
 											aria-label={$i18n.t('Edit')}
 											id="edit-message-{renderedMessageId}"
 											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
@@ -640,9 +642,11 @@
 									<button
 										id="close-edit-message-button"
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
-										on:click={() => {
+										on:click={async () => {
 											edit = false;
 											editedContent = null;
+											await tick();
+											editButtonElement?.focus();
 										}}
 									>
 										{$i18n.t('Cancel')}
