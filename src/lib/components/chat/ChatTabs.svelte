@@ -648,6 +648,7 @@
 		];
 		if (terminalFilesAvailable || (!hasOpenedTabs && showFilesTab)) openFiles();
 		else if (options.length === 1) options[0]();
+		else if (!options.length) showTabs.set(false);
 		hasOpenedTabs = true;
 	}
 	$: if (
