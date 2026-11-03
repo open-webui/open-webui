@@ -389,6 +389,7 @@ async def lifespan(app: FastAPI):
 
     await import_legacy_config_json()
     await seed_registered_defaults()
+    await app.state.oauth_manager.initialize()
     from open_webui.utils.mfa import validate_mfa_configuration
 
     await validate_mfa_configuration()

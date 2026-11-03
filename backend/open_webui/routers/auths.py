@@ -19,6 +19,7 @@ from ldap3.utils.dn import parse_dn
 from open_webui.config import (
     ENABLE_PASSWORD_AUTH,
     OAUTH_PROVIDERS,
+    oauth_client_kwargs,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -1475,6 +1476,10 @@ async def get_oauth_config(request: Request, user=Depends(get_admin_user)):
 
 @router.post('/admin/config/oauth', response_model=OAuthConfigResponse)
 async def update_oauth_config(request: Request, form_data: OAuthConfigForm, user=Depends(get_admin_user)):
+    try:
+        oauth_client_kwargs(form_data.OAUTH_SCOPES, form_data.OAUTH_TIMEOUT, form_data.OAUTH_CODE_CHALLENGE_METHOD)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
     await Config.upsert(oauth_config_updates(form_data.model_dump(exclude_none=True)))
     return await get_oauth_config_values()
 
