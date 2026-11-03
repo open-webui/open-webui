@@ -1153,9 +1153,7 @@
 					isTerminalAvailable(terminalId) &&
 					currentModels.every((model) => model.info?.meta?.terminalId === terminalId)
 						? terminalId
-						: preserveSelections
-							? null
-							: $selectedTerminalId
+						: $selectedTerminalId
 			};
 
 			if (preserveSelections) {
@@ -1181,7 +1179,7 @@
 						defaults[key] = [
 							...new Set([...defaults[key].filter((id: string) => !removed.includes(id)), ...added])
 						];
-					} else if (current[key] !== previous) {
+					} else if (key !== 'terminalId' && current[key] !== previous) {
 						defaults[key] = current[key];
 					} else {
 						modelDefaults[key] = defaults[key];
