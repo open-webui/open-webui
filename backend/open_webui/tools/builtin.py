@@ -1752,13 +1752,13 @@ async def view_chat(
 
         truncation = {}
         max_chars = await Config.get('chats.view_max_chars')
-        if max_chars and sum(len(message['content']) for message in messages) > max_chars:
+        if max_chars and sum(len(str(message['content'] or '')) for message in messages) > max_chars:
             remaining_chars = max_chars
             kept_messages = []
             for message in messages:
                 if remaining_chars <= 0:
                     break
-                content = message['content'][:remaining_chars]
+                content = str(message['content'] or '')[:remaining_chars]
                 kept_messages.append({**message, 'content': content})
                 remaining_chars -= len(content)
             truncation = {
