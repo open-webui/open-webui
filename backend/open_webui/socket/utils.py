@@ -247,7 +247,8 @@ class CachedRedisDict(RedisDict):
 class YdocManager:
     COMPACTION_THRESHOLD = 500
     MAX_DOCUMENTS_PER_SESSION = 20
-    MAX_DOCUMENT_SIZE = 2 * 1024 * 1024
+    # Never below what one socket message can carry, or large notes open empty
+    MAX_DOCUMENT_SIZE = 16 * 1024 * 1024
 
     def __init__(
         self,
