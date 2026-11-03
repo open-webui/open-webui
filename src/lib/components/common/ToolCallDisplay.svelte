@@ -20,8 +20,12 @@
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import { settings } from '$lib/stores';
+	import { requestToolCallSummaries, toolCallSummaries } from '$lib/utils/toolCallSummary';
 
 	export let id: string = '';
+	export let chatId = '';
+	export let modelId = '';
+	export let summarize = false;
 	export let attributes: {
 		type?: string;
 		id?: string;
@@ -32,6 +36,7 @@
 		embeds?: string;
 		done?: string;
 		status?: string;
+		display_summary?: string;
 	} = {};
 
 	export let open = false;
@@ -157,6 +162,26 @@
 	$: isActive = isPreparing || isExecuting;
 	$: isError = attributes?.status === 'failed' || (isDone && isToolResultError(result));
 
+	$: generatedSummary =
+		attributes?.display_summary || (attributes?.id ? $toolCallSummaries[attributes.id] : '') || '';
+
+	$: showSummary = isDone && !isRejected && !!generatedSummary;
+
+	$: if (summarize && resolvable && isDone && !grouped && !isRejected && !generatedSummary) {
+		requestToolCallSummaries(
+			[
+				{
+					id: attributes?.id ?? '',
+					name: attributes?.name ?? '',
+					arguments: decode(attributes?.arguments ?? ''),
+					error: isError
+				}
+			],
+			modelId,
+			chatId
+		);
+	}
+
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
 
@@ -240,11 +265,20 @@
 				<!-- Label -->
 				<div class="flex-1 min-w-0 line-clamp-1">
 					<!-- Short label (below md) -->
-					<span class="@md:hidden text-black dark:text-white">{attributes.name}</span>
+					<span
+						class="@md:hidden text-black dark:text-white"
+						title={showSummary ? attributes.name : undefined}
+						>{showSummary ? generatedSummary : attributes.name}</span
+					>
 					<!-- Full label (md and above) -->
-					<span class="hidden @md:inline font-normal">
+					<span
+						class="hidden @md:inline font-normal"
+						title={showSummary ? attributes.name : undefined}
+					>
 						{#if isRejected}
 							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
+						{:else if showSummary}
+							{generatedSummary}
 						{:else if isDone}
 							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
 						{:else if needsInput}

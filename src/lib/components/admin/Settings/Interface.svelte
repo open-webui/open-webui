@@ -32,6 +32,8 @@
 		TITLE_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_FOLLOW_UP_GENERATION: true,
 		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: '',
+		ENABLE_TOOL_CALL_SUMMARY_GENERATION: false,
+		TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE: '',
 		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: '',
 		ENABLE_AUTOCOMPLETE_GENERATION: true,
 		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: -1,
@@ -106,6 +108,7 @@
 							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS,
 							enable_title_generation: taskConfig.ENABLE_TITLE_GENERATION,
 							enable_follow_up_generation: taskConfig.ENABLE_FOLLOW_UP_GENERATION,
+							enable_tool_call_summary_generation: taskConfig.ENABLE_TOOL_CALL_SUMMARY_GENERATION,
 							enable_tags_generation: taskConfig.ENABLE_TAGS_GENERATION,
 							enable_autocomplete_generation: taskConfig.ENABLE_AUTOCOMPLETE_GENERATION
 						}
@@ -531,6 +534,34 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
+							placeholder={$i18n.t(
+								'Leave empty to use the default prompt, or enter a custom prompt'
+							)}
+						/>
+					</AdminSettingField>
+				{/if}
+
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolCallSummaryGeneration.label')}
+					description={$i18n.t('settings.admin.interface.toolCallSummaryGeneration.description')}
+					let:labelId
+				>
+					<Switch
+						bind:state={taskConfig.ENABLE_TOOL_CALL_SUMMARY_GENERATION}
+						ariaLabelledbyId={labelId}
+					/>
+				</AdminSettingRow>
+
+				{#if taskConfig.ENABLE_TOOL_CALL_SUMMARY_GENERATION}
+					<AdminSettingField
+						label={$i18n.t('settings.admin.interface.toolCallSummaryGenerationPrompt.label')}
+						description={$i18n.t(
+							'settings.admin.interface.toolCallSummaryGenerationPrompt.description'
+						)}
+					>
+						<Textarea
+							className={textareaClass}
+							bind:value={taskConfig.TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}

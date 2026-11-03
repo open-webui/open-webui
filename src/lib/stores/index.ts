@@ -427,6 +427,7 @@ type Config = {
 		enable_autocomplete_generation: boolean;
 		enable_title_generation: boolean;
 		enable_follow_up_generation: boolean;
+		enable_tool_call_summary_generation?: boolean;
 		enable_tags_generation: boolean;
 		enable_direct_connections: boolean;
 		enable_direct_integrations?: boolean;
