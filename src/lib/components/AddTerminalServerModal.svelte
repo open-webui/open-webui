@@ -63,6 +63,7 @@
 	let policyStorage = 'ephemeral';
 	let policyStorageSize = '5Gi';
 	let policyIdleTimeout = 30;
+	let loadedPolicyData: Record<string, any> = {};
 	let lifecycleJson = '{}';
 	let refreshOnlyIdle = true;
 	let refreshReset = false;
@@ -123,6 +124,7 @@
 			// Restore resources
 			policyCpu = p.cpu_limit ?? '1';
 			policyMemory = p.memory_limit ?? '1Gi';
+			loadedPolicyData = {};
 			lifecycleJson = stringifyJson({});
 			refreshOnlyIdle = true;
 			refreshReset = false;
@@ -151,6 +153,7 @@
 			policyStorage = 'ephemeral';
 			policyStorageSize = '5Gi';
 			policyIdleTimeout = 30;
+			loadedPolicyData = {};
 			lifecycleJson = '{}';
 			refreshOnlyIdle = true;
 			refreshReset = false;
@@ -180,6 +183,7 @@
 				auth_type
 			);
 			const data = policy?.data ?? {};
+			loadedPolicyData = data;
 			policyImage = data.image ?? '';
 			policyIdleTimeout = data.idle_timeout_minutes ?? 30;
 			policyStorage = data.storage ? 'persistent' : 'ephemeral';
@@ -275,7 +279,18 @@
 	};
 
 	const buildPolicyData = (): object => {
-		const data: Record<string, any> = {};
+		// Keep fields the form does not edit; the orchestrator replaces the whole policy
+		const data: Record<string, any> = { ...loadedPolicyData };
+		for (const key of [
+			'image',
+			'cpu_limit',
+			'memory_limit',
+			'storage',
+			'idle_timeout_minutes',
+			'env'
+		]) {
+			delete data[key];
+		}
 
 		if (policyImage) data.image = policyImage;
 		if (policyCpu) data.cpu_limit = policyCpu;
