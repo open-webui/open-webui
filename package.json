@@ -133,7 +133,7 @@
 		"leaflet": "^1.9.4",
 		"lowlight": "^3.3.0",
 		"mammoth": "^1.11.0",
-		"marked": "^9.1.0",
+		"marked": "^18.1.2",
 		"mermaid": "^11.17.2",
 		"panzoom": "^9.4.3",
 		"pdfjs-dist": "^5.4.149",
