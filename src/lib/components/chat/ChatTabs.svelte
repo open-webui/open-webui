@@ -103,6 +103,7 @@
 	let viewportWidth = 0;
 
 	let tabs = emptyTabs();
+	let sideChatNumber = 0;
 	let terminalViews: Record<string, XTerminal> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	export async function bindTerminalChat(id: string) {
@@ -259,6 +260,18 @@
 	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side') => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		const view = availableViews.find((view) => view.kind === kind)!;
+		if (kind === 'side') {
+			const pending = $sideChatRequest;
+			const initialPrompt = pending?.parentId === chatId ? pending.prompt : '';
+			if (pending?.parentId === chatId) sideChatRequest.set(null);
+			openPanel({
+				id: crypto.randomUUID(),
+				kind,
+				label: `${view.label} ${++sideChatNumber}`,
+				initialPrompt
+			});
+			return;
+		}
 		openPanel({ id: kind, kind, label: view.label });
 	};
 	const newTerminal = () => {
@@ -579,6 +592,7 @@
 	$: if (chatId !== tabsChatId) {
 		if (tabsChatId || !chatId) {
 			tabs = emptyTabs();
+			sideChatNumber = 0;
 			hasOpenedTabs = false;
 			dirtyFiles = {};
 			fileContexts = {};
@@ -924,9 +938,9 @@
 					<Embeds overlay={dragged} />
 				{:else if tab.kind === 'artifacts'}
 					<Artifacts overlay={dragged} />
-			{:else if tab.kind === 'side' && chatId}
-				<SideChat parentId={chatId} {history} {modelId} {systemPrompt} />
-			{:else if tab.kind === 'comments' && currentComments}
+				{:else if tab.kind === 'side' && chatId}
+					<SideChat {history} {modelId} {systemPrompt} initialPrompt={tab.initialPrompt ?? ''} />
+				{:else if tab.kind === 'comments' && currentComments}
 					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel
 							embedded={true}

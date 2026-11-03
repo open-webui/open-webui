@@ -16,6 +16,7 @@ export type PanelTab = {
 	id: string;
 	kind: PanelTabKind;
 	label: string;
+	initialPrompt?: string;
 	terminalId?: string;
 	terminalNumber?: number;
 	path?: string;
