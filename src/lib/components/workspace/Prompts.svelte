@@ -352,7 +352,10 @@
 		}
 
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
+			if (
+				event.key === 'Shift' &&
+				!document.activeElement?.matches(':focus-visible:not(input, textarea)')
+			) {
 				shiftKey = true;
 			}
 		};
