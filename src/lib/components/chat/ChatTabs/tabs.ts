@@ -2,6 +2,7 @@ import type { TerminalContext } from '$lib/types';
 import type { TerminalConnection } from '$lib/apis/terminal';
 
 export type PanelTabKind =
+	| 'chat'
 	| 'files'
 	| 'file'
 	| 'terminal'
@@ -30,6 +31,17 @@ export type PanelTab = {
 export type PanelTabs = { tabs: PanelTab[]; activeId: string; history: string[] };
 
 export const emptyTabs = (): PanelTabs => ({ tabs: [], activeId: '', history: [] });
+
+export const mainChatTabId = 'main-chat';
+
+export function setFullWidthTabs(state: PanelTabs, fullWidth: boolean, label = 'Chat'): PanelTabs {
+	if (!fullWidth) return removeTab(state, mainChatTabId);
+	if (state.tabs.some((tab) => tab.id === mainChatTabId)) return state;
+	return activateTab(
+		{ ...state, tabs: [{ id: mainChatTabId, kind: 'chat', label }, ...state.tabs] },
+		mainChatTabId
+	);
+}
 
 export function activateTab(state: PanelTabs, id: string): PanelTabs {
 	if (!state.tabs.some((tab) => tab.id === id) || state.activeId === id) return state;
@@ -70,6 +82,7 @@ export function removeTab(state: PanelTabs, id: string): PanelTabs {
 
 export function moveTab(state: PanelTabs, id: string, to: number): PanelTabs {
 	const from = state.tabs.findIndex((tab) => tab.id === id);
+	if (id === mainChatTabId || state.tabs[to]?.id === mainChatTabId) return state;
 	if (from < 0 || to < 0 || to >= state.tabs.length || from === to) return state;
 	const tabs = [...state.tabs];
 	tabs.splice(to, 0, tabs.splice(from, 1)[0]);

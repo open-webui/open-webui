@@ -2649,7 +2649,10 @@
 
 	const initNewChat = async () => {
 		loading = true;
-		if (!embedded && ($showTabs === 'comments' || $showTabs === 'side' || typeof $showTabs === 'object'))
+		if (
+			!embedded &&
+			($showTabs === 'comments' || $showTabs === 'side' || typeof $showTabs === 'object')
+		)
 			showTabs.set(false);
 		const signal = startChatLoad();
 		modelDefaults = null;
@@ -3874,6 +3877,10 @@
 	};
 
 	let terminalTabs: ChatTabs;
+	let fullWidthTabs = false;
+	let mainChatActive = false;
+	let tabTitleEditor: import('svelte').Snippet | undefined;
+	let tabActions: import('svelte').Snippet | undefined;
 
 	const getChatId = async (_history: typeof history) => {
 		let _chatId = $chatId;
@@ -3954,7 +3961,9 @@
 			messageInput?.openComments();
 			return { status: 'rejected' };
 		}
-		const sideCommand = String(userPrompt).trim().match(/^\/(?:side|btw)(?:\s+([\s\S]*))?$/i);
+		const sideCommand = String(userPrompt)
+			.trim()
+			.match(/^\/(?:side|btw)(?:\s+([\s\S]*))?$/i);
 		if (sideCommand && !sideChatAllowed) {
 			toast.error($i18n.t('You do not have permission to use side chat.'));
 			return { status: 'rejected' };
@@ -5290,8 +5299,18 @@
 			></div>
 		{/if}
 
-		<div class="w-full h-full flex">
-			<div class="h-full flex relative max-w-full min-w-0 flex-1 flex-col">
+		<div
+			class="w-full h-full min-h-0 {fullWidthTabs
+				? 'grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto]'
+				: 'flex'}"
+		>
+			<div
+				class="h-full flex relative max-w-full min-w-0 min-h-0 flex-1 flex-col col-start-1 row-start-2"
+				class:hidden={fullWidthTabs && !mainChatActive}
+				id={fullWidthTabs ? 'chat-panel-main-chat-view' : undefined}
+				role={fullWidthTabs ? 'tabpanel' : undefined}
+				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
+			>
 				{#if loading}
 					<div class="flex items-center justify-center h-full w-full">
 						<Spinner className="size-5" />
@@ -5327,6 +5346,9 @@
 						</div>
 					{:else}
 						<Navbar
+							tabbed={fullWidthTabs}
+							bind:tabTitleEditor
+							bind:tabActions
 							{liveParticipants}
 							bind:this={navbarElement}
 							readOnly={isShared}
@@ -5424,7 +5446,7 @@
 										}}
 										bind:selectedModels
 										{atSelectedModel}
-										className={embedded ? 'h-full flex pt-4' : 'h-full flex pt-18'}
+										className={embedded || fullWidthTabs ? 'h-full flex pt-4' : 'h-full flex pt-18'}
 										{sendMessage}
 										{showMessage}
 										{submitMessage}
@@ -5436,7 +5458,7 @@
 										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
 										forkHandler={$temporaryChatEnabled ? null : handleForkChat}
-										topPadding={!embedded}
+										topPadding={!embedded && !fullWidthTabs}
 										bottomPadding={files.length > 0}
 										{onSelect}
 										{onInsertToNote}
@@ -5698,6 +5720,11 @@
 
 			{#if !embedded}
 				<ChatTabs
+					bind:fullWidth={fullWidthTabs}
+					bind:mainChatActive
+					title={$chatTitle || $i18n.t('New Chat')}
+					tabTitleEditor={loading ? undefined : tabTitleEditor}
+					tabActions={loading ? undefined : tabActions}
 					bind:terminalContext
 					bind:history
 					bind:files

@@ -40,6 +40,8 @@
 		activateTab,
 		removeTab,
 		moveTab,
+		mainChatTabId,
+		setFullWidthTabs,
 		fileTabId,
 		type PanelTab
 	} from './ChatTabs/tabs';
@@ -95,6 +97,25 @@
 	export let canSideChat = false;
 
 	export let codeInterpreterEnabled = false;
+	export let fullWidth = false;
+	export let mainChatActive = false;
+	export let title = '';
+	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	let expanded = false;
+	$: fullWidth = expanded && largeScreen && !!$showTabs;
+	$: mainChatActive = fullWidth && tabs.activeId === mainChatTabId;
+	$: if (fullWidth !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
+		tabs = setFullWidthTabs(tabs, fullWidth, title);
+		if (fullWidth) void tick().then(() => document.getElementById(domId(mainChatTabId))?.focus());
+	}
+	const toggleLayout = async () => {
+		if (panelTarget) releasePanel(panelTarget);
+		expanded = !expanded;
+		localStorage.setItem('chatTabsLayout', expanded ? 'full' : 'side');
+		await tick();
+		if (!fullWidth) document.getElementById('chat-tabs-layout-toggle')?.focus();
+	};
 
 	let largeScreen = false;
 	let dragged = false;
@@ -169,6 +190,7 @@
 	};
 	const tabIcon = (kind: PanelTab['kind']) =>
 		({
+			chat: 'chat-lines',
 			files: 'folder',
 			file: 'page',
 			terminal: 'terminal',
@@ -183,14 +205,18 @@
 	const domId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
 	$: activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
-	$: terminalContext = fileContexts[tabs.activeId] ?? activeTab?.context ?? null;
+	$: contextTab =
+		activeTab?.kind === 'chat'
+			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
+			: activeTab;
+	$: terminalContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
 	// Resolve before reactive Files-tab creation, which can run later in the same update.
 	$: gitConnection =
 		mounted &&
 		$config?.features?.enable_tool_servers &&
-		(tabs.tabs.find((tab) => tab.id === tabs.activeId)?.connection ??
+		(contextTab?.connection ??
 			resolveTerminalConnection(
-				tabs.tabs.find((tab) => tab.id === tabs.activeId)?.terminalId ?? $selectedTerminalId,
+				contextTab?.terminalId ?? $selectedTerminalId,
 				$terminalServers ?? [],
 				directTerminals,
 				localStorage.token ?? ''
@@ -254,7 +280,7 @@
 			terminalId: selectedConnection.selector,
 			connection: { ...selectedConnection },
 			untitled: true,
-			context: activeTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
+			context: contextTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
 		});
 	};
 	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side') => {
@@ -277,7 +303,9 @@
 	const newTerminal = () => {
 		if (!terminalEnabled || !selectedConnection) return;
 		let terminalNumber = 1;
-		while (tabs.tabs.some((tab) => tab.kind === 'terminal' && tab.terminalNumber === terminalNumber)) {
+		while (
+			tabs.tabs.some((tab) => tab.kind === 'terminal' && tab.terminalNumber === terminalNumber)
+		) {
 			terminalNumber++;
 		}
 		openPanel({
@@ -343,6 +371,7 @@
 		});
 	};
 	const closeTab = async (id: string) => {
+		if (id === mainChatTabId) return;
 		if (closing.has(id)) return;
 		closing.add(id);
 		try {
@@ -397,7 +426,7 @@
 				// Restore the DOM before Svelte reconciles its keyed tabs.
 				from.insertBefore(item, nextSibling?.parentNode === from ? nextSibling : null);
 				if (newDraggableIndex != null)
-					tabs = moveTab(tabs, item.dataset.panelTab!, newDraggableIndex);
+					tabs = moveTab(tabs, item.dataset.panelTab!, newDraggableIndex + (fullWidth ? 1 : 0));
 				dragged = false;
 			}
 		});
@@ -492,7 +521,11 @@
 	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
 	$: availableViews = [
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
-		{ kind: 'side', label: $i18n.t('Side chat'), available: canSideChat && !!chatId && hasMessages },
+		{
+			kind: 'side',
+			label: $i18n.t('Side chat'),
+			available: canSideChat && !!chatId && hasMessages
+		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
 		{ kind: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
@@ -529,7 +562,7 @@
 		const hadTabs = tabs.tabs.length > 0;
 		for (const tab of tabs.tabs) {
 			// An open side chat owns its model and context; changing the parent must not discard it.
-			if (tab.kind === 'side') continue;
+			if (tab.kind === 'side' || tab.kind === 'chat') continue;
 			const available = tab.terminalId
 				? !!$selectedTerminalId && terminalAccessible(tab.terminalId)
 				: availableViews.some((view) => view.kind === tab.kind && view.available);
@@ -591,7 +624,7 @@
 
 	$: if (chatId !== tabsChatId) {
 		if (tabsChatId || !chatId) {
-			tabs = emptyTabs();
+			tabs = setFullWidthTabs(emptyTabs(), fullWidth, title);
 			sideChatNumber = 0;
 			hasOpenedTabs = false;
 			dirtyFiles = {};
@@ -602,10 +635,12 @@
 	}
 	$: if ($showTabs === true && !tabs.tabs.length) {
 		const options = [
-			...availableViews.filter((view) => view.available).map((view) => () => {
-				if (view.kind === 'files') openFiles();
-				else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
-			}),
+			...availableViews
+				.filter((view) => view.available)
+				.map((view) => () => {
+					if (view.kind === 'files') openFiles();
+					else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
+				}),
 			...(terminalFilesAvailable ? [newFile] : []),
 			...(terminalEnabled ? [newTerminal] : []),
 			...(browserEnabled ? [openBrowser] : []),
@@ -623,7 +658,8 @@
 				($user.permissions?.chat?.side_chat ?? false))
 		) &&
 		$sideChatRequest?.parentId === chatId
-	) sideChatRequest.set(null);
+	)
+		sideChatRequest.set(null);
 	$: if ($showTabs === 'files' && showFilesTab) openFiles();
 	$: if ($showTabs === 'side' && chatId && hasMessages) {
 		if (canSideChat) openFeature('side');
@@ -715,6 +751,8 @@
 		const mediaQuery = window.matchMedia('(min-width: 768px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
+		expanded = localStorage.getItem('chatTabsLayout') === 'full';
+		if (expanded && largeScreen && !$showTabs) showTabs.set(true);
 
 		let isDestroyed = false;
 
@@ -788,11 +826,13 @@
 <div
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
-	class="h-full w-full min-h-0 flex flex-col"
+	class={fullWidth ? 'contents' : 'h-full w-full min-h-0 flex flex-col'}
 	style:--chat-tabs-dark-background={'var(--color-gray-900)'}
 	id="controls-container"
 >
-	<div class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none">
+	<div
+		class="flex items-center px-2 pt-1 pb-1 gap-1 shrink-0 select-none col-start-1 row-start-1 min-w-0 z-10 bg-white dark:bg-gray-900"
+	>
 		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
 			<div
 				role="tablist"
@@ -809,7 +849,8 @@
 						event.shiftKey ||
 						Math.abs(event.deltaY) <= Math.abs(event.deltaX) ||
 						strip.scrollWidth <= strip.clientWidth
-					) return;
+					)
+						return;
 					const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
 					event.preventDefault();
 					strip.scrollLeft += event.deltaY * unit;
@@ -817,22 +858,26 @@
 			>
 				{#each tabs.tabs as tab (tab.id)}
 					<div
-						data-panel-tab={tab.id}
-						class="flex items-center gap-1.5 px-2.5 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {tabs.activeId ===
+						role="presentation"
+						data-panel-tab={tab.kind === 'chat' ? undefined : tab.id}
+						on:click={() => selectTab(tab.id)}
+						class="panel-tab flex cursor-pointer items-center gap-1.5 ps-2.5 pe-2 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {tabs.activeId ===
 						tab.id
 							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200'
 							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 					>
 						<button
 							role="tab"
-							aria-keyshortcuts="Alt+Shift+ArrowLeft Alt+Shift+ArrowRight"
+							aria-keyshortcuts={tab.kind === 'chat'
+								? undefined
+								: 'Alt+Shift+ArrowLeft Alt+Shift+ArrowRight'}
 							id={domId(tab.id)}
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={tabs.activeId === tab.id}
 							tabindex={tabs.activeId === tab.id ? 0 : -1}
-							title={tab.path ?? tab.label}
+							title={tab.kind === 'chat' ? title : (tab.path ?? tab.label)}
+							aria-label={tab.kind === 'chat' ? title : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
-							on:click={() => selectTab(tab.id)}
 						>
 							{#if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
@@ -841,7 +886,11 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							<span class="max-w-30 overflow-hidden text-ellipsis">{tab.label}</span>
+							{#if tab.kind !== 'chat' || !tabTitleEditor}
+								<span class="max-w-30 overflow-hidden text-ellipsis"
+									>{tab.kind === 'chat' ? title : tab.label}</span
+								>
+							{/if}
 							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
 									>{commentCount}</span
 								>{/if}
@@ -850,14 +899,18 @@
 								class="ms-1 size-1.5 shrink-0 rounded-full bg-gray-400"
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
-						<button
-							type="button"
-							class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
-							aria-label={tab.kind === 'voice'
-								? $i18n.t('End call')
-								: `${$i18n.t('Close')} ${tab.label}`}
-							on:click={() => closeTab(tab.id)}><Icon name="xmark" size={12} /></button
-						>
+						{#if tab.kind === 'chat'}
+							{@render tabTitleEditor?.()}
+							{@render tabActions?.()}
+						{:else}<button
+								type="button"
+								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+								aria-label={tab.kind === 'voice'
+									? $i18n.t('End call')
+									: `${$i18n.t('Close')} ${tab.label}`}
+								on:click|stopPropagation={() => closeTab(tab.id)}
+								><Icon name="xmark" size={12} /></button
+							>{/if}
 					</div>
 				{/each}
 			</div>
@@ -906,6 +959,19 @@
 				</Dropdown>
 			{/if}
 		</div>
+		{#if largeScreen}
+			<button
+				id="chat-tabs-layout-toggle"
+				type="button"
+				class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+				on:click={toggleLayout}
+				aria-label={fullWidth ? $i18n.t('Use side tabs') : $i18n.t('Use full-width tabs')}
+				title={fullWidth ? $i18n.t('Use side tabs') : $i18n.t('Use full-width tabs')}
+				aria-pressed={fullWidth}
+			>
+				<Icon name={fullWidth ? 'split-horizontal' : 'expand'} size={14} />
+			</button>
+		{/if}
 		<button
 			type="button"
 			class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
@@ -913,8 +979,11 @@
 			aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
 		>
 	</div>
-	<div class="relative flex-1 min-h-0">
-		{#each tabs.tabs as tab (tab.id)}
+	<div
+		class="relative flex-1 min-h-0 min-w-0 col-start-1 row-start-2"
+		class:hidden={mainChatActive}
+	>
+		{#each tabs.tabs.filter((tab) => tab.kind !== 'chat') as tab (tab.id)}
 			<div
 				id={`${domId(tab.id)}-view`}
 				role="tabpanel"
@@ -1051,19 +1120,21 @@
 				{$i18n.t('Open a tab using the + menu.')}
 			</div>{/if}
 	</div>
-	{#if gitConnection && tabs.tabs.length}
-		<GitBar
-			bind:status={gitStatus}
-			bind:diffMode={gitDiffMode}
-			bind:hideWhitespace={gitHideWhitespace}
-			connection={gitConnection}
-			{chatId}
-			directory={terminalContext?.currentDirectory ?? '.'}
-			active={!!$showTabs}
-			onOpenFile={(path) => openFile(path, gitConnection.selector)}
-			onOpenDirectory={(path) => openFiles(gitConnection.selector, path)}
-		/>
-	{/if}
+	<div class="col-start-1 row-start-3 min-w-0" class:hidden={mainChatActive}>
+		{#if gitConnection && tabs.tabs.length}
+			<GitBar
+				bind:status={gitStatus}
+				bind:diffMode={gitDiffMode}
+				bind:hideWhitespace={gitHideWhitespace}
+				connection={gitConnection}
+				{chatId}
+				directory={terminalContext?.currentDirectory ?? '.'}
+				active={!!$showTabs}
+				onOpenFile={(path) => openFile(path, gitConnection.selector)}
+				onOpenDirectory={(path) => openFiles(gitConnection.selector, path)}
+			/>
+		{/if}
+	</div>
 </div>
 
 {#if !largeScreen}
@@ -1096,7 +1167,7 @@
 	</MobileSwipePanel>
 {:else}
 	<ResizableSidePanel
-		open={!!$showTabs}
+		open={!!$showTabs && !fullWidth}
 		bind:width={controlsWidth}
 		minWidth={280}
 		minSiblingWidth={360}
@@ -1109,9 +1180,17 @@
 			class="h-full w-full z-40 pointer-events-auto"
 		></div>
 	</ResizableSidePanel>
+	{#if fullWidth}
+		<!-- The tab strip and pane share the parent chat's grid without remounting either view. -->
+		<div use:preservePanel bind:this={panelTarget} class="contents"></div>
+	{/if}
 {/if}
 
 <style>
+	.panel-tab:not(:has(:global(button:not([role='tab'])))) {
+		padding-inline: 0.625rem;
+	}
+
 	.panel-tab-strip {
 		scrollbar-width: none;
 	}
