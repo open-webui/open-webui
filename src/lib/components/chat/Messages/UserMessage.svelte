@@ -65,6 +65,7 @@
 	let editedFiles = [];
 
 	let messageEditTextAreaElement: HTMLTextAreaElement;
+	let editButtonElement: HTMLButtonElement;
 	let editScrollContainer: HTMLDivElement;
 
 	let message = structuredClone(history.messages[messageId]);
@@ -129,10 +130,13 @@
 		editedFiles = [];
 	};
 
-	const cancelEditMessage = () => {
+	const cancelEditMessage = async () => {
 		edit = false;
 		editedContent = '';
 		editedFiles = [];
+
+		await tick();
+		editButtonElement?.focus();
 	};
 
 	const deleteMessageHandler = async () => {
@@ -514,7 +518,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -570,7 +574,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}
@@ -587,6 +591,7 @@
 									? ''
 									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition edit-user-message-button"
 								aria-label={$i18n.t('Edit')}
+								bind:this={editButtonElement}
 								on:click={() => {
 									editMessageHandler();
 								}}
@@ -639,7 +644,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -695,7 +700,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}
