@@ -16,7 +16,6 @@ from fastapi import HTTPException, Request
 
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
-    VIEW_CHAT_MAX_CHARS,
     VIEW_FILE_DEFAULT_MAX_CHARS,
     VIEW_FILE_MAX_CHARS,
 )
@@ -1752,8 +1751,9 @@ async def view_chat(
             current_id = msg.get('parentId') if msg else None
 
         truncation = {}
-        if VIEW_CHAT_MAX_CHARS and sum(len(message['content']) for message in messages) > VIEW_CHAT_MAX_CHARS:
-            remaining_chars = VIEW_CHAT_MAX_CHARS
+        max_chars = await Config.get('chats.view_max_chars')
+        if max_chars and sum(len(message['content']) for message in messages) > max_chars:
+            remaining_chars = max_chars
             kept_messages = []
             for message in messages:
                 if remaining_chars <= 0:

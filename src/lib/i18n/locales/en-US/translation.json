@@ -3170,6 +3170,8 @@
 	"settings.admin.general.userWebhooks.description": "Allow users to configure webhooks from their account.",
 	"settings.admin.general.userWebhooks.label": "User Webhooks",
 	"settings.admin.general.version.label": "Version",
+	"settings.admin.general.viewChatMaxChars.description": "Maximum characters returned when a model reads a previous chat. The newest messages are kept. Leave empty for no limit.",
+	"settings.admin.general.viewChatMaxChars.label": "Chat Read Limit",
 	"settings.admin.general.webuiUrl.description": "Enter the public URL of your WebUI. This URL will be used to generate links in the notifications.",
 	"settings.admin.general.webuiUrl.label": "WebUI URL",
 	"settings.admin.images.apiAuthString.description": "Provide the --api-auth username and password when required.",
