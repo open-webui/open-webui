@@ -972,12 +972,14 @@
 				<Icon name={fullWidth ? 'split-horizontal' : 'expand'} size={14} />
 			</button>
 		{/if}
-		<button
-			type="button"
-			class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
-			on:click={() => showTabs.set(false)}
-			aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
-		>
+		{#if !fullWidth}
+			<button
+				type="button"
+				class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+				on:click={() => showTabs.set(false)}
+				aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
+			>
+		{/if}
 	</div>
 	<div
 		class="relative flex-1 min-h-0 min-w-0 col-start-1 row-start-2"
