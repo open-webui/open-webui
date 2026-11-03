@@ -236,13 +236,14 @@ def setup_metrics(app: FastAPI, resource: Resource, db_engine: Engine) -> None:
 
             # Route template e.g. "/items/{item_id}" instead of real path.
             route = request.scope.get('route')
-            route_path = getattr(route, 'path', request.url.path)
+            route_path = getattr(route, 'path', None)
 
             attrs: Dict[str, str | int] = {
                 'http.method': request.method,
-                'http.route': route_path,
                 'http.status_code': status_code,
             }
+            if route_path:
+                attrs['http.route'] = route_path
 
             request_counter.add(1, attrs)
             duration_histogram.record(elapsed_ms, attrs)
