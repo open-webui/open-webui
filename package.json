@@ -53,7 +53,7 @@
 		"svelte-check": "^4.0.0",
 		"svelte-confetti": "^2.3.2",
 		"tailwindcss": "^4.0.0",
-		"tslib": "^2.4.1",
+		"tslib": "^2.9.1",
 		"typescript": "^5.5.4",
 		"vite": "^5.4.21",
 		"vitest": "^1.6.1"
