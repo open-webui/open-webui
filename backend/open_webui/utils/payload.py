@@ -210,7 +210,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         'presence_penalty': float,
         'reasoning_effort': str,
         'seed': lambda x: x,
-        'stop': lambda x: [bytes(s, 'utf-8').decode('unicode_escape') for s in x],
+        'stop': lambda x: [stop.encode('latin-1', 'backslashreplace').decode('unicode_escape') for stop in x],
         'logit_bias': lambda x: x,
         'response_format': dict,
     }
@@ -264,7 +264,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         'repeat_penalty': float,
         'presence_penalty': float,
         'frequency_penalty': float,
-        'stop': lambda x: [bytes(s, 'utf-8').decode('unicode_escape') for s in x],
+        'stop': lambda x: [stop.encode('latin-1', 'backslashreplace').decode('unicode_escape') for stop in x],
         'num_gpu': int,
         'use_mmap': bool,
         'use_mlock': bool,
