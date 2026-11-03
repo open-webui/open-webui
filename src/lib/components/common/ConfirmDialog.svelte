@@ -41,6 +41,21 @@
 	let mounted = false;
 
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+	let returnFocusTarget: HTMLElement | null = null;
+
+	const handleFocusOutside = (event: FocusEvent) => {
+		if (
+			event.target instanceof HTMLElement &&
+			!modalElement?.contains(event.target) &&
+			!event.target.closest('[role="menu"], [role="listbox"]')
+		) {
+			returnFocusTarget = event.target;
+		}
+	};
+
+	const getReturnFocus = (previous: HTMLElement | SVGElement) =>
+		previous.isConnected ? previous : (returnFocusTarget ?? previous);
+
 	let previousOverflow: string | null = null;
 	const restoreOverflow = () => {
 		if (previousOverflow !== null) {
@@ -93,16 +108,19 @@
 	$: if (mounted) {
 		if (show && modalElement) {
 			document.body.appendChild(modalElement);
-			focusTrap = FocusTrap.createFocusTrap(modalElement);
+			returnFocusTarget = null;
+			focusTrap = FocusTrap.createFocusTrap(modalElement, { setReturnFocus: getReturnFocus });
 			focusTrap.activate();
 
 			window.addEventListener('keydown', handleKeyDown);
+			window.addEventListener('focusin', handleFocusOutside, true);
 			previousOverflow = document.body.style.overflow;
 			document.body.style.overflow = 'hidden';
 		} else if (modalElement) {
 			focusTrap.deactivate();
 
 			window.removeEventListener('keydown', handleKeyDown);
+			window.removeEventListener('focusin', handleFocusOutside, true);
 			document.body.removeChild(modalElement);
 
 			restoreOverflow();
@@ -113,6 +131,7 @@
 		show = false;
 		restoreOverflow();
 		window.removeEventListener('keydown', handleKeyDown);
+		window.removeEventListener('focusin', handleFocusOutside, true);
 		if (focusTrap) {
 			focusTrap.deactivate();
 		}
