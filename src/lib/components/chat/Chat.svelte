@@ -1166,7 +1166,10 @@
 					codeInterpreterEnabled,
 					terminalId: $selectedTerminalId
 				};
-				modelDefaults ??= structuredClone(defaults);
+				if (!modelDefaults) {
+					modelDefaults = structuredClone(defaults);
+					defaultsModelIds = modelIds;
+				}
 				for (const key of Object.keys(defaults)) {
 					const previous = modelDefaults[key];
 					if (Array.isArray(previous)) {
@@ -1179,7 +1182,10 @@
 						defaults[key] = [
 							...new Set([...defaults[key].filter((id: string) => !removed.includes(id)), ...added])
 						];
-					} else if (key !== 'terminalId' && current[key] !== previous) {
+					} else if (
+						(key !== 'terminalId' || equal(modelIds, defaultsModelIds)) &&
+						current[key] !== previous
+					) {
 						defaults[key] = current[key];
 					} else {
 						modelDefaults[key] = defaults[key];
