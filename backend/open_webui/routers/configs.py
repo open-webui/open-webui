@@ -814,7 +814,7 @@ class SubagentsConfigForm(BaseModel):
     )
     @classmethod
     def normalize_limit(cls, value):
-        return None if value == '' else value
+        return None if value in ('', 0) else value
 
     @field_validator('SUBAGENTS_MAX_CONCURRENT', 'SUBAGENTS_MAX_ASYNC', mode='before')
     @classmethod
