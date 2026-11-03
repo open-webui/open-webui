@@ -69,6 +69,8 @@ class MinerULoader:
         try:
             if self.api_mode == 'cloud':
                 return self._load_cloud_api()
+            elif self._is_tasks_api():
+                return self._load_tasks_api()
             elif self._is_v1_api():
                 return self._load_v1_api()
             else:
@@ -192,6 +194,13 @@ class MinerULoader:
         except requests.RequestException:
             return False
 
+    def _is_tasks_api(self) -> bool:
+        """Detect MinerU 4.1, whose Tasks API replaced the upload and parse job routes of 4.0."""
+        try:
+            return 'task_output_formats' in requests.get(f'{self.api_url}/v1/health', timeout=10).json()['features']
+        except (requests.RequestException, ValueError, KeyError):
+            return False
+
     def _load_v1_api(self) -> List[Document]:
         """
         Load document using the MinerU 4.x V1 API (asynchronous).
@@ -269,16 +278,75 @@ class MinerULoader:
 
         return [Document(page_content=markdown_content, metadata=metadata)]
 
-    def _request_v1_api(self, method: str, path: str, **kwargs) -> requests.Response:
+    def _load_tasks_api(self) -> List[Document]:
+        """Load document using the MinerU 4.1 Tasks API (asynchronous)."""
+        log.info('Using MinerU Tasks API at %s', self.api_url)
+
+        filename = os.path.basename(self.file_path)
+
+        file_entry = {'file_name': filename, 'bytes': os.path.getsize(self.file_path)}
+        if self.page_ranges and filename.lower().endswith('.pdf'):
+            file_entry['page_range'] = self.page_ranges
+
+        task = self._request_v1_api(
+            'POST',
+            '/v1/tasks',
+            json={
+                'files': [file_entry],
+                'tier': self.tier,
+                'ocr_mode': 'ocr' if self.enable_ocr else 'auto',
+            },
+        ).json()
+
+        upload = task['files'][0]['upload']
+        with open(self.file_path, 'rb') as f:
+            self._request_v1_api('PUT', upload['url'], headers=upload['headers'], data=f)
+
+        log.info('Polling MinerU task: %s', task['task_id'])
+        deadline = time.monotonic() + self.timeout if self.timeout else None
+        while True:
+            task = self._request_v1_api('GET', f'/v1/tasks/{task["task_id"]}').json()
+            if task['status'] not in ['waiting-file', 'pending', 'running']:
+                break
+            if deadline and time.monotonic() > deadline:
+                raise HTTPException(
+                    status.HTTP_504_GATEWAY_TIMEOUT,
+                    detail=f'MinerU processing timed out after {self.timeout} seconds',
+                )
+            time.sleep(2)
+
+        file_result = task['files'][0]
+        if task['status'] != 'completed':
+            error = file_result.get('error') or task.get('error') or {}
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f'MinerU processing {task["status"]}: {error.get("message", "Unknown error")}',
+            )
+
+        markdown_content = self._download_and_extract_zip(file_result['result_url'], filename)
+
+        log.info('Successfully parsed document with MinerU Tasks API: %s', filename)
+
+        metadata = {
+            'source': filename,
+            'api_mode': 'local',
+            'tier': file_result['parse']['tier'],
+            'version': file_result['parse'].get('parser_version', 'unknown'),
+        }
+
+        return [Document(page_content=markdown_content, metadata=metadata)]
+
+    def _request_v1_api(self, method: str, path: str, headers: Optional[dict] = None, **kwargs) -> requests.Response:
         """
         Send one request to the MinerU V1 API and raise an HTTPException on failure.
         """
+        url = path if path.startswith('http') else f'{self.api_url}{path}'
         # A 4.x server started with --api-key rejects every V1 request without it
-        headers = {'Authorization': f'Bearer {self.api_key}'} if self.api_key else None
+        # The key stays off storage URLs returned by the server
+        if self.api_key and url.startswith(f'{self.api_url}/'):
+            headers = {**(headers or {}), 'Authorization': f'Bearer {self.api_key}'}
         try:
-            response = requests.request(
-                method, f'{self.api_url}{path}', headers=headers, timeout=self.timeout, **kwargs
-            )
+            response = requests.request(method, url, headers=headers, timeout=self.timeout, **kwargs)
             response.raise_for_status()
         except requests.Timeout:
             raise HTTPException(
@@ -546,7 +614,12 @@ class MinerULoader:
         log.info('Downloading results from: %s', zip_url)
 
         try:
-            response = requests.get(zip_url, timeout=60)
+            headers = (
+                {'Authorization': f'Bearer {self.api_key}'}
+                if self.api_key and zip_url.startswith(f'{self.api_url}/')
+                else None
+            )
+            response = requests.get(zip_url, headers=headers, timeout=60)
             response.raise_for_status()
         except requests.HTTPError as e:
             raise HTTPException(
