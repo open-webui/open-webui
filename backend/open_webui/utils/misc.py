@@ -927,26 +927,38 @@ def _strip_null_bytes_deep(obj):
     return obj
 
 
+def _has_null_bytes_or_surrogates(obj) -> bool:
+    """True if any string, key or value, has a null byte or surrogate."""
+    if isinstance(obj, str):
+        if '\x00' in obj:
+            return True
+        # O(1) in CPython, so ASCII strings such as base64 images skip the surrogate scan.
+        if obj.isascii():
+            return False
+        try:
+            obj.encode('utf-8')
+            return False
+        except UnicodeEncodeError:
+            return True
+    elif isinstance(obj, dict):
+        return any(_has_null_bytes_or_surrogates(k) or _has_null_bytes_or_surrogates(v) for k, v in obj.items())
+    elif isinstance(obj, list):
+        return any(_has_null_bytes_or_surrogates(v) for v in obj)
+    return False
+
+
 def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
-    Performs a fast pre-check: serializes the structure once and scans for
+    Performs a fast pre-check: scans every string once for
     null bytes or invalid UTF-8 surrogates. If none are found, the
     original object is returned immediately, skipping the expensive
     recursive walk.
     """
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
-    # Fast path: check for null bytes and surrogate code points in the serialized form.
-    # json.dumps is implemented in C and much faster than a Python-level
-    # recursive walk over every leaf string.
-    try:
-        serialized = JSONCodec.dumps(obj, ensure_ascii=False)
-        if '\\u0000' not in serialized:
-            serialized.encode('utf-8')
-            return obj
-    except (TypeError, ValueError, UnicodeEncodeError):
-        pass
+    if not _has_null_bytes_or_surrogates(obj):
+        return obj
     return _strip_null_bytes_deep(obj)
 
 
