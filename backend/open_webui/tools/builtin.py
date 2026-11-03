@@ -16,6 +16,7 @@ from fastapi import HTTPException, Request
 
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
+    VIEW_CHAT_MAX_CHARS,
     VIEW_FILE_DEFAULT_MAX_CHARS,
     VIEW_FILE_MAX_CHARS,
 )
@@ -1750,6 +1751,23 @@ async def view_chat(
                 )
             current_id = msg.get('parentId') if msg else None
 
+        truncation = {}
+        if VIEW_CHAT_MAX_CHARS and sum(len(message['content']) for message in messages) > VIEW_CHAT_MAX_CHARS:
+            remaining_chars = VIEW_CHAT_MAX_CHARS
+            kept_messages = []
+            for message in messages:
+                if remaining_chars <= 0:
+                    break
+                content = message['content'][:remaining_chars]
+                kept_messages.append({**message, 'content': content})
+                remaining_chars -= len(content)
+            truncation = {
+                'truncated': True,
+                'total_messages': len(messages),
+                'returned_messages': len(kept_messages),
+            }
+            messages = kept_messages
+
         # Reverse to get chronological order
         messages.reverse()
 
@@ -1760,6 +1778,7 @@ async def view_chat(
                 'messages': messages,
                 'updated_at': chat.updated_at,
                 'created_at': chat.created_at,
+                **truncation,
             },
             ensure_ascii=False,
         )

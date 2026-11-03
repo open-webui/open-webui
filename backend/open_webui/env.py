@@ -1176,6 +1176,8 @@ KNOWLEDGE_GREP_MAX_MATCHES = _int_env('KNOWLEDGE_GREP_MAX_MATCHES', 50)
 # Characters returned by view_file / view_knowledge_file.
 VIEW_FILE_MAX_CHARS = _int_env('VIEW_FILE_MAX_CHARS', 100_000)
 VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
+# Characters returned by view_chat; unset returns the full chat.
+VIEW_CHAT_MAX_CHARS = int(os.getenv('VIEW_CHAT_MAX_CHARS')) if os.getenv('VIEW_CHAT_MAX_CHARS') else None
 
 # Tools/functions pip options
 
