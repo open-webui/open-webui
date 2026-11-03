@@ -12,6 +12,7 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	let focusChatMenuOnMount: string | null = null;
 </script>
 
 <script lang="ts">
@@ -245,6 +246,7 @@
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
+	let chatMenuButtonElement: HTMLButtonElement;
 
 	let chatTitle = '';
 
@@ -295,6 +297,18 @@
 		}
 	};
 
+	const focusNextChatMenu = () => {
+		if (!itemElement.contains(document.activeElement) && document.activeElement !== document.body) {
+			return;
+		}
+
+		const rows = [...document.querySelectorAll<HTMLElement>('[id="sidebar-chat-group"]')];
+		const index = rows.indexOf(itemElement);
+		(rows[index + 1] ?? rows[index - 1])
+			?.querySelector<HTMLElement>('#sidebar-chat-item-menu button')
+			?.focus();
+	};
+
 	let deleting = false;
 
 	const deleteChatHandler = async (id) => {
@@ -315,6 +329,7 @@
 				await tick();
 			}
 
+			focusNextChatMenu();
 			dispatch('change');
 		}
 
@@ -335,6 +350,7 @@
 				chatId.set('');
 			}
 
+			focusNextChatMenu();
 			dispatch('change');
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
@@ -355,11 +371,23 @@
 			);
 
 			if (res) {
+				focusChatMenuOnMount = chatId;
 				await refreshChatList(localStorage.token, { refreshPinned: true });
 
 				dispatch('change');
 
 				toast.success($i18n.t('Chat moved successfully'));
+
+				await tick();
+				if (document.activeElement === document.body) {
+					const collapsed =
+						document.querySelector<HTMLElement>(`#folder-${folderId}-button [aria-expanded]`) ??
+						document.querySelector<HTMLElement>('button[aria-controls="sidebar-folders-content"]');
+					if (collapsed?.getAttribute('aria-expanded') === 'false') {
+						focusChatMenuOnMount = null;
+						collapsed.focus();
+					}
+				}
 			}
 		} else {
 			toast.error($i18n.t('Failed to move chat'));
@@ -427,6 +455,11 @@
 	};
 
 	onMount(() => {
+		if (focusChatMenuOnMount === id && document.activeElement === document.body) {
+			focusChatMenuOnMount = null;
+			tick().then(() => chatMenuButtonElement?.focus());
+		}
+
 		const el = itemElement;
 		if (!el) return;
 
@@ -449,7 +482,7 @@
 
 	let showDeleteConfirm = false;
 
-	const chatTitleInputKeydownHandler = (e) => {
+	const chatTitleInputKeydownHandler = async (e) => {
 		// Let Enter and Escape finish IME composition without saving or cancelling the rename.
 		if (e.isComposing || e.keyCode === 229) {
 			return;
@@ -464,10 +497,16 @@
 
 			confirmEdit = false;
 			chatTitle = '';
+
+			await tick();
+			chatMenuButtonElement?.focus();
 		} else if (e.key === 'Escape') {
 			e.preventDefault();
 			confirmEdit = false;
 			chatTitle = '';
+
+			await tick();
+			chatMenuButtonElement?.focus();
 		}
 	};
 
@@ -873,10 +912,12 @@
 							dispatch('unselect');
 						}}
 						onPinChange={async () => {
+							focusChatMenuOnMount = id;
 							dispatch('change');
 						}}
 					>
 						<button
+							bind:this={chatMenuButtonElement}
 							type="button"
 							aria-label={$i18n.t('Chat Menu')}
 							class="flex {($settings?.highContrastMode ?? false)
