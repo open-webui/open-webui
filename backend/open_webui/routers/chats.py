@@ -1215,7 +1215,7 @@ async def get_shared_chat_by_id(
             live = (
                 shared.chat.get('share_mode') == 'continue'
                 and user is not None
-                and await Chats.get_accessible_chat_by_id(shared.chat_id, user, db=db, permission='write') is not None
+                and await Chats.has_chat_access(shared.chat_id, user, db=db, permission='write')
             )
             chat = (
                 await Chats.get_chat_by_id(shared.chat_id, db=db)
@@ -1239,9 +1239,7 @@ async def get_shared_chat_by_id(
         if chat:
             data = await shared_chat_response(chat, user, db=db)
             data['chat']['share_mode'] = (
-                'continue'
-                if await Chats.get_accessible_chat_by_id(chat.id, user, db=db, permission='write', chat=chat)
-                else None
+                'continue' if await Chats.has_chat_access(chat.id, user, db=db, permission='write', chat=chat) else None
             )
             return data
 
@@ -1347,9 +1345,7 @@ async def get_chat_by_id(
     if chat:
         data = await shared_chat_response(chat, user, db=db)
         data['chat']['share_mode'] = (
-            'continue'
-            if await Chats.get_accessible_chat_by_id(id, user, db=db, permission='write', chat=chat)
-            else None
+            'continue' if await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat) else None
         )
         data = overlay_response_streams(
             data,

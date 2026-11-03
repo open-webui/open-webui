@@ -1308,7 +1308,7 @@ class ChatTable:
     async def insert_chat_turn(self, chat_id, user, user_message, message_ids):
         from fastapi import HTTPException
 
-        if not await self.get_accessible_chat_by_id(chat_id, user, permission='write'):
+        if not await self.has_chat_access(chat_id, user, permission='write'):
             raise HTTPException(403, 'Chat continuation is not allowed.')
         async with self._chat_transaction(chat_id) as (db, chat):
             if not chat:
@@ -1997,15 +1997,34 @@ class ChatTable:
         if user.role not in {'user', 'admin'}:
             return None
         chat = chat if chat is not None else await self.get_chat_by_id(id, db=db)
+        if chat and await self.has_chat_access(id, user, db=db, permission=permission, chat=chat):
+            return ChatModel.model_validate(chat)
+        return None
+
+    async def has_chat_access(
+        self,
+        id: str,
+        user,
+        db: AsyncSession | None = None,
+        *,
+        permission: Literal['read', 'write'] = 'read',
+        chat: Chat | ChatModel | None = None,
+    ) -> bool:
+        if user.role not in {'user', 'admin'}:
+            return False
+        if chat is None:
+            async with get_async_db_context(db) as session:
+                result = await session.execute(select(Chat.user_id, Chat.meta, Chat.folder_id).filter_by(id=id))
+                chat = result.first()
         if not chat:
-            return None
+            return False
         if (
             chat.user_id == user.id
             or user.role == 'admin'
             and permission == 'read'
             and (ENABLE_ADMIN_CHAT_ACCESS or is_internal_chat(chat.meta))
         ):
-            return ChatModel.model_validate(chat)
+            return True
         from open_webui.models.shared_chats import SharedChats
 
         shared = await SharedChats.get_by_chat_id(id, db=db)
@@ -2016,7 +2035,7 @@ class ChatTable:
                 user_id=user.id, resource_type='shared_chat', resource_id=id, permission='read', db=db
             )
         ):
-            return ChatModel.model_validate(chat)
+            return True
         if chat.folder_id:
             from open_webui.utils.access_control.folders import has_folder_access
 
@@ -2026,8 +2045,8 @@ class ChatTable:
                 and (permission == 'read' or (folder.data or {}).get('share_mode') == 'continue')
                 and await has_folder_access(user.id, folder, 'read', db)
             ):
-                return ChatModel.model_validate(chat)
-        return None
+                return True
+        return False
 
     async def filter_task_ids_by_user_id(self, chat, user_id: str, task_ids: list[str]) -> list[str]:
         if not task_ids:
