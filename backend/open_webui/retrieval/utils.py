@@ -1362,8 +1362,15 @@ async def filter_accessible_collections(
 
 
 def filter_source_metadata(metadata: dict) -> dict:
-    """Keep only the chunk metadata keys the operator allowed the model to see."""
-    return {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
+    """Keep allowed metadata; expose uploaded-file pages as 1-based for the model."""
+    result = {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
+    if metadata.get('file_id') and not metadata.get('external'):
+        page = result.get('page')
+        if type(page) is float and page.is_integer():
+            page = int(page)
+        if type(page) is int and page >= 0:
+            result['page'] = page + 1
+    return result
 
 
 async def get_sources_from_items(
