@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- ♿ **Keyboard and screen reader fixes.** Buttons keep keyboard focus while they save, cancelling a message edit or switching message versions keeps focus in place, the show password button is wide enough to hit, the sign-in skip link moves focus to the form, and holding Shift no longer swaps row buttons for Delete while a keyboard user has focus.
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
 
