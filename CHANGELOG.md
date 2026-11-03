@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-11-03
+
+### Added
+
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Portuguese (Brazil) were enhanced and expanded.
+
+### Fixed
+
+- 🖥️ **Terminal kept on model switch.** Switching to a model without its own default terminal no longer turns off the terminal selected in the chat. [Commit](https://github.com/open-webui/open-webui/commit/b433aab65c8ad6c61800a82ea6680140182c9c30), [Commit](https://github.com/open-webui/open-webui/commit/a01b2ed55be5bf725f33f74e4171139eed8002be)
+- 📜 **Quieter MCP connection logs.** Logs no longer fill with a warning for every MCP server a user has not connected yet each time they load Open WebUI. [#33663](https://github.com/open-webui/open-webui/pull/33663)
+
 ## [0.13.0] - 2026-11-02
 
 ### Added
