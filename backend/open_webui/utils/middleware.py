@@ -89,7 +89,7 @@ from open_webui.utils.audit import log_model_usage
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_compaction import apply_summary_checkpoint, compact_messages_for_request
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -2178,27 +2178,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
+    filter_functions = (
+        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_FUNCTIONS else []
+    )
+    compaction_messages = None
+    context_summary = None
     if (is_saved_chat_id(chat_id) or is_temporary_chat_id(chat_id)) and user_message_id:
         system_message = get_system_message(form_data.get('messages', []))
         chat_system_prompt = get_content_from_message(system_message) if system_message else ''
 
         try:
-            form_data['messages'], context_summary, _ = await compact_messages_for_request(
-                request,
-                user,
-                form_data.get('messages', []),
-                metadata,
-                form_data.get('model'),
-                request.app.state.MODELS,
-                chat_system_prompt,
-            )
-            if context_summary:
-                form_data['messages'] = add_or_update_system_message(
-                    f'[CONVERSATION SUMMARY]\n{context_summary}',
-                    form_data['messages'],
-                    append=True,
+            # Filters and resumed tool calls must still receive compacted history.
+            if (
+                filter_functions
+                or 'pipeline' in model
+                or model.get('pipe')
+                or get_sorted_filters(form_data['model'], request.app.state.MODELS)
+                or pending_assistant_message is not None
+                or metadata.get('params', {}).get('function_calling') == 'legacy'
+            ):
+                form_data['messages'], context_summary, _ = await compact_messages_for_request(
+                    request,
+                    None,
+                    user,
+                    form_data.get('messages', []),
+                    metadata,
+                    form_data['model'],
+                    request.app.state.MODELS,
+                    chat_system_prompt,
                 )
+                if context_summary:
+                    form_data['messages'] = add_or_update_system_message(
+                        f'[CONVERSATION SUMMARY]\n{context_summary}', form_data['messages'], append=True
+                    )
+            else:
+                compaction_messages = form_data.get('messages', [])
+                form_data['messages'], context_summary = await apply_summary_checkpoint(compaction_messages)
         except Exception:
+            compaction_messages = None
             log.exception('Context compaction failed; continuing with full chat history')
 
     # Compact the full chain, but prepare history separately from the response being resumed.
@@ -2223,6 +2240,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         include_file_context=metadata['include_file_context'],
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+    history_messages = [message for message in form_data['messages'] if message.get('role') != 'system']
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
@@ -2349,12 +2367,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise e
 
-    filter_functions = []
     filter_context = get_filter_context(request) if ENABLE_FUNCTIONS else None
     if ENABLE_FUNCTIONS:
         try:
-            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
-
             form_data, flags = await process_filter_functions(
                 request=request,
                 filter_context=filter_context,
@@ -2982,6 +2997,51 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     form_data = normalize_messages_for_model(form_data)
+
+    if compaction_messages is not None:
+        summary_form_data = {**form_data}
+        if context_summary:
+            summary_form_data['messages'] = add_or_update_system_message(
+                f'[CONVERSATION SUMMARY]\n{context_summary}',
+                [dict(message) for message in form_data['messages']],
+                append=True,
+            )
+        try:
+            _, context_summary, compacted = await compact_messages_for_request(
+                request,
+                summary_form_data,
+                user,
+                compaction_messages,
+                metadata,
+                form_data['model'],
+                request.app.state.MODELS,
+                chat_system_prompt,
+            )
+            if compacted:
+                # Compacted messages lead the history this request was built from.
+                compacted_count = len(
+                    sanitize_tool_pairs(
+                        process_messages_with_output(
+                            compacted,
+                            reasoning_format=get_reasoning_format(model),
+                            include_file_context=metadata['include_file_context'],
+                        )
+                    )
+                )
+                compacted_ids = {id(message) for message in history_messages[:compacted_count]}
+                form_data['messages'] = [
+                    message for message in form_data['messages'] if id(message) not in compacted_ids
+                ]
+        except Exception:
+            log.exception('Context compaction failed; continuing with full chat history')
+
+        if context_summary:
+            summary_content = f'[CONVERSATION SUMMARY]\n{context_summary}'
+            form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
+            base_system_prompt = metadata['base_system_prompt']
+            metadata['base_system_prompt'] = (
+                f'{base_system_prompt}\n{summary_content}' if base_system_prompt else summary_content
+            )
 
     return form_data, metadata, events, False
 
@@ -5943,6 +6003,25 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
 
+                            # Use the existing checkpoint format internally and strip it from the provider payload.
+                            def get_request_messages(messages: list[dict]) -> list[dict]:
+                                request_messages = process_messages_with_output(messages)
+                                context_summary = next(
+                                    (
+                                        message['contextSummary']
+                                        for message in messages
+                                        if message.get('contextSummary')
+                                    ),
+                                    None,
+                                )
+                                if context_summary:
+                                    request_messages.insert(
+                                        1 if request_messages and request_messages[0].get('role') == 'system' else 0,
+                                        {'role': 'system', 'content': f'[CONVERSATION SUMMARY]\n{context_summary}'},
+                                    )
+                                return request_messages
+
+                            new_form_data['messages'] = get_request_messages(messages)
                             try:
                                 user_messages = [
                                     (message, message.get('content'))
@@ -5951,6 +6030,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     and message.get('role') == 'user'
                                     and message.get('content') == user_prompt.get('content')
                                 ]
+                                summary_form_data = None
+                                if not filter_functions:
+                                    summary_form_data = normalize_messages_for_model(
+                                        await convert_url_images_to_base64({**new_form_data}, user=user)
+                                    )
                                 try:
                                     # Summarize the user's text, then restore source context for the model.
                                     for message, _ in user_messages:
@@ -5959,7 +6043,14 @@ async def streaming_chat_response_handler(response, ctx):
                                             metadata.get('base_user_prompt') or user_message, [message]
                                         )
                                     messages, context_summary, compacted = await compact_messages_for_request(
-                                        request, user, messages, metadata, form_data['model'], request.app.state.MODELS
+                                        request,
+                                        summary_form_data,
+                                        user,
+                                        messages,
+                                        metadata,
+                                        form_data['model'],
+                                        request.app.state.MODELS,
+                                        bypass_system_prompt=True,
                                     )
                                 finally:
                                     for message, content in user_messages:
@@ -5975,6 +6066,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         idx for idx, message in enumerate(messages) if message.get('role') != 'system'
                                     )
                                     messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
+                                    new_form_data['messages'] = get_request_messages(messages)
                                     output.append(
                                         {
                                             'type': 'open_webui:context_compaction',
@@ -5990,21 +6082,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     await emit_output()
                             except Exception:
                                 log.exception('Tool loop context compaction failed; keeping the current context')
-
-                            # Use the existing checkpoint format internally and strip it from the provider payload.
-                            new_form_data['messages'] = process_messages_with_output(messages)
-                            context_summary = next(
-                                (message['contextSummary'] for message in messages if message.get('contextSummary')),
-                                None,
-                            )
-                            if context_summary:
-                                new_form_data['messages'].insert(
-                                    1
-                                    if new_form_data['messages']
-                                    and new_form_data['messages'][0].get('role') == 'system'
-                                    else 0,
-                                    {'role': 'system', 'content': f'[CONVERSATION SUMMARY]\n{context_summary}'},
-                                )
 
                         new_form_data = await convert_url_images_to_base64(new_form_data, user=user)
 
