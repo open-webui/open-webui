@@ -312,7 +312,9 @@ class DoclingLoader:
                 if len(page_indices) != len(pages):
                     page_indices = range(len(pages))
                 documents = [
-                    Document(page_content=page.strip(), metadata={**metadata, 'page': page_idx})
+                    Document(
+                        page_content=page.strip(), metadata={**metadata, 'page': page_idx, 'page_label': page_idx + 1}
+                    )
                     for page_idx, page in zip(page_indices, pages)
                     if page.strip()
                 ]
