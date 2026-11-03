@@ -1,5 +1,6 @@
 """Permission-scoped workspace search. Shared snapshots never read the live chat."""
 
+import logging
 from typing import Literal
 from urllib.parse import urlencode
 
@@ -18,11 +19,16 @@ from open_webui.models.users import User
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
 from pydantic import BaseModel, Field
-from sqlalchemy import BigInteger, and_, case, cast, func, literal, or_, select, text, union_all
+from sqlalchemy import BigInteger, Text, and_, case, cast, func, literal, or_, select, text, union_all
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 PAGE_SIZE = 24
+MESSAGE_LIMIT = 1000
+MESSAGE_TIMEOUT_MS = 3000
+QUERY_CANCELED = '57014'
 
 
 class SearchResult(BaseModel):
@@ -58,6 +64,18 @@ def terms_for(query: str) -> list[str]:
 
 def pattern(value: str) -> str:
     return '%' + value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
+
+
+def has_trigrams(term: str) -> bool:
+    return sum(char.isalnum() for char in term) >= 3
+
+
+async def has_message_index(db: AsyncSession, dialect: str) -> bool:
+    if dialect == 'sqlite':
+        index_exists = "SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE name = 'message_fts')"
+    else:
+        index_exists = "SELECT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'message_content_trgm_idx')"
+    return bool((await db.execute(text(index_exists))).scalar())
 
 
 def excerpt(content: str, query: str, length: int = 200) -> str:
@@ -348,44 +366,88 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         rank = title_rank(Note.title, query) if query else case((pinned, 0), else_=3)
         sources['note'] = (Note, stmt, rank, cast(Note.updated_at.op('/')(literal(1_000_000_000)), BigInteger))
 
+    message_typos = False
     if 'message' in enabled and kind in ('all', 'message') and not scope.startswith('folder:') and not chat_filtered:
         ids = [scope.removeprefix('channel:')] if scope else list(channel_map)
-        stmt = select(Message, User.name).outerjoin(User, User.id == Message.user_id).where(Message.channel_id.in_(ids))
-        stmt = stmt.where(sharing_filter(Message.user_id))
-        for term in terms:
-            stmt = stmt.where(Message.content.ilike(pattern(term), escape='\\'))
-        sources['message'] = (
-            Message,
-            stmt,
-            literal(3),
-            cast(Message.updated_at.op('/')(literal(1_000_000_000)), BigInteger),
-        )
+        has_index = any(has_trigrams(term) for term in terms) and await has_message_index(db, dialect)
+        message_typos = has_index and dialect == 'postgresql'
+
+        def message_source(typos: bool) -> tuple:
+            term_matches = [Message.content.ilike(pattern(term), escape='\\') for term in terms]
+            conditions = list(term_matches)
+            if typos:
+                conditions = [
+                    or_(match, cast(term, Text).op('<%')(Message.content)) if has_trigrams(term) else match
+                    for term, match in zip(terms, term_matches)
+                ]
+            indexed_terms = [term for term in terms if has_trigrams(term)]
+            if has_index and dialect == 'sqlite' and indexed_terms:
+                phrases = ' AND '.join('"' + term.replace('"', '""') + '"' for term in indexed_terms)
+                conditions.append(
+                    text('message.rowid IN (SELECT rowid FROM message_fts WHERE message_fts MATCH :fts)').bindparams(
+                        fts=phrases
+                    )
+                )
+            order = [Message.updated_at.desc(), Message.id]
+            if typos:
+                order.insert(0, case((and_(*term_matches), 0), else_=1))
+            newest = (
+                select(Message.id)
+                .where(Message.channel_id.in_(ids), sharing_filter(Message.user_id), *conditions)
+                .order_by(*order)
+                .limit(MESSAGE_LIMIT)
+            )
+            stmt = select(Message, User.name).outerjoin(User, User.id == Message.user_id)
+            stmt = stmt.where(Message.channel_id.in_(ids), sharing_filter(Message.user_id), Message.id.in_(newest))
+            return (
+                Message,
+                stmt,
+                case((and_(*term_matches), 3), else_=4) if typos else literal(3),
+                cast(Message.updated_at.op('/')(literal(1_000_000_000)), BigInteger),
+            )
+
+        sources['message'] = message_source(message_typos)
 
     if not sources:
         return SearchResponse(items=[], has_more=False, scopes=scopes, kinds=list(enabled))
 
     # Page one combined, permission-filtered ID query. Only hydrate the 24 visible
     # results, rather than repeatedly loading full conversation JSON while scrolling.
-    candidates = union_all(
-        *[
-            stmt.with_only_columns(
-                literal(source).label('source'),
-                model.id.label('id'),
-                rank.label('rank'),
-                updated.label('updated_at'),
-                maintain_column_froms=True,
-            )
-            for source, (model, stmt, rank, updated) in sources.items()
-        ]
-    ).subquery()
-    matches = (
-        await db.execute(
+    async def fetch_matches(timed: bool) -> list:
+        candidates = union_all(
+            *[
+                stmt.with_only_columns(
+                    literal(source).label('source'),
+                    model.id.label('id'),
+                    rank.label('rank'),
+                    updated.label('updated_at'),
+                    maintain_column_froms=True,
+                )
+                for source, (model, stmt, rank, updated) in sources.items()
+            ]
+        ).subquery()
+        page_stmt = (
             select(candidates)
             .order_by(candidates.c.rank, candidates.c.updated_at.desc(), candidates.c.source, candidates.c.id)
             .offset((page - 1) * PAGE_SIZE)
             .limit(PAGE_SIZE + 1)
         )
-    ).all()
+        if not timed:
+            return (await db.execute(page_stmt)).all()
+        async with db.begin_nested():
+            await db.execute(text(f'SET LOCAL statement_timeout = {MESSAGE_TIMEOUT_MS}'))
+            rows = (await db.execute(page_stmt)).all()
+            await db.execute(text('RESET statement_timeout'))
+            return rows
+
+    try:
+        matches = await fetch_matches(timed=message_typos)
+    except DBAPIError as exc:
+        if not message_typos or getattr(exc.orig, 'sqlstate', None) != QUERY_CANCELED:
+            raise
+        log.warning('Message typo search timed out, using exact matching: %s', exc.orig)
+        sources['message'] = message_source(False)
+        matches = await fetch_matches(timed=False)
     has_more = len(matches) > PAGE_SIZE
     matches = matches[:PAGE_SIZE]
     hydrated = {}
