@@ -180,12 +180,14 @@
 		typingUsers = [];
 		typingUsersTimeout = {};
 
+		const messagesRequest = getChannelMessages(localStorage.token, id, 0).catch(() => null);
+
 		channel = await getChannelById(localStorage.token, id).catch((error) => {
 			return null;
 		});
 
 		if (channel) {
-			messages = await getChannelMessages(localStorage.token, id, 0);
+			messages = await messagesRequest;
 
 			if (messages) {
 				scrollToBottom();
