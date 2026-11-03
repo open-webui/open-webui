@@ -412,14 +412,11 @@ class MessageTable:
             )
             all_messages = result.scalars().all()
 
+            reply_to_messages = await self._get_reply_to_messages(all_messages, db)
+
             messages = []
             for message in all_messages:
-                reply_to_message = (
-                    await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
-                    if message.reply_to_id
-                    else None
-                )
-
+                reply_to_message = reply_to_messages.get(message.reply_to_id)
                 user_info = await self._resolve_user_info(message, db)
 
                 messages.append(
@@ -427,11 +424,32 @@ class MessageTable:
                         {
                             **MessageModel.model_validate(message).model_dump(),
                             'user': user_info,
-                            'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
+                            'reply_to_message': reply_to_message,
                         }
                     )
                 )
             return messages
+
+    async def _get_reply_to_messages(self, messages: list[Message], db: AsyncSession) -> dict[str, dict]:
+        """Fetch every reply target of the given messages in a fixed number of queries, keyed by message id."""
+        reply_to_ids = {message.reply_to_id for message in messages if message.reply_to_id}
+        if not reply_to_ids:
+            return {}
+
+        result = await db.execute(select(Message).filter(Message.id.in_(reply_to_ids)))
+        targets = {message.id: message for message in result.scalars().all()}
+
+        user_infos = {target_id: await self._resolve_user_info(target, db) for target_id, target in targets.items()}
+        author_ids = [target.user_id for target_id, target in targets.items() if user_infos[target_id] is None]
+        authors = {user.id: user for user in await Users.get_users_by_user_ids(author_ids, db=db)}
+
+        reply_to_messages = {}
+        for target_id, target in targets.items():
+            user_info = user_infos[target_id]
+            if user_info is None and target.user_id in authors:
+                user_info = authors[target.user_id].model_dump()
+            reply_to_messages[target_id] = {**MessageModel.model_validate(target).model_dump(), 'user': user_info}
+        return reply_to_messages
 
     async def get_messages_by_parent_id(
         self,
