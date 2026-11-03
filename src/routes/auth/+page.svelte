@@ -250,6 +250,7 @@
 />
 
 <div class="w-full h-dvh text-white relative" id="auth-page">
+	<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
 	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
