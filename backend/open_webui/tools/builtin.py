@@ -2840,6 +2840,21 @@ async def grep_knowledge_files(
         return JSONCodec.dumps({'error': str(e)})
 
 
+def _numbered_lines_within_cap(all_lines: list[str], start: int, end: int) -> tuple[str, int]:
+    """Number lines start..end, stopping at the last whole line that fits VIEW_FILE_MAX_CHARS."""
+    numbered_lines = []
+    used_chars = 0
+    for line_index in range(start, end):
+        numbered_line = f'{line_index + 1}: {all_lines[line_index]}'
+        if used_chars + len(numbered_line) > VIEW_FILE_MAX_CHARS:
+            if numbered_lines:
+                return '\n'.join(numbered_lines), line_index
+            return numbered_line[:VIEW_FILE_MAX_CHARS], line_index + 1
+        numbered_lines.append(numbered_line)
+        used_chars += len(numbered_line) + 1
+    return '\n'.join(numbered_lines), end
+
+
 async def view_file(
     file_id: str,
     offset: int = 0,
@@ -2904,11 +2919,10 @@ async def view_file(
         if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line or 1)) - 1  # 1-indexed to 0-indexed
-            e = min(total_lines, int(end_line) if end_line else s + 100)
-            selected = all_lines[s:e]
-            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
-            is_truncated = e < total_lines
+            start_index = max(1, int(start_line or 1)) - 1  # 1-indexed to 0-indexed
+            end_index = min(total_lines, int(end_line) if end_line else start_index + 100)
+            sliced, end_index = _numbered_lines_within_cap(all_lines, start_index, end_index)
+            is_truncated = end_index < total_lines
             result = {
                 'id': file.id,
                 'filename': file.filename,
@@ -2916,11 +2930,11 @@ async def view_file(
                 'updated_at': file.updated_at,
                 'created_at': file.created_at,
                 'total_lines': total_lines,
-                'showing_lines': f'{s + 1}-{e}',
+                'showing_lines': f'{start_index + 1}-{end_index}',
             }
             if is_truncated:
                 result['truncated'] = True
-                result['next_start_line'] = e + 1
+                result['next_start_line'] = end_index + 1
             return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
@@ -3045,11 +3059,10 @@ async def view_knowledge_file(
         if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line or 1)) - 1
-            e = min(total_lines, int(end_line) if end_line else s + 100)
-            selected = all_lines[s:e]
-            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
-            is_truncated = e < total_lines
+            start_index = max(1, int(start_line or 1)) - 1
+            end_index = min(total_lines, int(end_line) if end_line else start_index + 100)
+            sliced, end_index = _numbered_lines_within_cap(all_lines, start_index, end_index)
+            is_truncated = end_index < total_lines
             result = {
                 'id': file.id,
                 'filename': file.filename,
@@ -3057,14 +3070,14 @@ async def view_knowledge_file(
                 'updated_at': file.updated_at,
                 'created_at': file.created_at,
                 'total_lines': total_lines,
-                'showing_lines': f'{s + 1}-{e}',
+                'showing_lines': f'{start_index + 1}-{end_index}',
             }
             if knowledge_info:
                 result['knowledge_id'] = knowledge_info['id']
                 result['knowledge_name'] = knowledge_info['name']
             if is_truncated:
                 result['truncated'] = True
-                result['next_start_line'] = e + 1
+                result['next_start_line'] = end_index + 1
             return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
