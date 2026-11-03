@@ -483,7 +483,7 @@
 	let feedbackLoading = false;
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
-		if (feedbackLoading) return;
+		if (feedbackLoading && rating !== null) return;
 		feedbackLoading = true;
 		console.log('Feedback', rating, details);
 
