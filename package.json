@@ -75,7 +75,7 @@
 		"@pixiv/three-vrm": "3.5.5",
 		"@pixiv/three-vrm-animation": "3.5.5",
 		"@pyscript/core": "^0.4.32",
-		"@sveltejs/adapter-node": "^2.0.0",
+		"@sveltejs/adapter-node": "^6.0.1",
 		"@sveltejs/svelte-virtual-list": "^3.0.1",
 		"@tiptap/core": "^3.0.7",
 		"@tiptap/extension-bubble-menu": "^3.0.7",
