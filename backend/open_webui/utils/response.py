@@ -835,7 +835,7 @@ def handle_responses_streaming_event(
 
         return current_output, None
 
-    elif event_type == 'response.completed':
+    elif event_type in ('response.completed', 'response.incomplete'):
         # State Machine Event: Completed
         response_data = data.get('response', {})
         final_output = response_data.get('output')
