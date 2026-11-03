@@ -8,7 +8,22 @@ from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserNameResponse, Users
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text, update
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    String,
+    Text,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
@@ -17,6 +32,7 @@ from sqlalchemy.sql import exists
 
 class MessageReaction(Base):
     __tablename__ = 'message_reaction'
+    __table_args__ = (Index('ix_message_reaction_message_id', 'message_id'),)
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
     message_id = Column(Text)
@@ -36,6 +52,10 @@ class MessageReactionModel(BaseModel):
 
 class Message(Base):
     __tablename__ = 'message'
+    __table_args__ = (
+        Index('ix_message_channel_parent_created', 'channel_id', 'parent_id', 'created_at'),
+        Index('ix_message_parent_id', 'parent_id'),
+    )
     id = Column(Text, primary_key=True, unique=True)
 
     user_id = Column(Text)
