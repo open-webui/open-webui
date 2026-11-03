@@ -481,6 +481,7 @@
 	let feedbackLoading = false;
 
 	const feedbackHandler = async (rating: number | null = null, details: object | null = null) => {
+		if (feedbackLoading) return;
 		feedbackLoading = true;
 		console.log('Feedback', rating, details);
 
@@ -1333,8 +1334,8 @@
 													message?.annotation?.rating ?? ''
 												).toString() === '1'
 													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-gray-400 hover:text-gray-600 transition disabled:cursor-progress disabled:hover:bg-transparent"
-												disabled={feedbackLoading}
+													: ''} dark:hover:text-gray-400 hover:text-gray-600 transition aria-disabled:cursor-progress aria-disabled:hover:bg-transparent"
+												aria-disabled={feedbackLoading}
 												on:click={async (e) => {
 													e.stopPropagation();
 													await feedbackHandler(1);
@@ -1377,8 +1378,8 @@
 													message?.annotation?.rating ?? ''
 												).toString() === '-1'
 													? 'bg-gray-100 dark:bg-gray-800'
-													: ''} dark:hover:text-gray-400 hover:text-gray-600 transition disabled:cursor-progress disabled:hover:bg-transparent"
-												disabled={feedbackLoading}
+													: ''} dark:hover:text-gray-400 hover:text-gray-600 transition aria-disabled:cursor-progress aria-disabled:hover:bg-transparent"
+												aria-disabled={feedbackLoading}
 												on:click={async (e) => {
 													e.stopPropagation();
 													await feedbackHandler(-1);

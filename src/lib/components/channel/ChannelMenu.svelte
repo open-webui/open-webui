@@ -96,8 +96,8 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={!isMuted}
-					disabled={saving}
-					class="disabled:opacity-50"
+					aria-disabled={saving}
+					class="aria-disabled:opacity-50"
 					on:click={() => setMuted(false)}
 				>
 					<AppNotification className="size-3.5 shrink-0" />
@@ -110,8 +110,8 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={isMuted}
-					disabled={saving}
-					class="disabled:opacity-50"
+					aria-disabled={saving}
+					class="aria-disabled:opacity-50"
 					on:click={() => setMuted(true)}
 				>
 					<BellSlash className="size-3.5 shrink-0" />
