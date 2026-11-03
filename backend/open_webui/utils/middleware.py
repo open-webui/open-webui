@@ -5292,11 +5292,6 @@ async def streaming_chat_response_handler(response, ctx):
                                                 reasoning_item.setdefault('reasoning_details', []),
                                                 reasoning_detail_items,
                                             )
-                                            await flush_pending_delta_data()
-                                            await event_emitter(
-                                                {'type': 'chat:completion', 'data': {'output': full_output()}}
-                                            )
-                                            stream_size = 0
                                             data = None
 
                                     if value:
