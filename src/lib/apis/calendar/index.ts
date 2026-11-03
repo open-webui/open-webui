@@ -69,7 +69,7 @@ export type CalendarForm = {
 	access_grants?: { target_type: string; target_id: string; permission: string }[];
 };
 
-// ── Calendars ─────────────────────────────────
+// Calendars
 
 export const getCalendars = async (token: string): Promise<CalendarModel[]> => {
 	let error = null;
@@ -220,7 +220,7 @@ export const setDefaultCalendar = async (
 	return res;
 };
 
-// ── Events ─────────────────────────────────
+// Events
 
 export const getCalendarEvents = async (
 	token: string,

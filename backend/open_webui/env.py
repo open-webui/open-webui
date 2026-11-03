@@ -18,9 +18,7 @@ import markdown
 from bs4 import BeautifulSoup
 from cryptography.hazmat.primitives import serialization
 
-####################################
 # Load .env file
-####################################
 
 # Use .resolve() to get the canonical path, removing any '..' or '.' components
 ENV_FILE_PATH = Path(__file__).resolve()
@@ -72,9 +70,7 @@ if not USE_SLIM and sys.platform == 'darwin' and DEVICE_TYPE == 'cpu':
 # Torch MPS inference is not thread-safe and a concurrent call kills the whole process.
 MPS_INFERENCE_LOCK = threading.Lock() if DEVICE_TYPE == 'mps' else nullcontext()
 
-####################################
-# LOGGING
-####################################
+# Logging
 
 _LEVEL_MAP = {
     'DEBUG': 'debug',
@@ -132,9 +128,7 @@ if _cuda_error:
 
 SRC_LOG_LEVELS = {}  # Legacy variable, do not remove
 
-####################################
 # ENV (dev,test,prod)
-####################################
 
 ENV = os.getenv('ENV', 'dev')
 
@@ -221,9 +215,7 @@ for version in soup.find_all('h2'):
 
 CHANGELOG = changelog_json
 
-####################################
-# DATA/FRONTEND BUILD DIR
-####################################
+# Data/frontend build dir
 
 DATA_DIR = Path(os.getenv('DATA_DIR', BACKEND_DIR / 'data')).resolve()
 
@@ -256,9 +248,7 @@ FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', BASE_DIR / 'build')).r
 if FROM_INIT_PY:
     FRONTEND_BUILD_DIR = Path(os.getenv('FRONTEND_BUILD_DIR', OPEN_WEBUI_DIR / 'frontend')).resolve()
 
-####################################
 # Database
-####################################
 
 # Check if the file exists
 if os.path.exists(f'{DATA_DIR}/ollama.db'):
@@ -374,9 +364,7 @@ RAG_SYSTEM_CONTEXT = os.getenv('RAG_SYSTEM_CONTEXT', 'False').lower() == 'true'
 # Empty by default: chunk metadata also holds internal bookkeeping (file hashes, collection names, scores).
 RAG_SOURCE_METADATA_KEYS = [key.strip() for key in os.getenv('RAG_SOURCE_METADATA_KEYS', '').split(',') if key.strip()]
 
-####################################
-# REDIS
-####################################
+# Redis
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 REDIS_CLUSTER = os.getenv('REDIS_CLUSTER', 'False').lower() == 'true'
@@ -454,9 +442,7 @@ else:
     except Exception:
         REDIS_RECONNECT_DELAY = None
 
-####################################
 # Uvicorn
-####################################
 
 try:
     UVICORN_WORKERS = max(int(os.getenv('UVICORN_WORKERS', '1')), 1)
@@ -466,9 +452,7 @@ except (ValueError, TypeError):
 # tiny delta-stream frames make per-frame websocket compression CPU-bound, allow opting out (true/false)
 UVICORN_WS_PER_MESSAGE_DEFLATE = os.getenv('UVICORN_WS_PER_MESSAGE_DEFLATE', 'True').lower() == 'true'
 
-####################################
-# WEBSOCKET SUPPORT
-####################################
+# Websocket support
 
 ENABLE_WEBSOCKET_SUPPORT = os.getenv('ENABLE_WEBSOCKET_SUPPORT', 'True').lower() == 'true'
 
@@ -728,9 +712,7 @@ except (ValueError, TypeError):
     MCP_INITIALIZE_TIMEOUT = 10
 
 
-####################################
 # AIOHTTP Connection Pool
-####################################
 
 AIOHTTP_POOL_CONNECTIONS = os.getenv('AIOHTTP_POOL_CONNECTIONS', '')
 if AIOHTTP_POOL_CONNECTIONS == '':
@@ -778,18 +760,14 @@ else:
         RAG_EMBEDDING_TIMEOUT = None
 
 
-####################################
 # Auth
-####################################
 
 WEBUI_AUTH = os.getenv('WEBUI_AUTH', 'True').lower() == 'true'
 
 ENABLE_INITIAL_ADMIN_SIGNUP = os.getenv('ENABLE_INITIAL_ADMIN_SIGNUP', 'False').lower() == 'true'
 ENABLE_SIGNUP_PASSWORD_CONFIRMATION = os.getenv('ENABLE_SIGNUP_PASSWORD_CONFIRMATION', 'False').lower() == 'true'
 
-####################################
 # Secret key & cookies
-####################################
 
 # WEBUI_JWT_SECRET_KEY is deprecated; use WEBUI_SECRET_KEY instead.
 # No hardcoded fallback by design: the supported start scripts set/auto-generate it; unset is rejected below.
@@ -823,9 +801,7 @@ if WEBUI_AUTH and WEBUI_SECRET_KEY == '':
 
 ENABLE_COMPRESSION_MIDDLEWARE = os.getenv('ENABLE_COMPRESSION_MIDDLEWARE', 'True').lower() == 'true'
 
-####################################
 # Admin Account Runtime Creation
-####################################
 
 # Optional env vars for creating an admin account on startup
 # Useful for headless/automated deployments
@@ -907,9 +883,7 @@ ENABLE_OPENAI_API_PASSTHROUGH = os.getenv('ENABLE_OPENAI_API_PASSTHROUGH', 'Fals
 
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.getenv('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
 
-####################################
 # OAUTH Configuration
-####################################
 ENABLE_OAUTH_EMAIL_FALLBACK = os.getenv('ENABLE_OAUTH_EMAIL_FALLBACK', 'False').lower() == 'true'
 
 ENABLE_OAUTH_ID_TOKEN_COOKIE = os.getenv('ENABLE_OAUTH_ID_TOKEN_COOKIE', 'True').lower() == 'true'
@@ -944,9 +918,7 @@ OAUTH_TOKEN_EXCHANGE_TRUSTED_CLIENT_IDS = [
 # Requires Redis for JWT revocation.
 ENABLE_OAUTH_BACKCHANNEL_LOGOUT = os.getenv('ENABLE_OAUTH_BACKCHANNEL_LOGOUT', 'False').lower() == 'true'
 
-####################################
 # SCIM Configuration
-####################################
 
 ENABLE_SCIM = os.getenv('ENABLE_SCIM', os.getenv('SCIM_ENABLED', 'False')).lower() == 'true'
 SCIM_TOKEN = os.getenv('SCIM_TOKEN', '')
@@ -959,9 +931,7 @@ if ENABLE_SCIM and not SCIM_AUTH_PROVIDER:
         'to enable externalId storage.'
     )
 
-####################################
 # LICENSE_KEY
-####################################
 
 LICENSE_KEY = os.getenv('LICENSE_KEY', '')
 
@@ -984,9 +954,7 @@ if LICENSE_PUBLIC_KEY:
     )
 
 
-####################################
 # WEBUI Identity
-####################################
 
 # LICENSE covers this Open WebUI branding surface, including name, logo,
 # visual, textual, symbolic identifiers, metadata, and surrounding UI.
@@ -1004,9 +972,7 @@ WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 
-####################################
 # Feature flags
-####################################
 
 SAFE_MODE = os.getenv('SAFE_MODE', 'False').lower() == 'true'
 ENABLE_EASTER_EGGS = os.getenv('ENABLE_EASTER_EGGS', 'True').lower() == 'true'
@@ -1028,9 +994,7 @@ PROFILE_IMAGE_ALLOWED_MIME_TYPES = frozenset(
 _profile_image_max_data_uri_size = os.getenv('PROFILE_IMAGE_MAX_DATA_URI_SIZE', '').strip()
 PROFILE_IMAGE_MAX_DATA_URI_SIZE = int(_profile_image_max_data_uri_size) if _profile_image_max_data_uri_size else None
 
-####################################
 # Forward Headers
-####################################
 
 ENABLE_FORWARD_USER_INFO_HEADERS = os.getenv('ENABLE_FORWARD_USER_INFO_HEADERS', 'False').lower() == 'true'
 
@@ -1053,9 +1017,7 @@ try:
 except ValueError:
     FORWARD_USER_INFO_HEADER_JWT_EXPIRES_SECONDS = 300
 
-####################################
 # Progressive Web App
-####################################
 
 # LICENSE covers this install-time Open WebUI branding surface, including
 # names, logos, manifests, metadata, and surrounding UI.
@@ -1063,18 +1025,14 @@ except ValueError:
 # https://docs.openwebui.com/license.
 EXTERNAL_PWA_MANIFEST_URL = os.getenv('EXTERNAL_PWA_MANIFEST_URL', None)
 
-####################################
-# GROUP DEFAULTS
-####################################
+# Group defaults
 
 # Controls the default "Who can share to this group" setting for new groups.
 # Env var values: "true" (anyone), "false" (no one), "members" (only group members).
 _default_group_share = os.getenv('DEFAULT_GROUP_SHARE_PERMISSION', 'members').strip().lower()
 DEFAULT_GROUP_SHARE_PERMISSION = 'members' if _default_group_share == 'members' else _default_group_share == 'true'
 
-####################################
-# MODELS
-####################################
+# Models
 
 ENABLE_CUSTOM_MODEL_FALLBACK = os.getenv('ENABLE_CUSTOM_MODEL_FALLBACK', 'False').lower() == 'true'
 
@@ -1088,9 +1046,7 @@ else:
         MODELS_CACHE_TTL = 1
 
 
-####################################
-# CHAT
-####################################
+# Chat
 
 ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION = (
     os.getenv('ENABLE_CHAT_RESPONSE_BASE64_IMAGE_URL_CONVERSION', 'False').lower() == 'true'
@@ -1128,16 +1084,16 @@ else:
 # The old CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES name is accepted as a fallback.
 CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = os.getenv(
     'CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS',
-    os.getenv('CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES', '256'),
+    os.getenv('CHAT_RESPONSE_MAX_TOOL_CALL_RETRIES', '1024'),
 )
 
 if CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS == '':
-    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 256
+    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 1024
 else:
     try:
         CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = int(CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS)
     except Exception:
-        CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 256
+        CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS = 1024
 
 # -1 means unlimited (no cap).
 if CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS == -1:
@@ -1162,9 +1118,7 @@ else:
         CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE = None
 
 
-####################################
-# SENTENCE TRANSFORMERS
-####################################
+# Sentence transformers
 
 
 SENTENCE_TRANSFORMERS_BACKEND = os.getenv('SENTENCE_TRANSFORMERS_BACKEND', '')
@@ -1203,9 +1157,7 @@ SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION = (
     os.getenv('SENTENCE_TRANSFORMERS_CROSS_ENCODER_SIGMOID_ACTIVATION_FUNCTION', 'True').lower() == 'true'
 )
 
-####################################
-# KNOWLEDGE TOOLS
-####################################
+# Knowledge tools
 
 
 def _int_env(name: str, default: int) -> int:
@@ -1225,9 +1177,7 @@ KNOWLEDGE_GREP_MAX_MATCHES = _int_env('KNOWLEDGE_GREP_MAX_MATCHES', 50)
 VIEW_FILE_MAX_CHARS = _int_env('VIEW_FILE_MAX_CHARS', 100_000)
 VIEW_FILE_DEFAULT_MAX_CHARS = _int_env('VIEW_FILE_DEFAULT_MAX_CHARS', 10_000)
 
-####################################
-# TOOLS/FUNCTIONS PIP OPTIONS
-####################################
+# Tools/functions pip options
 
 ENABLE_PLUGINS = os.getenv('ENABLE_PLUGINS', 'True').lower() == 'true'
 # Deployment controls: the master switch always overrides all feature switches.
@@ -1243,9 +1193,7 @@ PIP_OPTIONS = os.getenv('PIP_OPTIONS', '').split()
 PIP_PACKAGE_INDEX_OPTIONS = os.getenv('PIP_PACKAGE_INDEX_OPTIONS', '').split()
 
 
-####################################
 # OFFLINE_MODE
-####################################
 
 ENABLE_VERSION_UPDATE_CHECK = os.getenv('ENABLE_VERSION_UPDATE_CHECK', 'true').lower() == 'true'
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'false').lower() == 'true'
@@ -1254,15 +1202,11 @@ if OFFLINE_MODE:
     os.environ['HF_HUB_OFFLINE'] = '1'
     ENABLE_VERSION_UPDATE_CHECK = False
 
-####################################
 # Pyodide file persistence
-####################################
 
 ENABLE_PYODIDE_FILE_PERSISTENCE = os.getenv('ENABLE_PYODIDE_FILE_PERSISTENCE', 'false').lower() == 'true'
 
-####################################
 # Audit logging
-####################################
 
 
 ENABLE_AUDIT_STDOUT = os.getenv('ENABLE_AUDIT_STDOUT', 'False').lower() == 'true'
@@ -1306,9 +1250,7 @@ AUDIT_INCLUDED_PATHS = [
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
 
 
-####################################
-# OPENTELEMETRY
-####################################
+# OpenTelemetry
 
 ENABLE_OTEL = os.getenv('ENABLE_OTEL', 'False').lower() == 'true'
 ENABLE_OTEL_TRACES = os.getenv('ENABLE_OTEL_TRACES', 'False').lower() == 'true'

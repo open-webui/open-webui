@@ -149,8 +149,14 @@
 		hoveredId = id;
 		pinned = pin;
 		const rect = element.getBoundingClientRect();
-		popoverX = Math.max(8, Math.min(window.innerWidth - 296, rect.left));
-		popoverY = Math.max(8, Math.min(window.innerHeight - 260, rect.bottom + 10));
+		popoverX = Math.max(
+			8,
+			Math.min(window.innerWidth - (popover?.offsetWidth ?? 0) - 8, rect.left)
+		);
+		popoverY = Math.max(
+			8,
+			Math.min(window.innerHeight - (popover?.offsetHeight ?? 0) - 8, rect.bottom + 10)
+		);
 	};
 	const displayDate = (value: string) => {
 		const pdf = /^D:(\d{4})(\d{2})(\d{2})/.exec(value);
@@ -312,7 +318,9 @@
 			selectedExcelSheet={sheet}
 			onSheetChange={setSheet}
 		/>
-	{:else if previewError}<p class="p-4 text-sm text-red-500">{$i18n.t('Preview failed')}</p>{/if}
+	{:else if previewError}<p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+			{$i18n.t('Preview failed')}
+		</p>{/if}
 	{#if unplaced.length || commentState === 'error' || commentState === 'partial'}
 		<button
 			type="button"

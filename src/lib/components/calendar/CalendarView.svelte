@@ -125,6 +125,24 @@
 		return new Date(2000, 0, 1, h).toLocaleTimeString($i18n.language, { hour: 'numeric' });
 	}
 
+	function formatDay(d: Date): string {
+		return d.toLocaleDateString($i18n.language, {
+			weekday: 'long',
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric'
+		});
+	}
+
+	function formatDayHour(d: Date, h: number): string {
+		return new Date(d.getFullYear(), d.getMonth(), d.getDate(), h).toLocaleString($i18n.language, {
+			weekday: 'long',
+			month: 'long',
+			day: 'numeric',
+			hour: 'numeric'
+		});
+	}
+
 	function handleDayClick(day: Date) {
 		currentDate = day;
 		onNavigate();
@@ -171,15 +189,20 @@
 					{@const dayEvents = eventsByDay[dayKey] || []}
 					{@const col = i % 7}
 					{@const row = Math.floor(i / 7)}
-					<button
-						class="p-1 min-h-0 text-left overflow-hidden transition cursor-pointer flex flex-col
+					<div
+						class="relative p-1 min-h-0 text-left overflow-hidden transition cursor-pointer flex flex-col
 							{isCurrentMonth(day) ? '' : ($settings?.highContrastMode ?? false) ? 'opacity-80' : 'opacity-40'}
 							hover:bg-gray-50/80 dark:hover:bg-gray-850/30
 							{col > 0 ? 'border-l border-gray-100/20 dark:border-gray-850/20' : ''}
 							{row > 0 ? 'border-t border-gray-100/20 dark:border-gray-850/20' : ''}"
-						on:click={() => handleDayClick(day)}
 					>
-						<div class="flex justify-start px-0.5 mb-0.5">
+						<button
+							type="button"
+							class="absolute inset-0"
+							aria-label={formatDay(day)}
+							on:click={() => handleDayClick(day)}
+						></button>
+						<div class="relative pointer-events-none flex justify-start px-0.5 mb-0.5">
 							<span
 								class="text-xs w-6 h-6 flex items-center justify-center rounded-full
 								{isToday(day)
@@ -191,7 +214,7 @@
 								{day.getDate()}
 							</span>
 						</div>
-						<div class="flex flex-col gap-0 flex-1 overflow-hidden">
+						<div class="relative pointer-events-none flex flex-col gap-0 flex-1 overflow-hidden">
 							{#each dayEvents.slice(0, 3) as evt (evt.instance_id || evt.id)}
 								<CalendarEventChip
 									event={evt}
@@ -200,16 +223,16 @@
 								/>
 							{/each}
 							{#if dayEvents.length > 3}
-								<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
-								<div
-									class="text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
-									on:click|stopPropagation={() => goToDayView(day)}
+								<button
+									type="button"
+									class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+									on:click={() => goToDayView(day)}
 								>
 									{$i18n.t('and {{COUNT}} more', { COUNT: dayEvents.length - 3 })}
-								</div>
+								</button>
 							{/if}
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		</div>
@@ -264,13 +287,20 @@
 									</div>
 									{#each weekDays as day}
 										{@const hourEvents = getEventsForHour(day, hour, filteredEvents)}
-										<button
-											class="px-0.5 py-0.5 {day.getDay() > 0
+										<div
+											class="relative px-0.5 py-0.5 {day.getDay() > 0
 												? 'border-l border-gray-100/15 dark:border-gray-850/15'
 												: ''} hover:bg-gray-50/50 dark:hover:bg-gray-850/20 transition cursor-pointer min-w-0 flex flex-col"
-											on:click={() => handleHourClick(day, hour)}
 										>
-											<div class="flex flex-col gap-0.5 w-full min-h-0">
+											<button
+												type="button"
+												class="absolute inset-0"
+												aria-label={formatDayHour(day, hour)}
+												on:click={() => handleHourClick(day, hour)}
+											></button>
+											<div
+												class="relative pointer-events-none flex flex-col gap-0.5 w-full min-h-0"
+											>
 												{#each hourEvents.slice(0, 3) as evt (evt.instance_id || evt.id)}
 													<CalendarEventChip
 														event={evt}
@@ -279,16 +309,16 @@
 													/>
 												{/each}
 												{#if hourEvents.length > 3}
-													<!-- svelte-ignore a11y-click-events-have-key-events --><!-- svelte-ignore a11y-no-static-element-interactions -->
-													<div
-														class="text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
-														on:click|stopPropagation={() => goToDayView(day)}
+													<button
+														type="button"
+														class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+														on:click={() => goToDayView(day)}
 													>
 														{$i18n.t('and {{COUNT}} more', { COUNT: hourEvents.length - 3 })}
-													</div>
+													</button>
 												{/if}
 											</div>
-										</button>
+										</div>
 									{/each}
 								</div>
 							{/each}
@@ -316,12 +346,17 @@
 						>
 							{formatHour(hour)}
 						</div>
-						<button
-							class="flex-1 border-l border-gray-100/15 dark:border-gray-850/15 px-1.5 py-0.5
+						<div
+							class="relative flex-1 border-l border-gray-100/15 dark:border-gray-850/15 px-1.5 py-0.5
 								hover:bg-gray-50/50 dark:hover:bg-gray-850/20 transition cursor-pointer flex flex-col text-left justify-start"
-							on:click={() => handleHourClick(currentDate, hour)}
 						>
-							<div class="flex flex-col gap-0.5 w-full">
+							<button
+								type="button"
+								class="absolute inset-0"
+								aria-label={formatDayHour(currentDate, hour)}
+								on:click={() => handleHourClick(currentDate, hour)}
+							></button>
+							<div class="relative pointer-events-none flex flex-col gap-0.5 w-full">
 								{#each hourEvents as evt (evt.instance_id || evt.id)}
 									<CalendarEventChip
 										event={evt}
@@ -330,7 +365,7 @@
 									/>
 								{/each}
 							</div>
-						</button>
+						</div>
 					</div>
 				{/each}
 			</div>

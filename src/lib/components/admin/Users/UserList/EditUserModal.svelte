@@ -130,12 +130,12 @@
 	}}
 />
 
-<Modal size="sm" bind:show>
+<Modal ariaLabel={$i18n.t('Edit User')} size="sm" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Edit User')}</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -302,7 +302,12 @@
 									{#if rotatedAPIKey}
 										<div class="space-y-1.5">
 											<div class="flex items-center gap-2">
-												<SensitiveInput variant="settings" value={rotatedAPIKey} readOnly={true} />
+												<SensitiveInput
+													variant="settings"
+													placeholder={$i18n.t('API Key')}
+													value={rotatedAPIKey}
+													readOnly={true}
+												/>
 												<button
 													type="button"
 													class="shrink-0 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"

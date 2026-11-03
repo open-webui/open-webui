@@ -205,6 +205,7 @@
 
 		<div class="px-1.5 py-0.5">
 			<select
+				aria-label={$i18n.t('Schedule')}
 				class="w-full h-[1.6875rem] bg-transparent rounded-xl text-[0.8125rem] px-1.5 outline-hidden"
 				bind:value={frequency}
 				on:click={(e) => e.stopPropagation()}
@@ -219,6 +220,7 @@
 		{#if frequency === 'CUSTOM'}
 			<div class="px-2 pb-2">
 				<input
+					aria-label={$i18n.t('Custom schedule')}
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
@@ -232,6 +234,7 @@
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">
 						<input
+							aria-label={$i18n.t('Date')}
 							type="date"
 							bind:value={onceDate}
 							min={dayjs().format('YYYY-MM-DD')}
@@ -242,6 +245,7 @@
 					</div>
 					<div class="flex items-center gap-1.5">
 						<input
+							aria-label={$i18n.t('Time')}
 							type="time"
 							bind:value={onceTime}
 							class="bg-transparent outline-hidden text-xs dark:scheme-dark"
@@ -253,6 +257,7 @@
 					<div class="flex items-center gap-1.5">
 						<span class="text-xs text-gray-500 mr-0.5">{$i18n.t('Time')}</span>
 						<input
+							aria-label={$i18n.t('Time')}
 							type="time"
 							value={`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`}
 							on:input={(e) => {
@@ -271,6 +276,7 @@
 					<div class="flex items-center gap-1.5">
 						<span class="text-xs text-gray-500">{$i18n.t('Day')}</span>
 						<input
+							aria-label={$i18n.t('Day')}
 							type="number"
 							bind:value={monthDay}
 							min={1}

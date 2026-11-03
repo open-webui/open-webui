@@ -90,8 +90,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeExecutionJupyterUrl.description'
 							)}
+							forId="code-execution-jupyter-url"
 						>
 							<input
+								id="code-execution-jupyter-url"
 								class={inputClass}
 								type="text"
 								placeholder={$i18n.t('Enter Jupyter URL')}
@@ -155,8 +157,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeExecutionJupyterTimeout.description'
 							)}
+							forId="code-execution-jupyter-timeout"
 						>
 							<input
+								id="code-execution-jupyter-timeout"
 								class={inputClass}
 								type="number"
 								bind:value={config.CODE_EXECUTION_JUPYTER_TIMEOUT}
@@ -208,8 +212,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeInterpreterJupyterUrl.description'
 							)}
+							forId="code-interpreter-jupyter-url"
 						>
 							<input
+								id="code-interpreter-jupyter-url"
 								class={inputClass}
 								type="text"
 								placeholder={$i18n.t('Enter Jupyter URL')}
@@ -273,8 +279,10 @@
 							description={$i18n.t(
 								'settings.admin.codeExecution.codeInterpreterJupyterTimeout.description'
 							)}
+							forId="code-interpreter-jupyter-timeout"
 						>
 							<input
+								id="code-interpreter-jupyter-timeout"
 								class={inputClass}
 								type="number"
 								bind:value={config.CODE_INTERPRETER_JUPYTER_TIMEOUT}
@@ -289,8 +297,10 @@
 						description={$i18n.t(
 							'settings.admin.codeExecution.codeInterpreterPromptTemplate.description'
 						)}
+						forId="code-interpreter-prompt-template"
 					>
 						<Textarea
+							id="code-interpreter-prompt-template"
 							className={textareaClass}
 							bind:value={config.CODE_INTERPRETER_PROMPT_TEMPLATE}
 							placeholder={$i18n.t(

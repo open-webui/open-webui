@@ -245,6 +245,7 @@
 										{$i18n.t('Other')}
 									</div>
 									<input
+										aria-label={$i18n.t('Other')}
 										dir={$settings?.chatDirection ?? 'auto'}
 										class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
 										placeholder={$i18n.t('Type your answer')}

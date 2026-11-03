@@ -89,7 +89,7 @@ from open_webui.utils.audit import log_model_usage
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import compact_messages_for_request
+from open_webui.utils.context_compaction import apply_summary_checkpoint, compact_messages_for_request
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -103,6 +103,7 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
+from open_webui.utils.mcp.apps import MCPAppResult
 from open_webui.utils.memory import add_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -130,6 +131,7 @@ from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import (
+    convert_responses_stream_to_chat_completions,
     get_response_delta_key,
     handle_responses_streaming_event,
     merge_usage,
@@ -150,7 +152,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.terminals import upload_files_to_terminal
+from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
@@ -273,10 +275,8 @@ async def publish_chat_failed_event(request: Request, user: UserModel, metadata:
     )
 
 
-# We believe in one maker of all models, seen and unseen,
-# and in the reasoning which proceeds from the architect.
-# We look for the resurrection of dead processes and the
-# inference of the world to come.
+# Let every wandering thought find its closing tag,
+# and let the answer arrive before we forget the question.
 DEFAULT_REASONING_TAGS = [
     ('<think>', '</think>'),
     ('<thinking>', '</thinking>'),
@@ -736,6 +736,9 @@ async def process_tool_result(
     user=None,
 ):
     tool_result_embeds = []
+    if isinstance(tool_result, MCPAppResult):
+        tool_result_embeds.append(tool_result.embed)
+        tool_result = tool_result.context
     EXTERNAL_TOOL_TYPES = ('external', 'action', 'terminal')
 
     # Support (HTMLResponse, result_context) tuples: the optional second
@@ -2175,27 +2178,44 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if regeneration_prompt:
         form_data['messages'].append({'role': 'user', 'content': regeneration_prompt})
 
+    filter_functions = (
+        await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_FUNCTIONS else []
+    )
+    compaction_messages = None
+    context_summary = None
     if (is_saved_chat_id(chat_id) or is_temporary_chat_id(chat_id)) and user_message_id:
         system_message = get_system_message(form_data.get('messages', []))
         chat_system_prompt = get_content_from_message(system_message) if system_message else ''
 
         try:
-            form_data['messages'], context_summary, _ = await compact_messages_for_request(
-                request,
-                user,
-                form_data.get('messages', []),
-                metadata,
-                form_data.get('model'),
-                request.app.state.MODELS,
-                chat_system_prompt,
-            )
-            if context_summary:
-                form_data['messages'] = add_or_update_system_message(
-                    f'[CONVERSATION SUMMARY]\n{context_summary}',
-                    form_data['messages'],
-                    append=True,
+            # Filters and resumed tool calls must still receive compacted history.
+            if (
+                filter_functions
+                or 'pipeline' in model
+                or model.get('pipe')
+                or get_sorted_filters(form_data['model'], request.app.state.MODELS)
+                or pending_assistant_message is not None
+                or metadata.get('params', {}).get('function_calling') == 'legacy'
+            ):
+                form_data['messages'], context_summary, _ = await compact_messages_for_request(
+                    request,
+                    None,
+                    user,
+                    form_data.get('messages', []),
+                    metadata,
+                    form_data['model'],
+                    request.app.state.MODELS,
+                    chat_system_prompt,
                 )
+                if context_summary:
+                    form_data['messages'] = add_or_update_system_message(
+                        f'[CONVERSATION SUMMARY]\n{context_summary}', form_data['messages'], append=True
+                    )
+            else:
+                compaction_messages = form_data.get('messages', [])
+                form_data['messages'], context_summary = await apply_summary_checkpoint(compaction_messages)
         except Exception:
+            compaction_messages = None
             log.exception('Context compaction failed; continuing with full chat history')
 
     # Compact the full chain, but prepare history separately from the response being resumed.
@@ -2220,6 +2240,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         include_file_context=metadata['include_file_context'],
     )
     form_data['messages'] = sanitize_tool_pairs(form_data['messages'])
+    history_messages = [message for message in form_data['messages'] if message.get('role') != 'system']
 
     system_message = get_system_message(form_data.get('messages', []))
     if system_message:  # Chat Controls/User Settings
@@ -2346,12 +2367,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     except Exception as e:
         raise e
 
-    filter_functions = []
     filter_context = get_filter_context(request) if ENABLE_FUNCTIONS else None
     if ENABLE_FUNCTIONS:
         try:
-            filter_functions = await get_filter_functions(request, model, metadata.get('filter_ids', []))
-
             form_data, flags = await process_filter_functions(
                 request=request,
                 filter_context=filter_context,
@@ -2431,12 +2449,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
             else:
-                # Native FC: tool docstring can't be dynamic, so inject
-                # filesystem context into the system message for pyodide
-                # engine.  Appending to the system prompt (instead of the
-                # user message) keeps it in the stable cached prefix so
-                # providers with prefix caching don't re-bill the full
-                # conversation on every turn.
+                # Put dynamic Pyodide filesystem context in the system prompt to preserve prefix caching.
                 if engine != 'jupyter':
                     form_data['messages'] = add_or_update_system_message(
                         CODE_INTERPRETER_PYODIDE_PROMPT,
@@ -2627,10 +2640,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     prompt = get_last_user_message(form_data['messages'])
 
-    # Guard against empty user message after skill mention stripping.
-    # When a user selects a skill ($skill-name) without typing additional text,
-    # the stripped result is an empty string which causes 400 errors on providers
-    # that reject empty content blocks (e.g. AWS Bedrock ConverseStream).
+    # Supply fallback text for skill-only messages; some providers reject empty content.
     if not prompt or not prompt.strip():
         fallback = ', '.join([s.name for s in available_skills] + [s['name'] for s in terminal_skills])
         # Attachment-only messages keep their empty text, same as on models without skills.
@@ -2877,61 +2887,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 ):
                     tools_dict[name] = {**tools_dict[name], 'file_tool': tool_dict}
 
-        # Connections can keep shell tools advertised across browser disconnects for prompt caching.
-        shell_tools = {
-            name: tool
-            for name, tool in tools_dict.items()
-            if name in {'read_user_terminal', 'send_user_terminal_input'}
-            and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
-        }
-        selected = {
-            name: tool
-            for name, tool in shell_tools.items()
-            if terminal_id
-            and (
-                tool.get('tool_id') == f'terminal:{terminal_id}'
-                or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
-            )
-        }
-        connected = (
-            any(
-                tool.get('user_shell_tools') == 'always'
-                or (
-                    tool.get('direct')
-                    and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always'
-                )
-                for tool in selected.values()
-            )
-            and not metadata.get('automation_id')
-            and not metadata.get('internal')
-        )
-        if (
-            selected
-            and not connected
-            and event_caller
-            and metadata.get('session_id')
-            and metadata.get('chat_id')
-            and not metadata.get('automation_id')
-            and not metadata.get('internal')
-        ):
-            try:
-                state = await asyncio.wait_for(
-                    event_caller(
-                        {
-                            'type': 'request:terminal:state',
-                            'data': {'terminal_id': terminal_id, 'session_id': metadata['session_id']},
-                        }
-                    ),
-                    timeout=2,
-                )
-                connected = isinstance(state, dict) and state.get('connected') is True
-            except Exception:
-                # Old/disconnected browsers cannot confirm availability; other tools still work.
-                pass
-
-        for name in shell_tools:
-            if not connected or name not in selected:
-                tools_dict.pop(name)
+        await filter_user_terminal_tools(request, user, tools_dict, metadata, extra_params)
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers
@@ -3041,6 +2997,51 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     form_data = normalize_messages_for_model(form_data)
+
+    if compaction_messages is not None:
+        summary_form_data = {**form_data}
+        if context_summary:
+            summary_form_data['messages'] = add_or_update_system_message(
+                f'[CONVERSATION SUMMARY]\n{context_summary}',
+                [dict(message) for message in form_data['messages']],
+                append=True,
+            )
+        try:
+            _, context_summary, compacted = await compact_messages_for_request(
+                request,
+                summary_form_data,
+                user,
+                compaction_messages,
+                metadata,
+                form_data['model'],
+                request.app.state.MODELS,
+                chat_system_prompt,
+            )
+            if compacted:
+                # Compacted messages lead the history this request was built from.
+                compacted_count = len(
+                    sanitize_tool_pairs(
+                        process_messages_with_output(
+                            compacted,
+                            reasoning_format=get_reasoning_format(model),
+                            include_file_context=metadata['include_file_context'],
+                        )
+                    )
+                )
+                compacted_ids = {id(message) for message in history_messages[:compacted_count]}
+                form_data['messages'] = [
+                    message for message in form_data['messages'] if id(message) not in compacted_ids
+                ]
+        except Exception:
+            log.exception('Context compaction failed; continuing with full chat history')
+
+        if context_summary:
+            summary_content = f'[CONVERSATION SUMMARY]\n{context_summary}'
+            form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
+            base_system_prompt = metadata['base_system_prompt']
+            metadata['base_system_prompt'] = (
+                f'{base_system_prompt}\n{summary_content}' if base_system_prompt else summary_content
+            )
 
     return form_data, metadata, events, False
 
@@ -3387,6 +3388,9 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
         },
         touch=False,
     )
+    event_emitter = await get_event_emitter(metadata, update_db=False)
+    if event_emitter:
+        await event_emitter({'type': 'chat:active', 'data': {'active': True}})
 
 
 def get_response_data(response):
@@ -4898,11 +4902,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                                 }
                                                             )
 
-                                    # Merge any metadata (usage, etc.)
-                                    # Strip 'done' — response.completed emits
-                                    # it but we may still need to execute tool
-                                    # calls. The outer middleware manages the
-                                    # actual completion signal.
+                                    # Merge metadata without 'done'; the outer middleware signals completion after tool calls.
                                     if response_metadata:
                                         if ENABLE_RESPONSES_API_STATEFUL:
                                             response_id = response_metadata.pop('response_id', None)
@@ -5348,13 +5348,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         # closure-cell str += recopies per chunk; append + join once at read is O(n)
                                         content_parts.append(value)
 
-                                        # Check if we're inside a tag-based block
-                                        # (reasoning, code_interpreter, or solution).
-                                        # If so, append to the existing in-progress
-                                        # item instead of creating a new message —
-                                        # otherwise tag_output_handler re-detects the
-                                        # start tag on every chunk and fragments the
-                                        # output.
+                                        # Continue the open tag block so its start tag is not re-detected on each chunk.
                                         last_item = output[-1] if output else None
                                         last_item_type = last_item.get('type', '') if last_item else ''
                                         inside_tag_block = (
@@ -6009,6 +6003,25 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
 
+                            # Use the existing checkpoint format internally and strip it from the provider payload.
+                            def get_request_messages(messages: list[dict]) -> list[dict]:
+                                request_messages = process_messages_with_output(messages)
+                                context_summary = next(
+                                    (
+                                        message['contextSummary']
+                                        for message in messages
+                                        if message.get('contextSummary')
+                                    ),
+                                    None,
+                                )
+                                if context_summary:
+                                    request_messages.insert(
+                                        1 if request_messages and request_messages[0].get('role') == 'system' else 0,
+                                        {'role': 'system', 'content': f'[CONVERSATION SUMMARY]\n{context_summary}'},
+                                    )
+                                return request_messages
+
+                            new_form_data['messages'] = get_request_messages(messages)
                             try:
                                 user_messages = [
                                     (message, message.get('content'))
@@ -6017,6 +6030,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     and message.get('role') == 'user'
                                     and message.get('content') == user_prompt.get('content')
                                 ]
+                                summary_form_data = None
+                                if not filter_functions:
+                                    summary_form_data = normalize_messages_for_model(
+                                        await convert_url_images_to_base64({**new_form_data}, user=user)
+                                    )
                                 try:
                                     # Summarize the user's text, then restore source context for the model.
                                     for message, _ in user_messages:
@@ -6025,7 +6043,14 @@ async def streaming_chat_response_handler(response, ctx):
                                             metadata.get('base_user_prompt') or user_message, [message]
                                         )
                                     messages, context_summary, compacted = await compact_messages_for_request(
-                                        request, user, messages, metadata, form_data['model'], request.app.state.MODELS
+                                        request,
+                                        summary_form_data,
+                                        user,
+                                        messages,
+                                        metadata,
+                                        form_data['model'],
+                                        request.app.state.MODELS,
+                                        bypass_system_prompt=True,
                                     )
                                 finally:
                                     for message, content in user_messages:
@@ -6041,6 +6066,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         idx for idx, message in enumerate(messages) if message.get('role') != 'system'
                                     )
                                     messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
+                                    new_form_data['messages'] = get_request_messages(messages)
                                     output.append(
                                         {
                                             'type': 'open_webui:context_compaction',
@@ -6056,21 +6082,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     await emit_output()
                             except Exception:
                                 log.exception('Tool loop context compaction failed; keeping the current context')
-
-                            # Use the existing checkpoint format internally and strip it from the provider payload.
-                            new_form_data['messages'] = process_messages_with_output(messages)
-                            context_summary = next(
-                                (message['contextSummary'] for message in messages if message.get('contextSummary')),
-                                None,
-                            )
-                            if context_summary:
-                                new_form_data['messages'].insert(
-                                    1
-                                    if new_form_data['messages']
-                                    and new_form_data['messages'][0].get('role') == 'system'
-                                    else 0,
-                                    {'role': 'system', 'content': f'[CONVERSATION SUMMARY]\n{context_summary}'},
-                                )
 
                         new_form_data = await convert_url_images_to_base64(new_form_data, user=user)
 
@@ -6094,12 +6105,7 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                         if isinstance(res, StreamingResponse):
-                            # Save accumulated output and start fresh.
-                            # Responses API output_index values are relative
-                            # to the current response — a clean output list
-                            # keeps indices aligned. The display prefix
-                            # ensures the UI shows tool history during
-                            # streaming.
+                            # Reset response-relative output indices; keep prior output as the UI history prefix.
                             prior_output = list(full_output())
                             # Trim the trailing empty placeholder message
                             # so it doesn't persist as a ghost item once
@@ -6388,10 +6394,7 @@ async def streaming_chat_response_handler(response, ctx):
             except asyncio.CancelledError:
                 log.warning('Task was cancelled!')
 
-                # Close the response body iterator to trigger cleanup
-                # in stream_wrapper's finally block and release the
-                # upstream connection.  Without this, the async
-                # generator is orphaned and may spin in anyio internals.
+                # Close the iterator so stream_wrapper's finally block releases the upstream connection.
                 if hasattr(response, 'body_iterator') and hasattr(response.body_iterator, 'aclose'):
                     try:
                         await asyncio.shield(response.body_iterator.aclose())
@@ -6530,7 +6533,7 @@ async def streaming_chat_response_handler(response, ctx):
                 log_model_usage(request, user, form_data['model'], current_usage)
 
         return StreamingResponse(
-            stream_wrapper(response.body_iterator, events),
+            convert_responses_stream_to_chat_completions(stream_wrapper(response.body_iterator, events)),
             headers=dict(response.headers),
             background=response.background,
         )

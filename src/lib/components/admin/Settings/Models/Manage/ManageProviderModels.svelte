@@ -193,7 +193,13 @@
 	<div class="flex items-center justify-between">
 		<div class="text-sm font-normal">{providerLabel || provider}</div>
 		<Tooltip content={$i18n.t('Refresh')}>
-			<button class={iconButtonClass} type="button" on:click={refreshModels} disabled={loading}>
+			<button
+				aria-label={$i18n.t('Refresh')}
+				class={iconButtonClass}
+				type="button"
+				on:click={refreshModels}
+				disabled={loading}
+			>
 				<Refresh className="size-4" />
 			</button>
 		</Tooltip>
@@ -209,6 +215,7 @@
 		/>
 		<Tooltip content={$i18n.t('Download Model')}>
 			<button
+				aria-label={$i18n.t('Download Model')}
 				class={iconButtonClass}
 				type="submit"
 				disabled={actionModel !== '' || modelRef.trim() === ''}

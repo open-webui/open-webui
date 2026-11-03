@@ -7,6 +7,8 @@ from copy import deepcopy
 from typing import Annotated, Any, Literal
 
 from fastapi import HTTPException
+from open_webui.models.notifications import emit_changes
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import AccessGrant, AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
@@ -65,7 +67,7 @@ def strip_extracted_content_from_model_knowledge(knowledge: Any) -> Any:
     return sanitized
 
 
-# --- Models DB Schema ---
+# Models DB schema
 
 
 ModelControlKey = Annotated[str, Field(pattern=re.compile(r'^(?!(?:constructor|prototype)\Z)[a-zA-Z][a-zA-Z0-9_-]*\Z'))]
@@ -106,6 +108,10 @@ class ModelParams(BaseModel):
 
 class ModelVoice(BaseModel):
     voice: str | None = Field(default=None, min_length=1, max_length=200, pattern=r'^\S+$')
+
+
+class ModelSubagents(BaseModel):
+    model_ids: list[str] = Field(default_factory=list)
 
 
 class ModelAvatarAnimation(BaseModel):
@@ -149,6 +155,7 @@ class ModelMeta(BaseModel):
     i18n: dict[str, Any] | None = None
     capabilities: dict | None = None
     knowledge: list[Any] | None = None
+    subagents: ModelSubagents | None = None
     voice: ModelVoice | None = None
     voice_avatar: ModelVoiceAvatar | None = None
 
@@ -714,17 +721,20 @@ class ModelsTable:
             return None
 
     async def _delete_models(self, session, ids):
+        recipients = await delete_resource_comments('model', ids, db=session)
         await session.execute(
             delete(AccessGrant).where(AccessGrant.resource_type == 'model', AccessGrant.resource_id.in_(ids))
         )
         await session.execute(delete(ModelHistory).where(ModelHistory.model_id.in_(ids)))
         await session.execute(delete(Model).where(Model.id.in_(ids)))
+        return recipients
 
     async def delete_model_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as session:
             try:
-                await self._delete_models(session, [id])
+                recipients = await self._delete_models(session, [id])
                 await session.commit()
+                await emit_changes(recipients)
                 return True
             except Exception:
                 await session.rollback()
@@ -734,8 +744,9 @@ class ModelsTable:
         async with get_async_db_context(db) as session:
             try:
                 ids = (await session.execute(select(Model.id))).scalars().all()
-                await self._delete_models(session, ids)
+                recipients = await self._delete_models(session, ids)
                 await session.commit()
+                await emit_changes(recipients)
                 return True
             except Exception:
                 await session.rollback()
@@ -752,8 +763,9 @@ class ModelsTable:
                     # Imported version IDs are never local history identities.
                     form = ModelForm(**model.model_dump())
                     written.append(await self._write_model(session, form, user_id, existing.get(model.id)))
-                await self._delete_models(session, existing.keys() - {model.id for model in models})
+                recipients = await self._delete_models(session, existing.keys() - {model.id for model in models})
                 await session.commit()
+                await emit_changes(recipients)
                 return [await self._written_model(session, model) for model in written]
             except Exception:
                 await session.rollback()

@@ -13,7 +13,7 @@
 	export let show = false;
 </script>
 
-<Modal bind:show size="xs">
+<Modal ariaLabel={$i18n.t('Tags')} bind:show size="xs">
 	<div class="px-4 pt-4 pb-5 w-full flex flex-col justify-center">
 		<Tags
 			{tags}

@@ -145,11 +145,6 @@
 
 				await getVoices();
 
-				// const rawAudio = await tts.generate(inputText, {
-				// 	// Use `tts.list_voices()` to list all available voices
-				// 	voice: voice
-				// });
-
 				// const blobUrl = URL.createObjectURL(await rawAudio.toBlob());
 				// const audio = new Audio(blobUrl);
 

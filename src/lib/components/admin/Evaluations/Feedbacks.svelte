@@ -68,11 +68,7 @@
 		selectedFeedback = null;
 	};
 
-	//////////////////////
-	//
 	// CRUD operations
-	//
-	//////////////////////
 
 	const getFeedbacks = async () => {
 		try {

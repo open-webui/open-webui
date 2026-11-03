@@ -27,7 +27,7 @@ from uuid import uuid4
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.internal.db import get_async_db
 from open_webui.models.automations import AutomationModel, AutomationRuns, Automations
 from open_webui.models.chats import ChatForm, Chats
@@ -56,9 +56,7 @@ TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
 
 
-############################
 # Worker Loop
-############################
 
 
 # Keep the old name as an alias so any stale imports still work.
@@ -87,7 +85,7 @@ async def scheduler_worker_loop(app) -> None:
     while True:
         try:
             now = time.monotonic()
-            # ── Timers ──
+            # Timers
             try:
                 from open_webui.utils.timers import claim_due_timers, execute_due_timer
 
@@ -102,7 +100,7 @@ async def scheduler_worker_loop(app) -> None:
             # Jitter to spread automation/calendar load across instances; timers keep a tight poll.
             next_scheduler_poll = now + SCHEDULER_POLL_INTERVAL + random.uniform(0, 2)
 
-            # ── Automations ──
+            # Automations
             if await Config.get('automations.enable'):
                 try:
                     async with get_async_db() as db:
@@ -114,7 +112,7 @@ async def scheduler_worker_loop(app) -> None:
                 except Exception:
                     log.exception('Scheduler: automation error')
 
-            # ── Calendar Alerts ──
+            # Calendar alerts
             if await Config.get('calendar.enable'):
                 try:
                     await _check_calendar_alerts(app)
@@ -127,9 +125,7 @@ async def scheduler_worker_loop(app) -> None:
         await asyncio.sleep(max(1, TIMER_POLL_INTERVAL))
 
 
-##########################
 # Execute
-####################
 
 
 def _build_request(
@@ -340,9 +336,9 @@ async def _execute_channel_automation(
         room=f'user:{automation.user_id}',
     )
 
-    await _record_run(automation.id, 'success', chat_id=f'channel:{channel.id}')
+    await _record_run(request, automation.id, 'success', chat_id=f'channel:{channel.id}')
     await publish_event(
-        app,
+        request,
         EVENTS.AUTOMATION_RUN_COMPLETED,
         actor=user,
         subject_id=automation.id,
@@ -358,16 +354,11 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     (filters, model params, knowledge/RAG, tools, DB saves, webhooks).
     """
     chat = None
+    request = _build_request(app)
     try:
         user = await Users.get_user_by_id(automation.user_id)
         if not user:
-            await _record_run(automation.id, 'error', error='User not found')
-            await publish_event(
-                app,
-                EVENTS.AUTOMATION_RUN_FAILED,
-                subject_id=automation.id,
-                data={'name': automation.name, 'error': 'User not found'},
-            )
+            await _record_run(request, automation.id, 'error', error='User not found')
             return
 
         # Re-gate the rehydrated owner: a demoted/deactivated or de-permissioned owner must not run.
@@ -378,14 +369,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             and not await has_permission(user.id, 'features.automations', await Config.get('user.permissions'))
         ):
             error = 'Owner no longer permitted to run automations'
-            await _record_run(automation.id, 'error', error=error)
-            await publish_event(
-                app,
-                EVENTS.AUTOMATION_RUN_FAILED,
-                actor=user,
-                subject_id=automation.id,
-                data={'name': automation.name, 'error': error, 'message': f'{automation.name}: {error}'},
-            )
+            await _record_run(request, automation.id, 'error', error=error, actor=user)
             return
 
         prompt = await prompt_template(automation.data['prompt'], user)
@@ -464,14 +448,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
         if not chat:
             error = 'Failed to create chat'
-            await _record_run(automation.id, 'error', error=error)
-            await publish_event(
-                app,
-                EVENTS.AUTOMATION_RUN_FAILED,
-                actor=user,
-                subject_id=automation.id,
-                data={'name': automation.name, 'error': error, 'message': f'{automation.name}: {error}'},
-            )
+            await _record_run(request, automation.id, 'error', error=error, actor=user)
             return
 
         # Notify frontend to refresh chat list
@@ -542,9 +519,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             room=f'user:{automation.user_id}',
         )
 
-        await _record_run(automation.id, 'success', chat_id=chat.id)
+        await _record_run(request, automation.id, 'success', chat_id=chat.id)
         await publish_event(
-            app,
+            request,
             EVENTS.AUTOMATION_RUN_COMPLETED,
             actor=user,
             subject_id=automation.id,
@@ -554,26 +531,12 @@ async def execute_automation(app, automation: AutomationModel) -> None:
     except (Exception, asyncio.CancelledError) as e:
         log.exception(f'Automation {automation.id} failed')
         error = 'Automation reply was cancelled' if isinstance(e, asyncio.CancelledError) else str(e)[:4000]
-        await _record_run(automation.id, 'error', chat_id=chat.id if chat else None, error=error)
-        await publish_event(
-            app,
-            EVENTS.AUTOMATION_RUN_FAILED,
-            subject_id=automation.id,
-            data={
-                'name': automation.name,
-                'error': error,
-                'user_id': automation.user_id,
-                'message': f'{automation.name}: {error}',
-                **({'chat_id': chat.id} if chat else {}),
-            },
-        )
+        await _record_run(request, automation.id, 'error', chat_id=chat.id if chat else None, error=error)
         if isinstance(e, asyncio.CancelledError):
             raise
 
 
-####################
 # Internals
-####################
 
 
 async def _check_calendar_alerts(app) -> None:
@@ -582,7 +545,7 @@ async def _check_calendar_alerts(app) -> None:
     De-duplication is DB-backed via meta.alerted_at — survives restarts
     and works across multiple instances.
     """
-    from open_webui.models.calendar import CalendarEvents, CalendarEventUpdateForm
+    from open_webui.models.calendar import CalendarEvents
     from open_webui.socket.main import sio
 
     now_ns = int(time.time_ns())
@@ -597,6 +560,7 @@ async def _check_calendar_alerts(app) -> None:
     if not upcoming:
         return
 
+    request = _build_request(app)
     for event, user_tz in upcoming:
         # Skip if already alerted for this start time
         if event.meta and event.meta.get('alerted_at') == event.start_at:
@@ -615,6 +579,45 @@ async def _check_calendar_alerts(app) -> None:
             'location': event.location or '',
         }
 
+        from open_webui.models.calendar import CalendarEvent
+        from sqlalchemy import select
+
+        async with get_async_db() as db:
+            current = await db.scalar(select(CalendarEvent).where(CalendarEvent.id == event.id).with_for_update())
+            if (
+                not current
+                or current.is_cancelled
+                or current.start_at != event.start_at
+                or (current.meta or {}).get('alerted_at') == event.start_at
+            ):
+                continue
+            time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
+            from open_webui.utils.inbox import consume_event
+            from open_webui.models.notifications import emit_changes
+
+            alert_event = build_event(
+                request,
+                EVENTS.CALENDAR_ALERT,
+                subject_id=event.id,
+                subject_type='calendar.event',
+                source='scheduler',
+                message=event.title,
+                event_id=f'calendar:{event.id}:{event.start_at}',
+                data={
+                    **alert_data,
+                    'user_id': event.user_id,
+                    'starts_in': time_str,
+                    'start_at': event.start_at,
+                    'message': f'{event.title}: starting {time_str}',
+                },
+            )
+            current.meta = {**(current.meta or {}), 'alerted_at': event.start_at}
+            current.updated_at = time.time_ns()
+            recipients = await consume_event(alert_event, db=db)
+            await db.commit()
+            await emit_changes(recipients)
+            await publish_event(request, alert_event)
+
         await sio.emit(
             'events',
             {
@@ -626,42 +629,17 @@ async def _check_calendar_alerts(app) -> None:
             room=f'user:{event.user_id}',
         )
 
-        # Mark as alerted in DB so it survives restarts / multi-instance
-        try:
-            await CalendarEvents.update_event_by_id(
-                event.id,
-                CalendarEventUpdateForm(meta={'alerted_at': event.start_at}),
-            )
-        except Exception:
-            log.debug('Failed to mark event %s as alerted', event.id, exc_info=True)
-
-        # Send target notification if user has one configured
-        try:
-            time_str = f'in {minutes_until} min' if minutes_until > 0 else 'now'
-            await publish_event(
-                app,
-                EVENTS.CALENDAR_ALERT,
-                subject_id=event.id,
-                subject_type='calendar.event',
-                source='scheduler',
-                data={
-                    **alert_data,
-                    'user_id': event.user_id,
-                    'starts_in': time_str,
-                    'message': f'{event.title}: starting {time_str}',
-                },
-                message=event.title,
-            )
-        except Exception:
-            log.debug('Failed to send notification for calendar alert %s', event.id, exc_info=True)
-
 
 async def _record_run(
+    request: Request,
     automation_id: str,
     status: str,
     chat_id: str = None,
     error: str = None,
+    actor=None,
 ):
     """Insert a run record into automation_run."""
     async with get_async_db() as db:
-        await AutomationRuns.insert(automation_id, status, chat_id=chat_id, error=error, db=db)
+        await AutomationRuns.insert(
+            automation_id, status, chat_id=chat_id, error=error, request=request, event_actor=actor, db=db
+        )

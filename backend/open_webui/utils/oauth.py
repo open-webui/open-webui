@@ -63,6 +63,7 @@ from open_webui.config import (
     OAUTH_UPDATE_PICTURE_ON_LOGIN,
     OAUTH_USERNAME_CLAIM,
     WEBHOOK_URL,
+    load_oauth_providers,
 )
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -1382,12 +1383,21 @@ class OAuthManager:
         self._clients = {}
         self._refresh_locks: dict[str, asyncio.Lock] = {}
 
-        for name, provider_config in OAUTH_PROVIDERS.items():
+    async def initialize(self):
+        # Provider connections are fixed for this worker's lifetime.
+        await load_oauth_providers()
+
+        for name, provider_config in list(OAUTH_PROVIDERS.items()):
             if 'register' not in provider_config:
                 log.error(f'OAuth provider {name} missing register function')
                 continue
 
-            client = provider_config['register'](self.oauth)
+            try:
+                client = provider_config['register'](self.oauth)
+            except (ValueError, TypeError) as e:
+                log.error('Error registering OAuth provider %s: %s', name, e)
+                OAUTH_PROVIDERS.pop(name)
+                continue
             self._clients[name] = client
 
     def get_client(self, provider_name):

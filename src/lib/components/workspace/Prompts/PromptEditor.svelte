@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -435,306 +439,316 @@
 	}}
 />
 
-<div
-	class="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden {modal
-		? 'px-5 pt-3 pb-1'
-		: ''}"
->
-	<form
-		class="flex h-full min-h-0 min-w-0 flex-col"
-		aria-label={edit ? $i18n.t('Edit Prompt') : $i18n.t('Create Prompt')}
-		inert={loading}
-		on:submit|preventDefault={submitHandler}
+<Comments bind:view={comments} resourceType={modal ? null : 'prompt'} {modal}>
+	<div
+		class="flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden {modal
+			? 'px-5 pt-3 pb-1'
+			: ''}"
 	>
-		<div class="flex min-h-7 shrink-0 items-center justify-between gap-2">
-			{#if modal}
-				<span class="text-xs text-gray-500"
-					>{clone ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}</span
-				>
-			{:else}
-				<button
-					type="button"
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-					on:click={() => goto('/workspace/prompts')}
-				>
-					<ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}
-				</button>
-			{/if}
-			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				{#if !disabled}{#if $user?.permissions?.sharing?.prompts || $user?.role === 'admin'}<AccessButton
-							on:click={() => {
-								savedAccessGrants = structuredClone(accessGrants);
-								showAccessControlModal = true;
-							}}
-						/>{/if}
-				{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
-				{#if modal}<button
-						type="button"
-						aria-label={$i18n.t('Close')}
-						class="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-						on:click={() => confirmDiscard(() => onCancel())}><XMark className="size-4" /></button
-					>{/if}
-			</div>
-		</div>
-
-		<div class="shrink-0 px-1 pb-2">
-			<input
-				class="w-full {($settings?.highContrastMode ?? false)
-					? 'min-h-6'
-					: ''} bg-transparent text-sm outline-hidden"
-				placeholder={$i18n.t('Prompt Name')}
-				aria-label={$i18n.t('Prompt Name')}
-				bind:value={name}
-				on:input={debouncedSaveMetadata}
-				required
-				{disabled}
-			/>
-			<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
-				<Tooltip
-					className="min-w-0 flex-1"
-					content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
-						'Activate this command by typing "/{{COMMAND}}" to chat input.',
-						{
-							COMMAND: command
-						}
-					)}`}
-					placement="bottom-start"
-				>
-					<div class="flex min-w-0 items-center gap-0.5">
-						<span>/</span>
-						<input
-							class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
-								? 'min-h-6'
-								: ''} bg-transparent outline-hidden"
-							placeholder={$i18n.t('command')}
-							aria-label={$i18n.t('Command')}
-							bind:value={command}
-							on:input={() => {
-								hasManualEdit = true;
-								debouncedSaveMetadata();
-							}}
-							required
-							{disabled}
-						/>
-					</div>
-				</Tooltip>
-				{#if edit}
-					<Tooltip className="min-w-0 max-w-[45%]" content={$i18n.t('Click to copy ID')}>
-						<button
-							type="button"
-							class="w-full truncate font-mono text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-							on:click={async () => {
-								if (await copyToClipboard(prompt.id))
-									toast.success($i18n.t('ID copied to clipboard'));
-							}}>{prompt.id}</button
-						>
-					</Tooltip>
-				{/if}
-			</div>
-			<div class="mt-1">
-				<Tags
-					{tags}
-					{disabled}
-					{suggestionTags}
-					on:add={(e) => {
-						tags = [...tags, { name: e.detail }];
-						debouncedSaveMetadata();
-					}}
-					on:delete={(e) => {
-						tags = tags.filter((tag) => tag.name !== e.detail);
-						debouncedSaveMetadata();
-					}}
-				/>
-			</div>
-		</div>
-
-		<div
-			class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-100/80 bg-white dark:border-white/[0.04] dark:bg-gray-900"
+		<form
+			class="flex h-full min-h-0 min-w-0 flex-col"
+			aria-label={edit ? $i18n.t('Edit Prompt') : $i18n.t('Create Prompt')}
+			inert={loading}
+			on:submit|preventDefault={submitHandler}
 		>
-			{#if historyDiff}
-				<VersionDiff
-					diff={historyDiff}
-					currentLabel="Production"
-					showFileHeaders={false}
-					loadFileDiff={async () => ({
-						diff: historyDiff.content,
-						line_endings_only: historyDiff.line_endings_only
-					})}
-					onClose={() => (historyDiff = null)}
-				/>
-			{:else}
-				<div
-					class="flex shrink-0 items-center gap-1 bg-gray-50/60 px-2.5 py-1.5 text-xs dark:bg-black"
-				>
-					<div class="min-w-0 flex-1">
-						{#if edit}
-							<Dropdown bind:show={showHistory} align="start">
-								<button
-									type="button"
-									aria-label={$i18n.t('History')}
-									class="flex max-w-full items-center gap-2 py-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-									disabled={loading}
-								>
-									<span class="truncate"
-										>{historical
-											? selectedHistoryEntry.commit_message || selectedVersionId.slice(0, 7)
-											: $i18n.t('Live')}{editingHistory ? ` · ${$i18n.t('Editing')}` : ''}</span
-									><ChevronDown className="size-3 shrink-0" />
-								</button>
-								<div slot="content">
-									<DropdownMenu className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto">
-										<VersionMenuItem
-											entry={history.find((entry) => entry.id === prompt?.version_id) ||
-												(productionEntry?.id === prompt?.version_id ? productionEntry : null)}
-											status={$i18n.t('Live')}
-											deleteDisabledReason={disabled
-												? ''
-												: $i18n.t('Cannot delete the production version')}
-											selected={!historical}
-											onSelect={() => chooseVersion()}
-										/>
-										{#if history.some((entry) => entry.id !== prompt?.version_id)}<hr
-												class="border-gray-100 dark:border-gray-800"
-											/>{/if}
-										{#each history.filter((entry) => entry.id !== prompt?.version_id) as entry (entry.id)}
-											<VersionMenuItem
-												{entry}
-												selected={selectedVersionId === entry.id}
-												onSelect={() => chooseVersion(entry)}
-												onDelete={disabled
-													? undefined
-													: () => {
-															deleteVersionId = entry.id;
-															showHistory = false;
-															showDeleteVersion = true;
-														}}
-											/>
-										{/each}
-										{#if historyLoading}<div
-												class="flex items-center gap-2 px-2 py-1 text-xs text-gray-500"
-											>
-												<Spinner className="size-3" />{$i18n.t('Loading...')}
-											</div>
-										{:else if historyError}<button
-												type="button"
-												on:click={() => loadHistory(historyPage === 0)}>{$i18n.t('Retry')}</button
-											>
-										{:else if !history.length}<div class="px-2 py-2 text-xs text-gray-400">
-												{$i18n.t('No history available')}
-											</div>
-										{:else if historyHasMore}<hr class="border-gray-100 dark:border-gray-800" />
-											<button type="button" on:click={() => loadHistory()}
-												>{$i18n.t('Load more')}</button
-											>{/if}
-									</DropdownMenu>
-								</div>
-							</Dropdown>
-						{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
-					</div>
-					{#if !readOnly}
-						<button
-							type="button"
-							class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-100"
-							disabled={!ready || loading || historyLoading}
-							on:click={compareRevision}>{$i18n.t('Compare revision')}</button
-						>
-					{/if}
-					<Tooltip
-						content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
-						><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
+			<div class="flex min-h-7 shrink-0 items-center justify-between gap-2">
+				{#if modal}
+					<span class="text-xs text-gray-500"
+						>{clone ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}</span
 					>
+				{:else}
 					<button
 						type="button"
-						aria-label={$i18n.t('Copy content')}
-						class="shrink-0 p-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-						on:click={copyContent}
-						>{#if contentCopied}<Check className="size-3.5 text-green-500" />{:else}<Clipboard
-								className="size-3.5"
-							/>{/if}</button
+						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						on:click={() => goto('/workspace/prompts')}
 					>
-				</div>
-				<textarea
-					bind:this={contentInput}
-					bind:value={content}
-					aria-label={$i18n.t('Prompt Content')}
-					placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
-					readonly={readOnly}
-					required
-					spellcheck="false"
-					class="min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2 font-mono text-xs leading-relaxed outline-hidden"
-					on:keydown={(event) => {
-						if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
-							event.preventDefault();
-							submitHandler();
-						}
-					}}
-				></textarea>
-			{/if}
-		</div>
+						<ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}
+					</button>
+				{/if}
+				<div class="flex shrink-0 items-center gap-1 pr-0.5">
+					{#if edit && prompt?.id}<CommentButton
+							onComment={(request) => (comments = request)}
+							wrapperClassName="me-2"
+							resource={{ resource_type: 'prompt', resource_id: prompt.id }}
+						/>{/if}
 
-		{#if historical}
-			<div
-				class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-gray-500"
-			>
-				<span
-					>{selectedHistoryEntry.id.slice(0, 7)} · {renderDate(
-						selectedHistoryEntry.created_at
-					)}</span
-				>
-				{#if !editingHistory}<div class="ml-auto flex flex-wrap justify-end gap-2">
-						<button
+					{#if !disabled}{#if $user?.permissions?.sharing?.prompts || $user?.role === 'admin'}<AccessButton
+								on:click={() => {
+									savedAccessGrants = structuredClone(accessGrants);
+									showAccessControlModal = true;
+								}}
+							/>{/if}
+					{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+					{#if modal}<button
 							type="button"
-							class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
-							disabled={comparing || !!historyDiff}
-							on:click={compareToCurrent}
-							>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
-								'Compare to current'
-							)}</button
-						>
-						{#if !disabled}
+							aria-label={$i18n.t('Close')}
+							class="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+							on:click={() => confirmDiscard(() => onCancel())}><XMark className="size-4" /></button
+						>{/if}
+				</div>
+			</div>
+
+			<div class="shrink-0 px-1 pb-2">
+				<input
+					class="w-full {($settings?.highContrastMode ?? false)
+						? 'min-h-6'
+						: ''} bg-transparent text-sm outline-hidden"
+					placeholder={$i18n.t('Prompt Name')}
+					aria-label={$i18n.t('Prompt Name')}
+					bind:value={name}
+					on:input={debouncedSaveMetadata}
+					required
+					{disabled}
+				/>
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+					<Tooltip
+						className="min-w-0 flex-1"
+						content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
+							'Activate this command by typing "/{{COMMAND}}" to chat input.',
+							{
+								COMMAND: command
+							}
+						)}`}
+						placement="bottom-start"
+					>
+						<div class="flex min-w-0 items-center gap-0.5">
+							<span>/</span>
+							<input
+								class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+									? 'min-h-6'
+									: ''} bg-transparent outline-hidden"
+								placeholder={$i18n.t('command')}
+								aria-label={$i18n.t('Command')}
+								bind:value={command}
+								on:input={() => {
+									hasManualEdit = true;
+									debouncedSaveMetadata();
+								}}
+								required
+								{disabled}
+							/>
+						</div>
+					</Tooltip>
+					{#if edit}
+						<Tooltip className="min-w-0 max-w-[45%]" content={$i18n.t('Click to copy ID')}>
 							<button
 								type="button"
-								class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 dark:bg-gray-850 dark:text-gray-200"
-								on:click={editVersion}>{$i18n.t('Edit as new version')}</button
-							><button
-								type="button"
-								class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-								on:click={() => confirmDiscard(setAsProduction)}
-								>{$i18n.t('Set as Production')}</button
+								class="w-full truncate font-mono text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+								on:click={async () => {
+									if (await copyToClipboard(prompt.id))
+										toast.success($i18n.t('ID copied to clipboard'));
+								}}>{prompt.id}</button
 							>
-						{/if}
-					</div>{/if}
-			</div>
-		{/if}
-
-		{#if !readOnly}
-			<div class="flex shrink-0 flex-wrap items-center gap-2 py-2">
-				{#if edit}<input
-						class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
-						placeholder={$i18n.t('Describe what changed...')}
-						aria-label={$i18n.t('Commit Message')}
-						bind:value={commitMessage}
-					/>{:else}<div class="flex-1"></div>{/if}
-				<div class="ml-auto flex shrink-0 items-center gap-3">
-					{#if historical}<label
-							class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-gray-500"
-							><input
-								type="checkbox"
-								bind:checked={isProduction}
-								class="size-3 rounded border-gray-300 dark:border-gray-600"
-							/><span>{$i18n.t('Set as Production')}</span></label
-						>{/if}
-					<button
-						type="submit"
-						class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-						disabled={loading || !ready || historyLoading}
-					>
-						{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}{#if loading}<Spinner
-								className="size-3"
-							/>{/if}
-					</button>
+						</Tooltip>
+					{/if}
+				</div>
+				<div class="mt-1">
+					<Tags
+						{tags}
+						{disabled}
+						{suggestionTags}
+						on:add={(e) => {
+							tags = [...tags, { name: e.detail }];
+							debouncedSaveMetadata();
+						}}
+						on:delete={(e) => {
+							tags = tags.filter((tag) => tag.name !== e.detail);
+							debouncedSaveMetadata();
+						}}
+					/>
 				</div>
 			</div>
-		{/if}
-	</form>
-</div>
+
+			<div
+				class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-100/80 bg-white dark:border-white/[0.04] dark:bg-gray-900"
+			>
+				{#if historyDiff}
+					<VersionDiff
+						diff={historyDiff}
+						currentLabel="Production"
+						showFileHeaders={false}
+						loadFileDiff={async () => ({
+							diff: historyDiff.content,
+							line_endings_only: historyDiff.line_endings_only
+						})}
+						onClose={() => (historyDiff = null)}
+					/>
+				{:else}
+					<div
+						class="flex shrink-0 items-center gap-1 bg-gray-50/60 px-2.5 py-1.5 text-xs dark:bg-black"
+					>
+						<div class="min-w-0 flex-1">
+							{#if edit}
+								<Dropdown bind:show={showHistory} align="start">
+									<button
+										type="button"
+										aria-label={$i18n.t('History')}
+										class="flex max-w-full items-center gap-2 py-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+										disabled={loading}
+									>
+										<span class="truncate"
+											>{historical
+												? selectedHistoryEntry.commit_message || selectedVersionId.slice(0, 7)
+												: $i18n.t('Live')}{editingHistory ? ` · ${$i18n.t('Editing')}` : ''}</span
+										><ChevronDown className="size-3 shrink-0" />
+									</button>
+									<div slot="content">
+										<DropdownMenu
+											className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
+										>
+											<VersionMenuItem
+												entry={history.find((entry) => entry.id === prompt?.version_id) ||
+													(productionEntry?.id === prompt?.version_id ? productionEntry : null)}
+												status={$i18n.t('Live')}
+												deleteDisabledReason={disabled
+													? ''
+													: $i18n.t('Cannot delete the production version')}
+												selected={!historical}
+												onSelect={() => chooseVersion()}
+											/>
+											{#if history.some((entry) => entry.id !== prompt?.version_id)}<hr
+													class="border-gray-100 dark:border-gray-800"
+												/>{/if}
+											{#each history.filter((entry) => entry.id !== prompt?.version_id) as entry (entry.id)}
+												<VersionMenuItem
+													{entry}
+													selected={selectedVersionId === entry.id}
+													onSelect={() => chooseVersion(entry)}
+													onDelete={disabled
+														? undefined
+														: () => {
+																deleteVersionId = entry.id;
+																showHistory = false;
+																showDeleteVersion = true;
+															}}
+												/>
+											{/each}
+											{#if historyLoading}<div
+													class="flex items-center gap-2 px-2 py-1 text-xs text-gray-500"
+												>
+													<Spinner className="size-3" />{$i18n.t('Loading...')}
+												</div>
+											{:else if historyError}<button
+													type="button"
+													on:click={() => loadHistory(historyPage === 0)}>{$i18n.t('Retry')}</button
+												>
+											{:else if !history.length}<div class="px-2 py-2 text-xs text-gray-400">
+													{$i18n.t('No history available')}
+												</div>
+											{:else if historyHasMore}<hr class="border-gray-100 dark:border-gray-800" />
+												<button type="button" on:click={() => loadHistory()}
+													>{$i18n.t('Load more')}</button
+												>{/if}
+										</DropdownMenu>
+									</div>
+								</Dropdown>
+							{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
+						</div>
+						{#if !readOnly}
+							<button
+								type="button"
+								class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+								disabled={!ready || loading || historyLoading}
+								on:click={compareRevision}>{$i18n.t('Compare revision')}</button
+							>
+						{/if}
+						<Tooltip
+							content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
+							><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
+						>
+						<button
+							type="button"
+							aria-label={$i18n.t('Copy content')}
+							class="shrink-0 p-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+							on:click={copyContent}
+							>{#if contentCopied}<Check className="size-3.5 text-green-500" />{:else}<Clipboard
+									className="size-3.5"
+								/>{/if}</button
+						>
+					</div>
+					<textarea
+						bind:this={contentInput}
+						bind:value={content}
+						aria-label={$i18n.t('Prompt Content')}
+						placeholder={$i18n.t('Write a summary in 50 words that summarizes {{topic}}.')}
+						readonly={readOnly}
+						required
+						spellcheck="false"
+						class="min-h-0 w-full flex-1 resize-none bg-transparent px-3 py-2 font-mono text-xs leading-relaxed outline-hidden"
+						on:keydown={(event) => {
+							if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+								event.preventDefault();
+								submitHandler();
+							}
+						}}
+					></textarea>
+				{/if}
+			</div>
+
+			{#if historical}
+				<div
+					class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-gray-500"
+				>
+					<span
+						>{selectedHistoryEntry.id.slice(0, 7)} · {renderDate(
+							selectedHistoryEntry.created_at
+						)}</span
+					>
+					{#if !editingHistory}<div class="ml-auto flex flex-wrap justify-end gap-2">
+							<button
+								type="button"
+								class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+								disabled={comparing || !!historyDiff}
+								on:click={compareToCurrent}
+								>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
+									'Compare to current'
+								)}</button
+							>
+							{#if !disabled}
+								<button
+									type="button"
+									class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 dark:bg-gray-850 dark:text-gray-200"
+									on:click={editVersion}>{$i18n.t('Edit as new version')}</button
+								><button
+									type="button"
+									class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+									on:click={() => confirmDiscard(setAsProduction)}
+									>{$i18n.t('Set as Production')}</button
+								>
+							{/if}
+						</div>{/if}
+				</div>
+			{/if}
+
+			{#if !readOnly}
+				<div class="flex shrink-0 flex-wrap items-center gap-2 py-2">
+					{#if edit}<input
+							class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
+							placeholder={$i18n.t('Describe what changed...')}
+							aria-label={$i18n.t('Commit Message')}
+							bind:value={commitMessage}
+						/>{:else}<div class="flex-1"></div>{/if}
+					<div class="ml-auto flex shrink-0 items-center gap-3">
+						{#if historical}<label
+								class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-gray-500"
+								><input
+									type="checkbox"
+									bind:checked={isProduction}
+									class="size-3 rounded border-gray-300 dark:border-gray-600"
+								/><span>{$i18n.t('Set as Production')}</span></label
+							>{/if}
+						<button
+							type="submit"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							disabled={loading || !ready || historyLoading}
+						>
+							{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}{#if loading}<Spinner
+									className="size-3"
+								/>{/if}
+						</button>
+					</div>
+				</div>
+			{/if}
+		</form>
+	</div>
+</Comments>

@@ -78,6 +78,7 @@
 	<div class="flex shrink-0 items-center gap-1">
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
+				aria-label={$i18n.t('Configure')}
 				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
 				on:click={() => {
 					showConfigModal = true;

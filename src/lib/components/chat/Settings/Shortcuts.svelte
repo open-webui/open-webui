@@ -1,6 +1,6 @@
 <script lang="ts">
 	import UserSettingRow from './UserSettingRow.svelte';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { updateUserSettings } from '$lib/apis/users';
 	import {
@@ -96,21 +96,34 @@
 		return null;
 	};
 
+	const focusBinding = async (id: Shortcut) => {
+		await tick();
+		document.getElementById(`shortcut-binding-${id}`)?.focus();
+	};
+
+	const startRecording = (id: Shortcut) => {
+		recordingShortcut = id;
+		focusBinding(id);
+	};
+
 	const handleRecordingKeydown = async (event: KeyboardEvent) => {
 		if (!recordingShortcut) return;
 		event.preventDefault();
 		event.stopPropagation();
 
-		if (event.key === 'Escape') {
+		const id = recordingShortcut;
+		if (event.key === 'Escape' || event.key === 'Tab') {
 			recordingShortcut = null;
+			focusBinding(id);
 			return;
 		}
 
 		const chord = eventToChord(event);
 		if (!chord) return;
 
-		await setBinding(recordingShortcut, chord);
+		await setBinding(id, chord);
 		recordingShortcut = null;
+		focusBinding(id);
 	};
 </script>
 
@@ -232,15 +245,18 @@
 								{#if configurable}
 									{#if recordingShortcut === id}
 										<span
+											id="shortcut-binding-{id}"
+											tabindex="-1"
 											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
 										>
 											{$i18n.t('Press keys...')}
 										</span>
 									{:else if chord}
 										<button
+											id="shortcut-binding-{id}"
 											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
 											title={$i18n.t('Click to rebind')}
-											on:click={() => (recordingShortcut = id)}
+											on:click={() => startRecording(id)}
 										>
 											{formatChord(chord)}
 										</button>
@@ -249,14 +265,18 @@
 											type="button"
 											aria-label={$i18n.t('Remove')}
 											title={$i18n.t('Remove')}
-											on:click={() => setBinding(id, '')}
+											on:click={async () => {
+												await setBinding(id, '');
+												focusBinding(id);
+											}}
 										>
 											<XMark className="size-3" strokeWidth="2" />
 										</button>
 									{:else}
 										<button
+											id="shortcut-binding-{id}"
 											class="text-[0.625rem] text-gray-500 transition hover:text-gray-400 dark:text-gray-600"
-											on:click={() => (recordingShortcut = id)}
+											on:click={() => startRecording(id)}
 										>
 											{$i18n.t('Unassigned')}
 										</button>

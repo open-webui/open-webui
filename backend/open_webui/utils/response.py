@@ -1,10 +1,11 @@
+import time
 from numbers import Number
 from uuid import uuid4
 
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
-    openai_chat_chunk_message_template,
-    openai_chat_completion_message_template,
+    chat_completion_chunk_template,
+    chat_completion_message_template,
 )
 
 
@@ -157,7 +158,7 @@ def update_usage_snapshot(current: dict | None, incoming: dict | None) -> dict:
     return result
 
 
-def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
+def convert_ollama_tool_call_to_chat_completions(tool_calls: list) -> list:
     openai_tool_calls = []
     for tool_call in tool_calls:
         function = tool_call.get('function', {})
@@ -174,7 +175,7 @@ def convert_ollama_tool_call_to_openai(tool_calls: list) -> list:
     return openai_tool_calls
 
 
-def convert_ollama_usage_to_openai(data: dict) -> dict:
+def convert_ollama_usage_to_chat_completions(data: dict) -> dict:
     input_tokens = usage_counter(data.get('prompt_eval_count')) or 0
     output_tokens = usage_counter(data.get('eval_count')) or 0
     total_tokens = input_tokens + output_tokens
@@ -231,7 +232,23 @@ def convert_ollama_usage_to_openai(data: dict) -> dict:
     return result
 
 
-def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
+def convert_responses_usage_to_chat_completions(usage: dict | None) -> dict:
+    result = normalize_usage(usage)
+    for source, target in (('input_tokens', 'prompt_tokens'), ('output_tokens', 'completion_tokens')):
+        for suffix in ('', '_details'):
+            if source + suffix in result:
+                result[target + suffix] = result[source + suffix]
+    return result
+
+
+def get_responses_finish_reason(response: dict, has_tool_calls: bool = False) -> str:
+    if response.get('status') == 'incomplete':
+        reason = (response.get('incomplete_details') or {}).get('reason')
+        return 'content_filter' if reason == 'content_filter' else 'length'
+    return 'tool_calls' if has_tool_calls else 'stop'
+
+
+def convert_ollama_response_to_chat_completions(ollama_response: dict) -> dict:
     model = ollama_response.get('model', 'ollama')
     message_content = ollama_response.get('message', {}).get('content', '')
     reasoning_content = ollama_response.get('message', {}).get('thinking', None)
@@ -239,21 +256,19 @@ def convert_response_ollama_to_openai(ollama_response: dict) -> dict:
     openai_tool_calls = None
 
     if tool_calls:
-        openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
+        openai_tool_calls = convert_ollama_tool_call_to_chat_completions(tool_calls)
 
     data = ollama_response
 
-    usage = convert_ollama_usage_to_openai(data)
+    usage = convert_ollama_usage_to_chat_completions(data)
 
-    response = openai_chat_completion_message_template(
-        model, message_content, reasoning_content, openai_tool_calls, usage
-    )
+    response = chat_completion_message_template(model, message_content, reasoning_content, openai_tool_calls, usage)
     if not openai_tool_calls and ollama_response.get('done_reason'):
         response['choices'][0]['finish_reason'] = ollama_response['done_reason']
     return response
 
 
-async def convert_streaming_response_ollama_to_openai(ollama_streaming_response):
+async def convert_ollama_stream_to_chat_completions(ollama_streaming_response):
     has_tool_calls = False
     # All chunks in a single completion must share the same id (OpenAI spec).
     completion_id = f'chatcmpl-{str(uuid4())}'
@@ -269,7 +284,7 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         openai_tool_calls = None
 
         if tool_calls:
-            openai_tool_calls = convert_ollama_tool_call_to_openai(tool_calls)
+            openai_tool_calls = convert_ollama_tool_call_to_chat_completions(tool_calls)
             has_tool_calls = True
 
         done = data.get('done', False)
@@ -277,9 +292,9 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
 
         usage = None
         if done:
-            usage = convert_ollama_usage_to_openai(data)
+            usage = convert_ollama_usage_to_chat_completions(data)
 
-        data = openai_chat_chunk_message_template(
+        data = chat_completion_chunk_template(
             model, message_content, reasoning_content, openai_tool_calls, usage, message_id=completion_id
         )
 
@@ -297,6 +312,97 @@ async def convert_streaming_response_ollama_to_openai(ollama_streaming_response)
         yield line
 
     yield 'data: [DONE]\n\n'
+
+
+async def convert_responses_stream_to_chat_completions(body_iterator):
+    """Convert line-framed Responses SSE after internal filters; pass other streams through."""
+    completion_id = f'chatcmpl-{uuid4()}'
+    created = int(time.time())
+    model = ''
+    tool_call_indexes = {}
+    first = True
+    is_responses_stream = False
+    done = False
+    async for line in body_iterator:
+        text = line.decode('utf-8', 'replace') if isinstance(line, bytes) else line
+        if text.startswith('event:') and (
+            is_responses_stream or text.removeprefix('event:').strip().startswith('response.')
+        ):
+            continue
+        if done and text.strip() == 'data: [DONE]':
+            continue
+        try:
+            data = JSONCodec.loads(text.removeprefix('data:').strip()) if text.startswith('data:') else None
+        except JSONCodec.JSONDecodeError:
+            data = None
+        event_type = data.get('type', '') if isinstance(data, dict) else ''
+        if not event_type.startswith('response.') and not (event_type == 'error' and is_responses_stream):
+            yield line
+            continue
+
+        is_responses_stream = True
+        if event_type in ('response.failed', 'error'):
+            error = data.get('response', {}).get('error') if event_type == 'response.failed' else data
+            yield f'data: {JSONCodec.dumps({"error": error})}\n\n'
+            done = True
+            continue
+        if event_type == 'response.created':
+            response = data.get('response', {})
+            completion_id = response.get('id') or completion_id
+            created = response.get('created_at') or created
+            model = response.get('model', '')
+            continue
+
+        delta = {}
+        output_index = data.get('output_index')
+        is_final = event_type in ('response.completed', 'response.incomplete')
+        if event_type == 'response.output_text.delta':
+            delta['content'] = data['delta']
+        elif event_type in ('response.reasoning_text.delta', 'response.reasoning_summary_text.delta'):
+            delta['reasoning_content'] = data['delta']
+        elif event_type == 'response.refusal.delta':
+            delta['refusal'] = data['delta']
+        elif event_type == 'response.output_item.added' and data.get('item', {}).get('type') == 'function_call':
+            item = data['item']
+            tool_call_indexes[output_index] = len(tool_call_indexes)
+            delta['tool_calls'] = [
+                {
+                    'index': tool_call_indexes[output_index],
+                    'id': item.get('call_id', ''),
+                    'type': 'function',
+                    'function': {'name': item.get('name', ''), 'arguments': item.get('arguments', '')},
+                }
+            ]
+        elif event_type == 'response.function_call_arguments.delta':
+            delta['tool_calls'] = [
+                {
+                    'index': tool_call_indexes[output_index],
+                    'function': {'arguments': data['delta']},
+                }
+            ]
+        elif not is_final:
+            continue
+
+        chunk = chat_completion_chunk_template(model, message_id=completion_id)
+        chunk['created'] = created
+        chunk['choices'][0].update(delta=delta, finish_reason=None)
+        if first:
+            delta['role'] = 'assistant'
+            first = False
+        if is_final:
+            response = data.get('response', {})
+            chunk['choices'][0]['finish_reason'] = get_responses_finish_reason(
+                {**response, 'status': event_type.removeprefix('response.')}, bool(tool_call_indexes)
+            )
+            usage = convert_responses_usage_to_chat_completions(response.get('usage'))
+            if usage:
+                chunk['usage'] = usage
+            done = True
+        yield f'data: {JSONCodec.dumps(chunk)}\n\n'
+
+    # Let the wrapped stream finish outlet filters and usage logging before clients disconnect.
+    if done:
+        yield 'data: [DONE]\n\n'
 
 
 def convert_embedding_response_ollama_to_openai(response) -> dict:
@@ -729,7 +835,7 @@ def handle_responses_streaming_event(
 
         return current_output, None
 
-    elif event_type == 'response.completed':
+    elif event_type in ('response.completed', 'response.incomplete'):
         # State Machine Event: Completed
         response_data = data.get('response', {})
         final_output = response_data.get('output')

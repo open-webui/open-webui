@@ -203,8 +203,8 @@ def replace_imports(content):
     return content
 
 
-# May the intent of the one who wrote it survive every
-# import and transformation, as a deed survives the generations.
+# Let the care put into this work survive every
+# import and transformation, and serve those who carry it forward.
 async def load_tool_module_by_id(tool_id, content=None):
     """Prepare a Tool instance, frontmatter, and Python module without changing the live cache."""
     if not ENABLE_TOOLS:
@@ -229,8 +229,7 @@ async def load_tool_module_by_id(tool_id, content=None):
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary file and use it to define `__file__` so
-    # that it works as expected from the module's perspective.
+    # Give the module a real __file__; even dynamically loaded code wants an address.
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file.close()
     try:
@@ -244,7 +243,7 @@ async def load_tool_module_by_id(tool_id, content=None):
             frontmatter = extract_frontmatter(content)
         log.info('Loaded module: %s', module.__name__)
 
-        # Create and return the object if the class 'Tools' is found in the module
+        # Look for the Tools class; the toolkit still needs someone to answer the door.
         if hasattr(module, 'Tools'):
             return module.Tools(), frontmatter, module
         else:
@@ -278,8 +277,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
     module = types.ModuleType(module_name)
     sys.modules[module_name] = module
 
-    # Create a temporary file and use it to define `__file__` so
-    # that it works as expected from the module's perspective.
+    # Give the module a real __file__; even dynamically loaded code wants an address.
     temp_file = tempfile.NamedTemporaryFile(delete=False)
     temp_file.close()
     try:
@@ -475,7 +473,7 @@ async def install_tool_and_function_dependencies():
         return
 
     function_list = await Functions.get_functions(active_only=True) if ENABLE_FUNCTIONS else []
-    tool_list = await Tools.get_tools() if ENABLE_TOOLS else []
+    tool_list = await Tools.get_tools(active_only=True) if ENABLE_TOOLS else []
 
     all_dependencies = ''
     try:

@@ -3,23 +3,23 @@ updates:
   - package-ecosystem: uv
     directory: '/'
     schedule:
-      interval: monthly
+      interval: yearly
     target-branch: dev
 
   - package-ecosystem: pip
     directory: '/backend'
     schedule:
-      interval: monthly
+      interval: yearly
     target-branch: dev
 
   - package-ecosystem: github-actions
     directory: '/'
     schedule:
-      interval: monthly
+      interval: yearly
     target-branch: dev
 
   - package-ecosystem: npm
     directory: '/'
     schedule:
-      interval: monthly
+      interval: yearly
     target-branch: dev

@@ -80,7 +80,12 @@
 	});
 </script>
 
-<Modal size="sm" bind:show className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={$i18n.t('Manage Models')}
+	size="sm"
+	bind:show
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">
@@ -88,7 +93,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				on:click={() => {
 					show = false;
 				}}

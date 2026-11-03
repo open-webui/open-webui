@@ -65,7 +65,7 @@ async def resolve_system_prompt(
 
 # What goes out cannot be taken back. Let it be shaped
 # well before it leaves this place.
-# inplace function: form_data is modified
+# Mutates form_data in place.
 async def apply_system_prompt_to_body(
     system: Optional[str],
     form_data: dict,
@@ -210,7 +210,7 @@ def apply_model_params_to_body_openai(params: dict, form_data: dict) -> dict:
         'presence_penalty': float,
         'reasoning_effort': str,
         'seed': lambda x: x,
-        'stop': lambda x: [bytes(s, 'utf-8').decode('unicode_escape') for s in x],
+        'stop': lambda x: [stop.encode('latin-1', 'backslashreplace').decode('unicode_escape') for stop in x],
         'logit_bias': lambda x: x,
         'response_format': dict,
     }
@@ -242,7 +242,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
 
     for key, value in name_differences.items():
         if (param := params.get(key, None)) is not None:
-            # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+            # Move this parameter to the payload root so it is not also sent as a generation option.
             params[value] = params[key]
             del params[key]
 
@@ -264,7 +264,7 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
         'repeat_penalty': float,
         'presence_penalty': float,
         'frequency_penalty': float,
-        'stop': lambda x: [bytes(s, 'utf-8').decode('unicode_escape') for s in x],
+        'stop': lambda x: [stop.encode('latin-1', 'backslashreplace').decode('unicode_escape') for stop in x],
         'num_gpu': int,
         'use_mmap': bool,
         'use_mlock': bool,
@@ -292,16 +292,16 @@ def apply_model_params_to_body_ollama(params: dict, form_data: dict) -> dict:
             form_data[key] = value(param)
             del params[key]
 
-    # Unlike OpenAI, Ollama does not support params directly in the body
+    # Map the remaining generation parameters into options; root-level parameters were handled above.
     form_data['options'] = apply_model_params_to_body(params, (form_data.get('options', {}) or {}), mappings)
     return form_data
 
 
-def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
+def convert_chat_completions_messages_to_ollama(messages: list[dict]) -> list[dict]:
     ollama_messages = []
 
     for message in messages:
-        # Initialize the new message structure with the role
+        # New envelope, same speaker: carry the role across first.
         new_message = {'role': message['role']}
 
         # Preserve Ollama-native 'thinking' field (used by reasoning models,
@@ -315,12 +315,12 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
         tool_calls = message.get('tool_calls', None)
         tool_call_id = message.get('tool_call_id', None)
 
-        # Check if the content is a string (just a simple message)
+        # Plain text without tool calls gets the express lane.
         if isinstance(content, str) and not tool_calls:
             # If the content is a string, it's pure text
             new_message['content'] = content
 
-            # If message is a tool call, add the tool call id to the message
+            # Preserve the tool response's link to the call it answers.
             if tool_call_id:
                 new_message['tool_call_id'] = tool_call_id
 
@@ -339,7 +339,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                 ollama_tool_calls.append(ollama_tool_call)
             new_message['tool_calls'] = ollama_tool_calls
 
-            # Put the content to empty string (Ollama requires an empty string for tool calls)
+            # Tool calls get an empty content string; Ollama insists on the blank name tag.
             new_message['content'] = ''
 
         else:
@@ -357,7 +357,7 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
                 elif item.get('type') == 'image_url':
                     img_url = item.get('image_url', {}).get('url', '')
                     if img_url:
-                        # If the image url starts with data:, it's a base64 image and should be trimmed
+                        # Peel the data-URL label off the base64 image before packing it for Ollama.
                         if img_url.startswith('data:'):
                             img_url = img_url.split(',')[-1]
                         images.append(img_url)
@@ -370,13 +370,13 @@ def convert_messages_openai_to_ollama(messages: list[dict]) -> list[dict]:
             if images:
                 new_message['images'] = images
 
-        # Append the new formatted message to the result
+        # Add the repacked message to the outgoing mail.
         ollama_messages.append(new_message)
 
     return ollama_messages
 
 
-def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
+def convert_chat_completions_payload_to_ollama(openai_payload: dict) -> dict:
     """
     Converts a payload formatted for OpenAI's API to be compatible with Ollama's API endpoint for chat completions.
 
@@ -396,7 +396,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
 
     # Mapping basic model and message details
     ollama_payload['model'] = openai_payload.get('model')
-    ollama_payload['messages'] = convert_messages_openai_to_ollama(openai_payload.get('messages'))
+    ollama_payload['messages'] = convert_chat_completions_messages_to_ollama(openai_payload.get('messages'))
     ollama_payload['stream'] = openai_payload.get('stream', False)
     if 'tools' in openai_payload:
         ollama_payload['tools'] = openai_payload['tools']
@@ -425,7 +425,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
         # Ollama's options field can contain parameters that should be at the root level.
         for key, value in ollama_root_params.items():
             if (param := ollama_options.get(key, None)) is not None:
-                # Copy the parameter to new name then delete it, to prevent Ollama warning of invalid option provided
+                # Move this parameter to the payload root so it is not also sent as a generation option.
                 ollama_payload[key] = value(param)
                 del ollama_options[key]
 
@@ -434,8 +434,7 @@ def convert_payload_openai_to_ollama(openai_payload: dict) -> dict:
             ollama_options['num_predict'] = ollama_options['max_tokens']
             del ollama_options['max_tokens']
 
-        # Ollama lacks a "system" prompt option. It has to be provided as a direct parameter, so we copy it down.
-        # Comment: Not sure why this is needed, but we'll keep it for compatibility.
+        # Preserve legacy options.system input by moving it to the payload root.
         if 'system' in ollama_options:
             ollama_payload['system'] = ollama_options['system']
             del ollama_options['system']

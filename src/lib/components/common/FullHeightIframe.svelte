@@ -93,7 +93,7 @@
 
 		const scriptTags: string[] = [];
 
-		// --- Alpine.js detection & injection ---
+		// Alpine.js detection & injection
 		const hasAlpineDirectives = alpineDirectives.some((dir) => html.includes(dir));
 		if (hasAlpineDirectives) {
 			try {
@@ -107,7 +107,7 @@
 			}
 		}
 
-		// --- Chart.js detection & injection ---
+		// Chart.js detection & injection
 		const chartJsDirectives = ['new Chart(', 'Chart.'];
 		const hasChartJsDirectives = chartJsDirectives.some((dir) => html.includes(dir));
 		if (hasChartJsDirectives) {

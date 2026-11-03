@@ -13,7 +13,7 @@
 
 <Tooltip content="{event.title}{event.location ? ` · ${event.location}` : ''}">
 	<button
-		class="w-full text-left text-xs flex items-start gap-1.5 py-[0.0625rem] px-0.5 rounded-md
+		class="pointer-events-auto w-full text-left text-xs flex items-start gap-1.5 py-[0.0625rem] px-0.5 rounded-md
 			{event.meta?.automation_id ? 'opacity-60' : ''}
 			hover:bg-gray-50 dark:hover:bg-gray-800/50 transition truncate"
 		on:click|stopPropagation={() => dispatch('click', event)}

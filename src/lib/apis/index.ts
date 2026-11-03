@@ -20,8 +20,8 @@ const OPENAPI_HTTP_METHODS = new Set([
 	'trace'
 ]);
 
-// Every request sent from here is a petition. May it reach
-// the one for whom it was intended, and return answered.
+// Let every request reach its destination,
+// and let those who wait receive an answer worthy of their patience.
 export const getModels = async (
 	token: string = '',
 	connections: object | null = null,
@@ -393,6 +393,16 @@ export const getTaskIdsByChatId = async (token: string, chat_id: string, signal?
 	}
 
 	return res;
+};
+
+export const resumeTemporaryChat = async (token: string, chatId: string, sessionId: string) => {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/tasks/chat/${encodeURIComponent(chatId)}/resume`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify({ session_id: sessionId })
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
 };
 
 export const getToolServerData = async (token: string, url: string) => {

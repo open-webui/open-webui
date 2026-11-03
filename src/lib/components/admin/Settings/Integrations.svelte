@@ -291,6 +291,7 @@
 									<div class="flex gap-1 items-center">
 										<Tooltip content={$i18n.t('Configure')}>
 											<button
+												aria-label={$i18n.t('Configure')}
 												class="self-center p-1 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"
 												on:click={() => {
 													editTerminalIdx = idx;

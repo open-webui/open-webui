@@ -17,9 +17,7 @@ class ShareChatForm(BaseModel):
     share_mode: ChatShareMode = None
 
 
-####################
 # SharedChat DB Schema
-####################
 
 
 class SharedChat(Base):
@@ -59,9 +57,7 @@ class SharedChatResponse(BaseModel):
     created_at: int
 
 
-####################
 # Table Operations
-####################
 
 
 class SharedChatsTable:

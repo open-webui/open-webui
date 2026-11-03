@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { embed, showControls, showEmbeds } from '$lib/stores';
+	import { embed, showTabs, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
 
 	import CitationModal from './Citations/CitationModal.svelte';
@@ -54,7 +54,7 @@
 						window.open(embedUrl, '_blank');
 						return;
 					} else {
-						showControls.set(true);
+						showTabs.set(true);
 						showEmbeds.set(true);
 						embed.set({
 							url: embedUrl,

@@ -50,10 +50,7 @@
 	function portal(node: HTMLElement) {
 		document.body.appendChild(node);
 
-		// Content can grow after the dropdown is positioned - a submenu is opened, or an
-		// async list finishes loading - which would otherwise leave it overflowing the
-		// viewport. Compare scrollHeight (the natural content height) so that clamping
-		// max-height here cannot feed back into another reposition.
+		// Track scrollHeight as content grows; max-height clamping must not trigger a reposition loop.
 		const resizeObserver = new ResizeObserver(() => {
 			if (node.scrollHeight === lastContentHeight) return;
 			lastContentHeight = node.scrollHeight;

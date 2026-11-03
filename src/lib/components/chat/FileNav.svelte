@@ -1,18 +1,8 @@
-<script context="module">
-	// Keep keys in nested template expressions visible to i18next-parser.
-	// $i18n.t("Unknown error");
-
-	// Persists across mount/unmount cycles (module-level, not per-instance)
-	let savedPath = '/';
-	let savedFileRoot = null;
-	/** @type {Map<string, string[]>} */
-	const treeExpandedCache = new Map();
-	/** @type {Map<string, [string, any[]][]>} */
-	const treeContentsCache = new Map();
-</script>
-
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
+	import type { TerminalConnection } from '$lib/apis/terminal';
+	import type { GitStatus } from '$lib/apis/terminal/git';
+	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
@@ -29,7 +19,6 @@
 	} from '$lib/stores';
 	import {
 		getCwd,
-		getTerminalConfig,
 		getFileMatches,
 		listFiles,
 		readFile,
@@ -66,13 +55,33 @@
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
-	import PortList from './FileNav/PortList.svelte';
-	import PortPreview from './FileNav/PortPreview.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
+	// Directory and preview state belong to this tab, including its terminal connection.
+	let savedPath = '/';
+	let savedFileRoot: TerminalFileRoot | null = null;
+	const treeExpandedCache = new Map<string, string[]>();
+	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
+
 	const i18n = getContext<Readable<I18n>>('i18n');
+	// Keep the error fallback discoverable by the i18n extractor.
+	// t('Unknown error')
 
 	export let overlay = false;
+	export let active = true;
+	export let gitStatus: GitStatus | null = null;
+	export let gitConnection: TerminalConnection | null = null;
+	export let gitDiffMode: 'unified' | 'split' = 'unified';
+	export let gitHideWhitespace = false;
+	export let terminalId: string | null = null;
+	export let initialFile: { path: string; page?: number | null } | null = null;
+	export let initialDirectory: string | null = null;
+	export let manageFileRequests = true;
+	export let showTerminalDock = true;
+	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
+	export let onBrowseDirectory: ((path: string) => void) | null = null;
+	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
+
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let onAskFile: ((instruction: string, file: FilesystemFile) => Promise<void>) | null =
@@ -85,6 +94,7 @@
 	} | null = null;
 	// Keep typing from invalidating the keyed selection and remounting the input.
 	let fileAskInput = '';
+	let usingFileAsk = false;
 	let asking = false;
 	const positionFileAsk = (node: HTMLFormElement, anchor: Range | HTMLElement) => {
 		document.body.appendChild(node);
@@ -138,7 +148,7 @@
 	let pendingFile: FilesystemFile | null = null;
 	let viewerLabel = '';
 	let loadGeneration = 0;
-	let dirty = false;
+	export let dirty = false;
 	let diskChanged = false;
 	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
 		null;
@@ -169,6 +179,13 @@
 		}
 		return true;
 	};
+	export const requestClose = () => protectBuffer();
+	export const hasUnsavedChanges = () => dirty || saving;
+	export const browseDirectory = (path: string) => loadDir(path);
+	export const revealPage = (page: number | null) => {
+		documentTargetPage = normalizeDocumentTargetPage(page);
+	};
+
 	const publishFile = () => {
 		if (!openedFile) return;
 		terminalContext = {
@@ -178,6 +195,7 @@
 		};
 	};
 	const captureSelection = () => {
+		if (!active || usingFileAsk) return;
 		const selection = window.getSelection();
 		if (!onAskFile || !openedFile || !selection?.rangeCount || selection.isCollapsed) return;
 		const range = selection.getRangeAt(0);
@@ -214,7 +232,7 @@
 		if (
 			!openedFile ||
 			openedFile.path !== target.path ||
-			openedFile.terminal_id !== $selectedTerminalId ||
+			openedFile.terminal_id !== effectiveTerminalId ||
 			openedFile.session_id !== chatId
 		)
 			throw new Error('The file or terminal changed. Open it again before sending.');
@@ -223,12 +241,8 @@
 		return structuredClone(openedFile);
 	};
 
-	$: if (previewPort !== null && openedFile) {
-		openedFile = null;
-		if (terminalContext) terminalContext = { ...terminalContext, file: null };
-	}
 	$: {
-		(selectedFile, $selectedTerminalId, chatId);
+		(selectedFile, effectiveTerminalId, chatId);
 		fileAsk = null;
 	}
 	$: viewerLabel = selectedExcelSheet
@@ -258,12 +272,12 @@
 		await tick();
 	};
 
-	// ── Terminal panel state ────────────────────────────────────────────
+	// Sessions panel state
 	let terminalExpanded = false;
+	let hasSessions = false;
 	let terminalHeight = 200; // px, default when expanded
 	let isDraggingHandle = false;
 	let containerEl: HTMLElement;
-	let terminalEnabled = true;
 	type ComparisonFile = { name: string; path: string; size?: number };
 	let pinnedComparison: ComparisonFile | null = null;
 	let comparison: {
@@ -316,7 +330,7 @@
 		window.addEventListener('mouseup', onMouseUp);
 	};
 
-	// ── Directory state ──────────────────────────────────────────────────
+	// Directory state
 	let currentPath = savedPath;
 	let fileRoot: TerminalFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
@@ -324,8 +338,8 @@
 	let loading = false;
 	let error: string | null = null;
 
-	// ── Browser view state ──────────────────────────────────────────────
-	type SortMode = 'name' | 'size' | 'date';
+	// Browser view state
+	type SortMode = 'name' | 'size' | 'date' | 'created';
 	type BrowserRow = FileEntry & {
 		fullPath: string;
 		parentPath: string;
@@ -349,6 +363,15 @@
 	let loadingDirs: Set<string> = new Set();
 	let directoryMenu: { x: number; y: number } | null = null;
 	let searchQuery = '';
+	let showSearch = false;
+	let searchInput: HTMLInputElement;
+	const toggleSearch = async () => {
+		showSearch = !showSearch;
+		if (!showSearch) searchQuery = '';
+		await tick();
+		if (showSearch) searchInput?.focus();
+		else containerEl?.querySelector<HTMLButtonElement>('[data-file-search-toggle]')?.focus();
+	};
 	let matchResults: TerminalFileMatch[] | null = null;
 	let matchLoading = false;
 	let matchLoadingMore = false;
@@ -391,6 +414,13 @@
 		return [...items].sort((a, b) => {
 			// Directories always first
 			if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
+			if (mode === 'created') {
+				// Older servers and some filesystems do not expose creation time.
+				if (a.created == null && b.created != null) return 1;
+				if (a.created != null && b.created == null) return -1;
+				const cmp = (a.created ?? 0) - (b.created ?? 0) || a.name.localeCompare(b.name);
+				return asc ? cmp : -cmp;
+			}
 			if (mode === 'date') {
 				if (a.modified !== undefined && b.modified !== undefined) {
 					return asc ? a.modified - b.modified : b.modified - a.modified;
@@ -478,7 +508,7 @@
 		localStorage.setItem('fileNav:viewMode', mode);
 	};
 
-	// ── Navigation history ──────────────────────────────────────────────
+	// Navigation history
 	type NavEntry = { path: string; file: string | null };
 	let navHistory: NavEntry[] = [];
 	let navIndex = -1;
@@ -526,16 +556,29 @@
 		navigatingHistory = false;
 	};
 
-	// ── File preview state ───────────────────────────────────────────────
+	// File preview state
 	let selectedFile: string | null = null;
+	let showGitDiff = false;
+	let gitFileKey = '';
+	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
+		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
+		showGitDiff = false;
+	}
+	$: currentGitFile =
+		gitStatus?.is_repo && gitStatus.root && selectedFile
+			? (gitStatus.files.find(
+					(file) =>
+						normalizePath(`${gitStatus!.root}/${file.path}`) === normalizePath(selectedFile!)
+				) ?? null)
+			: null;
 	let selectedFileWritable = true;
-	let previewPort: number | null = null;
 	let fileContent: string | null = null;
 	let fileImageUrl: string | null = null;
 	let fileVideoUrl: string | null = null;
 	let fileAudioUrl: string | null = null;
 	let filePdfData: ArrayBuffer | null = null;
 	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
@@ -543,7 +586,7 @@
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
 
-	// ── Office preview state ────────────────────────────────────────────
+	// Office preview state
 	let fileOfficeHtml: string | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let currentSlide = 0;
@@ -551,7 +594,7 @@
 	let selectedExcelSheet = '';
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
-	// ── File preview toolbar state (bound from FilePreview) ─────────────
+	// File preview toolbar state (bound from FilePreview)
 	let editing = false;
 	let showRaw = false;
 	let saving = false;
@@ -573,7 +616,7 @@
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
 
-	// ── Upload / folder creation ─────────────────────────────────────────
+	// Upload / folder creation
 	let isDragOver = false;
 	let uploading = false;
 	let creatingFolder = false;
@@ -584,12 +627,12 @@
 	let newFileInput: HTMLInputElement;
 	let directoryUploadInput: HTMLInputElement;
 
-	// ── Delete confirmation ──────────────────────────────────────────────
+	// Delete confirmation
 	let deleteTarget: { path: string; name: string } | null = null;
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	// ── Terminal resolution ──────────────────────────────────────────────
+	// Terminal resolution
 	let selectedTerminal: { url: string; key: string } | null = null;
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
@@ -602,8 +645,8 @@
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	const getTerminal = (): { url: string; key: string } | null => {
-		const systemTerminal = $selectedTerminalId
-			? (($terminalServers ?? []).find((t) => t.id === $selectedTerminalId) ?? null)
+		const systemTerminal = effectiveTerminalId
+			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
 		const chatConfig = chatContext(systemTerminal);
 		isPerChatTerminal = !!systemTerminal && chatConfig?.context_id === 'chat_id';
@@ -616,7 +659,7 @@
 
 		const settingsValue: any = $settings;
 		const userTerminal = (settingsValue?.terminalServers ?? []).find(
-			(s: any) => s.url === $selectedTerminalId
+			(s: any) => s.url === effectiveTerminalId
 		);
 
 		const isSystem = !!systemTerminal;
@@ -630,11 +673,12 @@
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
-	let prevTerminalId = $selectedTerminalId;
+	let prevTerminalId = effectiveTerminalId;
 	let prevChatId = chatId;
 	let mounted = false;
+	let disposed = false;
 	$: {
-		($selectedTerminalId, $terminalServers, $settings);
+		(effectiveTerminalId, $terminalServers, $settings);
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 
@@ -643,17 +687,16 @@
 		if (chatChanged) prevChatId = chatId;
 
 		const terminalChanged =
-			terminal && (terminal.url !== prevTerminalUrl || $selectedTerminalId !== prevTerminalId);
+			terminal && (terminal.url !== prevTerminalUrl || effectiveTerminalId !== prevTerminalId);
 		if (terminalChanged) {
 			prevTerminalUrl = terminal.url;
-			prevTerminalId = $selectedTerminalId;
+			prevTerminalId = effectiveTerminalId;
 		}
 
 		if (chatChanged || terminalChanged || !terminal) {
 			comparison = null;
 			pinnedComparison = null;
 		}
-		if (chatChanged || terminalChanged || !terminal) previewPort = null;
 
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId) {
@@ -675,11 +718,6 @@
 				entries = [];
 				resetTreeState();
 				(async () => {
-					if (terminalChanged) {
-						const config = await getTerminalConfig(terminal.url, terminal.key);
-						terminalEnabled = config?.features?.terminal !== false;
-					}
-
 					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
 					loadDir(savedPath);
 				})();
@@ -687,7 +725,7 @@
 		}
 	}
 
-	// ── Helpers ──────────────────────────────────────────────────────────
+	// Helpers
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
 	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
@@ -772,13 +810,12 @@
 		terminal: { url: string; key: string } | null,
 		path: string,
 		hiddenVisible: boolean,
-		activeFile: string | null,
-		activePort: number | null
+		activeFile: string | null
 	) => {
 		clearMatchRequest();
 		matchRequestId += 1;
 		const requestId = matchRequestId;
-		if (!query || !terminal || activeFile || activePort !== null) {
+		if (!query || !terminal || activeFile) {
 			resetMatches();
 			return;
 		}
@@ -818,14 +855,7 @@
 		}, 200);
 	};
 
-	$: queueFileSearch(
-		searchText,
-		selectedTerminal,
-		currentPath,
-		showHidden,
-		selectedFile,
-		previewPort
-	);
+	$: queueFileSearch(searchText, selectedTerminal, currentPath, showHidden, selectedFile);
 
 	const loadMoreMatches = async () => {
 		const offset = nextMatchOffset;
@@ -939,7 +969,7 @@
 		);
 	};
 
-	// ── File preview management ──────────────────────────────────────────
+	// File preview management
 	const clearFilePreview = () => {
 		commentGeneration++;
 		fileSearchTarget = null;
@@ -959,6 +989,7 @@
 		}
 		filePdfData = null;
 		fileSqliteData = null;
+		fileModelData = null;
 		fileDocxData = null;
 		fileOfficeHtml = null;
 		fileOfficeSlides = null;
@@ -968,14 +999,15 @@
 		excelWorkbook = null;
 	};
 
-	// ── Directory operations ─────────────────────────────────────────────
+	// Directory operations
 	const loadDir = async (
 		path: string,
 		options: { preserveTree?: boolean; restoreTree?: boolean } = {}
 	) => {
+		if (disposed) return;
 		if (!(await protectBuffer())) return;
 		const generation = ++loadGeneration;
-		const selector = $selectedTerminalId,
+		const selector = effectiveTerminalId,
 			session = chatId;
 		const terminal = selectedTerminal;
 		if (!terminal) return;
@@ -993,21 +1025,22 @@
 		error = null;
 		selectedFile = null;
 		selectedFileWritable = true;
-		previewPort = null;
 		clearFilePreview();
 		clearSelection();
+		if (!options.preserveTree || directory !== currentPath || !terminalContext) {
+			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		}
 		currentPath = directory;
-		terminalContext = { terminalId: $selectedTerminalId, currentDirectory: directory };
 		savedPath = directory;
 		pushNavHistory(directory);
 
 		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
-		if (generation !== loadGeneration || selector !== $selectedTerminalId || session !== chatId)
+		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
 			return;
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
+		if (!initialFile) setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -1060,6 +1093,7 @@
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
+		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		saveTreeState();
 
 		const result = await fetchExpandedDir(directory);
@@ -1078,11 +1112,17 @@
 		entry: FileEntry,
 		options: { page?: unknown; refresh?: boolean } = {}
 	) => {
+		if (disposed) return;
 		const fullPath =
 			'fullPath' in entry ? (entry as BrowserRow).fullPath : entryPath(currentPath, entry);
 		const parentPath = 'parentPath' in entry ? (entry as BrowserRow).parentPath : currentPath;
 		if (entry.type === 'directory') {
 			await loadDir(fullPath);
+			return;
+		}
+
+		if (onOpenFile && !options.refresh && fullPath !== initialFile?.path) {
+			onOpenFile(fullPath, normalizeDocumentTargetPage(options.page));
 			return;
 		}
 
@@ -1102,14 +1142,14 @@
 		if (!terminal) return;
 
 		const generation = ++loadGeneration;
-		const selector = $selectedTerminalId!,
+		const selector = effectiveTerminalId!,
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
 				? { showRaw, currentSlide, selectedExcelSheet, scroll: viewerRoot?.scrollTop ?? 0 }
 				: null;
 		const current = () =>
-			generation === loadGeneration && selector === $selectedTerminalId && session === chatId;
+			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
 		openedFile = null;
 		if (terminalContext) terminalContext = { ...terminalContext, file: null };
 		dirty = false;
@@ -1141,6 +1181,7 @@
 			fileAudioUrl: null,
 			filePdfData: null,
 			fileSqliteData: null,
+			fileModelData: null,
 			fileDocxData: null,
 			fileOfficeHtml: null,
 			fileOfficeSlides: null,
@@ -1182,14 +1223,22 @@
 				chatId ?? undefined
 			);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
-		} else if (isSqlite(filePath)) {
+		} else if (
+			isSqlite(filePath) ||
+			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
+		) {
 			const result = await downloadFileBlob(
 				terminal.url,
 				terminal.key,
 				filePath,
 				chatId ?? undefined
 			);
-			if (result) next.fileSqliteData = await result.blob.arrayBuffer();
+			if (result) {
+				const data = await result.blob.arrayBuffer();
+				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
+					next.fileModelData = data;
+				else next.fileSqliteData = data;
+			}
 		} else if (isOffice(filePath)) {
 			const ext = getFileExt(filePath);
 			try {
@@ -1278,6 +1327,7 @@
 		fileAudioUrl = next.fileAudioUrl;
 		filePdfData = next.filePdfData;
 		fileSqliteData = next.fileSqliteData;
+		fileModelData = next.fileModelData;
 		fileDocxData = next.fileDocxData;
 		fileOfficeHtml = next.fileOfficeHtml;
 		fileOfficeSlides = next.fileOfficeSlides;
@@ -1295,6 +1345,7 @@
 				next.fileAudioUrl,
 				next.filePdfData,
 				next.fileSqliteData,
+				next.fileModelData,
 				next.fileDocxData,
 				next.fileOfficeHtml,
 				next.fileOfficeSlides
@@ -1374,7 +1425,7 @@
 		}
 	};
 
-	// ── Drag-and-drop upload ─────────────────────────────────────────────
+	// Drag-and-drop upload
 	type UploadEntry = { path: string; file?: File };
 
 	async function readDroppedFiles(data: DataTransfer): Promise<UploadEntry[]> {
@@ -1490,7 +1541,7 @@
 		directoryUploadInput.click();
 	};
 
-	// ── Folder creation ──────────────────────────────────────────────────
+	// Folder creation
 	const startNewFolderIn = async (path: string) => {
 		if (await loadDir(path)) await startNewFolder();
 	};
@@ -1525,7 +1576,7 @@
 		await refreshBrowser();
 	};
 
-	// ── File creation ────────────────────────────────────────────────────
+	// File creation
 	const startNewFileIn = async (path: string) => {
 		if (await loadDir(path)) await startNewFile();
 	};
@@ -1545,7 +1596,7 @@
 		if (!name) return;
 
 		const terminal = selectedTerminal;
-		if (!terminal) return;
+		if (!terminal || !currentWritable) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
 		const result = await uploadToTerminal(
@@ -1562,7 +1613,7 @@
 		await refreshBrowser();
 	};
 
-	// ── Delete ───────────────────────────────────────────────────────────
+	// Delete
 	const handleDelete = async (path: string, name: string) => {
 		const terminal = selectedTerminal;
 		if (!terminal || !currentWritable) return;
@@ -1583,7 +1634,7 @@
 		showDeleteConfirm = true;
 	};
 
-	// ── Move (drag-and-drop) ────────────────────────────────────────────
+	// Move (drag-and-drop)
 	const sourceParentPath = (source: string) => {
 		const cleanSource = normalizePath(source).replace(/\/$/, '');
 		const index = cleanSource.lastIndexOf('/');
@@ -1636,7 +1687,7 @@
 		}
 	};
 
-	// ── Rename ──────────────────────────────────────────────────────────
+	// Rename
 	const handleRename = async (oldPath: string, newName: string) => {
 		const terminal = selectedTerminal;
 		if (!terminal || !newName || !currentWritable) return;
@@ -1662,7 +1713,7 @@
 		await refreshBrowser();
 	};
 
-	// ── Multi-select ────────────────────────────────────────────────────
+	// Multi-select
 	let selectedEntries: Set<string> = new Set();
 	let lastClickedIndex: number | null = null;
 	let selectionMode = false;
@@ -1789,6 +1840,7 @@
 
 	// Click outside panel to clear selection
 	const handleWindowClick = (e: MouseEvent) => {
+		if (!active) return;
 		// A close click may reach the window after its modal has already been destroyed.
 		if (
 			e.composedPath().some((node) => node instanceof Element && node.classList.contains('modal'))
@@ -1805,7 +1857,7 @@
 		}
 	};
 
-	// ── Lifecycle ────────────────────────────────────────────────────────
+	// Lifecycle
 	onMount(() => {
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';
@@ -1814,7 +1866,7 @@
 		let handledDisplayFile = false;
 
 		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
-			if (!request || !selectedTerminal || comparison) return;
+			if (!manageFileRequests || !active || !request || !selectedTerminal || comparison) return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			let filePath = typeof request === 'string' ? request : request.path;
@@ -1831,10 +1883,10 @@
 
 			// Always reload directory to ensure entries are fresh
 			if (!(await protectBuffer())) return;
-			const selector = $selectedTerminalId,
+			const selector = effectiveTerminalId,
 				session = chatId;
 			await loadDir(dir);
-			if (selector !== $selectedTerminalId || session !== chatId || currentPath !== dir || dirty)
+			if (selector !== effectiveTerminalId || session !== chatId || currentPath !== dir || dirty)
 				return;
 			await tick();
 
@@ -1848,7 +1900,7 @@
 		});
 
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
-			if (!filePath || !selectedTerminal) return;
+			if (!filePath || !selectedTerminal || effectiveTerminalId !== $selectedTerminalId) return;
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
@@ -1876,18 +1928,29 @@
 			loading = true;
 
 			void (async () => {
-				// Discover server features on initial mount
-				const config = await getTerminalConfig(terminal.url, terminal.key);
-				terminalEnabled = config?.features?.terminal !== false;
-
 				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
 				savedPath =
-					terminalContext && terminalContext.terminalId === $selectedTerminalId
+					terminalContext && terminalContext.terminalId === effectiveTerminalId
 						? terminalContext.currentDirectory
 						: serverPath;
 				savedPath = clampToFileRoot(savedPath);
-				loadDir(savedPath, { restoreTree: true });
+				if (initialFile) {
+					const path = normalizePath(initialFile.path);
+					const slash = path.lastIndexOf('/');
+					await loadDir(slash > 0 ? path.slice(0, slash + 1) : '/');
+					await openEntry(
+						entries.find((entry) => entry.name === path.slice(slash + 1)) ?? {
+							name: path.slice(slash + 1),
+							type: 'file',
+							writable: currentWritable
+						},
+						{ page: initialFile.page }
+					);
+				} else {
+					await loadDir(initialDirectory ?? savedPath, { restoreTree: true });
+				}
 			})();
 		}
 
@@ -1903,6 +1966,7 @@
 
 		const onVisibilityChange = () => {
 			if (
+				active &&
 				document.visibilityState === 'visible' &&
 				!comparison &&
 				!selectedFile &&
@@ -1930,6 +1994,7 @@
 	});
 
 	onDestroy(() => {
+		disposed = true;
 		++loadGeneration;
 		dirtyChoice?.resolve('cancel');
 		clearMatchRequest();
@@ -1953,17 +2018,25 @@
 	}}
 />
 
+<svelte:document
+	on:selectionchange={captureSelection}
+	on:focusin={(event) => {
+		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+	}}
+/>
+
 <svelte:window
 	on:keydown={(event) => {
+		if (!active) return;
 		if (event.key === 'Escape' && fileAsk) {
 			fileAsk = null;
 			event.preventDefault();
 		} else handleKeydown(event);
 	}}
 	on:click={handleWindowClick}
-	on:pointerdown={(event) => {
-		if (fileAsk && !dirtyChoice && !(event.target as Element)?.closest('[data-file-ask]'))
-			fileAsk = null;
+	on:pointerdown|capture={(event) => {
+		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+		if (fileAsk && !dirtyChoice && !usingFileAsk) fileAsk = null;
 	}}
 />
 
@@ -2037,237 +2110,254 @@
 			</div>
 		{/if}
 
-		{#if previewPort === null}
-			<FileNavToolbar
-				breadcrumbs={buildBreadcrumbs(currentPath)}
-				{selectedFile}
-				{loading}
-				writable={currentWritable}
-				{canGoBack}
-				{canGoForward}
-				{sortBy}
-				{sortAsc}
-				{showHidden}
-				viewMode={isSearching ? null : viewMode}
-				onViewModeChange={changeViewMode}
-				onGoBack={goBack}
-				onGoForward={goForward}
-				onNavigate={loadDir}
-				onRefresh={() => {
-					if (selectedFile) {
-						const fileName = selectedFile.split('/').pop() ?? '';
-						openEntry({ name: fileName, type: 'file', size: 0 });
-					} else {
-						refreshBrowser();
-					}
-				}}
-				onNewFolder={startNewFolder}
-				onNewFile={startNewFile}
-				onUploadFiles={handleUploadFiles}
-				onUploadFolder={() => openUploadPicker(true)}
-				onDownloadDir={() => downloadFile(currentPath)}
-				onMove={handleMovePaths}
-				onSort={toggleSort}
-				onToggleHidden={toggleHidden}
-			>
-				{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
-					<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
+		<FileNavToolbar
+			gitFile={currentGitFile}
+			gitDiffOpen={showGitDiff}
+			onToggleGitDiff={() => {
+				showGitDiff = !showGitDiff;
+				fileAsk = null;
+			}}
+			breadcrumbs={buildBreadcrumbs(currentPath)}
+			{selectedFile}
+			fileSize={openedFile?.size ?? pendingFile?.size}
+			{loading}
+			{showSearch}
+			onToggleSearch={toggleSearch}
+			writable={currentWritable}
+			canGoBack={!initialFile && canGoBack}
+			canGoForward={!initialFile && canGoForward}
+			{sortBy}
+			{sortAsc}
+			showDateAdded
+			{showHidden}
+			viewMode={isSearching ? null : viewMode}
+			onViewModeChange={changeViewMode}
+			onGoBack={goBack}
+			onGoForward={goForward}
+			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
+			onRefresh={() => {
+				if (selectedFile) {
+					const fileName = selectedFile.split('/').pop() ?? '';
+					openEntry({ name: fileName, type: 'file', size: 0 });
+				} else {
+					refreshBrowser();
+				}
+			}}
+			onNewFolder={startNewFolder}
+			onNewFile={startNewFile}
+			onUploadFiles={handleUploadFiles}
+			onUploadFolder={() => openUploadPicker(true)}
+			onDownloadDir={() => downloadFile(currentPath)}
+			onMove={handleMovePaths}
+			onSort={toggleSort}
+			onToggleHidden={toggleHidden}
+		>
+			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
+					<button
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						on:click={async () => {
+							if (!(await protectBuffer())) return;
+							if (editing) filePreviewRef?.cancelEdit();
+							showRaw = !showRaw;
+						}}
+						aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
+					>
+						{#if showRaw}
+							<Icon name="eye" size={11} strokeWidth={1.4} />
+						{:else}
+							<Icon name="code" size={11} strokeWidth={1.4} />
+						{/if}
+					</button>
+				</Tooltip>
+			{/if}
+			{#if fileContent !== null}
+				<Tooltip content={$i18n.t('Copy')}>
+					<button
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						on:click={async () => {
+							if (await copyToClipboard(fileContent ?? '')) {
+								toast.success($i18n.t('Copied to clipboard'));
+							}
+						}}
+						aria-label={$i18n.t('Copy')}
+					>
+						<Icon name="copy" size={11} strokeWidth={1.4} />
+					</button>
+				</Tooltip>
+			{/if}
+			<Tooltip content={$i18n.t('Download')}>
+				<button
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					on:click={() => selectedFile && downloadFile(selectedFile)}
+					aria-label={$i18n.t('Download')}
+				>
+					<Icon name="download" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+
+			{#if isTextFile}
+				{#if isHtml && showRaw}
+					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={async () => {
-								if (!(await protectBuffer())) return;
-								if (editing) filePreviewRef?.cancelEdit();
-								showRaw = !showRaw;
-							}}
-							aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
 						>
-							{#if showRaw}
-								<Icon name="eye" size={11} strokeWidth={1.4} />
+							{#if saving}
+								<Spinner className="size-3.5" />
 							{:else}
-								<Icon name="code" size={11} strokeWidth={1.4} />
+								<Icon name="check" size={11} strokeWidth={1.7} />
 							{/if}
 						</button>
 					</Tooltip>
-				{/if}
-				{#if isTextFile}
-					{#if isHtml && showRaw}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if isHtml}
-						<!-- HTML preview mode: no edit/save buttons -->
-					{:else if isMarkdown && showRaw}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if isMarkdown}
-						<!-- Markdown preview mode: no edit/save buttons -->
-					{:else if isCode}
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else if editing}
-						<Tooltip content={$i18n.t('Cancel')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-								on:click={() => filePreviewRef?.cancelEdit()}
-								aria-label={$i18n.t('Cancel')}
-							>
-								<Icon name="xmark" size={11} strokeWidth={1.7} />
-							</button>
-						</Tooltip>
-						<Tooltip content={$i18n.t('Save')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() =>
-									filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
-								disabled={saving || !selectedFileWritable}
-								aria-label={$i18n.t('Save')}
-							>
-								{#if saving}
-									<Spinner className="size-3.5" />
-								{:else}
-									<Icon name="check" size={11} strokeWidth={1.7} />
-								{/if}
-							</button>
-						</Tooltip>
-					{:else}
-						<Tooltip content={$i18n.t('Edit')}>
-							<button
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:hover:bg-transparent"
-								on:click={() => filePreviewRef?.startEdit()}
-								disabled={!selectedFileWritable}
-								aria-label={$i18n.t('Edit')}
-							>
-								<Icon name="pencil" size={11} strokeWidth={1.4} />
-							</button>
-						</Tooltip>
-					{/if}
-				{/if}
-
-				{#if fileContent !== null}
-					<Tooltip content={$i18n.t('Copy')}>
+				{:else if isHtml}
+					<!-- HTML preview mode: no edit/save buttons -->
+				{:else if isMarkdown && showRaw}
+					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={async () => {
-								if (await copyToClipboard(fileContent ?? '')) {
-									toast.success($i18n.t('Copied to clipboard'));
-								}
-							}}
-							aria-label={$i18n.t('Copy')}
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
 						>
-							<Icon name="copy" size={11} strokeWidth={1.4} />
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else if isMarkdown}
+					<!-- Markdown preview mode: no edit/save buttons -->
+				{:else if isCode}
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else if editing}
+					<Tooltip content={$i18n.t('Cancel')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+							on:click={() => filePreviewRef?.cancelEdit()}
+							aria-label={$i18n.t('Cancel')}
+						>
+							<Icon name="xmark" size={11} strokeWidth={1.7} />
+						</button>
+					</Tooltip>
+					<Tooltip content={$i18n.t('Save')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() =>
+								filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
+							disabled={saving || !selectedFileWritable}
+							aria-label={$i18n.t('Save')}
+						>
+							{#if saving}
+								<Spinner className="size-3.5" />
+							{:else}
+								<Icon name="check" size={11} strokeWidth={1.7} />
+							{/if}
+						</button>
+					</Tooltip>
+				{:else}
+					<Tooltip content={$i18n.t('Edit')}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							on:click={() => filePreviewRef?.startEdit()}
+							disabled={!selectedFileWritable}
+							aria-label={$i18n.t('Edit')}
+						>
+							<Icon name="pencil" size={11} strokeWidth={1.4} />
 						</button>
 					</Tooltip>
 				{/if}
-				<Tooltip content={$i18n.t('Download')}>
-					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-						on:click={() => selectedFile && downloadFile(selectedFile)}
-						aria-label={$i18n.t('Download')}
-					>
-						<Icon name="download" size={11} strokeWidth={1.4} />
-					</button>
-				</Tooltip>
-			</FileNavToolbar>
-
-			{#if !selectedFile}
-				<div
-					class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
-				>
-					<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
-					<input
-						type="text"
-						class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
-						placeholder={$i18n.t('Search files and contents')}
-						bind:value={searchQuery}
-					/>
-					{#if searchQuery}
-						<button
-							class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
-							on:click={() => (searchQuery = '')}
-							aria-label={$i18n.t('Clear search')}
-						>
-							<Icon name="xmark" size={11} strokeWidth={1.5} />
-						</button>
-					{/if}
-				</div>
 			{/if}
+		</FileNavToolbar>
 
-			{#if pinnedComparison}
-				<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
-					<Tooltip content={pinnedComparison.path}>
-						<span class="block max-w-[16rem] truncate"
-							>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
-						>
-					</Tooltip>
-					<button
-						type="button"
-						class="shrink-0 hover:text-gray-900 dark:hover:text-white"
-						aria-label={$i18n.t('Clear comparison selection')}
-						on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
-					>
-				</div>
-			{/if}
-
-			<!-- Bulk action bar -->
-			{#if selectedCount > 0 && !isSearching}
-				<BulkActionBar
-					count={selectedCount}
-					{canCompare}
-					onCompare={() => {
-						if (canCompare)
-							openComparison([
-								comparisonFile(comparisonEntries[0]),
-								comparisonFile(comparisonEntries[1])
-							]);
+		{#if !selectedFile && showSearch}
+			<div
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
+			>
+				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
+				<input
+					bind:this={searchInput}
+					type="text"
+					class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
+					placeholder={$i18n.t('Search files and contents')}
+					aria-label={$i18n.t('Search files and contents')}
+					bind:value={searchQuery}
+					on:keydown={(event) => {
+						if (event.key === 'Escape') {
+							event.preventDefault();
+							event.stopPropagation();
+							void toggleSearch();
+						}
 					}}
-					canDelete={selectedEntriesWritable}
-					onDelete={() => {
-						deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
-						showDeleteConfirm = true;
-					}}
-					onDownload={bulkDownload}
-					onSelectAll={selectAll}
-					onClear={clearSelection}
 				/>
-			{/if}
+				{#if searchQuery}
+					<button
+						class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+						on:click={() => (searchQuery = '')}
+						aria-label={$i18n.t('Clear search')}
+					>
+						<Icon name="xmark" size={11} strokeWidth={1.5} />
+					</button>
+				{/if}
+			</div>
+		{/if}
+
+		{#if pinnedComparison}
+			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+				<Tooltip content={pinnedComparison.path}>
+					<span class="block max-w-[16rem] truncate"
+						>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
+					>
+				</Tooltip>
+				<button
+					type="button"
+					class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+					aria-label={$i18n.t('Clear comparison selection')}
+					on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
+				>
+			</div>
+		{/if}
+
+		<!-- Bulk action bar -->
+		{#if selectedCount > 0 && !isSearching}
+			<BulkActionBar
+				count={selectedCount}
+				{canCompare}
+				onCompare={() => {
+					if (canCompare)
+						openComparison([
+							comparisonFile(comparisonEntries[0]),
+							comparisonFile(comparisonEntries[1])
+						]);
+				}}
+				canDelete={selectedEntriesWritable}
+				onDelete={() => {
+					deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+					showDeleteConfirm = true;
+				}}
+				onDownload={bulkDownload}
+				onSelectAll={selectAll}
+				onClear={clearSelection}
+			/>
 		{/if}
 
 		{#if diskChanged}<div
@@ -2289,88 +2379,93 @@
 		<!-- Content -->
 		<div
 			bind:this={viewerRoot}
-			on:mouseup={captureSelection}
-			on:keyup={captureSelection}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
 				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
-				if (comparison || selectedFile || previewPort !== null || isSearching) return;
+				if (comparison || selectedFile || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
 				directoryMenu = { x: e.clientX, y: e.clientY };
 			}}
 		>
-			{#if previewPort !== null}
-				<PortPreview
-					baseUrl={previewBaseUrl}
-					port={previewPort}
-					overlay={overlay || isDraggingHandle}
-					onClose={() => {
-						previewPort = null;
-					}}
-				/>
-			{:else if selectedFile !== null}
-				{#if supportsComments(selectedFile) && selectedTerminal}
-					{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
-						<CommentFilePreview
-							path={selectedFile}
-							baseUrl={selectedTerminal.url}
-							apiKey={selectedTerminal.key}
-							{chatId}
-							targetPage={documentTargetPage}
-							initialSheet={selectedExcelSheet}
-							onReady={() => {
-								openedFile = pendingFile;
-								publishFile();
-							}}
-							bind:currentSlide
-							bind:sheet={selectedExcelSheet}
-						/>
-					{/key}
-				{:else}
-					<FilePreview
-						bind:this={filePreviewRef}
-						bind:editing
-						bind:showRaw
-						bind:saving
-						bind:dirty
+			{#if selectedFile !== null}
+				{#if showGitDiff}
+					<FileGitDiff
+						connection={gitConnection}
 						{chatId}
+						root={gitStatus?.root ?? currentPath}
+						file={currentGitFile}
+						active={active && !fileLoading}
+						mode={gitDiffMode}
+						hideWhitespace={gitHideWhitespace}
 						resourceVersion={commentGeneration}
-						onLocalLink={(path) => showFileNavPath.set({ path })}
-						bind:currentSlide
-						{selectedFile}
-						readOnly={!selectedFileWritable}
-						{fileLoading}
-						{fileImageUrl}
-						{fileVideoUrl}
-						{fileAudioUrl}
-						{filePdfData}
-						{fileSqliteData}
-						{fileDocxData}
-						{fileContent}
-						{fileOfficeHtml}
-						{fileOfficeSlides}
-						targetPage={documentTargetPage}
-						{excelSheetNames}
-						{selectedExcelSheet}
-						searchTarget={fileSearchTarget}
-						onSheetChange={async (sheet) => {
-							if (!excelWorkbook) return;
-							selectedExcelSheet = sheet;
-							const { excelToTable } = await import('$lib/utils/excelToTable');
-							const result = await excelToTable(excelWorkbook.Sheets[sheet]);
-							const DOMPurify = (await import('dompurify')).default;
-							fileOfficeHtml = DOMPurify.sanitize(result.html);
-						}}
-						baseUrl={previewBaseUrl}
-						apiKey={selectedTerminal?.key ?? ''}
-						overlay={overlay || isDraggingHandle}
-						onSave={saveFile}
 					/>
 				{/if}
+				<div class="h-full" class:hidden={showGitDiff}>
+					{#if supportsComments(selectedFile) && selectedTerminal}
+						{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+							<CommentFilePreview
+								path={selectedFile}
+								baseUrl={selectedTerminal.url}
+								apiKey={selectedTerminal.key}
+								{chatId}
+								targetPage={documentTargetPage}
+								initialSheet={selectedExcelSheet}
+								onReady={() => {
+									openedFile = pendingFile;
+									publishFile();
+								}}
+								bind:currentSlide
+								bind:sheet={selectedExcelSheet}
+							/>
+						{/key}
+					{:else}
+						<FilePreview
+							bind:this={filePreviewRef}
+							bind:editing
+							bind:showRaw
+							bind:saving
+							bind:dirty
+							{chatId}
+							resourceVersion={commentGeneration}
+							onLocalLink={(path) =>
+								onOpenFile ? onOpenFile(path) : showFileNavPath.set({ path })}
+							bind:currentSlide
+							{selectedFile}
+							readOnly={!selectedFileWritable}
+							{fileLoading}
+							{fileImageUrl}
+							{fileVideoUrl}
+							{fileAudioUrl}
+							{filePdfData}
+							{fileSqliteData}
+							{fileModelData}
+							{fileDocxData}
+							{fileContent}
+							{fileOfficeHtml}
+							{fileOfficeSlides}
+							targetPage={documentTargetPage}
+							{excelSheetNames}
+							{selectedExcelSheet}
+							searchTarget={fileSearchTarget}
+							onSheetChange={async (sheet) => {
+								if (!excelWorkbook) return;
+								selectedExcelSheet = sheet;
+								const { excelToTable } = await import('$lib/utils/excelToTable');
+								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
+								const DOMPurify = (await import('dompurify')).default;
+								fileOfficeHtml = DOMPurify.sanitize(result.html);
+							}}
+							baseUrl={previewBaseUrl}
+							apiKey={selectedTerminal?.key ?? ''}
+							overlay={overlay || isDraggingHandle}
+							onSave={saveFile}
+						/>
+					{/if}
+				</div>
 			{:else}
 				{#if isSearching}
 					{#if matchLoading}
@@ -2495,7 +2590,7 @@
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading || ($selectedTerminalId && $terminalServers === null)}
+				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
 					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
 				{:else if error}
 					<div class="p-4 text-xs">{error}</div>
@@ -2507,7 +2602,7 @@
 					</div>
 				{/if}
 
-				{#if !isSearching && !loading && !error && !uploading && !($selectedTerminalId && $terminalServers === null)}
+				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							class={viewMode === 'grid'
@@ -2631,7 +2726,8 @@
 									onSelect={handleSelect}
 									onLongPress={enterSelectionMode}
 									onToggleExpand={toggleExpand}
-									showDate={sortBy === 'date'}
+									showDate={sortBy === 'date' || sortBy === 'created'}
+									dateField={sortBy === 'created' ? 'created' : 'modified'}
 									{showHidden}
 									parentWritable={currentWritable}
 								/>
@@ -2642,28 +2738,12 @@
 			{/if}
 		</div>
 
-		<!-- Port detection -->
-		{#if selectedTerminal && !selectedFile && previewPort === null && !isSearching}
-			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
-				{#key JSON.stringify([chatId, selectedTerminal.url])}
-					<PortList
-						baseUrl={selectedTerminal.url}
-						{previewBaseUrl}
-						apiKey={selectedTerminal.key}
-						{chatId}
-						on:previewPort={(e) => {
-							selectedFile = null;
-							clearFilePreview();
-							previewPort = e.detail;
-						}}
-					/>
-				{/key}
-			</div>
-		{/if}
-
-		<!-- Terminal bottom panel -->
-		{#if terminalEnabled}
-			<div class="shrink-0 border-t border-gray-50 dark:border-gray-850/30">
+		<!-- Read-only session output -->
+		{#if showTerminalDock}
+			<div
+				class:hidden={!hasSessions}
+				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -2675,8 +2755,11 @@
 					</div>
 				{/if}
 
-				{#key JSON.stringify([chatId, $selectedTerminalId])}
+				{#key JSON.stringify([chatId, effectiveTerminalId])}
 					<TerminalDock
+						terminalId={effectiveTerminalId}
+						{active}
+						bind:hasSessions
 						overlay={overlay || isDraggingHandle}
 						bind:expanded={terminalExpanded}
 						height={terminalHeight}

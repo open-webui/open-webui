@@ -15,6 +15,7 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
+	import { autoUpdate } from '@floating-ui/dom';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -69,6 +70,56 @@
 	export let onReaction: Function = () => {};
 
 	let showButtons = false;
+
+	// The top layer escapes scroll clipping without moving actions out of the message's tab order.
+	const positionActions = (node: HTMLElement, keepOpen: boolean) => {
+		const anchor = node.parentElement!;
+		const messageElement = anchor.parentElement!;
+		let cleanup: (() => void) | undefined;
+		let destroyed = false;
+		node.showPopover();
+
+		const update = () => {
+			if (destroyed) return;
+			const visible =
+				!showDeleteConfirmDialog &&
+				(keepOpen ||
+					[messageElement, node].some(
+						(element) => element.matches(':hover') || element.contains(document.activeElement)
+					));
+			node.style.opacity = visible ? '1' : '0';
+			node.style.pointerEvents = visible ? 'auto' : 'none';
+			if (visible && !cleanup) {
+				cleanup = autoUpdate(messageElement, node, () => {
+					const rect = anchor.getBoundingClientRect();
+					node.style.left = `${rect.right - node.offsetWidth}px`;
+					node.style.top = `${rect.top}px`;
+				});
+			} else if (!visible) {
+				cleanup?.();
+				cleanup = undefined;
+			}
+		};
+		const scheduleUpdate = () => requestAnimationFrame(update);
+		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
+		for (const element of [messageElement, node]) {
+			for (const event of events) element.addEventListener(event, scheduleUpdate);
+		}
+		update();
+		return {
+			update(value: boolean) {
+				keepOpen = value;
+				update();
+			},
+			destroy() {
+				destroyed = true;
+				cleanup?.();
+				for (const element of [messageElement, node]) {
+					for (const event of events) element.removeEventListener(event, scheduleUpdate);
+				}
+			}
+		};
+	};
 
 	let edit = false;
 	let editedContent = null;
@@ -218,109 +269,118 @@
 				? ''
 				: 'transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);'}"
 		>
-			{#if !edit && !disabled}
-				<div class=" absolute {showButtons ? '' : 'hover-reveal'} right-1 -top-3 z-30">
+			{#if !edit && !disabled && !$$slots.header}
+				<div class="absolute right-1 -top-3">
 					<div
-						class="flex gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						use:positionActions={showButtons}
+						popover="manual"
+						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						style="inset: auto; margin: 0; color: inherit; opacity: 0; pointer-events: none;"
 					>
-						{#if onReaction}
-							<EmojiPicker
-								onClose={() => (showButtons = false)}
-								onSubmit={(name) => {
-									showButtons = false;
-									onReaction(name);
-								}}
-							>
-								<Tooltip content={$i18n.t('Add Reaction')}>
+						<slot name="actions">
+							{#if onReaction}
+								<EmojiPicker
+									onClose={() => (showButtons = false)}
+									onSubmit={(name) => {
+										showButtons = false;
+										onReaction(name);
+									}}
+								>
+									<Tooltip content={$i18n.t('Add Reaction')}>
+										<button
+											aria-label={$i18n.t('Add Reaction')}
+											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+											on:click={() => {
+												showButtons = true;
+											}}
+										>
+											<FaceSmile />
+										</button>
+									</Tooltip>
+								</EmojiPicker>
+							{/if}
+
+							{#if onReply}
+								<Tooltip content={$i18n.t('Reply')}>
 									<button
+										aria-label={$i18n.t('Reply')}
 										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 										on:click={() => {
-											showButtons = true;
+											onReply(message);
 										}}
 									>
-										<FaceSmile />
+										<ArrowUpLeftAlt className="size-4" />
 									</button>
 								</Tooltip>
-							</EmojiPicker>
-						{/if}
+							{/if}
 
-						{#if onReply}
-							<Tooltip content={$i18n.t('Reply')}>
+							<Tooltip content={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}>
 								<button
-									aria-label={$i18n.t('Reply')}
+									aria-label={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}
 									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
 									on:click={() => {
-										onReply(message);
+										onPin(message);
 									}}
 								>
-									<ArrowUpLeftAlt className="size-4" />
+									{#if message?.is_pinned}
+										<PinSlash className="size-4" />
+									{:else}
+										<Pin className="size-4" />
+									{/if}
 								</button>
 							</Tooltip>
-						{/if}
 
-						<Tooltip content={message?.is_pinned ? $i18n.t('Unpin') : $i18n.t('Pin')}>
-							<button
-								class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-								on:click={() => {
-									onPin(message);
-								}}
-							>
-								{#if message?.is_pinned}
-									<PinSlash className="size-4" />
-								{:else}
-									<Pin className="size-4" />
+							{#if !thread && onThread}
+								<Tooltip content={$i18n.t('Reply in Thread')}>
+									<button
+										aria-label={$i18n.t('Reply in Thread')}
+										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+										on:click={() => {
+											onThread(message.id);
+										}}
+									>
+										<ChatBubbleOvalEllipsis />
+									</button>
+								</Tooltip>
+							{/if}
+
+							{#if message.user_id === $user?.id || $user?.role === 'admin'}
+								{#if onEdit}
+									<Tooltip content={$i18n.t('Edit')}>
+										<button
+											aria-label={$i18n.t('Edit')}
+											id="edit-message-{renderedMessageId}"
+											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+											on:click={async () => {
+												edit = true;
+												editedContent = message.content;
+												await tick();
+												const textarea = document
+													.getElementById(`message-${renderedMessageId}`)
+													?.querySelector('textarea');
+												textarea?.focus();
+												textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
+												textarea?.scrollIntoView({ block: 'center' });
+											}}
+										>
+											<Pencil />
+										</button>
+									</Tooltip>
 								{/if}
-							</button>
-						</Tooltip>
 
-						{#if !thread && onThread}
-							<Tooltip content={$i18n.t('Reply in Thread')}>
-								<button
-									aria-label={$i18n.t('Reply in Thread')}
-									class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-									on:click={() => {
-										onThread(message.id);
-									}}
-								>
-									<ChatBubbleOvalEllipsis />
-								</button>
-							</Tooltip>
-						{/if}
-
-						{#if message.user_id === $user?.id || $user?.role === 'admin'}
-							{#if onEdit}
-								<Tooltip content={$i18n.t('Edit')}>
-									<button
-										id="edit-message-{renderedMessageId}"
-										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-										on:click={async () => {
-											edit = true;
-											editedContent = message.content;
-											await tick();
-											const textarea = document
-												.getElementById(`message-${renderedMessageId}`)
-												?.querySelector('textarea');
-											textarea?.focus();
-											textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
-											textarea?.scrollIntoView({ block: 'center' });
-										}}
-									>
-										<Pencil />
-									</button>
-								</Tooltip>
+								{#if onDelete}
+									<Tooltip content={$i18n.t('Delete')}>
+										<button
+											aria-label={$i18n.t('Delete')}
+											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
+											on:click={() => (showDeleteConfirmDialog = true)}
+										>
+											<GarbageBin />
+										</button>
+									</Tooltip>
+								{/if}
 							{/if}
-
-							{#if onDelete}
-								<Tooltip content={$i18n.t('Delete')}>
-									<button
-										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-										on:click={() => (showDeleteConfirmDialog = true)}
-									>
-										<GarbageBin />
-									</button>
-								</Tooltip>
-							{/if}
-						{/if}
+						</slot>
 					</div>
 				</div>
 			{/if}
@@ -407,73 +467,75 @@
 				</div>
 			{/if}
 
+			<slot name="header" />
 			<div
 				class=" flex w-full message-{message.id} "
 				id="message-{renderedMessageId}"
 				dir={$settings.chatDirection}
 			>
-				<div class="w-6 shrink-0">
-					{#if showUserProfile}
-						{#if message?.meta?.model_id}
-							<img
-								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
-								alt={message.meta.model_name ?? message.meta.model_id}
-								class="size-6 mt-0.5 object-cover rounded-full"
-								on:error={(e) => {
-									// LICENSE covers this Open WebUI fallback logo.
-									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-									// https://docs.openwebui.com/license.
-									e.currentTarget.src = '/favicon.png';
-								}}
-							/>
-						{:else if message.app_id}
-							{#if message.user?.profile_image_url}
-								<ProfileImage
-									src={message.user.profile_image_url}
-									allowExternal
-									className="size-6 mt-0.5 rounded-lg!"
+				{#if !$$slots.header}
+					<div class="w-6 shrink-0">
+						{#if showUserProfile}
+							{#if message?.meta?.model_id}
+								<img
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
+									alt={message.meta.model_name ?? message.meta.model_id}
+									class="size-6 mt-0.5 object-cover rounded-full"
+									on:error={(e) => {
+										// LICENSE covers this Open WebUI fallback logo.
+										// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+										// https://docs.openwebui.com/license.
+										e.currentTarget.src = '/favicon.png';
+									}}
 								/>
-							{:else}
-								<span
-									class="flex size-6 mt-0.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
-									role="img"
-									aria-label={$i18n.t('App')}
-								>
-									<Grid className="size-4" />
-								</span>
-							{/if}
-						{:else if message.user?.role === 'webhook'}
-							<ProfileImage
-								src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}
-								className={'size-6 mt-0.5 rounded-full!'}
-							/>
-						{:else}
-							<ProfilePreview user={message.user}>
+							{:else if message.app_id}
+								{#if message.user?.profile_image_url}
+									<ProfileImage
+										src={message.user.profile_image_url}
+										allowExternal
+										className="size-6 mt-0.5 rounded-lg!"
+									/>
+								{:else}
+									<span
+										class="flex size-6 mt-0.5 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
+										role="img"
+										aria-label={$i18n.t('App')}
+									>
+										<Grid className="size-4" />
+									</span>
+								{/if}
+							{:else if message.user?.role === 'webhook'}
 								<ProfileImage
-									src={`${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
+									src={`${WEBUI_API_BASE_URL}/channels/webhooks/${message.user?.id}/profile/image`}
 									className={'size-6 mt-0.5 rounded-full!'}
 								/>
-							</ProfilePreview>
-						{/if}
-					{:else if message.created_at}
-						<div
-							class="-mx-1 mt-1 translate-y-px flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
-						>
-							<Tooltip
-								content={dayjs(message.created_at / 1000000)
-									.locale($i18n.language)
-									.format('LLLL')}
+							{:else}
+								<ProfilePreview user={message.user}>
+									<ProfileImage
+										src={`${WEBUI_API_BASE_URL}/users/${message.user?.id}/profile/image`}
+										className={'size-6 mt-0.5 rounded-full!'}
+									/>
+								</ProfilePreview>
+							{/if}
+						{:else if message.created_at}
+							<div
+								class="-mx-1 mt-1 translate-y-px flex items-center justify-center text-[0.6875rem] leading-4 tabular-nums hover-reveal text-gray-500 dark:text-gray-400"
 							>
-								{dayjs(message.created_at / 1000000)
-									.locale($i18n.language)
-									.format('HH:mm')}
-							</Tooltip>
-						</div>
-					{/if}
-				</div>
-
-				<div class="flex-auto w-0 pl-3">
-					{#if showUserProfile}
+								<Tooltip
+									content={dayjs(message.created_at / 1000000)
+										.locale($i18n.language)
+										.format('LLLL')}
+								>
+									{dayjs(message.created_at / 1000000)
+										.locale($i18n.language)
+										.format('HH:mm')}
+								</Tooltip>
+							</div>
+						{/if}
+					</div>
+				{/if}
+				<div class="flex-auto w-0 {$$slots.header ? '' : 'pl-3'}">
+					{#if showUserProfile && !$$slots.header}
 						<div class="flex min-w-0 items-baseline gap-1.5 leading-5">
 							<div
 								class=" min-w-0 truncate text-[0.8125rem] font-medium text-gray-900 dark:text-gray-100"
@@ -559,6 +621,7 @@
 							<Textarea
 								className=" bg-transparent outline-hidden w-full resize-none text-sm leading-[1.375rem]"
 								bind:value={editedContent}
+								ariaLabel={$i18n.t('Message')}
 								onKeydown={(e) => {
 									if (e.key === 'Escape') {
 										document.getElementById('close-edit-message-button')?.click();
@@ -601,7 +664,9 @@
 						</div>
 					{:else}
 						<div
-							class="min-w-full [&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]! {pending
+							class="min-w-full {$$slots.header
+								? '[&_.markdown-prose]:text-[0.8125rem]! [&_.markdown-prose]:leading-5! [&_p]:leading-5!'
+								: '[&_.markdown-prose]:text-sm! [&_.markdown-prose]:leading-[1.375rem]!'} {pending
 								? 'opacity-50'
 								: ''}"
 						>
@@ -644,44 +709,45 @@
 								<div class="flex items-center flex-wrap gap-1 mt-1 mb-1">
 									{#each message.reactions as reaction}
 										<Tooltip
-											content={$i18n.t('{{NAMES}} reacted with {{REACTION}}', {
-												NAMES: reaction.users
-													.reduce((acc, u, idx) => {
-														const name = u.id === $user?.id ? $i18n.t('You') : u.name;
-														const total = reaction.users.length;
+											content={reaction.users.length === 0
+												? `${reaction.count} :${reaction.name}:`
+												: $i18n.t('{{NAMES}} reacted with {{REACTION}}', {
+														NAMES: reaction.users
+															.reduce((acc, u, idx) => {
+																const name = u.id === $user?.id ? $i18n.t('You') : u.name;
+																const total = reaction.users.length;
 
-														// First three names always added normally
-														if (idx < 3) {
-															const separator =
-																idx === 0
-																	? ''
-																	: idx === Math.min(2, total - 1)
-																		? ` ${$i18n.t('and')} `
-																		: ', ';
-															return `${acc}${separator}${name}`;
-														}
+																// First three names always added normally
+																if (idx < 3) {
+																	const separator =
+																		idx === 0
+																			? ''
+																			: idx === Math.min(2, total - 1)
+																				? ` ${$i18n.t('and')} `
+																				: ', ';
+																	return `${acc}${separator}${name}`;
+																}
 
-														// More than 4 → "and X others"
-														if (idx === 3 && total > 4) {
-															return (
-																acc +
-																` ${$i18n.t('and {{COUNT}} others', {
-																	COUNT: total - 3
-																})}`
-															);
-														}
+																// More than 4 → "and X others"
+																if (idx === 3 && total > 4) {
+																	return (
+																		acc +
+																		` ${$i18n.t('and {{COUNT}} others', {
+																			COUNT: total - 3
+																		})}`
+																	);
+																}
 
-														return acc;
-													}, '')
-													.trim(),
-												REACTION: `:${reaction.name}:`
-											})}
+																return acc;
+															}, '')
+															.trim(),
+														REACTION: `:${reaction.name}:`
+													})}
 										>
 											<button
 												{disabled}
-												class="flex min-h-6 items-center gap-1.5 text-sm leading-4 transition rounded-lg px-1.5 py-0.5 cursor-pointer {reaction.users
-													.map((u) => u.id)
-													.includes($user?.id)
+												class="flex min-h-6 items-center gap-1.5 text-sm leading-4 transition rounded-lg px-1.5 py-0.5 cursor-pointer {(reaction.reacted ??
+												reaction.users.map((u) => u.id).includes($user?.id))
 													? ' bg-blue-300/10 outline outline-blue-500/50 outline-1'
 													: 'bg-gray-300/10 dark:bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1'}"
 												on:click={() => {
@@ -692,11 +758,11 @@
 											>
 												<Emoji className="size-3.5" shortCode={reaction.name} />
 
-												{#if reaction.users.length > 0}
+												{#if (reaction.count ?? reaction.users.length) > 0}
 													<div
 														class="text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
 													>
-														{reaction.users?.length}
+														{reaction.count ?? reaction.users?.length}
 													</div>
 												{/if}
 											</button>
@@ -710,17 +776,21 @@
 											}}
 										>
 											<Tooltip content={$i18n.t('Add Reaction')}>
-												<div
+												<button
+													type="button"
+													aria-label={$i18n.t('Add Reaction')}
 													class="flex items-center gap-1.5 bg-gray-500/10 hover:outline hover:outline-gray-700/30 dark:hover:outline-gray-300/30 hover:outline-1 transition rounded-lg p-1 cursor-pointer text-gray-500 dark:text-gray-400"
 												>
 													<FaceSmile />
-												</div>
+												</button>
 											</Tooltip>
 										</EmojiPicker>
 									{/if}
 								</div>
 							</div>
 						{/if}
+
+						<slot name="footer" />
 
 						{#if !thread && message.reply_count > 0}
 							<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">

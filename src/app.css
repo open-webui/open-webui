@@ -103,8 +103,7 @@ textarea {
 	color-scheme: dark;
 }
 
-textarea::-webkit-resizer,
-textarea::-webkit-scrollbar-corner {
+textarea::-webkit-resizer {
 	background: transparent;
 }
 
@@ -161,7 +160,11 @@ li p {
 	display: inline;
 }
 
-::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)) textarea::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+:where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
 	background-color: rgba(215, 215, 215, 0.6);
 	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
@@ -170,17 +173,17 @@ li p {
 }
 
 /* Dark theme scrollbar styles */
-.dark ::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)).dark ::-webkit-scrollbar-thumb {
 	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
 	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
 }
 
-::-webkit-scrollbar {
+:where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar {
 	height: 0.45rem;
 	width: 0.45rem;
 }
 
-::-webkit-scrollbar-track {
+:where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar-track {
 	background-color: transparent;
 	border-radius: 9999px;
 }
@@ -298,16 +301,17 @@ body > iframe[id^='imermaid-'] {
 	overflow: hidden !important;
 }
 
-.scrollbar-hidden:active::-webkit-scrollbar-thumb,
-.scrollbar-hidden:focus::-webkit-scrollbar-thumb,
-.scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)) .scrollbar-hidden:active::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .scrollbar-hidden:focus::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .scrollbar-hidden:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
-.scrollbar-hidden::-webkit-scrollbar-thumb {
+
+:where(html:not(.native-scrollbars)) .scrollbar-hidden::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
 
-.scrollbar-hidden::-webkit-scrollbar-corner {
+:where(html:not(.native-scrollbars)) .scrollbar-hidden::-webkit-scrollbar-corner {
 	display: none;
 }
 
@@ -339,21 +343,22 @@ input[type='number'] {
 	@apply overflow-y-hidden overflow-x-auto max-w-full;
 }
 
-.katex-display::-webkit-scrollbar {
+:where(html:not(.native-scrollbars)) .katex-display::-webkit-scrollbar {
 	height: 0.4rem;
 	width: 0.4rem;
 }
 
-.katex-display:active::-webkit-scrollbar-thumb,
-.katex-display:focus::-webkit-scrollbar-thumb,
-.katex-display:hover::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)) .katex-display:active::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .katex-display:focus::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .katex-display:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
-.katex-display::-webkit-scrollbar-thumb {
+
+:where(html:not(.native-scrollbars)) .katex-display::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
 
-.katex-display::-webkit-scrollbar-corner {
+:where(html:not(.native-scrollbars)) .katex-display::-webkit-scrollbar-corner {
 	display: none;
 }
 
@@ -362,17 +367,17 @@ input[type='number'] {
 	width: 100%;
 }
 
-.cm-scroller:active::-webkit-scrollbar-thumb,
-.cm-scroller:focus::-webkit-scrollbar-thumb,
-.cm-scroller:hover::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)) .cm-scroller:active::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .cm-scroller:focus::-webkit-scrollbar-thumb,
+:where(html:not(.native-scrollbars)) .cm-scroller:hover::-webkit-scrollbar-thumb {
 	visibility: visible;
 }
 
-.cm-scroller::-webkit-scrollbar-thumb {
+:where(html:not(.native-scrollbars)) .cm-scroller::-webkit-scrollbar-thumb {
 	visibility: hidden;
 }
 
-.cm-scroller::-webkit-scrollbar-corner {
+:where(html:not(.native-scrollbars)) .cm-scroller::-webkit-scrollbar-corner {
 	display: none;
 }
 
@@ -660,7 +665,8 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	@apply dark:bg-gray-800 bg-gray-50;
 }
 
-.tiptap pre {
+.tiptap pre,
+.tiptap pre.hljs {
 	border-radius: 0.5rem;
 	font-family: 'JetBrainsMono', monospace;
 	margin: 1.5rem 0;
@@ -675,56 +681,12 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	@apply font-mono rounded-md text-gray-800 bg-gray-50 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
 }
 
-/* Code styling */
-.hljs-comment,
-.hljs-quote {
-	color: #616161;
+:where(html:not(.dark)) .tiptap {
+	@import 'highlight.js/styles/github.css';
 }
 
-.hljs-variable,
-.hljs-template-variable,
-.hljs-attribute,
-.hljs-tag,
-.hljs-regexp,
-.hljs-link,
-.hljs-name,
-.hljs-selector-id,
-.hljs-selector-class {
-	color: #f98181;
-}
-
-.hljs-number,
-.hljs-meta,
-.hljs-built_in,
-.hljs-builtin-name,
-.hljs-literal,
-.hljs-type,
-.hljs-params {
-	color: #fbbc88;
-}
-
-.hljs-string,
-.hljs-symbol,
-.hljs-bullet {
-	color: #b9f18d;
-}
-
-.hljs-title,
-.hljs-section {
-	color: #faf594;
-}
-
-.hljs-keyword,
-.hljs-selector-tag {
-	color: #70cff8;
-}
-
-.hljs-emphasis {
-	font-style: italic;
-}
-
-.hljs-strong {
-	font-weight: 700;
+:where(html.dark) .tiptap {
+	@import 'highlight.js/styles/github-dark.css';
 }
 
 /* Table styling for tiptap editors */
@@ -755,6 +717,10 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 .tippy-box[data-theme~='transparent'] {
 	@apply bg-transparent p-0 m-0 text-inherit;
+}
+
+.tippy-box[data-theme~='transparent'] > .tippy-content {
+	padding: 0;
 }
 
 /* This gives the remote user caret. The colors are automatically overwritten*/

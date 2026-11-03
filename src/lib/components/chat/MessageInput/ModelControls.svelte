@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { models, mobile, settings, type Model } from '$lib/stores';
+	import { models, mobile, settings, user, type Model } from '$lib/stores';
+	import Controls from '../Controls/Controls.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
@@ -17,6 +19,11 @@
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];
+	export let chatFiles: any[] = [];
+	export let params: Record<string, any> = {};
+	export let onParamChange: (key: string, value: unknown) => void = () => {};
+	let controlsOpen = false;
+	$: controlsAllowed = $user?.role === 'admin' || ($user?.permissions?.chat?.controls ?? true);
 	let saving = false;
 	$: modelControls = $settings?.params?.model_controls ?? {};
 	let active: {
@@ -114,8 +121,17 @@
 	{/each}
 {/snippet}
 
-{#if available.length}
-	<Dropdown align="end" visualViewportAware onOpenChange={() => (active = null)}>
+{#if controlsAllowed || available.length > 0}
+	<Dropdown
+		align="end"
+		visualViewportAware
+		maxHeight="min(21rem, calc(100dvh - 2rem))"
+		contentClass="overscroll-contain scrollbar-thin"
+		onOpenChange={(open) => {
+			active = null;
+			controlsOpen = open && available.length === 0;
+		}}
+	>
 		<Tooltip content={$i18n.t('Model controls')} placement="top">
 			<button
 				type="button"
@@ -126,7 +142,9 @@
 			</button>
 		</Tooltip>
 		<div slot="content">
-			<DropdownMenu className="w-60 max-w-[calc(100vw-2rem)]">
+			<DropdownMenu
+				className="w-70 max-w-[calc(100vw-2rem)] max-h-[min(21rem,calc(100dvh-2rem))] overflow-y-auto overscroll-contain scrollbar-thin"
+			>
 				{#if $mobile && active}
 					<button type="button" aria-label={$i18n.t('Back')} on:click={back}>
 						<ChevronLeft className="size-3.5" />
@@ -178,6 +196,38 @@
 							{/if}
 						{/each}
 					{/each}
+					{#if controlsAllowed}
+						{#if available.length}<hr class="border-gray-200/30 dark:border-gray-700/25" />{/if}
+						<button
+							type="button"
+							class={`${rowClass} text-xs!`}
+							aria-expanded={controlsOpen}
+							on:click={() => (controlsOpen = !controlsOpen)}
+						>
+							<Tooltip
+								as="span"
+								content={$i18n.t(
+									'Configure chat files, valves, system prompt, and advanced parameters.'
+								)}
+								allowHTML={false}
+							>
+								<span
+									class="cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+								>
+									{$i18n.t('Controls')}
+								</span>
+							</Tooltip>
+							<ChevronDown
+								className={`ml-auto size-3.5 text-gray-400 ${controlsOpen ? 'rotate-180' : ''}`}
+								strokeWidth="1.5"
+							/>
+						</button>
+						{#if controlsOpen}
+							<div class="px-1.5 pb-1">
+								<Controls embed={true} bind:chatFiles bind:params {onParamChange} />
+							</div>
+						{/if}
+					{/if}
 				{/if}
 			</DropdownMenu>
 		</div>

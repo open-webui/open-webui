@@ -22,7 +22,7 @@ def upgrade():
     existing_tables = set(inspector.get_table_names())
 
     if 'feedback' not in existing_tables:
-        # ### Create feedback table ###
+        # Create feedback table
         op.create_table(
             'feedback',
             sa.Column('id', sa.Text(), primary_key=True),  # Unique identifier for each feedback (TEXT type)
@@ -42,5 +42,5 @@ def upgrade():
 
 
 def downgrade():
-    # ### Drop feedback table ###
+    # Drop feedback table
     op.drop_table('feedback')

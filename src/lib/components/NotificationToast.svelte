@@ -94,6 +94,7 @@
 	on:pointerup={onPointerUp}
 	on:pointercancel={() => (moved = true)}
 	on:keydown={(e) => {
+		if (e.target !== e.currentTarget) return;
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			clickHandler();
@@ -103,7 +104,7 @@
 	<!-- Close button (visible on hover) -->
 	<button
 		bind:this={closeButtonElement}
-		class="absolute -top-0.5 -left-0.5 p-0.5 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10"
+		class="absolute -top-0.5 -left-0.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10 px-0"
 		on:click|stopPropagation={closeHandler}
 		aria-label={$i18n.t('Dismiss notification')}
 	>

@@ -59,7 +59,7 @@ class FunctionModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
 
 
-# --- form / schema definitions ---
+# Form / schema definitions
 class FunctionWithValvesModel(BaseModel):
     version_id: str | None = None
     id: str
@@ -77,9 +77,7 @@ class FunctionWithValvesModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class FunctionResponse(BaseModel):

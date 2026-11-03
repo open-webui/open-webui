@@ -211,6 +211,7 @@
 				class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
 				bind:value={query}
 				on:input={searchHandler}
+				aria-label={$i18n.t('Search Chats')}
 				placeholder={$i18n.t('Search')}
 				maxlength="500"
 			/>

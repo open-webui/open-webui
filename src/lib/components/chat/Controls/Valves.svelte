@@ -164,6 +164,7 @@
 					<div class="flex-1">
 						<select
 							class="w-full rounded-sm py-1 px-1 text-xs bg-transparent outline-hidden"
+							aria-label={$i18n.t('Type')}
 							bind:value={tab}
 							placeholder={$i18n.t('Select')}
 						>
@@ -183,6 +184,7 @@
 					<div class="flex-1">
 						<select
 							class="w-full rounded-sm py-1 px-1 text-xs bg-transparent outline-hidden"
+							aria-label={tab === 'tools' ? $i18n.t('Select a tool') : $i18n.t('Select a function')}
 							bind:value={selectedId}
 							on:change={async () => {
 								await tick();

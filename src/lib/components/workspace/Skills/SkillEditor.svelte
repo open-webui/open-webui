@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import { onMount, tick, getContext } from 'svelte';
 
@@ -341,300 +345,311 @@
 	}}
 />
 
-<div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
-	<form
-		inert={loading}
-		class="flex h-full min-h-0 min-w-0 flex-col"
-		on:submit|preventDefault={submitHandler}
-	>
-		<div class="flex shrink-0 items-center justify-between gap-2">
-			<button
-				class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-				type="button"
-				on:click={() => {
-					goto('/workspace/skills');
-				}}
-			>
-				<ChevronLeft className="size-3" strokeWidth="2" />
-				<span>{$i18n.t('Back')}</span>
-			</button>
-			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				<LanguageModeSelect bind:value={locale} translatedLocales={Object.keys(meta.i18n ?? {})} />
-				{#if !disabled}
-					{#if $user?.permissions?.sharing?.skills || $user?.role === 'admin'}
-						<AccessButton
-							on:click={() => {
-								savedAccessGrants = structuredClone(accessGrants);
-								showAccessControlModal = true;
-							}}
-						/>
-					{/if}
-				{:else}
-					<span class="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:bg-gray-850">
-						{$i18n.t('Read Only')}
-					</span>
-				{/if}
-			</div>
-		</div>
-
-		<div class="shrink-0 pb-2 px-1">
-			<Tooltip content={$i18n.t('e.g. Code Review Guidelines')} placement="top-start">
-				<LocalizedField
-					placeholder={$i18n.t('Skill Name')}
-					showControls={false}
-					bind:value={name}
-					bind:translations={meta.i18n}
-					{locale}
-					required
-					disabled={readOnly}
-				/>
-			</Tooltip>
-
-			<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
-				<Tooltip
-					className="flex min-w-0 flex-1 items-center"
-					content={$i18n.t('e.g. Step-by-step instructions for code reviews')}
-					placement="top-start"
+<Comments bind:view={comments} resourceType="skill">
+	<div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
+		<form
+			inert={loading}
+			class="flex h-full min-h-0 min-w-0 flex-col"
+			on:submit|preventDefault={submitHandler}
+		>
+			<div class="flex shrink-0 items-center justify-between gap-2">
+				<button
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					type="button"
+					on:click={() => {
+						goto('/workspace/skills');
+					}}
 				>
+					<ChevronLeft className="size-3" strokeWidth="2" />
+					<span>{$i18n.t('Back')}</span>
+				</button>
+				<div class="flex shrink-0 items-center gap-1 pr-0.5">
+					{#if edit && skill?.id}<CommentButton
+							onComment={(request) => (comments = request)}
+							wrapperClassName="me-2"
+							resource={{ resource_type: 'skill', resource_id: skill.id }}
+						/>{/if}
+					<LanguageModeSelect
+						bind:value={locale}
+						translatedLocales={Object.keys(meta.i18n ?? {})}
+					/>
+
+					{#if !disabled}
+						{#if $user?.permissions?.sharing?.skills || $user?.role === 'admin'}
+							<AccessButton
+								on:click={() => {
+									savedAccessGrants = structuredClone(accessGrants);
+									showAccessControlModal = true;
+								}}
+							/>
+						{/if}
+					{:else}
+						<span class="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:bg-gray-850">
+							{$i18n.t('Read Only')}
+						</span>
+					{/if}
+				</div>
+			</div>
+
+			<div class="shrink-0 pb-2 px-1">
+				<Tooltip content={$i18n.t('e.g. Code Review Guidelines')} placement="top-start">
 					<LocalizedField
-						placeholder={$i18n.t('Skill Description')}
+						placeholder={$i18n.t('Skill Name')}
 						showControls={false}
-						bind:value={description}
+						bind:value={name}
 						bind:translations={meta.i18n}
 						{locale}
-						field="description"
+						required
 						disabled={readOnly}
 					/>
 				</Tooltip>
 
-				{#if edit}
-					<div class="shrink-0 truncate font-mono" title={id}>
-						{id}
-					</div>
-				{:else}
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
 					<Tooltip
-						className="min-w-[8rem] flex-1"
-						content={$i18n.t('e.g. code-review-guidelines')}
+						className="flex min-w-0 flex-1 items-center"
+						content={$i18n.t('e.g. Step-by-step instructions for code reviews')}
 						placement="top-start"
 					>
-						<input
-							class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
-							type="text"
-							placeholder={$i18n.t('Skill ID')}
-							aria-label={$i18n.t('Skill ID')}
-							bind:value={id}
-							required
-							disabled={edit}
+						<LocalizedField
+							placeholder={$i18n.t('Skill Description')}
+							showControls={false}
+							bind:value={description}
+							bind:translations={meta.i18n}
+							{locale}
+							field="description"
+							disabled={readOnly}
 						/>
 					</Tooltip>
-				{/if}
-			</div>
-		</div>
 
-		{#if conflict}<div
-				role="alert"
-				class="flex flex-wrap gap-3 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100"
-			>
-				<span>{$i18n.t('This skill has a newer version. Your draft is preserved.')}</span><button
-					type="button"
-					on:click={() => confirmDiscard(reload)}>{$i18n.t('Reload latest')}</button
-				><button type="button" on:click={saveCopy}>{$i18n.t('Save draft as copy')}</button><button
-					type="button"
-					on:click={() => (conflict = false)}>{$i18n.t('Keep editing')}</button
-				>
-			</div>{/if}
-		<div
-			class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/50 bg-gray-50/60 dark:border-white/[0.025] dark:bg-white/[0.03]"
-		>
-			{#if historyDiff}
-				<VersionDiff
-					diff={historyDiff}
-					onClose={() => (historyDiff = null)}
-					loadFileDiff={async (path) => {
-						try {
-							return await (
-								await skillRequest(
-									localStorage.token,
-									`/id/${id}/history/diff/file?${new URLSearchParams({ from_id: historyDiff.fromId, to_id: historyDiff.toId, path })}`
-								)
-							).json();
-						} catch (error) {
-							throw new Error(skillError(error));
-						}
-					}}
-				/>
-			{:else if ready}<SkillFiles
-					bind:this={fileEditor}
-					skillId={id}
-					{versionId}
-					{reloadKey}
-					initialContent={content}
-					initialFiles={skill?.files || null}
-					{readOnly}
-					bind:dirty={fileDirty}
-					initialPath={new URLSearchParams(location.search).get('path') || 'SKILL.md'}
-					onSave={submitHandler}
-					onContentChange={handleContentChange}
-					canExport={edit &&
-						($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
-				>
-					{#snippet version()}
-						{#if edit}
-							<div class="min-w-0">
-								<Dropdown
-									bind:show={showHistory}
-									align="start"
-									onOpenChange={(open) => {
-										if (open) {
-											historyPage = 1;
-											history = [];
-											loadHistory();
-										}
-									}}
-								>
-									<button
-										type="button"
-										aria-label={$i18n.t('Select version')}
-										class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
-									>
-										<span class="truncate"
-											>{historical
-												? versionId?.slice(0, 7)
-												: $i18n.t('Current')}{selectedCommitMessage
-												? ` · ${selectedCommitMessage}`
-												: ''}</span
-										>
-										<ChevronDown className="size-3 shrink-0" />
-									</button>
-									<div slot="content">
-										<DropdownMenu
-											className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
-										>
-											<VersionMenuItem
-												entry={currentHistoryEntry?.id === currentVersionId
-													? currentHistoryEntry
-													: null}
-												status={$i18n.t('Current')}
-												selected={versionId === currentVersionId}
-												onSelect={() => chooseVersion(currentVersionId!)}
-											/>
-											{#if historyLoading || historyError || history.some((entry) => entry.id !== currentVersionId)}
-												<hr class="border-gray-100 dark:border-gray-800" />
-											{/if}
-											{#if historyLoading}
-												<div class="flex items-center gap-2 px-2 py-2 text-xs text-gray-500">
-													<Spinner className="size-3" />{$i18n.t('Loading...')}
-												</div>
-											{:else if historyError}
-												<button type="button" on:click={loadHistory}>{$i18n.t('Retry')}</button>
-											{:else}
-												{#each history.filter((entry) => entry.id !== currentVersionId) as entry}
-													<VersionMenuItem
-														{entry}
-														selected={entry.id === versionId}
-														onSelect={() => chooseVersion(entry.id)}
-														onDelete={disabled
-															? undefined
-															: () => {
-																	deleteVersionId = entry.id;
-																	showHistory = false;
-																	showDeleteVersion = true;
-																}}
-													/>
-												{:else}
-													{#if historyPage > 1}
-														<div class="px-2 py-2 text-xs text-gray-500">
-															{$i18n.t('No more versions')}
-														</div>
-													{/if}
-												{/each}
-											{/if}
-											{#if historyPage > 1 || history.length === 20}
-												<hr class="border-gray-100 dark:border-gray-800" />
-												<div class="flex justify-between px-2 py-1 text-xs">
-													<button
-														type="button"
-														disabled={historyLoading || historyPage === 1}
-														class="disabled:opacity-40"
-														on:click={() => {
-															historyPage--;
-															loadHistory();
-														}}>{$i18n.t('Previous')}</button
-													>
-													<button
-														type="button"
-														disabled={historyLoading || history.length < 20}
-														class="disabled:opacity-40"
-														on:click={() => {
-															historyPage++;
-															loadHistory();
-														}}>{$i18n.t('Next')}</button
-													>
-												</div>
-											{/if}
-										</DropdownMenu>
-									</div>
-								</Dropdown>
-							</div>
-						{/if}
-					{/snippet}
-					{#snippet exports()}
-						<button type="button" on:click={() => exportVersion('skill')}
-							><Download className="size-3.5" />{$i18n.t('Export .skill')}</button
+					{#if edit}
+						<div class="shrink-0 truncate font-mono" title={id}>
+							{id}
+						</div>
+					{:else}
+						<Tooltip
+							className="min-w-[8rem] flex-1"
+							content={$i18n.t('e.g. code-review-guidelines')}
+							placement="top-start"
 						>
-						<button type="button" on:click={() => exportVersion('json')}
-							><Download className="size-3.5" />{$i18n.t('Export JSON')}</button
-						>
-						<button type="button" on:click={() => exportVersion('zip')}
-							><Download className="size-3.5" />{$i18n.t('Export ZIP')}</button
-						>
-					{/snippet}
-				</SkillFiles>{/if}
-		</div>
-
-		{#if historical}
-			<div
-				class="flex w-full shrink-0 flex-wrap items-center gap-2 px-1 py-2 text-xs text-gray-500"
-			>
-				<span class="mr-auto">{$i18n.t('Read Only')}</span>
-				<div class="ml-auto flex flex-wrap justify-end gap-2">
-					<button
-						type="button"
-						class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
-						disabled={comparing || !!historyDiff}
-						on:click={compareToCurrent}
-						>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
-							'Compare to current'
-						)}</button
-					>
-					{#if !disabled}<button
-							type="button"
-							class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-							on:click={setProductionVersion}>{$i18n.t('Set as Production')}</button
-						>{/if}
+							<input
+								class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
+								type="text"
+								placeholder={$i18n.t('Skill ID')}
+								aria-label={$i18n.t('Skill ID')}
+								bind:value={id}
+								required
+								disabled={edit}
+							/>
+						</Tooltip>
+					{/if}
 				</div>
 			</div>
-		{/if}
 
-		{#if !readOnly}
-			<div class="flex shrink-0 justify-end gap-3 py-2">
-				<input
-					class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
-					placeholder={$i18n.t('Describe this change')}
-					aria-label={$i18n.t('Commit message')}
-					bind:value={commitMessage}
-				/>
-				<button
-					class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-					type="submit"
-					disabled={loading || !fileEditor}
+			{#if conflict}<div
+					role="alert"
+					class="flex flex-wrap gap-3 bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-950 dark:text-amber-100"
 				>
-					{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
-					{#if loading}
-						<Spinner className="size-3" />
-					{/if}
-				</button>
+					<span>{$i18n.t('This skill has a newer version. Your draft is preserved.')}</span><button
+						type="button"
+						on:click={() => confirmDiscard(reload)}>{$i18n.t('Reload latest')}</button
+					><button type="button" on:click={saveCopy}>{$i18n.t('Save draft as copy')}</button><button
+						type="button"
+						on:click={() => (conflict = false)}>{$i18n.t('Keep editing')}</button
+					>
+				</div>{/if}
+			<div
+				class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/50 bg-gray-50/60 dark:border-white/[0.025] dark:bg-white/[0.03]"
+			>
+				{#if historyDiff}
+					<VersionDiff
+						diff={historyDiff}
+						onClose={() => (historyDiff = null)}
+						loadFileDiff={async (path) => {
+							try {
+								return await (
+									await skillRequest(
+										localStorage.token,
+										`/id/${id}/history/diff/file?${new URLSearchParams({ from_id: historyDiff.fromId, to_id: historyDiff.toId, path })}`
+									)
+								).json();
+							} catch (error) {
+								throw new Error(skillError(error));
+							}
+						}}
+					/>
+				{:else if ready}<SkillFiles
+						bind:this={fileEditor}
+						skillId={id}
+						{versionId}
+						{reloadKey}
+						initialContent={content}
+						initialFiles={skill?.files || null}
+						{readOnly}
+						bind:dirty={fileDirty}
+						initialPath={new URLSearchParams(location.search).get('path') || 'SKILL.md'}
+						onSave={submitHandler}
+						onContentChange={handleContentChange}
+						canExport={edit &&
+							($user?.role === 'admin' || $user?.permissions?.workspace?.skills_export)}
+					>
+						{#snippet version()}
+							{#if edit}
+								<div class="min-w-0">
+									<Dropdown
+										bind:show={showHistory}
+										align="start"
+										onOpenChange={(open) => {
+											if (open) {
+												historyPage = 1;
+												history = [];
+												loadHistory();
+											}
+										}}
+									>
+										<button
+											type="button"
+											aria-label={$i18n.t('Select version')}
+											class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+										>
+											<span class="truncate"
+												>{historical
+													? versionId?.slice(0, 7)
+													: $i18n.t('Current')}{selectedCommitMessage
+													? ` · ${selectedCommitMessage}`
+													: ''}</span
+											>
+											<ChevronDown className="size-3 shrink-0" />
+										</button>
+										<div slot="content">
+											<DropdownMenu
+												className="w-72 max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto"
+											>
+												<VersionMenuItem
+													entry={currentHistoryEntry?.id === currentVersionId
+														? currentHistoryEntry
+														: null}
+													status={$i18n.t('Current')}
+													selected={versionId === currentVersionId}
+													onSelect={() => chooseVersion(currentVersionId!)}
+												/>
+												{#if historyLoading || historyError || history.some((entry) => entry.id !== currentVersionId)}
+													<hr class="border-gray-100 dark:border-gray-800" />
+												{/if}
+												{#if historyLoading}
+													<div class="flex items-center gap-2 px-2 py-2 text-xs text-gray-500">
+														<Spinner className="size-3" />{$i18n.t('Loading...')}
+													</div>
+												{:else if historyError}
+													<button type="button" on:click={loadHistory}>{$i18n.t('Retry')}</button>
+												{:else}
+													{#each history.filter((entry) => entry.id !== currentVersionId) as entry}
+														<VersionMenuItem
+															{entry}
+															selected={entry.id === versionId}
+															onSelect={() => chooseVersion(entry.id)}
+															onDelete={disabled
+																? undefined
+																: () => {
+																		deleteVersionId = entry.id;
+																		showHistory = false;
+																		showDeleteVersion = true;
+																	}}
+														/>
+													{:else}
+														{#if historyPage > 1}
+															<div class="px-2 py-2 text-xs text-gray-500">
+																{$i18n.t('No more versions')}
+															</div>
+														{/if}
+													{/each}
+												{/if}
+												{#if historyPage > 1 || history.length === 20}
+													<hr class="border-gray-100 dark:border-gray-800" />
+													<div class="flex justify-between px-2 py-1 text-xs">
+														<button
+															type="button"
+															disabled={historyLoading || historyPage === 1}
+															class="disabled:opacity-40"
+															on:click={() => {
+																historyPage--;
+																loadHistory();
+															}}>{$i18n.t('Previous')}</button
+														>
+														<button
+															type="button"
+															disabled={historyLoading || history.length < 20}
+															class="disabled:opacity-40"
+															on:click={() => {
+																historyPage++;
+																loadHistory();
+															}}>{$i18n.t('Next')}</button
+														>
+													</div>
+												{/if}
+											</DropdownMenu>
+										</div>
+									</Dropdown>
+								</div>
+							{/if}
+						{/snippet}
+						{#snippet exports()}
+							<button type="button" on:click={() => exportVersion('skill')}
+								><Download className="size-3.5" />{$i18n.t('Export .skill')}</button
+							>
+							<button type="button" on:click={() => exportVersion('json')}
+								><Download className="size-3.5" />{$i18n.t('Export JSON')}</button
+							>
+							<button type="button" on:click={() => exportVersion('zip')}
+								><Download className="size-3.5" />{$i18n.t('Export ZIP')}</button
+							>
+						{/snippet}
+					</SkillFiles>{/if}
 			</div>
-		{/if}
-	</form>
-</div>
+
+			{#if historical}
+				<div
+					class="flex w-full shrink-0 flex-wrap items-center gap-2 px-1 py-2 text-xs text-gray-500"
+				>
+					<span class="mr-auto">{$i18n.t('Read Only')}</span>
+					<div class="ml-auto flex flex-wrap justify-end gap-2">
+						<button
+							type="button"
+							class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+							disabled={comparing || !!historyDiff}
+							on:click={compareToCurrent}
+							>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
+								'Compare to current'
+							)}</button
+						>
+						{#if !disabled}<button
+								type="button"
+								class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								on:click={setProductionVersion}>{$i18n.t('Set as Production')}</button
+							>{/if}
+					</div>
+				</div>
+			{/if}
+
+			{#if !readOnly}
+				<div class="flex shrink-0 justify-end gap-3 py-2">
+					<input
+						class="min-w-0 flex-1 bg-transparent px-2 text-xs outline-hidden"
+						placeholder={$i18n.t('Describe this change')}
+						aria-label={$i18n.t('Commit message')}
+						bind:value={commitMessage}
+					/>
+					<button
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						type="submit"
+						disabled={loading || !fileEditor}
+					>
+						{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
+						{#if loading}
+							<Spinner className="size-3" />
+						{/if}
+					</button>
+				</div>
+			{/if}
+		</form>
+	</div>
+</Comments>

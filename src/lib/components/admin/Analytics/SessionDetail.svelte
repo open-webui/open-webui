@@ -201,7 +201,7 @@
 			data-close-session
 			aria-label={$i18n.t('Close session details')}
 			on:click={onClose}
-			class="shrink-0 rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800"
+			class="shrink-0 rounded-lg py-1 hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
 			><XMark className="size-4" /></button
 		>
 	</div>

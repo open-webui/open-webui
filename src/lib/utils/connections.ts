@@ -7,7 +7,7 @@
 import { getOpenAIConfig, updateOpenAIConfig } from '$lib/apis/openai';
 import { getTerminalServerConnections, setTerminalServerConnections } from '$lib/apis/configs';
 
-// ─── OpenAI Connections ─────────────────────────────────
+// OpenAI connections
 
 /**
  * Add an OpenAI-compatible API connection at the system level.
@@ -74,7 +74,7 @@ export const removeOpenAIConnection = async (token: string, url: string) => {
 	});
 };
 
-// ─── Terminal Server Connections ────────────────────────
+// Terminal server connections
 
 /**
  * Add a terminal server connection at the system level.

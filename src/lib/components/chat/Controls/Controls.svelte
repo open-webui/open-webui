@@ -28,7 +28,7 @@
 	let showFiles = getOpen('files');
 	let showValves = getOpen('valves', false);
 	let showSystemPrompt = getOpen('systemPrompt');
-	let showAdvancedParams = getOpen('advancedParams');
+	let showAdvancedParams = false;
 
 	const compactSectionButtonClass =
 		'w-full py-1 text-xs font-normal text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition cursor-pointer select-none';
@@ -61,11 +61,11 @@
 					title={$i18n.t('Files')}
 					bind:open={showFiles}
 					onChange={setOpen('files')}
-					buttonClassName="w-full"
+					buttonClassName={compactSectionButtonClass}
 					chevronClassName="size-2.5"
 					chevronStrokeWidth="2"
 				>
-					<div class="flex flex-col gap-1 mt-1.5" slot="content">
+					<div class="flex flex-col gap-1 pt-1 pb-1 text-xs" slot="content">
 						{#each chatFiles as file, fileIdx}
 							<FileItem
 								className="w-full"
@@ -125,6 +125,7 @@
 								: compactSystemPromptTextareaClass}
 							rows="3"
 							placeholder={$i18n.t('Enter system prompt')}
+							aria-label={$i18n.t('System Prompt')}
 						/>
 					</div>
 				</Collapsible>
@@ -134,13 +135,15 @@
 				<Collapsible
 					title={$i18n.t('Advanced Params')}
 					bind:open={showAdvancedParams}
-					onChange={setOpen('advancedParams')}
 					buttonClassName={compactSectionButtonClass}
 					chevronClassName="size-2.5"
 					chevronStrokeWidth="2"
 				>
-					<div class="pt-1 pb-1 text-xs" slot="content">
-						<div>
+					<div
+						class="pt-1 pb-1 text-xs [&_label]:truncate [&_label]:pb-1 [&_label]:-mb-1 [&_label+div]:shrink-0 [&_.inline-tooltip_label]:cursor-help!"
+						slot="content"
+					>
+						<div class="[&>div]:space-y-0 [&>div>div]:py-0">
 							<AdvancedParams
 								admin={$user?.role === 'admin'}
 								custom={true}

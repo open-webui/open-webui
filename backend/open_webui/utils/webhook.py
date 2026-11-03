@@ -40,14 +40,14 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
 
     try:
         payload = {}
-        # Slack and Google Chat Webhooks
+        # Slack and Google Chat both order their message under "text".
         if 'https://hooks.slack.com' in url or 'https://chat.googleapis.com' in url:
             payload['text'] = _event_text(message, description, event_data)
-        # Discord Webhooks
+        # Discord calls it "content" and keeps the speech under 2,000 characters.
         elif 'https://discord.com/api/webhooks' in url:
             content = _event_text(message, description, event_data)
             payload['content'] = content if len(content) < 2000 else f'{content[: 2000 - 20]}... (truncated)'
-        # Microsoft Teams Webhooks
+        # Teams prefers a MessageCard; apparently the message needs stationery.
         elif 'webhook.office.com' in url:
             action = event_data.get('action', 'undefined')
             user_data = event_data.get('user') or event_data.get('actor') or {}
@@ -79,7 +79,7 @@ async def post_webhook(name: str, url: str, message: str, event_data: dict, desc
                     }
                 ],
             }
-        # Default Payload
+        # Everyone else gets the event data without gift wrapping.
         else:
             payload = event_data
 

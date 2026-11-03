@@ -95,9 +95,7 @@ async def leave_note_rooms_for_revoked_users(
         await leave_room_for_users(room, user_ids)
 
 
-############################
-# GetNotes
-############################
+# Get Notes
 
 
 class NoteItemResponse(BaseModel):
@@ -148,9 +146,7 @@ async def get_notes(
     ]
 
 
-############################
-# GetPinnedNotes
-############################
+# Get Pinned Notes
 
 
 @router.get('/pinned', response_model=list[NoteItemResponse])
@@ -229,9 +225,7 @@ async def search_notes(
     return result
 
 
-############################
-# CreateNewNote
-############################
+# Create New Note
 
 
 @router.post('/create', response_model=Optional[NoteModel])
@@ -270,9 +264,7 @@ async def create_new_note(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetNoteById
-############################
+# Get Note By Id
 
 
 class NoteResponse(NoteModel):
@@ -521,9 +513,7 @@ async def create_note_chat_by_id(
     return chat
 
 
-############################
-# UpdateNoteById
-############################
+# Update Note By Id
 
 
 @router.post('/{id}/update', response_model=Optional[NoteModel])
@@ -609,9 +599,7 @@ async def update_note_pages(
     return await update_note_by_id(request, id, NoteUpdateForm(page_operation=form_data), user, db)
 
 
-############################
-# UpdateNoteAccessById
-############################
+# Update Note Access By Id
 
 
 class NoteAccessGrantsForm(BaseModel):
@@ -667,9 +655,7 @@ async def update_note_access_by_id(
     return note
 
 
-############################
-# PinNoteById
-############################
+# Pin Note By Id
 
 
 @router.post('/{id}/pin', response_model=Optional[NoteModel])
@@ -710,9 +696,7 @@ async def pin_note_by_id(
     return note
 
 
-############################
-# DeleteNoteById
-############################
+# Delete Note By Id
 
 
 @router.delete('/{id}/delete', response_model=bool)

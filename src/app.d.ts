@@ -11,6 +11,10 @@ declare global {
 	const APP_BUILD_CHANNEL: 'main' | 'dev' | 'unknown';
 
 	namespace App {
+		interface PageState {
+			inbox?: boolean;
+			inboxUserId?: string;
+		}
 		// interface Error {}
 		// interface Locals {}
 		// interface PageData {}

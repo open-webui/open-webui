@@ -79,10 +79,11 @@
 
 <div class="flex gap-2">
 	<div class="flex flex-col w-full">
-		<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
+		<label for="group-name" class="block mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</label>
 
 		<div class="flex-1">
 			<input
+				id="group-name"
 				class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 				type="text"
 				bind:value={name}
@@ -262,12 +263,13 @@
 
 	<div>
 		<div class=" flex w-full justify-between">
-			<div class=" self-center text-xs">
+			<label for="group-share" class=" self-center text-xs">
 				{$i18n.t('Who can share to this group')}
-			</div>
+			</label>
 
 			<div class="flex items-center gap-2 p-1">
 				<select
+					id="group-share"
 					class="text-sm bg-transparent outline-hidden rounded-lg pl-2 pr-5"
 					value={data?.config?.share ?? 'members'}
 					on:change={(e) => {

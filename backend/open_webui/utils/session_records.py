@@ -6,6 +6,21 @@ import re
 import time
 
 
+def has_pending_tool_approval(output):
+    if not isinstance(output, list):
+        return False
+    items = [item for item in output if isinstance(item, dict)]
+    result_ids = {item.get('call_id') for item in items if item.get('type') == 'function_call_output'}
+    return any(
+        item.get('type') == 'function_call'
+        and (item.get('call_id') or item.get('id'))
+        and (item.get('call_id') or item.get('id')) not in result_ids
+        and item.get('status') in {'pending', 'queued', 'requires_approval'}
+        and item.get('approved') is not True
+        for item in items
+    )
+
+
 def recorded_timestamp(value):
     try:
         value = float(value)

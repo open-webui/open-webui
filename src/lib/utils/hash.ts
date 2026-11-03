@@ -26,7 +26,7 @@ function hexEncode(bytes: Uint8Array): string {
 	return hex.join('');
 }
 
-// ── Pure-JS SHA-256 (RFC 6234) ──────────────────────────────────────────────
+// Pure-JS SHA-256 (RFC 6234)
 // Used only when crypto.subtle is unavailable (HTTP deployments).
 
 const K: Uint32Array = new Uint32Array([

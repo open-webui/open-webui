@@ -43,17 +43,7 @@ from typing_extensions import Self
 log = logging.getLogger(__name__)
 
 
-# ── SSL URL normalization (used by sync engine & Alembic migrations) ─
-#
-# psycopg2 (sync) needs ``sslmode=`` in the connection string (it does
-# not recognise the bare ``ssl=`` key that some ORMs emit).  The helpers
-# below strip all SSL-related query params, normalise them, and
-# reattach them in the canonical libpq form.
-#
-# The **async** engine now uses psycopg (v3), which speaks libpq
-# natively, so it needs no translation at all — the DATABASE_URL is
-# passed through as-is.
-# ─────────────────────────────────────────────────────────────────────
+# Normalize SSL query parameters for sync psycopg2 and Alembic; async psycopg uses the URL unchanged.
 
 
 def _pop_first(params: dict[str, list[str]], key: str) -> str | None:
@@ -281,10 +271,8 @@ def _create_async_engine(*args, **kwargs):
     return create_async_engine(*args, **_json_codec_kwargs(kwargs))
 
 
-# ============================================================
-# SYNC ENGINE (used only for: startup migrations, config loading,
+# Sync engine (used only for: startup migrations, config loading,
 #              Alembic, peewee migration, health checks)
-# ============================================================
 
 # Handle SQLCipher URLs
 if SQLALCHEMY_DATABASE_URL.startswith('sqlite+sqlcipher://'):
@@ -443,9 +431,7 @@ def get_session():
 get_db = contextmanager(get_session)
 
 
-# ============================================================
-# ASYNC ENGINE (used for ALL runtime database operations)
-# ============================================================
+# Async engine (used for all runtime database operations)
 
 # psycopg (v3) speaks libpq natively — the full DATABASE_URL is passed
 # through as-is.  SSL params, ``options``, ``target_session_attrs``, etc.

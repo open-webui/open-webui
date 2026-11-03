@@ -1,17 +1,23 @@
 <script lang="ts">
 	import { getContext, afterUpdate } from 'svelte';
+	import type { GitFile } from '$lib/apis/terminal/git';
+	export let gitFile: GitFile | null = null;
+	export let gitDiffOpen = false;
+	export let onToggleGitDiff: () => void = () => {};
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Icon from './Icon.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import { formatFileSize } from '$lib/utils';
 
 	export let dragType = 'application/x-terminal-file-move';
 	const i18n: any = getContext('i18n');
 
 	export let breadcrumbs: { label: string; path: string }[] = [];
 	export let selectedFile: string | null = null;
+	export let fileSize: number | undefined = undefined;
 	export let loading = false;
 	export let writable = true;
 	export let viewMode: 'grid' | 'list' | null = null;
@@ -19,6 +25,8 @@
 
 	export let onNavigate: (path: string) => void = () => {};
 	export let onRefresh: () => void = () => {};
+	export let showSearch = false;
+	export let onToggleSearch: (() => void) | null = null;
 	export let onNewFolder: () => void = () => {};
 	export let onNewFile: () => void = () => {};
 	export let onUploadFiles: (files: File[]) => void = () => {};
@@ -29,9 +37,10 @@
 	export let onToggleHidden: () => void = () => {};
 
 	// Sort controls
-	export let sortBy: 'name' | 'size' | 'date' = 'name';
+	export let sortBy: 'name' | 'size' | 'date' | 'created' = 'name';
 	export let sortAsc: boolean = true;
-	export let onSort: (mode: 'name' | 'size' | 'date') => void = () => {};
+	export let showDateAdded = false;
+	export let onSort: (mode: 'name' | 'size' | 'date' | 'created') => void = () => {};
 
 	// Back / forward navigation
 	export let canGoBack = false;
@@ -64,7 +73,7 @@
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoBack
-					? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
 					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 				on:click={onGoBack}
 				disabled={!canGoBack}
@@ -79,7 +88,7 @@
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoForward
-					? 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
+					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
 					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
 				on:click={onGoForward}
 				disabled={!canGoForward}
@@ -138,8 +147,38 @@
 			<span class="text-xs shrink-0 p-0 text-gray-700 dark:text-gray-300">
 				{selectedFile.split('/').pop()}
 			</span>
+			{#if gitFile}
+				<span class="flex shrink-0 items-center gap-1 font-mono text-[0.625rem]">
+					{#if gitFile.binary}
+						<span class="text-gray-500 dark:text-gray-400"
+							>{gitFile.status === 'untracked' ? 'U' : gitFile.status[0].toUpperCase()}</span
+						>
+					{:else}
+						<span class="text-green-600 dark:text-green-400">+{gitFile.additions ?? 0}</span>
+						<span class="text-gray-500 dark:text-gray-400">-{gitFile.deletions ?? 0}</span>
+					{/if}
+				</span>
+			{/if}
 		{/if}
 	</div>
+	{#if selectedFile && fileSize !== undefined}
+		<span class="shrink-0 me-1 text-[0.6875rem] text-gray-400/75">{formatFileSize(fileSize)}</span>
+	{/if}
+	{#if selectedFile && (gitFile || gitDiffOpen)}
+		<Tooltip content={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}>
+			<button
+				type="button"
+				class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 {gitDiffOpen
+					? 'text-gray-800 dark:text-gray-200'
+					: 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}"
+				aria-label={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}
+				aria-pressed={gitDiffOpen}
+				on:click={onToggleGitDiff}
+			>
+				<Icon name="git-diff" size={16} strokeWidth={1.4} />
+			</button>
+		</Tooltip>
+	{/if}
 	{#if !writable}
 		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
 			{$i18n.t('Read-only')}
@@ -149,11 +188,11 @@
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
 			type="button"
-			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
-			<Icon name="refresh" size={11} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
+			<Icon name="refresh" size={10} strokeWidth={1.4} class={loading ? 'animate-spin' : ''} />
 		</button>
 	</Tooltip>
 	{#if !selectedFile}
@@ -161,7 +200,7 @@
 			<Tooltip content={$i18n.t('Sort')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Sort')}
 				>
 					<Icon name="sort" size={11} strokeWidth={1.4} />
@@ -230,14 +269,50 @@
 							/>
 						{/if}
 					</button>
+					{#if showDateAdded}
+						<button
+							type="button"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+							on:click={() => {
+								onSort('created');
+								sortMenuOpen = false;
+							}}
+						>
+							<span class="flex-1 text-left">{$i18n.t('Date Added')}</span>
+							{#if sortBy === 'created'}
+								<Icon
+									name="chevron-up"
+									size={12}
+									strokeWidth={1.5}
+									class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+										? ''
+										: 'rotate-180'}"
+								/>
+							{/if}
+						</button>
+					{/if}
 				</DropdownMenu>
 			</div>
 		</Dropdown>
+		{#if onToggleSearch}
+			<Tooltip content={$i18n.t('Search')}>
+				<button
+					type="button"
+					data-file-search-toggle
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					aria-label={$i18n.t('Search')}
+					aria-expanded={showSearch}
+					on:click={onToggleSearch}
+				>
+					<Icon name="search" size={11} strokeWidth={1.4} />
+				</button>
+			</Tooltip>
+		{/if}
 		<Dropdown bind:show={actionsMenuOpen} align="end" sideOffset={4}>
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 					aria-label={$i18n.t('Actions')}
 				>
 					<Icon name="three-dots" size={11} strokeWidth={1.4} />

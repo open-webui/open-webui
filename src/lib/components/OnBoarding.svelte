@@ -79,7 +79,9 @@
 						Open WebUI
 					</div>
 
-					<h1 class="m-0 max-w-3xl text-2xl leading-[1.15] font-light tracking-tight lg:text-4xl">
+					<h1
+						class="m-0 max-w-3xl text-[22px] leading-[1.15] font-light tracking-tight lg:text-[33px]"
+					>
 						{$i18n.t('Welcome to your AI home.')}
 					</h1>
 
@@ -92,14 +94,14 @@
 					<div class="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-7">
 						<button
 							aria-label={$i18n.t('Get started')}
-							class="group relative z-20 inline-flex min-w-40 items-center justify-center gap-2 bg-white px-8 py-3 text-sm font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
+							class="group relative z-20 inline-flex h-10 w-[220px] max-w-full items-center justify-between gap-2 rounded-none bg-white px-4 text-[13px] font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
 							on:click={() => {
 								getStartedHandler();
 							}}
 						>
 							{$i18n.t('Get started')}
 							<svg
-								class="h-4 w-4 transition group-hover:translate-x-0.5"
+								class="h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"

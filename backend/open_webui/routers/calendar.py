@@ -81,9 +81,7 @@ async def _check_calendar_access(calendar_id: str, user: UserModel, permission: 
     raise HTTPException(status_code=403, detail='Access denied')
 
 
-####################
 # Calendar CRUD (static paths first)
-####################
 
 
 @router.get('/', response_model=list[CalendarModel])
@@ -137,9 +135,7 @@ async def create_calendar(request: Request, form_data: CalendarForm, user: UserM
     return calendar
 
 
-####################
 # Event CRUD (before /{calendar_id} to avoid route conflicts)
-####################
 
 
 @router.get('/events')
@@ -399,9 +395,7 @@ async def rsvp_event(
     return {'status': True, 'rsvp': result.status}
 
 
-####################
 # Calendar by ID (dynamic path — MUST come after /events* routes)
-####################
 
 
 @router.get('/{calendar_id}', response_model=CalendarModel)

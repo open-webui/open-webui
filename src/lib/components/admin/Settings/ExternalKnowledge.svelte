@@ -411,7 +411,14 @@
 	onMount(refresh);
 </script>
 
-<Modal bind:show={showSourceModal} size="sm" className="bg-white dark:bg-gray-900 rounded-4xl">
+<Modal
+	ariaLabel={editingItem
+		? $i18n.t('Edit Knowledge Connection')
+		: $i18n.t('Add Knowledge Connection')}
+	bind:show={showSourceModal}
+	size="sm"
+	className="bg-white dark:bg-gray-900 rounded-4xl"
+>
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
@@ -419,7 +426,7 @@
 			</h1>
 
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={() => {

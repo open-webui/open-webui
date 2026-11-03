@@ -461,9 +461,7 @@ export const updatePromptAccessGrants = async (
 	return res;
 };
 
-////////////////////////////
 // Prompt History APIs
-////////////////////////////
 
 export const getPromptHistory = async (
 	token: string,

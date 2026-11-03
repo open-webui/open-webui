@@ -4,8 +4,9 @@
 	import {
 		chatId as activeChatId,
 		config,
+		mobile,
 		settings,
-		showControls,
+		showTabs,
 		showSettings,
 		terminalServers,
 		selectedTerminalId,
@@ -68,8 +69,8 @@
 	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
 		selectedTerminalId.set(newId);
-		if (newId && window.matchMedia('(min-width: 1024px)').matches) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+		if (newId && !$mobile) {
+			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
 		// Enable the selected direct terminal, disable all others
@@ -92,8 +93,8 @@
 	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
 		selectedTerminalId.set(newId);
-		if (newId && window.matchMedia('(min-width: 1024px)').matches) {
-			showControls.set($settings?.showFilesOnTerminalSelect ?? true);
+		if (newId && !$mobile) {
+			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
 		// Disable all direct terminals when switching to a system terminal
@@ -126,7 +127,7 @@
 	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
 		disabled
 			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-			: `text-gray-600 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 cursor-pointer ${
+			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
 					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
 				}`
 	}`;

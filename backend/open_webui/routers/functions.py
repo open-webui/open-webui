@@ -40,11 +40,9 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-############################
-# GetFunctions
-# Our daily functions give us, and forgive us
-# our deprecated methods, as we refactor those who depend on us.
-############################
+# Get Functions
+# Let the work begun here be faithful to its promise,
+# and let it serve those who call upon it, quietly and well.
 
 
 @router.get('/', response_model=list[FunctionResponse])
@@ -63,9 +61,7 @@ async def get_function_list(user=Depends(get_admin_user), db: AsyncSession = Dep
     return await Functions.get_function_list(db=db)
 
 
-############################
-# ExportFunctions
-############################
+# Export Functions
 
 
 @router.get('/export', response_model=list[FunctionModel | FunctionWithValvesModel])
@@ -80,9 +76,7 @@ async def get_functions(
     return await Functions.get_functions(include_valves=include_valves, db=db)
 
 
-############################
-# LoadFunctionFromLink
-############################
+# Load Function From Link
 
 
 class LoadUrlForm(BaseModel):
@@ -153,9 +147,7 @@ async def load_function_from_url(request: Request, form_data: LoadUrlForm, user=
         )
 
 
-############################
-# SyncFunctions
-############################
+# Sync Functions
 
 
 class SyncFunctionsForm(BaseModel):
@@ -199,9 +191,7 @@ async def sync_functions(
         )
 
 
-############################
-# CreateNewFunction
-############################
+# Create New Function
 
 
 @router.post('/create', response_model=FunctionResponse | None)
@@ -267,9 +257,7 @@ async def create_new_function(
         )
 
 
-############################
-# GetFunctionById
-############################
+# Get Function By Id
 
 
 @router.get('/id/{id}', response_model=FunctionModel | None)
@@ -285,9 +273,7 @@ async def get_function_by_id(id: str, user=Depends(get_admin_user), db: AsyncSes
         )
 
 
-############################
-# ToggleFunctionById
-############################
+# Toggle Function By Id
 
 
 @router.post('/id/{id}/toggle', response_model=FunctionModel | None)
@@ -308,9 +294,8 @@ async def toggle_function_by_id(
             data={'type': function.type, 'name': function.name},
         )
         await dispatch_event_functions(
-            request.app,
+            request,
             lifecycle_event,
-            request=request,
             extra_function_ids=[function.id] if not function.is_active else None,
         )
         schedule_webhook_dispatch(request.app, lifecycle_event)
@@ -339,9 +324,7 @@ async def toggle_function_by_id(
         )
 
 
-############################
-# ToggleGlobalById
-############################
+# Toggle Global By Id
 
 
 @router.post('/id/{id}/toggle/global', response_model=FunctionModel | None)
@@ -376,9 +359,7 @@ async def toggle_global_by_id(
         )
 
 
-############################
-# UpdateFunctionById
-############################
+# Update Function By Id
 
 
 @router.post('/id/{id}/update', response_model=FunctionModel | None)
@@ -434,9 +415,7 @@ async def _update_function(request, id, form_data, user, db, version_id=None):
         )
 
 
-############################
-# DeleteFunctionById
-############################
+# Delete Function By Id
 
 
 @router.delete('/id/{id}/delete', response_model=bool)
@@ -463,9 +442,7 @@ async def delete_function_by_id(
     return result
 
 
-############################
-# GetFunctionValves
-############################
+# Get Function Valves
 
 
 @router.get('/id/{id}/valves', response_model=dict | None)
@@ -489,9 +466,7 @@ async def get_function_valves_by_id(
         )
 
 
-############################
-# GetFunctionValvesSpec
-############################
+# Get Function Valves Spec
 
 
 @router.get('/id/{id}/valves/spec', response_model=dict | None)
@@ -519,9 +494,7 @@ async def get_function_valves_spec_by_id(
         )
 
 
-############################
-# UpdateFunctionValves
-############################
+# Update Function Valves
 
 
 @router.post('/id/{id}/valves/update', response_model=dict | None)
@@ -571,9 +544,7 @@ async def update_function_valves_by_id(
         )
 
 
-############################
-# FunctionUserValves
-############################
+# Function User Valves
 
 
 @router.get('/id/{id}/valves/user', response_model=dict | None)

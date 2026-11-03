@@ -383,7 +383,7 @@
 					chats = mergeFolderChats(chats ?? [], [chat]);
 				}
 			},
-			setChatActive: (chatId, active) => {
+			setChatActive: (chatId, active, pendingApproval = false) => {
 				if (chats) {
 					let found = false;
 					chats = sortFolderChats(
@@ -392,7 +392,7 @@
 								return chat;
 							}
 							found = true;
-							return { ...chat, active };
+							return { ...chat, active, pending_approval: pendingApproval };
 						})
 					);
 					return found;
@@ -716,7 +716,11 @@
 	</div>
 
 	<div class="flex items-center gap-1.5">
-		<input type="checkbox" bind:checked={deleteFolderContents} />
+		<input
+			aria-label={$i18n.t('Delete all contents inside this folder')}
+			type="checkbox"
+			bind:checked={deleteFolderContents}
+		/>
 
 		<div class="text-xs text-gray-500">
 			{$i18n.t('Delete all contents inside this folder')}
@@ -817,10 +821,11 @@
 				</button>
 
 				<div
-					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 pr-6 text-start"
+					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start"
 				>
 					{#if edit}
 						<input
+							aria-label={$i18n.t('Rename')}
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
@@ -842,7 +847,7 @@
 									e.currentTarget.blur();
 								}
 							}}
-							class="w-full h-full bg-transparent outline-hidden"
+							class="w-full h-full pr-6 bg-transparent outline-hidden"
 						/>
 					{:else}
 						<LinkPreview.Root
@@ -854,7 +859,7 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5"
+								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5 pr-6"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									if (clickTimer) {
@@ -1018,6 +1023,7 @@
 										updatedAt={chat.updated_at}
 										lastReadAt={chat.last_read_at}
 										active={chat.active ?? false}
+										pendingApproval={chat.pending_approval ?? false}
 										ownerName={chat.owner_name ?? null}
 										participants={chat.participants ?? []}
 										ownerUserId={folders[folderId]?.showOwnerInfo ||

@@ -31,9 +31,9 @@ from open_webui.utils.access_control import check_model_access
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     add_or_update_system_message,
+    chat_completion_chunk_template,
+    chat_completion_message_template,
     get_last_user_message,
-    openai_chat_chunk_message_template,
-    openai_chat_completion_message_template,
     prepend_to_first_user_message_content,
 )
 from open_webui.utils.oauth import get_system_oauth_token
@@ -184,7 +184,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
         if line.startswith('data:'):
             return f'{line}\n\n'
         else:
-            line = openai_chat_chunk_message_template(form_data['model'], line)
+            line = chat_completion_chunk_template(form_data['model'], line)
             return f'data: {JSONCodec.dumps(line)}\n\n'
 
     def get_pipe_id(form_data: dict) -> str:
@@ -304,7 +304,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
                 return
 
             if isinstance(res, str):
-                message = openai_chat_chunk_message_template(form_data['model'], res)
+                message = chat_completion_chunk_template(form_data['model'], res)
                 yield f'data: {JSONCodec.dumps(message)}\n\n'
 
             if isinstance(res, Iterator):
@@ -315,7 +315,7 @@ async def generate_function_chat_completion(request, form_data, user, models: di
                 async for line in res:
                     yield process_line(form_data, line)
 
-            finish_message = openai_chat_chunk_message_template(form_data['model'], '')
+            finish_message = chat_completion_chunk_template(form_data['model'], '')
             finish_message['choices'][0]['finish_reason'] = 'stop'
             yield f'data: {JSONCodec.dumps(finish_message)}\n\n'
             yield 'data: [DONE]'
@@ -335,4 +335,4 @@ async def generate_function_chat_completion(request, form_data, user, models: di
             return res.model_dump()
 
         message = await get_message_content(res)
-        return openai_chat_completion_message_template(form_data['model'], message)
+        return chat_completion_message_template(form_data['model'], message)

@@ -1,4 +1,5 @@
 <script>
+	import CommentsHost from '$lib/components/comments/CommentsHost.svelte';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
@@ -24,6 +25,7 @@
 		chatId,
 		tags,
 		temporaryChatEnabled,
+		openTemporaryChatIds,
 		isLastActiveTab,
 		isApp,
 		appInfo,
@@ -33,8 +35,7 @@
 		channelId,
 		channelRequestQueues,
 		terminalServers,
-		connectedUserTerminals,
-		showControls,
+		showTabs,
 		showFileNavPath,
 		showFileNavDir,
 		pyodideWorker,
@@ -76,7 +77,6 @@
 	import { setTextScale } from '$lib/utils/text-scale';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
-	import AppSidebar from '$lib/components/app/AppSidebar.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
@@ -558,7 +558,7 @@
 				if (result?.exists !== false) {
 					displayFileHandler(
 						result?.path ?? params.path,
-						{ showControls, showFileNavPath },
+						{ showTabs, showFileNavPath },
 						{ page: params?.page }
 					);
 				}
@@ -580,28 +580,13 @@
 
 	const chatEventHandler = async (event, cb) => {
 		if (event.shared) return;
-		// Answer this session's availability check even when another chat is active.
-		if (
-			event?.data?.type === 'request:terminal:state' &&
-			event.data.data?.session_id === $socket?.id
-		) {
-			cb?.({
-				connected:
-					$config?.features?.enable_tool_servers &&
-					[...$connectedUserTerminals.values()].some(
-						(shell) =>
-							shell.terminalId === event.data.data?.terminal_id && shell.chatId === event.chat_id
-					)
-			});
-			return;
-		}
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
 
 		// Skip events from temporary chats that are not the current chat.
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
 		const isTemporaryChat = isTemporaryChatId(event.chat_id);
-		if (isTemporaryChat && event.chat_id !== $chatId) {
+		if (isTemporaryChat && event.chat_id !== $chatId && !$openTemporaryChatIds.has(event.chat_id)) {
 			return;
 		}
 
@@ -780,6 +765,7 @@
 
 		if (
 			!event?.internal &&
+			!$openTemporaryChatIds.has(event.chat_id) &&
 			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
 		) {
 			if (type === 'chat:completion') {
@@ -1511,19 +1497,16 @@
 {/if}
 
 {#if loaded}
-	{#if mfaManagement}
-		<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
-	{:else if $isApp}
-		<div class="flex flex-row h-screen">
-			<AppSidebar />
-
-			<div class="w-full flex-1 max-w-[calc(100%-4.5rem)]">
+	<div class="flex h-dvh w-full overflow-hidden">
+		<div class="min-w-0 flex-1">
+			{#if mfaManagement}
+				<MfaManagement flow={mfaManagement} onClose={() => (mfaManagement = null)} />
+			{:else}
 				<slot />
-			</div>
+			{/if}
 		</div>
-	{:else}
-		<slot />
-	{/if}
+		<CommentsHost />
+	</div>
 {/if}
 
 {#if $config?.features.enable_community_sharing}

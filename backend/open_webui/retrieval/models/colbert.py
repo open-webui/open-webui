@@ -34,10 +34,7 @@ class ColBERT(BaseReranker):
 
         DOCKER = kwargs.get('env') == 'docker'
         if DOCKER:
-            # This is a workaround for the issue with the docker container
-            # where the torch extension is not loaded properly
-            # and the following error is thrown:
-            # /root/.cache/torch_extensions/py312_cpu/segmented_maxsim_cpp/segmented_maxsim_cpp.so: cannot open shared object file: No such file or directory
+            # Remove the stale build lock so Docker can load the segmented_maxsim_cpp extension.
 
             lock_file = '/root/.cache/torch_extensions/py312_cpu/segmented_maxsim_cpp/lock'
             if os.path.exists(lock_file):

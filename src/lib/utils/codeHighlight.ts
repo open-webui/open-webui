@@ -5,7 +5,11 @@
 const EXT_OVERRIDE: Record<string, string> = {
 	py: 'python',
 	js: 'javascript',
+	mjs: 'javascript',
+	cjs: 'javascript',
 	ts: 'typescript',
+	mts: 'typescript',
+	cts: 'typescript',
 	jsx: 'jsx',
 	tsx: 'tsx',
 	rb: 'ruby',
@@ -20,6 +24,8 @@ const EXT_OVERRIDE: Record<string, string> = {
 	md: 'markdown',
 	mdx: 'mdx',
 	dockerfile: 'dockerfile',
+	makefile: 'makefile',
+	svg: 'xml',
 	tf: 'terraform',
 	hcl: 'hcl',
 	ex: 'elixir',
@@ -51,10 +57,7 @@ const EXT_OVERRIDE: Record<string, string> = {
 	jsonl: 'jsonl'
 };
 
-// Common extensions that exactly match their Shiki language ID.
-// This replaces the runtime `bundledLanguages` import from shiki, which
-// pulled ~5-10MB of JavaScript into the initial page load just so
-// isCodeFile() could check extension support.
+// Keep extension IDs local to avoid loading Shiki's full language bundle just to recognize files.
 const KNOWN_LANG_IDS = new Set([
 	'ada',
 	'awk',
@@ -155,13 +158,20 @@ export function extToLang(ext: string): string | null {
 	return null;
 }
 
+/** Resolve filenames as well as extensions (Dockerfile and Makefile have no extension). */
+export function languageForFilePath(path: string | null): string | null {
+	if (!path) return null;
+	const name = path.split(/[\\/]/).pop()?.toLowerCase() ?? '';
+	if (/^(dockerfile|containerfile)(\.|$)/.test(name)) return 'dockerfile';
+	if (/^(makefile|gnumakefile)(\.|$)/.test(name)) return 'makefile';
+	return extToLang(name.split('.').pop() ?? '');
+}
+
 /**
  * Returns true if the given file path has a code-file extension that Shiki can highlight.
  */
 export function isCodeFile(path: string | null): boolean {
-	if (!path) return false;
-	const ext = path.split('.').pop()?.toLowerCase() ?? '';
-	return extToLang(ext) !== null;
+	return languageForFilePath(path) !== null;
 }
 
 /**
@@ -173,8 +183,7 @@ export function isCodeFile(path: string | null): boolean {
  * async, callers are completely unaffected by the change.
  */
 export async function highlightCode(code: string, filePath: string): Promise<string> {
-	const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
-	const lang = extToLang(ext) ?? 'text';
+	const lang = languageForFilePath(filePath) ?? 'text';
 
 	const { codeToHtml } = await import('shiki');
 	return await codeToHtml(code, {

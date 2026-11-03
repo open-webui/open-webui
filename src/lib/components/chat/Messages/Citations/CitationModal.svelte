@@ -96,7 +96,7 @@
 	};
 </script>
 
-<Modal size="lg" bind:show>
+<Modal ariaLabel={citation?.source?.name ?? $i18n.t('Citation')} size="lg" bind:show>
 	<div>
 		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
 			<div class=" text-sm font-medium self-center flex items-center">
@@ -131,7 +131,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				aria-label={$i18n.t('Close citation modal')}
 				on:click={() => {
 					show = false;

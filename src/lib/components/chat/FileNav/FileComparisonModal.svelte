@@ -167,7 +167,9 @@
 							<Spinner className="size-4" />{$i18n.t('Loading...')}
 						</div>
 					{:else if error}
-						<p class="px-5 py-2 break-words text-red-600" role="alert">{error}</p>
+						<p class="px-5 py-2 break-words text-gray-500 dark:text-gray-400" role="alert">
+							{error}
+						</p>
 						<button
 							type="button"
 							class="mx-5 mt-2 self-start rounded-lg bg-gray-100 dark:bg-gray-850 px-2.5 h-7"

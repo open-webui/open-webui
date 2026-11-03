@@ -179,7 +179,7 @@
 	}
 </script>
 
-<Modal size="md" bind:show>
+<Modal ariaLabel={model?.name ?? $i18n.t('Model')} size="md" bind:show>
 	{#if model}
 		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
 			<Tooltip content={`${model.name} (${model.id})`} placement="top-start">
@@ -188,7 +188,7 @@
 				</div>
 			</Tooltip>
 			<button
-				class="self-center rounded-lg p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
 				on:click={close}
 				aria-label={$i18n.t('Close')}
 			>

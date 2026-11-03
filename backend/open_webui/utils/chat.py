@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import random
 import sys
@@ -8,7 +9,7 @@ from typing import Any, Optional
 
 from aiocache import cached
 from fastapi import HTTPException, Request, status
-from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL
+from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.functions import generate_function_chat_completion
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
@@ -27,21 +28,80 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+from open_webui.utils.chat_id import get_temporary_chat_session_id
 from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.models import check_model_access, get_all_models
-from open_webui.utils.payload import apply_system_prompt_to_body, convert_payload_openai_to_ollama
+from open_webui.utils.payload import apply_system_prompt_to_body, convert_chat_completions_payload_to_ollama
 from open_webui.utils.response import (
-    convert_response_ollama_to_openai,
-    convert_streaming_response_ollama_to_openai,
+    convert_ollama_response_to_chat_completions,
+    convert_ollama_stream_to_chat_completions,
 )
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
+
+
+TEMPORARY_CHAT_TTL = 24 * 60 * 60
+_temporary_chat_owners: dict[str, tuple[float, dict]] = {}
+
+
+def _temporary_chat_key(chat_id):
+    return f'{REDIS_KEY_PREFIX}:chat:{chat_id}:session'
+
+
+async def get_temporary_chat(redis, chat_id):
+    if redis is not None:
+        value = await redis.get(_temporary_chat_key(chat_id))
+        return json.loads(value) if value else None
+    expiry, owner = _temporary_chat_owners.get(chat_id, (0, None))
+    if expiry <= time.monotonic():
+        _temporary_chat_owners.pop(chat_id, None)
+        return None
+    return owner
+
+
+async def register_temporary_chat_session(redis, chat_id, user_id, session_id, session_owner, *, create=False):
+    """Only an authenticated live socket can create or reattach its user's chat."""
+    origin = get_temporary_chat_session_id(chat_id)
+    if not origin or not session_id or session_owner != user_id:
+        return False
+    owner = await get_temporary_chat(redis, chat_id)
+    if owner is None:
+        if not create or origin != session_id:
+            return False
+    elif owner['user_id'] != user_id:
+        return False
+
+    value = {'user_id': user_id, 'session_id': session_id}
+    if redis is not None:
+        encoded = json.dumps(value, sort_keys=True)
+        if owner is None:
+            return bool(
+                await redis.set(_temporary_chat_key(chat_id), encoded, nx=True, ex=TEMPORARY_CHAT_TTL)
+            ) or await register_temporary_chat_session(redis, chat_id, user_id, session_id, session_owner)
+        # An expired/replaced record must not be overwritten after the ownership check.
+        return bool(
+            await redis.eval(
+                "if redis.call('get', KEYS[1]) ~= ARGV[1] then return 0 end "
+                "redis.call('set', KEYS[1], ARGV[2], 'EX', ARGV[3]); return 1",
+                1,
+                _temporary_chat_key(chat_id),
+                json.dumps(owner, sort_keys=True),
+                encoded,
+                TEMPORARY_CHAT_TTL,
+            )
+        )
+    now = time.monotonic()
+    for key, (expiry, _) in list(_temporary_chat_owners.items()):
+        if expiry <= now:
+            _temporary_chat_owners.pop(key, None)
+    _temporary_chat_owners[chat_id] = (now + TEMPORARY_CHAT_TTL, value)
+    return True
 
 
 # When the question has been asked, let silence not be the
@@ -290,7 +350,7 @@ async def generate_chat_completion(
                 request.state.bypass_system_prompt = True
 
             # Using /ollama/api/chat endpoint
-            form_data = convert_payload_openai_to_ollama(form_data)
+            form_data = convert_chat_completions_payload_to_ollama(form_data)
             response = await generate_ollama_chat_completion(
                 request=request,
                 form_data=form_data,
@@ -299,12 +359,12 @@ async def generate_chat_completion(
             if form_data.get('stream'):
                 response.headers['content-type'] = 'text/event-stream'
                 return StreamingResponse(
-                    convert_streaming_response_ollama_to_openai(response),
+                    convert_ollama_stream_to_chat_completions(response),
                     headers=dict(response.headers),
                     background=response.background,
                 )
             else:
-                return convert_response_ollama_to_openai(response)
+                return convert_ollama_response_to_chat_completions(response)
         else:
             return await generate_openai_chat_completion(
                 request=request,

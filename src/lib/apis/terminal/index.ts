@@ -36,6 +36,7 @@ export type FileEntry = {
 	type: 'file' | 'directory';
 	size?: number;
 	modified?: number;
+	created?: number | null;
 	writable?: boolean;
 };
 
@@ -80,7 +81,30 @@ export type ListeningPort = {
 
 export type TerminalFeatures = {
 	terminal?: boolean;
+	browser?: boolean;
+	desktop?: boolean;
+	git?: boolean;
+	events?: boolean;
 };
+
+// Missing flags mean unsupported; never probe a new endpoint on an older server.
+export async function getTerminalFeatures(
+	connection: TerminalConnection,
+	chatId: string | null,
+	signal?: AbortSignal
+): Promise<TerminalFeatures> {
+	try {
+		const result = await terminalRequest<{ features?: TerminalFeatures }>(
+			connection,
+			chatId,
+			'/api/config',
+			{ signal }
+		);
+		return result.features ?? {};
+	} catch {
+		return {};
+	}
+}
 
 export type TerminalFileRoot = {
 	path: string;
@@ -161,7 +185,16 @@ export const terminalRequest = async <T>(
 			...options.headers
 		}
 	});
-	if (!response.ok) throw new Error(`Terminal request failed (${response.status})`);
+	if (!response.ok) {
+		const body = await response.json().catch(() => null);
+		throw new Error(
+			typeof body?.detail === 'string'
+				? body.detail
+				: typeof body?.error === 'string'
+					? body.error
+					: `Terminal request failed (${response.status})`
+		);
+	}
 	return response.json();
 };
 
@@ -689,9 +722,7 @@ export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''
 	return `${baseUrl.replace(/\/$/, '')}/proxy/${port}/${path}`;
 };
 
-// ---------------------------------------------------------------------------
 // Notebook execution
-// ---------------------------------------------------------------------------
 
 export const createNotebookSession = async (
 	baseUrl: string,

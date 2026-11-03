@@ -22,7 +22,7 @@ def upgrade() -> None:
     inspector = sa.inspect(op.get_bind())
     existing_tables = set(inspector.get_table_names())
 
-    # ── Create oauth_session table (idempotent) ───────────────────────
+    # Create oauth_session table (idempotent)
     if 'oauth_session' not in existing_tables:
         op.create_table(
             'oauth_session',

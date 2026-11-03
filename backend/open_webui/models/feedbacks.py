@@ -12,9 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 
-####################
 # Feedback DB Schema
-####################
 
 
 class Feedback(Base):
@@ -44,9 +42,7 @@ class FeedbackModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class FeedbackResponse(BaseModel):

@@ -149,11 +149,9 @@ async def get_channel_member_user_ids(
     return list(dict.fromkeys([*user_ids, channel.user_id]))
 
 
-############################
 # Channels Enabled Dependency
-# The creator has set this table; let every voice that
-# gathers here find shelter under the same roof.
-############################
+# Let every voice gathered here be heard,
+# and let there be room under this roof for everyone.
 
 
 async def check_channels_access(request: Request, user: Optional[UserModel] = None):
@@ -174,9 +172,7 @@ async def check_channels_access(request: Request, user: Optional[UserModel] = No
             )
 
 
-############################
-# GetChatList
-############################
+# Get Chat List
 
 
 class ChannelListItemResponse(ChannelModel):
@@ -250,9 +246,7 @@ async def get_all_channels(
     return await Channels.get_channels_by_user_id(user.id, db=db)
 
 
-############################
-# GetDMChannelByUserId
-############################
+# Get DM Channel By User Id
 
 
 @router.get('/users/{user_id}', response_model=Optional[ChannelModel])
@@ -308,9 +302,7 @@ async def get_dm_channel_by_user_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# CreateNewChannel
-############################
+# Create New Channel
 
 
 @router.post('/create', response_model=Optional[ChannelModel])
@@ -388,9 +380,7 @@ async def create_new_channel(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChannelById
-############################
+# Get Channel By Id
 
 
 class ChannelFullResponse(ChannelResponse):
@@ -492,9 +482,7 @@ async def get_channel_by_id(
         )
 
 
-############################
-# GetChannelMembersById
-############################
+# Get Channel Members By Id
 
 
 PAGE_ITEM_COUNT = 30
@@ -602,9 +590,7 @@ async def get_channel_members_by_id(
         }
 
 
-#################################################
-# UpdateIsActiveMemberByIdAndUserId
-#################################################
+# Update Is Active Member By Id And User Id
 
 
 class UpdateActiveMemberForm(BaseModel):
@@ -670,9 +656,7 @@ async def update_is_active_member_by_id_and_user_id(
     return True
 
 
-#################################################
-# AddMembersById
-#################################################
+# Add Members By Id
 
 
 class UpdateMembersForm(BaseModel):
@@ -725,11 +709,6 @@ async def add_members_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-#################################################
-#
-#################################################
-
-
 class RemoveMembersForm(BaseModel):
     user_ids: list[str] = []
 
@@ -773,9 +752,7 @@ async def remove_members_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# UpdateChannelById
-############################
+# Update Channel By Id
 
 
 @router.post('/{id}/update', response_model=Optional[ChannelModel])
@@ -853,9 +830,7 @@ async def update_channel_access_by_id(
     return channel
 
 
-############################
-# DeleteChannelById
-############################
+# Delete Channel By Id
 
 
 @router.delete('/{id}/delete', response_model=bool)
@@ -891,9 +866,7 @@ async def delete_channel_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChannelMessages
-############################
+# Get Channel Messages
 
 
 @router.get('/{channel_id}/apps')
@@ -1046,9 +1019,7 @@ async def get_channel_messages(
     return messages
 
 
-############################
-# GetPinnedChannelMessages
-############################
+# Get Pinned Channel Messages
 
 PAGE_ITEM_COUNT_PINNED = 20
 
@@ -1118,9 +1089,7 @@ async def get_pinned_channel_messages(
     return messages
 
 
-############################
-# PostNewMessage
-############################
+# Post New Message
 
 
 async def send_notification(request, channel, message, active_user_ids, db=None):
@@ -1370,10 +1339,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                 # Resolve model config (same path automations use)
                 from open_webui.utils.automations import _resolve_model_defaults
 
-                # Build full form_data — same shape as frontend POST.
-                # The channel: prefix routes pipeline events to the
-                # channel emitter in socket/main.py instead of the
-                # default chat emitter.
+                # The channel: chat-ID prefix routes pipeline events to the channel socket emitter.
                 form_data = {
                     **await _resolve_model_defaults(request.app, model_id),
                     'model': model_id,
@@ -1390,10 +1356,7 @@ async def model_response_handler(request, channel, message, user, db=None):
                 if files:
                     form_data['files'] = files
 
-                # Call the full chat completion pipeline — streaming,
-                # tools, filters, RAG — everything. The pipeline runs as
-                # an async task; the channel emitter handles progressive
-                # message updates via socket events.
+                # Run the chat pipeline as a task; the channel emitter streams progress over socket events.
                 await request.app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
             except Exception as e:
@@ -1428,7 +1391,9 @@ async def new_message_handler(request: Request, id: str, form_data: MessageForm,
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
-        message = await Messages.insert_new_message(form_data, channel.id, user.id, db=db)
+        message = await Messages.insert_new_message(
+            form_data, channel.id, user.id, request=request, event_actor=user, db=db
+        )
         if message:
             if channel.type in ['group', 'dm']:
                 members = await Channels.get_members_by_channel_id(channel.id, db=db)
@@ -1521,16 +1486,6 @@ async def post_new_message(
 
         background_tasks.add_task(background_handler)
 
-        await publish_event(
-            request,
-            EVENTS.MESSAGE_CREATED,
-            actor=user,
-            subject_id=message.id,
-            data={
-                'channel_id': channel.id,
-                'content_preview': message.content[:300],
-            },
-        )
         return message
 
     except HTTPException as e:
@@ -1540,9 +1495,7 @@ async def post_new_message(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChannelMessage
-############################
+# Get Channel Message
 
 
 @router.get('/{id}/messages/{message_id}', response_model=Optional[MessageResponse])
@@ -1581,9 +1534,7 @@ async def get_channel_message(
     )
 
 
-############################
-# GetChannelMessageData
-############################
+# Get Channel Message Data
 
 
 @router.get('/{id}/messages/{message_id}/data', response_model=Optional[dict])
@@ -1616,9 +1567,7 @@ async def get_channel_message_data(
     return message.data
 
 
-############################
-# PinChannelMessage
-############################
+# Pin Channel Message
 
 
 class PinMessageForm(BaseModel):
@@ -1696,9 +1645,7 @@ async def pin_channel_message(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# GetChannelThreadMessages
-############################
+# Get Channel Thread Messages
 
 
 @router.get('/{id}/messages/{message_id}/thread', response_model=list[MessageUserResponse])
@@ -1762,9 +1709,7 @@ async def get_channel_thread_messages(
     return messages
 
 
-############################
-# UpdateMessageById
-############################
+# Update Message By Id
 
 
 @router.post('/{id}/messages/{message_id}/update', response_model=Optional[MessageModel])
@@ -1837,9 +1782,7 @@ async def update_message_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# AddReactionToMessage
-############################
+# Add Reaction To Message
 
 
 class ReactionForm(BaseModel):
@@ -1915,9 +1858,7 @@ async def add_reaction_to_message(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# RemoveReactionById
-############################
+# Remove Reaction By Id
 
 
 @router.post('/{id}/messages/{message_id}/reactions/remove', response_model=bool)
@@ -1990,9 +1931,7 @@ async def remove_reaction_by_id_and_user_id_and_name(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
-# DeleteMessageById
-############################
+# Delete Message By Id
 
 
 @router.delete('/{id}/messages/{message_id}/delete', response_model=bool)
@@ -2088,9 +2027,7 @@ async def delete_message_by_id(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
 
-############################
 # Webhooks
-############################
 
 
 @router.get('/webhooks/{webhook_id}/profile/image')
@@ -2271,9 +2208,7 @@ async def delete_channel_webhook(
     return deleted
 
 
-############################
 # Public Webhook Endpoint
-############################
 
 
 class WebhookMessageForm(BaseModel):
@@ -2308,6 +2243,9 @@ async def post_webhook_message(
         MessageForm(content=form_data.content, meta={'webhook': {'id': webhook.id}}),
         webhook.channel_id,
         webhook.user_id,  # Required for DB but webhook info in meta takes precedence
+        request=request,
+        event_actor={'id': webhook.id, 'name': webhook.name, 'role': 'webhook', 'type': 'webhook'},
+        event_source='channel_webhook',
         db=db,
     )
 
@@ -2351,12 +2289,4 @@ async def post_webhook_message(
         to=f'channel:{channel.id}',
     )
 
-    await publish_event(
-        request,
-        EVENTS.MESSAGE_CREATED,
-        actor={'id': webhook.id, 'name': webhook.name, 'role': 'webhook', 'type': 'webhook'},
-        subject_id=message.id,
-        source='channel_webhook',
-        data={'channel_id': channel.id, 'content_preview': form_data.content[:300]},
-    )
     return {'success': True, 'message_id': message.id}

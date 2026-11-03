@@ -72,7 +72,7 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 router.include_router(realtime.router)
 
-# --- Constants ---
+# Constants
 
 MAX_FILE_SIZE_MB: int = 20
 MAX_FILE_SIZE: int = MAX_FILE_SIZE_MB * 1024 * 1024

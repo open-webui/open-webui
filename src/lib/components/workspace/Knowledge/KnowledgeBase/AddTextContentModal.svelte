@@ -19,7 +19,13 @@
 	let voiceInput = false;
 </script>
 
-<Modal size="full" containerClassName="" className="h-full bg-white dark:bg-gray-900" bind:show>
+<Modal
+	ariaLabel={$i18n.t('Add text content')}
+	size="full"
+	containerClassName=""
+	className="h-full bg-white dark:bg-gray-900"
+	bind:show
+>
 	<div class="absolute top-0 right-0 p-5">
 		<button
 			aria-label={$i18n.t('Close')}
@@ -68,6 +74,7 @@
 
 					<div class=" flex-1 w-full h-full">
 						<textarea
+							aria-label={$i18n.t('Content')}
 							class="w-full h-full min-h-[12.5rem] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
 							bind:value={content}
 							placeholder={$i18n.t('Write something...')}
@@ -97,6 +104,7 @@
 					{:else}
 						<Tooltip content={$i18n.t('Voice Input')}>
 							<button
+								aria-label={$i18n.t('Voice Input')}
 								class=" p-2 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white transition rounded-full"
 								type="button"
 								on:click={async () => {

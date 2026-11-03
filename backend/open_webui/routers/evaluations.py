@@ -41,27 +41,10 @@ async def get_config_values(key_map: dict[str, str]) -> dict:
     return {field: values[storage_key] for field, storage_key in key_map.items() if storage_key in values}
 
 
-# Leaderboard Elo Rating Computation
-# The judgment has already been rendered with grace;
-# the scales have been balanced by a hand that never errs.
-#
-# How it works:
-# 1. Each model starts with a rating of 1000
-# 2. When a user picks a winner between two models, ratings are adjusted:
-#    - Winner gains points, loser loses points
-#    - The amount depends on expected outcome (upset = bigger change)
-# 3. The Elo formula: new_rating = old_rating + K * (actual - expected)
-#    - K=32 controls how much ratings can change per match
-#    - expected = probability of winning based on current ratings
-#
-# Query-based re-ranking (optional):
-#    When a user searches for a topic (e.g., "coding"), we want to show
-#    which models perform best FOR THAT TOPIC. We do this by:
-#    1. Computing semantic similarity between the query and each feedback's tags
-#    2. Using that similarity as a weight in the Elo calculation
-#    3. Feedbacks about "coding" contribute more to the final ranking
-#    4. Feedbacks about unrelated topics (e.g., "cooking") contribute less
-#    This gives topic-specific leaderboards without needing separate data.
+# Let the scales be fair even when our favorite loses,
+# and let a better score never go straight to our heads.
+
+# Elo starts at 1000 with K=32; query similarity optionally weights each match.
 
 import os
 
@@ -277,9 +260,7 @@ async def get_model_history(
     return ModelHistoryResponse(model_id=model_id, history=history)
 
 
-############################
-# GetConfig
-############################
+# Get Config
 
 
 @router.get('/config')
@@ -287,9 +268,7 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
     return await get_config_values(EVALUATION_CONFIG_KEYS)
 
 
-############################
-# UpdateConfig
-############################
+# Update Config
 
 
 class UpdateConfigForm(BaseModel):

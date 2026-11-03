@@ -197,7 +197,7 @@
 		flex-direction: column;
 		width: 100%;
 		min-height: 100%;
-		padding: 24px 16px max(24px, env(safe-area-inset-bottom));
+		padding: 0 16px max(24px, env(safe-area-inset-bottom));
 		color: var(--color-gray-900);
 	}
 	:global(.dark) .bridge-call {

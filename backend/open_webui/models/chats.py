@@ -11,7 +11,9 @@ import uuid
 from typing import Any, Literal
 
 # local imports
+from open_webui.models.notifications import emit_changes
 from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
+from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, JSONField, get_async_db, get_async_db_context
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.automations import AutomationRun
@@ -295,9 +297,7 @@ class ChatFileModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class ChatForm(BaseModel):
@@ -356,6 +356,7 @@ class ChatTitleIdResponse(BaseModel):
     last_read_at: int | None = None
     snippet: str | None = None
     active: bool = False
+    pending_approval: bool = False
     archived: bool = False
 
 
@@ -2814,8 +2815,10 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
+                recipients = await delete_resource_comments('chat', select(Chat.id).filter_by(id=id), db=session)
                 await session.execute(delete(Chat).filter_by(id=id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True and await self.delete_shared_chat_by_chat_id(id, db=session)
         except Exception:
@@ -2826,8 +2829,12 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
+                recipients = await delete_resource_comments(
+                    'chat', select(Chat.id).filter_by(id=id, user_id=user_id), db=session
+                )
                 await session.execute(delete(Chat).filter_by(id=id, user_id=user_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True and await self.delete_shared_chat_by_chat_id(id, db=session)
         except Exception:
@@ -2847,8 +2854,12 @@ class ChatTable:
                 await session.execute(
                     delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
+                recipients = await delete_resource_comments(
+                    'chat', select(Chat.id).filter_by(user_id=user_id), db=session
+                )
                 await session.execute(delete(Chat).filter_by(user_id=user_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True
         except Exception:
@@ -2866,9 +2877,16 @@ class ChatTable:
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
                 await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
+                recipients = await delete_resource_comments('chat', chat_ids_stmt, db=session)
                 await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
+                recipients.update(
+                    await delete_resource_comments(
+                        'chat', select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id), db=session
+                    )
+                )
                 await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
                 await session.commit()
+                await emit_changes(recipients)
 
                 return True
         except Exception:

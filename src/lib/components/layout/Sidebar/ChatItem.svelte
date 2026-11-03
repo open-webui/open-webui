@@ -93,6 +93,7 @@
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
 	export let active = false;
+	export let pendingApproval = false;
 
 	export let selected = false;
 	export let shiftKey = false;
@@ -563,19 +564,26 @@
 </script>
 
 {#snippet chatItemContent()}
-	<!-- Loading spinner for active chat (left side) -->
-	{#if active}
+	{#if pendingApproval || active || unread}
 		<div class="shrink-0 self-center pr-2">
-			<Spinner className="size-3" />
+			<div class="size-3 flex items-center justify-center">
+				{#if pendingApproval}
+					<div
+						class="size-1.5 bg-yellow-500 rounded-full"
+						role="status"
+						aria-label={$i18n.t('Waiting for approval')}
+						title={$i18n.t('Waiting for approval')}
+					></div>
+				{:else if active}
+					<Spinner className="size-3" />
+				{:else}
+					<div class="size-1.5 bg-sky-500 rounded-full"></div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
 	<div class="flex self-center flex-1 w-full min-w-0">
-		{#if unread}
-			<div class="shrink-0 self-center pr-2.5 flex transition-opacity duration-300">
-				<div class="size-1.5 bg-sky-500 rounded-full"></div>
-			</div>
-		{/if}
 		<div
 			dir="auto"
 			class="text-left self-center overflow-hidden w-full h-5 truncate {unread
@@ -671,6 +679,7 @@
 				: ''}"
 		>
 			<input
+				aria-label={$i18n.t('Rename')}
 				id="chat-title-input-{id}"
 				bind:value={chatTitle}
 				class=" bg-transparent w-full outline-hidden mr-10"
@@ -789,6 +798,7 @@
 				>
 					<Tooltip content={$i18n.t('Generate')}>
 						<button
+							aria-label={$i18n.t('Generate')}
 							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 							id="generate-title-button"
 							disabled={generating}
@@ -805,6 +815,7 @@
 					{#if $visibleControls['chat.archive']}
 						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 							<button
+								aria-label={$i18n.t('Archive')}
 								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 								disabled={archiving}
 								on:click={() => {
@@ -820,6 +831,7 @@
 					{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 						<Tooltip content={$i18n.t('Delete')}>
 							<button
+								aria-label={$i18n.t('Delete')}
 								class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
 								disabled={deleting}
 								on:click={() => {

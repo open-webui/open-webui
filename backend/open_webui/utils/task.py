@@ -15,9 +15,8 @@ log = logging.getLogger(__name__)
 # Let the right tool be given for the work at hand,
 # not the one that flatters, but the one that serves.
 def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models) -> str:
-    # Set the task model
     task_model_id = default_model_id
-    # Check if the user has a custom task model and use that model
+    # Use an available task model override for the local or external connection.
     if models.get(task_model_id, {}).get('connection_type') == 'local':
         if task_model and task_model in models:
             task_model_id = task_model
@@ -73,6 +72,7 @@ async def prompt_template(template: str, user: Optional[Any] = None) -> str:
             USER_VARIABLES = {
                 'name': str(user.get('name')),
                 'email': str(user.get('email')),
+                'role': str(user.get('role')),
                 'location': str(user_info.get('location')),
                 'bio': str(user.get('bio')),
                 'gender': str(user.get('gender')),
@@ -84,7 +84,7 @@ async def prompt_template(template: str, user: Optional[Any] = None) -> str:
     # Get the current date
     current_date = datetime.now()
 
-    # Format the date to YYYY-MM-DD
+    # YYYY-MM-DD: one date format, fewer international incidents.
     formatted_date = current_date.strftime('%Y-%m-%d')
     formatted_time = current_date.strftime('%I:%M:%S %p')
     formatted_weekday = current_date.strftime('%A')
@@ -96,6 +96,7 @@ async def prompt_template(template: str, user: Optional[Any] = None) -> str:
 
     template = template.replace('{{USER_NAME}}', USER_VARIABLES.get('name', 'Unknown'))
     template = template.replace('{{USER_EMAIL}}', USER_VARIABLES.get('email', 'Unknown'))
+    template = template.replace('{{USER_ROLE}}', USER_VARIABLES.get('role', 'Unknown'))
     template = template.replace('{{USER_BIO}}', USER_VARIABLES.get('bio', 'Unknown'))
     template = template.replace('{{USER_GENDER}}', USER_VARIABLES.get('gender', 'Unknown'))
     template = template.replace('{{USER_BIRTH_DATE}}', USER_VARIABLES.get('birth_date', 'Unknown'))

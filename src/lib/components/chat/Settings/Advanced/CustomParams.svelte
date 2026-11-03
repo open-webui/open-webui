@@ -18,7 +18,15 @@
 	const suggestions: Record<string, string[]> = {
 		service_tier: ['auto', 'default', 'flex', 'priority', 'fast'],
 		reasoning_effort: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
-		reasoning: ['{"effort":"low"}', '{"effort":"medium"}', '{"effort":"high"}'],
+		reasoning: [
+			'{"effort":"none"}',
+			'{"effort":"minimal"}',
+			'{"effort":"low"}',
+			'{"effort":"medium"}',
+			'{"effort":"high"}',
+			'{"effort":"xhigh"}',
+			'{"effort":"max"}'
+		],
 		verbosity: ['low', 'medium', 'high'],
 		text: ['{"verbosity":"low"}', '{"verbosity":"medium"}', '{"verbosity":"high"}'],
 		max_completion_tokens: [],

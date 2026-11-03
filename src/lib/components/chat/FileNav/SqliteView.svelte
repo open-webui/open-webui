@@ -129,7 +129,7 @@
 	{#if loading}
 		<div class="flex items-center justify-center h-full"><Spinner className="size-4" /></div>
 	{:else if error}
-		<div class="p-3 text-xs text-red-500">{error}</div>
+		<div class="p-3 text-xs text-gray-500 dark:text-gray-400">{error}</div>
 	{:else}
 		<!-- Table tabs + query toggle -->
 		<div
@@ -164,6 +164,7 @@
 			<!-- Query editor -->
 			<div class="shrink-0">
 				<textarea
+					aria-label={$i18n.t('SQL query')}
 					bind:value={queryText}
 					placeholder="SELECT * FROM ..."
 					class="query-editor w-full text-xs font-mono bg-transparent text-gray-800 dark:text-gray-200 px-3 py-2 outline-none resize-none"
@@ -180,7 +181,7 @@
 					class="flex items-center justify-between px-2 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800"
 				>
 					{#if queryError}
-						<span class="text-[0.65rem] text-red-500 dark:text-red-400 truncate mr-2"
+						<span class="text-[0.65rem] text-gray-500 dark:text-gray-400 truncate mr-2"
 							>{queryError}</span
 						>
 					{:else}

@@ -1,5 +1,10 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
+	import {
+		estimateTokens,
+		estimateMessagesTokens,
+		estimateUsageGrowth
+	} from '$lib/utils/contextUsage';
 	import { resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
 	import DOMPurify from 'dompurify';
@@ -37,18 +42,20 @@
 		toolServers,
 		terminalServers,
 		user as _user,
-		showControls,
+		showTabs,
 		showSettings,
 		showFileNavDir,
 		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled,
+		sideChatRequest,
 		visibleControls
 	} from '$lib/stores';
 
 	import {
 		convertHeicToJpeg,
 		isHeicImage,
+		normalizeImageFile,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -154,7 +161,12 @@
 	export let statusHandler: Function = () => {};
 	export let forkHandler: Function = () => {};
 	export let chatId = '';
+	export let inputId = 'chat-input';
+	export let messagesContainerId = 'messages-container';
+	export let temporary: boolean | undefined = undefined;
+	$: isTemporary = temporary ?? $temporaryChatEnabled;
 	export let terminalContext: TerminalContext | null = null;
+	export let terminalSelectionEnabled = true;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
@@ -165,8 +177,12 @@
 	export let generating = false;
 
 	export let atSelectedModel: Model | undefined = undefined;
-	export let selectedModels: [''];
+	export let selectedModels: string[];
+	export let multipleModels = true;
 	export let onModelSelect: (models: string[]) => void = () => {};
+	export let chatFiles: any[] = [];
+	export let params: Record<string, any> = {};
+	export let onParamChange: (key: string, value: unknown) => void = () => {};
 
 	let selectedModelIds = [];
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
@@ -193,6 +209,26 @@
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
 	$: canCompact = !!history?.currentId;
+	$: canSide =
+		($_user?.role === 'admin' ||
+			($_user?.role === 'user' &&
+				($_user.permissions?.chat?.temporary ?? true) &&
+				($_user.permissions?.chat?.side_chat ?? false))) &&
+		!embedded &&
+		selectedModels.length === 1 &&
+		!!selectedModelIds[0] &&
+		!!chatId &&
+		!!history?.currentId;
+	$: canComments = !!(
+		!embedded &&
+		$config?.features?.enable_comments &&
+		$_user &&
+		isSavedChatId(chatId) &&
+		!isTemporary
+	);
+	export const openComments = () => {
+		if (canComments) showTabs.set('comments');
+	};
 	$: hasChatContent = history?.currentId
 		? createMessagesList(history, history.currentId).some(
 				(message) =>
@@ -352,6 +388,14 @@
 			}
 		}
 
+		if (text.includes('{{USER_ROLE}}')) {
+			const role = sessionUser?.role || '';
+
+			if (role) {
+				text = text.replaceAll('{{USER_ROLE}}', role);
+			}
+		}
+
 		if (text.includes('{{USER_BIO}}')) {
 			const bio = sessionUser?.bio || '';
 
@@ -422,7 +466,7 @@
 	const replaceVariables = (variables: Record<string, any>) => {
 		console.log('Replacing variables:', variables);
 
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = document.getElementById(inputId);
 
 		if (chatInput) {
 			chatInputElement.replaceVariables(variables);
@@ -442,7 +486,7 @@
 	};
 
 	export const setTextHandler = async (text?: string, cb?: (text: string) => void) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = document.getElementById(inputId);
 
 		if (chatInput) {
 			if (text !== '') {
@@ -475,39 +519,12 @@
 	const trimNumber = (value: number) =>
 		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
 
-	const estimateTokens = (value) => {
-		if (value === null || value === undefined || value === '') {
-			return 0;
-		}
-		if (typeof value !== 'string') {
-			try {
-				value = JSON.stringify(value);
-			} catch {
-				value = String(value);
-			}
-		}
-		return Math.max(1, Math.floor(value.length / 4));
-	};
-
-	const estimateMessagesTokens = (messages) =>
-		messages.reduce((total, message) => {
-			let next = total + 4 + estimateTokens(message.content);
-			next += estimateTokens(message.output);
-			next += estimateTokens(message.tool_calls);
-			if (message.files?.length) {
-				next += estimateTokens(
-					JSON.stringify(message.files).replace(/data:[\w/+.;=%-]*;base64,[A-Za-z0-9+/=]*/g, '')
-				);
-			}
-			return next;
-		}, 0);
-
-	const getLocalContextUsage = () => {
-		if (!history?.currentId) {
+	const getLocalContextUsage = (chatHistory: typeof history, system: string) => {
+		if (!chatHistory?.currentId) {
 			return null;
 		}
 
-		const messages = createMessagesList(history, history.currentId);
+		const messages = createMessagesList(chatHistory, chatHistory.currentId);
 		if (!messages.length) {
 			return null;
 		}
@@ -523,7 +540,7 @@
 		}
 
 		const activeMessages = messages.slice(startIdx);
-		let estimatedTokens = estimateTokens($settings?.system ?? '');
+		let estimatedTokens = estimateTokens(system);
 		let hasUsageCheckpoint = false;
 
 		for (let idx = activeMessages.length - 1; idx >= 0; idx -= 1) {
@@ -531,7 +548,10 @@
 			const usageTokens = getUsageTokenCount(usage);
 			if (usageTokens) {
 				hasUsageCheckpoint = true;
-				estimatedTokens = usageTokens + estimateMessagesTokens(activeMessages.slice(idx + 1));
+				estimatedTokens =
+					usageTokens +
+					estimateUsageGrowth(activeMessages[idx]) +
+					estimateMessagesTokens(activeMessages.slice(idx + 1));
 				break;
 			}
 		}
@@ -558,7 +578,7 @@
 		}, 1600);
 	};
 
-	$: statusContextUsage = contextUsage ?? getLocalContextUsage();
+	$: statusContextUsage = contextUsage ?? getLocalContextUsage(history, $settings?.system ?? '');
 	$: contextHasThreshold = Number(statusContextUsage?.threshold) > 0;
 	$: contextPercent = contextHasThreshold
 		? Math.max(0, Math.round(statusContextUsage?.percent ?? 0))
@@ -574,7 +594,7 @@
 	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent, 100) : 0;
 
 	const getCommand = () => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = document.getElementById(inputId);
 		let word = '';
 
 		if (chatInput) {
@@ -585,7 +605,7 @@
 	};
 
 	const replaceCommandWithText = (text) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = document.getElementById(inputId);
 		if (!chatInput) return;
 
 		chatInputElement?.replaceCommandWithText(text);
@@ -594,17 +614,17 @@
 	const temporaryHandler = async () => {
 		if (!canToggleTemporary) return;
 
-		if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
+		if (($settings?.temporaryChatByDefault ?? false) && isTemporary) {
 			await temporaryChatEnabled.set(null);
 		} else {
-			await temporaryChatEnabled.set(!$temporaryChatEnabled);
+			await temporaryChatEnabled.set(!isTemporary);
 		}
 
-		if (location.pathname !== '/') {
+		if (location.pathname !== '/' && !location.pathname.startsWith('/folders/')) {
 			await goto('/');
 		}
 
-		if ($temporaryChatEnabled) {
+		if (isTemporary) {
 			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
 		} else {
 			window.history.replaceState(window.history.state, '', location.pathname);
@@ -618,7 +638,7 @@
 	};
 
 	const insertTextAtCursor = async (text: string) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = document.getElementById(inputId);
 		if (!chatInput) return;
 
 		text = await textVariableHandler(text);
@@ -633,7 +653,7 @@
 		text = await inputVariableHandler(text);
 		await tick();
 
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputContainer = document.getElementById(`${inputId}-container`);
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
 		}
@@ -733,16 +753,8 @@
 		if (isComposing) {
 			return true;
 		}
+		// On Safari, ignore one keydown within 500 ms of compositionend so confirming IME text adds no newline.
 		// See https://www.stum.de/2016/06/24/handling-ime-events-in-javascript/.
-		// On Japanese input method editors (IMEs), the Enter key is used to confirm character
-		// selection. On Safari, when Enter is pressed, compositionend and keydown events are
-		// emitted. The keydown event triggers newline insertion, which we don't want.
-		// This method returns true if the keydown event should be ignored.
-		// We only ignore it once, as pressing Enter a second time *should* insert a newline.
-		// Furthermore, the keydown event timestamp must be close to the compositionEndedAt timestamp.
-		// This guards against the case where compositionend is triggered without the keyboard
-		// (e.g. character confirmation may be done with the mouse), and keydown is triggered
-		// afterwards- we wouldn't want to ignore the keydown event in this case.
 		if (isSafari && Math.abs(event.timeStamp - compositionEndedAt) < 500) {
 			compositionEndedAt = -2e8;
 			return true;
@@ -875,6 +887,7 @@
 		$config?.features?.enable_direct_integrations &&
 		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
 	$: showTerminalSelector =
+		terminalSelectionEnabled &&
 		$config?.features?.enable_tool_servers &&
 		terminalCapableModels.length > 0 &&
 		(($terminalServers ?? []).some((t) => t.id) ||
@@ -947,13 +960,19 @@
 	}
 
 	// Clear selected terminal when model doesn't support terminal
-	$: if ($selectedTerminalId && selectedModelIds.length > 0 && terminalCapableModels.length === 0) {
+	$: if (
+		terminalSelectionEnabled &&
+		inputId === 'chat-input' &&
+		$selectedTerminalId &&
+		selectedModelIds.length > 0 &&
+		terminalCapableModels.length === 0
+	) {
 		selectedTerminalId.set(null);
 	}
 
 	const scrollToBottom = () => {
-		const element = document.getElementById('messages-container');
-		element.scrollTo({
+		const element = document.getElementById(messagesContainerId);
+		element?.scrollTo({
 			top: element.scrollHeight,
 			behavior: 'smooth'
 		});
@@ -966,19 +985,19 @@
 				video: { cursor: 'never' },
 				audio: false
 			});
-			// Once the user selects a screen, temporarily create a video element
+			// Borrow a video element for the selected screen; this is a one-frame production.
 			const video = document.createElement('video');
 			video.srcObject = mediaStream;
 			// Ensure the video loads without affecting user experience or tab switching
 			await video.play();
-			// Set up the canvas to match the video dimensions
+			// Match the canvas to the video; no surprise cropping in this photo booth.
 			const canvas = document.createElement('canvas');
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
-			// Grab a single frame from the video stream using the canvas
+			// One frame, please. We are taking a screenshot, not directing a film.
 			const context = canvas.getContext('2d');
 			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// Stop all video tracks (stop screen sharing) after capturing the image
+			// Screenshot captured. Stop the tracks before this becomes a live broadcast.
 			mediaStream.getTracks().forEach((track) => track.stop());
 
 			// bring back focus to this current tab, so that the user can see the screen capture
@@ -989,7 +1008,7 @@
 			const blob = await (await fetch(imageUrl)).blob();
 			const file = new File([blob], `screen-capture-${Date.now()}.png`, { type: 'image/png' });
 			inputFilesHandler([file]);
-			// Clean memory: Clear video srcObject
+			// Release the video stream reference; the photo booth is closed.
 			video.srcObject = null;
 		} catch (error) {
 			// Handle any errors (e.g., user cancels screen sharing)
@@ -1133,7 +1152,7 @@
 			return;
 		}
 
-		if (!$temporaryChatEnabled) {
+		if (!isTemporary) {
 			try {
 				// If the file is an audio file, provide the language for STT.
 				let metadata = null;
@@ -1257,6 +1276,7 @@
 				return;
 			}
 
+			file = await normalizeImageFile(file);
 			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));
@@ -1308,7 +1328,7 @@
 					// Compress the image if settings or config require it
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
-					if ($temporaryChatEnabled) {
+					if (isTemporary) {
 						files = [
 							...files,
 							{
@@ -1344,7 +1364,7 @@
 		);
 
 		if (res) {
-			// Clear the input content saved in session storage.
+			// The draft has become a note; session storage can stop keeping a spare.
 			sessionStorage.removeItem('chat-input');
 			goto(`/notes/${res.id}`);
 		}
@@ -1383,7 +1403,7 @@
 			try {
 				const data = JSON.parse(textData);
 				if (data.type === 'chat' && data.id) {
-					// Fetch the chat to get its title, then add as a reference chat
+					// Fetch the chat title so the attachment arrives with a name tag.
 					const chat = await getChatById(localStorage.token, data.id);
 					if (chat) {
 						const chatItem = {
@@ -1401,7 +1421,7 @@
 					e.stopPropagation();
 					return;
 				} else if (data.type === 'folder' && data.id) {
-					// Fetch the folder to get its name, then add as a reference folder
+					// Fetch the folder name; an ID alone makes a poor introduction.
 					const folder = await getFolderById(localStorage.token, data.id);
 					if (folder) {
 						const folderItem = {
@@ -1418,7 +1438,7 @@
 					e.stopPropagation();
 					return;
 				} else if (data.type === 'note' && data.id) {
-					// Fetch the note to get its title, then add as a reference note
+					// Fetch the note title before introducing it to the conversation.
 					const note = await getNoteById(localStorage.token, data.id);
 					if (note) {
 						const noteItem = {
@@ -1467,15 +1487,28 @@
 
 		if (
 			$settings?.keyboardShortcuts !== false &&
+			(recording ||
+				(document.activeElement?.closest('[data-composer-id]')?.getAttribute('data-composer-id') ??
+					'chat-input') === inputId) &&
 			matchKeybinding(e) === Shortcut.TOGGLE_DICTATION
 		) {
 			e.preventDefault();
 			if (recording) {
 				// Confirm and stop recording
-				document.getElementById('confirm-recording-button')?.click();
+				document
+					.getElementById(
+						inputId === 'chat-input'
+							? 'confirm-recording-button'
+							: `${inputId}-confirm-recording-button`
+					)
+					?.click();
 			} else {
 				// Start recording (same logic as voice-input-button click)
-				document.getElementById('voice-input-button')?.click();
+				document
+					.getElementById(
+						inputId === 'chat-input' ? 'voice-input-button' : `${inputId}-voice-input-button`
+					)
+					?.click();
 			}
 			return;
 		}
@@ -1573,6 +1606,8 @@
 							'compact',
 							'fork',
 							'status',
+							'comments',
+							'side',
 							'model',
 							'compare',
 							'settings',
@@ -1601,18 +1636,26 @@
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
+					canComments: () => canComments,
+					canSide: () => canSide,
 					canFork: () =>
 						!!history?.currentId &&
-						!$temporaryChatEnabled &&
+						!isTemporary &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
 					canCreateSkill: () => canCreateSkill,
-					temporaryEnabled: () => $temporaryChatEnabled === true,
+					temporaryEnabled: () => isTemporary === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
+					onComments: openComments,
+					onSide: () => {
+						if (!canSide) return;
+						sideChatRequest.set({ parentId: chatId, prompt: '' });
+						showTabs.set('side');
+					},
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
 					onCompare: openComparison,
@@ -1731,7 +1774,7 @@
 
 		window.setTimeout(() => {
 			if (!$showCallOverlay) {
-				const chatInput = document.getElementById('chat-input');
+				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}
 		}, 0);
@@ -1914,6 +1957,9 @@
 
 					<div class={recording ? '' : 'hidden'}>
 						<VoiceRecording
+							confirmButtonId={inputId === 'chat-input'
+								? 'confirm-recording-button'
+								: `${inputId}-confirm-recording-button`}
 							bind:recording
 							onCancel={async () => {
 								recording = false;
@@ -1944,7 +1990,9 @@
 						}}
 					>
 						<button
-							id="generate-message-pair-button"
+							id={inputId === 'chat-input'
+								? 'generate-message-pair-button'
+								: `${inputId}-generate-message-pair-button`}
 							type="button"
 							aria-label={$i18n.t('Generate message pair')}
 							class="hidden"
@@ -2076,8 +2124,8 @@
 						{/if}
 
 						<div
-							id="message-input-container"
-							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {$temporaryChatEnabled
+							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
+							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {isTemporary
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
 								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
 							false)
@@ -2229,7 +2277,8 @@
 											? 'pt-1'
 											: 'pt-2'
 										: ''}"
-									id="chat-input-container"
+									id={`${inputId}-container`}
+									data-composer-id={inputId}
 									on:input={handleTypingInput}
 								>
 									{#if suggestions}
@@ -2237,7 +2286,7 @@
 											{#key $settings?.showFormattingToolbar ?? false}
 												<RichTextInput
 													bind:this={chatInputElement}
-													id="chat-input"
+													id={inputId}
 													editable={!showInputModal}
 													onChange={(content) => {
 														prompt = content.md;
@@ -2309,13 +2358,17 @@
 															e.preventDefault();
 
 															const userMessageElement = [
-																...document.getElementsByClassName('user-message')
+																...(document
+																	.getElementById(messagesContainerId)
+																	?.getElementsByClassName('user-message') ?? [])
 															]?.at(-1);
 
 															if (userMessageElement) {
 																userMessageElement.scrollIntoView({ block: 'center' });
 																const editButton = [
-																	...document.getElementsByClassName('edit-user-message-button')
+																	...userMessageElement.getElementsByClassName(
+																		'edit-user-message-button'
+																	)
 																]?.at(-1);
 
 																editButton?.click();
@@ -2472,14 +2525,14 @@
 										onClose={async () => {
 											await tick();
 
-											const chatInput = document.getElementById('chat-input');
+											const chatInput = document.getElementById(inputId);
 											chatInput?.focus();
 										}}
 									>
 										<button
 											type="button"
 											id="input-menu-button"
-											class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+											class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 											aria-label={$i18n.t('More')}
 										>
 											<PlusAlt className="size-5" />
@@ -2521,7 +2574,7 @@
 												await tick();
 
 												if (!$mobile) {
-													const chatInput = document.getElementById('chat-input');
+													const chatInput = document.getElementById(inputId);
 													chatInput?.focus();
 												}
 											}}
@@ -2529,7 +2582,7 @@
 											<button
 												type="button"
 												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 												aria-label={$i18n.t('Integrations')}
 											>
 												<Component className="size-4.5" strokeWidth="1.5" />
@@ -2791,6 +2844,7 @@
 									<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
 										<ModelSelector
 											bind:this={modelSelector}
+											multipleEnabled={multipleModels}
 											bind:selectedModels
 											{onModelSelect}
 											showSetDefault={!history?.currentId}
@@ -2799,7 +2853,12 @@
 											triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 										/>
 									</div>
-									<ModelControls selectedModels={selectedModelIds} />
+									<ModelControls
+										selectedModels={selectedModelIds}
+										bind:chatFiles
+										bind:params
+										{onParamChange}
+									/>
 
 									{#if isActive && (history.messages[history.currentId]?.user_id ?? $_user?.id) === $_user?.id && prompt === '' && files.length === 0}
 										<div class=" flex items-center">
@@ -2832,7 +2891,9 @@
 												<!-- {$i18n.t('Record voice')} -->
 												<Tooltip content={$i18n.t('Dictate')}>
 													<button
-														id="voice-input-button"
+														id={inputId === 'chat-input'
+															? 'voice-input-button'
+															: `${inputId}-voice-input-button`}
 														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
 														type="button"
 														on:click={async () => {
@@ -2882,7 +2943,7 @@
 														on:click={async () => {
 															if (callActive) {
 																showCallOverlay.set(true);
-																showControls.set(true);
+																showTabs.set(true);
 																return;
 															}
 															if (selectedModels.length > 1) {
@@ -2893,7 +2954,7 @@
 
 															if ($config?.audio?.realtime?.enabled) {
 																showCallOverlay.set(true);
-																showControls.set(true);
+																showTabs.set(true);
 																return;
 															}
 
@@ -2925,7 +2986,7 @@
 																}
 
 																showCallOverlay.set(true);
-																showControls.set(true);
+																showTabs.set(true);
 															} catch (err) {
 																// If the user denies the permission or an error occurs, show an error message
 																toast.error(
@@ -2946,7 +3007,9 @@
 												<!-- Preserve the former upload label for i18n extraction: $i18n.t('Waiting for upload...') -->
 												<Tooltip content={$i18n.t('Send message')}>
 													<button
-														id="send-message-button"
+														id={inputId === 'chat-input'
+															? 'send-message-button'
+															: `${inputId}-send-message-button`}
 														aria-label={$i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0)
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '

@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -311,284 +315,293 @@ class Tools:
 	}}
 />
 
-<div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
-	<form
-		bind:this={formElement}
-		class="flex h-full min-h-0 min-w-0 flex-col"
-		on:submit|preventDefault={() => {
-			if (selected) return;
-			if (edit) {
-				submitHandler();
-			} else {
-				showConfirm = true;
-			}
-		}}
-	>
-		<div class="flex shrink-0 items-center justify-between gap-2">
-			<div class="flex min-w-0 items-center gap-3">
-				<button
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-					type="button"
-					on:click={() => {
-						goto('/workspace/tools');
-					}}
-				>
-					<ChevronLeft className="size-3" strokeWidth="2" />
-					<span>{$i18n.t('Back')}</span>
-				</button>
-				{#if edit && version_id}
-					<ToolHistory
-						bind:this={historyControl}
-						resource={{ id, version_id }}
-						bind:selected
-						bind:selecting
-						bind:promoting
-						dirty={changed || !!commitMessage}
-						disabled={loading}
-						onProduction={productionHandler}
-					/>
-				{/if}
-			</div>
-			<div class="flex shrink-0 items-center gap-1 pr-0.5">
-				<LanguageModeSelect
-					bind:value={locale}
-					translatedLocales={Object.keys(
-						pruneEmptyLocaleEntries(selected ? selected.snapshot.meta.i18n : meta.i18n)
-					)}
-				/>
-				{#if $user?.permissions?.sharing?.tools || $user?.role === 'admin'}
-					<AccessButton
-						disabled={!!selected || loading || selecting || promoting}
+<Comments bind:view={comments} resourceType="tool">
+	<div class="flex h-full w-full min-w-0 flex-col overflow-hidden">
+		<form
+			bind:this={formElement}
+			class="flex h-full min-h-0 min-w-0 flex-col"
+			on:submit|preventDefault={() => {
+				if (selected) return;
+				if (edit) {
+					submitHandler();
+				} else {
+					showConfirm = true;
+				}
+			}}
+		>
+			<div class="flex shrink-0 items-center justify-between gap-2">
+				<div class="flex min-w-0 items-center gap-3">
+					<button
+						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						type="button"
 						on:click={() => {
-							savedAccessGrants = structuredClone(accessGrants);
-							showAccessControlModal = true;
+							goto('/workspace/tools');
 						}}
-					/>
-				{/if}
-			</div>
-		</div>
-
-		<div class="flex shrink-0 flex-col gap-2 pb-2 px-1 sm:flex-row sm:items-start">
-			<div class="min-w-0 w-full flex-1">
-				<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
-					{#if selected}
-						<LocalizedField
-							disabled
-							placeholder={$i18n.t('Tool Name')}
-							showControls={false}
-							value={selected.snapshot.name}
-							translations={selected.snapshot.meta.i18n}
-							{locale}
-							required
-						/>
-					{:else}
-						<LocalizedField
-							placeholder={$i18n.t('Tool Name')}
-							showControls={false}
-							bind:value={name}
-							bind:translations={meta.i18n}
-							{locale}
-							required
-						/>
-					{/if}
-				</Tooltip>
-
-				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
-					{#if edit}
-						<div class="shrink-0 truncate font-mono" title={id}>
-							{id}
-						</div>
-					{:else}
-						<Tooltip
-							className="min-w-[8rem] flex-1"
-							content={$i18n.t('e.g. my_tools')}
-							placement="top-start"
-						>
-							<input
-								class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
-								type="text"
-								placeholder={$i18n.t('Tool ID')}
-								aria-label={$i18n.t('Tool ID')}
-								bind:value={id}
-								required
-								disabled={edit}
-							/>
-						</Tooltip>
-					{/if}
-
-					<Tooltip
-						className="flex min-w-0 flex-1 items-center"
-						content={$i18n.t('e.g. Tools for performing various operations')}
-						placement="top-start"
 					>
+						<ChevronLeft className="size-3" strokeWidth="2" />
+						<span>{$i18n.t('Back')}</span>
+					</button>
+
+					{#if edit && version_id}
+						<ToolHistory
+							bind:this={historyControl}
+							resource={{ id, version_id }}
+							bind:selected
+							bind:selecting
+							bind:promoting
+							dirty={changed || !!commitMessage}
+							disabled={loading}
+							onProduction={productionHandler}
+						/>
+					{/if}
+				</div>
+				<div class="flex shrink-0 items-center gap-1 pr-0.5">
+					{#if edit && id}<CommentButton
+							onComment={(request) => (comments = request)}
+							wrapperClassName="me-2"
+							resource={{ resource_type: 'tool', resource_id: id }}
+						/>{/if}
+					<LanguageModeSelect
+						bind:value={locale}
+						translatedLocales={Object.keys(
+							pruneEmptyLocaleEntries(selected ? selected.snapshot.meta.i18n : meta.i18n)
+						)}
+					/>
+
+					{#if $user?.permissions?.sharing?.tools || $user?.role === 'admin'}
+						<AccessButton
+							disabled={!!selected || loading || selecting || promoting}
+							on:click={() => {
+								savedAccessGrants = structuredClone(accessGrants);
+								showAccessControlModal = true;
+							}}
+						/>
+					{/if}
+				</div>
+			</div>
+
+			<div class="flex shrink-0 flex-col gap-2 pb-2 px-1 sm:flex-row sm:items-start">
+				<div class="min-w-0 w-full flex-1">
+					<Tooltip content={$i18n.t('e.g. My Tools')} placement="top-start">
 						{#if selected}
 							<LocalizedField
 								disabled
-								placeholder={$i18n.t('Tool Description')}
+								placeholder={$i18n.t('Tool Name')}
 								showControls={false}
-								value={selected.snapshot.meta.description}
+								value={selected.snapshot.name}
 								translations={selected.snapshot.meta.i18n}
 								{locale}
-								field="description"
 								required
 							/>
 						{:else}
 							<LocalizedField
-								placeholder={$i18n.t('Tool Description')}
+								placeholder={$i18n.t('Tool Name')}
 								showControls={false}
-								bind:value={meta.description}
+								bind:value={name}
 								bind:translations={meta.i18n}
 								{locale}
-								field="description"
 								required
 							/>
 						{/if}
 					</Tooltip>
+
+					<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+						{#if edit}
+							<div class="shrink-0 truncate font-mono" title={id}>
+								{id}
+							</div>
+						{:else}
+							<Tooltip
+								className="min-w-[8rem] flex-1"
+								content={$i18n.t('e.g. my_tools')}
+								placement="top-start"
+							>
+								<input
+									class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
+									type="text"
+									placeholder={$i18n.t('Tool ID')}
+									aria-label={$i18n.t('Tool ID')}
+									bind:value={id}
+									required
+									disabled={edit}
+								/>
+							</Tooltip>
+						{/if}
+
+						<Tooltip
+							className="flex min-w-0 flex-1 items-center"
+							content={$i18n.t('e.g. Tools for performing various operations')}
+							placement="top-start"
+						>
+							{#if selected}
+								<LocalizedField
+									disabled
+									placeholder={$i18n.t('Tool Description')}
+									showControls={false}
+									value={selected.snapshot.meta.description}
+									translations={selected.snapshot.meta.i18n}
+									{locale}
+									field="description"
+									required
+								/>
+							{:else}
+								<LocalizedField
+									placeholder={$i18n.t('Tool Description')}
+									showControls={false}
+									bind:value={meta.description}
+									bind:translations={meta.i18n}
+									{locale}
+									field="description"
+									required
+								/>
+							{/if}
+						</Tooltip>
+					</div>
 				</div>
 			</div>
-		</div>
 
-		<div class="min-h-0 flex-1 overflow-hidden rounded-lg flex flex-col">
-			{#if locale && !comparison}
-				{#key selected?.id}
-					{#if selected}
-						<PluginTranslations
-							{id}
-							kind="tool"
-							{locale}
-							readOnly
-							translations={selected.snapshot.meta.i18n}
-						/>
-					{:else}
-						<PluginTranslations
-							id={edit ? id : ''}
-							kind="tool"
-							{locale}
-							bind:translations={meta.i18n}
-						/>
-					{/if}
-				{/key}
-			{/if}
+			<div class="min-h-0 flex-1 overflow-hidden rounded-lg flex flex-col">
+				{#if locale && !comparison}
+					{#key selected?.id}
+						{#if selected}
+							<PluginTranslations
+								{id}
+								kind="tool"
+								{locale}
+								readOnly
+								translations={selected.snapshot.meta.i18n}
+							/>
+						{:else}
+							<PluginTranslations
+								id={edit ? id : ''}
+								kind="tool"
+								{locale}
+								bind:translations={meta.i18n}
+							/>
+						{/if}
+					{/key}
+				{/if}
 
-			{#if comparison}
-				<VersionDiff
-					currentLabel={$i18n.t('Production')}
-					showFileHeaders={false}
-					diff={{
-						fromId: comparison.from_id,
-						toId: comparison.to_id,
-						metadata: comparison.metadata,
-						files:
-							comparison.content_diff || comparison.line_endings_only
-								? [{ path: `${id}.py`, status: 'modified', binary: false }]
-								: []
-					}}
-					loadFileDiff={async () => ({
-						diff: comparison.content_diff,
-						line_endings_only: comparison.line_endings_only
-					})}
-					onClose={() => {
-						comparison = null;
-					}}
-				/>
-			{/if}
-			{#if selected && !locale && !comparison}
-				<CodeEditor
-					value={selected.snapshot.content}
-					lang="python"
-					readOnly
-					ariaLabel={$i18n.t('Code Editor')}
-					className="text-[0.6875rem]"
-				/>
-			{/if}
-			<div class={locale || comparison || selected ? 'hidden' : 'h-full min-h-0'}>
-				<CodeEditor
-					bind:this={codeEditor}
-					value={content}
-					readOnly={!!selected || selecting || promoting}
-					lang="python"
-					ariaLabel={$i18n.t('Code Editor')}
-					{boilerplate}
-					className="text-[0.6875rem]"
-					onChange={(e: string) => {
-						if (selected) return;
-						content = e;
-						_content = e;
-						if (!edit) {
-							const fm = extractFrontmatter(e) as Record<string, string>;
-							if (fm.title && !name) {
-								name = formatSkillName(fm.title);
-								id = nameToId(fm.title);
+				{#if comparison}
+					<VersionDiff
+						currentLabel={$i18n.t('Production')}
+						showFileHeaders={false}
+						diff={{
+							fromId: comparison.from_id,
+							toId: comparison.to_id,
+							metadata: comparison.metadata,
+							files:
+								comparison.content_diff || comparison.line_endings_only
+									? [{ path: `${id}.py`, status: 'modified', binary: false }]
+									: []
+						}}
+						loadFileDiff={async () => ({
+							diff: comparison.content_diff,
+							line_endings_only: comparison.line_endings_only
+						})}
+						onClose={() => {
+							comparison = null;
+						}}
+					/>
+				{/if}
+				{#if selected && !locale && !comparison}
+					<CodeEditor
+						value={selected.snapshot.content}
+						lang="python"
+						readOnly
+						ariaLabel={$i18n.t('Code Editor')}
+						className="text-[0.6875rem]"
+					/>
+				{/if}
+				<div class={locale || comparison || selected ? 'hidden' : 'h-full min-h-0'}>
+					<CodeEditor
+						bind:this={codeEditor}
+						value={content}
+						readOnly={!!selected || selecting || promoting}
+						lang="python"
+						ariaLabel={$i18n.t('Code Editor')}
+						{boilerplate}
+						className="text-[0.6875rem]"
+						onChange={(e: string) => {
+							if (selected) return;
+							content = e;
+							_content = e;
+							if (!edit) {
+								const fm = extractFrontmatter(e) as Record<string, string>;
+								if (fm.title && !name) {
+									name = formatSkillName(fm.title);
+									id = nameToId(fm.title);
+								}
+								if (fm.description && !meta.description) {
+									meta = { ...meta, description: fm.description };
+								}
 							}
-							if (fm.description && !meta.description) {
-								meta = { ...meta, description: fm.description };
+						}}
+						onSave={async () => {
+							if (formElement) {
+								formElement.requestSubmit();
 							}
-						}
-					}}
-					onSave={async () => {
-						if (formElement) {
-							formElement.requestSubmit();
-						}
-					}}
-				/>
+						}}
+					/>
+				</div>
 			</div>
-		</div>
 
-		<div class="shrink-0 py-2 text-xs text-gray-500">
-			<div class="flex items-center justify-between gap-3">
-				<Tooltip
-					className="min-w-0 flex-1"
-					content={warning}
-					allowHTML={false}
-					placement="top-start"
-				>
-					<div class="truncate">{warning}</div>
-				</Tooltip>
+			<div class="shrink-0 py-2 text-xs text-gray-500">
+				<div class="flex items-center justify-between gap-3">
+					<Tooltip
+						className="min-w-0 flex-1"
+						content={warning}
+						allowHTML={false}
+						placement="top-start"
+					>
+						<div class="truncate">{warning}</div>
+					</Tooltip>
 
-				<div class="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-3">
-					{#if selected}
-						{#if !comparison}
+					<div class="ml-auto flex min-w-0 max-w-full shrink-0 items-center gap-3">
+						{#if selected}
+							{#if !comparison}
+								<button
+									type="button"
+									class="flex h-7 shrink-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+									disabled={comparing || promoting || selecting}
+									on:click={compareToCurrent}
+								>
+									{$i18n.t('Compare to current')}{#if comparing}<Spinner className="size-3" />{/if}
+								</button>
+							{/if}
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
-								disabled={comparing || promoting || selecting}
-								on:click={compareToCurrent}
+								class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900"
+								disabled={promoting || selecting}
+								on:click={() => historyControl?.requestPromotion()}
 							>
-								{$i18n.t('Compare to current')}{#if comparing}<Spinner className="size-3" />{/if}
+								{$i18n.t('Set as Production')}{#if promoting}<Spinner className="size-3" />{/if}
+							</button>
+						{:else}
+							<input
+								class="w-32 min-w-0 flex-1 border-0 bg-transparent text-xs outline-hidden placeholder:text-gray-400"
+								aria-label={$i18n.t('Describe this change')}
+								placeholder={$i18n.t('Describe this change')}
+								bind:value={commitMessage}
+								disabled={loading}
+							/>
+							<button
+								class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								type="submit"
+								disabled={loading || selecting || promoting || (edit && !changed)}
+							>
+								{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
+								{#if loading}
+									<Spinner className="size-3" />
+								{/if}
 							</button>
 						{/if}
-						<button
-							type="button"
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900"
-							disabled={promoting || selecting}
-							on:click={() => historyControl?.requestPromotion()}
-						>
-							{$i18n.t('Set as Production')}{#if promoting}<Spinner className="size-3" />{/if}
-						</button>
-					{:else}
-						<input
-							class="w-32 min-w-0 flex-1 border-0 bg-transparent text-xs outline-hidden placeholder:text-gray-400"
-							aria-label={$i18n.t('Describe this change')}
-							placeholder={$i18n.t('Describe this change')}
-							bind:value={commitMessage}
-							disabled={loading}
-						/>
-						<button
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-							type="submit"
-							disabled={loading || selecting || promoting || (edit && !changed)}
-						>
-							{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}
-							{#if loading}
-								<Spinner className="size-3" />
-							{/if}
-						</button>
-					{/if}
+					</div>
 				</div>
 			</div>
-		</div>
-	</form>
-</div>
+		</form>
+	</div>
+</Comments>
 
 <ConfirmDialog
 	bind:show={showConfirm}

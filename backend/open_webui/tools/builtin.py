@@ -124,9 +124,7 @@ async def _has_read_access_to_file(
     )
 
 
-# =============================================================================
-# TIME UTILITIES
-# =============================================================================
+# Time utilities
 
 
 async def notify(
@@ -226,7 +224,7 @@ async def calculate_timestamp(
         total_days = days_ago + (weeks_ago * 7)
         adjusted = now - datetime.timedelta(days=total_days)
 
-        # Handle months and years separately (variable length)
+        # Months and years need calendar arithmetic; February refuses to be 30 days.
         if months_ago > 0 or years_ago > 0:
             adjusted = adjusted - relativedelta(months=months_ago, years=years_ago)
 
@@ -287,9 +285,7 @@ async def calculate_timestamp(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# WEB SEARCH TOOLS
-# =============================================================================
+# Web search tools
 
 
 async def search_web(
@@ -363,9 +359,7 @@ async def fetch_url(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# IMAGE GENERATION TOOLS
-# =============================================================================
+# Image generation tools
 
 
 async def generate_image(
@@ -535,9 +529,7 @@ async def edit_image(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# USER INPUT TOOLS
-# =============================================================================
+# User input tools
 
 
 async def ask_user(
@@ -652,9 +644,7 @@ async def ask_user(
         return JSONCodec.dumps({'status': 'error', 'error': str(e)}, ensure_ascii=False)
 
 
-# =============================================================================
-# CODE INTERPRETER TOOLS
-# =============================================================================
+# Code interpreter tools
 
 
 async def execute_code(
@@ -819,9 +809,7 @@ async def execute_code(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# MEMORY TOOLS
-# =============================================================================
+# Memory tools
 
 
 async def list_memory_paths(
@@ -1146,9 +1134,7 @@ async def list_memories(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# NOTES TOOLS
-# =============================================================================
+# Notes tools
 
 
 async def search_notes(
@@ -1634,9 +1620,7 @@ async def replace_note_content(
         return JSONCodec.dumps({'error': str(e), 'code': 'unexpected_error'})
 
 
-# =============================================================================
-# CHATS TOOLS
-# =============================================================================
+# Chats tools
 
 
 async def search_chats(
@@ -1750,7 +1734,7 @@ async def view_chat(
         history = chat.chat.get('history', {})
         msg_dict = history.get('messages', {})
 
-        # Build message chain from currentId
+        # Follow parent links from currentId; conversations have family trees too.
         current_id = history.get('currentId')
         visited = set()
 
@@ -1784,9 +1768,7 @@ async def view_chat(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# SUB-AGENT TOOL
-# =============================================================================
+# Sub-agent tool
 
 
 async def delegate_task(
@@ -1794,6 +1776,7 @@ async def delegate_task(
     context: str = '',
     file_ids: list[str] | None = None,
     background: bool = False,
+    model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -1801,13 +1784,14 @@ async def delegate_task(
     __message_id__: str = None,
 ) -> str:
     """
-    Delegate focused work to a parallel sub-agent using the current model and tools.
+    Delegate focused work to a parallel sub-agent using the current tools.
 
     :param task: The specific task for the sub-agent to complete
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
     :param background: Return immediately and continue this chat when the sub-agent finishes
+    :param model_id: ID of an available sub-agent model. Omit to use the current model
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
     if __request__ is None:
@@ -1822,6 +1806,7 @@ async def delegate_task(
         context,
         background,
         file_ids=file_ids,
+        model_id=model_id,
         request=__request__,
         user_data=__user__ or {},
         metadata=__metadata__ or {},
@@ -1867,9 +1852,7 @@ async def timer(
     )
 
 
-# =============================================================================
-# CHANNELS TOOLS
-# =============================================================================
+# Channels tools
 
 
 async def search_channels(
@@ -2109,7 +2092,7 @@ async def view_channel_thread(
         # Build the response
         messages = []
 
-        # Add parent message first
+        # Parent message first; the replies need something to reply to.
         messages.append(
             {
                 'id': parent_message.id,
@@ -2121,7 +2104,7 @@ async def view_channel_thread(
             }
         )
 
-        # Add thread replies (reverse to get chronological order)
+        # Reverse the replies into chronological order; spoilers go at the end.
         for reply in reversed(thread_replies):
             messages.append(
                 {
@@ -2150,9 +2133,7 @@ async def view_channel_thread(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# KNOWLEDGE BASE TOOLS
-# =============================================================================
+# Knowledge base tools
 
 
 async def list_knowledge_bases(
@@ -3664,9 +3645,7 @@ async def query_knowledge_bases(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# SKILLS TOOLS
-# =============================================================================
+# Skills tools
 
 
 async def view_skill(
@@ -3888,6 +3867,47 @@ async def grep_skill_files(
         return result
 
 
+async def create_tool(
+    id: str,
+    name: str,
+    description: str,
+    content: str,
+    __request__: Request = None,
+    __user__: dict = None,
+) -> str:
+    """Create a private Python tool in the workspace.
+    Source must define a Tools class with public methods, type hints, and descriptive docstrings.
+    Use Valves or UserValves for credentials; do not embed secrets. Saving executes the Python module on the server.
+
+    :param id: Unique lowercase Python identifier for the toolkit.
+    :param name: Display name.
+    :param description: Short description of what the tool does.
+    :param content: Complete Python source, without Markdown fences.
+    """
+    try:
+        from types import SimpleNamespace
+
+        from open_webui.models.tools import ToolForm
+        from open_webui.routers.tools import create_new_tools
+        from open_webui.utils.access_control import has_permission
+
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        if __user__.get('role') != 'admin' and not await has_permission(
+            __user__['id'], 'workspace.tools', await Config.get('user.permissions')
+        ):
+            raise ValueError('Tool authoring permission required')
+        result = await create_new_tools(
+            __request__,
+            ToolForm(id=id, name=name, content=content, meta={'description': description}, access_grants=[]),
+            SimpleNamespace(**__user__),
+            None,
+        )
+        return JSONCodec.dumps({'id': result.id, 'url': '/workspace/tools/edit?id=' + result.id})
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
 async def create_skill(
     id: str,
     name: str,
@@ -3999,9 +4019,7 @@ async def update_skill_files(
         return JSONCodec.dumps({'error': detail})
 
 
-# =============================================================================
-# TOOL SEARCH
-# =============================================================================
+# Tool search
 
 
 async def search_tools(
@@ -4031,9 +4049,7 @@ async def search_tools(
     return JSONCodec.dumps({'tools': [candidates[name] for name in matches]})
 
 
-# =============================================================================
-# TASK MANAGEMENT TOOLS
-# =============================================================================
+# Task management tools
 
 from typing import Literal
 
@@ -4176,9 +4192,7 @@ async def update_task(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# AUTOMATION TOOLS
-# =============================================================================
+# Automation tools
 
 
 async def _validate_owned_automation_folder(user_id: str, folder_id: Optional[str]) -> Optional[str]:
@@ -4571,9 +4585,7 @@ async def delete_automation(
         return JSONCodec.dumps({'error': str(e)})
 
 
-# =============================================================================
-# CALENDAR TOOLS
-# =============================================================================
+# Calendar tools
 
 
 MAX_CALENDAR_RANGE_END_NS = 2**63 - 1

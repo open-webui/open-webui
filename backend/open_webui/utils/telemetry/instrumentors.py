@@ -63,10 +63,7 @@ def redis_request_hook(span: Span, instance: Union[Redis | RedisCluster], args, 
     Redis Request Hook
     """
 
-    # In cluster mode, the instance can be of two types:
-    # - redis.asyncio.cluster.RedisCluster
-    # - redis.cluster.RedisCluster
-    # Instead of checking the type, we check if the instance has a nodes_manager attribute.
+    # Detect both sync and async RedisCluster clients by their nodes_manager attribute.
     try:
         db = ''
         if hasattr(instance, 'nodes_manager'):

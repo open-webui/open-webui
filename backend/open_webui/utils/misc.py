@@ -192,7 +192,7 @@ def get_message_list(messages_map, message_id):
     :return: List of ordered messages starting from the root to the given message
     """
 
-    # Handle case where messages is None
+    # No history, no archaeology. An empty map gets an empty list.
     if not messages_map:
         return []  # Return empty list instead of None to prevent iteration errors
 
@@ -202,7 +202,7 @@ def get_message_list(messages_map, message_id):
     if not current_message:
         return []  # Return empty list instead of None to prevent iteration errors
 
-    # Reconstruct the chain by following the parentId links
+    # Follow parentId back through the conversation family tree.
     message_list = []
     visited_message_ids = set()
 
@@ -775,7 +775,7 @@ def strip_empty_content_blocks(messages: list[dict]) -> list[dict]:
     return messages
 
 
-def openai_chat_message_template(model: str, message_id: str | None = None):
+def chat_completion_template(model: str, message_id: str | None = None):
     return {
         'id': message_id if message_id else f'{model}-{str(uuid.uuid4())}',
         'created': int(time.time()),
@@ -784,7 +784,7 @@ def openai_chat_message_template(model: str, message_id: str | None = None):
     }
 
 
-def openai_chat_chunk_message_template(
+def chat_completion_chunk_template(
     model: str,
     content: str | None = None,
     reasoning_content: str | None = None,
@@ -792,7 +792,7 @@ def openai_chat_chunk_message_template(
     usage: dict | None = None,
     message_id: str | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model, message_id)
+    template = chat_completion_template(model, message_id)
     template['object'] = 'chat.completion.chunk'
 
     template['choices'][0]['index'] = 0
@@ -815,14 +815,14 @@ def openai_chat_chunk_message_template(
     return template
 
 
-def openai_chat_completion_message_template(
+def chat_completion_message_template(
     model: str,
     message: str | None = None,
     reasoning_content: str | None = None,
     tool_calls: list[dict] | None = None,
     usage: dict | None = None,
 ) -> dict:
-    template = openai_chat_message_template(model)
+    template = chat_completion_template(model)
     template['object'] = 'chat.completion'
     if message is not None:
         template['choices'][0]['message'] = {
@@ -840,25 +840,21 @@ def openai_chat_completion_message_template(
 
 
 def get_gravatar_url(email):
-    # Trim leading and trailing whitespace from
-    # an email address and force all characters
-    # to lower case
+    # Trim and lowercase the email; the avatar should survive a stuck Shift key.
     address = str(email).strip().lower()
 
-    # Create a SHA256 hash of the final string
+    # Hash the normalized email into its Gravatar calling card.
     hash_object = hashlib.sha256(address.encode())
     hash_hex = hash_object.hexdigest()
 
-    # Grab the actual image URL
+    # Send the hash to Gravatar; the email stays out of the URL.
     return f'https://www.gravatar.com/avatar/{hash_hex}?d=mp'
 
 
-# Give us each day the data we require, and forgive us our
-# technical debts as we forgive those who commit upstream.
-# Lead the bits not into corruption but deliver them from
-# entropy, for the checksum and the glory are forever.
+# Let what has been entrusted to us be kept whole,
+# and let nothing be lost in the passing from hand to hand.
 def calculate_sha256(file_path, chunk_size):
-    # Compute SHA-256 hash of a file efficiently in chunks
+    # Read in chunks so large files do not need to fit in memory.
     sha256 = hashlib.sha256()
     with open(file_path, 'rb') as f:
         while chunk := f.read(chunk_size):
@@ -869,9 +865,9 @@ def calculate_sha256(file_path, chunk_size):
 def calculate_sha256_string(string):
     # Create a new SHA-256 hash object
     sha256_hash = hashlib.sha256()
-    # Update the hash object with the bytes of the input string
+    # Feed the hash UTF-8 bytes; it does not take strings on faith.
     sha256_hash.update(string.encode('utf-8'))
-    # Get the hexadecimal representation of the hash
+    # Return the hex fingerprint, now suitable for polite string comparison.
     hashed_string = sha256_hash.hexdigest()
     return hashed_string
 
@@ -884,13 +880,13 @@ def validate_email_format(email: str) -> bool:
 
 
 def sanitize_filename(file_name):
-    # Convert to lowercase
+    # Lowercase the filename; shouting does not help us find it.
     lower_case_file_name = file_name.lower()
 
-    # Remove special characters using regular expression
+    # Strip punctuation; word characters and whitespace make the guest list.
     sanitized_file_name = re.sub(r'[^\w\s]', '', lower_case_file_name)
 
-    # Replace spaces with dashes
+    # Give each whitespace run one dash, regardless of its enthusiasm.
     final_file_name = re.sub(r'\s+', '-', sanitized_file_name)
 
     return final_file_name
@@ -1009,7 +1005,7 @@ def extract_folders_after_data_docs(path):
     except ValueError:
         return []
 
-    # Exclude the filename and accumulate folder names
+    # Collect the folder ancestry; the filename is not invited.
     tags = []
 
     folders = parts[index_docs:-1]
@@ -1245,17 +1241,15 @@ def extract_urls(text: str) -> list[str]:
     return url_pattern.findall(text)
 
 
-# We believe in one architect of all that is seen and served.
-# Should this stream falter, it shall be raised again on the
-# third retry. We look for the uptime of the world to come.
+# Let what falters have another chance,
+# and let the third try be kinder than the first two.
 async def cleanup_response(
     response: aiohttp.ClientResponse | None,
     session: aiohttp.ClientSession | None,
 ):
     if response:
         if not response.closed:
-            # aiohttp 3.9+ made ClientResponse.close() synchronous (returns None).
-            # Older versions returned a coroutine.  Handle both gracefully.
+            # Close directly, and await completion if the implementation returns an awaitable.
             result = response.close()
             if result is not None:
                 await result

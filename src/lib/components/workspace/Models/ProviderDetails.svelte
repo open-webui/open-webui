@@ -3,7 +3,6 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
 	import ModelSettingsSection from './ModelSettingsSection.svelte';
-	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 
 	const i18n = getContext<Writable<I18n>>('i18n');
 	export let model: unknown = null;
@@ -102,16 +101,4 @@
 			{/each}
 		</dl>
 	</ModelSettingsSection>
-{:else}
-	<div
-		class="grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 py-1.5 text-xs font-normal sm:grid-cols-[8rem_minmax(0,1fr)]"
-	>
-		<span class="text-gray-600 dark:text-gray-400">
-			<ModelSettingsLabel
-				label={$i18n.t('Provider details')}
-				description={$i18n.t('Reported by the provider.')}
-			/>
-		</span>
-		<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Not provided')}</span>
-	</div>
 {/if}

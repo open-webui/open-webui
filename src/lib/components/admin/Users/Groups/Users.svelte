@@ -101,6 +101,9 @@
 
 	let page = 1;
 
+	const sortState = (key, orderBy, direction) =>
+		orderBy === key ? (direction === 'asc' ? 'ascending' : 'descending') : 'none';
+
 	const setSortKey = (key: string) => {
 		if (orderBy === key) {
 			direction = direction === 'asc' ? 'desc' : 'asc';
@@ -370,10 +373,14 @@
 						<tr class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
 							<th
 								scope="col"
-								class="px-2.5 py-1.5 cursor-pointer text-left w-8"
-								on:click={() => setSortKey(`group_id:${groupId}`)}
+								class="text-left w-8"
+								aria-sort={sortState(`group_id:${groupId}`, orderBy, direction)}
 							>
-								<div class="flex gap-1.5 items-center">
+								<button
+									type="button"
+									class="flex w-full gap-1.5 items-center px-2.5 py-1.5 uppercase"
+									on:click={() => setSortKey(`group_id:${groupId}`)}
+								>
 									{$i18n.t('MBR')}
 
 									{#if orderBy === `group_id:${groupId}`}
@@ -389,15 +396,15 @@
 											<ChevronUp className="size-2" />
 										</span>
 									{/if}
-								</div>
+								</button>
 							</th>
 
-							<th
-								scope="col"
-								class="px-2.5 py-1.5 cursor-pointer select-none"
-								on:click={() => setSortKey('name')}
-							>
-								<div class="flex gap-1.5 items-center">
+							<th scope="col" class="select-none" aria-sort={sortState('name', orderBy, direction)}>
+								<button
+									type="button"
+									class="flex w-full gap-1.5 items-center px-2.5 py-1.5 uppercase"
+									on:click={() => setSortKey('name')}
+								>
 									{$i18n.t('Name')}
 
 									{#if orderBy === 'name'}
@@ -413,14 +420,14 @@
 											<ChevronUp className="size-2" />
 										</span>
 									{/if}
-								</div>
+								</button>
 							</th>
-							<th
-								scope="col"
-								class="px-2.5 py-1.5 cursor-pointer select-none"
-								on:click={() => setSortKey('role')}
-							>
-								<div class="flex gap-1.5 items-center">
+							<th scope="col" class="select-none" aria-sort={sortState('role', orderBy, direction)}>
+								<button
+									type="button"
+									class="flex w-full gap-1.5 items-center px-2.5 py-1.5 uppercase"
+									on:click={() => setSortKey('role')}
+								>
 									{$i18n.t('Role')}
 
 									{#if orderBy === 'role'}
@@ -436,15 +443,19 @@
 											<ChevronUp className="size-2" />
 										</span>
 									{/if}
-								</div>
+								</button>
 							</th>
 
 							<th
 								scope="col"
-								class="px-2.5 py-1.5 cursor-pointer select-none"
-								on:click={() => setSortKey('last_active_at')}
+								class="select-none"
+								aria-sort={sortState('last_active_at', orderBy, direction)}
 							>
-								<div class="flex gap-1.5 items-center">
+								<button
+									type="button"
+									class="flex w-full gap-1.5 items-center px-2.5 py-1.5 uppercase"
+									on:click={() => setSortKey('last_active_at')}
+								>
 									{$i18n.t('Last Active')}
 
 									{#if orderBy === 'last_active_at'}
@@ -460,7 +471,7 @@
 											<ChevronUp className="size-2" />
 										</span>
 									{/if}
-								</div>
+								</button>
 							</th>
 						</tr>
 					</thead>

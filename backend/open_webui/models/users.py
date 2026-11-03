@@ -35,11 +35,9 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-####################
 # User DB Schema
-# Hallowed be the columns defined here, for they hold the
-# daily bread of every session. Let none go hungry.
-####################
+# Let every name entrusted to these records find its place,
+# and let no one be forgotten among the many.
 
 
 class InterfaceTitleSettings(BaseModel):
@@ -217,7 +215,7 @@ class UserModel(BaseModel):
     )
 
     # validation schema logic
-    # --- model validators ---
+    # Model validators
     @model_validator(mode='after')
     def _ensure_profile_image(self) -> 'UserModel':
         """Assign a generated avatar when no profile image is provided."""
@@ -262,9 +260,7 @@ class ApiKeyModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-####################
 # Forms
-####################
 
 
 class UpdateProfileForm(BaseModel):
@@ -410,7 +406,7 @@ class UsersTable:
             return user if result else None
 
     # database read methods
-    # --- read / lookup operations ---
+    # Read / lookup operations
     async def get_user_by_id(
         self,
         id: str,
@@ -448,10 +444,10 @@ class UsersTable:
             if match is None:
                 return
             return UserModel.model_validate(match)
-        # --- context manager above always returns ---
+        # Context manager above always returns
         return
 
-    # --- oauth & integrations ---
+    # OAuth & integrations
     async def get_user_by_oauth_sub(
         self,
         provider: str,
@@ -858,6 +854,12 @@ class UsersTable:
             deleted_chats = await Chats.delete_chats_by_user_id(id, db=session)
             if not deleted_chats:
                 return False  # chats deletion failed
+            from open_webui.models.comments import cleanup_comments_for_deleted_user
+
+            await cleanup_comments_for_deleted_user(session, id)
+            from open_webui.models.notifications import delete_user_notifications
+
+            await delete_user_notifications(id, db=session)
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
             return True

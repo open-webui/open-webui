@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { toast } from 'svelte-sonner';
+	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
 	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
 
@@ -38,11 +40,7 @@
 	});
 	turndownService.escape = (string) => string;
 
-	// Produce single newlines between paragraphs instead of double.
-	// TipTap wraps every line in <p> tags; the default Turndown rule emits
-	// \n\n around each paragraph which then required a destructive
-	// replaceAll('\n\n','\n') that also wiped blank lines inside code blocks.
-	// This rule eliminates that hack so <pre><code> content is untouched.
+	// Emit one newline per paragraph; global newline collapsing would damage code-block spacing.
 	turndownService.addRule('singleNewlineParagraphs', {
 		filter: 'p',
 		replacement: function (content) {
@@ -53,7 +51,7 @@
 	// Use turndown-plugin-gfm for proper GFM table support
 	turndownService.use(gfm);
 
-	// Add custom table header rule before using GFM plugin
+	// Keep header text intact; the table rule will handle the scaffolding.
 	turndownService.addRule('tableHeaders', {
 		filter: 'th',
 		replacement: function (content, node) {
@@ -61,7 +59,7 @@
 		}
 	});
 
-	// Add custom table rule to handle headers properly
+	// Rebuild tables as Markdown; the columns still need to stay in their lanes.
 	turndownService.addRule('tables', {
 		filter: 'table',
 		replacement: function (content, node) {
@@ -76,7 +74,7 @@
 				const cellContents = cells.map((cell) => {
 					// Get the text content and clean it up
 					let cellContent = turndownService.turndown(cell.innerHTML).trim();
-					// Remove extra paragraph tags that might be added
+					// Trim edge newlines; a table cell does not need its own front lawn.
 					cellContent = cellContent.replace(/^\n+|\n+$/g, '');
 					cellContent = cellContent.replace(/\n/g, '<br>');
 					return cellContent;
@@ -85,7 +83,7 @@
 				// Add the row
 				markdown += '| ' + cellContents.join(' | ') + ' |\n';
 
-				// Add separator after first row (which should be headers)
+				// Give the first row its Markdown header underline. Tiny table bureaucracy.
 				if (rowIndex === 0) {
 					const separator = cells.map(() => '---').join(' | ');
 					markdown += '| ' + separator + ' |\n';
@@ -139,7 +137,14 @@
 	const componentContext = getAllContexts();
 	const eventDispatch = createEventDispatcher();
 
-	import { Fragment, DOMParser, Slice, type Node, type Schema } from 'prosemirror-model';
+	import {
+		Fragment,
+		DOMParser,
+		DOMSerializer,
+		Slice,
+		type Node,
+		type Schema
+	} from 'prosemirror-model';
 	import { EditorState, Plugin, PluginKey, TextSelection, Selection } from 'prosemirror-state';
 	import { Decoration, DecorationSet } from 'prosemirror-view';
 	import { Editor, Extension, markInputRule, mergeAttributes } from '@tiptap/core';
@@ -194,10 +199,45 @@
 	import Italic from '@tiptap/extension-italic';
 	import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
 
-	// WORKAROUND: TipTap's default Code mark input rule regex captures the
-	// character before the opening backtick, causing it to be deleted.
-	// This uses a lookbehind assertion instead so the preceding character is
-	// matched for position but not captured/deleted.
+	const CopyableCodeBlock = CodeBlockLowlight.extend({
+		addNodeView() {
+			return ({ node, editor, getPos }) => {
+				const dom = document.createElement('div');
+				dom.className = 'relative my-6';
+				const { dom: pre, contentDOM } = DOMSerializer.renderSpec(
+					document,
+					DOMSerializer.fromSchema(editor.schema).nodes[node.type.name](node)
+				);
+				(pre as HTMLElement).classList.add('hljs');
+				(pre as HTMLElement).style.margin = '0';
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.contentEditable = 'false';
+				button.className =
+					'not-prose absolute end-2 top-2 rounded-lg px-2.5 py-1 text-xs font-normal text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-850';
+				button.textContent = $i18n.t('Copy');
+				button.onclick = async () => {
+					const pos = getPos();
+					if (typeof pos !== 'number') return;
+					const code = editor.state.doc.nodeAt(pos);
+					if (!code) return;
+					if (await copyToClipboard(code.textContent)) {
+						toast.success($i18n.t('Copied to clipboard'));
+					} else {
+						toast.error($i18n.t('Could not copy to clipboard. Please try again.'));
+					}
+				};
+				dom.append(button, pre);
+				return {
+					dom,
+					contentDOM: contentDOM as HTMLElement,
+					stopEvent: (event) => button.contains(event.target as globalThis.Node)
+				};
+			};
+		}
+	});
+
+	// Use lookbehind so the backtick rule does not capture and delete the preceding character.
 	// Upstream fix: https://github.com/ueberdosis/tiptap/pull/7124
 	const backtickInputRegex = /(?<=\s|^)`([^`]+)`(?!`)$/;
 	const FixedCode = Code.extend({
@@ -276,7 +316,7 @@
 	export let image = false;
 	export let fileHandler = false;
 	export let attachments = false;
-	export let suggestions = null;
+	export let suggestions: Partial<import('@tiptap/suggestion').SuggestionOptions>[] | null = null;
 
 	export let onFileDrop = (currentEditor, files, pos) => {
 		files.forEach((file) => {
@@ -519,20 +559,20 @@
 					.trim()
 			);
 
-			// Create a temporary div to parse HTML
+			// Give the sanitized HTML a temporary home while the parser unpacks it.
 			const tempDiv = document.createElement('div');
 			tempDiv.innerHTML = htmlContent;
 
 			// Convert HTML to ProseMirror nodes
 			const fragment = DOMParser.fromSchema(state.schema).parse(tempDiv);
 
-			// Extract just the content, not the wrapper paragraphs
+			// Unpack the fragment; paragraph wrappers come off in the loop below.
 			const content = fragment.content;
 			let nodesToInsert = [];
 
 			content.forEach((node) => {
 				if (node.type.name === 'paragraph') {
-					// If it's a paragraph, extract its content
+					// Keep the paragraph contents; leave the packing material behind.
 					nodesToInsert.push(...node.content.content);
 				} else {
 					nodesToInsert.push(node);
@@ -540,12 +580,12 @@
 			});
 
 			tr = tr.replaceWith(start, end, nodesToInsert);
-			// Calculate new position
+			// Park the caret after the inserted nodes, not back at the loading dock.
 			const newPos = start + nodesToInsert.reduce((sum, node) => sum + node.nodeSize, 0);
 			tr = tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
 		} else {
 			if (text.includes('\n')) {
-				// Split the text into lines and create a <p> node for each line
+				// Keep the first line inline and wrap subsequent lines in paragraphs.
 				const lines = text.split('\n');
 				const nodes = lines.map(
 					(line, index) =>
@@ -554,17 +594,17 @@
 							: state.schema.nodes.paragraph.create({}, line ? state.schema.text(line) : undefined) // Subsequent lines are paragraphs
 				);
 
-				// Build and dispatch the transaction to replace the word at cursor
+				// Replace the current word in the pending transaction; dispatch after setting the selection.
 				tr = tr.replaceWith(start, end, nodes);
 
 				let newSelectionPos;
 
-				// +1 because the insert happens at start, so last para starts at (start + sum of all previous nodes' sizes)
+				// Sum node sizes from the insertion point to locate the end of the inserted content.
 				let lastPos = start;
 				for (let i = 0; i < nodes.length; i++) {
 					lastPos += nodes[i].nodeSize;
 				}
-				// Place cursor inside the last paragraph at its end
+				// Use that boundary to find the nearest valid text selection below.
 				newSelectionPos = lastPos;
 
 				tr = tr.setSelection(TextSelection.near(tr.doc.resolve(newSelectionPos)));
@@ -711,7 +751,7 @@
 
 	export const focus = (options: FocusOptions = {}) => {
 		if (editor && editor.view) {
-			// Check if the editor is destroyed
+			// Retired editors do not take focus requests.
 			if (editor.isDestroyed) {
 				return;
 			}
@@ -721,7 +761,7 @@
 					editor.view.dom.focus(options);
 				} else {
 					editor.view.focus();
-					// Scroll to the current selection
+					// Bring the selection into view; the caret should not play hide-and-seek.
 					editor.view.dispatch(editor.view.state.tr.scrollIntoView());
 				}
 			} catch (e) {
@@ -797,6 +837,7 @@
 		if (value !== '') {
 			// After updating the state, try to find and select the next template
 			setTimeout(() => {
+				if (destroyed || !editor || editor.isDestroyed) return;
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
 				if (!templateFound && !suppressAutoFocus) {
 					editor.commands.focus('end');
@@ -833,6 +874,7 @@
 	});
 
 	import { listDragHandlePlugin } from './RichTextInput/listDragHandlePlugin.js';
+	import BlockHandle from './RichTextInput/BlockHandle.svelte';
 
 	const ListItemDragHandle = Extension.create({
 		name: 'listItemDragHandle',
@@ -941,7 +983,7 @@
 
 				...(richText
 					? [
-							CodeBlockLowlight.configure({
+							CopyableCodeBlock.configure({
 								lowlight
 							}),
 							Typography,
@@ -1548,3 +1590,7 @@
 	dir="auto"
 	class="relative w-full min-w-full {className} {!editable ? 'cursor-not-allowed' : ''}"
 />
+
+{#if dragHandle && editor && editable}
+	<BlockHandle {editor} />
+{/if}

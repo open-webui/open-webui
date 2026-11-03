@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
 # Interactive docker compose launcher for Open WebUI.
 # Supports GPU auto-detection, configurable ports, data mounts, and Playwright.
-# ---------------------------------------------------------------------------
 
 readonly BOLD='\033[1m'
 readonly GREEN='\033[1;32m'
@@ -13,7 +11,7 @@ readonly RED='\033[0;31m'
 readonly RESET='\033[0m'
 readonly CHECK_MARK='\xE2\x9C\x93'
 
-# ── GPU detection ─────────────────────────────────────────────────────────────
+# Gpu detection
 
 detect_gpu_driver() {
   if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null; then
@@ -32,7 +30,7 @@ detect_gpu_driver() {
   fi
 }
 
-# ── Argument helpers ──────────────────────────────────────────────────────────
+# Argument helpers
 
 extract_bracket_value() {
   local input="$1" fallback="${2:-}"
@@ -66,7 +64,7 @@ Examples:
 EOF
 }
 
-# ── Defaults ──────────────────────────────────────────────────────────────────
+# Defaults
 
 enable_gpu=false
 enable_api=false
@@ -79,7 +77,7 @@ api_port=11435
 webui_port=3000
 data_dir=""
 
-# ── Parse arguments ───────────────────────────────────────────────────────────
+# Parse arguments
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -97,7 +95,7 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
-# ── Drop mode ─────────────────────────────────────────────────────────────────
+# Drop mode
 
 if [[ "$drop_project" == true ]]; then
   docker compose down --remove-orphans
@@ -105,7 +103,7 @@ if [[ "$drop_project" == true ]]; then
   exit 0
 fi
 
-# ── Build compose command ─────────────────────────────────────────────────────
+# Build compose command
 
 compose_files=("-f" "docker-compose.yaml")
 
@@ -141,7 +139,7 @@ if [[ "$build_image" == true ]]; then
   up_args+=("--build")
 fi
 
-# ── Confirmation ──────────────────────────────────────────────────────────────
+# Confirmation
 
 echo
 echo -e "${WHITE}${BOLD}Current Setup:${RESET}"
@@ -161,7 +159,7 @@ if [[ "$headless" != true ]]; then
   fi
 fi
 
-# ── Launch ────────────────────────────────────────────────────────────────────
+# Launch
 
 if docker compose "${compose_files[@]}" "${up_args[@]}"; then
   echo

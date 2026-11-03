@@ -20,6 +20,7 @@
 	// https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html
 	// https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html
 	let focusTrap: FocusTrap.FocusTrap | null = null;
+	let returnFocusTarget: HTMLElement | null = null;
 
 	const sizeToWidth = (size: string) => {
 		if (size === 'full') {
@@ -58,6 +59,19 @@
 		}
 	};
 
+	const handleFocusOutside = (event: FocusEvent) => {
+		if (
+			event.target instanceof HTMLElement &&
+			!modalElement?.contains(event.target) &&
+			!event.target.closest('[role="menu"], [role="listbox"]')
+		) {
+			returnFocusTarget = event.target;
+		}
+	};
+
+	const getReturnFocus = (previous: HTMLElement | SVGElement) =>
+		previous.isConnected ? previous : (returnFocusTarget ?? previous);
+
 	const isTopModal = () => {
 		const modals = document.getElementsByClassName('modal');
 		return modals.length && modals[modals.length - 1] === modalElement;
@@ -74,6 +88,7 @@
 			window.removeEventListener('focusin', handleOutsideInteraction, true);
 		}
 		if (handleModalFocusIn) modalElement?.removeEventListener('focusin', handleModalFocusIn);
+		window.removeEventListener('focusin', handleFocusOutside, true);
 		window.removeEventListener('keydown', handleKeyDown);
 		if (previousOverflow !== null) {
 			document.body.style.overflow = previousOverflow;
@@ -83,8 +98,10 @@
 
 	$: if (show && modalElement) {
 		document.body.appendChild(modalElement);
+		returnFocusTarget = null;
 		focusTrap = FocusTrap.createFocusTrap(modalElement, {
 			escapeDeactivates: false,
+			setReturnFocus: getReturnFocus,
 			allowOutsideClick: (e) => {
 				return (
 					e.target instanceof Element &&
@@ -125,6 +142,7 @@
 		document.addEventListener('pointerdown', handleOutsideInteraction, true);
 		window.addEventListener('focusin', handleOutsideInteraction, true);
 		modalElement.addEventListener('focusin', handleModalFocusIn);
+		window.addEventListener('focusin', handleFocusOutside, true);
 
 		window.addEventListener('keydown', handleKeyDown);
 		previousOverflow = document.body.style.overflow;

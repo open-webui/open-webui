@@ -98,7 +98,7 @@ def _json_value(value: Any) -> Any:
     return jsonable_encoder(value)
 
 
-# ── Model ────────────────────────────────────────────────────────────────────
+# Model
 
 
 class Config(Base):
@@ -114,7 +114,7 @@ class Config(Base):
     PERSISTENT_ENABLED: ClassVar[bool] = True
     OAUTH_PERSISTENT_ENABLED: ClassVar[bool] = False
 
-    # ── Class methods ────────────────────────────────────────
+    # Class methods
 
     @classmethod
     def configure(

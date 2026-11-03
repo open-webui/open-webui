@@ -24,7 +24,7 @@ export class KokoroWorker {
 
 		this.worker = new WorkerInstance();
 
-		// Handle worker messages
+		// Listen for news from the voice booth.
 		this.worker.onmessage = (event) => {
 			const { status, error, audioUrl } = event.data;
 
@@ -34,7 +34,7 @@ export class KokoroWorker {
 				console.error(error);
 				this.initialized = false;
 			} else if (status === 'generate:complete') {
-				// Resolve promise from queue
+				// The clip is ready; hand it to the request at the front of the queue.
 				const request = this.requestQueue.shift();
 				if (request) {
 					request.resolve(audioUrl);

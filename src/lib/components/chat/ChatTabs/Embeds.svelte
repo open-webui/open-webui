@@ -1,13 +1,11 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
-	import { embed, showControls, showEmbeds } from '$lib/stores';
+	import { embed } from '$lib/stores';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 
 	export let overlay = false;
-
-	const i18n: any = getContext('i18n');
+	// Preserve the former embed close label for i18n extraction.
+	// t('Close embed')
 
 	const getSrcUrl = (url: string, chatId?: string, messageId?: string, sourceId: string) => {
 		try {
@@ -45,7 +43,7 @@
 {#if $embed}
 	<div class="h-full w-full flex flex-col">
 		<div
-			class="pointer-events-auto z-20 flex justify-between items-center py-3 px-2 font-primar text-gray-900 dark:text-white flex-shrink-0"
+			class="pointer-events-auto z-20 flex justify-between items-center pb-3 px-2 font-primar text-gray-900 dark:text-white flex-shrink-0"
 		>
 			<div class="flex-1 flex items-center justify-between pl-2">
 				<a
@@ -57,18 +55,6 @@
 					{$embed?.title ?? 'Embedded Content'}
 				</a>
 			</div>
-
-			<button
-				class="self-center pointer-events-auto p-1 rounded-full bg-white dark:bg-gray-850"
-				aria-label={$i18n.t('Close embed')}
-				on:click={() => {
-					showControls.set(false);
-					showEmbeds.set(false);
-					embed.set(null);
-				}}
-			>
-				<XMark className="size-3.5 text-gray-900 dark:text-white" />
-			</button>
 		</div>
 
 		<div class="w-full flex-1 min-h-0 relative">

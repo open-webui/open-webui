@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 from typing import Any
+import logging
+import time
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from open_webui.internal.db import get_async_session
+from open_webui.models.notifications import Notification, emit_changes
+from open_webui.utils.inbox import hydrate, visible_clause
 from pydantic import BaseModel
 
 from open_webui.constants import ERROR_MESSAGES
@@ -20,6 +28,121 @@ from open_webui.utils.notifications import (
 )
 
 router = APIRouter()
+
+log = logging.getLogger(__name__)
+
+
+async def _check_notifications_enabled():
+    if not await Config.get('notifications.enable'):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+
+async def inbox_page(user, cursor=None, limit=20, clause=None, *, db):
+    started = time.monotonic()
+    if clause is None:
+        clause = await visible_clause(user, db=db)
+    query = select(Notification).where(clause)
+    if cursor:
+        try:
+            timestamp, id = cursor.split(':', 1)
+            timestamp = int(timestamp)
+            UUID(id)
+            if not 0 <= timestamp <= 2**63 - 1:
+                raise ValueError()
+        except (ValueError, TypeError):
+            raise HTTPException(422, 'Invalid inbox cursor')
+        query = query.where(
+            or_(Notification.created_at < timestamp, and_(Notification.created_at == timestamp, Notification.id < id))
+        )
+    rows = (
+        await db.scalars(query.order_by(Notification.created_at.desc(), Notification.id.desc()).limit(limit + 1))
+    ).all()
+    more = len(rows) > limit
+    rows = rows[:limit]
+    result = {
+        'items': await hydrate(rows, db=db),
+        'next_cursor': f'{rows[-1].created_at}:{rows[-1].id}' if more else None,
+    }
+    log.debug('Inbox page loaded in %.3fs', time.monotonic() - started)
+    return result
+
+
+@router.get('/inbox')
+async def get_inbox(
+    cursor: str | None = Query(None, max_length=100),
+    limit: int = Query(20, ge=1, le=50),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await _check_notifications_enabled()
+    return await inbox_page(user, cursor, limit, db=db)
+
+
+@router.get('/inbox/count')
+async def get_inbox_count(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await _check_notifications_enabled()
+    started = time.monotonic()
+    clause = await visible_clause(user, db=db)
+    count = await db.scalar(
+        select(func.count()).select_from(Notification).where(clause, Notification.seen_at.is_(None))
+    )
+    log.debug('Inbox count loaded in %.3fs', time.monotonic() - started)
+    return {'count': count}
+
+
+@router.post('/inbox/open')
+async def open_inbox(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await _check_notifications_enabled()
+    clause = await visible_clause(user, db=db)
+    now = time.time_ns()
+    # A single UPDATE acknowledges only rows visible to this statement. A late
+    # commit with an older created_at must remain unseen (no timestamp watermark).
+    result = await db.execute(
+        update(Notification)
+        .where(clause, Notification.seen_at.is_(None))
+        .values(seen_at=now, updated_at=now)
+        .returning(Notification.id)
+        .execution_options(synchronize_session=False)
+    )
+    # SQLite reports rowcount=-1 for UPDATEs containing the recursive folder CTE.
+    acknowledged = len(result.scalars().all())
+    await db.commit()
+    await emit_changes({user.id})
+    page = await inbox_page(user, clause=clause, db=db)
+    for item in page['items']:
+        item['is_new'] = item['seen_at'] == str(now) or item['seen_at'] is None
+    page.update(
+        acknowledged_count=acknowledged,
+        acknowledged_at=str(now),
+        count=await db.scalar(
+            select(func.count()).select_from(Notification).where(clause, Notification.seen_at.is_(None))
+        ),
+    )
+    return page
+
+
+@router.patch('/inbox/{id}')
+async def read_inbox_item(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    await _check_notifications_enabled()
+    clause = await visible_clause(user, db=db)
+    now = time.time_ns()
+    row = await db.scalar(
+        update(Notification)
+        .where(clause, Notification.id == id)
+        .values(
+            seen_at=func.coalesce(Notification.seen_at, now),
+            read_at=func.coalesce(Notification.read_at, now),
+            updated_at=now,
+        )
+        .returning(Notification)
+        .execution_options(populate_existing=True)
+    )
+    if not row:
+        raise HTTPException(404, 'Notification not found')
+    response = (await hydrate([row], db=db))[0]
+    await db.commit()
+    await emit_changes({user.id})
+    return response
 
 
 class NotificationTargetForm(BaseModel):

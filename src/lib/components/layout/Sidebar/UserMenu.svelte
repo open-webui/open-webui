@@ -169,32 +169,37 @@
 			{#if profile}
 				{#if $user?.status_emoji || $user?.status_message}
 					<div class="user-menu-status">
-						<button
-							role="menuitem"
-							class="w-full h-[1.6875rem] gap-2 rounded-xl px-2 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition cursor-pointer select-none text-xs flex items-center text-left"
-							type="button"
-							on:click={() => {
-								show = false;
-								showUserStatusModal = true;
-							}}
+						<div
+							class="user-menu-row flex items-center w-full rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
 						>
-							{#if $user?.status_emoji}
-								<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
-									<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
-								</div>
-							{/if}
-
-							<Tooltip
-								content={$user?.status_message}
-								className="self-center line-clamp-2 flex-1 text-left"
+							<button
+								role="menuitem"
+								class="flex flex-1 min-w-0 h-[1.6875rem] gap-2 rounded-xl px-2 cursor-pointer select-none text-xs items-center text-left"
+								type="button"
+								on:click={() => {
+									show = false;
+									showUserStatusModal = true;
+								}}
 							>
-								{$user?.status_message}
-							</Tooltip>
+								{#if $user?.status_emoji}
+									<div class="self-center shrink-0 size-4.5 flex items-center justify-center">
+										<Emoji className="size-3.5" shortCode={$user?.status_emoji} />
+									</div>
+								{/if}
 
-							<div class="self-center">
+								<Tooltip
+									content={$user?.status_message}
+									className="self-center line-clamp-2 flex-1 text-left"
+								>
+									{$user?.status_message}
+								</Tooltip>
+							</button>
+
+							<div class="self-center mr-2">
 								<Tooltip content={$i18n.t('Clear status')}>
 									<button
 										role="menuitem"
+										aria-label={$i18n.t('Clear status')}
 										class="flex size-5 items-center justify-center"
 										type="button"
 										on:click={async (e) => {
@@ -219,7 +224,7 @@
 									</button>
 								</Tooltip>
 							</div>
-						</button>
+						</div>
 					</div>
 				{:else}
 					<div class="user-menu-status">
@@ -277,6 +282,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('workspace')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -325,6 +333,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('notes')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -373,6 +384,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('calendar')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -421,6 +435,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('automations')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"
@@ -469,6 +486,9 @@
 								: $i18n.t('Pin to Sidebar')}
 						>
 							<button
+								aria-label={pinnedItems.includes('playground')
+									? $i18n.t('Unpin from Sidebar')
+									: $i18n.t('Pin to Sidebar')}
 								role="menuitem"
 								type="button"
 								class="p-1 mr-1 rounded-lg hover:bg-gray-100/60 dark:hover:bg-gray-700/60 transition"

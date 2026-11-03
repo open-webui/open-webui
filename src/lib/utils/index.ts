@@ -1,3 +1,4 @@
+import type { ResourceComment } from '$lib/apis/comments';
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
@@ -28,11 +29,9 @@ import markedKatexExtension from '$lib/utils/marked/katex-extension';
 import hljs from 'highlight.js';
 import { decode } from 'html-entities';
 
-//////////////////////////
 // Helper functions
 // No one thanks the foundation, but without it the
 // house falls. Let the quiet work here hold.
-//////////////////////////
 
 export const resolveDefaultModelIds = (
 	models: { id: string; info?: { meta?: { hidden?: boolean } } }[],
@@ -244,10 +243,7 @@ export const convertMessagesToHistory = (messages) => {
 	return history;
 };
 
-// Repair structurally-malformed history nodes from failed regenerations.
-// A lost assistant placeholder may exist under its map key with only
-// completion fields (content/done/error), missing id/role/parentId.
-// Reconstruct graph fields so already-corrupted chats recover on open.
+// Rebuild missing graph fields so chats with incomplete regeneration placeholders can reopen.
 export const sanitizeHistory = (history) => {
 	if (!history?.messages || typeof history.messages !== 'object') return;
 
@@ -702,32 +698,27 @@ export const extractCurlyBraceWords = (text) => {
 
 export const removeLastWordFromString = (inputString, wordString) => {
 	console.log('inputString', inputString);
-	// Split the string by newline characters to handle lines separately
+	// Only edit the final line; preserve earlier lines verbatim.
 	const lines = inputString.split('\n');
 
-	// Take the last line to operate only on it
 	const lastLine = lines.pop();
 
-	// Split the last line into an array of words
 	const words = lastLine.split(' ');
 
-	// Conditional to check for the last word removal
+	// Remove the final token if it matches, or the escaped hash marker when wordString is empty.
 	if (words.at(-1) === wordString || (wordString === '' && words.at(-1) === '\\#')) {
-		words.pop(); // Remove last word if condition is satisfied
+		words.pop();
 	}
 
-	// Join the remaining words back into a string and handle space correctly
 	let updatedLastLine = words.join(' ');
 
-	// Add a trailing space to the updated last line if there are still words
+	// Append a space to any nonempty result, even when no token was removed.
 	if (updatedLastLine !== '') {
 		updatedLastLine += ' ';
 	}
 
-	// Combine the lines together again, placing the updated last line back in
 	const resultString = [...lines, updatedLastLine].join('\n');
 
-	// Return the final string
 	console.log('resultString', resultString);
 
 	return resultString;
@@ -740,7 +731,7 @@ export const removeFirstHashWord = (inputString) => {
 	// Find the index of the first word that starts with #
 	const index = words.findIndex((word) => word.startsWith('#'));
 
-	// Remove the first word with #
+	// Retire the first hashtag; the rest of the sentence keeps its job.
 	if (index !== -1) {
 		words.splice(index, 1);
 	}
@@ -752,13 +743,13 @@ export const removeFirstHashWord = (inputString) => {
 };
 
 export const transformFileName = (fileName) => {
-	// Convert to lowercase
+	// Lowercase the filename; shouting does not help us find it.
 	const lowerCaseFileName = fileName.toLowerCase();
 
-	// Remove special characters using regular expression
+	// Strip punctuation; word characters and whitespace make the guest list.
 	const sanitizedFileName = lowerCaseFileName.replace(/[^\w\s]/g, '');
 
-	// Replace spaces with dashes
+	// Give each whitespace run one dash, regardless of its enthusiasm.
 	const finalFileName = sanitizedFileName.replace(/\s+/g, '-');
 
 	return finalFileName;
@@ -778,7 +769,7 @@ export const calculateSHA256 = async (file) => {
 	reader.readAsArrayBuffer(file);
 
 	try {
-		// Wait for the FileReader to finish reading the file
+		// Wait for the bytes; hashing an IOU would be optimistic.
 		const buffer = await readFile;
 
 		// Convert the ArrayBuffer to a Uint8Array
@@ -787,7 +778,7 @@ export const calculateSHA256 = async (file) => {
 		// Calculate the SHA-256 hash using Web Crypto API
 		const hashBuffer = await crypto.subtle.digest('SHA-256', uint8Array);
 
-		// Convert the hash to a hexadecimal string
+		// Dress the hash in hex: two characters per byte, no exceptions.
 		const hashArray = Array.from(new Uint8Array(hashBuffer));
 		const hashHex = hashArray.map((byte) => byte.toString(16).padStart(2, '0')).join('');
 
@@ -799,7 +790,7 @@ export const calculateSHA256 = async (file) => {
 };
 
 export const getImportOrigin = (_chats) => {
-	// Check what external service chat imports are from
+	// Check the import paperwork to see which chat service sent this.
 	// ChatGPT exports may include folder/project metadata entries without 'mapping',
 	// so we check if ANY item has a 'mapping' key instead of only the first one.
 	if (_chats.some((chat) => 'mapping' in chat)) {
@@ -809,7 +800,7 @@ export const getImportOrigin = (_chats) => {
 };
 
 export const getUserPosition = async (raw = false) => {
-	// Get the user's location using the Geolocation API
+	// Ask the browser for coordinates; we have not installed a crystal ball.
 	const position = await new Promise((resolve, reject) => {
 		navigator.geolocation.getCurrentPosition(resolve, reject);
 	}).catch((error) => {
@@ -847,7 +838,7 @@ const extractOpenAIMessageContent = (message): string => {
 };
 
 const convertOpenAIMessages = (convo) => {
-	// Parse OpenAI chat messages and create chat dictionary for creating new chats
+	// Unpack the OpenAI message map into our chat shape. Moving day for conversations.
 	const mapping = convo['mapping'];
 	const messages = [];
 	let currentId = '';
@@ -929,12 +920,12 @@ const validateChat = (chat) => {
 	// Because ChatGPT sometimes has features we can't use like DALL-E or might have corrupted messages, need to validate
 	const messages = chat.messages;
 
-	// Check if messages array is empty
+	// An empty conversation has nothing to bring to the import party.
 	if (messages.length === 0) {
 		return false;
 	}
 
-	// Every message's content should be a string
+	// Every message needs string content; mystery objects must use another entrance.
 	for (const message of messages) {
 		if (typeof message.content !== 'string') {
 			return false;
@@ -945,7 +936,7 @@ const validateChat = (chat) => {
 };
 
 export const convertOpenAIChats = (_chats) => {
-	// Create a list of dictionaries with each conversation from import
+	// Give each imported conversation its own seat in the chat list.
 	const chats = [];
 	let failed = 0;
 	let skipped = 0;
@@ -1027,11 +1018,7 @@ export const isYoutubeUrl = (url: string) => {
 };
 
 export const removeEmojis = (str: string) => {
-	// Use Unicode property escape with the 'v' flag (ES2024) to match all
-	// standardised emoji sequences, including text-presentation emoji + variation
-	// selector (e.g. ❤️, ☀️, ✅), keycap sequences (e.g. 1️⃣), ZWJ families
-	// (e.g. 👨‍👩‍👧‍👦) and flag sequences (e.g. 🏳️‍🌈).
-	// The previous surrogate-pair regex missed the entire BMP emoji category.
+	// Match complete emoji sequences with RGI_Emoji, including variation selectors, keycaps, and ZWJ groups.
 	const emojiRegex = /\p{RGI_Emoji}/gv;
 
 	// Replace emojis with an empty string
@@ -1084,10 +1071,7 @@ export const removeDetails = (content, types) => {
 };
 
 export const removeAllDetails = (content) => {
-	// First pass: strip <details> blocks on the full string before code-fence
-	// splitting, so blocks whose body contains triple backticks are caught.
-	// (replaceOutsideCode splits on ``` fences, which breaks the <details>
-	// regex when the opening and closing tags land in different segments.)
+	// Strip details before splitting code fences, which can separate opening and closing tags.
 	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
 	// Second pass: catch any remaining blocks that live outside code fences
 	return replaceOutsideCode(content, (segment) => {
@@ -1199,14 +1183,7 @@ export const extractSentencesForAudio = (text: string) => {
 };
 
 export const getMessageContentParts = (content: string, splitOn: string = 'punctuation') => {
-	// Strip <details> blocks directly on the full string before any
-	// code-block-aware processing. removeAllDetails (which callers use)
-	// applies the regex via replaceOutsideCode, which splits on triple-
-	// backtick code fences first. If a <details> block contains code
-	// fences (e.g. reasoning with code examples), the opening and
-	// closing tags land in separate segments and the regex fails,
-	// leaking thinking content into TTS. Applying the strip here on
-	// the full string catches those cases. (Fixes #22197)
+	// Strip details before splitting code fences, which can separate their tags and leak reasoning into TTS (#22197).
 	content = content.replace(/<details[^>]*>[\s\S]*?<\/details>/gi, '');
 
 	const messageContentParts: string[] = [];
@@ -1228,7 +1205,7 @@ export const getMessageContentParts = (content: string, splitOn: string = 'punct
 };
 
 export const blobToFile = (blob, fileName) => {
-	// Create a new File object from the Blob
+	// Give the Blob a filename; it is ready to introduce itself as a File.
 	const file = new File([blob], fileName, { type: blob.type });
 	return file;
 };
@@ -2124,6 +2101,29 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+export const normalizeImageFile = async (file: File): Promise<File> => {
+	if (file.type && file.type !== 'application/octet-stream') return file;
+
+	// Some drag sources (e.g. macOS Photos) omit both the MIME type and extension.
+	try {
+		const header = String.fromCharCode(...new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+		let type = '';
+		if (header.startsWith('\xff\xd8\xff')) type = 'image/jpeg';
+		else if (header.startsWith('\x89PNG\r\n\x1a\n')) type = 'image/png';
+		else if (header.startsWith('GIF87a') || header.startsWith('GIF89a')) type = 'image/gif';
+		else if (header.startsWith('RIFF') && header.slice(8, 12) === 'WEBP') type = 'image/webp';
+		else if (header.slice(4, 8) === 'ftyp') {
+			const brand = header.slice(8, 12);
+			if (['avif', 'avis'].includes(brand)) type = 'image/avif';
+			else if (['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis'].includes(brand))
+				type = 'image/heic';
+		}
+		return type ? new File([file], file.name, { type, lastModified: file.lastModified }) : file;
+	} catch {
+		return file;
+	}
+};
+
 const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
 
 // Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
@@ -2386,11 +2386,7 @@ export const getCodeBlockContents = (content: string): object => {
 
 	let codeBlocks = [];
 
-	// Groups of related HTML/CSS/JS blocks. Each HTML block starts a new group;
-	// CSS and JS blocks attach to the current (most recent) group.
-	// This preserves the existing behaviour for "dumb" models that output
-	// separate html/css/js blocks meant to form a single page, while also
-	// allowing multiple distinct HTML blocks to produce separate artifacts.
+	// Each HTML block starts an artifact; subsequent CSS and JS join the most recent group.
 	let htmlGroups: Array<{ html: string; css: string; js: string }> = [];
 
 	const initDefaultGroup = () => {
@@ -2495,12 +2491,61 @@ export const formatSkillName = (name) => {
  */
 export const displayFileHandler = (
 	path: string,
-	stores: { showControls: Writable<boolean>; showFileNavPath: Writable<FileNavOpenRequest | null> },
+	stores: {
+		showTabs: Pick<Writable<boolean>, 'set'>;
+		showFileNavPath: Writable<FileNavOpenRequest | null>;
+	},
 	options: { page?: unknown } = {}
 ) => {
 	if (path) {
-		stores.showControls.set(true);
+		stores.showTabs.set(true);
 		const page = normalizeDocumentTargetPage(options.page);
 		stores.showFileNavPath.set(page ? { path, page } : path);
 	}
 };
+
+export function groupReplies(items: ResourceComment[], parentId: string) {
+	const children = new Map<string, ResourceComment[]>();
+	for (const comment of [...items].sort(
+		(a, b) => a.created_at - b.created_at || a.id.localeCompare(b.id)
+	)) {
+		const target = comment.reply_to_id ?? parentId;
+		const siblings = children.get(target) ?? [];
+		siblings.push(comment);
+		children.set(target, siblings);
+	}
+	return children;
+}
+
+export function scrollToComment(id: string) {
+	const element = document.getElementById(`comment-${id}`);
+	element?.scrollIntoView({ block: 'center' });
+	element?.animate([{ backgroundColor: '#a5a5c544' }, { backgroundColor: 'transparent' }], {
+		duration: 2200
+	});
+}
+
+export function commentLink(
+	comment: Pick<
+		ResourceComment,
+		'id' | 'resource_type' | 'resource_id' | 'target_type' | 'target_id'
+	>
+) {
+	const query = new URLSearchParams({ comment: comment.id });
+	let path = '/';
+	if (comment.resource_type === 'chat') path = `/c/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'note') path = `/notes/${encodeURIComponent(comment.resource_id)}`;
+	if (['model', 'skill', 'tool'].includes(comment.resource_type)) {
+		path = `/workspace/${comment.resource_type}s/edit`;
+		query.set('id', comment.resource_id);
+	}
+	if (comment.resource_type === 'prompt')
+		path = `/workspace/prompts/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.resource_type === 'knowledge')
+		path = `/workspace/knowledge/${encodeURIComponent(comment.resource_id)}`;
+	if (comment.target_type === 'chat_message' && comment.target_id)
+		query.set('message', comment.target_id);
+	if (comment.target_type === 'note_page' && comment.target_id)
+		query.set('page', comment.target_id);
+	return `${path}?${query}`;
+}

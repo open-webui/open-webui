@@ -1,4 +1,8 @@
 <script lang="ts">
+	import Comments from '$lib/components/comments/Comments.svelte';
+	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let comments: CommentsRequest | null = null;
+	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
@@ -9,7 +13,7 @@
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { config, models, tools, functions, user, settings } from '$lib/stores';
+	import { config, models, tools, functions, user, settings, visibleControls } from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -33,6 +37,7 @@
 	import Tags from '$lib/components/common/Tags.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import TypeaheadSelector from './TypeaheadSelector.svelte';
 	import SkillsSelector from '$lib/components/workspace/Models/SkillsSelector.svelte';
 	import FiltersSelector from '$lib/components/workspace/Models/FiltersSelector.svelte';
 	import ActionsSelector from '$lib/components/workspace/Models/ActionsSelector.svelte';
@@ -199,6 +204,7 @@
 			background_image_url: null as string | null,
 			voice: undefined as { voice?: string } | undefined,
 			voice_avatar: null as VoiceAvatarConfig | null,
+			subagents: undefined as { model_ids: string[] } | undefined,
 			description: '',
 			i18n: {} as Record<string, Record<string, any>>,
 			suggestion_prompts: null,
@@ -227,6 +233,7 @@
 
 	let knowledge = [];
 	let toolIds = [];
+	let subagents = { model_ids: [] as string[] };
 	let skillIds = [];
 	let skillsList = [];
 
@@ -235,7 +242,7 @@
 
 	let capabilities = { ...DEFAULT_CAPABILITIES };
 	let defaultFeatureIds = [];
-	let builtinTools = {};
+	let builtinTools: Record<string, boolean> = {};
 
 	let actionIds = [];
 	let accessGrants: any[] = [];
@@ -408,6 +415,11 @@
 		if (edit) delete modelInfo.access_grants;
 		else modelInfo.access_grants = accessGrants;
 		modelInfo.meta.capabilities = capabilities;
+		if (subagents.model_ids.length > 0) {
+			modelInfo.meta.subagents = { model_ids: subagents.model_ids };
+		} else {
+			delete modelInfo.meta.subagents;
+		}
 
 		if (enableDescription) {
 			modelInfo.meta.description =
@@ -711,6 +723,7 @@
 			});
 
 			toolIds = model?.meta?.toolIds ?? [];
+			subagents = { model_ids: model?.meta?.subagents?.model_ids ?? [] };
 			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
 			defaultFilterIds = model?.meta?.defaultFilterIds ?? [];
@@ -788,1048 +801,1125 @@
 	});
 </script>
 
-{#if loaded}
-	<DiffEditorModal
-		bind:show={showComparison}
-		initialContent={comparison?.content ?? ''}
-		filePath="system-prompt.md"
-		onApply={applyComparison}
-	/>
-	<input
-		bind:this={backgroundInput}
-		type="file"
-		accept="image/png,image/jpeg,image/webp,image/gif"
-		hidden
-		on:change={async () => {
-			const selected = backgroundInput.files?.[0];
-			backgroundInput.value = '';
-			if (!selected || readOnly || loading) return;
-			loading = true;
-			const candidate = URL.createObjectURL(selected);
-			try {
-				if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(selected.type)) {
-					throw new Error($i18n.t('Background image must be PNG, JPEG, WebP, or GIF.'));
-				}
-				if (selected.size > 5 * 1024 * 1024)
-					throw new Error($i18n.t('Background image must be at most 5 MiB.'));
-				const image = new Image();
-				image.src = candidate;
-				await image.decode();
-				if (image.naturalWidth * image.naturalHeight > 25_000_000) {
-					throw new Error($i18n.t('Background image must be at most 25 megapixels.'));
-				}
-				clearBackgroundPreview();
-				backgroundPreview = candidate;
-				backgroundFile = selected;
-			} catch (error) {
-				URL.revokeObjectURL(candidate);
-				toast.error(error instanceof Error ? error.message : $i18n.t('Invalid background image.'));
-			} finally {
-				loading = false;
-			}
-		}}
-	/>
-	<ConfirmDialog
-		bind:show={showDiscard}
-		title={$i18n.t('Discard unsaved changes?')}
-		message={$i18n.t('Your unsaved changes will be lost.')}
-		on:confirm={() => {
-			allowNavigation = true;
-			afterDiscard?.();
-		}}
-	/>
-	<AccessControlModal
-		disabled={loading}
-		bind:show={showAccessControlModal}
-		bind:accessGrants
-		accessRoles={preset ? ['read', 'write'] : ['read']}
-		share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
-		sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
-		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
-		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
-			$user?.role === 'admin'}
-		onChange={async (grants) => {
-			if (edit && model?.id) {
+<Comments bind:view={comments} resourceType={admin || readOnly ? null : 'model'} modal={admin}>
+	{#if loaded}
+		<DiffEditorModal
+			bind:show={showComparison}
+			initialContent={comparison?.content ?? ''}
+			filePath="system-prompt.md"
+			onApply={applyComparison}
+		/>
+		<input
+			bind:this={backgroundInput}
+			type="file"
+			accept="image/png,image/jpeg,image/webp,image/gif"
+			hidden
+			on:change={async () => {
+				const selected = backgroundInput.files?.[0];
+				backgroundInput.value = '';
+				if (!selected || readOnly || loading) return;
 				loading = true;
+				const candidate = URL.createObjectURL(selected);
 				try {
-					const saved = await updateModelAccessGrants(
-						localStorage.token,
-						model.id,
-						model.name,
-						grants
-					);
-					model.access_grants = structuredClone(saved.access_grants);
-					accessGrants = structuredClone(saved.access_grants);
-					onAccessUpdate(saved);
-					toast.success($i18n.t('Saved'));
+					if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(selected.type)) {
+						throw new Error($i18n.t('Background image must be PNG, JPEG, WebP, or GIF.'));
+					}
+					if (selected.size > 5 * 1024 * 1024)
+						throw new Error($i18n.t('Background image must be at most 5 MiB.'));
+					const image = new Image();
+					image.src = candidate;
+					await image.decode();
+					if (image.naturalWidth * image.naturalHeight > 25_000_000) {
+						throw new Error($i18n.t('Background image must be at most 25 megapixels.'));
+					}
+					clearBackgroundPreview();
+					backgroundPreview = candidate;
+					backgroundFile = selected;
 				} catch (error) {
-					accessGrants = structuredClone(model.access_grants ?? []);
-					toast.error(`${error?.detail ?? error}`);
+					URL.revokeObjectURL(candidate);
+					toast.error(
+						error instanceof Error ? error.message : $i18n.t('Invalid background image.')
+					);
 				} finally {
 					loading = false;
 				}
-			}
-		}}
-	/>
+			}}
+		/>
+		<ConfirmDialog
+			bind:show={showDiscard}
+			title={$i18n.t('Discard unsaved changes?')}
+			message={$i18n.t('Your unsaved changes will be lost.')}
+			on:confirm={() => {
+				allowNavigation = true;
+				afterDiscard?.();
+			}}
+		/>
+		<AccessControlModal
+			disabled={loading}
+			bind:show={showAccessControlModal}
+			bind:accessGrants
+			accessRoles={preset ? ['read', 'write'] : ['read']}
+			share={$user?.permissions?.sharing?.models || $user?.role === 'admin'}
+			sharePublic={$user?.permissions?.sharing?.public_models || $user?.role === 'admin'}
+			shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) ||
+				$user?.role === 'admin'}
+			allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
+				$user?.role === 'admin'}
+			onChange={async (grants) => {
+				if (edit && model?.id) {
+					loading = true;
+					try {
+						const saved = await updateModelAccessGrants(
+							localStorage.token,
+							model.id,
+							model.name,
+							grants
+						);
+						model.access_grants = structuredClone(saved.access_grants);
+						accessGrants = structuredClone(saved.access_grants);
+						onAccessUpdate(saved);
+						toast.success($i18n.t('Saved'));
+					} catch (error) {
+						accessGrants = structuredClone(model.access_grants ?? []);
+						toast.error(`${error?.detail ?? error}`);
+					} finally {
+						loading = false;
+					}
+				}
+			}}
+		/>
 
-	<div class="flex h-full min-h-0 w-full flex-col">
-		<div class="flex shrink-0 items-center gap-3" class:px-3={!admin}>
-			{#if onBack}
-				<button
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-					type="button"
-					on:click={() => {
-						discardThen(() => {
-							allowNavigation = true;
-							onBack?.();
-						});
-					}}
-				>
-					<ChevronLeft className="size-3" strokeWidth="2" />
-					<span>{$i18n.t('Back')}</span>
-				</button>
-			{/if}
-			{#if edit && model?.version_id && !readOnly}
-				<ModelHistory
-					bind:this={historyMenu}
-					{model}
-					{dirty}
-					bind:selected={selectedVersion}
-					bind:selecting={selectingVersion}
-					bind:promoting={promotingVersion}
-					onProduction={productionHandler}
-				/>
-			{/if}
-			{#if !historical && !readOnly}
-				<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
-					<LanguageModeSelect
-						bind:value={editingLocale}
-						{languages}
-						{translatedLocales}
-						className="w-fit"
+		<div class="flex h-full min-h-0 w-full flex-col">
+			<div class="flex shrink-0 items-center gap-3" class:px-3={!admin}>
+				{#if onBack}
+					<button
+						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						type="button"
+						on:click={() => {
+							discardThen(() => {
+								allowNavigation = true;
+								onBack?.();
+							});
+						}}
+					>
+						<ChevronLeft className="size-3" strokeWidth="2" />
+						<span>{$i18n.t('Back')}</span>
+					</button>
+				{/if}
+
+				{#if edit && model?.version_id && !readOnly}
+					<ModelHistory
+						bind:this={historyMenu}
+						{model}
+						{dirty}
+						bind:selected={selectedVersion}
+						bind:selecting={selectingVersion}
+						bind:promoting={promotingVersion}
+						onProduction={productionHandler}
 					/>
-					{#if $user?.permissions?.sharing?.models || $user?.role === 'admin'}
+				{/if}
+				<div class="ms-auto flex shrink-0 items-center gap-1 pr-0.5">
+					{#if edit && model?.id}<CommentButton
+							onComment={(request) => (comments = request)}
+							wrapperClassName="me-2"
+							resource={{ resource_type: 'model', resource_id: model.id }}
+						/>{/if}
+					{#if !historical && !readOnly}
+						<LanguageModeSelect
+							bind:value={editingLocale}
+							{languages}
+							{translatedLocales}
+							className="w-fit"
+						/>
+					{/if}
+
+					{#if !historical && !readOnly && ($user?.permissions?.sharing?.models || $user?.role === 'admin')}
 						<AccessButton on:click={() => (showAccessControlModal = true)} />
 					{/if}
 				</div>
-			{/if}
-		</div>
-
-		{#if selectingVersion}
-			<div class="flex flex-1 justify-center py-8"><Spinner className="size-5" /></div>
-		{:else if selectedVersion}
-			<section aria-label={$i18n.t('Model version preview')} class="min-h-0 flex-1">
-				{#key selectedVersion.id}
-					<svelte:self
-						model={{ id: model.id, ...selectedVersion.snapshot }}
-						edit
-						readOnly
-						{admin}
-						preset={!!selectedVersion.snapshot.base_model_id}
-					/>
-				{/key}
-			</section>
-			<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
-				<button
-					type="button"
-					class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-					disabled={promotingVersion}
-					on:click={() => historyMenu.requestPromotion()}
-				>
-					{$i18n.t('Set as Production')}
-				</button>
 			</div>
-		{/if}
-		<div
-			class:hidden={historical}
-			class="min-h-0 w-full flex-1 overflow-y-auto px-1 scrollbar-hover"
-		>
-			<input
-				bind:this={filesInputElement}
-				bind:files={inputFiles}
-				type="file"
-				hidden
-				accept="image/*"
-				on:change={() => {
-					let reader = new FileReader();
-					reader.onload = (event) => {
-						let originalImageUrl = `${event.target?.result}`;
 
-						// For animated formats (gif, webp), skip resizing to preserve animation
-						const fileType = (inputFiles[0] as any)?.['type'];
-						if (fileType === 'image/gif' || fileType === 'image/webp') {
-							info.meta.profile_image_url = originalImageUrl;
-							inputFiles = null;
-							filesInputElement.value = '';
-							return;
-						}
+			{#if selectingVersion}
+				<div class="flex flex-1 justify-center py-8"><Spinner className="size-5" /></div>
+			{:else if selectedVersion}
+				<section aria-label={$i18n.t('Model version preview')} class="min-h-0 flex-1">
+					{#key selectedVersion.id}
+						<svelte:self
+							model={{ id: model.id, ...selectedVersion.snapshot }}
+							edit
+							readOnly
+							{admin}
+							preset={!!selectedVersion.snapshot.base_model_id}
+						/>
+					{/key}
+				</section>
+				<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
+					<button
+						type="button"
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						disabled={promotingVersion}
+						on:click={() => historyMenu.requestPromotion()}
+					>
+						{$i18n.t('Set as Production')}
+					</button>
+				</div>
+			{/if}
+			<div
+				class:hidden={historical}
+				class="min-h-0 w-full flex-1 overflow-y-auto px-1 scrollbar-hover"
+			>
+				<input
+					bind:this={filesInputElement}
+					bind:files={inputFiles}
+					type="file"
+					hidden
+					accept="image/*"
+					on:change={() => {
+						let reader = new FileReader();
+						reader.onload = (event) => {
+							let originalImageUrl = `${event.target?.result}`;
 
-						const img = new Image();
-						img.src = originalImageUrl;
-
-						img.onload = function () {
-							const canvas = document.createElement('canvas');
-							const ctx = canvas.getContext('2d');
-
-							// Calculate the aspect ratio of the image
-							const aspectRatio = img.width / img.height;
-
-							// Calculate the new width and height to fit within 100x100
-							let newWidth, newHeight;
-							if (aspectRatio > 1) {
-								newWidth = 250 * aspectRatio;
-								newHeight = 250;
-							} else {
-								newWidth = 250;
-								newHeight = 250 / aspectRatio;
+							// For animated formats (gif, webp), skip resizing to preserve animation
+							const fileType = (inputFiles[0] as any)?.['type'];
+							if (fileType === 'image/gif' || fileType === 'image/webp') {
+								info.meta.profile_image_url = originalImageUrl;
+								inputFiles = null;
+								filesInputElement.value = '';
+								return;
 							}
 
-							// Set the canvas size
-							canvas.width = 250;
-							canvas.height = 250;
+							const img = new Image();
+							img.src = originalImageUrl;
 
-							// Calculate the position to center the image
-							const offsetX = (250 - newWidth) / 2;
-							const offsetY = (250 - newHeight) / 2;
+							img.onload = function () {
+								const canvas = document.createElement('canvas');
+								const ctx = canvas.getContext('2d');
 
-							// Draw the image on the canvas
-							ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+								// Calculate the aspect ratio of the image
+								const aspectRatio = img.width / img.height;
 
-							// Get the base64 representation of the compressed image
-							const compressedSrc = canvas.toDataURL('image/webp', 0.8);
+								// Calculate the new width and height to fit within 100x100
+								let newWidth, newHeight;
+								if (aspectRatio > 1) {
+									newWidth = 250 * aspectRatio;
+									newHeight = 250;
+								} else {
+									newWidth = 250;
+									newHeight = 250 / aspectRatio;
+								}
 
-							// Display the compressed image
-							info.meta.profile_image_url = compressedSrc;
+								// Set the canvas size
+								canvas.width = 250;
+								canvas.height = 250;
 
-							inputFiles = null;
-							filesInputElement.value = '';
+								// Calculate the position to center the image
+								const offsetX = (250 - newWidth) / 2;
+								const offsetY = (250 - newHeight) / 2;
+
+								// Draw the image on the canvas
+								ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+
+								// Get the base64 representation of the compressed image
+								const compressedSrc = canvas.toDataURL('image/webp', 0.8);
+
+								// Display the compressed image
+								info.meta.profile_image_url = compressedSrc;
+
+								inputFiles = null;
+								filesInputElement.value = '';
+							};
 						};
-					};
 
-					if (
-						inputFiles &&
-						inputFiles.length > 0 &&
-						['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
-							(inputFiles[0] as any)?.['type']
-						)
-					) {
-						reader.readAsDataURL(inputFiles[0]);
-					} else {
-						console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
-						inputFiles = null;
-					}
-				}}
-			/>
-
-			{#if !edit || (edit && model)}
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Capture listeners block changes from custom controls in read-only fieldsets.) -->
-				<form
-					id={formId}
-					class="flex w-full flex-col gap-2.5 md:flex-row"
-					on:click|capture={preventReadOnlyEdit}
-					on:keydown|capture={preventReadOnlyEdit}
-					on:pointerdown|capture={preventReadOnlyEdit}
-					on:submit|preventDefault={() => {
-						submitHandler();
+						if (
+							inputFiles &&
+							inputFiles.length > 0 &&
+							['image/gif', 'image/webp', 'image/jpeg', 'image/png', 'image/svg+xml'].includes(
+								(inputFiles[0] as any)?.['type']
+							)
+						) {
+							reader.readAsDataURL(inputFiles[0]);
+						} else {
+							console.log(`Unsupported File Type '${(inputFiles[0] as any)?.['type']}'.`);
+							inputFiles = null;
+						}
 					}}
-				>
-					<div class="w-full px-1">
-						<fieldset disabled={readOnly} class="flex min-w-0 w-full flex-col gap-3">
-							<div class="group/header flex min-w-0 flex-col gap-3">
-								<div
-									class="relative mt-2 w-full transition-[height] duration-200 motion-reduce:transition-none {backgroundPreview ||
-									info.meta.background_image_url
-										? 'h-36 sm:h-48'
-										: 'h-20'}"
-								>
-									{#if backgroundPreview || info.meta.background_image_url}
-										<img
-											src={backgroundPreview ?? info.meta.background_image_url}
-											alt={$i18n.t('Background image preview')}
-											class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl object-cover"
-										/>
-									{:else}
-										<div
-											aria-hidden="true"
-											class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-gray-100 dark:bg-gray-850"
-										></div>
-									{/if}
-								</div>
+				/>
 
-								<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+				{#if !edit || (edit && model)}
+					<!-- svelte-ignore a11y_no_noninteractive_element_interactions (Capture listeners block changes from custom controls in read-only fieldsets.) -->
+					<form
+						id={formId}
+						class="flex w-full flex-col gap-2.5 md:flex-row"
+						on:click|capture={preventReadOnlyEdit}
+						on:keydown|capture={preventReadOnlyEdit}
+						on:pointerdown|capture={preventReadOnlyEdit}
+						on:submit|preventDefault={() => {
+							submitHandler();
+						}}
+					>
+						<div class="w-full px-1">
+							<fieldset disabled={readOnly} class="flex min-w-0 w-full flex-col gap-3">
+								<div class="group/header flex min-w-0 flex-col gap-3">
 									<div
-										class="relative flex min-w-0 flex-1 items-center gap-3.5 px-3 md:px-5 pb-1 {backgroundPreview ||
+										class="relative mt-2 w-full transition-[height] duration-200 motion-reduce:transition-none {backgroundPreview ||
 										info.meta.background_image_url
-											? '-mt-14 sm:-mt-16'
-											: '-mt-9'}"
+											? 'h-36 sm:h-48'
+											: 'h-20'}"
 									>
-										<!-- LICENSE covers this Open WebUI fallback logo.
+										{#if backgroundPreview || info.meta.background_image_url}
+											<img
+												src={backgroundPreview ?? info.meta.background_image_url}
+												alt={$i18n.t('Background image preview')}
+												class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl object-cover"
+											/>
+										{:else}
+											<div
+												aria-hidden="true"
+												class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-gray-100 dark:bg-gray-850"
+											></div>
+										{/if}
+									</div>
+
+									<div class="flex w-full min-w-0 items-center gap-3 py-0.5">
+										<div
+											class="relative flex min-w-0 flex-1 items-center gap-3.5 px-3 md:px-5 pb-1 {backgroundPreview ||
+											info.meta.background_image_url
+												? '-mt-14 sm:-mt-16'
+												: '-mt-9'}"
+										>
+											<!-- LICENSE covers this Open WebUI fallback logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-										<div class="group relative size-12 shrink-0">
-											<button
-												class="group relative flex size-full items-center overflow-hidden rounded-xl {info
-													.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
-													? 'bg-transparent'
-													: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
-												type="button"
-												aria-label={$i18n.t('Upload profile image')}
-												on:click={() => {
-													filesInputElement.click();
-												}}
-											>
-												{#if info.meta.profile_image_url}
-													<img
-														src={info.meta.profile_image_url}
-														alt={$i18n.t('model profile')}
-														class="size-full object-cover"
-													/>
-												{:else}
-													<img
-														src="{WEBUI_BASE_URL}/static/favicon.png"
-														alt={$i18n.t('model profile')}
-														class="size-full object-cover"
-													/>
-												{/if}
-
-												<div
-													class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+											<div class="group relative size-12 shrink-0">
+												<button
+													class="group relative flex size-full items-center overflow-hidden rounded-xl {info
+														.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
+														? 'bg-transparent'
+														: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+													type="button"
+													aria-label={$i18n.t('Upload profile image')}
+													on:click={() => {
+														filesInputElement.click();
+													}}
 												>
-													<div class="m-1">
-														<div
-															class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
-														>
-															<svg
-																xmlns="http://www.w3.org/2000/svg"
-																viewBox="0 0 16 16"
-																fill="currentColor"
-																class="size-3"
+													{#if info.meta.profile_image_url}
+														<img
+															src={info.meta.profile_image_url}
+															alt={$i18n.t('model profile')}
+															class="size-full object-cover"
+														/>
+													{:else}
+														<img
+															src="{WEBUI_BASE_URL}/static/favicon.png"
+															alt={$i18n.t('model profile')}
+															class="size-full object-cover"
+														/>
+													{/if}
+
+													<div
+														class="absolute bottom-0 right-0 z-10 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100"
+													>
+														<div class="m-1">
+															<div
+																class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 															>
-																<path
-																	fill-rule="evenodd"
-																	d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
-																	clip-rule="evenodd"
-																/>
-															</svg>
+																<svg
+																	xmlns="http://www.w3.org/2000/svg"
+																	viewBox="0 0 16 16"
+																	fill="currentColor"
+																	class="size-3"
+																>
+																	<path
+																		fill-rule="evenodd"
+																		d="M2 4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4Zm10.5 5.707a.5.5 0 0 0-.146-.353l-1-1a.5.5 0 0 0-.708 0L9.354 9.646a.5.5 0 0 1-.708 0L6.354 7.354a.5.5 0 0 0-.708 0l-2 2a.5.5 0 0 0-.146.353V12a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5V9.707ZM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"
+																		clip-rule="evenodd"
+																	/>
+																</svg>
+															</div>
 														</div>
 													</div>
-												</div>
 
-												<div
-													class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
-												></div>
-											</button>
-
-											{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
-												<button
-													class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
-													on:click={() => {
-														info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
-													}}
-													type="button"
-												>
-													{$i18n.t('Reset')}</button
-												>
-											{/if}
-										</div>
-
-										<div class="min-w-0 w-full flex-1">
-											<div class="flex min-w-0 items-center gap-2">
-												{#if editingLocale}
-													<input
-														class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
-															? 'min-h-6'
-															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
-														placeholder={name || $i18n.t('Model Name')}
-														value={localizedField('name')}
-														on:input={(e) =>
-															setLocalizedField(
-																'name',
-																(e.currentTarget as HTMLInputElement).value
-															)}
-													/>
-												{:else}
-													<input
-														class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
-															? 'min-h-6'
-															: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
-														placeholder={$i18n.t('Model Name')}
-														bind:value={name}
-														required
-													/>
-												{/if}
-												{#if !readOnly}
 													<div
-														class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute bottom-full right-3 mb-1 md:static md:mb-0 flex shrink-0 items-center gap-1 text-xs"
+														class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+													></div>
+												</button>
+
+												{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
+													<button
+														class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+														on:click={() => {
+															info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
+														}}
+														type="button"
 													>
-														{#if loading}<Spinner />{/if}
-														<!-- Previous labels retained for i18n extraction: {$i18n.t('Background Image')} -->
-														{#if backgroundPreview || info.meta.background_image_url}
-															<button
-																type="button"
-																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
-																disabled={loading}
-																title={$i18n.t(
-																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
-																)}
-																on:click={() => backgroundInput.click()}>{$i18n.t('Change')}</button
-															>
-															<button
-																type="button"
-																class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
-																disabled={loading}
-																on:click={() => {
-																	clearBackgroundPreview();
-																	backgroundFile = null;
-																	info.meta.background_image_url = null;
-																}}>{$i18n.t('Remove')}</button
-															>
-														{:else}
-															<button
-																type="button"
-																class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-500 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
-																disabled={loading}
-																title={$i18n.t(
-																	'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
-																)}
-																on:click={() => backgroundInput.click()}
-															>
-																<Photo />
-																{$i18n.t('Add background')}
-															</button>
-														{/if}
-													</div>
+														{$i18n.t('Reset')}</button
+													>
 												{/if}
 											</div>
 
-											{#if editingLocale}
-												<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
-													<div
-														class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
-													>
-														<button type="button" on:click={() => setLocalizedField('name', name)}>
-															{$i18n.t('Copy default')}
-														</button>
-														{#if localizedField('name')}
-															<button type="button" on:click={() => clearLocalizedField('name')}>
-																{$i18n.t('Use default')}
-															</button>
-														{/if}
-													</div>
+											<div class="min-w-0 w-full flex-1">
+												<div class="flex min-w-0 items-center gap-2">
+													{#if editingLocale}
+														<input
+															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+																? 'min-h-6'
+																: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+															placeholder={name || $i18n.t('Model Name')}
+															aria-label={$i18n.t('Model Name')}
+															value={localizedField('name')}
+															on:input={(e) =>
+																setLocalizedField(
+																	'name',
+																	(e.currentTarget as HTMLInputElement).value
+																)}
+														/>
+													{:else}
+														<input
+															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
+																? 'min-h-6'
+																: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+															placeholder={$i18n.t('Model Name')}
+															aria-label={$i18n.t('Model Name')}
+															bind:value={name}
+															required
+														/>
+													{/if}
+													{#if !readOnly}
+														<div
+															class="[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/header:opacity-100 [@media(hover:hover)]:group-focus-within/header:opacity-100 absolute bottom-full right-3 mb-1 md:static md:mb-0 flex shrink-0 items-center gap-1 text-xs"
+														>
+															{#if loading}<Spinner />{/if}
+															<!-- Previous labels retained for i18n extraction: {$i18n.t('Background Image')} -->
+															{#if backgroundPreview || info.meta.background_image_url}
+																<button
+																	type="button"
+																	class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	disabled={loading}
+																	title={$i18n.t(
+																		'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
+																	)}
+																	on:click={() => backgroundInput.click()}
+																	>{$i18n.t('Change')}</button
+																>
+																<button
+																	type="button"
+																	class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	disabled={loading}
+																	on:click={() => {
+																		clearBackgroundPreview();
+																		backgroundFile = null;
+																		info.meta.background_image_url = null;
+																	}}>{$i18n.t('Remove')}</button
+																>
+															{:else}
+																<button
+																	type="button"
+																	class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-500 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	disabled={loading}
+																	title={$i18n.t(
+																		'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
+																	)}
+																	on:click={() => backgroundInput.click()}
+																>
+																	<Photo />
+																	{$i18n.t('Add background')}
+																</button>
+															{/if}
+														</div>
+													{/if}
 												</div>
-											{/if}
 
-											<input
-												class="block w-full {($settings?.highContrastMode ?? false)
-													? 'min-h-6'
-													: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
-												placeholder={$i18n.t('Model ID')}
-												bind:value={id}
-												disabled={edit}
-												required
-											/>
+												{#if editingLocale}
+													<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
+														<div
+															class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
+														>
+															<button
+																type="button"
+																on:click={() => setLocalizedField('name', name)}
+															>
+																{$i18n.t('Copy default')}
+															</button>
+															{#if localizedField('name')}
+																<button type="button" on:click={() => clearLocalizedField('name')}>
+																	{$i18n.t('Use default')}
+																</button>
+															{/if}
+														</div>
+													</div>
+												{/if}
+
+												<input
+													class="block w-full {($settings?.highContrastMode ?? false)
+														? 'min-h-6'
+														: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+													placeholder={$i18n.t('Model ID')}
+													aria-label={$i18n.t('Model ID')}
+													bind:value={id}
+													disabled={edit}
+													required
+												/>
+											</div>
 										</div>
 									</div>
 								</div>
-							</div>
-							<div class="flex min-w-0 flex-col gap-3 px-3 md:px-5">
-								<div>
-									<div class="mb-1 flex w-full items-center justify-between">
-										{#if editingLocale}
-											<div class="self-center text-xs font-normal text-gray-600 dark:text-gray-400">
-												{$i18n.t('Description ({{language}})', {
-													language: editingLocaleLabel || editingLocale
-												})}
-											</div>
-											<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-												<button
-													type="button"
-													on:click={() =>
-														setLocalizedField('description', info.meta.description ?? '')}
+								<div class="flex min-w-0 flex-col gap-3 px-3 md:px-5">
+									<div>
+										<div class="mb-1 flex w-full items-center justify-between">
+											{#if editingLocale}
+												<div
+													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
 												>
-													{$i18n.t('Copy default')}
-												</button>
-												{#if localizedField('description')}
-													<button type="button" on:click={() => clearLocalizedField('description')}>
-														{$i18n.t('Use default')}
+													{$i18n.t('Description ({{language}})', {
+														language: editingLocaleLabel || editingLocale
+													})}
+												</div>
+												<div
+													class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+												>
+													<button
+														type="button"
+														on:click={() =>
+															setLocalizedField('description', info.meta.description ?? '')}
+													>
+														{$i18n.t('Copy default')}
 													</button>
-												{/if}
-											</div>
-										{:else}
-											<!-- Preserve the former description labels for i18n extraction:
+													{#if localizedField('description')}
+														<button
+															type="button"
+															on:click={() => clearLocalizedField('description')}
+														>
+															{$i18n.t('Use default')}
+														</button>
+													{/if}
+												</div>
+											{:else}
+												<!-- Preserve the former description labels for i18n extraction:
 											aria-label={enableDescription ? $i18n.t('Custom description enabled') : $i18n.t('Default description enabled')}
 											-->
-											<button
-												class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
-												type="button"
-												aria-pressed={enableDescription ? 'true' : 'false'}
-												on:click={() => {
-													enableDescription = !enableDescription;
-												}}
-											>
-												<span class="font-normal text-gray-600 dark:text-gray-400">
-													{$i18n.t('Description')}
-												</span>
-												{#if !enableDescription}
-													<span class="justify-self-end">{$i18n.t('Default')}</span>
-												{:else}
-													<span class="justify-self-end">{$i18n.t('Custom')}</span>
-												{/if}
-											</button>
+												<button
+													class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
+													type="button"
+													aria-pressed={enableDescription ? 'true' : 'false'}
+													on:click={() => {
+														enableDescription = !enableDescription;
+													}}
+												>
+													<span class="font-normal text-gray-600 dark:text-gray-400">
+														{$i18n.t('Description')}
+													</span>
+													{#if !enableDescription}
+														<span class="justify-self-end">{$i18n.t('Default')}</span>
+													{:else}
+														<span class="justify-self-end">{$i18n.t('Custom')}</span>
+													{/if}
+												</button>
+											{/if}
+										</div>
+
+										{#if editingLocale}
+											<Textarea
+												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+												placeholder={info.meta.description ||
+													$i18n.t('Add a short description about what this model does')}
+												minSize={32}
+												value={localizedField('description')}
+												onInput={(e) =>
+													setLocalizedField(
+														'description',
+														(e.currentTarget as HTMLTextAreaElement).value
+													)}
+											/>
+										{:else if enableDescription}
+											<Textarea
+												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+												placeholder={$i18n.t('Add a short description about what this model does')}
+												minSize={32}
+												bind:value={info.meta.description}
+											/>
 										{/if}
 									</div>
 
-									{#if editingLocale}
-										<Textarea
-											className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
-											placeholder={info.meta.description ||
-												$i18n.t('Add a short description about what this model does')}
-											minSize={32}
-											value={localizedField('description')}
-											onInput={(e) =>
-												setLocalizedField(
-													'description',
-													(e.currentTarget as HTMLTextAreaElement).value
-												)}
-										/>
-									{:else if enableDescription}
-										<Textarea
-											className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
-											placeholder={$i18n.t('Add a short description about what this model does')}
-											minSize={32}
-											bind:value={info.meta.description}
-										/>
-									{/if}
-								</div>
+									<div class="flex min-w-0 flex-col gap-2">
+										{#if preset}
+											<div
+												class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
+											>
+												<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+													<ModelSettingsLabel
+														label={$i18n.t('Base Model (From)')}
+														description={$i18n.t(
+															'Choose the underlying model that generates responses for this custom model.'
+														)}
+													/>
+												</div>
 
-								<div class="flex min-w-0 flex-col gap-2">
-									{#if preset}
+												<div class="min-w-0">
+													<ModelSelector
+														id="workspace-base-model"
+														placeholder={$i18n.t('Select a base model')}
+														searchPlaceholder={$i18n.t('Search a model')}
+														items={getBaseModelItems($models)}
+														triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
+														selectionOnly
+														{includeHidden}
+														bind:value={info.base_model_id}
+													/>
+												</div>
+											</div>
+										{/if}
+
 										<div
-											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
+											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
-											<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+											<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
 												<ModelSettingsLabel
-													label={$i18n.t('Base Model (From)')}
+													label={$i18n.t('Tags')}
 													description={$i18n.t(
-														'Choose the underlying model that generates responses for this custom model.'
+														'Add tags to organize models and make them easier to find.'
 													)}
 												/>
 											</div>
-
 											<div class="min-w-0">
-												<ModelSelector
-													id="workspace-base-model"
-													placeholder={$i18n.t('Select a base model')}
-													searchPlaceholder={$i18n.t('Search a model')}
-													items={getBaseModelItems($models)}
-													triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
-													selectionOnly
-													{includeHidden}
-													bind:value={info.base_model_id}
+												<Tags
+													tags={info?.meta?.tags ?? []}
+													{suggestionTags}
+													on:delete={(e) => {
+														const tagName = e.detail;
+														info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
+													}}
+													on:add={(e) => {
+														const tagName = e.detail;
+														if (!(info?.meta?.tags ?? null)) {
+															info.meta.tags = [{ name: tagName }];
+														} else {
+															info.meta.tags = [...info.meta.tags, { name: tagName }];
+														}
+													}}
 												/>
 											</div>
 										</div>
-									{/if}
+									</div>
+								</div>
+							</fieldset>
 
-									<div
-										class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
-									>
-										<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
+							<div class="px-2.5 md:px-4">
+								{#if $user?.role === 'admin' && !readOnly}
+									<div class="mt-2">
+										<ProviderDetails model={reportedModel} />
+									</div>
+								{/if}
+								<section class="mt-4">
+									<div class="space-y-2 px-1">
+										<div
+											class="flex items-center justify-between gap-2 text-xs font-normal text-gray-600 dark:text-gray-400"
+										>
 											<ModelSettingsLabel
-												label={$i18n.t('Tags')}
+												label={$i18n.t('System Prompt')}
 												description={$i18n.t(
-													'Add tags to organize models and make them easier to find.'
+													'Set instructions that guide how this model behaves throughout a chat.'
 												)}
 											/>
+											{#if !readOnly && !historical}
+												<button
+													type="button"
+													class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-gray-100"
+													disabled={loading || promotingVersion}
+													on:click={compareRevision}>{$i18n.t('Compare revision')}</button
+												>
+											{/if}
 										</div>
-										<div class="min-w-0">
-											<Tags
-												tags={info?.meta?.tags ?? []}
-												{suggestionTags}
-												on:delete={(e) => {
-													const tagName = e.detail;
-													info.meta.tags = info.meta.tags.filter((tag) => tag.name !== tagName);
-												}}
-												on:add={(e) => {
-													const tagName = e.detail;
-													if (!(info?.meta?.tags ?? null)) {
-														info.meta.tags = [{ name: tagName }];
-													} else {
-														info.meta.tags = [...info.meta.tags, { name: tagName }];
-													}
-												}}
-											/>
-										</div>
-									</div>
-								</div>
-							</div>
-						</fieldset>
 
-						<div class="px-2.5 md:px-4">
-							{#if $user?.role === 'admin' && !readOnly}
-								<div class="mt-2">
-									<ProviderDetails model={reportedModel} />
-								</div>
-							{/if}
-							<section class="mt-4">
-								<div class="space-y-2 px-1">
-									<div
-										class="flex items-center justify-between gap-2 text-xs font-normal text-gray-600 dark:text-gray-400"
-									>
-										<ModelSettingsLabel
-											label={$i18n.t('System Prompt')}
-											description={$i18n.t(
-												'Set instructions that guide how this model behaves throughout a chat.'
-											)}
-										/>
-										{#if !readOnly && !historical}
-											<button
-												type="button"
-												class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-gray-100"
-												disabled={loading || promotingVersion}
-												on:click={compareRevision}>{$i18n.t('Compare revision')}</button
-											>
-										{/if}
-									</div>
-
-									{#if showSystemPrompt || !system.trim()}
-										<fieldset disabled={readOnly} class="min-w-0">
-											<div>
-												<Textarea
-													ariaLabel={$i18n.t('System Prompt')}
-													className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
-													placeholder={$i18n.t(
-														'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-													)}
-													rows={2}
-													minSize={48}
-													bind:value={system}
-												/>
-											</div>
-											{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
-												<div class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60">
-													<div class="mb-1.5 flex items-center justify-between gap-2">
-														<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
-															{$i18n.t('Detected Variables')}
+										{#if showSystemPrompt || !system.trim()}
+											<fieldset disabled={readOnly} class="min-w-0">
+												<div>
+													<Textarea
+														ariaLabel={$i18n.t('System Prompt')}
+														className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+														placeholder={$i18n.t(
+															'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+														)}
+														rows={2}
+														minSize={48}
+														bind:value={system}
+													/>
+												</div>
+												{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
+													<div
+														class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60"
+													>
+														<div class="mb-1.5 flex items-center justify-between gap-2">
+															<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+																{$i18n.t('Detected Variables')}
+															</div>
+															{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
+																<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+																	{chatVariablesPreview.fields.length +
+																		chatVariablesPreview.userFields.length}
+																</div>
+															{/if}
 														</div>
-														{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
-															<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-																{chatVariablesPreview.fields.length +
-																	chatVariablesPreview.userFields.length}
+
+														{#if chatVariablesPreview.fields.length > 0}
+															<div
+																class="mb-1 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
+															>
+																{$i18n.t('Chat Variables')}
+															</div>
+															<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+																{#each chatVariablesPreview.fields as field}
+																	<div
+																		class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
+																	>
+																		<span class="font-medium">{field.key}</span>
+																		<span class="text-gray-400 dark:text-gray-600"
+																			>{field.type}</span
+																		>
+																		{#if field.required}
+																			<span class="text-amber-600 dark:text-amber-400"
+																				>required</span
+																			>
+																		{/if}
+																	</div>
+																{/each}
+															</div>
+														{/if}
+
+														{#if chatVariablesPreview.userFields.length > 0}
+															<div
+																class="mb-1 mt-2 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
+															>
+																{$i18n.t('User Variables')}
+															</div>
+															<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
+																{#each chatVariablesPreview.userFields as field}
+																	<div
+																		class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
+																	>
+																		<span class="font-medium">{field.key}</span>
+																	</div>
+																{/each}
+															</div>
+														{/if}
+
+														{#if chatVariablesPreview.warnings.length > 0}
+															<div
+																class="mt-2 flex flex-col gap-1 text-xs text-amber-600 dark:text-amber-400"
+															>
+																{#each chatVariablesPreview.warnings as warning}
+																	<div>{warning}</div>
+																{/each}
 															</div>
 														{/if}
 													</div>
+												{/if}
+											</fieldset>
+										{:else}
+											<button
+												type="button"
+												aria-label={$i18n.t('System Prompt')}
+												aria-expanded={false}
+												on:click={() => {
+													showSystemPrompt = true;
+												}}
+												class="w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100"
+											>
+												{system}
+											</button>
+										{/if}
+										{#if system.trim()}
+											<button
+												class="block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+												type="button"
+												aria-expanded={showSystemPrompt}
+												on:click={() => {
+													showSystemPrompt = !showSystemPrompt;
+												}}
+											>
+												{showSystemPrompt ? $i18n.t('Show less') : $i18n.t('Show more')}
+											</button>
+										{/if}
+									</div>
+									<!-- Previous labels retained for i18n extraction: {$i18n.t('Model Params')} -->
+									<div class="mt-2 space-y-0.5">
+										<button
+											type="button"
+											class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-start text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+											aria-expanded={showAdvanced}
+											on:click={() => (showAdvanced = !showAdvanced)}
+										>
+											<span class="font-normal text-gray-600 dark:text-gray-400"
+												><ModelSettingsLabel
+													label={$i18n.t('Advanced Params')}
+													description={$i18n.t(
+														'Override generation settings such as temperature, token limits, and sampling. Unmodified settings use the provider defaults.'
+													)}
+												/></span
+											>
+											<span class="text-gray-900 dark:text-gray-100">
+												<!-- Previous non-plural key retained for i18n extraction: {$i18n.t('{{count}} modified')} -->
+												{modifiedParamCount
+													? $i18n.t('{{count}} modified', { count: modifiedParamCount })
+													: $i18n.t('Default')}
+											</span>
+											<ChevronRight
+												className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+											/>
+										</button>
 
-													{#if chatVariablesPreview.fields.length > 0}
+										{#if showAdvanced}
+											<fieldset disabled={readOnly} class="min-w-0 my-2 pl-3">
+												<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
+											</fieldset>
+										{/if}
+										<fieldset disabled={readOnly} class="min-w-0">
+											{#if !editingLocale}
+												<ModelControls bind:controls={params.model_controls} />
+											{:else if Object.keys(params.model_controls ?? {}).length}
+												{@const fields = modelControlTranslationSource(params.model_controls ?? {})}
+												{@const customized = Object.keys(fields).some((key) =>
+													info.meta.i18n?.[editingLocale]?.[key]?.trim()
+												)}
+												<ModelSettingsSection
+													label={$i18n.t('Model controls')}
+													description={$i18n.t(
+														'Let people choose approved parameter presets in chat.'
+													)}
+													summary={customized ? $i18n.t('Custom') : $i18n.t('Default')}
+												>
+													{#each Object.entries(fields) as [key, original] (key)}
 														<div
-															class="mb-1 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
+															class="rounded-xl px-2 py-1.5 focus-within:bg-gray-50 dark:focus-within:bg-gray-850 {info.meta.i18n?.[
+																editingLocale
+															]?.[key]?.trim()
+																? ''
+																: 'opacity-60 focus-within:opacity-100'}"
 														>
-															{$i18n.t('Chat Variables')}
+															<Textarea
+																className="min-h-5 w-full min-w-0 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
+																placeholder={original}
+																value={info.meta.i18n?.[editingLocale]?.[key] ?? ''}
+																onInput={(event) =>
+																	setLocalizedField(
+																		key,
+																		(event.currentTarget as HTMLTextAreaElement).value
+																	)}
+															/>
 														</div>
-														<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
-															{#each chatVariablesPreview.fields as field}
-																<div
-																	class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
-																>
-																	<span class="font-medium">{field.key}</span>
-																	<span class="text-gray-400 dark:text-gray-600">{field.type}</span>
-																	{#if field.required}
-																		<span class="text-amber-600 dark:text-amber-400">required</span>
-																	{/if}
-																</div>
-															{/each}
+													{/each}
+													{#if customized}
+														<div
+															class="flex justify-end px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
+														>
+															<button
+																type="button"
+																class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+																on:click={() => Object.keys(fields).forEach(clearLocalizedField)}
+																>{$i18n.t('Use default')}</button
+															>
 														</div>
 													{/if}
-
-													{#if chatVariablesPreview.userFields.length > 0}
-														<div
-															class="mb-1 mt-2 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
-														>
-															{$i18n.t('User Variables')}
-														</div>
-														<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
-															{#each chatVariablesPreview.userFields as field}
-																<div
-																	class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
-																>
-																	<span class="font-medium">{field.key}</span>
-																</div>
-															{/each}
-														</div>
-													{/if}
-
-													{#if chatVariablesPreview.warnings.length > 0}
-														<div
-															class="mt-2 flex flex-col gap-1 text-xs text-amber-600 dark:text-amber-400"
-														>
-															{#each chatVariablesPreview.warnings as warning}
-																<div>{warning}</div>
-															{/each}
-														</div>
-													{/if}
-												</div>
+												</ModelSettingsSection>
 											{/if}
 										</fieldset>
-									{:else}
-										<button
-											type="button"
-											aria-label={$i18n.t('System Prompt')}
-											aria-expanded={false}
-											on:click={() => {
-												showSystemPrompt = true;
-											}}
-											class="w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100"
-										>
-											{system}
-										</button>
-									{/if}
-									{#if system.trim()}
-										<button
-											class="block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
-											type="button"
-											aria-expanded={showSystemPrompt}
-											on:click={() => {
-												showSystemPrompt = !showSystemPrompt;
-											}}
-										>
-											{showSystemPrompt ? $i18n.t('Show less') : $i18n.t('Show more')}
-										</button>
-									{/if}
-								</div>
-								<!-- Previous labels retained for i18n extraction: {$i18n.t('Model Params')} -->
-								<div class="mt-2 space-y-0.5">
-									<button
-										type="button"
-										class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-start text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
-										aria-expanded={showAdvanced}
-										on:click={() => (showAdvanced = !showAdvanced)}
-									>
-										<span class="font-normal text-gray-600 dark:text-gray-400"
-											><ModelSettingsLabel
-												label={$i18n.t('Advanced Params')}
-												description={$i18n.t(
-													'Override generation settings such as temperature, token limits, and sampling. Unmodified settings use the provider defaults.'
-												)}
-											/></span
-										>
-										<span class="text-gray-900 dark:text-gray-100">
-											<!-- Previous non-plural key retained for i18n extraction: {$i18n.t('{{count}} modified')} -->
-											{modifiedParamCount
-												? $i18n.t('{{count}} modified', { count: modifiedParamCount })
-												: $i18n.t('Default')}
-										</span>
-										<ChevronRight
-											className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
-										/>
-									</button>
-
-									{#if showAdvanced}
-										<fieldset disabled={readOnly} class="min-w-0 my-2 pl-3">
-											<AdvancedParams admin={true} custom={true} layout="grid" bind:params />
-										</fieldset>
-									{/if}
-									<fieldset disabled={readOnly} class="min-w-0">
-										{#if !editingLocale}
-											<ModelControls bind:controls={params.model_controls} />
-										{:else if Object.keys(params.model_controls ?? {}).length}
-											{@const fields = modelControlTranslationSource(params.model_controls ?? {})}
-											{@const customized = Object.keys(fields).some((key) =>
-												info.meta.i18n?.[editingLocale]?.[key]?.trim()
-											)}
-											<ModelSettingsSection
-												label={$i18n.t('Model controls')}
-												description={$i18n.t(
-													'Let people choose approved parameter presets in chat.'
-												)}
-												summary={customized ? $i18n.t('Custom') : $i18n.t('Default')}
-											>
-												{#each Object.entries(fields) as [key, original] (key)}
-													<div
-														class="rounded-xl px-2 py-1.5 focus-within:bg-gray-50 dark:focus-within:bg-gray-850 {info.meta.i18n?.[
-															editingLocale
-														]?.[key]?.trim()
-															? ''
-															: 'opacity-60 focus-within:opacity-100'}"
-													>
-														<Textarea
-															className="min-h-5 w-full min-w-0 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
-															placeholder={original}
-															value={info.meta.i18n?.[editingLocale]?.[key] ?? ''}
-															onInput={(event) =>
-																setLocalizedField(
-																	key,
-																	(event.currentTarget as HTMLTextAreaElement).value
-																)}
-														/>
-													</div>
-												{/each}
-												{#if customized}
-													<div
-														class="flex justify-end px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
-													>
-														<button
-															type="button"
-															class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
-															on:click={() => Object.keys(fields).forEach(clearLocalizedField)}
-															>{$i18n.t('Use default')}</button
-														>
-													</div>
-												{/if}
-											</ModelSettingsSection>
-										{/if}
-									</fieldset>
-								</div>
-							</section>
-
-							<fieldset disabled={readOnly} class="min-w-0">
-								<section class="mt-0.5">
-									<ModelSettingsSection
-										label={$i18n.t('Prompts')}
-										description={$i18n.t(
-											'Set the starter suggestions people see when opening a new chat with this model.'
-										)}
-										summary={editingLocale
-											? Array.isArray(info.meta.i18n?.[editingLocale]?.suggestion_prompts)
-												? $i18n.t('Custom')
-												: $i18n.t('Default')
-											: info.meta.suggestion_prompts == null
-												? $i18n.t('Default')
-												: `${$i18n.t('Custom')} · ${info.meta.suggestion_prompts.length}`}
-									>
-										{#if editingLocale}
-											<LocalizedPromptSuggestions
-												promptSuggestions={info.meta.suggestion_prompts ??
-													resolveLocalizedPromptSuggestions(
-														$config?.default_prompt_suggestions,
-														$config?.default_prompt_suggestions_i18n ?? {},
-														editingLocale,
-														(key) => $i18n.t(key)
-													)}
-												bind:localizedPromptSuggestions={info.meta.i18n}
-												locale={editingLocale}
-												localeLabel={editingLocaleLabel}
-												disabled={readOnly}
-											/>
-										{:else if info.meta.suggestion_prompts != null}
-											<PromptSuggestions
-												bind:promptSuggestions={info.meta.suggestion_prompts}
-												disabled={readOnly}
-											>
-												<button
-													slot="label"
-													disabled={readOnly}
-													type="button"
-													class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
-													on:click={() => {
-														customPromptDraft = structuredClone(info.meta.suggestion_prompts);
-														info.meta.suggestion_prompts = null;
-													}}>{$i18n.t('Use default')}</button
-												>
-											</PromptSuggestions>
-										{:else}
-											<div
-												class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-gray-500 dark:text-gray-400"
-											>
-												<span>{$i18n.t('Using default prompt suggestions')}</span>
-												<button
-													type="button"
-													class="shrink-0 hover:text-gray-900 dark:hover:text-gray-100"
-													on:click={() => {
-														info.meta.suggestion_prompts = customPromptDraft ?? [
-															{ content: '', title: ['', ''] }
-														];
-													}}>{$i18n.t('Customize')}</button
-												>
-											</div>
-										{/if}
-									</ModelSettingsSection>
+									</div>
 								</section>
 
-								<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
+								<fieldset disabled={readOnly} class="min-w-0">
+									<section class="mt-0.5">
+										<ModelSettingsSection
+											label={$i18n.t('Prompts')}
+											description={$i18n.t(
+												'Set the starter suggestions people see when opening a new chat with this model.'
+											)}
+											summary={editingLocale
+												? Array.isArray(info.meta.i18n?.[editingLocale]?.suggestion_prompts)
+													? $i18n.t('Custom')
+													: $i18n.t('Default')
+												: info.meta.suggestion_prompts == null
+													? $i18n.t('Default')
+													: `${$i18n.t('Custom')} · ${info.meta.suggestion_prompts.length}`}
+										>
+											{#if editingLocale}
+												<LocalizedPromptSuggestions
+													promptSuggestions={info.meta.suggestion_prompts ??
+														resolveLocalizedPromptSuggestions(
+															$config?.default_prompt_suggestions,
+															$config?.default_prompt_suggestions_i18n ?? {},
+															editingLocale,
+															(key) => $i18n.t(key)
+														)}
+													bind:localizedPromptSuggestions={info.meta.i18n}
+													locale={editingLocale}
+													localeLabel={editingLocaleLabel}
+													disabled={readOnly}
+												/>
+											{:else if info.meta.suggestion_prompts != null}
+												<PromptSuggestions
+													bind:promptSuggestions={info.meta.suggestion_prompts}
+													disabled={readOnly}
+												>
+													<button
+														slot="label"
+														disabled={readOnly}
+														type="button"
+														class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+														on:click={() => {
+															customPromptDraft = structuredClone(info.meta.suggestion_prompts);
+															info.meta.suggestion_prompts = null;
+														}}>{$i18n.t('Use default')}</button
+													>
+												</PromptSuggestions>
+											{:else}
+												<div
+													class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-gray-500 dark:text-gray-400"
+												>
+													<span>{$i18n.t('Using default prompt suggestions')}</span>
+													<button
+														type="button"
+														class="shrink-0 hover:text-gray-900 dark:hover:text-gray-100"
+														on:click={() => {
+															info.meta.suggestion_prompts = customPromptDraft ?? [
+																{ content: '', title: ['', ''] }
+															];
+														}}>{$i18n.t('Customize')}</button
+													>
+												</div>
+											{/if}
+										</ModelSettingsSection>
+									</section>
 
-								<div class="my-3 space-y-0.5">
-									<Knowledge bind:selectedItems={knowledge} disabled={readOnly} />
-									<ToolsSelector
-										bind:selectedToolIds={toolIds}
-										tools={$tools ?? []}
-										disabled={readOnly}
-									/>
-									<SkillsSelector
-										bind:selectedSkillIds={skillIds}
-										skills={skillsList}
-										disabled={readOnly}
-									/>
-									{#if ($functions ?? []).some((func) => func.type === 'filter')}
-										<FiltersSelector
-											bind:selectedFilterIds={filterIds}
-											bind:defaultFilterIds
-											filters={($functions ?? []).filter((func) => func.type === 'filter')}
+									<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
+
+									<div class="my-3 space-y-0.5">
+										<Knowledge bind:selectedItems={knowledge} disabled={readOnly} />
+										<ToolsSelector
+											bind:selectedToolIds={toolIds}
+											tools={$tools ?? []}
 											disabled={readOnly}
 										/>
-									{/if}
-									{#if ($functions ?? []).some((func) => func.type === 'action')}
-										<ActionsSelector
-											bind:selectedActionIds={actionIds}
-											actions={($functions ?? []).filter((func) => func.type === 'action')}
+										<SkillsSelector
+											bind:selectedSkillIds={skillIds}
+											skills={skillsList}
 											disabled={readOnly}
 										/>
-									{/if}
-								</div>
-								<div class="space-y-0.5">
-									<Capabilities
-										bind:capabilities
-										bind:defaultFeatureIds
-										bind:builtinTools
-										disabled={readOnly}
-									/>
-									<ModelSettingsSection
-										label={$i18n.t('Voice')}
-										description={$i18n.t(
-											'Configure the realtime voice, voice avatar, and text-to-speech voice for this model.'
-										)}
-										summary={[
-											$config?.audio?.realtime?.enabled
-												? voice.voice || $i18n.t('Admin default')
-												: null,
-											voiceAvatar
-												? $i18n.t('Custom avatar')
-												: $config?.audio?.realtime?.enabled
-													? $i18n.t('Default orb')
+										{#if ($functions ?? []).some((func) => func.type === 'filter')}
+											<FiltersSelector
+												bind:selectedFilterIds={filterIds}
+												bind:defaultFilterIds
+												filters={($functions ?? []).filter((func) => func.type === 'filter')}
+												disabled={readOnly}
+											/>
+										{/if}
+										{#if ($functions ?? []).some((func) => func.type === 'action')}
+											<ActionsSelector
+												bind:selectedActionIds={actionIds}
+												actions={($functions ?? []).filter((func) => func.type === 'action')}
+												disabled={readOnly}
+											/>
+										{/if}
+									</div>
+									<div class="space-y-0.5">
+										<Capabilities
+											bind:capabilities
+											bind:defaultFeatureIds
+											bind:builtinTools
+											disabled={readOnly}
+										/>
+										{#if $config?.features?.enable_subagents && capabilities.builtin_tools && builtinTools.subagents !== false && $visibleControls['model_editor.tools.subagents']}
+											<ModelSettingsSection
+												label={$i18n.t('settings.admin.models.builtinTools.subagents.label')}
+												description={$i18n.t(
+													'Models this model can delegate to. Users must have access to them. Leave empty to use the current model.'
+												)}
+												summary={subagents.model_ids
+													.map((id) => $models.find((model) => model.id === id)?.name || id)
+													.join(', ') || $i18n.t('Current Model')}
+											>
+												<TypeaheadSelector
+													id="model-subagents"
+													label={$i18n.t('Models')}
+													items={($models ?? [])
+														.filter((model) => !('direct' in model && model.direct))
+														.map((model) => ({
+															id: model.id,
+															name: model.name,
+															meta: model.info?.meta
+														}))}
+													selectedIds={subagents.model_ids}
+													disabled={readOnly}
+													placeholder={$i18n.t('Search Models')}
+													emptyLabel={$i18n.t('No models found')}
+													variant="dropdown"
+													on:select={(e) => {
+														subagents.model_ids = subagents.model_ids.includes(e.detail.id)
+															? subagents.model_ids.filter((id) => id !== e.detail.id)
+															: [...subagents.model_ids, e.detail.id];
+													}}
+													on:enableall={(e) => {
+														subagents.model_ids = [
+															...new Set([
+																...subagents.model_ids,
+																...e.detail.map((model) => model.id)
+															])
+														];
+													}}
+													on:clear={() => (subagents.model_ids = [])}
+												/>
+											</ModelSettingsSection>
+										{/if}
+										<ModelSettingsSection
+											label={$i18n.t('Voice')}
+											description={$i18n.t(
+												'Configure the realtime voice, voice avatar, and text-to-speech voice for this model.'
+											)}
+											summary={[
+												$config?.audio?.realtime?.enabled
+													? voice.voice || $i18n.t('Admin default')
 													: null,
-											tts.voice
-										]
-											.filter(Boolean)
-											.join(' · ') || $i18n.t('Default')}
-									>
-										{#if $config?.audio?.realtime?.enabled}
+												voiceAvatar
+													? $i18n.t('Custom avatar')
+													: $config?.audio?.realtime?.enabled
+														? $i18n.t('Default orb')
+														: null,
+												tts.voice
+											]
+												.filter(Boolean)
+												.join(' · ') || $i18n.t('Default')}
+										>
+											{#if $config?.audio?.realtime?.enabled}
+												<div
+													class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+												>
+													<div class="flex min-w-0 items-center">
+														<label
+															for="realtime-voice-input"
+															class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+														>
+															{$i18n.t('Realtime Voice')}
+														</label>
+													</div>
+													<TTSVoiceInput
+														className="w-full font-normal text-gray-900 dark:text-gray-100"
+														id="realtime-voice"
+														bind:value={voice.voice}
+														placeholder={$i18n.t('Admin default')}
+													/>
+												</div>
+											{/if}
+											<VoiceAvatarSettings
+												bind:value={voiceAvatar}
+												bind:file={avatarFile}
+												bind:animationFiles
+												disabled={loading || readOnly}
+											/>
 											<div
 												class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
 											>
 												<div class="flex min-w-0 items-center">
 													<label
-														for="realtime-voice-input"
+														for="tts-voice-input"
 														class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
 													>
-														{$i18n.t('Realtime Voice')}
+														{$i18n.t('TTS Voice')}
 													</label>
 												</div>
 												<TTSVoiceInput
 													className="w-full font-normal text-gray-900 dark:text-gray-100"
-													id="realtime-voice"
-													bind:value={voice.voice}
-													placeholder={$i18n.t('Admin default')}
+													bind:value={tts.voice}
+													{voices}
+													placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
 												/>
 											</div>
+										</ModelSettingsSection>
+										{#if capabilities.terminal && hasTerminal}
+											<TerminalSelector bind:terminalId />
 										{/if}
-										<VoiceAvatarSettings
-											bind:value={voiceAvatar}
-											bind:file={avatarFile}
-											bind:animationFiles
-											disabled={loading || readOnly}
-										/>
-										<div
-											class="grid min-h-8 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs sm:grid-cols-[8rem_minmax(0,1fr)]"
+									</div>
+								</fieldset>
+
+								<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
+									<div
+										class="flex w-full items-center gap-2 {($settings?.highContrastMode ?? false)
+											? ''
+											: 'opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60'}"
+									>
+										<button
+											type="button"
+											class="flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+											aria-expanded={showPreview}
+											on:click={() => (showPreview = !showPreview)}
 										>
-											<div class="flex min-w-0 items-center">
-												<div
-													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
-												>
-													{$i18n.t('TTS Voice')}
-												</div>
-											</div>
-											<TTSVoiceInput
-												className="w-full font-normal text-gray-900 dark:text-gray-100"
-												bind:value={tts.voice}
-												{voices}
-												placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
+											<span class="font-normal">{$i18n.t('JSON Preview')}</span>
+											<span aria-hidden="true"
+												>{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
+											>
+										</button>
+										<button
+											class="px-1.5 py-0.5 text-xs flex rounded-sm"
+											type="button"
+											on:click={async () => {
+												const copied = await copyToClipboard(
+													JSON.stringify(readOnly ? model : modelInfo, null, 2)
+												);
+												if (copied) {
+													toast.success($i18n.t('Copied to clipboard'));
+												}
+											}}
+										>
+											{$i18n.t('Copy')}
+										</button>
+									</div>
+									{#if showPreview}
+										<div class="pt-2">
+											<textarea
+												aria-label={$i18n.t('JSON Preview')}
+												class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
+												rows="8"
+												value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
+												disabled
+												readonly
 											/>
 										</div>
-									</ModelSettingsSection>
-									{#if capabilities.terminal && hasTerminal}
-										<TerminalSelector bind:terminalId />
 									{/if}
 								</div>
-							</fieldset>
-
-							<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
-								<div
-									class="flex w-full items-center gap-2 {($settings?.highContrastMode ?? false)
-										? ''
-										: 'opacity-30 transition-opacity hover:opacity-60 focus-within:opacity-60'}"
-								>
-									<button
-										type="button"
-										class="flex h-7 min-w-0 flex-1 items-center justify-between gap-3 rounded-sm text-start text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-										aria-expanded={showPreview}
-										on:click={() => (showPreview = !showPreview)}
-									>
-										<span class="font-normal">{$i18n.t('JSON Preview')}</span>
-										<span aria-hidden="true">{showPreview ? $i18n.t('Hide') : $i18n.t('Show')}</span
-										>
-									</button>
-									<button
-										class="px-1.5 py-0.5 text-xs flex rounded-sm"
-										type="button"
-										on:click={async () => {
-											const copied = await copyToClipboard(
-												JSON.stringify(readOnly ? model : modelInfo, null, 2)
-											);
-											if (copied) {
-												toast.success($i18n.t('Copied to clipboard'));
-											}
-										}}
-									>
-										{$i18n.t('Copy')}
-									</button>
-								</div>
-								{#if showPreview}
-									<div class="pt-2">
-										<textarea
-											class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
-											rows="8"
-											value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
-											disabled
-											readonly
-										/>
-									</div>
-								{/if}
 							</div>
 						</div>
-					</div>
-				</form>
+					</form>
+				{/if}
+			</div>
+			{#if !readOnly && !historical && (!edit || model)}
+				<div
+					class="flex shrink-0 items-center justify-end gap-2 py-2"
+					class:px-1={admin}
+					class:px-3={!admin}
+				>
+					{#if edit}
+						<input
+							form={formId}
+							type="text"
+							aria-label={$i18n.t('Commit message')}
+							placeholder={$i18n.t('Describe this change')}
+							class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
+							bind:value={commitMessage}
+						/>
+					{/if}
+					<button
+						form={formId}
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						type="submit"
+						disabled={loading || (edit && !configurationChanged)}
+					>
+						{edit ? $i18n.t('Save & Update') : $i18n.t('Save & Create')}
+						{#if loading}<Spinner className="size-3" />{/if}
+					</button>
+				</div>
 			{/if}
 		</div>
-		{#if !readOnly && !historical && (!edit || model)}
-			<div
-				class="flex shrink-0 items-center justify-end gap-2 py-2"
-				class:px-1={admin}
-				class:px-3={!admin}
-			>
-				{#if edit}
-					<input
-						form={formId}
-						type="text"
-						aria-label={$i18n.t('Commit message')}
-						placeholder={$i18n.t('Describe this change')}
-						class="min-w-0 flex-1 border-0 bg-transparent px-1 text-xs outline-hidden focus:ring-0"
-						bind:value={commitMessage}
-					/>
-				{/if}
-				<button
-					form={formId}
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-					type="submit"
-					disabled={loading || (edit && !configurationChanged)}
-				>
-					{edit ? $i18n.t('Save & Update') : $i18n.t('Save & Create')}
-					{#if loading}<Spinner className="size-3" />{/if}
-				</button>
-			</div>
-		{/if}
-	</div>
-{:else}
-	<div class="flex h-full w-full items-center justify-center" role="status">
-		<Spinner className="size-5" />
-		<span class="sr-only">{$i18n.t('Loading...')}</span>
-	</div>
-{/if}
+	{:else}
+		<div class="flex h-full w-full items-center justify-center" role="status">
+			<Spinner className="size-5" />
+			<span class="sr-only">{$i18n.t('Loading...')}</span>
+		</div>
+	{/if}
+</Comments>

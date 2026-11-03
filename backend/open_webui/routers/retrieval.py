@@ -135,13 +135,9 @@ log = logging.getLogger(__name__)
 
 TIKTOKEN_DISALLOWED_SPECIAL = ()
 
-##########################################
-#
 # Utility functions
-# Give us this day our relevant chunks, and lead us
-# not into hallucination, but deliver us from noise.
-#
-##########################################
+# Let us find what is true among the many voices,
+# and let us not mistake the loudest answer for the wisest.
 
 
 def get_ef(
@@ -240,11 +236,7 @@ def get_rf(
     return rf
 
 
-##########################################
-#
 # API routes
-#
-##########################################
 
 
 RETRIEVAL_CONFIG_KEYS = {
@@ -305,6 +297,9 @@ RETRIEVAL_CONFIG_KEYS = {
     'FILE_IMAGE_COMPRESSION_HEIGHT': 'file.image_compression_height',
     'FILE_IMAGE_COMPRESSION_WIDTH': 'file.image_compression_width',
     'FILE_MAX_COUNT': 'rag.file.max_count',
+    'KNOWLEDGE_MAX_UPLOAD_COUNT': 'knowledge.max_upload_count',
+    'KNOWLEDGE_MAX_FILE_COUNT': 'knowledge.max_file_count',
+    'KNOWLEDGE_MAX_FILE_SIZE': 'knowledge.max_file_size',
     'FILE_MAX_SIZE': 'rag.file.max_size',
     'FIRECRAWL_API_BASE_URL': 'web.loader.firecrawl_api_url',
     'FIRECRAWL_API_KEY': 'web.loader.firecrawl_api_key',
@@ -684,6 +679,9 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
+        'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
+        'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
         'FILE_IMAGE_COMPRESSION_HEIGHT': config['file.image_compression_height'],
         'ALLOWED_FILE_EXTENSIONS': config['rag.file.allowed_extensions'],
@@ -935,6 +933,9 @@ class ConfigForm(BaseModel):
     # File upload settings
     FILE_MAX_SIZE: Union[int, str | None] = None
     FILE_MAX_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_UPLOAD_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_FILE_COUNT: Union[int, str | None] = None
+    KNOWLEDGE_MAX_FILE_SIZE: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_WIDTH: Union[int, str | None] = None
     FILE_IMAGE_COMPRESSION_HEIGHT: Union[int, str | None] = None
     ALLOWED_FILE_EXTENSIONS: list[str] | None = None
@@ -998,9 +999,34 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     }
     if form_data.RAG_TOKENIZER_MODEL is not None:
         updates['rag.tokenizer_model'] = form_data.RAG_TOKENIZER_MODEL.strip()
-    for field in ('FILE_MAX_SIZE', 'FILE_MAX_COUNT', 'FILE_IMAGE_COMPRESSION_WIDTH', 'FILE_IMAGE_COMPRESSION_HEIGHT'):
+    for field in (
+        'FILE_MAX_SIZE',
+        'FILE_MAX_COUNT',
+        'KNOWLEDGE_MAX_UPLOAD_COUNT',
+        'KNOWLEDGE_MAX_FILE_COUNT',
+        'KNOWLEDGE_MAX_FILE_SIZE',
+        'FILE_IMAGE_COMPRESSION_WIDTH',
+        'FILE_IMAGE_COMPRESSION_HEIGHT',
+    ):
         if getattr(form_data, field) == '':
             updates[RETRIEVAL_CONFIG_KEYS[field]] = None
+
+    for field, label in (
+        ('KNOWLEDGE_MAX_UPLOAD_COUNT', 'Knowledge batch upload limit'),
+        ('KNOWLEDGE_MAX_FILE_COUNT', 'Knowledge file count limit'),
+        ('KNOWLEDGE_MAX_FILE_SIZE', 'Knowledge file size limit'),
+    ):
+        value = getattr(form_data, field)
+        if field in form_data.model_fields_set and value is None:
+            updates[RETRIEVAL_CONFIG_KEYS[field]] = None
+        if value not in (None, ''):
+            try:
+                value = int(value)
+                if value <= 0:
+                    raise ValueError
+            except (TypeError, ValueError):
+                raise HTTPException(400, f'{label} must be a positive integer.')
+            updates[RETRIEVAL_CONFIG_KEYS[field]] = value
 
     # Unload the previous internal reranker before applying its new settings.
     if config['rag.reranking_engine'] == '':
@@ -1116,6 +1142,9 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         # File upload settings
         'FILE_MAX_SIZE': config['rag.file.max_size'],
         'FILE_MAX_COUNT': config['rag.file.max_count'],
+        'KNOWLEDGE_MAX_UPLOAD_COUNT': config['knowledge.max_upload_count'],
+        'KNOWLEDGE_MAX_FILE_COUNT': config['knowledge.max_file_count'],
+        'KNOWLEDGE_MAX_FILE_SIZE': config['knowledge.max_file_size'],
         'FILE_IMAGE_COMPRESSION_WIDTH': config['file.image_compression_width'],
         'FILE_IMAGE_COMPRESSION_HEIGHT': config['file.image_compression_height'],
         'ALLOWED_FILE_EXTENSIONS': config['rag.file.allowed_extensions'],
@@ -1206,11 +1235,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
     }
 
 
-####################################
-#
 # Document process and retrieval
-#
-####################################
 
 
 def can_merge_chunks(a: Document, b: Document) -> bool:
@@ -2927,11 +2952,7 @@ async def query_collection_handler(
         )
 
 
-####################################
-#
 # Vector DB operations
-#
-####################################
 
 
 class DeleteForm(BaseModel):
@@ -2969,13 +2990,7 @@ async def delete_entries_from_collection(
                     detail=ERROR_MESSAGES.DEFAULT('File has no hash; cannot delete vector entries by hash.'),
                 )
 
-            # Pre-existing bug: this used `metadata=` which is not a
-            # parameter on `VectorDBBase.delete` nor on any backend
-            # implementation, so the call always raised TypeError that
-            # was silently swallowed by the surrounding `except
-            # Exception` and the endpoint reported `{'status': False}`
-            # for every request. Use `filter` to actually do what the
-            # endpoint name promises.
+            # Vector deletion accepts filter, not metadata; passing the wrong keyword raises TypeError.
             await ASYNC_VECTOR_DB_CLIENT.delete(
                 collection_name=form_data.collection_name,
                 filter={'hash': hash},

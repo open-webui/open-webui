@@ -44,18 +44,16 @@ from open_webui.routers.retrieval import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, validate_access_grants
 from open_webui.utils.access_control.files import has_access_to_file
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_by_id
 from open_webui.utils.json_codec import JSONCodec
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
 router = APIRouter()
 
-############################
 # getKnowledgeBases
-############################
 
 PAGE_ITEM_COUNT = 30
 
@@ -79,9 +77,7 @@ async def delete_file_resource(file: FileModel, db: AsyncSession) -> bool:
     return result
 
 
-############################
 # Knowledge Base Embedding
-############################
 
 # Knowledge that sits unread serves no one. Let what is
 # stored here find the ones who need it.
@@ -311,9 +307,7 @@ async def search_knowledge_files(
     return await Knowledges.search_knowledge_files(filter=filter, skip=skip, limit=limit, db=db)
 
 
-############################
-# CreateNewKnowledge
-############################
+# Create New Knowledge
 
 
 @router.post('/create', response_model=KnowledgeResponse | None)
@@ -322,10 +316,7 @@ async def create_new_knowledge(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations (has_permission, filter_allowed_access_grants, insert_new_knowledge) manage their own sessions.
-    # This prevents holding a connection during embed_knowledge_base_metadata()
-    # which makes external embedding API calls (1-5+ seconds).
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     if user.role != 'admin' and not await has_permission(
         user.id, 'workspace.knowledge', await Config.get('user.permissions')
     ):
@@ -367,9 +358,7 @@ async def create_new_knowledge(
         )
 
 
-############################
-# ReindexKnowledgeFiles
-############################
+# Reindex Knowledge Files
 
 
 @router.post('/reindex', response_model=bool)
@@ -462,9 +451,7 @@ async def reindex_knowledge_files(
     return True
 
 
-############################
-# ReindexKnowledgeBases
-############################
+# Reindex Knowledge Bases
 
 
 @router.post('/metadata/reindex', response_model=dict)
@@ -495,9 +482,7 @@ async def reindex_knowledge_base_metadata_embeddings(
     return {'total': len(knowledge_bases), 'success': success_count}
 
 
-############################
 # External Knowledge Sources
-############################
 
 
 class ExternalKnowledgeSourceForm(BaseModel):
@@ -1079,9 +1064,7 @@ async def update_external_knowledge_source(
     return updated
 
 
-############################
-# GetKnowledgeById
-############################
+# Get Knowledge By Id
 
 
 class KnowledgeFilesResponse(KnowledgeResponse):
@@ -1131,9 +1114,7 @@ async def get_knowledge_by_id(id: str, user=Depends(get_verified_user), db: Asyn
         )
 
 
-############################
-# UpdateKnowledgeById
-############################
+# Update Knowledge By Id
 
 
 @router.post('/{id}/update', response_model=KnowledgeFilesResponse | None)
@@ -1143,10 +1124,7 @@ async def update_knowledge_by_id(
     form_data: KnowledgeForm,
     user=Depends(get_verified_user),
 ):
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations manage their own short-lived sessions internally.
-    # This prevents holding a connection during embed_knowledge_base_metadata()
-    # which makes external embedding API calls (1-5+ seconds).
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -1168,6 +1146,12 @@ async def update_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    if form_data.meta is not None:
+        if knowledge.user_id != user.id and user.role != 'admin':
+            raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
+        if is_external_knowledge(knowledge):
+            external_knowledge_error()
 
     knowledge = await Knowledges.update_knowledge_by_id(id=id, form_data=form_data)
     if knowledge:
@@ -1197,9 +1181,7 @@ async def update_knowledge_by_id(
         )
 
 
-############################
-# UpdateKnowledgeAccessById
-############################
+# Update Knowledge Access By Id
 
 
 class KnowledgeAccessGrantsForm(BaseModel):
@@ -1261,9 +1243,7 @@ async def update_knowledge_access_by_id(
     return response
 
 
-############################
-# GetPendingKnowledgeFiles
-############################
+# Get Pending Knowledge Files
 
 
 @router.get('/{id}/files/pending')
@@ -1283,10 +1263,7 @@ async def get_pending_knowledge_files(
     When ``stream=true``, returns an SSE stream that polls every 3 seconds
     and emits the current pending file list.  Closes when no files remain.
     """
-    # NOTE: We intentionally do NOT use Depends(get_async_session) here.
-    # Database operations manage their own short-lived sessions internally.
-    # Holding a session here would keep a connection for the entire stream
-    # (up to an hour) and exhaust the connection pool under concurrent load.
+    # Let DB helpers own short-lived sessions so remote calls and streams do not hold pool connections.
     knowledge = await Knowledges.get_knowledge_by_id(id=id)
     if not knowledge:
         raise HTTPException(
@@ -1322,15 +1299,29 @@ async def get_pending_knowledge_files(
                 break
             await asyncio.sleep(3)
 
+            # Access can be revoked while the stream is open.
+            refreshed_user = await get_verified_user_by_id(user.id)
+            if not refreshed_user:
+                break
+            if not (
+                refreshed_user.role == 'admin'
+                or knowledge.user_id == refreshed_user.id
+                or await AccessGrants.has_access(
+                    user_id=refreshed_user.id,
+                    resource_type='knowledge',
+                    resource_id=knowledge_id,
+                    permission='read',
+                )
+            ):
+                break
+
     return StreamingResponse(
         event_stream(id),
         media_type='text/event-stream',
     )
 
 
-############################
-# GetKnowledgeFilesById
-############################
+# Get Knowledge Files By Id
 
 
 @router.get('/{id}/files', response_model=KnowledgeFileListResponse)
@@ -1397,9 +1388,66 @@ async def get_knowledge_files_by_id(
     return await Knowledges.search_files_by_id(id, user.id, filter=filter, skip=skip, limit=limit, db=db)
 
 
-############################
-# AddFileToKnowledge
-############################
+# Add File To Knowledge
+
+
+async def check_knowledge_upload_limits(
+    knowledge_id: str,
+    count: int,
+    *,
+    batch: bool = False,
+    file_size: int | None = None,
+    exclude_file_ids: list[str] | None = None,
+    db=None,
+) -> None:
+    if batch:
+        batch_limit = await Config.get('knowledge.max_upload_count')
+        if batch_limit is not None and count > int(batch_limit):
+            raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
+
+    knowledge = await Knowledges.get_knowledge_by_id(knowledge_id, db=db)
+    if not knowledge:
+        raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
+    limits = await Knowledges.get_file_limits(knowledge.meta)
+
+    if file_size is not None:
+        for max_size in (await Config.get('rag.file.max_size'), limits['max_file_size']):
+            if max_size and file_size > int(max_size) * 1024 * 1024:
+                raise HTTPException(413, ERROR_MESSAGES.FILE_TOO_LARGE(size=f'{max_size} MB'))
+
+    limit = limits['max_file_count']
+    if limit is not None and count > 0:
+        current_count = await Knowledges.get_file_count_by_id(
+            knowledge_id, include_pending=True, exclude_file_ids=exclude_file_ids, db=db
+        )
+        if current_count + count > int(limit):
+            raise HTTPException(400, f'Knowledge base file limit exceeded ({limit} files maximum).')
+
+
+class KnowledgeUploadValidationForm(BaseModel):
+    count: int = Field(ge=0)
+    file_size: int | None = Field(default=None, ge=0)
+    removed_file_ids: list[str] = Field(default_factory=list)
+
+
+@router.post('/{id}/files/validate')
+async def validate_knowledge_upload(
+    id: str,
+    form_data: KnowledgeUploadValidationForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await _verify_knowledge_write_access(id, user, db)
+    # This is a preflight only. Actual additions recheck capacity without removal credits.
+    await check_knowledge_upload_limits(
+        id,
+        form_data.count,
+        batch=True,
+        file_size=form_data.file_size,
+        exclude_file_ids=form_data.removed_file_ids,
+        db=db,
+    )
+    return {'status': True}
 
 
 class KnowledgeFileIdForm(BaseModel):
@@ -1462,24 +1510,34 @@ async def add_file_to_knowledge_by_id(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
-    # Add content to the vector database
+    already_linked = await Knowledges.has_file(knowledge_id=id, file_id=form_data.file_id, db=db)
+    if not already_linked:
+        await check_knowledge_upload_limits(
+            id, 1, batch=True, file_size=(file.meta or {}).get('size', 0), exclude_file_ids=[form_data.file_id], db=db
+        )
+
+    linked = None
     try:
+        # Claim capacity atomically before indexing into the knowledge collection.
+        if not already_linked:
+            linked = await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=form_data.file_id,
+                user_id=user.id,
+                directory_id=form_data.directory_id,
+                db=db,
+            )
+            if not linked:
+                raise ValueError(f'Failed to link file {form_data.file_id} to knowledge {id}')
         await process_file(
             request,
             ProcessFileForm(file_id=form_data.file_id, collection_name=id),
             user=user,
             db=db,
         )
-
-        # Add file to knowledge base
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=form_data.file_id,
-            user_id=user.id,
-            directory_id=form_data.directory_id,
-            db=db,
-        )
     except Exception as e:
+        if linked:
+            await Knowledges.remove_file_from_knowledge_by_id(id, form_data.file_id, db=db)
         log.debug(e)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -1590,9 +1648,7 @@ async def update_file_from_knowledge_by_id(
         )
 
 
-############################
-# RemoveFileFromKnowledge
-############################
+# Remove File From Knowledge
 
 
 @router.post('/{id}/file/remove', response_model=KnowledgeFilesResponse | None)
@@ -1679,9 +1735,7 @@ async def remove_file_from_knowledge_by_id(
         )
 
 
-############################
-# DeleteKnowledgeById
-############################
+# Delete Knowledge By Id
 
 
 @router.delete('/{id}/delete', response_model=bool)
@@ -1769,9 +1823,7 @@ async def delete_knowledge_by_id(
     return result
 
 
-############################
-# ResetKnowledgeById
-############################
+# Reset Knowledge By Id
 
 
 @router.post('/{id}/reset', response_model=KnowledgeResponse | None)
@@ -1831,9 +1883,7 @@ async def reset_knowledge_by_id(
     return knowledge
 
 
-############################
-# SyncKnowledgeDiff
-############################
+# Sync Knowledge Diff
 
 
 class FileManifestEntry(BaseModel):
@@ -1870,7 +1920,7 @@ async def sync_knowledge_diff(
     """
     await _verify_knowledge_write_access(id, user, db)
 
-    # ── Index existing state ──
+    # Index existing state
     existing_directories = await Knowledges.get_all_directories(id, db=db)
 
     # Build directory path lookups
@@ -1911,7 +1961,7 @@ async def sync_knowledge_diff(
             'checksum': stored_checksum,
         }
 
-    # ── Diff files ──
+    # Diff files
     added: list[dict] = []
     modified: list[dict] = []
     deleted: list[dict] = []
@@ -1943,7 +1993,19 @@ async def sync_knowledge_diff(
         if key not in manifest_keys:
             deleted.append({'file_id': file_info['file_id'], 'filename': key[1]})
 
-    # ── Diff directories ──
+    changed_keys = {(entry['path'], entry['filename']) for entry in added + modified}
+    await check_knowledge_upload_limits(
+        id,
+        len(added) + len(modified),
+        file_size=max(
+            (entry.size for entry in form_data.manifest if (entry.path, entry.filename) in changed_keys), default=0
+        ),
+        batch=True,
+        exclude_file_ids=[entry['file_id'] for entry in deleted] + [entry['stale_file_id'] for entry in modified],
+        db=db,
+    )
+
+    # Diff directories
     required_directory_paths: set[str] = set()
     for entry in form_data.manifest:
         if entry.path:
@@ -1967,9 +2029,7 @@ async def sync_knowledge_diff(
     )
 
 
-############################
-# SyncKnowledgeCleanup
-############################
+# Sync Knowledge Cleanup
 
 
 class SyncCleanupForm(BaseModel):
@@ -1990,7 +2050,7 @@ async def sync_knowledge_cleanup(
     """
     await _verify_knowledge_write_access(id, user, db)
 
-    # ── Remove deleted files ──
+    # Remove deleted files
     for file_id in form_data.file_ids:
         file = await Files.get_file_by_id(file_id, db=db)
         if not file:
@@ -2017,7 +2077,7 @@ async def sync_knowledge_cleanup(
         ):
             await delete_file_resource(file, db)
 
-    # ── Remove orphaned directories (children before parents) ──
+    # Remove orphaned directories (children before parents)
     for dir_id in reversed(form_data.dir_ids):
         # Only delete directories that belong to this knowledge base.
         directory = await Knowledges.get_directory_by_id(dir_id, db=db)
@@ -2028,9 +2088,7 @@ async def sync_knowledge_cleanup(
     return {'status': True}
 
 
-############################
-# AddFilesToKnowledge
-############################
+# Add Files To Knowledge
 
 
 @router.post('/{id}/files/batch/add', response_model=KnowledgeFilesResponse | None)
@@ -2068,6 +2126,10 @@ async def add_files_to_knowledge_batch(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
+
+    batch_limit = await Config.get('knowledge.max_upload_count')
+    if batch_limit is not None and len(form_data) > int(batch_limit):
+        raise HTTPException(400, f'You can only upload a maximum of {batch_limit} file(s) per batch.')
 
     for directory_id in {form.directory_id for form in form_data if form.directory_id}:
         await _verify_directory_in_knowledge(id, directory_id, db, detail='Target directory not found.')
@@ -2112,8 +2174,29 @@ async def add_files_to_knowledge_batch(
     new_file_ids = {form.file_id for form in new_entries}
     files = [f for f in files if f.id in new_file_ids]
 
-    # Process files
+    await check_knowledge_upload_limits(
+        id,
+        len(files),
+        file_size=max(((file.meta or {}).get('size', 0) or 0 for file in files), default=0),
+        exclude_file_ids=list(new_file_ids),
+        db=db,
+    )
+
+    # Claim slots before embedding; release them if processing fails.
+    reserved_ids = []
+    dir_map = {form.file_id: form.directory_id for form in new_entries}
     try:
+        for file in files:
+            linked = await Knowledges.add_file_to_knowledge_by_id(
+                knowledge_id=id,
+                file_id=file.id,
+                user_id=user.id,
+                directory_id=dir_map.get(file.id),
+                db=db,
+            )
+            if not linked:
+                raise ValueError(f'Failed to link file {file.id} to knowledge {id}')
+            reserved_ids.append(file.id)
         result = await process_files_batch(
             request=request,
             form_data=BatchProcessFilesForm(files=files, collection_name=id),
@@ -2121,20 +2204,14 @@ async def add_files_to_knowledge_batch(
             db=db,
         )
     except Exception as e:
+        for file_id in reserved_ids:
+            await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
         log.error(f'add_files_to_knowledge_batch: Exception occurred: {e}', exc_info=True)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-    # Only add files that were successfully processed
     successful_file_ids = [r.file_id for r in result.results if r.status == 'completed']
-    dir_map = {form.file_id: form.directory_id for form in new_entries}
-    for file_id in successful_file_ids:
-        await Knowledges.add_file_to_knowledge_by_id(
-            knowledge_id=id,
-            file_id=file_id,
-            user_id=user.id,
-            directory_id=dir_map.get(file_id),
-            db=db,
-        )
+    for file_id in set(reserved_ids) - set(successful_file_ids):
+        await Knowledges.remove_file_from_knowledge_by_id(id, file_id, db=db)
 
     # If there were any errors, include them in the response
     if result.errors:
@@ -2154,9 +2231,7 @@ async def add_files_to_knowledge_batch(
     )
 
 
-############################
-# ExportKnowledgeById
-############################
+# Export Knowledge By Id
 
 
 @router.get('/{id}/export')
@@ -2202,9 +2277,7 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
     )
 
 
-############################
 # Directory endpoints
-############################
 
 
 class KnowledgeDirectoryCreateForm(BaseModel):

@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
 # Build and run the Open WebUI Docker container locally.
-# ---------------------------------------------------------------------------
 
 readonly IMAGE="open-webui"
 readonly CONTAINER="open-webui"

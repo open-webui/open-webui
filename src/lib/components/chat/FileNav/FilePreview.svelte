@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
+	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
@@ -27,6 +28,7 @@
 	export let fileAudioUrl: string | null = null;
 	export let filePdfData: ArrayBuffer | null = null;
 	export let fileSqliteData: ArrayBuffer | null = null;
+	export let fileModelData: ArrayBuffer | null = null;
 	export let fileDocxData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
 
@@ -204,7 +206,7 @@
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
 
-	// ── Shiki code highlighting (SVG only) ──────────────────────────────
+	// Shiki code highlighting (SVG only)
 	let highlightedHtml: string | null = null;
 	let highlightingFile: string | null = null;
 
@@ -229,7 +231,7 @@
 		highlightedHtml = null;
 	}
 
-	// ── JSON parsing ────────────────────────────────────────────────────
+	// JSON parsing
 	let parsedJson: unknown = undefined;
 	let jsonError: string | null = null;
 
@@ -246,7 +248,7 @@
 		jsonError = null;
 	}
 
-	// ── Notebook parsing ─────────────────────────────────────────────────
+	// Notebook parsing
 	let parsedNotebook: Record<string, unknown> | null = null;
 
 	$: if (isNotebook && fileContent !== null) {
@@ -284,6 +286,7 @@
 <div
 	class="flex-1 {fileImageUrl !== null ||
 	fileDocxData !== null ||
+	fileModelData !== null ||
 	filePdfData !== null ||
 	(fileOfficeSlides !== null && fileOfficeSlides.length > 0)
 		? 'overflow-hidden'
@@ -330,6 +333,32 @@
 			listLabel={isPptx ? 'Slides' : 'Pages'}
 			className="w-full h-full"
 		/>
+	{:else if fileModelData !== null}
+		{#key fileModelData}
+			{#await import('../../common/ModelPreview.svelte')}
+				<div class="flex h-full items-center justify-center"><Spinner className="size-4" /></div>
+			{:then { default: ModelPreview }}
+				<ModelPreview
+					data={fileModelData}
+					path={selectedFile ?? ''}
+					loadResource={baseUrl
+						? async (path, signal) => {
+								const result = await downloadFileBlob(
+									baseUrl,
+									apiKey,
+									path,
+									chatId ?? undefined,
+									signal
+								);
+								if (!result) throw new Error('Could not load model resource.');
+								return result.blob;
+							}
+						: undefined}
+				/>
+			{:catch}
+				<div class="p-4 text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Preview failed')}</div>
+			{/await}
+		{/key}
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
@@ -341,14 +370,14 @@
 			</div>
 			{#if excelSheetNames.length > 1}
 				<div
-					class="flex items-center gap-1 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 overflow-x-auto"
+					class="flex items-center gap-1 py-1.5 px-1.5 border-t border-gray-100/40 dark:border-gray-800/25 overflow-x-auto"
 				>
 					{#each excelSheetNames as sheet}
 						<button
-							class="shrink-0 px-3 py-1 text-xs rounded-md transition-colors
+							class="shrink-0 px-2 py-1 text-xs rounded-md transition-colors
 								{selectedExcelSheet === sheet
-								? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-normal'
-								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200 font-normal'
+								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 							on:click={() => onSheetChange?.(sheet)}
 						>
 							{sheet}
@@ -487,7 +516,7 @@
 			</div>
 		{:else if isJson && !showRaw && jsonError}
 			<div class="p-3 text-xs">
-				<div class="text-red-500 mb-2">
+				<div class="text-gray-500 dark:text-gray-400 mb-2">
 					{$i18n.t('JSON parse error: {{error}}', { error: jsonError })}
 				</div>
 				<pre
@@ -513,6 +542,7 @@
 			</div>
 		{:else if editing}
 			<textarea
+				aria-label={$i18n.t('File content')}
 				bind:this={editTextarea}
 				bind:value={editContent}
 				class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
@@ -661,7 +691,7 @@
 		padding-left: 1.5em;
 		margin: 0.5em 0;
 	}
-	/* ── Shiki code highlighting ─────────────────────────────────── */
+	/* Shiki code highlighting */
 	.shiki-preview :global(pre.shiki) {
 		margin: 0;
 		padding: 0.75rem 1rem;

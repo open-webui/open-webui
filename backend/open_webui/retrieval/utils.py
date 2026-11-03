@@ -243,12 +243,7 @@ def _get_content_from_url_sync(request, url: str, config: dict):
     # Validate URL before making any request (blocks private IPs, non-HTTP, filter list)
     validate_url(url)
 
-    # YouTube URLs (including youtu.be short links) should go straight to
-    # YoutubeLoader, which uses youtube-transcript-api and never needs the
-    # HTTP response body.  Probing the URL first is harmful for short URLs:
-    # youtu.be returns a 303 redirect with Content-Type: application/binary
-    # when allow_redirects=False, causing the binary-content path to run
-    # and produce empty docs → HTTP 400.
+    # Send YouTube URLs directly to YoutubeLoader; probing youtu.be can misclassify its 303 as binary.
     if is_youtube_url(url):
         loader = get_loader(request, url, config)
         docs = loader.load()
@@ -814,11 +809,7 @@ async def query_collection_with_hybrid_search(
         if native_task_results and all(result is not None for result in native_task_results):
             return merge_and_sort_query_results(native_task_results, k=k)
 
-    # Fetch every collection's contents once up front so the
-    # per-query/per-document loop below can reuse them. Each fetch
-    # offloads to a worker thread, so run them concurrently with
-    # `asyncio.gather` instead of awaiting them serially — otherwise
-    # latency scales linearly with `len(collection_names)`.
+    # Fetch collections concurrently once, then reuse the results across queries and documents.
     log.debug(
         'query_collection_with_hybrid_search: prefetching %d collections',
         len(collection_names),
@@ -1371,8 +1362,15 @@ async def filter_accessible_collections(
 
 
 def filter_source_metadata(metadata: dict) -> dict:
-    """Keep only the chunk metadata keys the operator allowed the model to see."""
-    return {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
+    """Keep allowed metadata; expose uploaded-file pages as 1-based for the model."""
+    result = {key: metadata[key] for key in RAG_SOURCE_METADATA_KEYS if metadata.get(key) is not None}
+    if metadata.get('file_id') and not metadata.get('external'):
+        page = result.get('page')
+        if type(page) is float and page.is_integer():
+            page = int(page)
+        if type(page) is int and page >= 0:
+            result['page'] = page + 1
+    return result
 
 
 async def get_sources_from_items(
