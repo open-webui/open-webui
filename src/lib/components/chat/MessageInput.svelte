@@ -50,6 +50,7 @@
 	import {
 		convertHeicToJpeg,
 		isHeicImage,
+		normalizeImageFile,
 		compressImage,
 		createMessagesList,
 		extractContentFromFile,
@@ -1288,6 +1289,7 @@
 				return;
 			}
 
+			file = await normalizeImageFile(file);
 			if (isRasterImageContentType(file['type']) || isHeicImage(file)) {
 				if (visionCapableModels.length === 0) {
 					toast.error($i18n.t('Selected model(s) do not support image inputs'));

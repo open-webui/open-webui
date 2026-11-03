@@ -29,6 +29,7 @@
 	import {
 		convertHeicToJpeg,
 		isHeicImage,
+		normalizeImageFile,
 		compressImage,
 		extractInputVariables,
 		getAge,
@@ -412,6 +413,7 @@
 				return;
 			}
 
+			file = await normalizeImageFile(file);
 			const image = file.type.startsWith('image/') || isHeicImage(file);
 			uploadFileHandler(file, !image, image);
 		});

@@ -2101,6 +2101,29 @@ export const getAge = (birthDate) => {
 	return age.toString();
 };
 
+export const normalizeImageFile = async (file: File): Promise<File> => {
+	if (file.type && file.type !== 'application/octet-stream') return file;
+
+	// Some drag sources (e.g. macOS Photos) omit both the MIME type and extension.
+	try {
+		const header = String.fromCharCode(...new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+		let type = '';
+		if (header.startsWith('\xff\xd8\xff')) type = 'image/jpeg';
+		else if (header.startsWith('\x89PNG\r\n\x1a\n')) type = 'image/png';
+		else if (header.startsWith('GIF87a') || header.startsWith('GIF89a')) type = 'image/gif';
+		else if (header.startsWith('RIFF') && header.slice(8, 12) === 'WEBP') type = 'image/webp';
+		else if (header.slice(4, 8) === 'ftyp') {
+			const brand = header.slice(8, 12);
+			if (['avif', 'avis'].includes(brand)) type = 'image/avif';
+			else if (['heic', 'heix', 'hevc', 'hevx', 'heim', 'heis'].includes(brand))
+				type = 'image/heic';
+		}
+		return type ? new File([file], file.name, { type, lastModified: file.lastModified }) : file;
+	} catch {
+		return file;
+	}
+};
+
 const HEIC_EXTENSION_PATTERN = /\.(heic|heif)$/i;
 
 // Browsers label HEIC photos inconsistently (Firefox uses image/heif, some leave it empty).
