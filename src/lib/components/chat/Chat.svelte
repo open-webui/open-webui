@@ -2788,7 +2788,9 @@
 		autoScroll = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
-		await restoreChatInput(sessionStorage.getItem('chat-input'));
+		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem('chat-input')))
+			? prompt
+			: null;
 		const previousChatId = $chatId;
 		const previousMessageId = history.currentId;
 		await resetInput();
@@ -2860,6 +2862,8 @@
 
 		loading = false;
 		await tick();
+		// Mounting the editor clears prompt, so apply the saved text afterward.
+		if (chatInputPrompt !== null) messageInput?.setText(chatInputPrompt);
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
