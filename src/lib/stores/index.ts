@@ -8,6 +8,7 @@ import { APP_NAME } from '$lib/constants';
 import { type Writable, derived, get, writable } from 'svelte/store';
 import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
+import type { SearchKind } from '$lib/apis/search';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue } from '$lib/utils/audio';
@@ -171,6 +172,7 @@ export type SettingsModalRequest = {
 
 export const showSidebar = writable(false);
 export const showSearch = writable(false);
+export const searchPreset: Writable<{ kind: SearchKind; scope: string } | null> = writable(null);
 export const showSettings: Writable<boolean | string | SettingsModalRequest> = writable(false);
 export const showChangelog = writable(false);
 

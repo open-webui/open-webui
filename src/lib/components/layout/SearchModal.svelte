@@ -2,7 +2,7 @@
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
-	import { folders, mobile, settings, tags } from '$lib/stores';
+	import { folders, mobile, searchPreset, settings, tags } from '$lib/stores';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -95,6 +95,16 @@
 			savedPreview === null
 				? window.matchMedia('(min-width: 768px)').matches
 				: savedPreview === 'true';
+	}
+	let previousFilters: { kind: 'all' | SearchKind; scope: string } | null = null;
+	$: if (show && $searchPreset) {
+		previousFilters = { kind, scope };
+		({ kind, scope } = $searchPreset);
+		searchPreset.set(null);
+	}
+	$: if (!show && previousFilters) {
+		({ kind, scope } = previousFilters);
+		previousFilters = null;
 	}
 	$: schedule(show, query, kind, sharing, scope);
 
