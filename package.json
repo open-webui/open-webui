@@ -150,7 +150,7 @@
 		"prosemirror-tables": "^1.7.1",
 		"prosemirror-view": "1.42.6",
 		"pyodide": "^314.0.3",
-		"shiki": "^4.0.1",
+		"shiki": "^4.5.0",
 		"socket.io-client": "^4.8.3",
 		"sortablejs": "^1.15.6",
 		"sql.js": "^1.14.1",
