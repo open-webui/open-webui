@@ -1520,6 +1520,7 @@ async def chat_completion(
 
                     # Insert chat files from user message if any
                     user_message_files = user_message.get('files', [])
+                    print("Hello, World") # code change testing for back-end. added breakpoint for process understanding
                     if user_message_files:
                         try:
                             await Chats.insert_chat_files(
