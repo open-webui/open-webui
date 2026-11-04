@@ -1559,9 +1559,24 @@ async def generate_chat_completion(
     if not is_responses and 'messages' in payload:
         for message in payload['messages']:
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
-                message['content'] = ''.join(
-                    part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
+                parts = message['content']
+                text = ''.join(
+                    part.get('text', '') for part in parts if part.get('type') in ('input_text', 'text')
                 )
+                # Prompt-caching markers (e.g. Anthropic `cache_control` used via
+                # OpenAI-compatible gateways) must stay on a content block, so keep
+                # the flattened text in block form when a marker is present.
+                cache_control = None
+                for part in reversed(parts):
+                    if isinstance(part, dict) and part.get('cache_control'):
+                        cache_control = part['cache_control']
+                        break
+                if cache_control is not None and text:
+                    message['content'] = [
+                        {'type': 'text', 'text': text, 'cache_control': cache_control}
+                    ]
+                else:
+                    message['content'] = text
 
     is_streaming_request = bool(payload.get('stream', False))
     if not is_streaming_request:
