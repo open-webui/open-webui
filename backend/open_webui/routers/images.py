@@ -203,7 +203,7 @@ async def set_image_model(request: Request, model: str):
 async def get_image_model(request):
     image_config = await get_image_config()
     if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'dall-e-2'
+        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'gpt-image-2'
     elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
         return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'imagen-3.0-generate-002'
     elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
@@ -366,10 +366,9 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
     try:
         if image_config.IMAGE_GENERATION_ENGINE == 'openai':
             return [
-                {'id': 'dall-e-2', 'name': 'DALL·E 2'},
-                {'id': 'dall-e-3', 'name': 'DALL·E 3'},
                 {'id': 'gpt-image-1', 'name': 'GPT-IMAGE 1'},
                 {'id': 'gpt-image-1.5', 'name': 'GPT-IMAGE 1.5'},
+                {'id': 'gpt-image-2', 'name': 'GPT-IMAGE 2'},
             ]
         elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
             return [
