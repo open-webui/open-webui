@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - ✉️ **Non-ASCII email addresses.** The sign-up page and the add and edit user dialogs now accept email addresses with non-ASCII characters. [#33693](https://github.com/open-webui/open-webui/pull/33693), [#33681](https://github.com/open-webui/open-webui/issues/33681)
 - ⌨️ **Faster typing after large pastes.** Typing in the chat input after pasting 16,000 lines of text is now about 117 times faster, down from 8.6 seconds to 74 milliseconds per keystroke. [#33729](https://github.com/open-webui/open-webui/pull/33729), [#12087](https://github.com/open-webui/open-webui/issues/12087)
+- ⏱️ **Faster large chats.** Large chats now open about twice as fast. [#33665](https://github.com/open-webui/open-webui/pull/33665)
 - 🏎️ **Faster chat access checks.** Sending messages, typing indicators, shared links, comments and file access no longer load the whole conversation just to check who may access it, which helps most on large chats. [#33667](https://github.com/open-webui/open-webui/pull/33667), [#33669](https://github.com/open-webui/open-webui/pull/33669)
+- 🚀 **Faster channels.** The channel list, the channel messages and the replied-to messages in a channel now load much faster, especially with many channels or many replies. [#33690](https://github.com/open-webui/open-webui/pull/33690), [#33691](https://github.com/open-webui/open-webui/pull/33691), [#33688](https://github.com/open-webui/open-webui/pull/33688)
 - 🗂️ **Faster sidebar chat list.** The chat list in the sidebar now appears as soon as its own data is ready instead of waiting for the channel list. [#33686](https://github.com/open-webui/open-webui/pull/33686)
 - 🧮 **Faster Redis filter lookups.** With Redis enabled, chat requests now look up the filters of a model faster. [#33668](https://github.com/open-webui/open-webui/pull/33668)
 - 📄 **MinerU 4.1 support.** The MinerU document loader in local mode now works with MinerU 4.1 servers, which previously failed on every document. [#33719](https://github.com/open-webui/open-webui/pull/33719), [#33718](https://github.com/open-webui/open-webui/issues/33718)
@@ -21,8 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- 🛡️ **Security Advisory**: This release contains **security fixes**. We **strongly recommend updating** all deployments **as soon as possible** to have the latest security fixes in place. These fixes are **not listed in this changelog**; we will publish the security advisories for them immediately following CVE assignment. [Advisories](https://github.com/open-webui/open-webui/security)
 - 🔐 **Terminal Session authentication.** Terminal connections set to Session authentication now accept an API key, so Verify Connection, the policy settings and the terminal tools work again. [#33699](https://github.com/open-webui/open-webui/pull/33699), [#30001](https://github.com/open-webui/open-webui/issues/30001), [#33579](https://github.com/open-webui/open-webui/issues/33579)
+- 🗓️ **Automation schedule examples.** Models creating automations through the built-in tool no longer hit "Invalid RRULE" errors caused by a wrong example schedule format. [#33732](https://github.com/open-webui/open-webui/pull/33732), [#33730](https://github.com/open-webui/open-webui/issues/33730)
 - 📖 **File read size limit.** Reading a file by line range now stops at the same size limit as other reads, so one read can no longer overflow the context window of the model. [#33696](https://github.com/open-webui/open-webui/pull/33696), [#33607](https://github.com/open-webui/open-webui/issues/33607)
+- 🎨 **OpenAI image default model.** Image generation with the OpenAI engine now defaults to GPT-IMAGE 2 instead of the shut-down DALL·E 2, and the shut-down DALL·E models are no longer offered. [#33694](https://github.com/open-webui/open-webui/pull/33694), [#33578](https://github.com/open-webui/open-webui/issues/33578)
+- 🧠 **Complete compaction summaries.** Context compaction summaries are no longer cut off at 1000 tokens, which could leave reasoning models with an empty or truncated summary. [#33726](https://github.com/open-webui/open-webui/pull/33726)
+- 💾 **Prompt cache on tool results.** Tool results sent through OpenAI-compatible gateways now keep their prompt cache marker, so Anthropic models behind OpenRouter or LiteLLM can cache the prefix in tool loops. [#33757](https://github.com/open-webui/open-webui/pull/33757), [#33755](https://github.com/open-webui/open-webui/issues/33755)
 - 💬 **Temporary chat button with tabs.** The Temporary Chat button is back on new chats when the tabbed layout is on. [#33680](https://github.com/open-webui/open-webui/pull/33680)
 - 🖼️ **Stable MCP app views.** MCP apps in chat no longer reload and lose their state while the message around them updates. [Commit](https://github.com/open-webui/open-webui/commit/b79a778c030615729726a905cad6b5d5a7065ec3)
 - 🔎 **External knowledge base queries.** External knowledge bases now search with every generated query at the same time instead of using only the results of the first one. [#33704](https://github.com/open-webui/open-webui/pull/33704), [#33184](https://github.com/open-webui/open-webui/issues/33184)
@@ -31,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📜 **Quieter MCP connection logs.** Logs no longer fill with a warning for every MCP server a user has not connected yet each time they load Open WebUI. [#33663](https://github.com/open-webui/open-webui/pull/33663)
 - 🔇 **Queries kept out of logs.** The default server log no longer contains your search queries or the provider address of a failing external reranker. [#33701](https://github.com/open-webui/open-webui/pull/33701)
 - 🪪 **OAuth token refresh warnings.** Refreshing OAuth tokens with a client secret no longer logs deprecation warnings on every call. [#33700](https://github.com/open-webui/open-webui/pull/33700), [#33297](https://github.com/open-webui/open-webui/issues/33297)
+- 🕵️ **Audit log secret masking.** With request auditing on, the audit log now masks API keys, tokens and secrets saved in the admin settings, not only passwords. [#33746](https://github.com/open-webui/open-webui/pull/33746)
+- 🏷️ **Visible controls labels.** Six toggles under Visible controls in the Admin Interface settings now show their names instead of raw translation keys. [#33734](https://github.com/open-webui/open-webui/pull/33734)
 
 ## [0.13.0] - 2026-11-02
 
