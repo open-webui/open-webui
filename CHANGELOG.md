@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - ✉️ **Non-ASCII email addresses.** The sign-up page and the add and edit user dialogs now accept email addresses with non-ASCII characters. [#33693](https://github.com/open-webui/open-webui/pull/33693), [#33681](https://github.com/open-webui/open-webui/issues/33681)
-- ⌨️ **Smooth typing after large pastes.** Typing in the chat input no longer freezes for seconds after pasting a large amount of text. [#33729](https://github.com/open-webui/open-webui/pull/33729), [#12087](https://github.com/open-webui/open-webui/issues/12087)
+- ⌨️ **Faster typing after large pastes.** Typing in the chat input after pasting 16,000 lines of text is now about 117 times faster, down from 8.6 seconds to 74 milliseconds per keystroke. [#33729](https://github.com/open-webui/open-webui/pull/33729), [#12087](https://github.com/open-webui/open-webui/issues/12087)
 - 🏎️ **Faster chat access checks.** Sending messages, typing indicators, shared links, comments and file access no longer load the whole conversation just to check who may access it, which helps most on large chats. [#33667](https://github.com/open-webui/open-webui/pull/33667), [#33669](https://github.com/open-webui/open-webui/pull/33669)
 - 🗂️ **Faster sidebar chat list.** The chat list in the sidebar now appears as soon as its own data is ready instead of waiting for the channel list. [#33686](https://github.com/open-webui/open-webui/pull/33686)
 - 🧮 **Faster Redis filter lookups.** With Redis enabled, chat requests now look up the filters of a model faster. [#33668](https://github.com/open-webui/open-webui/pull/33668)
