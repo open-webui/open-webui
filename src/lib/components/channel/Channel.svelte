@@ -407,10 +407,10 @@
 					} else {
 						return e.name;
 					}
-				}, '')} / Open WebUI</title
+				}, '')} / BatchTechUI</title
 		>
 	{:else}
-		<title>#{channel?.name ?? 'Channel'} / Open WebUI</title>
+		<title>#{channel?.name ?? 'Channel'} / BatchTechUI</title>
 	{/if}
 </svelte:head>
 

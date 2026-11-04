@@ -48,7 +48,7 @@
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 							{$i18n.t(
-								'Your entire contribution will go directly to the plugin developer; Open WebUI does not take any percentage. However, the chosen funding platform might have its own fees.'
+								'Your entire contribution will go directly to the plugin developer; BatchTechUI does not take any percentage. However, the chosen funding platform might have its own fees.'
 							)}
 						</div>
 

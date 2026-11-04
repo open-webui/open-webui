@@ -285,7 +285,7 @@ export const detectTerminalServerType = async (
 
 /**
  * Create or update a policy on the orchestrator.
- * Proxied through the Open WebUI backend to keep API keys server-side.
+ * Proxied through the BatchTechUI backend to keep API keys server-side.
  */
 export const putOrchestratorPolicy = async (
 	token: string,

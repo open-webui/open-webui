@@ -193,7 +193,7 @@
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
-					{$i18n.t('Open WebUI can use tools provided by any OpenAPI server.')} <br /><a
+					{$i18n.t('BatchTechUI can use tools provided by any OpenAPI server.')} <br /><a
 						class="underline"
 						href="https://github.com/open-webui/openapi-servers"
 						target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')}</a
