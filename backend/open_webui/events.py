@@ -490,6 +490,12 @@ class EventDefinitions(BaseModel):
     MODEL_DISABLED: EventDefinition = EventDefinition(
         name='model.disabled', description='A model was disabled.', message='Model disabled'
     )
+    MODEL_ONLINE: EventDefinition = EventDefinition(
+        name='model.online', description='A model became available.', message='Model online'
+    )
+    MODEL_OFFLINE: EventDefinition = EventDefinition(
+        name='model.offline', description='A model is no longer available.', message='Model offline'
+    )
     MODEL_ACCESS_UPDATED: EventDefinition = EventDefinition(
         name='model.access_updated', description='Model access was updated.', message='Model access updated'
     )
