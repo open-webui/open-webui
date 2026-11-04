@@ -1040,6 +1040,9 @@ async def ydoc_document_join(sid, data):
             ):
                 log.error(f'User {user.get("id")} does not have access to note {note_id}')
                 return
+        else:
+            # Only notes have access checks, so no other document gets a room.
+            return
 
         user_id = user['id']
         user_name = user.get('name', '')
