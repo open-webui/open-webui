@@ -315,7 +315,7 @@
 		{#each allEmbeds as embedItem, idx}
 			<div id={`${id}-embed-${idx}`}>
 				{#if typeof embedItem.embed === 'object' && embedItem.embed?.type === 'mcp_app'}
-					{#key embedItem.embed}<MCPApp app={embedItem.embed} />{/key}
+					{#key JSON.stringify(embedItem.embed)}<MCPApp app={embedItem.embed} />{/key}
 				{:else if typeof embedItem.embed === 'string'}
 					<FullHeightIframe
 						src={embedItem.embed}

@@ -764,7 +764,7 @@
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
 										{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
-											{#key embed}<MCPApp app={embed} />{/key}
+											{#key JSON.stringify(embed)}<MCPApp app={embed} />{/key}
 										{:else if typeof embed === 'string'}
 											<FullHeightIframe
 												src={embed}
