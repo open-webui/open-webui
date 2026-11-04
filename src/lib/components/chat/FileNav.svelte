@@ -59,6 +59,8 @@
 
 	// Directory and preview state belong to this tab, including its terminal connection.
 	let savedPath = '/';
+	// savedPath is only a placeholder until a directory has loaded.
+	let savedPathLoaded = false;
 	let savedFileRoot: TerminalFileRoot | null = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
@@ -706,7 +708,7 @@
 				}
 				// Chat just got created (null → real ID): persist the current
 				// browsed path as the new session's cwd — don't re-fetch.
-				setCwd(terminal.url, terminal.key, savedPath, chatId);
+				if (savedPathLoaded) setCwd(terminal.url, terminal.key, savedPath, chatId);
 			} else if (terminalChanged || chatChanged) {
 				++loadGeneration;
 				openedFile = null;
@@ -1032,6 +1034,7 @@
 		}
 		currentPath = directory;
 		savedPath = directory;
+		savedPathLoaded = true;
 		pushNavHistory(directory);
 
 		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
