@@ -39,7 +39,7 @@ export function setFullWidthTabs(state: PanelTabs, fullWidth: boolean, label = '
 	if (state.tabs.some((tab) => tab.id === mainChatTabId)) return state;
 	return activateTab(
 		{ ...state, tabs: [{ id: mainChatTabId, kind: 'chat', label }, ...state.tabs] },
-		mainChatTabId
+		state.activeId || mainChatTabId
 	);
 }
 

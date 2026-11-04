@@ -107,7 +107,7 @@
 	$: mainChatActive = fullWidth && tabs.activeId === mainChatTabId;
 	$: if (fullWidth !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
 		tabs = setFullWidthTabs(tabs, fullWidth, title);
-		if (fullWidth) void tick().then(() => document.getElementById(domId(mainChatTabId))?.focus());
+		if (fullWidth) void tick().then(() => document.getElementById(domId(tabs.activeId))?.focus());
 	}
 	const toggleLayout = async () => {
 		if (panelTarget) releasePanel(panelTarget);
