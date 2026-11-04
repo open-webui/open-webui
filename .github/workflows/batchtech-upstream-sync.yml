@@ -61,7 +61,7 @@ jobs:
         if: steps.merge.outputs.result == 'merged'
         with:
           node-version: 22
-      - name: Build frontend
+      - name: Build frontend (also re-sorts translations so upstream's format check passes)
         if: steps.merge.outputs.result == 'merged'
         id: build
         continue-on-error: true
@@ -70,7 +70,11 @@ jobs:
           CYPRESS_INSTALL_BINARY: '0'
         run: |
           npm ci --no-audit --no-fund --ignore-scripts
+          npm run i18n:parse
           npx vite build
+      - name: Commit re-sorted translations
+        if: steps.merge.outputs.result == 'merged'
+        run: git add -A && (git diff --cached --quiet || git commit -m "Re-sort translations (i18n:parse)")
       - name: Open PR or issue
         if: steps.up.outputs.new == 'true'
         env:

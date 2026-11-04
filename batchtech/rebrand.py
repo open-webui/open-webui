@@ -40,16 +40,18 @@ for p in list((root / 'src').rglob('*.svelte')) + list((root / 'src').rglob('*.t
         p.write_text('\n'.join(new))
         changed += 1
 
-# English strings double as i18n keys: rename them in en-US only (other locales fall back to the English key).
-tp = root / 'src/lib/i18n/locales/en-US/translation.json'
-raw = tp.read_text()
-data = json.loads(raw)
-out = {}
-for k, v in data.items():
-    nk = k if (OLD not in k or keep(k)) else k.replace(OLD, NEW)
-    nv = v if (not isinstance(v, str) or keep(v)) else v.replace(OLD, NEW)
-    out[nk] = nv
-tp.write_text(json.dumps(out, indent='\t', ensure_ascii=False) + '\n')
+# English strings double as i18n keys: rename them in every locale, keeping existing translations (the product name
+# stays in Latin letters in translations), so the i18n parser finds nothing to change.
+for tp in sorted((root / 'src/lib/i18n/locales').glob('*/translation.json')):
+    data = json.loads(tp.read_text())
+    out = {}
+    for k, v in data.items():
+        nk = k if (OLD not in k or keep(k)) else k.replace(OLD, NEW)
+        # only touch the translation when the English key was renamed; translations also write it as "Open-WebUI"
+        nv = re.sub(r'Open[ -]?WebUI', NEW, v) if (nk != k and isinstance(v, str)) else v
+        out[nk] = nv
+    if out != data:
+        tp.write_text(json.dumps(out, indent='\t', ensure_ascii=False) + '\n')
 
 for rel in ['static/static/site.webmanifest', 'static/opensearch.xml']:
     p = root / rel
