@@ -4234,12 +4234,12 @@ async def create_automation(
     The automation will use the current chat model.
 
     The rrule parameter must be a valid iCalendar RRULE string. Common examples:
-    - Every day at 9am: "DTSTART:20250101T090000\\nRRULE:FREQ=DAILY"
-    - Every Monday at 8am: "DTSTART:20250106T080000\\nRRULE:FREQ=WEEKLY;BYDAY=MO"
+    - Every day at 9am: "DTSTART:20250101T090000\nRRULE:FREQ=DAILY"
+    - Every Monday at 8am: "DTSTART:20250106T080000\nRRULE:FREQ=WEEKLY;BYDAY=MO"
     - Every hour: "RRULE:FREQ=HOURLY;INTERVAL=1"
     - Every 30 minutes: "RRULE:FREQ=MINUTELY;INTERVAL=30"
-    - Once at a specific time: "DTSTART:20250415T140000\\nRRULE:FREQ=DAILY;COUNT=1"
-    - First day of every month: "DTSTART:20250101T090000\\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1"
+    - Once at a specific time: "DTSTART:20250415T140000\nRRULE:FREQ=DAILY;COUNT=1"
+    - First day of every month: "DTSTART:20250101T090000\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1"
 
     The DTSTART time should reflect the desired execution time. Use COUNT=1 for one-time automations.
 
