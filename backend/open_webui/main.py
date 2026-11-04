@@ -154,6 +154,7 @@ from open_webui.routers import (
     audio,
     auths,
     automations,
+    batchtech_stats,  # BATCHTECH
     calendar,
     channels,
     chats,
@@ -820,6 +821,7 @@ app.include_router(openai.router, prefix='/openai', tags=['openai'])
 
 app.include_router(pipelines.router, prefix='/api/v1/pipelines', tags=['pipelines'])
 app.include_router(tasks.router, prefix='/api/v1/tasks', tags=['tasks'])
+app.include_router(batchtech_stats.router, prefix='/api/v1/batchtech', tags=['batchtech'])  # BATCHTECH
 app.include_router(images.router, prefix='/api/v1/images', tags=['images'])
 
 app.include_router(audio.router, prefix='/api/v1/audio', tags=['audio'])

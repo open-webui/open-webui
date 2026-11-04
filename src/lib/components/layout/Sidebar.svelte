@@ -82,6 +82,7 @@
 	import InboxBadge from './InboxBadge.svelte';
 	import { inboxCount } from '$lib/stores/inbox';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import StatusPanel from '$lib/components/batchtech/StatusPanel.svelte'; // BATCHTECH
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -1965,6 +1966,7 @@
 					<div
 						class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 					></div>
+					<StatusPanel /> <!-- BATCHTECH -->
 					<div class="flex flex-col">
 						{#if $user !== undefined && $user !== null}
 							<UserMenu
