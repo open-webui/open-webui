@@ -1,0 +1,41 @@
+# BATCHTECH: one-click release. Actions > "Release BatchTechUI" > Run workflow.
+# The version comes from backend/open_webui/utils/batchtech_version.py (bump it in a PR first).
+# This only tags main and publishes release notes. Nothing is built or deployed for anyone.
+name: Release BatchTechUI
+
+on:
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: What changed (shown in the release notes)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          version=$(sed -n "s/^BATCHTECH_VERSION = '\(.*\)'/\1/p" backend/open_webui/utils/batchtech_version.py)
+          [ -n "$version" ] || { echo "Could not read the version"; exit 1; }
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists. Bump BATCHTECH_VERSION in a PR first."; exit 1
+          fi
+          {
+            printf '%s\n\n' "$NOTES"
+            echo "## Upgrading"
+            echo
+            echo "Back up first, then pull and rebuild. Steps: [batchtech/UPDATING.md](https://github.com/${{ github.repository }}/blob/$tag/batchtech/UPDATING.md)"
+          } > notes.md
+          gh release create "$tag" --target main --title "BatchTechUI $tag" --notes-file notes.md

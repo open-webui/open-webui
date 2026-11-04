@@ -8,6 +8,7 @@
 	import { WEBUI_NAME, config, settings, showChangelog } from '$lib/stores';
 	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
+	import { WEBUI_API_BASE_URL } from '$lib/constants'; // BATCHTECH
 
 	import BuildVersion from '$lib/components/common/BuildVersion.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -39,6 +40,19 @@
 		updateAvailable = compareVersion(version.latest, version.current);
 		console.log(updateAvailable);
 	};
+
+	// BATCHTECH: BatchTechUI has its own version, separate from the Open WebUI release it is based on.
+	let btVersion: { batchtech: string; open_webui: string } | null = null;
+	onMount(async () => {
+		try {
+			const r = await fetch(`${WEBUI_API_BASE_URL}/batchtech/version`, {
+				headers: { authorization: `Bearer ${localStorage.token}` }
+			});
+			if (r.ok) btVersion = await r.json();
+		} catch {
+			/* leave the line out */
+		}
+	});
 
 	onMount(async () => {
 		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
@@ -118,6 +132,12 @@
 				{/if}
 			</UserSettingRow>
 		</UserSettingSection>
+
+		{#if btVersion}
+			<div class="text-xs text-gray-600 dark:text-gray-400">
+				BatchTechUI v{btVersion.batchtech} (based on Open WebUI v{btVersion.open_webui})
+			</div>
+		{/if}
 
 		{#if ollamaVersion}
 			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>

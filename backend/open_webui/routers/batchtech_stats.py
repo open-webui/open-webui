@@ -14,6 +14,7 @@ import psutil
 from fastapi import APIRouter, Depends, Request
 
 from open_webui.utils.auth import get_verified_user
+from open_webui.utils.batchtech_version import BATCHTECH_VERSION
 
 router = APIRouter()
 
@@ -125,3 +126,10 @@ async def get_stats(request: Request, user=Depends(get_verified_user)):
         'gpu': await _gpu_stats(),
         'net': _net_rate(),
     }
+
+
+@router.get('/version')
+async def get_version(user=Depends(get_verified_user)):
+    from open_webui.env import VERSION
+
+    return {'batchtech': BATCHTECH_VERSION, 'open_webui': VERSION}
