@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 import psutil
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from open_webui.utils.auth import get_verified_user
 
@@ -95,10 +95,30 @@ async def _gpu_stats():
     return value
 
 
+async def _loaded_models(request: Request, user):
+    """Models Ollama currently holds in memory (what is 'running' on this machine), with their memory use."""
+    try:
+        from open_webui.routers.ollama import get_ollama_loaded_models
+
+        res = await asyncio.wait_for(get_ollama_loaded_models(request, user=user), timeout=2)
+        return [
+            {
+                'name': m.get('model') or m.get('name'),
+                'size': m.get('size'),
+                'size_vram': m.get('size_vram'),
+                'expires_at': m.get('expires_at'),
+            }
+            for m in res.get('models', [])
+        ]
+    except Exception:
+        return []
+
+
 @router.get('/stats')
-async def get_stats(user=Depends(get_verified_user)):
+async def get_stats(request: Request, user=Depends(get_verified_user)):
     mem = psutil.virtual_memory()
     return {
+        'models': await _loaded_models(request, user),
         'cpu': psutil.cpu_percent(interval=None) / 100,
         'cores': os.cpu_count(),
         'mem': {'used': mem.total - mem.available, 'total': mem.total},
