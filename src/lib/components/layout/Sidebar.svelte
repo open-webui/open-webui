@@ -1333,7 +1333,7 @@
 					https://docs.openwebui.com/license. -->
 						<div
 							id="sidebar-webui-name"
-							class=" self-center truncate font-normal text-gray-700 dark:text-gray-200"
+							class=" self-center truncate text-[1.0625rem] leading-6 font-normal text-gray-700 dark:text-gray-200"
 						>
 							{$WEBUI_NAME}
 						</div>
