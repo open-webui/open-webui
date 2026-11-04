@@ -140,7 +140,7 @@
 							</p>{/each}
 					</div>{/if}
 				<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-					{$i18n.t('Connect external apps to Open WebUI.')}
+					{$i18n.t('Connect external apps to BatchTechUI.')}
 				</p>
 			</div>
 		</AdminSettingSection>

@@ -4,6 +4,8 @@
 	import WebSearchResults from '../WebSearchResults.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
 	import { t } from 'i18next';
+	import { WEBUI_API_BASE_URL } from '$lib/constants'; // BATCHTECH
+	import ProfileImage from '../../ProfileImage.svelte'; // BATCHTECH
 
 	export let status = null;
 	export let done = false;
@@ -37,6 +39,22 @@
 					</div>
 				</div>
 			</WebSearchResults>
+		{:else if status?.action === 'handoff'}
+			<!-- BATCHTECH: who is doing the work. The model's logo spins only while it is working. -->
+			<div class="flex items-center gap-2 text-[0.9375rem] text-gray-600 dark:text-gray-300">
+				<ProfileImage
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${status.model_id}`}
+					className={`size-5 ${status.done === false && !done ? 'bt-working' : ''}`}
+				/>
+				<span class={status.done === false && !done ? 'shimmer' : ''}>{status.description}</span>
+				<span
+					class="rounded-md px-1.5 py-0.5 text-[0.6875rem] font-medium {status.local
+						? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+						: 'bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300'}"
+				>
+					{status.local ? 'Local' : 'Cloud'}
+				</span>
+			</div>
 		{:else if status?.action === 'knowledge_search'}
 			<div class="flex flex-col justify-center -space-y-0.5">
 				<div

@@ -395,7 +395,7 @@
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					{$i18n.t(
-						'Participate in community leaderboards and evaluations! Syncing aggregated usage stats helps drive research and improvements to Open WebUI. Your privacy is paramount: no message content is ever shared.'
+						'Participate in community leaderboards and evaluations! Syncing aggregated usage stats helps drive research and improvements to BatchTechUI. Your privacy is paramount: no message content is ever shared.'
 					)}
 				</div>
 
@@ -407,7 +407,7 @@
 						<!-- LICENSE covers this Open WebUI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
-						<li>{$i18n.t('Open WebUI version')}</li>
+						<li>{$i18n.t('BatchTechUI version')}</li>
 						<li>{$i18n.t('Model names and usage frequency')}</li>
 						<li>{$i18n.t('Message counts and response timestamps')}</li>
 						<li>{$i18n.t('Content lengths (character counts only)')}</li>

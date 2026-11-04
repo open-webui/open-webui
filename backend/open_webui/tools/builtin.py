@@ -1782,6 +1782,7 @@ async def delegate_task(
     __metadata__: dict = None,
     __chat_id__: str = None,
     __message_id__: str = None,
+    __event_emitter__: callable = None,  # BATCHTECH
 ) -> str:
     """
     Delegate focused work to a parallel sub-agent using the current tools.
@@ -1812,6 +1813,7 @@ async def delegate_task(
         metadata=__metadata__ or {},
         parent_chat_id=__chat_id__ or '',
         parent_message_id=__message_id__,
+        event_emitter=__event_emitter__,  # BATCHTECH
     )
 
 

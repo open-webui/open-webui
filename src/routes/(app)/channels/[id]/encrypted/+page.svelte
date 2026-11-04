@@ -110,7 +110,7 @@
 	}
 </script>
 
-<svelte:head><title>{$i18n.t('Encrypted chat')} · Open WebUI</title></svelte:head>
+<svelte:head><title>{$i18n.t('Encrypted chat')} · BatchTechUI</title></svelte:head>
 <div
 	class="h-screen max-h-[100dvh] w-full min-w-0 flex flex-col {$showSidebar
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'

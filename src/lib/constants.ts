@@ -4,7 +4,7 @@
 // visual, textual, symbolic identifiers, metadata, and surrounding UI.
 // Do not alter, remove, obscure, or replace it except as LICENSE permits:
 // https://docs.openwebui.com/license.
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'BatchTechUI';
 
 export const WEBUI_HOSTNAME = '';
 export const WEBUI_BASE_URL = '';

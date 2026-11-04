@@ -636,10 +636,10 @@
 										content={type === 'mcp' && oauthAuthTypes.includes(auth_type)
 											? edit
 												? $i18n.t(
-														'Identifies this connection in Open WebUI, separately from the OAuth client ID.'
+														'Identifies this connection in BatchTechUI, separately from the OAuth client ID.'
 													)
 												: $i18n.t(
-														'Generated from the name, or enter your own. Identifies this connection in Open WebUI, separately from the OAuth client ID.'
+														'Generated from the name, or enter your own. Identifies this connection in BatchTechUI, separately from the OAuth client ID.'
 													)
 											: ''}
 									>
@@ -903,7 +903,7 @@
 											{$i18n.t('Forward cookies')}
 										</label>
 										<p class="text-xs text-gray-500">
-											{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
+											{$i18n.t('Forward cookies from your BatchTechUI request to this server.')}
 										</p>
 									</div>
 									<Switch

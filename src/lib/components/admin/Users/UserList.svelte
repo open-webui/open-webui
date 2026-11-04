@@ -520,7 +520,7 @@
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
-					{$i18n.t('Running Open WebUI for a team?')}
+					{$i18n.t('Running BatchTechUI for a team?')}
 				</div>
 				<div class="mt-2 space-y-2">
 					<p>

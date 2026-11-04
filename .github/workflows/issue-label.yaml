@@ -1,8 +1,8 @@
 name: Issue Labeler
 
+# BATCHTECH: upstream's trigger removed so this does not run on the fork. Run by hand if ever needed.
 on:
-  issues:
-    types: [opened, edited]
+  workflow_dispatch:
 
 permissions:
   issues: write

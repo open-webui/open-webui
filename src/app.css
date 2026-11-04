@@ -1106,3 +1106,19 @@ html.high-contrast:not(.dark) .shimmer {
 	outline: 2px solid rgba(59, 130, 246, 0.5);
 	outline-offset: -2px;
 }
+
+/* BATCHTECH: only the model that is currently working spins its logo. */
+@keyframes bt-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+.bt-working {
+	animation: bt-spin 2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+	.bt-working {
+		animation: none;
+		opacity: 0.7;
+	}
+}

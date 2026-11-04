@@ -56,6 +56,7 @@
 		chatRequestQueues,
 		desktopEvent
 	} from '$lib/stores';
+	import { appMode, pickModelForMode, CODE_SYSTEM_PROMPT } from '$lib/stores/batchtech'; // BATCHTECH
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -224,6 +225,13 @@
 	};
 
 	let selectedModels = [''];
+	// BATCHTECH: switching Chat/Code on an empty chat swaps to that mode's model
+	let lastMode = $appMode;
+	$: if ($appMode !== lastMode) {
+		lastMode = $appMode;
+		const modeModel = pickModelForMode($models, $appMode);
+		if (modeModel && !$chatId) selectedModels = [modeModel];
+	}
 	let selectedModelIdx = 0;
 	$: selectedModelIdx = Math.max(0, selectedModels.length - 1);
 	$: backgroundImage = embedded
@@ -4389,10 +4397,11 @@
 			true;
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
+		// BATCHTECH: Code mode adds a coding-focused system prompt unless the user set their own
+		const systemPrompt =
+			params?.system || $settings?.system || ($appMode === 'code' ? CODE_SYSTEM_PROMPT : '');
 		let messages: any[] = [
-			params?.system || $settings.system
-				? { role: 'system', content: `${params?.system || $settings?.system || ''}` }
-				: undefined
+			systemPrompt ? { role: 'system', content: `${systemPrompt}` } : undefined
 		].filter(Boolean);
 
 		if ($temporaryChatEnabled) {

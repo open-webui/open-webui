@@ -13,6 +13,7 @@
 		tags,
 		folders as _folders,
 		showSidebar,
+		models,
 		showTabs,
 		showSearch,
 		mobile,
@@ -70,7 +71,9 @@
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
-	import InboxButton from './InboxButton.svelte';
+	import ChatBubble from '../icons/ChatBubble.svelte'; // BATCHTECH
+	import CodeBracket from '../icons/CodeBracket.svelte'; // BATCHTECH
+	import { appMode, setAppMode } from '$lib/stores/batchtech'; // BATCHTECH
 	import InboxHost from './InboxHost.svelte';
 	import InboxPanel from './InboxPanel.svelte';
 	let inboxHost: InboxHost;
@@ -79,9 +82,12 @@
 		$config?.features?.enable_notifications &&
 		!!$page.state.inbox &&
 		$page.state.inboxUserId === $user?.id;
+	// BATCHTECH: the bell lives in the main window but its panel lives here, so show the sidebar
+	$: if (inboxOpened && !$showSidebar) showSidebar.set(true);
 	import InboxBadge from './InboxBadge.svelte';
 	import { inboxCount } from '$lib/stores/inbox';
 	import UserMenu from './Sidebar/UserMenu.svelte';
+	import StatusPanel from '$lib/components/batchtech/StatusPanel.svelte'; // BATCHTECH
 	import ChatItem from './Sidebar/ChatItem.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -1129,16 +1135,7 @@
 							<div
 								class="self-center relative flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition group-hover:bg-gray-100 dark:group-hover:bg-gray-900"
 							>
-								<!-- LICENSE covers this Open WebUI sidebar logo.
-							Do not alter, remove, obscure, or replace it except as LICENSE permits:
-							https://docs.openwebui.com/license. -->
-								<img
-									src="{WEBUI_BASE_URL}/static/favicon.png"
-									class="sidebar-new-chat-icon size-5 rounded-full group-hover:hidden"
-									alt=""
-								/>
-
-								<Sidebar className="size-4 hidden group-hover:flex" />
+								<Sidebar className="size-4" />
 								<InboxBadge className="-top-0.5 -translate-x-0.5 text-[0.5625rem]" />
 							</div>
 						</button>
@@ -1308,25 +1305,27 @@
 						? 'px-0.75 pt-1 pb-1 -mb-2'
 						: 'px-1 pt-0.5 pb-0.5'} flex shrink-0 justify-between space-x-1 text-gray-600 dark:text-gray-400 sticky top-0 z-10"
 				>
-					<a
-						class="flex items-center rounded-xl size-8.5 {$mobile
-							? 'h-full'
-							: 'shrink-0'} justify-center hover:bg-gray-100 dark:hover:bg-gray-900 transition no-drag-region"
-						href="/"
-						draggable="false"
-						aria-label={$i18n.t('New Chat')}
-						on:click={newChatHandler}
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						placement="bottom"
 					>
-						<!-- LICENSE covers this Open WebUI sidebar logo.
-					Do not alter, remove, obscure, or replace it except as LICENSE permits:
-					https://docs.openwebui.com/license. -->
-						<img
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 rounded-full"
-							alt=""
-						/>
-					</a>
+						<button
+							bind:this={closeSidebarButton}
+							class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
+								? 'cursor-pointer'
+								: 'cursor-[w-resize]'}"
+							on:click={async () => {
+								showSidebar.set(!$showSidebar);
+								await tick();
+								openSidebarButton?.focus();
+							}}
+							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						>
+							<div class=" self-center">
+								<Sidebar className="size-4" />
+							</div>
+						</button>
+					</Tooltip>
 
 					<a href="/" class="flex min-w-0 flex-1 px-0.5" on:click={newChatHandler}>
 						<!-- LICENSE covers this Open WebUI sidebar name.
@@ -1334,36 +1333,32 @@
 					https://docs.openwebui.com/license. -->
 						<div
 							id="sidebar-webui-name"
-							class=" self-center truncate font-normal text-gray-700 dark:text-gray-200"
+							class=" self-center truncate text-[1.125rem] leading-6 font-normal text-gray-700 dark:text-gray-200"
 						>
 							{$WEBUI_NAME}
 						</div>
 					</a>
-					<div class="flex shrink-0 items-center gap-px">
-						{#if $config?.features?.enable_notifications}<InboxButton
-								onClose={() => inboxHost.close()}
-							/>{/if}
-						<Tooltip
-							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							placement="bottom"
-						>
-							<button
-								bind:this={closeSidebarButton}
-								class="flex size-[1.875rem] justify-center items-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-900 transition {isWindows
-									? 'cursor-pointer'
-									: 'cursor-[w-resize]'}"
-								on:click={async () => {
-									showSidebar.set(!$showSidebar);
-									await tick();
-									openSidebarButton?.focus();
-								}}
-								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							>
-								<div class=" self-center">
-									<Sidebar className="size-4" />
-								</div>
-							</button>
-						</Tooltip>
+					<div class="flex shrink-0 items-center gap-px" role="group" aria-label={$i18n.t('Mode')}>
+						{#each [{ id: 'chat', label: 'Chat', icon: ChatBubble }, { id: 'code', label: 'Code', icon: CodeBracket }] as m (m.id)}
+							<Tooltip content={$i18n.t(m.label)} placement="bottom">
+								<button
+									type="button"
+									class="flex size-[1.875rem] justify-center items-center rounded-lg transition {$appMode ===
+									m.id
+										? 'bg-gray-200/70 dark:bg-gray-800 text-gray-800 dark:text-gray-100'
+										: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
+									aria-label={$i18n.t(m.label)}
+									aria-pressed={$appMode === m.id}
+									on:click={() => {
+										if ($appMode !== m.id) setAppMode(m.id, $models);
+										goto('/');
+										newChatHandler();
+									}}
+								>
+									<svelte:component this={m.icon} className="size-4" strokeWidth="1.5" />
+								</button>
+							</Tooltip>
+						{/each}
 					</div>
 
 					<div
@@ -1965,6 +1960,8 @@
 					<div
 						class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 					></div>
+					<StatusPanel />
+					<!-- BATCHTECH -->
 					<div class="flex flex-col">
 						{#if $user !== undefined && $user !== null}
 							<UserMenu

@@ -662,7 +662,7 @@
 					{#if oauthConfig.ENABLE_OAUTH}
 						<p class="text-xs text-gray-500 dark:text-gray-400">
 							{$i18n.t(
-								'Restart all Open WebUI instances to apply changes to the provider connection settings.'
+								'Restart all BatchTechUI instances to apply changes to the provider connection settings.'
 							)}
 						</p>
 						<div class="grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
