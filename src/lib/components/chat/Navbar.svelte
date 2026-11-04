@@ -20,7 +20,7 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
+	import { goto, replaceState } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
@@ -38,6 +38,7 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import SplitPanel from '../icons/SplitPanel.svelte';
+	import InboxButton from '$lib/components/layout/InboxButton.svelte'; // BATCHTECH
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import { createMessagesList } from '$lib/utils';
@@ -392,6 +393,14 @@
 								<SplitPanel className="size-4.5" strokeWidth="1" />
 							</button>
 						</Tooltip>
+					{/if}
+
+					<!-- BATCHTECH: notifications live in the upper right of the main window -->
+					{#if $config?.features?.enable_notifications}
+						<InboxButton
+							onClose={() =>
+								replaceState('', { ...$page.state, inbox: false, inboxUserId: undefined })}
+						/>
 					{/if}
 				</div>
 			</div>

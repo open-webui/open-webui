@@ -28,4 +28,11 @@ Open `http://SERVER:3001`, create an admin account (it is a fresh instance), the
 4. **Spin:** only the model that is generating spins its logo. Remove the old spin CSS in Theme Designer and paste the
    trimmed file from the project files (branding/theme-designer-css-trimmed.css).
 
+5. **Chat and Code modes:** Admin Panel, Settings, Connections: add your OpenAI key, and add Anthropic as an
+   OpenAI-compatible connection (URL `https://api.anthropic.com/v1`, your Anthropic key). Keys stay on the server.
+   In the sidebar header the two small icons switch **Chat** (first OpenAI model it finds) and **Code** (first Claude model).
+   Switching starts a new chat on that mode's model, and Code adds a coding system prompt unless you set your own.
+6. **Layout:** the logo is gone and the hide/show sidebar button sits where it was. The bell is in the upper right of the
+   main window and opens the notifications list in the sidebar. The new-chat page shows a greeting instead of the model name.
+
 Remove the test: `docker rm -f batchtechui-test && docker volume rm batchtechui-test-data`.
