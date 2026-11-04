@@ -52,7 +52,11 @@
 				},
 				...(stats.gpu
 					? [
-							{ label: 'GPU', v: stats.gpu.util, text: `${pct(stats.gpu.util)} · ${stats.gpu.name}` },
+							{
+								label: 'GPU',
+								v: stats.gpu.util,
+								text: `${pct(stats.gpu.util)} · ${stats.gpu.name}`
+							},
 							...(stats.gpu.vram
 								? [
 										{
