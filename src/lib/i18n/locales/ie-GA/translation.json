@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Luan",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Samhail",
 	"Model '{{modelName}}' has been successfully downloaded.": "Rinneadh an tsamhail '{{modelName}}' a íoslódáil go rathúil.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Tá samhail '{{modelTag}}' sa scuaine cheana féin le híoslódáil.",

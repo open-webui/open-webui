@@ -1856,6 +1856,7 @@
 	"MistralAI": "Mistral AI",
 	"Mo_day_of_week": "ב'",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "מודל",
 	"Model '{{modelName}}' has been successfully downloaded.": "המודל '{{modelName}}' הורד בהצלחה.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "המודל '{{modelTag}}' כבר בתור להורדה.",

@@ -1831,6 +1831,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "月",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "モデル",
 	"Model '{{modelName}}' has been successfully downloaded.": "モデル '{{modelName}}' が正常にダウンロードされました。",
 	"Model '{{modelTag}}' is already in queue for downloading.": "モデル '{{modelTag}}' はすでにダウンロード待機中です。",

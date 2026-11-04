@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Δε",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Μοντέλο",
 	"Model '{{modelName}}' has been successfully downloaded.": "Το μοντέλο '{{modelName}}' κατεβάστηκε με επιτυχία.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Το μοντέλο '{{modelTag}}' βρίσκεται ήδη στην ουρά για λήψη.",

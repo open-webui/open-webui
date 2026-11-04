@@ -1856,6 +1856,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Lu",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Model",
 	"Model '{{modelName}}' has been successfully downloaded.": "Modelul '{{modelName}}' a fost descărcat cu succes.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Modelul '{{modelTag}}' este deja în coada de descărcare.",

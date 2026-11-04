@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Hétfő",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Modell",
 	"Model '{{modelName}}' has been successfully downloaded.": "A '{{modelName}}' modell sikeresen letöltve.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "A '{{modelTag}}' modell már a letöltési sorban van.",

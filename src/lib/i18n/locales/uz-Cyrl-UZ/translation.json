@@ -1837,6 +1837,7 @@
 	"MistralAI": "",
 	"Mo_day_of_week": "",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Модел",
 	"Model '{{modelName}}' has been successfully downloaded.": "“{{modelName}}” модели юклаб олинди.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "“{{modelTag}}” модели аллақачон юклаб олиш учун навбатда турибди.",

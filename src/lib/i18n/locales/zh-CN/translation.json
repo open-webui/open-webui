@@ -1828,6 +1828,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "周一",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "模型",
 	"Model '{{modelName}}' has been successfully downloaded.": "模型“{{modelName}}”已成功下载",
 	"Model '{{modelTag}}' is already in queue for downloading.": "模型“{{modelTag}}”已在下载队列中",

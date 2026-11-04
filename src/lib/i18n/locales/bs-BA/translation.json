@@ -1856,6 +1856,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Pon",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Model",
 	"Model '{{modelName}}' has been successfully downloaded.": "Model '{{modelName}}' je uspješno preuzet.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Model '{{modelTag}}' je već u redu za preuzimanje.",

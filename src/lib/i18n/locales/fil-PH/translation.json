@@ -1838,6 +1838,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Lunes",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Modelo",
 	"Model '{{modelName}}' has been successfully downloaded.": "Matagumpay na na-download ang modelong '{{modelName}}'.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Nakapila na para sa pag-download ang modelong '{{modelTag}}'.",

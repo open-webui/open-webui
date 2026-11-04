@@ -1831,6 +1831,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Sen",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Model",
 	"Model '{{modelName}}' has been successfully downloaded.": "Model '{{modelName}}' telah berhasil diunduh.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Model '{{modelTag}}' sudah berada dalam antrean untuk diunduh.",

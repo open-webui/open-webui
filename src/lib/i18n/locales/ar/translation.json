@@ -1913,6 +1913,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "الاثنين",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "النموذج",
 	"Model '{{modelName}}' has been successfully downloaded.": "تم تحميل النموذج '{{modelName}}' بنجاح",
 	"Model '{{modelTag}}' is already in queue for downloading.": "النموذج '{{modelTag}}' موجود بالفعل في قائمة الانتظار للتحميل",

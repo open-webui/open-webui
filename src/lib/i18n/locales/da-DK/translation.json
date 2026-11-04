@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Man",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Model",
 	"Model '{{modelName}}' has been successfully downloaded.": "Model '{{modelName}}' er blevet downloadet.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Model '{{modelTag}}' er allerede i kø til download.",

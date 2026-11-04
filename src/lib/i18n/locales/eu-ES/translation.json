@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Al.",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Modeloa",
 	"Model '{{modelName}}' has been successfully downloaded.": "'{{modelName}}' modeloa ongi deskargatu da.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "'{{modelTag}}' modeloa dagoeneko deskarga ilaran dago.",

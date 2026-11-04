@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "دۈ",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "مودېل",
 	"Model '{{modelName}}' has been successfully downloaded.": "مودېل '{{modelName}}' مۇۋەپپەقىيەتلىك چۈشۈرۈلدى.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "مودېل '{{modelTag}}' ئاللىقاچان چۈشۈرۈش قاتارىغا قوشۇلغان.",

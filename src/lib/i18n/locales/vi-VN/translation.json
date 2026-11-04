@@ -1818,6 +1818,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "T2",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Mô hình",
 	"Model '{{modelName}}' has been successfully downloaded.": "Mô hình '{{modelName}}' đã được tải xuống thành công.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Mô hình '{{modelTag}}' đã có trong hàng đợi để tải xuống.",

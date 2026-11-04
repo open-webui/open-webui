@@ -1875,6 +1875,7 @@
 	"MistralAI": "Mistral AI",
 	"Mo_day_of_week": "Pr",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Modelis",
 	"Model '{{modelName}}' has been successfully downloaded.": "'{{modelName}}' modelis sėkmingai atsisiųstas.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Modelis '{{modelTag}}' jau atsisiuntimų eilėje.",

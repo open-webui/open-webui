@@ -1818,6 +1818,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "จ",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "โมเดล",
 	"Model '{{modelName}}' has been successfully downloaded.": "โมเดล '{{modelName}}' ถูกดาวน์โหลดเรียบร้อยแล้ว",
 	"Model '{{modelTag}}' is already in queue for downloading.": "โมเดล '{{modelTag}}' อยู่ในคิวสำหรับการดาวน์โหลดแล้ว",

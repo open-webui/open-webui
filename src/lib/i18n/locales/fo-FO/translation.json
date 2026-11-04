@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Mo_day_of_week",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Modell",
 	"Model '{{modelName}}' has been successfully downloaded.": "Modellið '{{modelName}}' varð tikið niður.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Modellið '{{modelTag}}' stendur longu í kø til niðurtøku.",

@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "ორშ",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "მოდელი",
 	"Model '{{modelName}}' has been successfully downloaded.": "მოდელის „{{modelName}}“ გადმოწერა წარმატებით დასრულდა.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "მოდელი „{{modelTag}}“ უკვე გადმოწერის რიგშია.",

@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "தி",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "மாதிரி",
 	"Model '{{modelName}}' has been successfully downloaded.": "மாடல் '{{modelName}}' வெற்றிகரமாகப் பதிவிறக்கப்பட்டது.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "மாடல் '{{modelTag}}' ஏற்கனவே பதிவிறக்குவதற்கு வரிசையில் உள்ளது.",

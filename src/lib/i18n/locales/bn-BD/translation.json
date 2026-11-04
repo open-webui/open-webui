@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "সোম",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "মডেল",
 	"Model '{{modelName}}' has been successfully downloaded.": "'{{modelName}}' মডেল সফলভাবে ডাউনলোড হয়েছে।",
 	"Model '{{modelTag}}' is already in queue for downloading.": "{{modelTag}} ডাউনলোডের জন্য আগে থেকেই অপেক্ষমান আছে।",

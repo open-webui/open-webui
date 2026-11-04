@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Ma",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Malli",
 	"Model '{{modelName}}' has been successfully downloaded.": "Malli '{{modelName}}' ladattiin onnistuneesti.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Malli '{{modelTag}}' on jo jonossa ladattavaksi.",

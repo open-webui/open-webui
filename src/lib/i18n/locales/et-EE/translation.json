@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "E",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Mudel",
 	"Model '{{modelName}}' has been successfully downloaded.": "Mudel '{{modelName}}' on edukalt alla laaditud.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Mudel '{{modelTag}}' on juba allalaadimise järjekorras.",

@@ -1837,6 +1837,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Пн",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "Модел",
 	"Model '{{modelName}}' has been successfully downloaded.": "Моделът '{{modelName}}' беше успешно свален.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "Моделът '{{modelTag}}' е вече в очакване за сваляне.",

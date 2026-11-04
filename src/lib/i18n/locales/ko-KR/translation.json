@@ -1819,6 +1819,7 @@
 	"MistralAI": "MistralAI",
 	"Mo_day_of_week": "Mo_day_of_week",
 	"Mobile view": "",
+	"Mode": "",
 	"Model": "모델",
 	"Model '{{modelName}}' has been successfully downloaded.": "모델 '{{modelName}}'이/가 성공적으로 다운로드되었습니다.",
 	"Model '{{modelTag}}' is already in queue for downloading.": "모델 '{{modelTag}}'은/는 이미 다운로드 대기열에 있습니다.",
