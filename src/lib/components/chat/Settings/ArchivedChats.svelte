@@ -55,6 +55,7 @@
 	let allChatsLoaded = false;
 	let chatListLoading = false;
 	let searchDebounceTimeout: ReturnType<typeof setTimeout> | null = null;
+	let requestId = 0;
 
 	let selectedChatId: string | null = null;
 	let showDeleteConfirmDialog = false;
@@ -67,9 +68,12 @@
 	});
 
 	const loadChats = async () => {
+		const activeRequestId = ++requestId;
 		page = 1;
 		chatList = null;
-		chatList = await getArchivedChatList(localStorage.token, page, getFilter());
+		const res = await getArchivedChatList(localStorage.token, page, getFilter());
+		if (activeRequestId !== requestId) return;
+		chatList = res;
 		allChatsLoaded = (chatList ?? []).length === 0;
 		chatCount = await getArchivedChatCount(localStorage.token);
 	};

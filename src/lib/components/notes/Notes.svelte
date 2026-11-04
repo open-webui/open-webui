@@ -74,6 +74,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
@@ -158,6 +159,7 @@
 	};
 
 	const reset = () => {
+		requestId += 1;
 		page = 1;
 		items = null;
 		total = null;
@@ -202,6 +204,7 @@
 			: `/notes/${note.id}`;
 
 	const getItemsPage = async () => {
+		const activeRequestId = requestId;
 		itemsLoading = true;
 
 		if (viewOption === 'created') {
@@ -219,6 +222,8 @@
 		).catch(() => {
 			return [];
 		});
+
+		if (activeRequestId !== requestId) return res;
 
 		if (res) {
 			total = res.total;
