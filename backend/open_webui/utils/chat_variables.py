@@ -63,10 +63,11 @@ def is_nested_too_deep(value: Any) -> bool:
     stack = [(value, 1)]
     while stack:
         item, depth = stack.pop()
-        if isinstance(item, list):
+        if isinstance(item, (list, dict)):
             if depth > MAX_JSON_VALUE_DEPTH:
                 return True
-            stack.extend((child, depth + 1) for child in item)
+            children = item.values() if isinstance(item, dict) else item
+            stack.extend((child, depth + 1) for child in children)
     return False
 
 
