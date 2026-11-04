@@ -3,6 +3,7 @@
 Leaves alone: code comments about the LICENSE, URLs/package names (open-webui), and anything that refers to the
 upstream *Community* site (sharing/leaderboard), which really is Open WebUI's.
 """
+
 import json, re
 from pathlib import Path
 
@@ -13,8 +14,18 @@ OLD = 'Open WebUI'
 
 def keep(line):
     # Also keep: copyright attribution, the gate that shows it, and upstream's own marketing/community copy.
-    skip = ['LICENSE covers', 'Community', 'docs.openwebui', 'github.com', 'Inc.', 'WEBUI_NAME.includes',
-            'Open WebUI team', 'Help us translate', 'sponsorship', 'free to use as-is']
+    skip = [
+        'LICENSE covers',
+        'Community',
+        'docs.openwebui',
+        'github.com',
+        'Inc.',
+        'WEBUI_NAME.includes',
+        'Open WebUI team',
+        'Help us translate',
+        'sponsorship',
+        'free to use as-is',
+    ]
     return any(s in line for s in skip)
 
 
@@ -48,7 +59,9 @@ for rel in ['static/static/site.webmanifest', 'static/opensearch.xml']:
 env = root / 'backend/open_webui/env.py'
 t = env.read_text()
 t = t.replace("os.getenv('WEBUI_NAME', 'Open WebUI')", "os.getenv('WEBUI_NAME', 'BatchTechUI')").replace(
-    "if WEBUI_NAME != 'Open WebUI':\n    WEBUI_NAME += ' (Open WebUI)'", "if False:  # BatchTechUI: no ' (Open WebUI)' suffix\n    pass")
+    "if WEBUI_NAME != 'Open WebUI':\n    WEBUI_NAME += ' (Open WebUI)'",
+    "if False:  # BatchTechUI: no ' (Open WebUI)' suffix\n    pass",
+)
 env.write_text(t)
 
 m = root / 'backend/open_webui/main.py'

@@ -1,4 +1,5 @@
 """Regenerate BatchTechUI icons/splash from batchtech/assets/BT_mark.png (square mark)."""
+
 import base64, io
 from pathlib import Path
 from PIL import Image
