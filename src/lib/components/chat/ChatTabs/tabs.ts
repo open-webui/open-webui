@@ -18,6 +18,8 @@ export type PanelTab = {
 	kind: PanelTabKind;
 	label: string;
 	initialPrompt?: string;
+	saved?: boolean;
+	chatId?: string;
 	terminalId?: string;
 	terminalNumber?: number;
 	path?: string;

@@ -4,7 +4,7 @@
 	import {
 		socket,
 		user,
-		openTemporaryChatIds,
+		openSideChatIds,
 		models,
 		settings,
 		config,
@@ -15,18 +15,27 @@
 	} from '$lib/stores';
 	import { createTemporaryChatId } from '$lib/utils/chatId';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
-	import { resumeTemporaryChat, stopTasksByChatId } from '$lib/apis';
+	import { createNewChat, getChatById } from '$lib/apis/chats';
+	import { getTaskIdsByChatId, resumeTemporaryChat, stopTasksByChatId } from '$lib/apis';
+	import { refreshChatList } from '$lib/stores/chatList';
 	import { applyResponseStreamEvent } from '../Messages/structuredOutput';
 	import Messages from '../Messages.svelte';
 	import MessageInput from '../MessageInput.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ElicitationDialog from '../ElicitationDialog.svelte';
-	import { isRasterImageContentType } from '$lib/utils';
+	import {
+		convertMessagesToHistory,
+		createMessagesList,
+		isRasterImageContentType
+	} from '$lib/utils';
 
 	export let initialPrompt = '';
 	export let history;
 	export let modelId: string;
 	export let systemPrompt = '';
+	export let saved = false;
+	export let chatId = '';
+	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	$: sideChatAllowed =
 		$user?.role === 'admin' ||
@@ -35,6 +44,7 @@
 			($user.permissions?.chat?.side_chat ?? false));
 	// Snapshot the active branch once; later parent edits and streaming stay in the parent.
 	const context = (() => {
+		if (saved) return [];
 		const branch: any[] = [];
 		let current = history?.currentId;
 		const seen = new Set<string>();
@@ -89,8 +99,9 @@
 		onCancel: () => resolveInteraction(interaction, { status: 'cancelled', answers: {} })
 	};
 	const system = systemPrompt;
-	let id = '';
+	let id = chatId;
 	let messages: any[] = [];
+	let savedMessages: Record<string, any> = {};
 	let draft = '';
 	let error = '';
 	let busy = false;
@@ -103,16 +114,27 @@
 	const messagesContainerId = `${inputId}-messages`;
 	$: sideHistory = {
 		currentId: messages.at(-1)?.id ?? null,
-		messages: Object.fromEntries(messages.map((message) => [message.id, message]))
+		messages: {
+			...savedMessages,
+			...Object.fromEntries(messages.map((message) => [message.id, message]))
+		}
 	};
 	const scroll = async () => {
 		await tick();
 		if (autoScroll) scroller?.scrollTo({ top: scroller.scrollHeight });
 	};
 
+	const markRead = () =>
+		$socket?.emit('events:chat', { chat_id: id, data: { type: 'last_read_at' } });
+
 	const receive = (event: any, callback?: (value: any) => void) => {
 		if (!id || event.chat_id !== id) return;
 		const { type, data } = event.data ?? {};
+		if (type === 'chat:title') {
+			onChatUpdate({ id, title: data });
+			void refreshChatList(localStorage.token);
+			return;
+		}
 		if (type === 'context_compaction') {
 			const checkpoint = [...context, ...messages].find(
 				(message) => message.id === data.checkpoint_message_id
@@ -147,6 +169,7 @@
 			if (data.done) {
 				message.done = true;
 				busy = false;
+				if (saved) markRead();
 			}
 		} else if (type === 'chat:message:error') {
 			error = getErrorMessage(data.error);
@@ -172,8 +195,36 @@
 		void scroll();
 	};
 
+	const loadSavedChat = async () => {
+		try {
+			const chat = await getChatById(localStorage.token, id);
+			if (disposed) return;
+			const savedHistory = chat.chat.history ?? convertMessagesToHistory(chat.chat.messages);
+			const chatModelId = chat.chat.models?.find((name: string) =>
+				$models.some((model) => model.id === name)
+			);
+			if (chatModelId) selectedModels = [chatModelId];
+			params = { ...params, ...chat.chat.params };
+			savedMessages = savedHistory.messages;
+			messages = createMessagesList(savedHistory, savedHistory.currentId);
+			const lastMessage = messages.at(-1);
+			const unfinished = lastMessage?.role === 'assistant' && lastMessage.done === false;
+			busy = unfinished && !!(await getTaskIdsByChatId(localStorage.token, id)).task_ids.length;
+			(busy ? messages.slice(0, -1) : messages).forEach((message) => {
+				message.done = true;
+			});
+			messages = messages;
+			onChatUpdate({ id, title: chat.title });
+			markRead();
+			void scroll();
+		} catch (err) {
+			error = getErrorMessage(err);
+		}
+	};
+
 	const reconnect = async () => {
 		if (!sideChatAllowed || !id || !$socket?.id) return;
+		if (saved) return loadSavedChat();
 		try {
 			const result = await resumeTemporaryChat(localStorage.token, id, $socket.id);
 			if (disposed || !sideChatAllowed) return;
@@ -197,6 +248,24 @@
 		}
 	};
 
+	const createSavedChat = async () => {
+		const created = await createNewChat(
+			localStorage.token,
+			{
+				title: $i18n.t('New Chat'),
+				models: [sideModelId],
+				params,
+				history: { messages: {}, currentId: null },
+				messages: [],
+				tags: [],
+				timestamp: Date.now()
+			},
+			null
+		);
+		if (!created?.id) throw new Error($i18n.t('Failed to create chat'));
+		return created.id;
+	};
+
 	const send = async () => {
 		if (!sideChatAllowed) return;
 		const question = draft.trim();
@@ -215,8 +284,14 @@
 		}
 		error = '';
 		if (!id) {
-			id = createTemporaryChatId($socket.id);
-			openTemporaryChatIds.update((ids) => new Set([...ids, id]));
+			try {
+				id = saved ? await createSavedChat() : createTemporaryChatId($socket.id);
+			} catch (err) {
+				error = getErrorMessage(err);
+				return;
+			}
+			openSideChatIds.update((ids) => new Set([...ids, id]));
+			if (saved) onChatUpdate({ id });
 		}
 		await tick();
 		if (!sideChatAllowed) return;
@@ -274,6 +349,8 @@
 		const directServers = selectedToolIds
 			.filter((id) => id.startsWith('direct_server:'))
 			.map((id) => id.slice('direct_server:'.length));
+		const requestSystem = saved ? params.system || $settings.system || '' : system;
+		const systemMessages = requestSystem ? [{ role: 'system', content: requestSystem }] : [];
 		messages = [...messages, userMessage, answer];
 		draft = '';
 		files = [];
@@ -289,6 +366,17 @@
 			session_id: $socket.id,
 			id: answer.id,
 			user_message: userMessage,
+			...(saved
+				? {
+						parent_id: userMessage.parentId,
+						background_tasks: userMessage.parentId
+							? {}
+							: {
+									title_generation: $settings?.title?.auto ?? true,
+									tags_generation: $settings?.autoTags ?? true
+								}
+					}
+				: {}),
 			params: { ...params, tool_approval_mode: toolApprovalMode },
 			files: requestFiles,
 			tool_ids: selectedToolIds.filter((id) => !id.startsWith('direct_server:')),
@@ -310,15 +398,17 @@
 				code_interpreter: codeInterpreterEnabled,
 				memory: $settings.memory ?? $config?.features?.enable_memories ?? false
 			},
-			messages: [
-				...(system ? [{ role: 'system', content: system }] : []),
-				{
-					role: 'system',
-					content:
-						'This is a separate side conversation. Earlier messages are reference context only. Answer the side question; do not continue the parent task.'
-				},
-				...conversation
-			]
+			messages: saved
+				? systemMessages
+				: [
+						...systemMessages,
+						{
+							role: 'system',
+							content:
+								'This is a separate side conversation. Earlier messages are reference context only. Answer the side question; do not continue the parent task.'
+						},
+						...conversation
+					]
 		});
 		try {
 			const result = await request;
@@ -359,6 +449,10 @@
 		connection?.on('events', receive);
 		connection?.on('connect', reconnect);
 		connection?.on('disconnect', cancelInteractions);
+		if (saved && id) {
+			openSideChatIds.update((ids) => new Set([...ids, id]));
+			void loadSavedChat();
+		}
 		void tick().then(() => {
 			if (disposed) return;
 			if (sideChatAllowed && initialPrompt) {
@@ -375,8 +469,8 @@
 			connection?.off('disconnect', cancelInteractions);
 			cancelInteractions();
 			if (id) {
-				void stop();
-				openTemporaryChatIds.update((ids) => {
+				if (!saved) void stop();
+				openSideChatIds.update((ids) => {
 					const next = new Set(ids);
 					next.delete(id);
 					return next;
@@ -423,10 +517,12 @@
 			<div class="flex h-full items-center justify-center px-6">
 				<div class="max-w-56 text-center">
 					<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
-						{$i18n.t('Temporary chat')}
+						{saved ? $i18n.t('New Chat') : $i18n.t('Temporary chat')}
 					</p>
 					<p class="mt-1.5 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
-						{$i18n.t('Messages disappear when you close this tab.')}
+						{saved
+							? $i18n.t('Messages are saved to your chats.')
+							: $i18n.t('Messages disappear when you close this tab.')}
 					</p>
 				</div>
 			</div>
@@ -462,7 +558,7 @@
 				dropzoneId={`${inputId}-pane`}
 				{inputId}
 				{messagesContainerId}
-				temporary={true}
+				temporary={!saved}
 				embedded
 				callEnabled={false}
 				terminalSelectionEnabled={false}

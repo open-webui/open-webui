@@ -300,6 +300,41 @@
 		}
 		openPanel({ id: kind, kind, label: view.label });
 	};
+	const openSavedChat = (savedChatId = '') => {
+		if (!canSavedSideChat || (savedChatId && savedChatId === chatId)) return;
+		const existing = tabs.tabs.find((tab) => savedChatId && tab.chatId === savedChatId);
+		if (existing) {
+			selectTab(existing.id);
+			return;
+		}
+		openPanel({
+			id: crypto.randomUUID(),
+			kind: 'side',
+			label: savedChatId ? $i18n.t('Chat') : $i18n.t('New Chat'),
+			saved: true,
+			chatId: savedChatId
+		});
+	};
+	const updateSideChatTab = (tabId: string, chat: { id: string; title?: string }) => {
+		tabs = {
+			...tabs,
+			tabs: tabs.tabs.map((tab) =>
+				tab.id === tabId ? { ...tab, chatId: chat.id, label: chat.title || tab.label } : tab
+			)
+		};
+	};
+	const isSidebarDrag = (event: DragEvent) =>
+		canSavedSideChat && !!event.dataTransfer?.types.includes('application/x-open-webui-drag');
+	const allowChatDrop = (event: DragEvent) => {
+		if (isSidebarDrag(event)) event.preventDefault();
+	};
+	const dropChat = (event: DragEvent) => {
+		if (!isSidebarDrag(event)) return;
+		const item = JSON.parse(event.dataTransfer!.getData('text/plain'));
+		if (item.type !== 'chat') return;
+		event.preventDefault();
+		openSavedChat(item.id);
+	};
 	const newTerminal = () => {
 		if (!terminalEnabled || !selectedConnection) return;
 		let terminalNumber = 1;
@@ -540,7 +575,11 @@
 	$: newTabViews = availableViews.filter(
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
-	$: canOpenNewTab = showFilesMenuItem || terminalFilesAvailable || newTabViews.length > 0;
+	$: canSavedSideChat =
+		canSideChat &&
+		($user?.role === 'admin' || !($user?.permissions?.chat?.temporary_enforced ?? false));
+	$: canOpenNewTab =
+		showFilesMenuItem || terminalFilesAvailable || newTabViews.length > 0 || canSavedSideChat;
 
 	$: directTerminals =
 		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
@@ -825,8 +864,11 @@
 </Modal>
 
 <div
+	role="presentation"
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
+	on:dragover={allowChatDrop}
+	on:drop={dropChat}
 	class={fullWidth ? 'contents' : 'h-full w-full min-h-0 flex flex-col'}
 	style:--chat-tabs-dark-background={'var(--color-gray-900)'}
 	id="controls-container"
@@ -955,6 +997,9 @@
 									{/if}{view.label}
 								</button>
 							{/each}
+							{#if canSavedSideChat}<button on:click={() => openSavedChat()}
+									><Icon name="chat-plus" size={14} />{$i18n.t('New Chat')}</button
+								>{/if}
 						</DropdownMenu>
 					</div>
 				</Dropdown>
@@ -1010,8 +1055,16 @@
 					<Embeds overlay={dragged} />
 				{:else if tab.kind === 'artifacts'}
 					<Artifacts overlay={dragged} />
-				{:else if tab.kind === 'side' && chatId}
-					<SideChat {history} {modelId} {systemPrompt} initialPrompt={tab.initialPrompt ?? ''} />
+				{:else if tab.kind === 'side' && (chatId || tab.saved)}
+					<SideChat
+						{history}
+						{modelId}
+						{systemPrompt}
+						initialPrompt={tab.initialPrompt ?? ''}
+						saved={tab.saved}
+						chatId={tab.chatId}
+						onChatUpdate={(chat) => updateSideChatTab(tab.id, chat)}
+					/>
 				{:else if tab.kind === 'comments' && currentComments}
 					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel

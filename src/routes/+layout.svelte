@@ -25,7 +25,7 @@
 		chatId,
 		tags,
 		temporaryChatEnabled,
-		openTemporaryChatIds,
+		openSideChatIds,
 		isLastActiveTab,
 		isApp,
 		appInfo,
@@ -586,7 +586,7 @@
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
 		const isTemporaryChat = isTemporaryChatId(event.chat_id);
-		if (isTemporaryChat && event.chat_id !== $chatId && !$openTemporaryChatIds.has(event.chat_id)) {
+		if (isTemporaryChat && event.chat_id !== $chatId && !$openSideChatIds.has(event.chat_id)) {
 			return;
 		}
 
@@ -765,7 +765,7 @@
 
 		if (
 			!event?.internal &&
-			!$openTemporaryChatIds.has(event.chat_id) &&
+			!$openSideChatIds.has(event.chat_id) &&
 			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
 		) {
 			if (type === 'chat:completion') {

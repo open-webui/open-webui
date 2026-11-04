@@ -197,7 +197,7 @@ export const artifactContents = writable(null);
 export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
-export const openTemporaryChatIds = writable<Set<string>>(new Set());
+export const openSideChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
 // Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
