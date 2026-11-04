@@ -489,7 +489,7 @@ class MilvusClient(VectorDBBase):
             hybrid_bm25_weight=hybrid_bm25_weight,
         )
 
-    def query(self, collection_name: str, filter: dict, limit: int = -1):
+    def query(self, collection_name: str, filter: dict, limit: Optional[int] = None):
         collection_name = collection_name.replace('-', '_')
         if not self.has_collection(collection_name):
             log.warning(f'Query attempted on non-existent collection: {self.collection_prefix}_{collection_name}')
@@ -524,7 +524,7 @@ class MilvusClient(VectorDBBase):
                     'text',
                     'metadata',
                 ],
-                limit=limit if limit > 0 else -1,
+                limit=limit if limit and limit > 0 else -1,
             )
 
             all_results = []
