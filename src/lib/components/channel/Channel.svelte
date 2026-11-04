@@ -2,7 +2,7 @@
 	import { toast } from 'svelte-sonner';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, onNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { v4 as uuidv4 } from 'uuid';
 	import type { Socket } from 'socket.io-client';
@@ -97,6 +97,13 @@
 
 	let replyToMessage = null;
 	let threadId: any = null;
+
+	onNavigate(({ from, to }) => {
+		if (from?.url.pathname !== to.url.pathname) {
+			threadId = null;
+			return tick();
+		}
+	});
 
 	let typingUsers = [];
 	let typingUsersTimeout = {};
