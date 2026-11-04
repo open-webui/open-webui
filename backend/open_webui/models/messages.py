@@ -513,15 +513,36 @@ class MessageTable:
                 )
             return messages
 
-    async def get_last_message_by_channel_id(
-        self, channel_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[MessageModel]:
+    async def get_last_message_times_by_channel_ids(
+        self, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, int]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).limit(1)
+                select(Message.channel_id, func.max(Message.created_at))
+                .filter(Message.channel_id.in_(channel_ids))
+                .group_by(Message.channel_id)
             )
-            message = result.scalars().first()
-            return MessageModel.model_validate(message) if message else None
+            return dict(result.all())
+
+    async def get_unread_message_counts_by_user_id(
+        self, user_id: str, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, int]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Message.channel_id, func.count(Message.id))
+                .join(
+                    ChannelMember,
+                    and_(ChannelMember.channel_id == Message.channel_id, ChannelMember.user_id == user_id),
+                )
+                .filter(
+                    Message.channel_id.in_(channel_ids),
+                    Message.parent_id == None,  # only count top-level messages
+                    Message.created_at > func.coalesce(ChannelMember.last_read_at, 0),
+                    or_(Message.user_id != user_id, Message.user_id.is_(None)),
+                )
+                .group_by(Message.channel_id)
+            )
+            return dict(result.all())
 
     async def get_pinned_messages_by_channel_id(
         self,
