@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils import batchtech_handoff  # BATCHTECH
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
@@ -305,6 +306,7 @@ async def delegate(
     metadata: dict,
     parent_chat_id: str,
     parent_message_id: str | None,
+    event_emitter=None,  # BATCHTECH
 ) -> str:
     global _foreground_semaphore
 
@@ -718,7 +720,15 @@ async def delegate(
     try:
         _, child_task = await create_task(
             request.app.state.redis,
-            run_background() if background else run_reserved(),
+            # BATCHTECH: report who is doing the work
+            batchtech_handoff.track(
+                request,
+                event_emitter,
+                model_id,
+                delegation_id,
+                background,
+                run_background() if background else run_reserved(),
+            ),
             id=chat_id,
         )
     except Exception as exc:

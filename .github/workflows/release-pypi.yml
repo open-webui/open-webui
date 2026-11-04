@@ -1,10 +1,8 @@
 name: Release to PyPI
 
+# BATCHTECH: upstream's trigger removed so this does not run on the fork. Run by hand if ever needed.
 on:
-  push:
-    branches:
-      - main # or whatever branch you want to use
-      - pypi-release
+  workflow_dispatch:
 
 jobs:
   release:

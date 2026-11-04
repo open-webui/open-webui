@@ -1,13 +1,8 @@
 name: Create and publish Docker images with specific build args
 
+# BATCHTECH: upstream's trigger removed so this does not run on the fork. Run by hand if ever needed.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-      - dev
-    tags:
-      - v*
 
 concurrency:
   group: docker-${{ github.ref }}

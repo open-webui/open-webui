@@ -45,12 +45,16 @@ jobs:
           git config user.name "batchtech-sync"
           git config user.email "batchtech-sync@users.noreply.github.com"
           git checkout -b "sync/$TAG" origin/main
-          if ! git merge --no-edit "upstream-$TAG"; then
+          if ! git merge --no-commit --no-ff "upstream-$TAG"; then
             git diff --name-only --diff-filter=U > conflicts.txt
             git merge --abort
             echo "result=conflict" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # Keep our own workflows: upstream's would run on the fork, and the Actions token cannot push workflow edits.
+          git rm -rf -q --ignore-unmatch .github/workflows
+          git checkout origin/main -- .github/workflows
+          git commit -q -m "Merge Open WebUI $TAG (upstream workflows skipped)"
           pip install -q pillow
           python3 batchtech/rebrand.py
           python3 batchtech/apply_assets.py
