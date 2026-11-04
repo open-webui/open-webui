@@ -395,6 +395,26 @@ async def toggle_tool_by_id(
     return tool
 
 
+@router.post('/id/{id}/toggle/global', response_model=ToolResponse)
+async def toggle_tool_global_by_id(
+    request: Request,
+    id: str,
+    user=Depends(get_admin_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    tool = await Tools.toggle_tool_global_by_id(id, db=db)
+    if tool is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    await publish_event(
+        request,
+        EVENTS.TOOL_UPDATED,
+        actor=user,
+        subject_id=tool.id,
+        data={'name': tool.name, 'is_global': tool.is_global},
+    )
+    return tool
+
+
 # Load Function From Link
 
 

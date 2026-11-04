@@ -4,6 +4,8 @@
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	export let resourceId = '';
 	import LockClosed from '$lib/components/icons/LockClosed.svelte';
+	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import { getContext } from 'svelte';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -24,6 +26,8 @@
 	export let exportHandler: Function;
 	export let deleteHandler: Function;
 	export let accessHandler: (() => void) | null = null;
+	export let toggleGlobalHandler: (() => void) | null = null;
+	export let isGlobal = false;
 	export let onClose: Function;
 
 	export let show = false;
@@ -48,6 +52,20 @@
 
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
+			{#if toggleGlobalHandler}
+				<div
+					class="flex h-[1.6875rem] w-full items-center justify-between gap-2 rounded-xl px-2 text-[0.8125rem]"
+				>
+					<div class="flex items-center gap-2">
+						<GlobeAlt className="size-3.5" />
+						<div class="flex items-center">{$i18n.t('Global')}</div>
+					</div>
+					<Switch bind:state={isGlobal} on:change={toggleGlobalHandler} />
+				</div>
+
+				<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
+			{/if}
+
 			<button
 				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 				draggable="false"

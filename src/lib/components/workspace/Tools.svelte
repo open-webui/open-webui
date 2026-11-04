@@ -35,7 +35,8 @@
 		getToolById,
 		getToolList,
 		getTools,
-		toggleToolById
+		toggleToolById,
+		toggleToolGlobalById
 	} from '$lib/apis/tools';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
@@ -90,6 +91,26 @@
 	let openToolMenuId: string | null = null;
 
 	let showImportModal = false;
+
+	const toggleGlobalHandler = async (tool) => {
+		try {
+			const updatedTool = await toggleToolGlobalById(localStorage.token, tool.id);
+			tool.is_global = updatedTool.is_global;
+			tools = tools;
+			toast.success(
+				tool.is_global
+					? $i18n.t('Tool is now globally enabled')
+					: $i18n.t('Tool is now globally disabled')
+			);
+		} catch (error) {
+			tool.is_global = !tool.is_global;
+			tools = tools;
+			toast.error(`${error?.detail ?? error}`);
+			return;
+		}
+
+		_tools.set(await getTools(localStorage.token));
+	};
 
 	const toggleToolHandler = async (tool) => {
 		if (updatingTools[tool.id]) return;
@@ -655,6 +676,10 @@
 													$user?.role === 'admin'
 														? () => accessModal.open(tool.id)
 														: null}
+													toggleGlobalHandler={$user?.role === 'admin'
+														? () => toggleGlobalHandler(tool)
+														: null}
+													bind:isGlobal={tool.is_global}
 													show={openToolMenuId === tool.id}
 													editHandler={() => {
 														goto(`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`);

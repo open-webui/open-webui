@@ -52,6 +52,7 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.models import Models
+from open_webui.models.tools import Tools
 from open_webui.models.users import UserModel, Users
 from open_webui.retrieval.utils import filter_source_metadata, get_sources_from_items
 from open_webui.routers.images import (
@@ -2674,7 +2675,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # unchanged.  Sending `tools: []` explicitly opts out of builtin injection.
     if payload_tools is None:
         # Server side tools
-        tool_ids = metadata.get('tool_ids', None)
+        bypass_access_control = user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL
+        global_tool_ids = await Tools.get_global_tool_ids(user_id=None if bypass_access_control else user.id)
+        tool_ids = list(dict.fromkeys([*global_tool_ids, *(metadata.get('tool_ids') or [])]))
         # Client side tools
         direct_tool_servers = metadata.get('tool_servers', None)
 

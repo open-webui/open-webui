@@ -12,6 +12,21 @@ export const toggleToolById = async (token: string, id: string) => {
 	return response.json();
 };
 
+export const toggleToolGlobalById = async (token: string, id: string) => {
+	const response = await fetch(
+		`${WEBUI_API_BASE_URL}/tools/id/${encodeURIComponent(id)}/toggle/global`,
+		{
+			method: 'POST',
+			headers: { Accept: 'application/json', authorization: `Bearer ${token}` }
+		}
+	);
+	if (!response.ok) {
+		const error = await response.json();
+		throw error.detail ?? error;
+	}
+	return response.json();
+};
+
 export const createNewTool = async (token: string, tool: object) => {
 	let error = null;
 

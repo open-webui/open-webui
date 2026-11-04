@@ -53,6 +53,7 @@
 		description?: string;
 		meta?: { description?: string };
 		is_active?: boolean;
+		is_global?: boolean;
 		authenticated?: boolean;
 		has_user_valves?: boolean;
 		[key: string]: any;
@@ -244,7 +245,7 @@
 
 	const toggleTool = async (toolId: string, e: MouseEvent) => {
 		const tool = tools?.[toolId];
-		if (!tool) return;
+		if (!tool || tool.is_global) return;
 
 		if (!(tool.authenticated ?? true)) {
 			e.preventDefault();
@@ -564,14 +565,17 @@
 						{:else}
 							<div class="flex flex-col gap-0.5">
 								{#each toolIds as toolId}
+									{@const isGlobalTool = tools?.[toolId]?.is_global}
 									<div
-										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+										class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500 {isGlobalTool
+											? 'opacity-50'
+											: ''}"
 										role="presentation"
 										on:click={async (e) => {
 											await toggleTool(toolId, e);
 										}}
 									>
-										{#if !(tools?.[toolId]?.authenticated ?? true)}
+										{#if !(tools?.[toolId]?.authenticated ?? true) || isGlobalTool}
 											<!-- make it slighly darker and not clickable -->
 											<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
 										{/if}
@@ -582,7 +586,7 @@
 												? 'menuitemcheckbox'
 												: 'menuitem'}
 											aria-checked={(tools?.[toolId]?.authenticated ?? true)
-												? selectedToolIds.includes(toolId)
+												? isGlobalTool || selectedToolIds.includes(toolId)
 												: undefined}
 										>
 											<div class="flex flex-1 gap-2 items-center">
@@ -670,7 +674,7 @@
 										{/if}
 
 										<div class=" shrink-0" inert>
-											<Switch state={selectedToolIds.includes(toolId)} />
+											<Switch state={isGlobalTool || selectedToolIds.includes(toolId)} />
 										</div>
 									</div>
 								{/each}

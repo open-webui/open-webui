@@ -17,7 +17,7 @@ from open_webui.models.tool_history import ToolHistories, ToolHistory, tool_snap
 from open_webui.models.users import UserResponse, Users
 from open_webui.utils.valves import decrypt_valves, encrypt_valves, validate_valves
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, delete, select, true, update
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, delete, false, select, true, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ class Tool(Base):  # database table definition
     meta = Column(JSONField)  # description, manifest, etc.
     valves = Column(JSONField)  # admin-configurable runtime parameters
     is_active = Column(Boolean, nullable=False, default=True, server_default=true())
+    is_global = Column(Boolean, nullable=False, default=False, server_default=false())
 
     updated_at = Column(BigInteger, nullable=False)  # modification timestamp
     created_at = Column(BigInteger, index=True)  # creation timestamp
@@ -58,6 +59,7 @@ class ToolModel(BaseModel):
     specs: list[dict]
     meta: ToolMeta
     is_active: bool = True
+    is_global: bool = False
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
 
     updated_at: int  # timestamp in epoch
@@ -81,6 +83,7 @@ class ToolResponse(BaseModel):
     name: str
     meta: ToolMeta
     is_active: bool = True
+    is_global: bool = False
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
@@ -239,6 +242,40 @@ class ToolsTable:
                 await session.rollback()
                 raise
 
+    async def toggle_tool_global_by_id(self, id: str, db: AsyncSession | None = None) -> ToolModel | None:
+        async with get_async_db_context(db) as session:
+            try:
+                tool = await self._lock_tool(session, id)
+                if tool is None:
+                    return None
+                tool.is_global = not tool.is_global
+                tool.updated_at = int(time.time())
+                await session.flush()
+                result = await self._to_tool_model(tool, db=session)
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                raise
+
+    async def get_global_tool_ids(self, user_id: str | None = None, db: AsyncSession | None = None) -> list[str]:
+        async with get_async_db_context(db) as session:
+            stmt = select(Tool.id).where(Tool.is_active.is_(True), Tool.is_global.is_(True))
+            if user_id is not None:
+                user_group_ids = {
+                    group.id
+                    for group in await Groups.get_groups_by_member_id(user_id, db=session, include_inherited=True)
+                }
+                stmt = AccessGrants.has_permission_filter(
+                    db=session,
+                    query=stmt,
+                    DocumentModel=Tool,
+                    filter={'user_id': user_id, 'group_ids': user_group_ids},
+                    resource_type='tool',
+                    permission='read',
+                )
+            return (await session.scalars(stmt)).all()
+
     async def get_tools(
         self,
         defer_content: bool = False,
@@ -260,6 +297,7 @@ class ToolsTable:
                     Tool.specs,
                     Tool.meta,
                     Tool.is_active,
+                    Tool.is_global,
                     Tool.updated_at,
                     Tool.created_at,
                 )
