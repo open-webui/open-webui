@@ -21,7 +21,8 @@ Open `http://SERVER:3001`, create an admin account (it is a fresh instance), the
 2. Sidebar, above your avatar: the **Server** bar (click it for numbers). GPU shows only if the container can see the GPU
    (add `--gpus all` for NVIDIA, with the NVIDIA container toolkit installed).
 3. **Handoffs:** Admin Panel, Settings, turn on sub-agents, and in a model's settings choose which models it may delegate to
-   (cloud model delegating to a local one). Ask the cloud model to "use a sub-agent with <local model> to ...".
+   (cloud model delegating to a local one). Built-in tools such as sub-agents need the delegating model's
+   Advanced Params, Function Calling set to **Native**. Ask the cloud model to "use a sub-agent with <local model> to ...".
    A line appears under the reply: "Handing off to <model> (local)", the model's logo spins while it works, then
    "<model> (local) finished in Ns".
 4. **Spin:** only the model that is generating spins its logo. Remove the old spin CSS in Theme Designer and paste the
