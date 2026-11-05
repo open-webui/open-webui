@@ -1960,7 +1960,9 @@
 					<div
 						class=" sidebar-bg-gradient-to-t bg-linear-to-t from-gray-50 dark:from-gray-950 to-transparent from-50% pointer-events-none absolute inset-0 -z-10 -mt-6"
 					></div>
-					<StatusPanel />
+					{#if $settings?.showServerStatus ?? true}
+						<StatusPanel />
+					{/if}
 					<!-- BATCHTECH -->
 					<div class="flex flex-col">
 						{#if $user !== undefined && $user !== null}

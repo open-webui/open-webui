@@ -113,6 +113,7 @@
 
 	// Admin - Show Update Available Toast
 	let showUpdateToast = true;
+	let showServerStatus = true; // BATCHTECH
 	let showChangelog = true;
 
 	// File
@@ -345,6 +346,7 @@
 
 		showUsername = currentSettings?.showUsername ?? false;
 		showUpdateToast = currentSettings?.showUpdateToast ?? true;
+		showServerStatus = currentSettings?.showServerStatus ?? true; // BATCHTECH
 		showChangelog = currentSettings?.showChangelog ?? true;
 
 		showEmojiInCall = currentSettings?.showEmojiInCall ?? false;
@@ -741,6 +743,30 @@
 		</div>
 		<p class={settingDescriptionClass}>
 			{$i18n.t('settings.personal.interface.copyFormattedText.description')}
+		</p>
+	</div>
+
+	<!-- BATCHTECH: show or hide the Server status section in the sidebar -->
+	<div>
+		<div class={settingRowClass}>
+			<label id="server-status-label" class={settingLabelClass} for="server-status-label-control">
+				{$i18n.t('Show server status in the sidebar')}
+			</label>
+
+			<div class={settingControlClass}>
+				<Switch
+					ariaLabelledbyId="server-status-label"
+					tooltip={true}
+					bind:state={showServerStatus}
+					inherited={isDefaultSetting('showServerStatus')}
+					on:change={() => {
+						saveSettings({ showServerStatus });
+					}}
+				/>
+			</div>
+		</div>
+		<p class={settingDescriptionClass}>
+			{$i18n.t('CPU, RAM, GPU, network and loaded models of the server.')}
 		</p>
 	</div>
 

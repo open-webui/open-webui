@@ -267,6 +267,7 @@ type Settings = {
 	toolServers?: never[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
+	showServerStatus?: boolean; // BATCHTECH
 	showChangelog?: boolean;
 	showEmojiInCall?: boolean;
 	voiceInterruption?: boolean;
