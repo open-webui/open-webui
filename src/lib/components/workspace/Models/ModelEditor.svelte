@@ -436,7 +436,7 @@
 			}
 		}
 
-		if (toolIds.length > 0) {
+		if (toolIds.length > 0 || defaultMeta.toolIds?.length > 0) {
 			modelInfo.meta.toolIds = toolIds;
 		} else {
 			if (modelInfo.meta.toolIds) {
@@ -722,7 +722,7 @@
 				}
 			});
 
-			toolIds = model?.meta?.toolIds ?? [];
+			toolIds = model?.meta?.toolIds ?? defaultMeta.toolIds ?? [];
 			subagents = { model_ids: model?.meta?.subagents?.model_ids ?? [] };
 			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
