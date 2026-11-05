@@ -131,7 +131,8 @@ export const searchNotes = async (
 	permission: string | null = null,
 	sortKey: string | null = null,
 	page: number | null = null,
-	direction: string | null = null
+	direction: string | null = null,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
@@ -162,6 +163,7 @@ export const searchNotes = async (
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/search?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			Accept: 'application/json',
 			'Content-Type': 'application/json',
@@ -176,6 +178,7 @@ export const searchNotes = async (
 			return json;
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			error = err.detail;
 			console.error(err);
 			return null;

@@ -74,6 +74,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
@@ -200,6 +201,10 @@
 			: `/notes/${note.id}`;
 
 	const getItemsPage = async () => {
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		itemsLoading = true;
 
 		if (viewOption === 'created') {
@@ -213,10 +218,13 @@
 			permission,
 			sortKey,
 			page,
-			sortKey ? sortDirection : null
+			sortKey ? sortDirection : null,
+			signal
 		).catch(() => {
 			return [];
 		});
+
+		if (signal.aborted) return;
 
 		if (res) {
 			total = res.total;
@@ -349,6 +357,7 @@
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			searchController?.abort();
 			clearTimeout(searchDebounceTimer);
 
 			window.removeEventListener('focusin', onFocusIn);
