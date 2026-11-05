@@ -168,6 +168,7 @@
 	};
 
 	const submitRename = () => {
+		if (!renaming) return;
 		const newName = renameValue.trim();
 		renaming = false;
 		if (!newName || newName === entry.name) return;
