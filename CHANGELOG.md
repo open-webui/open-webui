@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- 🔗 **Personal terminals from native apps.** Native apps on your own computer can now sign in with renewable sessions (90 days without use by default, set with "SESSION_EXPIRES_IN") and appear as a personal terminal in chats, with terminal output that resumes after a dropped connection. [Commit](https://github.com/open-webui/open-webui/commit/404d27a36eed45359a56082500b8970ba6ad58aa), [Commit](https://github.com/open-webui/open-webui/commit/99f4541e3bef722d0ffe32374e29c7a72dc0ebff), [Commit](https://github.com/open-webui/open-webui/commit/69189cbaad2aa2cf437ffbc988ef397691c4e04a)
 - ✉️ **Non-ASCII email addresses.** The sign-up page and the add and edit user dialogs now accept email addresses with non-ASCII characters. [#33693](https://github.com/open-webui/open-webui/pull/33693), [#33681](https://github.com/open-webui/open-webui/issues/33681)
 - ⌨️ **Faster typing after large pastes.** Typing in the chat input after pasting 16,000 lines of text is now about 117 times faster, down from 8.6 seconds to 74 milliseconds per keystroke. [#33729](https://github.com/open-webui/open-webui/pull/33729), [#12087](https://github.com/open-webui/open-webui/issues/12087)
 - ⏱️ **Faster large chats.** Large chats now open about twice as fast. [#33665](https://github.com/open-webui/open-webui/pull/33665)
@@ -40,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🪪 **OAuth token refresh warnings.** Refreshing OAuth tokens with a client secret no longer logs deprecation warnings on every call. [#33700](https://github.com/open-webui/open-webui/pull/33700), [#33297](https://github.com/open-webui/open-webui/issues/33297)
 - 🕵️ **Audit log secret masking.** With request auditing on, the audit log now masks API keys, tokens and secrets saved in the admin settings, not only passwords. [#33746](https://github.com/open-webui/open-webui/pull/33746)
 - 🏷️ **Visible controls labels.** Six toggles under Visible controls in the Admin Interface settings now show their names instead of raw translation keys. [#33734](https://github.com/open-webui/open-webui/pull/33734)
+
+### Changed
+
+- ⚠️ **Database Migrations**: This release includes database schema changes; we strongly recommend backing up your database and all associated data before upgrading in production environments. If you are running a multi-worker, multi-server, or load-balanced deployment, all instances must be updated simultaneously, rolling updates are not supported and will cause application failures due to schema incompatibility.
 
 ## [0.13.0] - 2026-11-02
 
