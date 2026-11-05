@@ -279,6 +279,18 @@ async def is_valid_token(decoded, redis=None) -> bool:
     token_type = decoded.get('typ', 'session')
     if token_type not in {'session', 'automation', 'subagent'}:
         return False
+    if decoded.get('sid'):
+        from open_webui.models.auth_sessions import AuthSessions
+        import time
+
+        session = await AuthSessions.get(decoded['sid'])
+        if (
+            not session
+            or session.user_id != decoded.get('id')
+            or session.refresh_token_id is None
+            or session.expires_at <= int(time.time())
+        ):
+            return False
     if token_type == 'session':
         config = await get_mfa_config()
         if is_mfa_required(decoded.get('auth_method', ''), config):

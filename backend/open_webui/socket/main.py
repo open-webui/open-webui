@@ -658,6 +658,11 @@ async def user_join(sid, data):
     if not user:
         return
 
+    previous = await sio.get_session(sid)
+    if previous.get('user', {}).get('id') not in (None, user.id):
+        await sio.disconnect(sid)
+        return
+
     socket_user = {
         **user.model_dump(
             exclude=[

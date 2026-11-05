@@ -2549,6 +2549,7 @@ ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
 API_KEYS_ALLOWED_ENDPOINTS = os.getenv('API_KEYS_ALLOWED_ENDPOINTS', os.getenv('API_KEY_ALLOWED_ENDPOINTS', ''))
 
 JWT_EXPIRES_IN = os.getenv('JWT_EXPIRES_IN', '4w')
+SESSION_EXPIRES_IN = os.getenv('SESSION_EXPIRES_IN', '90d')
 
 if JWT_EXPIRES_IN == '-1':
     log.warning(
@@ -3292,6 +3293,7 @@ DEFAULT_CONFIG = {
     'auth.api_key.endpoint_restrictions': ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     'auth.api_key.allowed_endpoints': API_KEYS_ALLOWED_ENDPOINTS,
     'auth.jwt_expiry': JWT_EXPIRES_IN,
+    'auth.session_expiry': SESSION_EXPIRES_IN,
     'auth.mfa.enable': ENABLE_MFA,
     'auth.mfa.allow_oauth_bypass': MFA_ALLOW_OAUTH_BYPASS,
     'auth.mfa.allow_trusted_header_bypass': MFA_ALLOW_TRUSTED_HEADER_BYPASS,

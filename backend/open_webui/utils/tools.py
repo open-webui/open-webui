@@ -125,6 +125,7 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     set_tool_module_in_cache,
 )
+from open_webui.utils.tether import get_terminal_connections, get_terminal_client
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
@@ -1370,7 +1371,7 @@ async def get_terminal_cwd(
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
-        async with aiohttp.ClientSession(
+        async with get_terminal_client(base_url, headers.get('X-User-Id'), 
             timeout=aiohttp.ClientTimeout(total=5),
             trust_env=True,
         ) as session:
@@ -1398,7 +1399,7 @@ async def get_terminal_system_prompt(
     """
     base = base_url.rstrip('/')
     try:
-        async with aiohttp.ClientSession(
+        async with get_terminal_client(base_url, headers.get('X-User-Id'), 
             timeout=aiohttp.ClientTimeout(total=3),
             trust_env=True,
         ) as session:
@@ -1537,7 +1538,7 @@ async def get_terminal_tools(
     if not ENABLE_TOOL_SERVERS:
         return {}
 
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await get_terminal_connections(user)
     connection = next(
         (terminal_connection for terminal_connection in connections if terminal_connection.get('id') == terminal_id),
         None,
@@ -1552,8 +1553,14 @@ async def get_terminal_tools(
         raise RuntimeError(f'Access denied to terminal {terminal_id}')
 
     # Find the cached spec data for this terminal
-    terminal_servers = await get_terminal_servers(request)
-    server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
+    if connection.get('owner_id') == user.id:
+        url = connection['url']
+        openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id})
+        server_data = {'id': terminal_id, 'url': url, 'openapi': openapi,
+                       'specs': convert_openapi_to_tool_payload(openapi)}
+    else:
+        terminal_servers = await get_terminal_servers(request)
+        server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
     if server_data is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' is unavailable")
 
@@ -1663,7 +1670,7 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+        async with get_terminal_client(url, _headers.get('X-User-Id'), timeout=timeout, trust_env=True) as session:
             async with session.get(url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL) as response:
                 if response.status != 200:
                     error_body = await response.json()
@@ -1904,7 +1911,7 @@ async def execute_tool_server(
             else:
                 body_params = params
 
-        async with aiohttp.ClientSession(
+        async with get_terminal_client(url, (headers or {}).get('X-User-Id'), 
             trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
         ) as session:
             request_method = getattr(session, http_method.lower())

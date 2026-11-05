@@ -373,6 +373,10 @@ type Document = {
 };
 
 type Config = {
+	metadata?: {
+		auth_logo_position?: 'center' | 'top-right';
+		login_footer?: string;
+	};
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
 		stt: { engine: string };

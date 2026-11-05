@@ -140,15 +140,15 @@ async def get_terminal_json(
         return None
 
     import aiohttp
+    from open_webui.utils.tether import get_terminal_connections, get_terminal_client
     from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-    from open_webui.models.config import Config
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
     from open_webui.utils.access_control import has_connection_access
     from open_webui.utils.tools import build_tool_server_headers
 
     user_model = user if isinstance(user, UserModel) else UserModel(**user)
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await get_terminal_connections(user_model)
     connection = next((item for item in connections if item.get('id') == terminal_id), None)
 
     if connection:
@@ -191,14 +191,14 @@ async def get_terminal_json(
             body = aiohttp.FormData()
             body.add_field(
                 'file',
-                await asyncio.to_thread(Path(local_path).read_bytes),
+                open(local_path, 'rb'),
                 filename=file['name'],
                 content_type=(source.meta or {}).get('content_type') or 'application/octet-stream',
             )
             headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
         try:
-            async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
+            async with get_terminal_client(get_terminal_server_url(connection), user_model.id, timeout=timeout, trust_env=True) as session:
                 async with session.request(
                     'POST' if file else 'GET',
                     f'{get_terminal_server_url(connection)}{path}',

@@ -827,6 +827,9 @@ app.include_router(retrieval.router, prefix='/api/v1/retrieval', tags=['retrieva
 
 app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
+from open_webui.env import UVICORN_WORKERS, REDIS_URL
+from open_webui.routers import tether
+app.include_router(tether.router, prefix='/api/v1/tether', tags=['tether'])
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
 app.include_router(users.router, prefix='/api/v1/users', tags=['users'])
@@ -2387,6 +2390,8 @@ async def get_app_config(request: Request):
         },
         'features': {
             'slim': USE_SLIM,
+            'auth_sessions': True,
+            'tether': ENABLE_WEBSOCKET_SUPPORT and (UVICORN_WORKERS == 1 or bool(REDIS_URL)),
             # Public: required by login/signup page pre-auth
             'auth': WEBUI_AUTH,
             'auth_trusted_header': bool(WEBUI_AUTH_TRUSTED_EMAIL_HEADER),

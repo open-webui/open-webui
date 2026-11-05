@@ -152,6 +152,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
+from open_webui.utils.tether import get_terminal_connections
 from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
@@ -2778,7 +2779,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         terminal_capability = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('terminal', True)
         terminal_connection_ids = {
-            connection.get('id') for connection in await Config.get('terminal_server.connections', []) or []
+            connection.get('id') for connection in await get_terminal_connections(user)
         }
         if terminal_id and terminal_capability and terminal_id in terminal_connection_ids:
             try:

@@ -1030,7 +1030,14 @@
 			return;
 		}
 
-		if (now >= exp - TOKEN_EXPIRY_BUFFER) {
+		if (now >= exp - Math.max(TOKEN_EXPIRY_BUFFER, window.tether ? 90 : 0)) {
+			if (window.tether) {
+				try {
+					if (await renewTetherSession()) return;
+				} catch {
+					return;
+				}
+			}
 			clearExpiredSession();
 		}
 	};
@@ -1136,6 +1143,7 @@
 
 	onMount(async () => {
 		const originalFetch = window.fetch.bind(window);
+		stopTether = await initializeTether(originalFetch);
 		window.fetch = async (input, init) => {
 			const response = await originalFetch(input, init);
 
@@ -1145,6 +1153,13 @@
 				isAuthenticatedBackendFetch(input, init) &&
 				(await isCurrentSessionUnauthorized(originalFetch))
 			) {
+				if (window.tether) {
+					try {
+						if (await renewTetherSession(true)) return response;
+					} catch {
+						return response;
+					}
+				}
 				clearExpiredSession();
 			}
 
@@ -1460,6 +1475,7 @@
 	}
 
 	onDestroy(() => {
+		stopTether();
 		bc.close();
 	});
 </script>
