@@ -160,7 +160,10 @@ export const resolveTerminalConnection = (
 		return {
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
-			key: token,
+			// Panels outlive Tether's token rotations; read the current session at request time.
+			get key() {
+				return typeof localStorage === 'undefined' ? token : (localStorage.getItem('token') ?? '');
+			},
 			system: true
 		};
 	}
