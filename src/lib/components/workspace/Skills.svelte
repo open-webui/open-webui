@@ -109,7 +109,6 @@
 
 	let filteredItems = null;
 	let total = null;
-	let loading = false;
 
 	let tagsContainerElement: HTMLDivElement;
 	let viewOption = '';
@@ -188,7 +187,6 @@
 		searchController = new AbortController();
 		const { signal } = searchController;
 
-		loading = true;
 		try {
 			const res = await getSkillItems(
 				localStorage.token,
@@ -212,14 +210,11 @@
 			}
 		} catch (err) {
 			console.error(err);
-		} finally {
-			if (!signal.aborted) loading = false;
 		}
 	};
 
 	const handleSearchInput = () => {
 		searchController?.abort();
-		loading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (page !== 1) {
@@ -465,7 +460,7 @@
 				</div>
 			</div>
 
-			{#if filteredItems === null || loading}
+			{#if filteredItems === null}
 				<div class="w-full h-full flex justify-center items-center my-16 mb-24">
 					<Spinner className="size-5" />
 				</div>
