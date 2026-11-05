@@ -266,6 +266,39 @@
 
 	let showTerminalMenu = false;
 
+	function fitControlLabels(controls: HTMLElement) {
+		let frame: number;
+		const scheduleMeasure = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				const labels = controls.querySelectorAll<HTMLElement>('[data-input-label]');
+				// Measure all labels together so separate controls cannot compete for the same space.
+				for (const label of labels) label.style.display = '';
+				if (controls.scrollWidth > controls.clientWidth) {
+					for (const label of labels) label.style.display = 'none';
+				}
+			});
+		};
+		const observer = new ResizeObserver(scheduleMeasure);
+		const observeControls = () => {
+			observer.disconnect();
+			observer.observe(controls);
+			for (const child of controls.children) observer.observe(child);
+			scheduleMeasure();
+		};
+		const mutations = new MutationObserver(observeControls);
+		mutations.observe(controls, { childList: true, subtree: true, characterData: true });
+		observeControls();
+
+		return {
+			destroy() {
+				cancelAnimationFrame(frame);
+				observer.disconnect();
+				mutations.disconnect();
+			}
+		};
+	}
+
 	export let messageQueue: { id: string; prompt: string; files: any[]; error?: string }[] = [];
 	export let onQueueSendNow: (id: string) => void = () => {};
 	export let onQueueEdit: (id: string) => void = () => {};
@@ -2608,7 +2641,7 @@
 								</div>
 
 								<div
-									data-chat-input-controls
+									use:fitControlLabels
 									class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none"
 								>
 									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
@@ -2648,7 +2681,7 @@
 												>
 													<Wrench className="size-4" strokeWidth="1.75" />
 
-													<span class="text-sm">
+													<span data-input-label class="text-sm">
 														{(selectedToolIds ?? []).length}
 													</span>
 												</button>
@@ -2671,7 +2704,7 @@
 												>
 													<Cube className="size-4" strokeWidth="1.75" />
 
-													<span class="text-sm">
+													<span data-input-label class="text-sm">
 														{(selectedSkillIds ?? []).length}
 													</span>
 												</button>
@@ -2762,9 +2795,9 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<GlobeAlt className="size-4" strokeWidth="1.75" />
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
+													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
+														>{$i18n.t('Web Search')}</span
+													>
 												</button>
 											</Tooltip>
 										{/if}
@@ -2782,9 +2815,9 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<Photo className="size-4" strokeWidth="1.75" />
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
+													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
+														>{$i18n.t('Image')}</span
+													>
 												</button>
 											</Tooltip>
 										{/if}
@@ -2808,9 +2841,9 @@
 												>
 													<Terminal className="size-3.5" strokeWidth="2" />
 
-													<div class="hidden group-hover:block">
-														<XMark className="size-4" strokeWidth="1.75" />
-													</div>
+													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
+														>{$i18n.t('Code Interpreter')}</span
+													>
 												</button>
 											</Tooltip>
 										{/if}
