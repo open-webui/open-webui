@@ -136,6 +136,9 @@
 	{:else if displayItem.type === 'detail_group'}
 		<ConsecutiveDetailsGroup
 			id={`${id}-${displayItem.id}`}
+			{chatId}
+			modelId={model?.id ?? ''}
+			summarize
 			tokens={displayItem.tokens}
 			messageDone={done}
 			{compactPreview}
@@ -149,6 +152,9 @@
 					{#if detailToken.attributes?.type === 'tool_calls'}
 						<ToolCallDisplay
 							id={`${id}-${displayItem.id}-${detailIndex}-tool-call`}
+							{chatId}
+							modelId={model?.id ?? ''}
+							summarize
 							attributes={detailToken.attributes}
 							resultContent={detailToken.text}
 							grouped={true}
@@ -211,6 +217,9 @@
 		{#if detailToken.attributes?.type === 'tool_calls'}
 			<ToolCallDisplay
 				id={`${id}-${displayItem.id}-tool-call`}
+				{chatId}
+				modelId={model?.id ?? ''}
+				summarize
 				attributes={detailToken.attributes}
 				resultContent={detailToken.text}
 				{allowEmbeds}

@@ -14,6 +14,7 @@ from open_webui.config import (
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_VOICE_MODE_PROMPT_TEMPLATE,
 )
 from open_webui.constants import ERROR_MESSAGES, TASKS
@@ -29,9 +30,11 @@ from open_webui.utils.task import (
     get_task_model_id,
     image_prompt_generation_template,
     moa_response_generation_template,
+    parse_tool_call_summary,
     query_generation_template,
     tags_generation_template,
     title_generation_template,
+    tool_call_summary_generation_template,
 )
 from pydantic import BaseModel
 
@@ -51,6 +54,8 @@ TASK_CONFIG_KEYS = {
     'TAGS_GENERATION_PROMPT_TEMPLATE': 'task.tags.prompt_template',
     'FOLLOW_UP_GENERATION_PROMPT_TEMPLATE': 'task.follow_up.prompt_template',
     'ENABLE_FOLLOW_UP_GENERATION': 'task.follow_up.enable',
+    'TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE': 'task.tool_call_summary.prompt_template',
+    'ENABLE_TOOL_CALL_SUMMARY_GENERATION': 'task.tool_call_summary.enable',
     'ENABLE_TAGS_GENERATION': 'task.tags.enable',
     'ENABLE_TITLE_GENERATION': 'task.title.enable',
     'ENABLE_SEARCH_QUERY_GENERATION': 'task.query.search.enable',
@@ -120,6 +125,8 @@ class TaskConfigForm(BaseModel):
     TAGS_GENERATION_PROMPT_TEMPLATE: str
     FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: str
     ENABLE_FOLLOW_UP_GENERATION: bool
+    TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE: str
+    ENABLE_TOOL_CALL_SUMMARY_GENERATION: bool
     ENABLE_TAGS_GENERATION: bool
     ENABLE_SEARCH_QUERY_GENERATION: bool
     ENABLE_RETRIEVAL_QUERY_GENERATION: bool
@@ -276,6 +283,74 @@ async def generate_follow_ups(request: Request, form_data: dict, user=Depends(ge
             status_code=status.HTTP_400_BAD_REQUEST,
             content={'detail': 'An internal error has occurred.'},
         )
+
+
+@router.post('/tool_call_summary/completions')
+async def generate_tool_call_summary(request: Request, form_data: dict, user=Depends(get_verified_user)):
+    if not await Config.get('task.tool_call_summary.enable'):
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={'detail': 'Tool call summary generation is disabled'},
+        )
+
+    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
+        models = {
+            **dict(request.app.state.MODELS.items()),
+            request.state.model['id']: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data['model']
+    if model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
+        )
+
+    tool_calls = form_data['tool_calls']
+
+    task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+
+    log.debug('generating tool call summary using model %s for user %s', task_model_id, user.email)
+
+    summary_template = await Config.get('task.tool_call_summary.prompt_template')
+    if summary_template != '':
+        template = summary_template
+    else:
+        template = DEFAULT_TOOL_CALL_SUMMARY_GENERATION_PROMPT_TEMPLATE
+
+    language = form_data.get('language', 'English')
+    content = await tool_call_summary_generation_template(template, tool_calls, language, user)
+
+    payload = {
+        'model': task_model_id,
+        'messages': [{'role': 'user', 'content': content}],
+        'stream': False,
+        'metadata': {
+            **(request.state.metadata if hasattr(request.state, 'metadata') else {}),
+            'task': str(TASKS.TOOL_CALL_SUMMARY_GENERATION),
+            'task_body': form_data,
+            'chat_id': form_data.get('chat_id', None),
+        },
+    }
+
+    payload = await process_pipeline_inlet_filter(request, payload, user, models)
+
+    payload = apply_task_model_params(payload, models, task_model_id, task_model_params)
+
+    try:
+        response = await generate_chat_completion(request, form_data=payload, user=user)
+    except Exception:
+        log.error('Exception occurred', exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={'detail': 'An internal error has occurred.'},
+        )
+
+    message = response.get('choices', [{}])[0].get('message', {}) if isinstance(response, dict) else {}
+    generated = message.get('content') or message.get('reasoning_content') or ''
+    return {'steps': parse_tool_call_summary(generated, len(tool_calls))}
 
 
 @router.post('/tags/completions')

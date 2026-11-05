@@ -865,6 +865,39 @@ export const generateTitle = async (
 	}
 };
 
+export const generateToolCallSummary = async (
+	token: string = '',
+	model: string,
+	toolCalls: { name: string; arguments: string; error: boolean }[],
+	language: string,
+	chat_id?: string
+): Promise<string[] | null> => {
+	const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/tool_call_summary/completions`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			model: model,
+			tool_calls: toolCalls,
+			language: language,
+			...(chat_id && { chat_id: chat_id })
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			console.error(err);
+			return null;
+		});
+
+	return Array.isArray(res?.steps) && res.steps.length > 0 ? res.steps : null;
+};
+
 export const generateTags = async (
 	token: string = '',
 	model: string,

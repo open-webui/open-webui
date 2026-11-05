@@ -41,6 +41,7 @@ export type OutputDetailToken = {
 		embeds?: string;
 		output?: string;
 		status?: string;
+		display_summary?: string;
 	};
 };
 
@@ -244,7 +245,8 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 			// ToolCallDisplay HTML-decodes these, like legacy <details> attributes.
 			arguments: encode(stringifyAttribute(item.arguments ?? '')),
 			files: encode(stringifyAttribute(resultItem?.files)),
-			embeds: encode(stringifyAttribute(resultItem?.embeds))
+			embeds: encode(stringifyAttribute(resultItem?.embeds)),
+			display_summary: typeof item.display_summary === 'string' ? item.display_summary : ''
 		}
 	};
 }

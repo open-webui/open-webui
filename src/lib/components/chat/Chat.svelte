@@ -81,6 +81,7 @@
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { toolCallSummaries } from '$lib/utils/toolCallSummary';
 	import { resumeTemporaryChat } from '$lib/apis';
 	import {
 		applyResponseStreamEvent,
@@ -823,6 +824,47 @@
 			if (res) chat = res;
 		}
 	};
+
+	let toolCallSummarySaveTimeout: ReturnType<typeof setTimeout>;
+	let toolCallSummarySave: { chatId: string; history: typeof history } | null = null;
+
+	const saveToolCallSummaries = async () => {
+		const pendingSave = toolCallSummarySave;
+		toolCallSummarySave = null;
+		clearTimeout(toolCallSummarySaveTimeout);
+		if (!pendingSave || isShared || $temporaryChatEnabled || isTemporaryChatId(pendingSave.chatId))
+			return;
+
+		await updateChatById(localStorage.token, pendingSave.chatId, {
+			history: pendingSave.history
+		}).catch((error) => {
+			console.error('[tool call summaries autosave]', error);
+		});
+	};
+
+	const unsubscribeToolCallSummaries = toolCallSummaries.subscribe((summaries) => {
+		let changed = false;
+		for (const message of Object.values(history.messages)) {
+			for (const item of message?.output ?? []) {
+				const summary = item?.type === 'function_call' ? summaries[item.call_id ?? item.id] : '';
+				if (summary && item.display_summary !== summary) {
+					item.display_summary = summary;
+					changed = true;
+				}
+			}
+		}
+
+		if (changed) {
+			toolCallSummarySave = { chatId: $chatId, history };
+			clearTimeout(toolCallSummarySaveTimeout);
+			toolCallSummarySaveTimeout = setTimeout(saveToolCallSummaries, 300);
+		}
+	});
+
+	onDestroy(() => {
+		unsubscribeToolCallSummaries();
+		saveToolCallSummaries();
+	});
 
 	const onToolCallResolved = (res) => {
 		const newTaskIds = res?.task_ids ?? (res?.task_id ? [res.task_id] : []);

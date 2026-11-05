@@ -16,10 +16,14 @@
 	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
 
 	import { settings } from '$lib/stores';
+	import { requestToolCallSummaries, toolCallSummaries } from '$lib/utils/toolCallSummary';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	export let id = '';
+	export let chatId = '';
+	export let modelId = '';
+	export let summarize = false;
 	export let tokens: Array<{
 		summary?: string;
 		text?: string;
@@ -32,6 +36,7 @@
 			duration?: string;
 			embeds?: string;
 			arguments?: string;
+			display_summary?: string;
 		};
 	}> = [];
 
@@ -179,6 +184,33 @@
 		return detail;
 	})();
 
+	$: toolCalls = tokens
+		.filter((t) => t?.attributes?.type === 'tool_calls')
+		.map((t) => ({
+			id: t.attributes?.id ?? '',
+			name: t.attributes?.name ?? '',
+			arguments: decode(t.attributes?.arguments ?? ''),
+			error: t.attributes?.status === 'failed' || isToolResultError(decode(t?.text ?? '')),
+			displaySummary: t.attributes?.display_summary ?? ''
+		}));
+
+	$: callSummaries = toolCalls.map(
+		(call) => call.displaySummary || $toolCallSummaries[call.id] || ''
+	);
+
+	$: if (summarize && resolvable && messageDone && !hasActiveDetails && !hasRejected) {
+		requestToolCallSummaries(
+			toolCalls.filter((_, index) => !callSummaries[index]),
+			modelId,
+			chatId
+		);
+	}
+
+	$: generatedSummary =
+		codeInterpreterCount === 0 && toolCalls.length > 0 && callSummaries.every(Boolean)
+			? callSummaries.join(' \u00b7 ')
+			: '';
+
 	$: prefixText = hasActiveDetails ? $i18n.t('Exploring') : $i18n.t('Explored');
 </script>
 
@@ -227,12 +259,26 @@
 				{/if}
 
 				<!-- Summary text -->
-				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
-						>{prefixText}</span
-					>
-					{#if summaryText}
-						<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+				<div
+					class="flex-1 line-clamp-1"
+					title={generatedSummary ? `${prefixText} ${summaryText}` : undefined}
+				>
+					{#if generatedSummary && !hasActiveDetails}
+						{#if toolCalls.length > 1}
+							<span class="text-gray-600 dark:text-gray-300">
+								{$i18n.t('{{COUNT}} steps', { COUNT: toolCalls.length })}
+							</span>
+							<span class="text-gray-400 dark:text-gray-500">{generatedSummary}</span>
+						{:else}
+							<span class="text-gray-600 dark:text-gray-300">{generatedSummary}</span>
+						{/if}
+					{:else}
+						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+							>{prefixText}</span
+						>
+						{#if summaryText}
+							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+						{/if}
 					{/if}
 				</div>
 

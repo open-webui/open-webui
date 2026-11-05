@@ -366,6 +366,40 @@ def parse_follow_ups(content: str, max_count: int = 5) -> list[str]:
     return result[:max_count]
 
 
+TOOL_CALL_ARGUMENTS_MAX_CHARS = 300
+
+
+async def tool_call_summary_generation_template(
+    template: str, tool_calls: list[dict], language: str, user: Optional[Any] = None
+) -> str:
+    lines = []
+    for index, tool_call in enumerate(tool_calls, start=1):
+        name = str(tool_call.get('name') or 'tool')
+        arguments = truncate_content(str(tool_call.get('arguments') or ''), TOOL_CALL_ARGUMENTS_MAX_CHARS)
+        failed = ' [failed]' if tool_call.get('error') else ''
+        lines.append(f'{index}. {name}({arguments}){failed}')
+
+    # Tool call text goes in last so its own {{...}} is never expanded
+    template = await prompt_template(template, user)
+    template = template.replace('{{LANGUAGE}}', language)
+    return template.replace('{{TOOL_CALLS}}', '\n'.join(lines))
+
+
+def parse_tool_call_summary(content: str, call_count: int) -> list[str]:
+    if not isinstance(content, str):
+        return []
+    content = content[content.find('{') : content.rfind('}') + 1]
+    try:
+        data = JSONCodec.loads(content)
+    except (ValueError, TypeError):
+        return []
+
+    steps = data.get('steps') if isinstance(data, dict) else None
+    if not isinstance(steps, list) or len(steps) != call_count or any(not isinstance(step, str) for step in steps):
+        return []
+    return [step.strip() for step in steps]
+
+
 async def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
     prompt = get_last_user_message(messages)
     template = replace_prompt_variable(template, prompt)
