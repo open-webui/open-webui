@@ -20,7 +20,10 @@ export class AudioQueue {
 	id: string | null = null;
 	onStopped: OnStoppedCallback | null = null;
 
-	constructor(audioElement: HTMLAudioElement) {
+	constructor(
+		audioElement: HTMLAudioElement,
+		private isAutoPlaybackEnabled: () => boolean
+	) {
 		this.audio = audioElement;
 		this.audio.addEventListener('ended', this._onEnded);
 		document.addEventListener('pointerdown', this._onGesture, true);
@@ -59,7 +62,7 @@ export class AudioQueue {
 
 	/** Play silence inside the first user gesture so WebKit allows later programmatic playback. */
 	#unlock() {
-		if (this.current || !this.audio.paused) return;
+		if (this.current || !this.audio.paused || !this.isAutoPlaybackEnabled()) return;
 
 		this.audio.src = SILENT_WAV;
 		this.audio
