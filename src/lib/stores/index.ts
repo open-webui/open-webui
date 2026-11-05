@@ -314,6 +314,7 @@ type Settings = {
 	responseAutoPlayback?: boolean;
 	audio?: AudioSettings;
 	showUsername?: boolean;
+	thinkingWords?: string;
 	notificationEnabled?: boolean;
 	highContrastMode?: boolean;
 	title?: TitleSettings;

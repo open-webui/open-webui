@@ -2,7 +2,8 @@
 	import { decode } from 'html-entities';
 	import { v4 as uuidv4 } from 'uuid';
 
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
+	import { settings } from '$lib/stores';
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import dayjs from '$lib/dayjs';
@@ -50,6 +51,58 @@
 	};
 
 	const collapsibleId = uuidv4();
+
+	// BATCHTECH: rotate the "Thinking..." label through a user-configurable word list.
+	const DEFAULT_THINKING_WORDS = [
+		'Thinking',
+		'Pondering',
+		'Cogitating',
+		'Percolating',
+		'Noodling',
+		'Simmering',
+		'Ruminating',
+		'Musing',
+		'Contemplating',
+		'Mulling',
+		'Brewing',
+		'Churning',
+		'Deliberating',
+		'Spelunking',
+		'Marinating',
+		'Synthesizing',
+		'Cerebrating',
+		'Wrangling'
+	];
+
+
+	$: thinkingWords = (() => {
+		const custom = ($settings?.thinkingWords ?? '')
+			.split(/[\n,]/)
+			.map((w) => w.trim())
+			.filter(Boolean);
+		return custom.length > 0 ? custom : DEFAULT_THINKING_WORDS;
+	})();
+
+	let thinkingIndex = 0;
+	let thinkingTimer: ReturnType<typeof setInterval> | null = null;
+
+	$: isThinking =
+		attributes?.type === 'reasoning' && attributes?.done !== 'true' && !messageDone;
+
+	$: if (isThinking && thinkingWords.length > 1) {
+		if (!thinkingTimer) {
+			thinkingTimer = setInterval(() => (thinkingIndex += 1), 2500);
+		}
+	} else if (thinkingTimer) {
+		clearInterval(thinkingTimer);
+		thinkingTimer = null;
+	}
+
+	onDestroy(() => {
+		if (thinkingTimer) clearInterval(thinkingTimer);
+	});
+
+	$: thinkingLabel = `${thinkingWords[thinkingIndex % thinkingWords.length]}...`;
 </script>
 
 <div {id} class={className}>
@@ -95,7 +148,7 @@
 						{:else if attributes?.done === 'true' || messageDone}
 							{$i18n.t('Thought')}
 						{:else}
-							{$i18n.t('Thinking...')}
+							{thinkingLabel}
 						{/if}
 					{:else if attributes?.type === 'code_interpreter'}
 						{#if attributes?.done === 'true' || messageDone}

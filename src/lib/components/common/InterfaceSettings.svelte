@@ -62,6 +62,7 @@
 
 	// Interface
 	let showUsername = false;
+	let thinkingWords = '';
 
 	let highContrastMode = false;
 
@@ -344,6 +345,7 @@
 		responseAutoCopy = currentSettings?.responseAutoCopy ?? false;
 
 		showUsername = currentSettings?.showUsername ?? false;
+		thinkingWords = currentSettings?.thinkingWords ?? '';
 		showUpdateToast = currentSettings?.showUpdateToast ?? true;
 		showChangelog = currentSettings?.showChangelog ?? true;
 
@@ -976,6 +978,29 @@
 			</p>
 		</div>
 	{/if}
+
+	<div>
+		<div class={settingRowClass}>
+			<label id="thinking-words-label" class={settingLabelClass} for="thinking-words-input">
+				{$i18n.t('Thinking words')}
+			</label>
+		</div>
+		<div class="mt-1.5 flex items-center pb-1">
+			<input
+				id="thinking-words-input"
+				class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-500 dark:focus:border-blue-500"
+				type="text"
+				placeholder="Pondering, Cogitating, Percolating"
+				bind:value={thinkingWords}
+				on:change={() => saveSettings({ thinkingWords })}
+			/>
+		</div>
+		<p class={settingDescriptionClass}>
+			{$i18n.t(
+				'Words that rotate in place of "Thinking..." while the model reasons. Separate with commas. Leave empty for the defaults.'
+			)}
+		</p>
+	</div>
 
 	{#if $visibleControls['settings.widescreen']}
 		<div>
