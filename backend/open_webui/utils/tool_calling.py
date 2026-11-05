@@ -11,10 +11,6 @@ import math
 import re
 from uuid import uuid4
 
-from jsonschema import Draft202012Validator
-from referencing import Registry
-from referencing.exceptions import Unresolvable
-
 FINAL_ANSWER_PROMPT = (
     'Tool use has stopped for this response. Use the results already available to answer the user. '
     'Explain any unfinished work briefly. Do not request or describe additional tool calls.'
@@ -107,15 +103,8 @@ def _coerce(value, schema, depth=0):
 def normalize_arguments(raw, schema=None):
     params = parse_arguments(raw)
     if schema is not None:
+        # Provider schemas strip nullability; use them for coercion, leaving validation to the tool.
         params = _coerce(params, schema)
-        try:
-            # Schemas may use local $defs; fetching arbitrary external refs is never part of tool execution.
-            error = next(Draft202012Validator(schema, registry=Registry()).iter_errors(params), None)
-        except Unresolvable as exc:
-            raise ValueError('Tool schema contains an unresolved reference.') from exc
-        if error:
-            path = '.'.join(str(part) for part in error.absolute_path) or 'arguments'
-            raise ValueError(f'Invalid {path}: {error.message}')
     _check_json_value(params)
     return params
 

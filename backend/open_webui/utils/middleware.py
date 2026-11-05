@@ -1077,6 +1077,9 @@ async def chat_completion_tools_handler(
                     if error := prepare_tool_call(prepared, tool.get('spec', {}).get('parameters')):
                         raise ValueError(error)
                     tool_function_params = JSONCodec.loads(prepared['arguments'])
+                    if tool_type != 'mcp':
+                        allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
+                        tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
 
                     if tool.get('direct', False):
                         tool_result = await event_caller(
@@ -3069,6 +3072,9 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
             return params, 'Error: Uploaded file display is not available.', None, None, False
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
+    if tool_type != 'mcp':
+        allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
+        params = {key: value for key, value in params.items() if key in allowed_params}
     try:
         if (
             not is_saved_chat_id(metadata.get('chat_id'))
