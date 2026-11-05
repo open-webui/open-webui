@@ -27,6 +27,7 @@
 	export let overlay = false;
 	export let onNavigate: (url: string, label: string) => void = () => {};
 	export let onOpenBrowser: (url: string) => void = () => {};
+	export let onReady: () => void = () => {};
 	export let onClose: (() => void) | null = null;
 	let session: BrowserSession | null = null;
 	let sessionChatId = chatId;
@@ -270,6 +271,7 @@
 						return;
 					}
 					await tick();
+					onReady();
 				} catch (reason) {
 					error = 'Browser sessions unavailable. Update Open Terminal. ' + String(reason);
 					return;
