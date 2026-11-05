@@ -181,10 +181,13 @@
 				}
 			};
 			socket.onmessage = async (event) => {
+				if (disposed || socket !== channel) return;
 				try {
 					if (event.data instanceof ArrayBuffer) {
+						// A frame can arrive before navigation state is available.
+						transport = 'frames';
 						await tick();
-						if (disposed || socket !== channel) return;
+						if (disposed || socket !== channel || transport !== 'frames') return;
 						await frames.draw(event.data);
 						if (disposed || socket !== channel) return;
 						command('frameAck');
