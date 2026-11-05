@@ -79,6 +79,7 @@
 	export let history;
 
 	export let chatId: string | null = null;
+	export let folderId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
 
@@ -299,6 +300,67 @@
 			return;
 		}
 		openPanel({ id: kind, kind, label: view.label });
+	};
+	const updateSideChat = (tabId: string, chat: { id: string; title?: string }) => {
+		tabs = {
+			...tabs,
+			tabs: tabs.tabs.map((tab) =>
+				tab.id === tabId ? { ...tab, chatId: chat.id, label: chat.title || tab.label } : tab
+			)
+		};
+	};
+	let chatDropPreview: { left: number; top: number; width: number; height: number } | null = null;
+	const clearChatDropPreview = () => (chatDropPreview = null);
+	const canDropChat = (event: DragEvent) =>
+		canSideChat &&
+		($user?.role === 'admin' || !($user?.permissions?.chat?.temporary_enforced ?? false)) &&
+		event.dataTransfer?.types.includes('application/x-open-webui-chat');
+	const chatDropBounds = (event: DragEvent) => {
+		if (!canDropChat(event) || !(event.target instanceof Element)) return null;
+		if (event.target.closest('[data-composer-id]')) return null;
+		const panel = event.target.closest('#controls-container');
+		const canvas = event.target.closest('#chat-container');
+		const rect = (panel && !fullWidth ? panel : canvas)?.getBoundingClientRect();
+		if (!rect?.width || !rect.height) return null;
+		if (panel) return rect;
+		if (event.clientX < rect.right - rect.width * 0.3) return null;
+		const width = largeScreen
+			? Math.min(Math.max(280, controlsWidth), Math.max(280, rect.width - 360), rect.width)
+			: rect.width;
+		return { left: rect.right - width, top: rect.top, width, height: rect.height };
+	};
+	export const dragOverChat = (event: DragEvent) => {
+		chatDropPreview = chatDropBounds(event);
+		if (chatDropPreview || event.dataTransfer?.types.includes('Files')) event.preventDefault();
+		if (chatDropPreview) event.dataTransfer!.dropEffect = 'copy';
+	};
+	export const leaveChatDrop = (event: DragEvent) => {
+		if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node))
+			clearChatDropPreview();
+	};
+	export const dropChat = (event: DragEvent) => {
+		const bounds = chatDropBounds(event);
+		clearChatDropPreview();
+		if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+		if (!bounds) return;
+		let item;
+		try {
+			item = JSON.parse(event.dataTransfer!.getData('text/plain'));
+		} catch {
+			return;
+		}
+		if (item?.type !== 'chat' || typeof item.id !== 'string' || !item.id.trim()) return;
+		event.preventDefault();
+		event.stopPropagation();
+		if (item.id === chatId) {
+			if (fullWidth) selectTab(mainChatTabId);
+			return;
+		}
+		if (!$showTabs) expanded = false;
+		const existing = tabs.tabs.find((tab) => tab.kind === 'side' && tab.chatId === item.id);
+		if (existing) selectTab(existing.id);
+		else
+			openPanel({ id: crypto.randomUUID(), kind: 'side', label: $i18n.t('Chat'), chatId: item.id });
 	};
 	const newTerminal = () => {
 		if (!terminalEnabled || !selectedConnection) return;
@@ -523,8 +585,8 @@
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
 		{
 			kind: 'side',
-			label: $i18n.t('Side chat'),
-			available: canSideChat && !!chatId && hasMessages
+			label: $i18n.t('New Chat'),
+			available: canSideChat
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
@@ -654,15 +716,13 @@
 	$: if (
 		!(
 			$user?.role === 'admin' ||
-			($user?.role === 'user' &&
-				($user.permissions?.chat?.temporary ?? true) &&
-				($user.permissions?.chat?.side_chat ?? false))
+			($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false))
 		) &&
 		$sideChatRequest?.parentId === chatId
 	)
 		sideChatRequest.set(null);
 	$: if ($showTabs === 'files' && showFilesTab) openFiles();
-	$: if ($showTabs === 'side' && chatId && hasMessages) {
+	$: if ($showTabs === 'side') {
 		if (canSideChat) openFeature('side');
 		else sideChatRequest.set(null);
 		showTabs.set(tabs.tabs.length > 0);
@@ -787,7 +847,30 @@
 	});
 </script>
 
-<svelte:window bind:innerWidth={viewportWidth} />
+<svelte:window
+	bind:innerWidth={viewportWidth}
+	on:dragend={clearChatDropPreview}
+	on:drop|capture={clearChatDropPreview}
+	on:blur={clearChatDropPreview}
+/>
+
+{#if chatDropPreview}
+	<div
+		class="chat-drop-preview fixed pointer-events-none z-50 bg-black/[0.02] dark:bg-white/[0.02]"
+		style:left={`${chatDropPreview.left}px`}
+		style:top={`${chatDropPreview.top}px`}
+		style:width={`${chatDropPreview.width}px`}
+		style:height={`${chatDropPreview.height}px`}
+		role="status"
+	>
+		<div
+			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+		>
+			<Icon name="split-horizontal" size={14} strokeWidth={1.5} />
+			<span class="truncate">{$i18n.t('Open in side panel')}</span>
+		</div>
+	</div>
+{/if}
 
 <Modal
 	bind:show={$showOverview}
@@ -825,6 +908,10 @@
 </Modal>
 
 <div
+	role="presentation"
+	on:dragover|capture={dragOverChat}
+	on:drop|capture={dropChat}
+	on:dragleave={leaveChatDrop}
 	class:hidden={!$showTabs || !panelTarget}
 	use:placePanel={$showTabs ? panelTarget : null}
 	class={fullWidth ? 'contents' : 'h-full w-full min-h-0 flex flex-col'}
@@ -1010,8 +1097,17 @@
 					<Embeds overlay={dragged} />
 				{:else if tab.kind === 'artifacts'}
 					<Artifacts overlay={dragged} />
-				{:else if tab.kind === 'side' && chatId}
-					<SideChat {history} {modelId} {systemPrompt} initialPrompt={tab.initialPrompt ?? ''} />
+				{:else if tab.kind === 'side'}
+					<SideChat
+						chatId={tab.chatId ?? ''}
+						onChatUpdate={(chat) => updateSideChat(tab.id, chat)}
+						parentChatId={chatId ?? ''}
+						parentFolderId={folderId}
+						{history}
+						{modelId}
+						{systemPrompt}
+						initialPrompt={tab.initialPrompt ?? ''}
+					/>
 				{:else if tab.kind === 'comments' && currentComments}
 					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel

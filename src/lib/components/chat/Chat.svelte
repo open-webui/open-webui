@@ -140,7 +140,6 @@
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
-	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Modal from '../common/Modal.svelte';
@@ -433,9 +432,7 @@
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
 	$: sideChatAllowed =
 		$user?.role === 'admin' ||
-		($user?.role === 'user' &&
-			($user.permissions?.chat?.temporary ?? true) &&
-			($user.permissions?.chat?.side_chat ?? false));
+		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
 	let cloning = false;
 
 	const cloneSharedChat = async () => {
@@ -5291,6 +5288,10 @@
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full min-w-0 flex flex-col"
 	id={chatContainerId}
+	role="presentation"
+	on:dragover|capture={(event) => terminalTabs?.dragOverChat(event)}
+	on:drop|capture={(event) => terminalTabs?.dropChat(event)}
+	on:dragleave={(event) => terminalTabs?.leaveChatDrop(event)}
 >
 	<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 		{#if backgroundImage}
@@ -5320,7 +5321,6 @@
 						<Spinner className="size-5" />
 					</div>
 				{:else}
-					<FilesOverlay show={dragged} />
 					{#if embedded}
 						<div
 							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
@@ -5734,9 +5734,10 @@
 					bind:files
 					chatId={$chatId}
 					bind:this={terminalTabs}
+					folderId={chat ? (chat.folder_id ?? null) : ($selectedFolder?.id ?? null)}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
-					canSideChat={sideChatAllowed && selectedModels.length === 1 && !!selectedModelIds[0]}
+					canSideChat={sideChatAllowed}
 					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}

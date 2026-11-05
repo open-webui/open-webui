@@ -164,6 +164,7 @@
 	export let inputId = 'chat-input';
 	export let messagesContainerId = 'messages-container';
 	export let temporary: boolean | undefined = undefined;
+	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	$: isTemporary = temporary ?? $temporaryChatEnabled;
 	export let terminalContext: TerminalContext | null = null;
 	export let terminalSelectionEnabled = true;
@@ -211,9 +212,7 @@
 	$: canCompact = !!history?.currentId;
 	$: canSide =
 		($_user?.role === 'admin' ||
-			($_user?.role === 'user' &&
-				($_user.permissions?.chat?.temporary ?? true) &&
-				($_user.permissions?.chat?.side_chat ?? false))) &&
+			($_user?.role === 'user' && ($_user.permissions?.chat?.side_chat ?? false))) &&
 		!embedded &&
 		selectedModels.length === 1 &&
 		!!selectedModelIds[0] &&
@@ -236,7 +235,7 @@
 			)
 		: false;
 	$: canToggleTemporary =
-		!embedded &&
+		(!embedded || onTemporaryChange !== null) &&
 		!chatId &&
 		($_user?.role === 'admin' ||
 			($_user?.role === 'user' &&
@@ -646,6 +645,10 @@
 
 	const temporaryHandler = async () => {
 		if (!canToggleTemporary) return;
+		if (onTemporaryChange) {
+			onTemporaryChange(!isTemporary);
+			return;
+		}
 
 		if (($settings?.temporaryChatByDefault ?? false) && isTemporary) {
 			await temporaryChatEnabled.set(null);
@@ -1403,7 +1406,14 @@
 		}
 	};
 
+	const isComposerDrop = (event: DragEvent) =>
+		event.target instanceof Element &&
+		event.target.closest('[data-composer-id]')?.getAttribute('data-composer-id') === inputId;
 	const onDragOver = (e: DragEvent) => {
+		if (!isComposerDrop(e)) {
+			dragged = false;
+			return;
+		}
 		e.preventDefault();
 
 		// Check if a file or a sidebar chat/folder item is being dragged.
@@ -1427,6 +1437,7 @@
 	};
 
 	const onDrop = async (e: DragEvent) => {
+		if (!isComposerDrop(e)) return;
 		e.preventDefault();
 		console.log(e);
 
@@ -2158,6 +2169,7 @@
 
 						<div
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
+							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {isTemporary
 								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
 								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
@@ -2311,7 +2323,6 @@
 											: 'pt-2'
 										: ''}"
 									id={`${inputId}-container`}
-									data-composer-id={inputId}
 									on:input={handleTypingInput}
 								>
 									{#if suggestions}
