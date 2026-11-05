@@ -86,6 +86,7 @@ from open_webui.utils.access_control.files import get_owner_accessible_folder_fi
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.ask_user import stage_ask_user_tool_calls
 from open_webui.utils.audit import log_model_usage
+from open_webui.utils.auth import get_verified_user_by_id
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
@@ -3548,6 +3549,9 @@ async def background_tasks_handler(ctx):
     metadata = ctx['metadata']
     tasks = ctx['tasks']
     event_emitter = ctx['event_emitter']
+
+    if not await get_verified_user_by_id(user.id):
+        return
 
     message = None
     messages = []

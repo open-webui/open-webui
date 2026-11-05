@@ -59,7 +59,7 @@ from open_webui.utils.apps import (
     has_app_access,
     send_app_mention,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_by_id
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
@@ -1152,7 +1152,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
 async def app_channel_reply_handler(channel_id, message_id, user_id):
     """Committed human messages only; errors never cause the human POST to retry."""
-    if not await Config.get('apps.enable'):
+    if not await Config.get('apps.enable') or not await get_verified_user_by_id(user_id):
         return
     async with get_async_db() as db:
         message = await db.get(Message, message_id)
@@ -1228,6 +1228,9 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
 
 
 async def model_response_handler(request, channel, message, user, db=None):
+    if not await get_verified_user_by_id(user.id):
+        return
+
     MODELS = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
 
     mentions = extract_mentions(message.content)
