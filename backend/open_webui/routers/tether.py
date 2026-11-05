@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, WebSocket
 from open_webui.models.auth_sessions import AuthSessions
 from open_webui.utils.auth import decode_token, get_verified_user_by_token
-from open_webui.utils.tether import hub, encode, decode
+from open_webui.utils.tether import hub, encode, decode, get_services
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ async def connect(ws: WebSocket):
     watcher = None
     try:
         hello = json.loads(await asyncio.wait_for(ws.receive_text(), 10))
-        if hello.get('type') != 'hello' or hello.get('version') != 1:
+        if hello.get('type') != 'hello' or hello.get('version') not in (1, 2):
             raise ValueError('Unsupported Tether handshake')
         token = hello.get('token', '')
         user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
@@ -43,6 +43,7 @@ async def connect(ws: WebSocket):
             'user': user.id,
             'connection_id': connection_id,
             'name': name.strip(),
+            'services': get_services(hello.get('services', ['terminal'] if hello['version'] == 1 else None)),
         }
         connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
 
@@ -58,6 +59,7 @@ async def connect(ws: WebSocket):
         hub.connections[presence['connection']] = connection
         key = hub.key(user.id, connection_id)
         record = json.dumps(presence)
+        presence_lock = asyncio.Lock()
         if hub.redis:
             await hub.redis.set(key, record, ex=60)
         await ws.send_json({'type': 'ready'})
@@ -69,16 +71,17 @@ async def connect(ws: WebSocket):
                 if not current or current.id != user.id:
                     await ws.close(code=4001)
                     return
-                if hub.redis:
-                    refreshed = await hub.redis.eval(
-                        "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], 60) else return 0 end",
-                        1,
-                        key,
-                        record,
-                    )
-                    if not refreshed:
-                        await ws.close(code=1000)
-                        return
+                async with presence_lock:
+                    if hub.redis:
+                        refreshed = await hub.redis.eval(
+                            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('expire', KEYS[1], 60) else return 0 end",
+                            1,
+                            key,
+                            record,
+                        )
+                        if not refreshed:
+                            await ws.close(code=1000)
+                            return
 
         async def guarded_watch():
             try:
@@ -97,6 +100,20 @@ async def connect(ws: WebSocket):
                 await hub.returned(connection, header, data)
             elif message.get('text') is not None:
                 update = json.loads(message['text'])
+                if update.get('type') == 'services':
+                    services = get_services(update.get('services'))
+                    async with presence_lock:
+                        updated_record = json.dumps({**presence, 'services': services})
+                        if hub.redis:
+                            replaced = await hub.redis.eval(
+                                "if redis.call('get', KEYS[1]) == ARGV[1] then redis.call('set', KEYS[1], ARGV[2], 'EX', 60); return 1 else return 0 end",
+                                1, key, record, updated_record,
+                            )
+                            if not replaced:
+                                raise ValueError('Tether connection was replaced')
+                        presence['services'] = services
+                        record = updated_record
+                    continue
                 updated = decode_token(update.get('token', ''))
                 current = await get_verified_user_by_token(
                     update.get('token', ''), getattr(ws.app.state, 'redis', None)

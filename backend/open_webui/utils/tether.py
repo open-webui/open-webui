@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import struct
 import time
 from contextlib import suppress
@@ -19,6 +20,16 @@ from open_webui.models.config import Config
 CHUNK = 65536
 WINDOW = 262144
 MAX_MESSAGE = 16 * 1024 * 1024
+
+
+def get_services(value):
+    if (
+        not isinstance(value, list)
+        or len(value) > 16
+        or any(not isinstance(name, str) or not re.fullmatch(r'[a-z][a-z0-9_]{0,31}', name) for name in value)
+    ):
+        raise ValueError('Invalid Tether services')
+    return list(dict.fromkeys(value))
 
 
 def encode(header, data=b''):
@@ -222,13 +233,15 @@ class Hub:
         # SCAN may return a key more than once while connections are changing.
         return list({record['connection_id']: record for record in records if record['user'] == user_id}.values())
 
-    async def open(self, user_id, connection_id):
+    async def open(self, user_id, connection_id, service='terminal'):
         presence = await self.presence(user_id, connection_id)
         if not presence or presence['user'] != user_id or presence['connection_id'] != connection_id:
             raise HTTPException(503, 'Tether is offline.')
         row = await AuthSessions.get(presence['session'])
         if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
             raise HTTPException(403, 'Tether session is no longer available.')
+        if service not in presence.get('services', ['terminal']):
+            raise HTTPException(503, 'Tether service is unavailable.')
         if sum(s.presence['connection'] == presence['connection'] for s in self.streams.values()) >= 16:
             raise HTTPException(429, 'Tether has too many active operations.')
         stream = Stream(self, presence)
@@ -277,6 +290,8 @@ async def get_terminal_connections(user):
     user_id = user['id'] if isinstance(user, dict) else user.id
     connections = list(await Config.get('terminal_server.connections', []) or [])
     for presence in await hub.presences(user_id):
+        if 'terminal' not in presence.get('services', ['terminal']):
+            continue
         row = await AuthSessions.get(presence['session'])
         if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
             continue
@@ -410,10 +425,11 @@ class RelaySocket:
 
 
 class RelayClient:
-    def __init__(self, user_id):
+    def __init__(self, user_id, service='terminal'):
         if not user_id:
             raise HTTPException(403, 'A user is required for Tether.')
         self.user_id = user_id
+        self.service = get_services([service])[0]
         self.operations = []
 
     async def __aenter__(self):
@@ -445,7 +461,7 @@ class RelayClient:
         query = parsed.query
         if kwargs.get('params'):
             query += ('&' if query else '') + urlencode(kwargs['params'], doseq=True)
-        stream = await hub.open(self.user_id, parsed.hostname)
+        stream = await hub.open(self.user_id, parsed.hostname, self.service)
         body = kwargs.get('data')
         if 'json' in kwargs:
             body = json.dumps(kwargs['json']).encode()
@@ -457,6 +473,7 @@ class RelayClient:
         try:
             await stream.send(
                 'http-open' if method else 'ws-open',
+                service=self.service,
                 method=method,
                 path=parsed.path or '/',
                 query=query,
