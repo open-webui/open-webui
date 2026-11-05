@@ -219,6 +219,8 @@ class Hub:
                 async_mode=True,
                 decode_responses=False,
             )
+            # RedisCluster can't route a pubsub subscribe until initialize() fills its slot cache.
+            await self.redis.initialize()
             pubsub = self.redis.pubsub()
             await pubsub.subscribe(self.channel(self.worker))
             self.listener = asyncio.create_task(self.listen(pubsub))
