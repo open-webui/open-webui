@@ -225,6 +225,10 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'message') {
+				if (document.visibilityState === 'visible') {
+					updateLastReadAt(id);
+				}
+
 				if ((data?.parent_id ?? null) === null) {
 					const idx = (messages ?? []).findIndex(
 						(message) =>
