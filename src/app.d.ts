@@ -4,6 +4,8 @@ declare global {
 	interface Window {
 		tether?: {
 			version: 1;
+			isFocused?(): Promise<boolean>;
+			focus?(): Promise<void>;
 			onEvent?(
 				callback: (
 					event:

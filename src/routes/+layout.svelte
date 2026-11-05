@@ -581,6 +581,24 @@
 		}
 	};
 
+	const notify = (title, options, path) => {
+		if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+		const userId = $user?.id;
+		if (!userId) return;
+		const notification = new Notification(title, options);
+		notification.onclick = async () => {
+			notification.close();
+			if ($user?.id !== userId) return;
+			try {
+				if (window.tether?.focus) await window.tether.focus();
+				else window.focus();
+				if ($user?.id === userId) await goto(path);
+			} catch (error) {
+				console.error('Could not open notification', error);
+			}
+		};
+	};
+
 	const chatEventHandler = async (event, cb) => {
 		if (event.shared) return;
 		const chat = $page.url.pathname.includes(`/c/${event.chat_id}`);
@@ -594,7 +612,9 @@
 		}
 
 		let isInBackground = document.visibilityState !== 'visible';
-		if (window.electronAPI) {
+		if (window.tether?.isFocused) {
+			isInBackground = !(await window.tether.isFocused().catch(() => false));
+		} else if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
@@ -630,13 +650,17 @@
 
 			if ($isLastActiveTab) {
 				if ($settings?.notificationEnabled ?? false) {
-					new Notification(`${data.title} / Open WebUI`, {
-						body: timeStr,
-						// LICENSE covers this Open WebUI notification identifier.
-						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-						// https://docs.openwebui.com/license.
-						icon: `${WEBUI_BASE_URL}/static/favicon.png`
-					});
+					notify(
+						`${data.title} / Open WebUI`,
+						{
+							body: timeStr,
+							// LICENSE covers this Open WebUI notification identifier.
+							// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+							// https://docs.openwebui.com/license.
+							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+						},
+						'/calendar'
+					);
 				}
 			}
 			return;
@@ -792,13 +816,17 @@
 
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
-							new Notification(`${displayTitle} / Open WebUI`, {
-								body: contentPreview,
-								// LICENSE covers this Open WebUI notification identifier.
-								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-								// https://docs.openwebui.com/license.
-								icon: `${WEBUI_BASE_URL}/static/favicon.png`
-							});
+							notify(
+								`${displayTitle} / Open WebUI`,
+								{
+									body: contentPreview,
+									// LICENSE covers this Open WebUI notification identifier.
+									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+									// https://docs.openwebui.com/license.
+									icon: `${WEBUI_BASE_URL}/static/favicon.png`
+								},
+								`/c/${event.chat_id}`
+							);
 						}
 					}
 
@@ -860,7 +888,9 @@
 		const channel = $page.url.pathname.includes(`/channels/${event.channel_id}`);
 
 		let isInBackground = document.visibilityState !== 'visible';
-		if (window.electronAPI) {
+		if (window.tether?.isFocused) {
+			isInBackground = !(await window.tether.isFocused().catch(() => false));
+		} else if (window.electronAPI) {
 			const res = await window.electronAPI.send({
 				type: 'window:isFocused'
 			});
@@ -932,10 +962,14 @@
 						// LICENSE covers this Open WebUI notification identifier.
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
-						new Notification(`${title} / Open WebUI`, {
-							body: content,
-							icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
-						});
+						notify(
+							`${title} / Open WebUI`,
+							{
+								body: content,
+								icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
+							},
+							`/channels/${event.channel_id}`
+						);
 					}
 				}
 
