@@ -44,6 +44,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -95,6 +96,7 @@
 	};
 
 	const getUserList = async () => {
+		const activeRequestId = ++requestId;
 		try {
 			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
 				(error) => {
@@ -102,6 +104,8 @@
 					return null;
 				}
 			);
+
+			if (activeRequestId !== requestId) return;
 
 			if (res) {
 				users = res.users;

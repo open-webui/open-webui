@@ -24,6 +24,7 @@
 	let allChatsLoaded = false;
 	let chatListLoading = false;
 	let searchDebounceTimeout: any;
+	let requestId = 0;
 
 	let showUnshareAllConfirmDialog = false;
 
@@ -47,15 +48,20 @@
 			clearTimeout(searchDebounceTimeout);
 		}
 
+		const activeRequestId = ++requestId;
 		page = 1;
 		chatList = null;
 
 		if (query === '') {
-			chatList = await getSharedChatList(localStorage.token, page, filter);
+			const res = await getSharedChatList(localStorage.token, page, filter);
+			if (activeRequestId !== requestId) return;
+			chatList = res;
 			allChatsLoaded = (chatList ?? []).length === 0;
 		} else {
 			searchDebounceTimeout = setTimeout(async () => {
-				chatList = await getSharedChatList(localStorage.token, page, filter);
+				const res = await getSharedChatList(localStorage.token, page, filter);
+				if (activeRequestId !== requestId) return;
+				chatList = res;
 				allChatsLoaded = (chatList ?? []).length === 0;
 			}, 500);
 		}

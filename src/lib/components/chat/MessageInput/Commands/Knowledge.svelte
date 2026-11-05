@@ -27,6 +27,7 @@
 	let selectedIdx = 0;
 	let items = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
 	export let filteredItems = [];
 	let webUploadEnabled: boolean = true;
@@ -86,6 +87,7 @@
 	});
 
 	const getItems = () => {
+		requestId += 1;
 		getKnowledgeItems();
 		getKnowledgeFileItems();
 	};
@@ -100,9 +102,12 @@
 		.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
 	const getKnowledgeItems = async () => {
+		const activeRequestId = requestId;
 		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => {
 			return null;
 		});
+
+		if (activeRequestId !== requestId) return;
 
 		if (res) {
 			knowledgeItems = res.items.map((item) => {
@@ -115,9 +120,12 @@
 	};
 
 	const getKnowledgeFileItems = async () => {
+		const activeRequestId = requestId;
 		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => {
 			return null;
 		});
+
+		if (activeRequestId !== requestId) return;
 
 		if (res) {
 			fileItems = res.items.map((item) => {

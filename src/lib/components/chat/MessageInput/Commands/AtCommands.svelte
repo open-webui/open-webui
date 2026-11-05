@@ -39,6 +39,7 @@
 	let selectedIdx = 0;
 	export let filteredItems: any[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let requestId = 0;
 
 	let filesystemItems: any[] = [];
 	let knowledgeItems: any[] = [];
@@ -101,6 +102,7 @@
 	});
 
 	const getItems = () => {
+		requestId += 1;
 		const terminal = getSelectedTerminal();
 		getFilesystemItems(terminal);
 		getKnowledgeItems();
@@ -170,7 +172,10 @@
 		.filter((folder: any) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
 	const getKnowledgeItems = async () => {
+		const activeRequestId = requestId;
 		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => null);
+
+		if (activeRequestId !== requestId) return;
 
 		if (res) {
 			knowledgeItems = res.items.map((item: any) => ({
@@ -181,7 +186,10 @@
 	};
 
 	const getKnowledgeFileItems = async () => {
+		const activeRequestId = requestId;
 		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => null);
+
+		if (activeRequestId !== requestId) return;
 
 		if (res) {
 			fileItems = res.items.map((item: any) => ({
