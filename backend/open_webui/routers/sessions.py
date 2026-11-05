@@ -33,7 +33,6 @@ PROOF_KEYS = ('auth_time', 'auth_method', 'session_stamp', 'mfa_verified')
 
 class SessionForm(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
-    connection_id: UUID | None = None
     name: str = Field(min_length=1, max_length=100)
 
 
@@ -147,7 +146,7 @@ async def create_session(form: SessionForm, request: Request, user=Depends(get_h
     proof = await verify_proof(request.state.claims, request)
     row = await AuthSessions.create(
         user_id=user.id,
-        data=form.model_dump(mode='json', exclude_none=True),
+        data={'name': form.name},
         expires_at=await idle_expiry(),
         refresh_token_id=str(uuid4()),
     )
@@ -159,7 +158,7 @@ async def authorization_request(form: AuthorizationRequest, request: Request):
     await throttle(request)
     row = await AuthSessions.create(
         data={
-            **form.model_dump(mode='json', include={'connection_id', 'name'}, exclude_none=True),
+            'name': form.name,
             'authorization': {
                 'redirect_uri': form.redirect_uri,
                 'state': form.state,

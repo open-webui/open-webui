@@ -209,18 +209,25 @@ class Hub:
             None,
         )
 
+    async def presences(self, user_id):
+        await self.start()
+        if self.redis:
+            records = []
+            async for key in self.redis.scan_iter(match=self.key(user_id, '*'), count=100):
+                raw = await self.redis.get(key)
+                if raw:
+                    records.append(json.loads(raw))
+        else:
+            records = [connection.presence for connection in self.connections.values()]
+        # SCAN may return a key more than once while connections are changing.
+        return list({record['connection_id']: record for record in records if record['user'] == user_id}.values())
+
     async def open(self, user_id, connection_id):
         presence = await self.presence(user_id, connection_id)
-        if not presence:
+        if not presence or presence['user'] != user_id or presence['connection_id'] != connection_id:
             raise HTTPException(503, 'Tether is offline.')
         row = await AuthSessions.get(presence['session'])
-        if (
-            not row
-            or row.user_id != user_id
-            or row.refresh_token_id is None
-            or row.expires_at <= time.time()
-            or row.data.get('connection_id') != connection_id
-        ):
+        if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
             raise HTTPException(403, 'Tether session is no longer available.')
         if sum(s.presence['connection'] == presence['connection'] for s in self.streams.values()) >= 16:
             raise HTTPException(429, 'Tether has too many active operations.')
@@ -269,19 +276,15 @@ async def get_terminal_connections(user):
     """Resolve personal targets alongside existing configured servers."""
     user_id = user['id'] if isinstance(user, dict) else user.id
     connections = list(await Config.get('terminal_server.connections', []) or [])
-    seen = set()
-    for row in await AuthSessions.list(user_id):
-        connection_id = row['connection_id']
-        if not connection_id or connection_id in seen:
+    for presence in await hub.presences(user_id):
+        row = await AuthSessions.get(presence['session'])
+        if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
             continue
-        seen.add(connection_id)
-        presence = await hub.presence(user_id, connection_id)
-        if not presence:
-            continue
+        connection_id = presence['connection_id']
         connections.append(
             {
                 'id': 'tether:' + connection_id,
-                'name': row['name'],
+                'name': presence['name'],
                 'url': 'tether://' + connection_id,
                 'auth_type': 'none',
                 'enabled': True,

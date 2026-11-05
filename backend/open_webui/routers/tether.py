@@ -4,7 +4,7 @@ import asyncio
 import json
 from contextlib import suppress
 from types import SimpleNamespace
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, WebSocket
 from open_webui.models.auth_sessions import AuthSessions
@@ -31,9 +31,10 @@ async def connect(ws: WebSocket):
         row = await AuthSessions.get(claims['sid'])
         if not row or row.user_id != user.id or row.refresh_token_id is None:
             raise ValueError('Invalid session')
-        connection_id = row.data.get('connection_id')
-        if not connection_id:
-            raise ValueError('A Tether connection ID is required')
+        connection_id = str(UUID(hello['connection_id']))
+        name = hello.get('name')
+        if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
+            raise ValueError('A connection name of 1–100 characters is required')
         await hub.start()
         presence = {
             'connection': str(uuid4()),
@@ -41,6 +42,7 @@ async def connect(ws: WebSocket):
             'session': row.id,
             'user': user.id,
             'connection_id': connection_id,
+            'name': name.strip(),
         }
         connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
 

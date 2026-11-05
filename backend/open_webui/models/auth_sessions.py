@@ -89,7 +89,6 @@ class AuthSessionsTable:
             return [
                 {
                     **{key: getattr(row, key) for key in ('id', 'created_at', 'updated_at', 'expires_at')},
-                    'connection_id': row.data.get('connection_id'),
                     'name': row.data['name'],
                 }
                 for row in rows
