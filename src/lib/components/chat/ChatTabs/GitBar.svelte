@@ -358,7 +358,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="git-panel relative shrink-0 border-t border-gray-100/50 dark:border-white/2"
+		class="git-panel relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
