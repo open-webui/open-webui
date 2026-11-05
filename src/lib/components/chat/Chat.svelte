@@ -154,8 +154,15 @@
 	export let onCreateEmbeddedChat: (() => any | Promise<any>) | null = null;
 	export let onSelectEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
 	export let onDeleteEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
-	export let onEmbeddedChatTitle: ((chatId: string, title: string) => void | Promise<void>) | null =
-		null;
+	export let onEmbeddedChatTitle: ((chatId: string, title: string) => void | Promise<void>) | null = null;
+
+	// tracks active assignment context for current session.
+	export let selectedAssignmentId = '';
+
+	// Temp assignment list
+	let assignments = [
+		{ id: 'sql-joins', title: 'SQL Joins'}
+	];
 
 	let loading = true;
 	$: chatContainerId = embedded ? 'note-chat-container' : 'chat-container';
@@ -5047,6 +5054,35 @@
 						/>
 					{/if}
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+
+						<!-- Assignment Selection Bar -->
+						<div
+							class="flex items-center justify-between px-4 py-2 border-b
+		       border-gray-200 dark:border-gray-800 bg-white/60
+		       dark:bg-gray-900/60 backdrop-blur z-20 mt-14 sm:mt-16"
+						>
+							<label
+								for="assignment-select"
+								class="text-xs font-medium text-gray-500 dark:text-gray-400"
+							>
+								Assignment:
+							</label>
+							<select
+								id="assignment-select"
+								bind:value={selectedAssignmentId}
+								class="text-xs sm:text-sm rounded-lg px-2.5 py-1.5
+			       bg-gray-50 dark:bg-gray-800
+			       border border-gray-300 dark:border-gray-700
+			       text-gray-900 dark:text-gray-100
+			       focus:outline-none focus:ring-1 focus:ring-blue-500"
+							>
+
+								<option value="">Select Assignment</option>
+								{#each assignments as assignment}
+									<option value={assignment.id}>{assignment.title}</option>
+								{/each}
+							</select>
+						</div>
 						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
