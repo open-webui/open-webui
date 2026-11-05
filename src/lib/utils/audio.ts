@@ -1,3 +1,7 @@
+import { get } from 'svelte/store';
+
+import { settings } from '$lib/stores';
+
 type AudioQueueEvent = 'stop' | 'empty-queue' | 'id-change' | 'error';
 
 interface AudioQueueStopDetail {
@@ -59,7 +63,7 @@ export class AudioQueue {
 
 	/** Play silence inside the first user gesture so WebKit allows later programmatic playback. */
 	#unlock() {
-		if (this.current || !this.audio.paused) return;
+		if (this.current || !this.audio.paused || !get(settings)?.responseAutoPlayback) return;
 
 		this.audio.src = SILENT_WAV;
 		this.audio
