@@ -4,7 +4,13 @@ declare global {
 	interface Window {
 		tether?: {
 			version: 1;
-			onEvent?(callback: (event: import('$lib/stores').TetherEvent) => Promise<void>): () => void;
+			onEvent?(
+				callback: (
+					event:
+						| import('$lib/stores').TetherEvent
+						| { type: 'theme:update'; data: { theme: 'system' | 'light' | 'dark' } }
+				) => Promise<void>
+			): () => void;
 			signedIn(token: string): Promise<{ token: string; expiresAt: number | null }>;
 			refresh(force?: boolean): Promise<{ token: string; expiresAt: number | null } | null>;
 			signedOut(): Promise<void>;

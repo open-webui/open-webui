@@ -1,4 +1,5 @@
 <script>
+	import { setTheme } from '$lib/utils/theme';
 	import CommentsHost from '$lib/components/comments/CommentsHost.svelte';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
@@ -1060,23 +1061,7 @@
 			return;
 		}
 		if (event.type === 'theme:update' && event.data?.theme) {
-			const newTheme = event.data.theme;
-			localStorage.setItem('theme', newTheme);
-			theme.set(newTheme);
-
-			// Apply theme classes (mirrors logic from chat/Settings/General.svelte)
-			const themes = ['dark', 'light', 'oled-dark'];
-			let themeToApply =
-				newTheme === 'oled-dark' ? 'dark' : newTheme === 'her' ? 'light' : newTheme;
-			if (newTheme === 'system') {
-				themeToApply = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-			}
-			themes
-				.filter((e) => e !== themeToApply)
-				.forEach((e) => {
-					e.split(' ').forEach((cls) => document.documentElement.classList.remove(cls));
-				});
-			themeToApply.split(' ').forEach((cls) => document.documentElement.classList.add(cls));
+			setTheme(event.data.theme);
 			return;
 		}
 		if (event.type === 'models:refresh') {

@@ -1,4 +1,5 @@
 import { get } from 'svelte/store';
+import { setTheme } from './theme';
 import { goto } from '$app/navigation';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { user, socket, desktopEvent, type DesktopEvent } from '$lib/stores';
@@ -71,6 +72,12 @@ export async function initializeTether(fetcher: typeof fetch): Promise<() => voi
 	// Connectivity errors must not erase credentials or force a sign-out.
 	await renewTetherSession().catch(() => {});
 	const unsubscribeEvents = tether.onEvent?.(async (payload) => {
+		if (payload?.type === 'theme:update') {
+			if (!['system', 'light', 'dark'].includes(payload.data?.theme))
+				throw new Error('Invalid theme');
+			setTheme(payload.data.theme);
+			return;
+		}
 		if (!payload || !['query', 'voice'].includes(payload.type))
 			throw new Error('Unsupported Tether event.');
 		const userId = get(user)?.id;
