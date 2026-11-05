@@ -142,29 +142,6 @@
 	let viewportWidth = 0;
 
 	let tabs = emptyTabs();
-	$: positions = largeScreen
-		? panelPositions(tabs.layout)
-		: {
-				groups: { [tabs.activeGroupId]: { left: 0, top: 0, width: 1, height: 1 } },
-				dividers: []
-			};
-	$: tabGroups = Object.fromEntries(
-		tabs.groups.flatMap((group) => group.tabIds.map((id) => [id, group]))
-	);
-	$: displayedGroups = largeScreen
-		? tabs.groups
-		: [
-				{
-					id: tabs.activeGroupId,
-					tabIds: tabs.groups.flatMap((group) => group.tabIds),
-					activeId: tabs.activeId
-				}
-			];
-	$: visibleTabIds = new Set(
-		tabs.groups
-			.filter((group) => largeScreen || group.id === tabs.activeGroupId)
-			.map((group) => group.activeId)
-	);
 	const paneStyle = (rect: PanelRect, header = 0, footer = 0) =>
 		`position:absolute;left:${rect.left * 100}%;top:calc((100% - ${footer}px) * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc((100% - ${footer}px) * ${rect.height} - ${header}px);`;
 	const focusGroup = (id: string) => {
@@ -361,7 +338,7 @@
 			)
 		};
 	};
-	type SplitDrop = PanelRect & { groupId: string; edge: SplitEdge | null; main: boolean };
+	type SplitDrop = PanelRect & { groupId: string; edge: SplitEdge | null };
 	let chatDropPreview: SplitDrop | null = null;
 	let draggedTabId = '';
 	let pendingTabDrop: (() => void) | null = null;
@@ -384,10 +361,10 @@
 			event.target.closest('#chat-container');
 		const rect = element?.getBoundingClientRect();
 		if (!rect?.width || !rect.height) return null;
-		const groupId = group?.dataset.panelGroup ?? (panel ? tabs.activeGroupId : '');
+		const groupId = group?.dataset.panelGroup ?? tabs.activeGroupId;
 		const inTabBar = !!event.target.closest('[data-panel-tab-bar]');
 		const edges: { edge: SplitEdge; distance: number }[] = [];
-		if (largeScreen && !inTabBar) {
+		if ((fullWidth || (!$showTabs && largeScreen)) && !inTabBar) {
 			if (event.clientX - rect.left <= rect.width * 0.3)
 				edges.push({ edge: 'left', distance: event.clientX - rect.left });
 			if (rect.right - event.clientX <= rect.width * 0.3)
@@ -398,16 +375,26 @@
 				edges.push({ edge: 'bottom', distance: rect.bottom - event.clientY });
 		}
 		const edge = edges.sort((a, b) => a.distance - b.distance)[0]?.edge ?? null;
-		if (main && !edge) return null;
+		if (main && !edge) {
+			// An already-open side panel receives chats without changing the layout.
+			if (!$showTabs && largeScreen) return null;
+			if (internal || event.clientX < rect.right - rect.width * 0.3) return null;
+			return {
+				groupId: tabs.activeGroupId,
+				edge: null,
+				left: rect.right - Math.min(controlsWidth, rect.width),
+				top: rect.top,
+				width: Math.min(controlsWidth, rect.width),
+				height: rect.height
+			};
+		}
 		const source = tabs.groups.find((item) => item.tabIds.includes(draggedTabId));
-		if (internal && source?.id === groupId && (!edge || (fullWidth && source.tabIds.length === 1)))
-			return null;
+		if (internal && source?.id === groupId && (!edge || source.tabIds.length === 1)) return null;
 		const width = edge === 'left' || edge === 'right' ? rect.width / 2 : rect.width;
 		const height = edge === 'top' || edge === 'bottom' ? rect.height / 2 : rect.height;
 		return {
 			groupId,
 			edge,
-			main,
 			width,
 			height,
 			left: rect.left + (edge === 'right' ? width : 0),
@@ -449,14 +436,13 @@
 		event.preventDefault();
 		const applyDrop = () => {
 			let groupId = bounds.groupId;
-			if (bounds.edge || bounds.main || savedId === chatId) {
+			if (!$showTabs && bounds.edge) {
 				expanded = true;
 				tabs = setFullWidthTabs(tabs, true, title);
-				if (bounds.main) {
-					groupId = tabs.groups.find((group) => group.tabIds.includes(mainChatTabId))!.id;
-					tabs = activateTab(tabs, mainChatTabId);
-				}
+				groupId = tabs.activeGroupId;
+				tabs = activateTab(tabs, mainChatTabId);
 			}
+			if (savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
 			const existing =
 				internalId ||
 				(savedId === chatId ? mainChatTabId : tabs.tabs.find((tab) => tab.chatId === savedId)?.id);
@@ -640,7 +626,7 @@
 	const navigateTabs = (event: KeyboardEvent) => {
 		if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab')
 			return;
-		const group = displayedGroups.find((group) => group.id === tabs.activeGroupId)!;
+		const group = tabs.groups.find((group) => group.id === tabs.activeGroupId)!;
 		const index = group.tabIds.indexOf(tabs.activeId);
 		if (event.altKey && event.shiftKey && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
 			event.preventDefault();
@@ -990,6 +976,21 @@
 			document.removeEventListener('pointercancel', onPointerUp);
 		};
 	});
+	// Resolve pane placement after the reactive tab-opening handlers.
+	$: positions = fullWidth
+		? panelPositions(tabs.layout)
+		: {
+				groups: { [tabs.activeGroupId]: { left: 0, top: 0, width: 1, height: 1 } },
+				dividers: []
+			};
+	$: tabGroups = Object.fromEntries(
+		tabs.groups.flatMap((group) => group.tabIds.map((id) => [id, group]))
+	);
+	$: visibleTabIds = new Set(
+		tabs.groups
+			.filter((group) => fullWidth || group.id === tabs.activeGroupId)
+			.map((group) => group.activeId)
+	);
 </script>
 
 <svelte:window
@@ -1066,7 +1067,7 @@
 	id="controls-container"
 >
 	<div bind:this={paneCanvas} class="relative flex-1 min-h-0 min-w-0">
-		{#each displayedGroups as group (group.id)}
+		{#each tabs.groups.filter((group) => fullWidth || group.id === tabs.activeGroupId) as group (group.id)}
 			<div
 				data-panel-group={group.id}
 				role="presentation"

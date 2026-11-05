@@ -68,7 +68,21 @@ export const emptyTabs = (): PanelTabs => ({
 export const mainChatTabId = 'main-chat';
 
 export function setFullWidthTabs(state: PanelTabs, fullWidth: boolean, label = 'Chat'): PanelTabs {
-	if (!fullWidth) return removeTab(state, mainChatTabId);
+	if (!fullWidth) {
+		const next = removeTab(state, mainChatTabId);
+		if (next.groups.length === 1) return next;
+		return {
+			...next,
+			groups: [
+				{
+					id: next.activeGroupId,
+					tabIds: next.groups.flatMap((group) => group.tabIds),
+					activeId: next.activeId
+				}
+			],
+			layout: { type: 'group', groupId: next.activeGroupId }
+		};
+	}
 	if (state.tabs.some((tab) => tab.id === mainChatTabId)) return state;
 	const groupId = state.activeGroupId;
 	const next = {
