@@ -145,14 +145,21 @@
 						if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
 					}, 25000);
 				},
-				{ resume: true, cursor }
+				{ resume: true, cursor, flow_control: true }
 			);
+			const socket = ws;
+			let flowControlled = false;
+			let ackPending = false;
 			ws.onmessage = (event) => {
 				if (destroyed) return;
 				if (typeof event.data === 'string') {
 					try {
 						const message = JSON.parse(event.data);
 						if (message.type === 'chat') return;
+						if (message.type === 'flow_control') {
+							flowControlled = true;
+							return;
+						}
 						if (message.type === 'output') {
 							outputEnd = message.end;
 							if (message.truncated) write('\r\n[Earlier output is no longer available]\r\n');
@@ -176,6 +183,14 @@
 								}
 								term.write(data, () => {
 									if (end !== null) cursor = end;
+									if (flowControlled && end !== null && !ackPending) {
+										ackPending = true;
+										queueMicrotask(() => {
+											ackPending = false;
+											if (socket.readyState === WebSocket.OPEN)
+												socket.send(JSON.stringify({ type: 'ack', cursor }));
+										});
+									}
 									reconnectDelay = 1000;
 									resolve();
 								});

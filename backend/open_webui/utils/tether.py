@@ -18,7 +18,7 @@ from open_webui.models.auth_sessions import AuthSessions
 from open_webui.models.config import Config
 
 CHUNK = 65536
-WINDOW = 262144
+WINDOW = 2 * 1024 * 1024
 MAX_MESSAGE = 16 * 1024 * 1024
 
 
@@ -73,9 +73,10 @@ class Stream:
         self.id = str(uuid4())
         self.owner, self.presence = owner, presence
         self.sequence = self.incoming = 0
-        self.credit = self.receive_credit = WINDOW
+        self.window = presence.get('window', 256 * 1024)
+        self.credit = self.receive_credit = self.window
         self.wake = asyncio.Event()
-        self.queue = asyncio.Queue(maxsize=32)
+        self.queue = asyncio.Queue(maxsize=64)
         self.closed = False
         self.lock = asyncio.Lock()
         self.error = None
@@ -121,7 +122,7 @@ class Stream:
         self.incoming += 1
         if header['type'] == 'window':
             count = header.get('bytes')
-            if type(count) is not int or count <= 0 or self.credit + count > WINDOW:
+            if type(count) is not int or count <= 0 or self.credit + count > self.window:
                 self.fail('Invalid relay window')
             else:
                 self.credit += count

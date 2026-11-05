@@ -78,12 +78,17 @@
 			if (version !== generation) return;
 			if (transport === 'frames') {
 				socket = openTerminalSocket(connection, chatId, '/desktop/stream');
+				let framePending = Promise.resolve();
 				socket.onmessage = async (event) => {
 					if (version !== generation) return;
 					try {
-						await native.draw(event.data);
+						framePending = framePending.then(() => {
+							if (version !== generation) return;
+							return native.draw(event.data);
+						});
+						await framePending;
 						if (version !== generation) return;
-						send({ type: 'frameAck' });
+						send({ type: 'frameAck', window: 3 });
 						status = '';
 					} catch (reason) {
 						if (version === generation)

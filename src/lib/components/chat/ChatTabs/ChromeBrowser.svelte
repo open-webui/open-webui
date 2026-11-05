@@ -173,6 +173,7 @@
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			socket = new WebSocket(url);
 			const channel = socket;
+			let framePending = Promise.resolve();
 			socket.binaryType = 'arraybuffer';
 			socket.onopen = async () => {
 				onError('');
@@ -195,9 +196,13 @@
 						transport = 'frames';
 						await tick();
 						if (disposed || socket !== channel || transport !== 'frames') return;
-						await frames.draw(event.data);
+						framePending = framePending.then(() => {
+							if (disposed || socket !== channel || transport !== 'frames') return;
+							return frames.draw(event.data);
+						});
+						await framePending;
 						if (disposed || socket !== channel) return;
-						command('frameAck');
+						command('frameAck', { window: 3 });
 						onStatus('');
 						return;
 					}

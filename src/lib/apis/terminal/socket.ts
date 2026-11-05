@@ -40,7 +40,7 @@ export function openTerminalSocket(
 	chatId: string | null,
 	path: string,
 	onOpen?: (socket: WebSocket) => void,
-	resume?: { resume: true; cursor: number }
+	resume?: { resume: true; cursor: number; flow_control?: true }
 ) {
 	const url = new URL(`${connection.baseUrl.replace(/\/$/, '')}${path}`, location.href);
 	url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';

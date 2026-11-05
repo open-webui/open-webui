@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, WebSocket
 from open_webui.models.auth_sessions import AuthSessions
 from open_webui.utils.auth import decode_token, get_verified_user_by_token
-from open_webui.utils.tether import hub, encode, decode, get_services
+from open_webui.utils.tether import CHUNK, WINDOW, hub, encode, decode, get_services
 
 router = APIRouter()
 
@@ -23,6 +23,10 @@ async def connect(ws: WebSocket):
         hello = json.loads(await asyncio.wait_for(ws.receive_text(), 10))
         if hello.get('type') != 'hello' or hello.get('version') not in (1, 2):
             raise ValueError('Unsupported Tether handshake')
+        window = hello.get('window', 256 * 1024)
+        if type(window) is not int or window < CHUNK:
+            raise ValueError('Invalid relay window')
+        window = min(window, WINDOW)
         token = hello.get('token', '')
         user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
         claims = decode_token(token)
@@ -44,26 +48,34 @@ async def connect(ws: WebSocket):
             'connection_id': connection_id,
             'name': name.strip(),
             'notifications': hello.get('notifications') is True,
+            'window': window,
             'services': get_services(hello.get('services', ['open_terminal'] if hello['version'] == 1 else None)),
         }
-        connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
+        connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock(), pending=0)
 
         async def send(header, data):
-            async with connection.lock:
-                await asyncio.wait_for(ws.send_bytes(encode(header, data)), 10)
+            if connection.pending >= 64:
+                raise ConnectionError('Relay send queue full')
+            connection.pending += 1
+            try:
+                # Lock waiters are FIFO; each stream yields after one chunk.
+                async with connection.lock:
+                    await asyncio.wait_for(ws.send_bytes(encode(header, data)), 10)
+            finally:
+                connection.pending -= 1
 
         connection.send = send
+        key = hub.key(user.id, connection_id)
+        record = json.dumps(presence)
         # A reconnect replaces the previous connection, including on another worker.
         for old in list(hub.connections.values()):
             if old.presence['user'] == user.id and old.presence['connection_id'] == connection_id:
                 await old.ws.close(code=1000)
+        await ws.send_json({'type': 'ready', 'notifications': True, 'window': window})
         hub.connections[presence['connection']] = connection
-        key = hub.key(user.id, connection_id)
-        record = json.dumps(presence)
         presence_lock = asyncio.Lock()
         if hub.redis:
             await hub.redis.set(key, record, ex=60)
-        await ws.send_json({'type': 'ready', 'notifications': True})
 
         async def watch():
             while True:
