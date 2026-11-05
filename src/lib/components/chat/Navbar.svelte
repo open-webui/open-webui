@@ -313,12 +313,11 @@
 />
 
 <nav
-	class:hidden={tabbed}
-	class="sticky top-0 z-30 w-full {$mobile
-		? 'pt-1.5'
-		: ''} pb-1 -mb-12 flex flex-col items-center drag-region"
+	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} pb-1 {tabbed
+		? ''
+		: '-mb-12'} flex flex-col items-center drag-region"
 >
-	<div class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
+	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
 			id="navbar-bg-gradient-to-b"
 			class="{chat?.id
@@ -411,13 +410,13 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && isTemporaryChatId($chatId)}
+	{#if !tabbed && $temporaryChatEnabled && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
 	{/if}
 
-	<div class="absolute top-[100%] left-0 right-0 h-fit">
+	<div class="absolute {tabbed ? 'top-8' : 'top-[100%]'} left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
