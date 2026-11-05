@@ -31,13 +31,16 @@ async def connect(ws: WebSocket):
         row = await AuthSessions.get(claims['sid'])
         if not row or row.user_id != user.id or row.refresh_token_id is None:
             raise ValueError('Invalid session')
+        connection_id = row.data.get('connection_id')
+        if not connection_id:
+            raise ValueError('A Tether connection ID is required')
         await hub.start()
         presence = {
             'connection': str(uuid4()),
             'worker': hub.worker,
             'session': row.id,
             'user': user.id,
-            'connection_id': row.data['connection_id'],
+            'connection_id': connection_id,
         }
         connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
 
@@ -48,10 +51,10 @@ async def connect(ws: WebSocket):
         connection.send = send
         # A reconnect replaces the previous connection, including on another worker.
         for old in list(hub.connections.values()):
-            if old.presence['user'] == user.id and old.presence['connection_id'] == row.data['connection_id']:
+            if old.presence['user'] == user.id and old.presence['connection_id'] == connection_id:
                 await old.ws.close(code=1000)
         hub.connections[presence['connection']] = connection
-        key = hub.key(user.id, row.data['connection_id'])
+        key = hub.key(user.id, connection_id)
         record = json.dumps(presence)
         if hub.redis:
             await hub.redis.set(key, record, ex=60)

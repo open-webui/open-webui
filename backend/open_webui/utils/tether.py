@@ -219,7 +219,7 @@ class Hub:
             or row.user_id != user_id
             or row.refresh_token_id is None
             or row.expires_at <= time.time()
-            or row.data['connection_id'] != connection_id
+            or row.data.get('connection_id') != connection_id
         ):
             raise HTTPException(403, 'Tether session is no longer available.')
         if sum(s.presence['connection'] == presence['connection'] for s in self.streams.values()) >= 16:
@@ -272,7 +272,7 @@ async def get_terminal_connections(user):
     seen = set()
     for row in await AuthSessions.list(user_id):
         connection_id = row['connection_id']
-        if connection_id in seen:
+        if not connection_id or connection_id in seen:
             continue
         seen.add(connection_id)
         presence = await hub.presence(user_id, connection_id)
