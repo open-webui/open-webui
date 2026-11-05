@@ -829,7 +829,7 @@
 	$: if (mounted && !fullWidth && $showTabs === true && !tabs.tabs.length) {
 		const options = [
 			...availableViews
-				.filter((view) => view.available)
+				.filter((view) => view.available && view.kind !== 'side')
 				.map((view) => () => {
 					if (view.kind === 'files') openFiles();
 					else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
@@ -841,7 +841,7 @@
 		];
 		if (terminalFilesAvailable || (!hasOpenedTabs && showFilesTab)) openFiles();
 		else if (options.length === 1) options[0]();
-		else if (!options.length) showTabs.set(false);
+		else if (!options.length && !canSideChat) showTabs.set(false);
 		hasOpenedTabs = true;
 	}
 	$: if (
