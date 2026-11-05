@@ -413,11 +413,12 @@ export const getUserInfo = async (token: string) => {
 	return res;
 };
 
-export const updateUserInfo = async (token: string, info: object) => {
+export const updateUserInfo = async (token: string, info: object, signal?: AbortSignal) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
 		method: 'POST',
+		signal,
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
@@ -506,7 +507,10 @@ export const getAndUpdateUserLocation = async (token: string) => {
 	});
 
 	if (location) {
-		await updateUserInfo(token, { location: location });
+		// Saving optional context must not hold up sending a message.
+		void updateUserInfo(token, { location }, AbortSignal.timeout(5_000)).catch((error) => {
+			console.error('Error saving user location:', error);
+		});
 		return location;
 	} else {
 		console.info('Failed to get user location');
