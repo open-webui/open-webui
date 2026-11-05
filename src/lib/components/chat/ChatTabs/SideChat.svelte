@@ -11,10 +11,14 @@
 		config,
 		toolServers,
 		terminalServers,
+		tools,
+		skills,
 		selectedTerminalId,
 		type Model
 	} from '$lib/stores';
 	import { createTemporaryChatId } from '$lib/utils/chatId';
+	import { getTools } from '$lib/apis/tools';
+	import { getSkills } from '$lib/apis/skills';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { getTaskIdsByChatId, resumeTemporaryChat, stopTasksByChatId } from '$lib/apis';
 	import { createNewChat, getAllTags, getChatById, updateChatById } from '$lib/apis/chats';
@@ -98,6 +102,36 @@
 	let webSearchEnabled = false;
 	let imageGenerationEnabled = false;
 	let codeInterpreterEnabled = false;
+
+	const applyModelDefaults = async (selectedModelId: string) => {
+		if (!$tools) tools.set(await getTools(localStorage.token));
+		if (!$skills) skills.set(await getSkills(localStorage.token));
+		const selectedModel = $models.find((model) => model.id === selectedModelId);
+		if (!selectedModel || $tools === null || $skills === null) return;
+		if (id || selectedModelId !== sideModelId) return;
+		const meta = selectedModel.info?.meta;
+		const defaultFeature = (feature: 'web_search' | 'image_generation' | 'code_interpreter') =>
+			!!meta?.defaultFeatureIds?.includes(feature) &&
+			(meta?.capabilities?.[feature] ?? true) &&
+			!!$config?.features?.[`enable_${feature}`] &&
+			($user?.role === 'admin' || !!$user?.permissions?.features?.[feature]);
+		selectedToolIds =
+			meta?.toolIds?.filter((toolId: string) =>
+				($tools as any[]).some((tool) => tool.id === toolId && tool.authenticated !== false)
+			) ??
+			$settings?.tools ??
+			[];
+		selectedSkillIds = (meta?.skillIds ?? []).filter((skillId: string) =>
+			($skills as any[]).some((skill) => skill.id === skillId && skill.is_active)
+		);
+		selectedFilterIds = (meta?.defaultFilterIds ?? []).filter((filterId: string) =>
+			selectedModel.filters?.some((filter: { id: string }) => filter.id === filterId)
+		);
+		webSearchEnabled = defaultFeature('web_search');
+		imageGenerationEnabled = defaultFeature('image_generation');
+		codeInterpreterEnabled = defaultFeature('code_interpreter');
+	};
+	$: if (!id && sideModelId) void applyModelDefaults(sideModelId);
 	$: toolApprovalMode =
 		(params.tool_approval_mode ?? $settings.params?.tool_approval_mode) === 'ask' ? 'ask' : 'full';
 	let interactions: { id: string; type: string; data: any; callback: (value: any) => void }[] = [];
