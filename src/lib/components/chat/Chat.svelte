@@ -3880,6 +3880,8 @@
 	let terminalTabs: ChatTabs;
 	let fullWidthTabs = false;
 	let mainChatActive = false;
+	let mainChatStyle = '';
+	let mainChatGroupId = '';
 	let tabTitleEditor: import('svelte').Snippet | undefined;
 	let tabActions: import('svelte').Snippet | undefined;
 
@@ -5304,14 +5306,15 @@
 			></div>
 		{/if}
 
-		<div
-			class="w-full h-full min-h-0 {fullWidthTabs
-				? 'grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto]'
-				: 'flex'}"
-		>
+		<div class="relative w-full h-full min-h-0 flex">
 			<div
 				class="h-full flex relative max-w-full min-w-0 min-h-0 flex-1 flex-col col-start-1 row-start-2"
 				class:hidden={fullWidthTabs && !mainChatActive}
+				style={fullWidthTabs ? mainChatStyle : undefined}
+				data-main-chat-pane
+				data-panel-group={fullWidthTabs ? mainChatGroupId : undefined}
+				on:focusin={() => fullWidthTabs && terminalTabs?.focusMainChat()}
+				on:pointerdown={() => fullWidthTabs && terminalTabs?.focusMainChat()}
 				id={fullWidthTabs ? 'chat-panel-main-chat-view' : undefined}
 				role={fullWidthTabs ? 'tabpanel' : undefined}
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
@@ -5726,6 +5729,8 @@
 				<ChatTabs
 					bind:fullWidth={fullWidthTabs}
 					bind:mainChatActive
+					bind:mainChatStyle
+					bind:mainChatGroupId
 					title={$chatTitle || $i18n.t('New Chat')}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
 					tabActions={loading ? undefined : tabActions}
