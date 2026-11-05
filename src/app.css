@@ -1109,12 +1109,18 @@ html.high-contrast:not(.dark) .shimmer {
 
 /* BATCHTECH: only the model that is currently working spins its logo. */
 @keyframes bt-spin {
-	to {
-		transform: rotate(360deg);
+	0% {
+		transform: rotate(0deg) scale(0.85);
+	}
+	50% {
+		transform: rotate(180deg) scale(1.25);
+	}
+	100% {
+		transform: rotate(360deg) scale(0.85);
 	}
 }
 .bt-working {
-	animation: bt-spin 2s linear infinite;
+	animation: bt-spin 2.4s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
 	.bt-working {
