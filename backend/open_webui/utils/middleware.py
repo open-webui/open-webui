@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import base64
 import copy
@@ -156,6 +155,14 @@ from open_webui.utils.task import (
 from open_webui.utils.tether import get_terminal_connections
 from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
+from open_webui.utils.tool_calling import (
+    INCOMPLETE_CALL_ERROR,
+    final_answer_payload,
+    prepare_tool_call,
+    recover_tool_calls,
+    split_tool_calls,
+    tool_repetition_error,
+)
 from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
 from open_webui.utils.tools import (
     connect_mcp_server,
@@ -395,64 +402,6 @@ def merge_streamed_reasoning_details(target: list, details) -> None:
                 append_to_text_field(existing, key, value)
             else:
                 existing[key] = value
-
-
-def _split_tool_calls(
-    tool_calls: list[dict],
-) -> list[dict]:
-    """Expand tool calls whose arguments contain multiple back-to-back JSON objects.
-
-    Some models (e.g. GPT-5.4) send multiple complete JSON argument objects
-    under the same tool call index, producing concatenated invalid JSON like:
-        '{"query":"A","count":5}{"query":"B","count":5}'
-
-    Each such tool call is split into separate entries so each gets executed
-    independently. Single-object arguments pass through unchanged.
-    """
-
-    def split_json_objects(raw: str) -> list[str]:
-        if not isinstance(raw, str):
-            raw = '' if raw is None else JSONCodec.dumps(raw)
-
-        decoder = json.JSONDecoder()
-        results = []
-        position = 0
-
-        while position < len(raw):
-            while position < len(raw) and raw[position].isspace():
-                position += 1
-            if position >= len(raw):
-                break
-            try:
-                _, end = decoder.raw_decode(raw, position)
-                results.append(raw[position:end].strip())
-                position = end
-            except JSONCodec.JSONDecodeError:
-                return [raw]
-
-        return results or [raw]
-
-    expanded = []
-    for tool_call in tool_calls:
-        function = tool_call.setdefault('function', {})
-        arguments = function.get('arguments')
-        if not isinstance(arguments, str):
-            arguments = '' if arguments is None else JSONCodec.dumps(arguments)
-            function['arguments'] = arguments
-        split_arguments = split_json_objects(arguments)
-
-        if len(split_arguments) <= 1:
-            expanded.append(tool_call)
-        else:
-            for position, argument in enumerate(split_arguments):
-                cloned = copy.deepcopy(tool_call)
-                # The first split keeps the original id so it maps to the streamed output item.
-                if position > 0:
-                    cloned['id'] = f'call_{uuid4().hex[:24]}'
-                cloned['function']['arguments'] = argument
-                expanded.append(cloned)
-
-    return expanded
 
 
 CITATION_TOOL_NAMES = ('fetch_url', 'view_file', 'view_knowledge_file', 'query_knowledge_files', 'query_chat_files')
@@ -1124,10 +1073,10 @@ async def chat_completion_tools_handler(
                     tool_type = tool.get('type', '')
                     direct_tool = tool.get('direct', False)
 
-                    if tool_type != 'mcp':
-                        spec = tool.get('spec', {})
-                        allowed_params = spec.get('parameters', {}).get('properties', {}).keys()
-                        tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
+                    prepared = {'name': tool_function_name, 'arguments': tool_function_params}
+                    if error := prepare_tool_call(prepared, tool.get('spec', {}).get('parameters')):
+                        raise ValueError(error)
+                    tool_function_params = JSONCodec.loads(prepared['arguments'])
 
                     if tool.get('direct', False):
                         tool_result = await event_caller(
@@ -3093,33 +3042,22 @@ async def build_chat_response_context(request, form_data, user, model, metadata,
     }
 
 
-async def execute_tool_call(form_data, metadata, event_caller, tool_call):
-    """Execute the saved function_call item, already resolved before approval staging."""
+async def execute_tool_call(form_data, metadata, event_caller, tool_call, history=None):
+    """Execute a resolved call; resumed approvals use the same validation and loop policy."""
     name = tool_call.get('name', '')
-    tool_args = tool_call.get('arguments', '{}')
-    params = {}
-    if tool_args and tool_args.strip():
-        try:
-            params = JSONCodec.loads(tool_args)
-        except Exception:
-            try:
-                params = ast.literal_eval(tool_args)
-            except Exception as e:
-                log.debug(e)
-                return {}, 'Error: Tool arguments are not valid JSON.', None, None, False
-    if not isinstance(params, dict):
-        return (
-            {},
-            f'Error: Tool call arguments for `{name}` must be a JSON object. Please try again.',
-            None,
-            None,
-            False,
-        )
-    tool_call['arguments'] = JSONCodec.dumps(params)
-
     tool = metadata.get('tools', {}).get(name)
-    if not tool:
-        return params, f'Error: Tool "{name}" not found.', None, None, False
+    error = (
+        prepare_tool_call(tool_call, tool.get('spec', {}).get('parameters'))
+        if tool
+        else f'Error: Tool "{name}" not found.'
+    )
+    if history is not None:
+        error = error or tool_repetition_error(tool_call, history)
+        history.append(tool_call)
+    tool_call['status'] = 'failed' if error else 'in_progress'
+    if error:
+        return {}, error, None, None, False
+    params = JSONCodec.loads(tool_call['arguments'])
     if name == 'display_file' and (
         str(params.get('path', '')).startswith('/api/v1/files/')
         or re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', str(params.get('path', '')))
@@ -3127,14 +3065,10 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
         if tool.get('file_tool'):
             tool = tool['file_tool']
         elif tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True:
+            tool_call['status'] = 'failed'
             return params, 'Error: Uploaded file display is not available.', None, None, False
     tool_type = tool.get('type', '')
     direct_tool = tool.get('direct', False)
-    # MCP servers validate their own arguments
-    if tool_type != 'mcp':
-        allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {}).keys()
-        params = {key: value for key, value in params.items() if key in allowed_params}
-
     try:
         if (
             not is_saved_chat_id(metadata.get('chat_id'))
@@ -3151,6 +3085,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
                 is not True  # Disconnection and timeout replies are error objects, not approval.
             )
         ):
+            tool_call['status'] = 'failed'
             return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
 
         tool_call['started_at'] = time.time()
@@ -3186,6 +3121,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call):
             tool_call['duration'] = time.perf_counter() - started
     except Exception as e:
         result = {'error': str(e)}
+    tool_call['status'] = 'failed' if _is_tool_result_error(result) else 'completed'
     return params, result, tool, tool_type, direct_tool
 
 
@@ -3267,8 +3203,10 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
             item = copy.deepcopy(item)
 
         try:
+            history = [call for call in output if call.get('type') == 'function_call']
+            history = history[: next(i for i, call in enumerate(history) if call.get('call_id') == item['call_id'])]
             params, result, tool, tool_type, direct_tool = await execute_tool_call(
-                form_data, metadata, event_caller, item
+                form_data, metadata, event_caller, item, history
             )
             files, embeds = [], []
             if result is None and tool is None:
@@ -4700,6 +4638,7 @@ async def streaming_chat_response_handler(response, ctx):
                     nonlocal stream_size
 
                     response_tool_calls = []
+                    finish_reason = None
                     prior_usage = usage
                     current_usage = {}
                     form_data['model'] = current_form_data['model']
@@ -4875,6 +4814,10 @@ async def streaming_chat_response_handler(response, ctx):
                                 # Check for Responses API events
                                 elif data.get('type', '').startswith('response.') or data.get('type', '') == 'error':
                                     response_data_type = data.get('type', '')
+                                    if response_data_type in {'response.incomplete', 'response.failed', 'error'}:
+                                        finish_reason = 'incomplete'
+                                    elif response_data_type == 'response.completed':
+                                        finish_reason = data.get('response', {}).get('status', 'completed')
                                     response_data_is_delta = response_data_type.endswith('.delta')
                                     output, response_metadata = handle_responses_streaming_event(data, output)
 
@@ -5544,6 +5487,49 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                 reasoning_item['status'] = 'completed'
 
+                    incomplete = finish_reason in {'length', 'content_filter', 'incomplete', 'failed'}
+                    if (
+                        not response_tool_calls
+                        and not incomplete
+                        and current_form_data.get('tool_choice') != 'none'
+                        and current_form_data.get('response_format') in (None, {'type': 'text'})
+                    ):
+                        text_items = [item for item in output if item.get('type') == 'message']
+                        text = ''.join(
+                            part.get('text', '')
+                            for item in text_items
+                            for part in item.get('content', [])
+                            if part.get('type') == 'output_text'
+                        )
+                        allowed = {
+                            spec.get('function', spec).get('name') for spec in current_form_data.get('tools') or []
+                        }
+                        choice = current_form_data.get('tool_choice')
+                        if isinstance(choice, dict):
+                            allowed &= {choice.get('function', choice).get('name')}
+                        recovered = recover_tool_calls(text, allowed)
+                        if recovered and not any(item.get('type') == 'function_call' for item in output):
+                            response_tool_calls = recovered
+                            output = [item for item in output if item not in text_items]
+                            content_parts[:] = [get_output_text(full_output())]
+                            for call in recovered:
+                                output.append(
+                                    {
+                                        'type': 'function_call',
+                                        'id': call['id'],
+                                        'call_id': call['id'],
+                                        **call['function'],
+                                        'status': 'in_progress',
+                                        'recovered_from_text': True,
+                                    }
+                                )
+                            await event_emitter(
+                                {
+                                    'type': 'chat:completion',
+                                    'data': {'output': full_output(), 'flush': True},
+                                }
+                            )
+
                     if response_tool_calls:
                         for tc in response_tool_calls:
                             call_id = tc.get('id', '')
@@ -5568,7 +5554,11 @@ async def streaming_chat_response_handler(response, ctx):
                                         }
                                     )
                                     break
-                        tool_calls.append(_split_tool_calls(response_tool_calls))
+                        calls = split_tool_calls(response_tool_calls) if not incomplete else response_tool_calls
+                        if incomplete:
+                            for call in calls:
+                                call['execution_error'] = INCOMPLETE_CALL_ERROR
+                        tool_calls.append(calls)
 
                     # Responses API path: extract function_call items from output
                     if not response_tool_calls and output:
@@ -5589,6 +5579,11 @@ async def streaming_chat_response_handler(response, ctx):
                                     {
                                         'id': call_id,
                                         'index': len(responses_api_tool_calls),
+                                        **(
+                                            {'execution_error': INCOMPLETE_CALL_ERROR}
+                                            if incomplete or item.get('status') != 'completed'
+                                            else {}
+                                        ),
                                         'function': {
                                             'name': item.get('name', ''),
                                             'arguments': (
@@ -5598,7 +5593,7 @@ async def streaming_chat_response_handler(response, ctx):
                                     }
                                 )
                         if responses_api_tool_calls:
-                            tool_calls.append(_split_tool_calls(responses_api_tool_calls))
+                            tool_calls.append(split_tool_calls(responses_api_tool_calls))
 
                     await save_current_response_stream()
                     if not current_usage:
@@ -5613,12 +5608,13 @@ async def streaming_chat_response_handler(response, ctx):
                     if response.background:
                         await response.background()
 
+                tool_history = [item for item in prior_output if item.get('type') == 'function_call']
                 tool_call_iterations = 0
                 max_tool_call_iterations = getattr(
-                    request.state,
-                    'max_tool_call_iterations',
-                    CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS,
+                    request.state, 'max_tool_call_iterations', CHAT_RESPONSE_MAX_TOOL_CALL_ITERATIONS
                 )
+                final_answer_requested = form_data.get('tool_choice') == 'none'
+                stop_reason = None
                 tool_call_sources = []  # Track citation sources from tool results
                 all_tool_call_sources = []  # Accumulated sources across all iterations
                 user_message = get_last_user_message(form_data['messages'])
@@ -5672,10 +5668,14 @@ async def streaming_chat_response_handler(response, ctx):
                             }
                         )
 
-                while tool_calls and (
-                    max_tool_call_iterations is None or tool_call_iterations < max_tool_call_iterations
-                ):
-                    tool_call_iterations += 1
+                while tool_calls:
+                    round_error = stop_reason
+                    if max_tool_call_iterations is not None and tool_call_iterations >= max_tool_call_iterations:
+                        round_error = 'Tool-call iteration limit reached.'
+                    if final_answer_requested:
+                        round_error = round_error or 'Tool calls are disabled for this response.'
+                    if not round_error:
+                        tool_call_iterations += 1
 
                     # Resolve dispatch before approvals and special handling such as ask_user.
                     response_tool_calls = []
@@ -5683,7 +5683,9 @@ async def streaming_chat_response_handler(response, ctx):
                         item.get('call_id'): item for item in output if item.get('type') == 'function_call'
                     }
                     for tool_call in tool_calls.pop(0):
-                        error = resolve_tool_call(tool_call, metadata.get('tools', {}))
+                        error = tool_call.get('execution_error') or resolve_tool_call(
+                            tool_call, metadata.get('tools', {})
+                        )
                         call_id = tool_call.get('id') or output_id('fc')
                         tool_call['id'] = call_id
                         function = tool_call.get('function', {})
@@ -5697,6 +5699,19 @@ async def streaming_chat_response_handler(response, ctx):
                             arguments=function.get('arguments', '{}'),
                             status='failed' if error else item.get('status', 'in_progress'),
                         )
+                        tool = metadata.get('tools', {}).get(item['name'])
+                        error = error or (
+                            prepare_tool_call(item, tool.get('spec', {}).get('parameters'))
+                            if tool
+                            else f'Error: Tool "{item["name"]}" not found.'
+                        )
+                        blocked = tool_repetition_error(item, tool_history)
+                        stop_reason = stop_reason or round_error or blocked or tool_call.get('execution_error')
+                        error = f'Error: {round_error}' if round_error else error or blocked
+                        if error:
+                            tool_history.append(item)
+                        function['arguments'] = item['arguments']
+                        item['status'] = 'failed' if error else item['status']
                         if 'provider_function' in tool_call:
                             item['provider_function'] = tool_call['provider_function']
                         if error:
@@ -5771,14 +5786,14 @@ async def streaming_chat_response_handler(response, ctx):
                     for tool_call in response_tool_calls:
                         if tool_call.get('name') != 'delegate_task':
                             tool_results[tool_call['call_id']] = await execute_tool_call(
-                                form_data, metadata, event_caller, tool_call
+                                form_data, metadata, event_caller, tool_call, tool_history
                             )
                     tool_results.update(
                         zip(
                             [tool_call['call_id'] for tool_call in delegate_calls],
                             await asyncio.gather(
                                 *(
-                                    execute_tool_call(form_data, metadata, event_caller, tool_call)
+                                    execute_tool_call(form_data, metadata, event_caller, tool_call, tool_history)
                                     for tool_call in delegate_calls
                                 )
                             ),
@@ -5946,6 +5961,9 @@ async def streaming_chat_response_handler(response, ctx):
                         tool_call_sources.clear()
 
                     await emit_output()
+                    if final_answer_requested:
+                        await emit_message_error(round_error or 'The provider requested tools after tool use stopped.')
+                        break
 
                     try:
                         new_form_data = {
@@ -6103,6 +6121,11 @@ async def streaming_chat_response_handler(response, ctx):
                                 extra_params=extra_params,
                             )
 
+                        final_answer_requested = bool(stop_reason) or (
+                            max_tool_call_iterations is not None and tool_call_iterations >= max_tool_call_iterations
+                        )
+                        if final_answer_requested:
+                            new_form_data = final_answer_payload(new_form_data)
                         new_form_data = normalize_messages_for_model(new_form_data)
 
                         res = await generate_chat_completion(
@@ -6142,15 +6165,6 @@ async def streaming_chat_response_handler(response, ctx):
                         log.exception('Tool-call continuation failed: %s', error_content)
                         await emit_message_error(error_content)
                         break
-
-                if (
-                    max_tool_call_iterations is not None
-                    and tool_calls
-                    and tool_call_iterations >= max_tool_call_iterations
-                ):
-                    log.warning('Tool-call iteration limit reached (%s)', max_tool_call_iterations)
-                    error_content = f'Tool-call limit reached ({max_tool_call_iterations} iterations).'
-                    await emit_message_error(error_content)
 
                 if DETECT_CODE_INTERPRETER:
                     MAX_RETRIES = 5

@@ -12,6 +12,7 @@ import regex
 from open_webui.models.config import Config
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message
+from open_webui.utils.tool_calling import parse_arguments
 
 SEARCH_TOOL_NAME = 'search_tools'
 CALL_TOOL_NAME = 'call_tool'
@@ -141,7 +142,7 @@ def resolve_tool_call(tool_call: dict, tools: dict[str, dict]) -> str | None:
         return None
 
     try:
-        arguments = JSONCodec.loads(function.get('arguments', ''))
+        arguments = parse_arguments(function.get('arguments', ''))
         if not isinstance(arguments, dict) or set(arguments) != {'tool_name', 'params'}:
             raise ValueError('call_tool requires tool_name and params.')
         name = arguments['tool_name']
@@ -151,9 +152,7 @@ def resolve_tool_call(tool_call: dict, tools: dict[str, dict]) -> str | None:
             raise ValueError('call_tool cannot invoke search_tools or itself.')
         if name not in tools:
             raise ValueError(f'Tool "{name}" is not available. Search for an available tool.')
-        if not isinstance(arguments['params'], str):
-            raise ValueError('params must be a JSON-encoded object string.')
-        params = JSONCodec.loads(arguments['params'])
+        params = parse_arguments(arguments['params'])
         if not isinstance(params, dict):
             raise ValueError('params must decode to a JSON object.')
     except (TypeError, ValueError) as error:
