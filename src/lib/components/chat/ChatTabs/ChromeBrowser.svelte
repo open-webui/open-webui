@@ -174,12 +174,14 @@
 			socket = new WebSocket(url);
 			const channel = socket;
 			socket.binaryType = 'arraybuffer';
-			socket.onopen = () => {
+			socket.onopen = async () => {
 				onError('');
+				await tick();
+				if (disposed || socket !== channel || channel.readyState !== WebSocket.OPEN) return;
 				command('frames');
-				resize();
 				command('quality', { quality });
 				command('visibility', { visible: active });
+				resize();
 				if (pendingNavigation) {
 					command('navigate', { url: pendingNavigation });
 					pendingNavigation = null;

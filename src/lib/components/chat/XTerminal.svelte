@@ -3,6 +3,7 @@
 	import { Terminal } from '@xterm/xterm';
 	import { FitAddon } from '@xterm/addon-fit';
 	import { WebLinksAddon } from '@xterm/addon-web-links';
+	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
 	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
 	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
@@ -32,6 +33,8 @@
 	let cursor = 0;
 	let outputEnd: number | null = null;
 	let outputPending = Promise.resolve();
+	let outputBatch = outputPending;
+	let outputBatchBytes = 0;
 	let reconnectTimer: ReturnType<typeof setTimeout>;
 	let reconnectDelay = 1000;
 	let reconnecting = false;
@@ -163,7 +166,8 @@
 					const data = new Uint8Array(event.data);
 					const end = outputEnd;
 					outputEnd = null;
-					outputPending = outputPending.then(
+					// Let xterm batch parsing instead of scheduling a timer for every chunk.
+					outputPending = outputBatch.then(
 						() =>
 							new Promise<void>((resolve) => {
 								if (!term || destroyed) {
@@ -177,6 +181,11 @@
 								});
 							})
 					);
+					outputBatchBytes += data.byteLength;
+					if (outputBatchBytes >= 64 * 1024) {
+						outputBatch = outputPending;
+						outputBatchBytes = 0;
+					}
 				} else write(event.data);
 			};
 			ws.onclose = async (event) => {
@@ -235,6 +244,13 @@
 		term.loadAddon(fitAddon);
 		term.loadAddon(new WebLinksAddon());
 		term.open(terminalEl);
+		try {
+			const webgl = new WebglAddon();
+			webgl.onContextLoss(() => webgl.dispose());
+			term.loadAddon(webgl);
+		} catch {
+			// Keep the default renderer when WebGL is unavailable.
+		}
 		resizeObserver = new ResizeObserver(fit);
 		resizeObserver.observe(terminalEl);
 		requestAnimationFrame(fit);
