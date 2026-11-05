@@ -18,7 +18,7 @@
 			return;
 		}
 		const continuation = `/auth/sessions/${$page.params.id}`;
-		sessionStorage.setItem('tether:continue', continuation);
+		sessionStorage.setItem('auth:continue', continuation);
 		try {
 			if (!get(user)) {
 				const provider = $page.url.searchParams.get('provider');
@@ -42,10 +42,10 @@
 			const callback = new URL(result.redirect_uri);
 			if (callback.protocol !== 'http:' || callback.hostname !== '127.0.0.1')
 				throw new Error($i18n.t('Invalid callback.'));
-			sessionStorage.removeItem('tether:continue');
+			sessionStorage.removeItem('auth:continue');
 			location.assign(callback.href);
 		} catch (cause) {
-			sessionStorage.removeItem('tether:continue');
+			sessionStorage.removeItem('auth:continue');
 			error = cause instanceof Error ? cause.message : String(cause);
 		}
 	});
@@ -53,7 +53,7 @@
 
 <svelte:head>
 	<title
-		>{error ? $i18n.t('Could not connect to Tether') : $i18n.t('Returning to Tether…')} · {$WEBUI_NAME}</title
+		>{error ? $i18n.t('Could not complete sign-in') : $i18n.t('Completing sign-in…')} · {$WEBUI_NAME}</title
 	>
 </svelte:head>
 
@@ -77,14 +77,14 @@
 			{/if}
 
 			{#if error}
-				<h1 class="text-xl font-normal">{$i18n.t('Could not connect to Tether')}</h1>
+				<h1 class="text-xl font-normal">{$i18n.t('Could not complete sign-in')}</h1>
 				<p role="alert" class="mt-4 text-xs leading-4 text-red-600 dark:text-red-400">{error}</p>
 				<p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
-					{$i18n.t('Return to Tether and sign in again.')}
+					{$i18n.t('Return to the app and sign in again.')}
 				</p>
 			{:else}
 				<div role="status">
-					<h1 class="text-xl font-normal">{$i18n.t('Returning to Tether…')}</h1>
+					<h1 class="text-xl font-normal">{$i18n.t('Completing sign-in…')}</h1>
 					<div class="mt-5 flex justify-center text-gray-500 dark:text-gray-400">
 						<Spinner className="size-5" />
 					</div>

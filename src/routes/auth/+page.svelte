@@ -88,7 +88,7 @@
 
 			if (!redirectPath) {
 				redirectPath =
-					sessionStorage.getItem('tether:continue') ||
+					sessionStorage.getItem('auth:continue') ||
 					$page.url.searchParams.get('redirect') ||
 					'/';
 			}
@@ -178,7 +178,7 @@
 		localStorage.token = token;
 		await setSessionUser(
 			sessionUser,
-			sessionStorage.getItem('tether:continue') || localStorage.getItem('redirectPath') || null
+			sessionStorage.getItem('auth:continue') || localStorage.getItem('redirectPath') || null
 		);
 	};
 
