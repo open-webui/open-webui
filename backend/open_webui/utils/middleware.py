@@ -444,9 +444,11 @@ def _split_tool_calls(
         if len(split_arguments) <= 1:
             expanded.append(tool_call)
         else:
-            for argument in split_arguments:
+            for position, argument in enumerate(split_arguments):
                 cloned = copy.deepcopy(tool_call)
-                cloned['id'] = f'call_{uuid4().hex[:24]}'
+                # The first split keeps the original id so it maps to the streamed output item.
+                if position > 0:
+                    cloned['id'] = f'call_{uuid4().hex[:24]}'
                 cloned['function']['arguments'] = argument
                 expanded.append(cloned)
 
