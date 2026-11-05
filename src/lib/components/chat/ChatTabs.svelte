@@ -125,14 +125,13 @@
 			: '';
 	$: if (fullWidth !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
 		tabs = setFullWidthTabs(tabs, fullWidth, title);
-		if (fullWidth) void tick().then(() => document.getElementById(domId(tabs.activeId))?.focus());
 	}
 	const toggleLayout = async () => {
 		if (panelTarget) releasePanel(panelTarget);
 		expanded = !expanded;
 		localStorage.setItem('chatTabsLayout', expanded ? 'full' : 'side');
 		await tick();
-		if (!fullWidth) document.getElementById('chat-tabs-layout-toggle')?.focus();
+		document.getElementById(fullWidth ? domId(tabs.activeId) : 'chat-tabs-layout-toggle')?.focus();
 	};
 
 	let largeScreen = false;
