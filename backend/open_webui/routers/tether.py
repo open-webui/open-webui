@@ -43,7 +43,7 @@ async def connect(ws: WebSocket):
             'user': user.id,
             'connection_id': connection_id,
             'name': name.strip(),
-            'services': get_services(hello.get('services', ['terminal'] if hello['version'] == 1 else None)),
+            'services': get_services(hello.get('services', ['open_terminal'] if hello['version'] == 1 else None)),
         }
         connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
 

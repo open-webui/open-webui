@@ -1,4 +1,4 @@
-"""Ephemeral reverse connections and streaming terminal transport."""
+"""Ephemeral reverse connections and streaming service transport."""
 
 import asyncio
 import json
@@ -233,14 +233,14 @@ class Hub:
         # SCAN may return a key more than once while connections are changing.
         return list({record['connection_id']: record for record in records if record['user'] == user_id}.values())
 
-    async def open(self, user_id, connection_id, service='terminal'):
+    async def open(self, user_id, connection_id, service):
         presence = await self.presence(user_id, connection_id)
         if not presence or presence['user'] != user_id or presence['connection_id'] != connection_id:
             raise HTTPException(503, 'Tether is offline.')
         row = await AuthSessions.get(presence['session'])
         if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
             raise HTTPException(403, 'Tether session is no longer available.')
-        if service not in presence.get('services', ['terminal']):
+        if service not in presence.get('services', []):
             raise HTTPException(503, 'Tether service is unavailable.')
         if sum(s.presence['connection'] == presence['connection'] for s in self.streams.values()) >= 16:
             raise HTTPException(429, 'Tether has too many active operations.')
@@ -290,7 +290,7 @@ async def get_terminal_connections(user):
     user_id = user['id'] if isinstance(user, dict) else user.id
     connections = list(await Config.get('terminal_server.connections', []) or [])
     for presence in await hub.presences(user_id):
-        if 'terminal' not in presence.get('services', ['terminal']):
+        if 'open_terminal' not in presence.get('services', []):
             continue
         row = await AuthSessions.get(presence['session'])
         if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
@@ -425,7 +425,7 @@ class RelaySocket:
 
 
 class RelayClient:
-    def __init__(self, user_id, service='terminal'):
+    def __init__(self, user_id, service):
         if not user_id:
             raise HTTPException(403, 'A user is required for Tether.')
         self.user_id = user_id
@@ -522,5 +522,5 @@ class RelayClient:
 
 def get_terminal_client(url, user_id=None, **kwargs):
     if str(url).startswith('tether://'):
-        return RelayClient(user_id)
+        return RelayClient(user_id, service='open_terminal')
     return aiohttp.ClientSession(**kwargs)
