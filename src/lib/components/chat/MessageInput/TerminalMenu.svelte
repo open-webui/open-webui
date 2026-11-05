@@ -25,6 +25,37 @@
 	export let show = false;
 	export let disabled = false;
 
+	function fitLabel(node: HTMLSpanElement) {
+		const controls = node.closest<HTMLElement>('[data-chat-input-controls]');
+		if (!controls) return;
+
+		let frame: number;
+		const scheduleMeasure = () => {
+			cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				// Measure the expanded label before paint so hiding it cannot cause resize flicker.
+				node.style.display = '';
+				if (controls.scrollWidth > controls.clientWidth) node.style.display = 'none';
+			});
+		};
+
+		const observer = new ResizeObserver(scheduleMeasure);
+		observer.observe(controls);
+		for (const child of controls.children) observer.observe(child);
+		observer.observe(node);
+		const mutations = new MutationObserver(scheduleMeasure);
+		mutations.observe(controls, { childList: true, subtree: true, characterData: true });
+		scheduleMeasure();
+
+		return {
+			destroy() {
+				cancelAnimationFrame(frame);
+				observer.disconnect();
+				mutations.disconnect();
+			}
+		};
+	}
+
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
@@ -146,8 +177,7 @@
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span
-						class="hidden @min-[40rem]/chat-input:inline truncate text-[0.8125rem] max-w-[9.375rem]"
+					<span use:fitLabel class="truncate text-[0.8125rem] max-w-[9.375rem]"
 						>{selectedLabel}</span
 					>
 				{/if}
@@ -160,8 +190,7 @@
 					<Cloud className="size-3.5" strokeWidth="2" />
 
 					{#if $selectedTerminalId && selectedLabel}
-						<span
-							class="hidden @min-[40rem]/chat-input:inline truncate text-[0.8125rem] max-w-[9.375rem]"
+						<span use:fitLabel class="truncate text-[0.8125rem] max-w-[9.375rem]"
 							>{selectedLabel}</span
 						>
 					{/if}
