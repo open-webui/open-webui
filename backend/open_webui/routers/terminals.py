@@ -694,7 +694,8 @@ async def _proxy_terminal_websocket(
                         elif 'text' in msg and msg['text']:
                             await upstream.send_str(msg['text'])
                 except Exception:
-                    pass
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal connection interrupted. Reconnecting.')
 
             async def _upstream_to_client():
                 """Forward upstream → client."""
@@ -724,6 +725,8 @@ async def _proxy_terminal_websocket(
                             return
                 except Exception:
                     log.exception('Terminal access recheck failed')
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal access check unavailable. Reconnecting.')
 
             # End the proxy as soon as any task finishes (e.g. a
             # graceful upstream CLOSE) and cancel the rest, which would
