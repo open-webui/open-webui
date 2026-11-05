@@ -202,7 +202,7 @@
 	</div>
 	{#if status || error}
 		<div
-			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-sm text-gray-500 dark:bg-gray-900/90"
+			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-xs text-gray-500 dark:bg-gray-900/90 dark:text-gray-400"
 		>
 			<span class={error ? '' : 'text-xs text-gray-400 dark:text-gray-500'}>{error || status}</span>
 			{#if error}<button
