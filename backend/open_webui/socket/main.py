@@ -768,6 +768,12 @@ async def join_channel(sid, data):
             await sio.enter_room(sid, f'channel:{channel.id}')
 
 
+async def has_notes_access(user_id: str, role: str) -> bool:
+    if not await Config.get('notes.enable'):
+        return False
+    return role == 'admin' or await has_permission(user_id, 'features.notes', await Config.get('user.permissions'))
+
+
 @sio.on('note:join')
 async def join_note(sid, data):
     auth = data['auth'] if 'auth' in data else None
@@ -782,9 +788,7 @@ async def join_note(sid, data):
     if not user:
         return
 
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'features.notes', await Config.get('user.permissions')
-    ):
+    if not await has_notes_access(user.id, user.role):
         return
 
     note = await Notes.get_note_by_id(data['note_id'])
@@ -1021,9 +1025,7 @@ async def ydoc_document_join(sid, data):
         document_id = normalize_document_id(data['document_id'])
 
         if document_id.startswith('note:'):
-            if user.get('role') != 'admin' and not await has_permission(
-                user.get('id'), 'features.notes', await Config.get('user.permissions')
-            ):
+            if not await has_notes_access(user.get('id'), user.get('role')):
                 return
 
             note_id = document_id.split(':')[1]
@@ -1229,6 +1231,9 @@ async def yjs_document_update(sid, data):
             return
 
         if document_id.startswith('note:'):
+            if not await has_notes_access(user.get('id'), user.get('role')):
+                return
+
             note_id = document_id.split(':')[1]
             note = await Notes.get_note_by_id(note_id)
             if not note:
