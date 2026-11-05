@@ -4550,15 +4550,18 @@ async def streaming_chat_response_handler(response, ctx):
             finish_reason = None
             last_response_id = None
 
-            def full_output():
-                if (
+            def is_message_continuation() -> bool:
+                return bool(
                     continuing
                     and prior_output
                     and output
                     and prior_output[-1].get('type') == output[0].get('type') == 'message'
                     and prior_output[-1].get('role', 'assistant') == 'assistant'
                     and output[0].get('role', 'assistant') == 'assistant'
-                ):
+                )
+
+            def full_output():
+                if is_message_continuation():
                     return [
                         *prior_output[:-1],
                         {
@@ -4588,11 +4591,9 @@ async def streaming_chat_response_handler(response, ctx):
                 nonlocal stream_size
                 if not stream_size or not request.app.state.redis:
                     return
-                # Continue merges items; code blocks write to `code`, not the event's text field.
-                if (
-                    continuing
-                    or not isinstance(delta.get('delta'), str)
-                    or any(item.get('type') == 'open_webui:code_interpreter' for item in output)
+                # Code blocks write to `code`, not the event's text field.
+                if not isinstance(delta.get('delta'), str) or any(
+                    item.get('type') == 'open_webui:code_interpreter' for item in output
                 ):
                     stream_size = 0
                     return
@@ -4661,6 +4662,10 @@ async def streaming_chat_response_handler(response, ctx):
                     reasoning_tags = DEFAULT_REASONING_TAGS
 
             try:
+                # deltas of a continued reply assume the client already holds the prior output
+                if prior_output:
+                    await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+
                 for event in events:
                     await event_emitter(
                         {
@@ -4704,6 +4709,14 @@ async def streaming_chat_response_handler(response, ctx):
 
                     def get_response_data_with_full_output_index(response_data: dict):
                         if prior_output and isinstance(response_data.get('output_index'), int):
+                            if is_message_continuation():
+                                output_index = response_data['output_index']
+                                content_offset = len(prior_output[-1].get('content', [])) if output_index == 0 else 0
+                                return {
+                                    **response_data,
+                                    'output_index': output_index + len(prior_output) - 1,
+                                    'content_index': response_data.get('content_index', 0) + content_offset,
+                                }
                             return {
                                 **response_data,
                                 'output_index': response_data['output_index'] + len(prior_output),
@@ -4725,14 +4738,7 @@ async def streaming_chat_response_handler(response, ctx):
                         nonlocal last_delta_key
 
                         if delta_count >= threshold and last_delta_data:
-                            await event_emitter(
-                                {
-                                    'type': 'chat:completion' if continuing else 'response:completion',
-                                    'data': {'output': full_output(), 'type': last_delta_data.get('type')}
-                                    if continuing
-                                    else last_delta_data,
-                                }
-                            )
+                            await event_emitter({'type': 'response:completion', 'data': last_delta_data})
                             delta_count = 0
                             last_delta_data = None
                             last_delta_type = None
