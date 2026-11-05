@@ -38,6 +38,8 @@
 	} from '$lib/apis/chats';
 	import {
 		chatId,
+		folders,
+		pinnedChats,
 		chatTitle as _chatTitle,
 		mobile,
 		showSidebar,
@@ -245,6 +247,7 @@
 
 	let showShareChatModal = false;
 	let confirmEdit = false;
+	let menuButtonElement: HTMLButtonElement;
 
 	let chatTitle = '';
 
@@ -295,6 +298,38 @@
 		}
 	};
 
+	const refreshAfterChange = async (folderId: string | null = null, removed = false) => {
+		const restoreFocus =
+			document.activeElement === document.body || itemElement?.contains(document.activeElement);
+		const menus = Array.from(document.getElementsByName('sidebar-chat-menu'));
+		const index = menus.indexOf(menuButtonElement);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(button) => button.id
+		);
+
+		await Promise.all([
+			refreshSidebar(localStorage.token),
+			getAllTags(localStorage.token).then((value) => tags.set(value))
+		]);
+		await tick();
+		if (!restoreFocus || document.activeElement !== document.body) return;
+
+		const fallback = folderId
+			? 'sidebar-folders-button'
+			: $pinnedChats.some((chat) => chat.id === id)
+				? 'sidebar-pinned-chats-button'
+				: 'sidebar-chats-button';
+		let target = removed
+			? neighbors.map((id) => document.getElementById(id)).find(Boolean)
+			: document.getElementById(`sidebar-chat-menu-${id}`);
+		const folderList: { id: string; parent_id: string | null }[] = $folders;
+		while (!target && folderId) {
+			target = document.getElementById(`folder-${folderId}-expand-button`);
+			folderId = folderList.find((folder) => folder.id === folderId)?.parent_id ?? null;
+		}
+		(target ?? document.getElementById(fallback))?.focus();
+	};
+
 	let deleting = false;
 
 	const deleteChatHandler = async (id) => {
@@ -307,7 +342,6 @@
 		});
 
 		if (res) {
-			tags.set(await getAllTags(localStorage.token));
 			if ($chatId === id) {
 				await goto('/');
 
@@ -315,7 +349,7 @@
 				await tick();
 			}
 
-			dispatch('change');
+			await refreshAfterChange(null, true);
 		}
 
 		deleting = false;
@@ -335,7 +369,7 @@
 				chatId.set('');
 			}
 
-			dispatch('change');
+			await refreshAfterChange(null, true);
 			toast.success($i18n.t('Chat archived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);
@@ -355,9 +389,7 @@
 			);
 
 			if (res) {
-				await refreshChatList(localStorage.token, { refreshPinned: true });
-
-				dispatch('change');
+				await refreshAfterChange(folderId);
 
 				toast.success($i18n.t('Chat moved successfully'));
 			}
@@ -366,7 +398,7 @@
 		}
 	};
 
-	let itemElement;
+	let itemElement: HTMLDivElement;
 
 	let generating = false;
 
@@ -450,7 +482,7 @@
 
 	let showDeleteConfirm = false;
 
-	const chatTitleInputKeydownHandler = (e) => {
+	const chatTitleInputKeydownHandler = async (e: KeyboardEvent) => {
 		// Let Enter and Escape finish IME composition without saving or cancelling the rename.
 		if (e.isComposing || e.keyCode === 229) {
 			return;
@@ -462,13 +494,14 @@
 			if (chatTitle !== title) {
 				editChatTitle(id, chatTitle);
 			}
+		}
 
-			confirmEdit = false;
-			chatTitle = '';
-		} else if (e.key === 'Escape') {
+		if (e.key === 'Enter' || e.key === 'Escape') {
 			e.preventDefault();
 			confirmEdit = false;
 			chatTitle = '';
+			await tick();
+			menuButtonElement?.focus();
 		}
 	};
 
@@ -873,12 +906,13 @@
 							menuOpen = false;
 							dispatch('unselect');
 						}}
-						onPinChange={async () => {
-							dispatch('change');
-						}}
+						onPinChange={(chat) => refreshAfterChange(chat.pinned ? null : chat.folder_id)}
 					>
 						<button
 							type="button"
+							bind:this={menuButtonElement}
+							id="sidebar-chat-menu-{id}"
+							name="sidebar-chat-menu"
 							aria-label={$i18n.t('Chat Menu')}
 							class="flex {($settings?.highContrastMode ?? false)
 								? 'size-6'

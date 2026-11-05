@@ -130,6 +130,7 @@
 						<button
 							type="button"
 							class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors duration-100 {buttonClassName}"
+							id="{id}-button"
 							aria-expanded={open}
 							aria-controls="{id}-content"
 						>

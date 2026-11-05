@@ -785,6 +785,7 @@
 					aria-label={open
 						? $i18n.t('Collapse {{name}}', { name: folders[folderId]?.name })
 						: $i18n.t('Expand {{name}}', { name: folders[folderId]?.name })}
+					id="folder-{folderId}-expand-button"
 					aria-expanded={open}
 					on:click={(e) => {
 						e.stopPropagation();

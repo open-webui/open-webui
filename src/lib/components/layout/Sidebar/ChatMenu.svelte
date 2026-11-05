@@ -52,11 +52,14 @@
 	let chat = null;
 	let showFullMessages = false;
 
-	export let onPinChange: () => void = () => {};
+	export let onPinChange: (chat: {
+		pinned: boolean;
+		folder_id: string | null;
+	}) => void | Promise<void> = () => {};
 
 	const pinHandler = async () => {
-		await toggleChatPinnedStatusById(localStorage.token, chatId);
-		onPinChange();
+		const chat = await toggleChatPinnedStatusById(localStorage.token, chatId);
+		await onPinChange(chat);
 	};
 
 	const checkPinned = async () => {

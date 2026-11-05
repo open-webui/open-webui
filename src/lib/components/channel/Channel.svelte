@@ -87,7 +87,7 @@
 
 	let scrollEnd = true;
 	let messagesContainerElement = null;
-	let chatInputElement = null;
+	let chatInputElement: { focus: () => void } | null = null;
 	let threadChatInputElement = null;
 
 	let top = false;
@@ -146,6 +146,17 @@
 				return channel;
 			})
 		);
+	};
+
+	let threadTrigger: HTMLButtonElement | null = null;
+	const closeThread = async () => {
+		const trigger = threadTrigger;
+		threadTrigger = null;
+		threadId = null;
+		await tick();
+		if (document.activeElement === document.body) {
+			(trigger?.isConnected ? trigger : chatInputElement)?.focus();
+		}
 	};
 
 	const pinHandler = (
@@ -485,7 +496,8 @@
 									await tick();
 									chatInputElement?.focus();
 								}}
-								onThread={async (id) => {
+								onThread={async (id: string, trigger: HTMLButtonElement) => {
+									threadTrigger = trigger;
 									threadId = id;
 									await tick();
 									threadChatInputElement?.focus();
@@ -541,22 +553,14 @@
 
 		{#if !largeScreen}
 			{#if threadId !== null}
-				<Drawer
-					show={threadId !== null}
-					ariaLabel={$i18n.t('Thread')}
-					onClose={() => {
-						threadId = null;
-					}}
-				>
+				<Drawer show={threadId !== null} ariaLabel={$i18n.t('Thread')} onClose={closeThread}>
 					<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
 						<Thread
 							{threadId}
 							{channel}
 							bind:chatInputElement={threadChatInputElement}
 							onPin={pinHandler}
-							onClose={() => {
-								threadId = null;
-							}}
+							onClose={closeThread}
 						/>
 					</div>
 				</Drawer>
@@ -576,9 +580,7 @@
 						{channel}
 						bind:chatInputElement={threadChatInputElement}
 						onPin={pinHandler}
-						onClose={() => {
-							threadId = null;
-						}}
+						onClose={closeThread}
 					/>
 				</div>
 			</ResizableSidePanel>
