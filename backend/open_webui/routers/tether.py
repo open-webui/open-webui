@@ -43,6 +43,7 @@ async def connect(ws: WebSocket):
             'user': user.id,
             'connection_id': connection_id,
             'name': name.strip(),
+            'notifications': hello.get('notifications') is True,
             'services': get_services(hello.get('services', ['open_terminal'] if hello['version'] == 1 else None)),
         }
         connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock())
@@ -62,7 +63,7 @@ async def connect(ws: WebSocket):
         presence_lock = asyncio.Lock()
         if hub.redis:
             await hub.redis.set(key, record, ex=60)
-        await ws.send_json({'type': 'ready'})
+        await ws.send_json({'type': 'ready', 'notifications': True})
 
         async def watch():
             while True:

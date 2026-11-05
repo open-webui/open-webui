@@ -207,6 +207,9 @@ class Hub:
                     connection = self.connections.get(header.pop('connection', ''))
                     if not connection:
                         continue
+                    if header['type'] == 'notification':
+                        await connection.send(header, data)
+                        continue
                     reply = header.pop('reply', '')
                     if header['type'] in ('http-open', 'ws-open'):
                         if len(connection.routes) >= 16:
@@ -307,6 +310,32 @@ class Hub:
 
 
 hub = Hub()
+
+
+async def notify(user_id, notification_id, title, body, path):
+    """Deliver only to authenticated background clients that opted into notifications."""
+    from open_webui.models.users import Users
+
+    if not user_id:
+        return
+    presences = [p for p in await hub.presences(user_id) if p.get('notifications')]
+    if not presences:
+        return
+    user = await Users.get_user_by_id(user_id)
+    if not user or user.role == 'pending' or not user.settings or not (user.settings.ui or {}).get('notificationEnabled', False):
+        return
+    payload = json.dumps({
+        'id': str(notification_id)[:200], 'user_id': user_id,
+        'title': str(title)[:256], 'body': str(body)[:4096], 'path': path,
+    }).encode()
+    for presence in presences:
+        row = await AuthSessions.get(presence['session'])
+        if not row or row.user_id != user_id or row.refresh_token_id is None or row.expires_at <= time.time():
+            continue
+        with suppress(Exception):
+            await asyncio.wait_for(hub.send(presence, {
+                'type': 'notification', 'stream': str(uuid4()), 'sequence': 0,
+            }, payload), 10)
 
 
 async def get_terminal_connections(user):

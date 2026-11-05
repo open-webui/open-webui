@@ -1115,6 +1115,17 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
         member = members.get(u.id)
         if member and member.is_channel_muted and u.id not in mentioned_user_ids:
             continue
+        if member and u.id != message.user_id:
+            from open_webui.utils.tether import notify
+            from urllib.parse import quote
+
+            try:
+                await notify(
+                    u.id, f'channel:{channel.id}:{message.id}', f'{channel.name} / Open WebUI',
+                    message.content, '/channels/' + quote(channel.id, safe=''),
+                )
+            except Exception:
+                log.exception('Tether channel notification failed')
         if (u.id not in active_user_ids) and member:
             if enable_user_webhooks and u.settings:
                 await publish_event(

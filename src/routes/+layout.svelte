@@ -582,16 +582,16 @@
 	};
 
 	const notify = (title, options, path) => {
-		if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 		const userId = $user?.id;
+		if (window.tether) return;
+		if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 		if (!userId) return;
 		const notification = new Notification(title, options);
 		notification.onclick = async () => {
 			notification.close();
 			if ($user?.id !== userId) return;
 			try {
-				if (window.tether?.focus) await window.tether.focus();
-				else window.focus();
+				window.focus();
 				if ($user?.id === userId) await goto(path);
 			} catch (error) {
 				console.error('Could not open notification', error);
