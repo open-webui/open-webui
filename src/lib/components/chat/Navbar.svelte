@@ -35,6 +35,7 @@
 	import ChatPlus from '../icons/ChatPlus.svelte';
 	import ChatCheck from '../icons/ChatCheck.svelte';
 	import Knobs from '../icons/Knobs.svelte';
+	import ThemeToggle from '../common/ThemeToggle.svelte';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
 
 	const i18n: any = getContext('i18n');
@@ -256,6 +257,8 @@
 							</button>
 						</Tooltip>
 					{/if}
+
+					<ThemeToggle />
 				</div>
 			</div>
 		</div>
