@@ -5140,10 +5140,10 @@
     },
     "mypy-extensions": {
       "name": "mypy-extensions",
-      "version": "1.1.0",
-      "file_name": "mypy_extensions-1.1.0-py3-none-any.whl",
+      "version": "1.2.0",
+      "file_name": "mypy_extensions-1.2.0-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505",
+      "sha256": "993e7a20aa5671eb41a7132cf555af30062da99729601601b9a8382b11cae768",
       "package_type": "package",
       "imports": [
         "mypy_extensions"
@@ -5238,10 +5238,10 @@
     },
     "xlsxwriter": {
       "name": "xlsxwriter",
-      "version": "3.2.9",
-      "file_name": "xlsxwriter-3.2.9-py3-none-any.whl",
+      "version": "3.3.1",
+      "file_name": "xlsxwriter-3.3.1-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "9a5db42bc5dff014806c58a20b9eae7322a134abb6fce3c92c181bfb275ec5b3",
+      "sha256": "8e2c89e59d733fe59e112317218c64fbbc276d90a8c144ebd6f7fa15e7ab184a",
       "package_type": "package",
       "imports": [
         "xlsxwriter"
