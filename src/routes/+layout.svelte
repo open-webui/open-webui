@@ -1024,7 +1024,7 @@
 		}
 	};
 
-	const clearExpiredSession = () => {
+	const clearExpiredSession = async () => {
 		if (isAuthRedirectInProgress) {
 			return;
 		}
@@ -1034,13 +1034,14 @@
 			clearInterval(tokenTimer);
 			tokenTimer = null;
 		}
+		// Await sign-out so it cannot clear the state of the new OAuth login
+		await userSignOut().catch((error) => {
+			console.error('Error signing out expired session:', error);
+		});
 		user.set(null);
 		localStorage.removeItem('token');
 		// Clear the OAuth token cookie so /auth doesn't auto-login and redirect-loop
 		document.cookie = 'token=; Max-Age=0; path=/';
-		userSignOut().catch((error) => {
-			console.error('Error signing out expired session:', error);
-		});
 		toast.error($i18n.t('Session expired. Please sign in again.'));
 		isAuthRedirectInProgress = false;
 	};
