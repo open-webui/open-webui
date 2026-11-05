@@ -79,6 +79,16 @@ class Stream:
         self.closed = False
         self.lock = asyncio.Lock()
         self.error = None
+        self.cleanup = None
+        self.timeout_handle = None
+        self.read_timeout = None
+
+    def set_timeout(self, timeout):
+        self.read_timeout = timeout.sock_read if timeout.sock_read and timeout.sock_read > 0 else None
+        if timeout.total and timeout.total > 0:
+            self.timeout_handle = asyncio.get_running_loop().call_later(
+                timeout.total, self.fail, 'Request timed out'
+            )
 
     async def send(self, operation, data=b'', **fields):
         while len(data) > self.credit and not self.closed:
@@ -92,6 +102,8 @@ class Stream:
             raise self.error or RelayInterrupted('Stream closed')
         self.credit -= len(data)
         async with self.lock:
+            if self.closed:
+                raise self.error or RelayInterrupted('Stream closed')
             header = dict(fields, type=operation, stream=self.id, sequence=self.sequence)
             self.sequence += 1
             try:
@@ -136,7 +148,7 @@ class Stream:
         if self.error:
             raise self.error
         try:
-            header, data = await asyncio.wait_for(self.queue.get(), 300)
+            header, data = await asyncio.wait_for(self.queue.get(), self.read_timeout)
         except TimeoutError as error:
             self.fail('Response timed out')
             raise self.error from error
@@ -151,12 +163,26 @@ class Stream:
             await self.send('window', bytes=count)
 
     async def close(self):
-        if not self.closed:
-            with suppress(Exception):
-                await self.send('cancel')
+        if self.cleanup is None:
             self.closed = True
             self.wake.set()
-        self.owner.streams.pop(self.id, None)
+            if self.timeout_handle:
+                self.timeout_handle.cancel()
+            self.cleanup = asyncio.create_task(self._cleanup())
+        # A cancelled consumer must not interrupt remote cleanup or send it twice.
+        await asyncio.shield(self.cleanup)
+
+    async def _cleanup(self):
+        try:
+            with suppress(Exception):
+                async with asyncio.timeout(10):
+                    async with self.lock:
+                        header = dict(type='cancel', stream=self.id, sequence=self.sequence)
+                        self.sequence += 1
+                        # send() deliberately rejects failed streams; cancellation must still reach Tether.
+                        await self.owner.send(self.presence, header, b'')
+        finally:
+            self.owner.streams.pop(self.id, None)
 
 
 class Hub:
@@ -217,9 +243,11 @@ class Hub:
                         connection.routes[header['stream']] = reply
                     elif connection.routes.get(header['stream']) != reply:
                         continue
-                    await connection.send(header, data)
-                    if header['type'] == 'cancel':
-                        connection.routes.pop(header['stream'], None)
+                    try:
+                        await connection.send(header, data)
+                    finally:
+                        if header['type'] == 'cancel':
+                            connection.routes.pop(header['stream'], None)
                 else:
                     stream = self.streams.get(header['stream'])
                     if stream and header.pop('connection', None) == stream.presence['connection']:
@@ -284,9 +312,11 @@ class Hub:
                 if len(connection.routes) >= 16:
                     raise HTTPException(429, 'Tether has too many active operations.')
                 connection.routes[header['stream']] = self.worker
-            await connection.send(header, data)
-            if header['type'] == 'cancel':
-                connection.routes.pop(header['stream'], None)
+            try:
+                await connection.send(header, data)
+            finally:
+                if header['type'] == 'cancel':
+                    connection.routes.pop(header['stream'], None)
         else:
             packet = encode(
                 dict(header, route='connection', connection=presence['connection'], reply=self.worker), data
@@ -479,12 +509,13 @@ class RelaySocket:
 
 
 class RelayClient:
-    def __init__(self, user_id, service):
+    def __init__(self, user_id, service, timeout=None):
         if not user_id:
             raise HTTPException(403, 'A user is required for Tether.')
         self.user_id = user_id
         self.service = get_services([service])[0]
         self.operations = []
+        self.timeout = timeout if timeout is not None else aiohttp.ClientTimeout(total=300)
 
     async def __aenter__(self):
         return self
@@ -525,6 +556,11 @@ class RelayClient:
             headers['Content-Type'] = body.headers['Content-Type']
         upload = None
         try:
+            if method:
+                timeout = kwargs.get('timeout', self.timeout)
+                if not isinstance(timeout, aiohttp.ClientTimeout):
+                    timeout = aiohttp.ClientTimeout(total=timeout)
+                stream.set_timeout(timeout)
             await stream.send(
                 'http-open' if method else 'ws-open',
                 service=self.service,
@@ -557,7 +593,9 @@ class RelayClient:
                         stream.fail('Upload interrupted; completion may be unknown')
 
                 upload = asyncio.create_task(upload_body())
-            header, _ = await asyncio.wait_for(stream.receive(), 30)
+            # HTTP headers may wait for an upload or command to finish. Only the
+            # WebSocket upgrade has a separate establishment deadline.
+            header, _ = await stream.receive() if method else await asyncio.wait_for(stream.receive(), 30)
             if method and header['type'] == 'http-response':
                 result = RelayResponse(stream, header, upload)
             elif not method and header['type'] == 'ws-ready':
@@ -578,5 +616,5 @@ class RelayClient:
 
 def get_terminal_client(url, user_id=None, **kwargs):
     if str(url).startswith('tether://'):
-        return RelayClient(user_id, service='open_terminal')
+        return RelayClient(user_id, service='open_terminal', timeout=kwargs.get('timeout'))
     return aiohttp.ClientSession(**kwargs)
