@@ -75,6 +75,7 @@
 		removeAllDetails
 	} from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
+	import { initializeTether, renewTetherSession } from '$lib/utils/tether';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
 	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
@@ -122,6 +123,7 @@
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
+	let stopTether = () => {};
 	let tokenTimer = null;
 	let isAuthRedirectInProgress = false;
 
