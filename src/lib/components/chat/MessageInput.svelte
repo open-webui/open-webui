@@ -2795,9 +2795,6 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<GlobeAlt className="size-4" strokeWidth="1.75" />
-													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
-														>{$i18n.t('Web Search')}</span
-													>
 												</button>
 											</Tooltip>
 										{/if}
@@ -2815,9 +2812,6 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<Photo className="size-4" strokeWidth="1.75" />
-													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
-														>{$i18n.t('Image')}</span
-													>
 												</button>
 											</Tooltip>
 										{/if}
@@ -2840,10 +2834,6 @@
 														: 'focus:outline-hidden rounded-full'}"
 												>
 													<Terminal className="size-3.5" strokeWidth="2" />
-
-													<span data-input-label class="whitespace-nowrap text-[0.8125rem]"
-														>{$i18n.t('Code Interpreter')}</span
-													>
 												</button>
 											</Tooltip>
 										{/if}
