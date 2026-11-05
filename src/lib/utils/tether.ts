@@ -2,6 +2,7 @@ import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { user, socket } from '$lib/stores';
+import { receiveSpotlightQuery } from './spotlight';
 
 let nativeFetch: typeof fetch;
 let renewal: Promise<boolean> | undefined;
@@ -63,11 +64,22 @@ export function renewTetherSession(force = false): Promise<boolean> {
 
 export async function initializeTether(fetcher: typeof fetch): Promise<() => void> {
 	nativeFetch = fetcher;
-	if (!window.tether) return () => {};
-	const unsubscribe = window.tether.onToken((access) => {
+	const tether = window.tether;
+	if (!tether) return () => {};
+	const unsubscribeToken = tether.onToken((access) => {
 		void applyTetherToken(access).catch(() => {});
 	});
 	// Connectivity errors must not erase credentials or force a sign-out.
 	await renewTetherSession().catch(() => {});
-	return unsubscribe;
+	const unsubscribeQuery = tether.onQuery?.((query) =>
+		receiveSpotlightQuery(
+			query,
+			() => goto('/'),
+			() => get(user)?.id
+		)
+	);
+	return () => {
+		unsubscribeToken();
+		unsubscribeQuery?.();
+	};
 }

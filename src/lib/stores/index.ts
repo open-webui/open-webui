@@ -200,13 +200,18 @@ export const temporaryChatEnabled = writable(false);
 export const openTemporaryChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
-// Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
-// Set by +layout.svelte, consumed and cleared by Chat.svelte.
-export type DesktopEventFile = { name: string; mimeType: string; dataUrl: string };
-export type DesktopEvent = {
-	type: string;
-	data?: any;
+export type SpotlightQuery = {
+	query: string;
+	files: { name: string; mimeType: string; dataUrl: string }[];
 };
+// One-shot call requests and acknowledged Tether queries, consumed by Chat.svelte.
+export type DesktopEvent =
+	| { type: 'call' }
+	| {
+			type: 'query';
+			data: SpotlightQuery;
+			handoff: { isCurrent: () => boolean; complete: (error?: string) => void };
+	  };
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 
 export const isLastActiveTab = writable(true);

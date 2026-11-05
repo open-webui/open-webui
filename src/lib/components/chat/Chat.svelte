@@ -2878,36 +2878,33 @@
 		if (chatInputPrompt !== null) messageInput?.setText(chatInputPrompt);
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
-		// Consume one-shot desktop event (e.g. Spotlight query, call shortcut)
-		if ($desktopEvent) {
+		// Consume call requests or the acknowledged Tether handoff.
+		if ($desktopEvent && ($desktopEvent.type === 'call' || !embedded)) {
 			const event = $desktopEvent;
 			desktopEvent.set(null);
 
 			if (event.type === 'call') {
 				openCallOverlay();
 			} else if (event.type === 'query') {
-				const query = event.data?.query;
-				const eventFiles = event.data?.files;
-
-				// Attach screenshot images from desktop (e.g. Spotlight region capture)
-				if (eventFiles?.length) {
-					for (const ef of eventFiles) {
-						files = [
-							...files,
-							{
-								type: 'image',
-								url: ef.dataUrl,
-								name: ef.name
-							}
-						];
-					}
-				}
-
-				if (query) {
-					messageInput?.setTextHandler(query, () => submitHandler(prompt));
-				} else if (eventFiles?.length) {
+				if (!event.handoff.isCurrent()) {
+					event.handoff.complete('The signed-in account changed. Send again from Spotlight.');
+				} else if (!messageInput) {
+					event.handoff.complete('The WebUI composer is not ready. Send again from Spotlight.');
+				} else {
+					// Replace the restored new-chat draft; do not mix in its old attachments.
+					files = event.data.files.map((file) => ({
+						type: 'image',
+						url: file.dataUrl,
+						name: file.name
+					}));
+					messageInput.setText(event.data.query ?? '');
 					await tick();
-					submitHandler('');
+					if (event.handoff.isCurrent()) {
+						event.handoff.complete();
+						void submitHandler(event.data.query ?? '');
+					} else {
+						event.handoff.complete('The handoff expired. Send again from Spotlight.');
+					}
 				}
 			}
 		} else if ($page.url.searchParams.get('q')) {

@@ -1054,13 +1054,8 @@
 			await goto(event.data.path);
 			return;
 		}
-		if (event.type === 'query' && (event.data?.query || event.data?.files?.length)) {
-			desktopEvent.set(event);
-			await goto('/');
-			return;
-		}
 		if (event.type === 'call') {
-			desktopEvent.set(event);
+			desktopEvent.set({ type: 'call' });
 			await goto('/');
 			return;
 		}
