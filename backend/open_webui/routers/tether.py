@@ -102,8 +102,11 @@ async def connect(ws: WebSocket):
                 update = json.loads(message['text'])
                 if update.get('type') == 'services':
                     services = get_services(update.get('services'))
+                    name = update.get('name', presence['name'])
+                    if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
+                        raise ValueError('A device name of 1–100 characters is required')
                     async with presence_lock:
-                        updated_record = json.dumps({**presence, 'services': services})
+                        updated_record = json.dumps({**presence, 'services': services, 'name': name.strip()})
                         if hub.redis:
                             replaced = await hub.redis.eval(
                                 "if redis.call('get', KEYS[1]) == ARGV[1] then redis.call('set', KEYS[1], ARGV[2], 'EX', 60); return 1 else return 0 end",
@@ -112,6 +115,7 @@ async def connect(ws: WebSocket):
                             if not replaced:
                                 raise ValueError('Tether connection was replaced')
                         presence['services'] = services
+                        presence['name'] = name.strip()
                         record = updated_record
                     continue
                 updated = decode_token(update.get('token', ''))

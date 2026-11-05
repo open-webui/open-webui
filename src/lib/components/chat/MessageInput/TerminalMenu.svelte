@@ -135,18 +135,19 @@
 
 <div class="flex items-center translate-x-0.5">
 	{#if disabled}
-		<Tooltip content={$i18n.t('Terminal')} placement="top">
+		<Tooltip content={selectedLabel} placement="top">
 			<button
 				type="button"
 				disabled
 				aria-disabled="true"
-				aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
+				aria-label={selectedLabel}
 				class={triggerClass}
 			>
 				<Cloud className="size-3.5" strokeWidth="2" />
 
 				{#if $selectedTerminalId && selectedLabel}
-					<span class="truncate text-[0.8125rem] max-w-[6.25rem] sm:max-w-[9.375rem]"
+					<span
+						class="hidden @min-[40rem]/chat-input:inline truncate text-[0.8125rem] max-w-[9.375rem]"
 						>{selectedLabel}</span
 					>
 				{/if}
@@ -154,16 +155,13 @@
 		</Tooltip>
 	{:else}
 		<Dropdown bind:show align="start">
-			<Tooltip content={$i18n.t('Terminal')} placement="top">
-				<button
-					type="button"
-					aria-label={$selectedTerminalId && selectedLabel ? undefined : $i18n.t('Terminal')}
-					class={triggerClass}
-				>
+			<Tooltip content={selectedLabel} placement="top">
+				<button type="button" aria-label={selectedLabel} class={triggerClass}>
 					<Cloud className="size-3.5" strokeWidth="2" />
 
 					{#if $selectedTerminalId && selectedLabel}
-						<span class="truncate text-[0.8125rem] max-w-[6.25rem] sm:max-w-[9.375rem]"
+						<span
+							class="hidden @min-[40rem]/chat-input:inline truncate text-[0.8125rem] max-w-[9.375rem]"
 							>{selectedLabel}</span
 						>
 					{/if}
