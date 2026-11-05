@@ -87,7 +87,7 @@
 		showDeleteConfirmDialog = false;
 	};
 
-	$: if (show && channel) {
+	$: if (show) {
 		loadWebhooks();
 		selectedWebhookId = null;
 		pendingChanges = {};
