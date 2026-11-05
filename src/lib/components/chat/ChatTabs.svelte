@@ -826,7 +826,7 @@
 		}
 		tabsChatId = chatId;
 	}
-	$: if ($showTabs === true && !tabs.tabs.length) {
+	$: if (mounted && !fullWidth && $showTabs === true && !tabs.tabs.length) {
 		const options = [
 			...availableViews
 				.filter((view) => view.available)
