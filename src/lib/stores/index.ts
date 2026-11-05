@@ -200,18 +200,17 @@ export const temporaryChatEnabled = writable(false);
 export const openTemporaryChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
-export type SpotlightQuery = {
+export type QueryData = {
 	query: string;
 	files: { name: string; mimeType: string; dataUrl: string }[];
 };
-// One-shot call requests and acknowledged Tether queries, consumed by Chat.svelte.
+export type TetherEvent = { type: 'query'; data: QueryData } | { type: 'voice' };
+// The legacy call shortcut is separate from acknowledged Tether events.
 export type DesktopEvent =
-	| { type: 'call' }
-	| {
-			type: 'query';
-			data: SpotlightQuery;
+	| { type: 'call'; handoff?: never }
+	| (TetherEvent & {
 			handoff: { isCurrent: () => boolean; complete: (error?: string) => void };
-	  };
+	  });
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 
 export const isLastActiveTab = writable(true);

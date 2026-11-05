@@ -1,8 +1,7 @@
 import { get } from 'svelte/store';
 import { goto } from '$app/navigation';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
-import { user, socket } from '$lib/stores';
-import { receiveSpotlightQuery } from './spotlight';
+import { user, socket, desktopEvent, type DesktopEvent } from '$lib/stores';
 
 let nativeFetch: typeof fetch;
 let renewal: Promise<boolean> | undefined;
@@ -71,15 +70,36 @@ export async function initializeTether(fetcher: typeof fetch): Promise<() => voi
 	});
 	// Connectivity errors must not erase credentials or force a sign-out.
 	await renewTetherSession().catch(() => {});
-	const unsubscribeQuery = tether.onQuery?.((query) =>
-		receiveSpotlightQuery(
-			query,
-			() => goto('/'),
-			() => get(user)?.id
-		)
-	);
+	const unsubscribeEvents = tether.onEvent?.(async (payload) => {
+		if (!payload || !['query', 'voice'].includes(payload.type))
+			throw new Error('Unsupported Tether event.');
+		const userId = get(user)?.id;
+		if (!userId)
+			throw new Error('Sign in to WebUI, then send again. Your Spotlight draft is kept.');
+		return new Promise<void>((resolve, reject) => {
+			let active = true;
+			const complete = (error?: string) => {
+				if (!active) return;
+				active = false;
+				clearTimeout(timer);
+				if (get(desktopEvent) === event) desktopEvent.set(null);
+				if (error) reject(new Error(error));
+				else resolve();
+			};
+			const event: DesktopEvent = {
+				...payload,
+				handoff: { isCurrent: () => active && get(user)?.id === userId, complete }
+			};
+			const timer = setTimeout(
+				() => complete('WebUI is not ready. Try again from Tether.'),
+				15_000
+			);
+			desktopEvent.set(event);
+			void goto('/').catch((error) => complete(error.message || 'Could not open chat.'));
+		});
+	});
 	return () => {
 		unsubscribeToken();
-		unsubscribeQuery?.();
+		unsubscribeEvents?.();
 	};
 }

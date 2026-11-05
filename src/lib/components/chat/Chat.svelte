@@ -2879,16 +2879,21 @@
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume call requests or the acknowledged Tether handoff.
-		if ($desktopEvent && ($desktopEvent.type === 'call' || !embedded)) {
+		if ($desktopEvent && (!$desktopEvent.handoff || !embedded)) {
 			const event = $desktopEvent;
 			desktopEvent.set(null);
 
-			if (event.type === 'call') {
+			if (event.handoff && !event.handoff.isCurrent()) {
+				event.handoff.complete('The signed-in account changed. Try again from Tether.');
+			} else if (event.type === 'call' || event.type === 'voice') {
 				openCallOverlay();
+				event.handoff?.complete(
+					$showCallOverlay
+						? undefined
+						: 'Voice mode is unavailable. Check your model, permissions and voice settings in WebUI.'
+				);
 			} else if (event.type === 'query') {
-				if (!event.handoff.isCurrent()) {
-					event.handoff.complete('The signed-in account changed. Send again from Spotlight.');
-				} else if (!messageInput) {
+				if (!messageInput) {
 					event.handoff.complete('The WebUI composer is not ready. Send again from Spotlight.');
 				} else {
 					// Replace the restored new-chat draft; do not mix in its old attachments.

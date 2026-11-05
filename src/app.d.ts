@@ -4,12 +4,7 @@ declare global {
 	interface Window {
 		tether?: {
 			version: 1;
-			onQuery?(
-				callback: (query: {
-					query: string;
-					files: { name: string; mimeType: string; dataUrl: string }[];
-				}) => Promise<void>
-			): () => void;
+			onEvent?(callback: (event: import('$lib/stores').TetherEvent) => Promise<void>): () => void;
 			signedIn(token: string): Promise<{ token: string; expiresAt: number | null }>;
 			refresh(force?: boolean): Promise<{ token: string; expiresAt: number | null } | null>;
 			signedOut(): Promise<void>;
