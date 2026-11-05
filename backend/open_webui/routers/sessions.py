@@ -71,6 +71,7 @@ class ExchangeForm(BaseModel):
 
 class RefreshForm(BaseModel):
     refresh_token: str = Field(max_length=8192)
+    request_id: UUID | None = None
 
 
 def digest(value: str) -> str:
@@ -110,7 +111,7 @@ async def verify_proof(claims, request):
     return proof
 
 
-def credentials(row, proof):
+def credentials(row, proof, refresh_issued_at=None):
     now = int(time.time())
     access_expiry = min(now + 900, row.expires_at)
     access = create_token(
@@ -124,7 +125,7 @@ def credentials(row, proof):
             'typ': 'refresh',
             **proof,
             'jti': row.refresh_token_id,
-            'iat': now,
+            'iat': now if refresh_issued_at is None else refresh_issued_at,
             'exp': row.expires_at,
         },
         SESSION_SECRET,
@@ -221,19 +222,42 @@ async def refresh(form: RefreshForm, request: Request):
     row = await AuthSessions.get(session_id)
     if not row or row.user_id != claims.get('id') or row.expires_at <= time.time():
         raise HTTPException(401, 'Session expired or revoked.')
-    values = dict(refresh_token_id=str(uuid4()), expires_at=await idle_expiry())
-    # shortcut: a lost rotation response requires sign-in; add recovery only if that becomes necessary.
-    if not await AuthSessions.change(
-        row.id,
-        [
-            AuthSession.user_id == claims['id'],
-            AuthSession.refresh_token_id == token_id,
-            AuthSession.expires_at > int(time.time()),
-        ],
-        **values,
+    if row.refresh_token_id == token_id:
+        issued_at = int(time.time())
+        data = {key: value for key, value in row.data.items() if key != 'refresh_retry'}
+        if form.request_id:
+            data['refresh_retry'] = {
+                'token_hash': digest(form.refresh_token),
+                'request_hash': digest(str(form.request_id)),
+                'issued_at': issued_at,
+            }
+        values = dict(refresh_token_id=str(uuid4()), expires_at=await idle_expiry(), data=data)
+        if await AuthSessions.change(
+            row.id,
+            [
+                AuthSession.user_id == claims['id'],
+                AuthSession.refresh_token_id == token_id,
+                AuthSession.expires_at > int(time.time()),
+            ],
+            **values,
+        ):
+            return credentials(row.model_copy(update=values), proof, issued_at)
+        # Another worker may have completed the same request while we were rotating.
+        row = await AuthSessions.get(session_id)
+
+    retry = row.data.get('refresh_retry', {}) if row else {}
+    if (
+        row
+        and row.user_id == claims['id']
+        and row.refresh_token_id is not None
+        and row.expires_at > time.time()
+        and form.request_id
+        and hmac.compare_digest(retry.get('token_hash', ''), digest(form.refresh_token))
+        and hmac.compare_digest(retry.get('request_hash', ''), digest(str(form.request_id)))
     ):
-        raise HTTPException(401, 'Invalid refresh token. Sign in again.')
-    return credentials(row.model_copy(update=values), proof)
+        # Only the last rotation is recoverable; token verification still enforces its original expiry.
+        return credentials(row, proof, retry['issued_at'])
+    raise HTTPException(401, 'Invalid refresh token. Sign in again.')
 
 
 @router.get('')

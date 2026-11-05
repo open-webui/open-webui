@@ -22,6 +22,17 @@ WINDOW = 262144
 MAX_MESSAGE = 16 * 1024 * 1024
 
 
+class RelayInterrupted(ConnectionError):
+    def __init__(self, reason='Connection lost'):
+        super().__init__(
+            f'Tether connection interrupted: {reason}. '
+            'The operation may have completed. Check its result before trying again; do not automatically repeat it.'
+        )
+
+    def result(self):
+        return {'error': str(self), 'code': 'tether_interrupted', 'outcome': 'unknown', 'retryable': False}
+
+
 def get_services(value):
     if (
         not isinstance(value, list)
@@ -72,14 +83,22 @@ class Stream:
     async def send(self, operation, data=b'', **fields):
         while len(data) > self.credit and not self.closed:
             self.wake.clear()
-            await asyncio.wait_for(self.wake.wait(), 300)
+            try:
+                await asyncio.wait_for(self.wake.wait(), 300)
+            except TimeoutError as error:
+                self.fail('Send timed out')
+                raise self.error from error
         if self.closed:
-            raise ConnectionError('Tether stream closed')
+            raise self.error or RelayInterrupted('Stream closed')
         self.credit -= len(data)
         async with self.lock:
             header = dict(fields, type=operation, stream=self.id, sequence=self.sequence)
             self.sequence += 1
-            await self.owner.send(self.presence, header, data)
+            try:
+                await self.owner.send(self.presence, header, data)
+            except (OSError, TimeoutError) as error:
+                self.fail(str(error) or 'Send failed')
+                raise self.error from error
 
     def feed(self, header, data):
         if self.closed:
@@ -106,7 +125,7 @@ class Stream:
             self.fail('Relay consumer too slow')
 
     def fail(self, message):
-        self.error = ConnectionError(message)
+        self.error = RelayInterrupted(message)
         self.closed = True
         self.wake.set()
         while not self.queue.empty():
@@ -116,9 +135,14 @@ class Stream:
     async def receive(self):
         if self.error:
             raise self.error
-        header, data = await asyncio.wait_for(self.queue.get(), 300)
+        try:
+            header, data = await asyncio.wait_for(self.queue.get(), 300)
+        except TimeoutError as error:
+            self.fail('Response timed out')
+            raise self.error from error
         if header['type'] == 'error':
-            raise ConnectionError(header.get('message', 'Tether operation interrupted'))
+            self.fail(header.get('message', 'Response interrupted'))
+            raise self.error
         return header, data
 
     async def consumed(self, count):
@@ -343,7 +367,7 @@ class RelayResponse:
             if header['type'] == 'end':
                 return
             if header['type'] != 'data':
-                raise ConnectionError('Unexpected relay response')
+                raise RelayInterrupted('Unexpected response')
             yield data
             await self.stream.consumed(len(data))
 
@@ -404,6 +428,7 @@ class RelaySocket:
         while True:
             header, data = await self.stream.receive()
             if header['type'] == 'end':
+                self.close_code = header.get('code', 1000)
                 raise StopAsyncIteration
             if header['type'] != 'data':
                 raise ConnectionError('Invalid WebSocket relay message')
@@ -512,11 +537,13 @@ class RelayClient:
                 raise ConnectionError('Unexpected relay handshake')
             self.operations.append(result)
             return result
-        except BaseException:
+        except BaseException as error:
             if upload:
                 upload.cancel()
                 await asyncio.gather(upload, return_exceptions=True)
             await stream.close()
+            if isinstance(error, (OSError, TimeoutError)) and not isinstance(error, RelayInterrupted):
+                raise RelayInterrupted(str(error) or 'Response timed out') from error
             raise
 
 

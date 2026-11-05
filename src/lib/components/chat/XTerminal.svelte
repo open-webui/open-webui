@@ -34,6 +34,7 @@
 	let outputPending = Promise.resolve();
 	let reconnectTimer: ReturnType<typeof setTimeout>;
 	let reconnectDelay = 1000;
+	let reconnecting = false;
 
 	export async function bindChat(id: string) {
 		if (readOnly || destroyed || sessionChatId === id) return;
@@ -130,6 +131,7 @@
 				() => {
 					if (destroyed) return;
 					connected = true;
+					reconnecting = false;
 					finishConnection(true);
 					connecting = false;
 					reportActivity(active);
@@ -182,16 +184,21 @@
 				await outputPending;
 				if (destroyed) return;
 				if (event.code === 1000 || [4001, 4003, 4004].includes(event.code)) {
-					write('\r\n[Terminal session ended]\r\n');
+					reconnecting = false;
+					write(
+						event.code === 4001 || event.code === 4003
+							? '\r\n[Terminal access denied. Check your sign-in and permissions.]\r\n'
+							: '\r\n[Terminal session ended. Open a new terminal to continue.]\r\n'
+					);
 					return;
 				}
+				reconnecting = true;
 				reconnectTimer = setTimeout(() => void connect(), reconnectDelay);
 				reconnectDelay = Math.min(reconnectDelay * 2, 10000);
 			};
 			ws.onerror = () => {
 				if (destroyed) return;
 				disconnect();
-				write('\r\n\x1b[31m[Terminal connection failed]\x1b[0m\r\n');
 			};
 		} catch (error) {
 			if (destroyed) return;
@@ -261,6 +268,11 @@
 </script>
 
 <div class="terminal-view h-full min-h-0 relative bg-white dark:bg-transparent">
+	{#if reconnecting}
+		<div class="absolute top-1 right-2 z-10 rounded bg-white/90 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900/90 dark:text-gray-300" role="status">
+			Connection interrupted. Reconnecting to the same terminal…
+		</div>
+	{/if}
 	<div
 		bind:this={terminalEl}
 		class="absolute inset-0 pl-2 pr-0.5"

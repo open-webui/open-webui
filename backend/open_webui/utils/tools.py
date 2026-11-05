@@ -125,7 +125,7 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     set_tool_module_in_cache,
 )
-from open_webui.utils.tether import get_terminal_connections, get_terminal_client
+from open_webui.utils.tether import RelayInterrupted, get_terminal_connections, get_terminal_client
 from open_webui.utils.terminals import (
     TERMINAL_CONTEXT_HEADER,
     get_terminal_server_url,
@@ -1968,6 +1968,8 @@ async def execute_tool_server(
                     response_headers = response.headers
                     return (response_data, response_headers)
 
+    except RelayInterrupted as err:
+        return (err.result(), None)
     except Exception as err:
         error = str(err)
         log.warning(f'API Request Error: {error}')

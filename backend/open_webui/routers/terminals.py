@@ -24,7 +24,7 @@ from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
 from open_webui.utils.browser import browser_access, browser_ticket
-from open_webui.utils.tether import get_terminal_connections, get_terminal_client
+from open_webui.utils.tether import RelayInterrupted, get_terminal_connections, get_terminal_client
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
@@ -476,6 +476,9 @@ async def proxy_terminal(
     except ClientDisconnect:
         await session.close()
         return Response(status_code=499)
+    except RelayInterrupted as error:
+        await session.close()
+        return JSONResponse(error.result(), status_code=502)
     except (aiohttp.ClientConnectionError, TimeoutError) as error:
         await session.close()
         log.error('Terminal proxy error: %s', str(error) or type(error).__name__)
@@ -542,7 +545,10 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
-        await ws.close(code=4004, reason='Terminal server not found')
+        if server_id.startswith('tether:'):
+            await ws.close(code=1013, reason='Tether is offline. Reconnecting.')
+        else:
+            await ws.close(code=4004, reason='Terminal server not found')
         return None
 
     if not connection.get('enabled', True):
@@ -703,11 +709,11 @@ async def _proxy_terminal_websocket(
                             aiohttp.WSMsgType.ERROR,
                         ):
                             break
-                    if session_id is None:
-                        code = upstream.close_code or 1011
-                        await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
+                    code = upstream.close_code or 1011
+                    await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
                 except Exception:
-                    pass
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal connection interrupted. Reconnecting.')
 
             async def _watch_access():
                 try:
@@ -735,13 +741,10 @@ async def _proxy_terminal_websocket(
                 await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
-        if session_id is None:
-            status = getattr(e, 'status', None)
-            code = {401: 4001, 403: 4003, 404: 4004}.get(status, 1011)
-            try:
-                await ws.close(code=code)
-            except Exception:
-                pass
+        status = getattr(e, 'status', getattr(e, 'status_code', None))
+        code = {401: 4001, 403: 4003, 404: 4004}.get(status, 1011)
+        with suppress(Exception):
+            await ws.close(code=code)
     finally:
         await session.close()
         if opened:
