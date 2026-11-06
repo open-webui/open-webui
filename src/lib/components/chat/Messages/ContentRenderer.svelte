@@ -368,7 +368,7 @@
 		{/if}
 		{#if extracted.plainContent}
 			<div
-				class="whitespace-pre-wrap text-[0.9375rem]"
+				class="whitespace-pre-wrap text-[0.90625rem]"
 				use:commentSurface={{
 					resource_type: 'chat',
 					resource_id: chatId,

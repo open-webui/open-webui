@@ -13,6 +13,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import FileTypeIcon from './FileTypeIcon.svelte';
+	import FileGridIcon from './FileGridIcon.svelte';
 	import Icon from './Icon.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 
@@ -66,7 +67,6 @@
 	$: entryPath =
 		fullPath ??
 		(entry.type === 'directory' ? `${currentPath}${entry.name}/` : `${currentPath}${entry.name}`);
-	$: folderCard = viewMode === 'grid' && entry.type === 'directory';
 	$: directoryPath = entryPath.endsWith('/') ? entryPath : `${entryPath}/`;
 	$: writable = entry.writable !== false;
 	$: canMutate = parentWritable && writable;
@@ -244,18 +244,16 @@
 <li class="group min-w-0 {viewMode === 'grid' ? 'self-start' : ''}" data-file-row>
 	<div
 		class="w-full flex items-center transition-colors duration-75 {viewMode === 'grid'
-			? folderCard
-				? 'relative h-17'
-				: 'relative h-[3.875rem] rounded-md border border-black/[0.06] bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900'
+			? 'relative rounded-xl'
 			: ''} {variant === 'workspace' ? 'rounded-xl' : ''}
-			{folderCard
-			? ''
-			: selected || active
-				? 'bg-gray-100 dark:bg-white/8'
+			{selected || active
+			? viewMode === 'grid'
+				? 'bg-blue-50 dark:bg-blue-500/15'
+				: 'bg-gray-100 dark:bg-white/8'
+			: viewMode === 'grid'
+				? ''
 				: 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
-			{dragOverFolder && !folderCard
-			? 'bg-gray-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15 ring-inset'
-			: ''}"
+			{dragOverFolder ? 'bg-blue-50 dark:bg-blue-500/15 ring-2 ring-blue-500/60 ring-inset' : ''}"
 		role="presentation"
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
@@ -297,39 +295,6 @@
 			} catch {}
 		}}
 	>
-		{#if folderCard}
-			<svg
-				class="pointer-events-none absolute inset-0 h-full w-full {dragOverFolder
-					? 'text-black/25 dark:text-white/25'
-					: 'text-black/10 dark:text-white/10'}"
-				viewBox="0 0 200 68"
-				preserveAspectRatio="none"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1"
-				aria-hidden="true"
-			>
-				<!-- The back, sloped tab, and front are one folder silhouette. -->
-				<path
-					d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
-					vector-effect="non-scaling-stroke"
-				/>
-				{#if folderItemCount !== null && folderItemCount > 0}
-					<path
-						d="M7 13V12Q7 9 12 9H188Q193 9 193 12V13Z"
-						vector-effect="non-scaling-stroke"
-						class="fill-gray-50 text-black/10 dark:fill-[color-mix(in_srgb,var(--color-gray-900),white_4%)] dark:text-white/10"
-					/>
-				{/if}
-				<path
-					d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
-					vector-effect="non-scaling-stroke"
-					class={selected || active || dragOverFolder
-						? 'fill-black/5 dark:fill-white/8'
-						: 'fill-transparent group-hover:fill-black/[0.02] dark:group-hover:fill-white/4'}
-				/>
-			</svg>
-		{/if}
 		{#if viewMode === 'list' && variant === 'workspace'}
 			<span class="shrink-0" style:width={rowIndent}></span>
 		{:else if viewMode === 'list' && entry.type === 'directory'}
@@ -360,7 +325,7 @@
 				class="mr-2 flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {selected
 					? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
 					: 'border-gray-300 dark:border-gray-600'} {viewMode === 'grid'
-					? 'absolute bottom-[0.3125rem] left-1.5 z-10'
+					? 'absolute top-1 left-1 z-10 !size-6 !mr-0'
 					: ''}"
 				on:click|stopPropagation={(event) => onSelect(entry, event, entryPath, rowIndex)}
 			>
@@ -379,12 +344,11 @@
 					<button
 						{...props}
 						type="button"
-						class="flex min-w-0 flex-1 items-center {viewMode === 'grid'
-							? folderCard
-								? 'h-17 flex-col !items-start justify-start gap-0.5 px-1.5 pt-4 pb-1.5 text-left'
-								: 'h-15 flex-col !items-start justify-start gap-0.5 p-1.5 text-left'
+						class="flex min-w-0 flex-1 items-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 {viewMode ===
+						'grid'
+							? 'h-24 flex-col gap-0.5 px-1 py-2 text-center'
 							: 'gap-1.5 py-1.5 pr-2 text-left'}"
-						title={hoverDisabled ? entry.name : undefined}
+						title={viewMode === 'grid' || hoverDisabled ? entry.name : undefined}
 						draggable={canMutate}
 						on:dragend={() => (dragging = false)}
 						on:dragstart={(e) => {
@@ -438,7 +402,7 @@
 							startRename();
 						}}
 					>
-						{#if variant === 'workspace'}
+						{#if variant === 'workspace' && viewMode === 'list'}
 							{#if entry.type === 'directory'}
 								<Icon
 									name={expanded ? 'chevron-down' : 'chevron-right'}
@@ -449,6 +413,17 @@
 						{/if}
 						{#if viewMode === 'list'}
 							<FileTypeIcon name={entry.name} type={entry.type} size={14} />
+						{:else}
+							{#key JSON.stringify( [terminalUrl, terminalKey, terminalSessionId, entryPath, entry.modified, entry.size] )}
+								<FileGridIcon
+									{entry}
+									path={entryPath}
+									{terminalUrl}
+									{terminalKey}
+									sessionId={terminalSessionId}
+									itemCount={folderItemCount}
+								/>
+							{/key}
 						{/if}
 						{#if renaming}
 							<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -459,7 +434,9 @@
 								class="flex-1 text-xs bg-transparent outline-hidden text-gray-800 dark:text-gray-200 min-w-0 {variant ===
 								'workspace'
 									? 'h-4 p-0 leading-4'
-									: 'py-0.5'} {viewMode === 'grid' ? 'w-full pr-6' : ''}"
+									: 'py-0.5'} {viewMode === 'grid'
+									? 'w-full flex-none text-center ring-1 ring-blue-500 rounded'
+									: ''}"
 								on:keydown={(e) => {
 									if (e.key === 'Enter') {
 										e.preventDefault();
@@ -476,7 +453,7 @@
 						{:else}
 							<span
 								class="text-xs text-gray-800 dark:text-gray-200 {viewMode === 'grid'
-									? 'w-full shrink-0 line-clamp-2 break-words pr-5'
+									? 'w-full min-w-0 shrink-0 truncate leading-4'
 									: 'flex-1 truncate'}"
 							>
 								{entry.name}
@@ -487,26 +464,14 @@
 						{/if}
 						{#if viewMode === 'grid' && !renaming}
 							<span
-								class="mt-auto flex w-full min-w-0 shrink-0 items-center gap-1 text-[0.5625rem] leading-3 text-gray-500 dark:text-gray-400 {selectionMode ||
-								selected
-									? 'pl-5'
-									: ''}"
+								class="flex w-full min-w-0 shrink-0 items-center justify-center gap-1 text-[11px] leading-3.5 text-gray-500 dark:text-gray-400"
 							>
 								{#if entry.type === 'directory'}
 									{#key folderContentsVersion}
-										<span use:observeFolderContents class="min-w-0 flex-1 truncate"
+										<span use:observeFolderContents class="min-w-0 truncate"
 											>{folderCountLabel}</span
 										>
 									{/key}
-								{:else}
-									<span class="min-w-0 truncate rounded bg-black/5 px-1 uppercase dark:bg-white/5">
-										{entry.name.includes('.')
-											? entry.name.split('.').pop() || $i18n.t('File')
-											: $i18n.t('File')}
-									</span>
-									{#if entry.size !== undefined}
-										<span class="ml-auto shrink-0">{formatFileSize(entry.size)}</span>
-									{/if}
 								{/if}
 								{#if !writable && variant !== 'workspace'}
 									<span title={$i18n.t('Read-only')} aria-label={$i18n.t('Read-only')}
@@ -561,10 +526,9 @@
 					: 'h-5 w-5'} items-center justify-center mr-1 rounded transition
 					text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400
 					hover:bg-gray-50/40 dark:hover:bg-white/4 {viewMode === 'grid'
-					? folderCard
-						? 'absolute right-0 top-4'
-						: 'absolute right-0 top-1'
+					? 'absolute left-[calc(50%_+_16px)] -top-[3px] !m-0 !h-6 !w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100'
 					: ''}"
+				style:opacity={viewMode === 'grid' && menuOpen ? 1 : undefined}
 				aria-label={$i18n.t('More')}
 			>
 				<Icon name="three-dots" size={12} strokeWidth={1.4} />

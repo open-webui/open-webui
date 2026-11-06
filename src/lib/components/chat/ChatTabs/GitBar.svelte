@@ -84,9 +84,25 @@
 	let configuration = 0;
 	let pending: Promise<void> | null = null;
 	let syncAction: 'publish' | 'pull' | 'push' | 'fetch';
-	$: staged = status?.files.filter((file) => file.staged) ?? [];
+	let syncFeedback: typeof syncAction | null = null;
+	let syncComplete = false;
+	let syncFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+	let pendingStaging: { action: 'stage' | 'unstage'; paths: Set<string> } | null = null;
+	$: stageStates = new Map<string, boolean | 'mixed'>(
+		(status?.files ?? []).map((file) => [
+			file.path,
+			pendingStaging?.paths.has(file.path)
+				? pendingStaging.action === 'stage'
+				: file.staged
+					? file.unstaged
+						? 'mixed'
+						: true
+					: false
+		])
+	);
+	$: staged = status?.files.filter((file) => stageStates.get(file.path)) ?? [];
 	$: allStaged =
-		!!status?.files.length && status.files.every((file) => file.staged && !file.unstaged);
+		!!status?.files.length && status.files.every((file) => stageStates.get(file.path) === true);
 	$: someStaged = staged.length > 0 && !allStaged;
 	$: additions = status?.files.reduce((sum, file) => sum + file.additions, 0) ?? 0;
 	$: deletions = status?.files.reduce((sum, file) => sum + file.deletions, 0) ?? 0;
@@ -109,9 +125,26 @@
 				? 'push'
 				: 'fetch';
 	$: syncLabel = { publish: 'Publish', pull: 'Pull', push: 'Push', fetch: 'Fetch' }[syncAction];
+	$: syncMessage = syncFeedback
+		? syncComplete
+			? { publish: 'Published', pull: 'Pulled', push: 'Pushed', fetch: 'Fetched' }[syncFeedback]
+			: { publish: 'Publishing…', pull: 'Pulling…', push: 'Pushing…', fetch: 'Fetching…' }[
+					syncFeedback
+				]
+		: '';
+	$: feedbackMessage = pendingStaging
+		? pendingStaging.action === 'stage'
+			? 'Staging…'
+			: 'Unstaging…'
+		: syncMessage;
 	$: syncIcon = { publish: 'upload', pull: 'download', push: 'upload', fetch: 'refresh' }[
-		syncAction
+		busy && syncFeedback ? syncFeedback : syncAction
 	];
+	const clearSyncFeedback = () => {
+		clearTimeout(syncFeedbackTimer);
+		syncFeedback = null;
+		syncComplete = false;
+	};
 
 	const relativeTime = (date: string) => {
 		const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
@@ -184,6 +217,8 @@
 		watchError = '';
 		gitEnabled = false;
 		if (key !== context) {
+			clearSyncFeedback();
+			pendingStaging = null;
 			context = key;
 			++generation;
 			pending = null;
@@ -302,6 +337,11 @@
 	const act = async (action: string, fields: Record<string, unknown> = {}) => {
 		if (busy) return;
 		const current = generation;
+		clearSyncFeedback();
+		if (action === 'fetch' || action === 'pull' || action === 'push' || action === 'publish')
+			syncFeedback = action;
+		if (action === 'stage' || action === 'unstage')
+			pendingStaging = { action, paths: new Set(fields.paths as string[]) };
 		busy = true;
 		error = '';
 		try {
@@ -318,12 +358,25 @@
 			showWorktrees = false;
 			resetSelection();
 			await pending;
+			if (current !== generation) return;
 			await refresh(true);
+			if (current !== generation) return;
 			if (view === 'history') await loadHistory();
+			if (current !== generation) return;
+			if (syncFeedback) {
+				if (status?.is_repo && !detectionError && !error) {
+					syncComplete = true;
+					syncFeedbackTimer = setTimeout(clearSyncFeedback, 1800);
+				} else clearSyncFeedback();
+			}
 			if (action === 'worktree' && result.path) onOpenDirectory(result.path);
 		} catch (reason) {
-			if (current === generation) error = String(reason instanceof Error ? reason.message : reason);
+			if (current === generation) {
+				clearSyncFeedback();
+				error = String(reason instanceof Error ? reason.message : reason);
+			}
 		} finally {
+			if (current === generation) pendingStaging = null;
 			busy = false;
 		}
 	};
@@ -348,6 +401,7 @@
 		return () => document.removeEventListener('visibilitychange', visibility);
 	});
 	onDestroy(() => {
+		clearSyncFeedback();
 		mounted = false;
 		++configuration;
 		++generation;
@@ -605,14 +659,31 @@
 					{#if status.behind}<span>↓{status.behind}</span>{/if}
 				</span>
 			{/if}
+			<span
+				role="status"
+				class="shrink-0 text-[0.625rem] font-mono whitespace-nowrap text-gray-500 dark:text-gray-400 {feedbackMessage
+					? 'ml-1.5'
+					: ''}">{feedbackMessage ? $i18n.t(feedbackMessage) : ''}</span
+			>
 			<Tooltip
-				content={[$i18n.t(syncLabel), ...(watchError ? [$i18n.t(watchError)] : [])].join('\n')}
+				content={[
+					$i18n.t(busy && syncFeedback ? syncMessage : syncLabel),
+					...(watchError ? [$i18n.t(watchError)] : [])
+				].join('\n')}
 			>
 				<button
 					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"
-					aria-label={$i18n.t(syncLabel)}
+					aria-label={$i18n.t(busy && syncFeedback ? syncMessage : syncLabel)}
+					aria-busy={busy && !!syncFeedback}
 					on:click={() => act(syncAction)}
-					disabled={busy}><Icon name={syncIcon} size={10} /></button
+					disabled={busy}
+					><span
+						class="flex"
+						class:git-fetching={busy && syncFeedback === 'fetch'}
+						class:git-pulling={busy && syncFeedback === 'pull'}
+						class:git-pushing={busy && (syncFeedback === 'push' || syncFeedback === 'publish')}
+						><Icon name={syncIcon} size={10} /></span
+					></button
 				>
 			</Tooltip>
 			<button
@@ -737,11 +808,15 @@
 									<button
 										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100/50 dark:border-white/2 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
 										disabled={busy}
+										role="checkbox"
+										aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
+										aria-busy={!!pendingStaging}
 										aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
 										on:click={() =>
 											act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
 									>
 										<span
+											class:opacity-60={!!pendingStaging}
 											class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
 												? 'bg-gray-800 dark:bg-white'
 												: someStaged
@@ -763,6 +838,8 @@
 									class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hidden"
 								>
 									{#each status.files as file (file.path)}
+										{@const checked = stageStates.get(file.path) ?? false}
+										{@const staging = pendingStaging?.paths.has(file.path) ?? false}
 										<div
 											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left transition-colors duration-75 {selected?.path ===
 											file.path
@@ -770,16 +847,20 @@
 												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
 										>
 											<button
-												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {file.staged
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {checked
 													? 'bg-gray-800 dark:bg-white'
 													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
 												disabled={busy}
-												aria-label={`${$i18n.t(file.staged ? 'Unstage' : 'Stage')} ${file.path}`}
+												class:opacity-60={staging}
+												role="checkbox"
+												aria-checked={checked}
+												aria-busy={staging}
+												aria-label={`${$i18n.t(checked ? 'Unstage' : 'Stage')} ${file.path}`}
 												on:click={() =>
 													act(file.staged ? 'unstage' : 'stage', { paths: paths([file]) })}
 											>
-												{#if file.staged}<Icon
-														name={file.unstaged ? 'minus' : 'check'}
+												{#if checked}<Icon
+														name={checked === 'mixed' ? 'minus' : 'check'}
 														size={7}
 														class="text-white dark:text-black"
 													/>{/if}
@@ -1057,6 +1138,36 @@
 />
 
 <style>
+	@media (prefers-reduced-motion: no-preference) {
+		.git-fetching {
+			animation: git-fetch 1.2s linear infinite;
+		}
+		.git-pulling,
+		.git-pushing {
+			animation: git-transfer 1s ease-out infinite;
+			--git-direction: 3px;
+		}
+		.git-pushing {
+			--git-direction: -3px;
+		}
+	}
+	@keyframes git-fetch {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@keyframes git-transfer {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(var(--git-direction));
+		}
+	}
 	.git-panel {
 		container-type: inline-size;
 	}

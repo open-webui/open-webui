@@ -323,7 +323,7 @@
 							aria-label={$i18n.t('Message')}
 							id="message-edit-{message.id}"
 							bind:this={messageEditTextAreaElement}
-							class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.9375rem]"
+							class=" bg-transparent outline-hidden focus-visible:outline-none! w-full resize-none text-[0.90625rem]"
 							bind:value={editedContent}
 							on:input={(e) => {
 								const messagesContainer = document.getElementById('messages-container');
@@ -462,7 +462,7 @@
 									</div>
 								{:else}
 									<div
-										class="whitespace-pre-wrap text-[0.9375rem]"
+										class="whitespace-pre-wrap text-[0.90625rem]"
 										use:commentSurface={{
 											resource_type: 'chat',
 											resource_id: chatId,

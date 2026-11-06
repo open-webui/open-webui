@@ -55,6 +55,7 @@
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
+	import FileGridIcon from './FileNav/FileGridIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
@@ -2645,34 +2646,17 @@
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							class={viewMode === 'grid'
-								? 'grid grid-cols-[repeat(auto-fill,minmax(min(94px,calc((100%_-_0.5rem)/2)),1fr))] gap-2 p-2.5'
+								? 'grid grid-cols-[repeat(auto-fill,minmax(min(80px,100%),1fr))] gap-1 p-2'
 								: ''}
 						>
 							{#if creatingFolder}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last relative flex h-17 min-w-0 flex-col items-start self-start px-1.5 pt-4 pb-1.5'
+										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'grid'}
-										<svg
-											class="pointer-events-none absolute inset-0 h-full w-full text-black/10 dark:text-white/10"
-											viewBox="0 0 200 68"
-											preserveAspectRatio="none"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1"
-											aria-hidden="true"
-										>
-											<path
-												d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
-												vector-effect="non-scaling-stroke"
-											/>
-											<path
-												d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
-												vector-effect="non-scaling-stroke"
-											/>
-										</svg>
+										<FileGridIcon entry={{ name: newFolderName, type: 'directory' }} itemCount={0} />
 									{:else}
 										<FileTypeIcon name={newFolderName} type="directory" />
 									{/if}
@@ -2680,7 +2664,7 @@
 										bind:this={newFolderInput}
 										bind:value={newFolderName}
 										class={viewMode === 'grid'
-											? 'relative w-full min-w-0 bg-transparent py-0.5 text-xs text-gray-800 outline-hidden dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('Folder name')}
 										aria-label={$i18n.t('Folder name')}
@@ -2698,17 +2682,19 @@
 							{#if creatingFile}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last flex h-[3.875rem] min-w-0 flex-col items-start self-start rounded-md border border-black/[0.06] bg-gray-50/40 p-1.5 dark:border-white/[0.06] dark:bg-gray-900'
+										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'list'}
 										<FileTypeIcon name={newFileName} type="file" />
+									{:else}
+										<FileGridIcon entry={{ name: newFileName, type: 'file' }} />
 									{/if}
 									<input
 										bind:this={newFileInput}
 										bind:value={newFileName}
 										class={viewMode === 'grid'
-											? 'relative w-full min-w-0 bg-transparent py-0.5 text-xs text-gray-800 outline-hidden dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('File name')}
 										aria-label={$i18n.t('File name')}

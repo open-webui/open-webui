@@ -189,7 +189,7 @@
 			tabindex="0"
 			class="flex-1 min-w-0 py-0.5 text-left {compactPreview
 				? 'text-xs'
-				: 'text-[0.9375rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+				: 'text-[0.90625rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
 			aria-label={$i18n.t('Toggle details')}
 			aria-expanded={open}
 			on:click={() => {
