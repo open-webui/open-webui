@@ -9,6 +9,7 @@
 	import type { FileEntry } from '$lib/apis/terminal';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -363,27 +364,7 @@
 	role="region"
 	aria-label={$i18n.t('Pyodide file browser')}
 >
-	{#if isDragOver}
-		<div
-			class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm pointer-events-none gap-1.5"
-		>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.5"
-				class="size-5 text-gray-400 dark:text-gray-500"
-			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
-				/>
-			</svg>
-			<span class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('Drop files here')}</span>
-		</div>
-	{/if}
+	<FilesOverlay show={isDragOver} />
 
 	{#if overlay}
 		<div class="absolute inset-0 z-10 pointer-events-none" />

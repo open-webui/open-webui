@@ -137,7 +137,7 @@
 	{#if loaded}
 		{#if draggedOver}
 			<div
-				class="absolute top-0 left-0 w-full h-full rounded-xs bg-gray-100/50 dark:bg-gray-700/20 bg-opacity-50 dark:bg-opacity-10 z-50 pointer-events-none touch-none"
+				class="pointer-events-none absolute inset-0 z-50 touch-none rounded-lg bg-black/[0.02] ring-1 ring-inset ring-black/10 dark:bg-white/[0.02] dark:ring-white/10"
 			></div>
 		{/if}
 

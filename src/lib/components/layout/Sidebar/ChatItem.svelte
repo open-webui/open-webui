@@ -665,10 +665,12 @@
 
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
-		<div class=" bg-black/80 backdrop-blur-2xl px-2 py-1 rounded-lg w-fit max-w-40">
-			<div class="flex items-center gap-1">
-				<ChatIcon className=" size-[1.125rem]" strokeWidth="1.5" />
-				<div class=" text-xs text-white line-clamp-1">
+		<div
+			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+		>
+			<div class="flex items-center gap-1.5">
+				<ChatIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
+				<div class="min-w-0 truncate">
 					{title}
 				</div>
 			</div>
