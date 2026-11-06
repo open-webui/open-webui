@@ -1092,21 +1092,11 @@ async def chat_completion_tools_handler(
                 direct_tool = False
 
                 try:
-                    tool = tools[tool_function_name]
-                    tool_type = tool.get('type', '')
-                    direct_tool = tool.get('direct', False)
-
-                    prepared = {'name': tool_function_name, 'arguments': tool_function_params}
-                    if error := prepare_tool_call(prepared, tool.get('spec', {}).get('parameters')):
-                        raise ValueError(error)
-                    tool_function_params = JSONCodec.loads(prepared['arguments'])
-                    if tool_type != 'mcp':
-                        allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
-                        tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
-
-                    prepared['call_id'] = str(uuid4())
-                    _, tool_result, _, _, _ = await execute_tool_call(
-                        body, {**metadata, 'tools': tools}, event_caller, prepared
+                    tool_function_params, tool_result, tool, tool_type, direct_tool = await execute_tool_call(
+                        body,
+                        {**metadata, 'tools': tools},
+                        event_caller,
+                        {'name': tool_function_name, 'arguments': tool_function_params, 'call_id': str(uuid4())},
                     )
 
                 except Exception as e:
@@ -5913,7 +5903,6 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Provider calls have been resolved and staged; execute their saved items directly.
                     response_tool_calls = [output_by_call_id[call['id']] for call in response_tool_calls]
-                    approval_pending = False
                     tool_results = {}
                     if tool_approval_mode != 'auto':
                         delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
@@ -5943,7 +5932,6 @@ async def streaming_chat_response_handler(response, ctx):
                                     form_data, metadata, event_caller, tool_call, tool_history
                                 )
                             except ToolApprovalRequired:
-                                approval_pending = True
                                 break
                         tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[
                             tool_call['call_id']
@@ -6041,7 +6029,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if item['call_id'] in result_status_by_call_id:
                             item['status'] = result_status_by_call_id[item['call_id']]
 
-                    if approval_pending:
+                    if any(call.get('status') == 'pending' for call in response_tool_calls):
                         # Include all completed results before pausing the remaining calls.
                         await pause_for_tool_approval(
                             metadata['chat_id'], metadata['message_id'], full_output(), form_data, metadata
