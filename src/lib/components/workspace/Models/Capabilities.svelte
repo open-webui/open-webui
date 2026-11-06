@@ -158,6 +158,7 @@
 				{#each availableFeatures.filter((key) => $visibleControls[`model_editor.defaults.${key}`]) as key}
 					<ModelSettingToggle
 						label={capabilityLabels[key].label}
+						description={`${capabilityLabels[key].description}. ${$i18n.t('Start enabled in new chats')}.`}
 						checked={defaultFeatureIds.includes(key)}
 						{disabled}
 						on:change={(e) => setDefault(key, e.detail)}
