@@ -1115,7 +1115,12 @@ async def chat_completion(
     if isinstance(model_id, str) and model_id.startswith('agent:'):
         from open_webui.utils.agents.discovery import get_models as get_agent_models
 
-        candidates = await get_agent_models(request, user, form_data.get('terminal_id'), form_data.get('chat_id'))
+        parts = model_id.split(':', 3)
+        if len(parts) != 4:
+            raise HTTPException(400, 'Invalid agent model')
+        candidates = await get_agent_models(
+            request, user, form_data.get('terminal_id'), form_data.get('chat_id'), provider=parts[2]
+        )
         agent_model = next((item for item in candidates if item['id'] == model_id), None)
         if agent_model is None:
             raise HTTPException(400, 'Agent model is unavailable in the selected terminal')
@@ -1645,6 +1650,8 @@ async def chat_completion(
                         else await Models.get_model_by_id(form_data['model'])
                     )
                     controls = target.params.model_dump().get('model_controls', {}) if target else {}
+                    if model.get('agent'):
+                        controls = model.get('info', {}).get('params', {}).get('model_controls', {})
                     form_data['params'] = apply_model_controls(
                         copy.deepcopy(form_data.get('params') or {}),
                         controls,

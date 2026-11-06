@@ -106,7 +106,12 @@ async def run(request, form_data, user, metadata, model):
         await transport.start(agent['provider'], options)
         extra = {'auth_method': 'cursor_login'} if agent['provider'] == 'cursor' else {}
         await PROVIDERS[agent['provider']](
-            transport, output, prompt, images, {**options, 'resume_state': previous or {}}, **extra
+            transport,
+            output,
+            prompt,
+            images,
+            {**options, 'resume_state': previous or {}, 'params': form_data.get('params') or {}},
+            **extra,
         )
         succeeded = True
     finally:

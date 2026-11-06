@@ -23,11 +23,39 @@ class Output:
         self.usage = None
         self.emitter = None
         self.last_flush = 0
+        self.last_save = 0
+        self.save_task = None
         self.lock = asyncio.Lock()
 
-    async def flush(self, done=False, force=False):
-        if not force and not done and time.monotonic() - self.last_flush < 0.1:
+    async def flush(self, done=False, force=False, persist=False):
+        if self.save_task and self.save_task.done():
+            self.save_task.result()
+        if not force and not done and time.monotonic() - self.last_flush < 0.05:
             return
+        if persist or done:
+            # Approval cards must exist in the DB before users can answer them.
+            if self.save_task:
+                await asyncio.shield(self.save_task)
+            await self.save(done=done)
+        if self.emitter is None:
+            self.emitter = await get_event_emitter(self.metadata, update_db=False)
+        await self.emitter(
+            {
+                'type': 'chat:completion',
+                'data': {
+                    'content': self.content,
+                    'output': copy.deepcopy(self.items),
+                    'done': done,
+                    'usage': self.usage,
+                },
+            }
+        )
+        self.last_flush = time.monotonic()
+        if not (persist or done) and time.monotonic() - self.last_save >= 1:
+            if self.save_task is None or self.save_task.done():
+                self.save_task = asyncio.create_task(self.save())
+
+    async def save(self, done=False):
         async with self.lock:
             async with Chats.edit_message_output(self.metadata['chat_id'], self.metadata['message_id']) as message:
                 if message is None:
@@ -51,20 +79,7 @@ class Output:
                 if done:
                     meta['response_ended_at'] = time.time()
                 message['meta'] = meta
-            if self.emitter is None:
-                self.emitter = await get_event_emitter(self.metadata, update_db=False)
-            await self.emitter(
-                {
-                    'type': 'chat:completion',
-                    'data': {
-                        'content': self.content,
-                        'output': copy.deepcopy(self.items),
-                        'done': done,
-                        'usage': self.usage,
-                    },
-                }
-            )
-            self.last_flush = time.monotonic()
+            self.last_save = time.monotonic()
 
     async def text(self, text, reasoning=False):
         kind = 'reasoning' if reasoning else 'message'
@@ -122,7 +137,7 @@ class Output:
             'native': native,
         }
         self.items.append(item)
-        await self.flush(force=True)
+        await self.flush(force=True, persist=True)
         deadline = time.monotonic() + timeout if timeout is not None else None
         # Persisted resolutions work across workers and survive browser refreshes.
         while True:
@@ -148,6 +163,6 @@ class Output:
                         'status': 'completed',
                     }
                 )
-                await self.flush(force=True)
+                await self.flush(force=True, persist=True)
                 return resolution
             await asyncio.sleep(0.5)

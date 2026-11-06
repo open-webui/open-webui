@@ -5,14 +5,35 @@ from urllib.parse import quote, urlencode
 from open_webui.utils.terminals import get_terminal_json
 
 
-async def get_models(request, user, terminal_id, chat_id=None):
+def model_controls(model):
+    controls = {}
+    for key, label, values, value_key, label_key, default_key in (
+        ('reasoning_effort', 'Reasoning effort', 'supportedReasoningEfforts', 'reasoningEffort', 'reasoningEffort', 'defaultReasoningEffort'),
+        ('service_tier', 'Service tier', 'serviceTiers', 'id', 'name', 'defaultServiceTier'),
+    ):
+        options = {
+            option[value_key]: {
+                'label': option.get(label_key) or option[value_key],
+                'params': {key: option[value_key]},
+            }
+            for option in model.get(values, [])
+        }
+        if options:
+            controls[key] = {'label': label, 'options': options}
+            if model.get(default_key) in options:
+                controls[key]['default'] = model[default_key]
+    return controls
+
+
+async def get_models(request, user, terminal_id, chat_id=None, *, provider=None):
     if not terminal_id:
         return []
     metadata = {'terminal_id': terminal_id, 'chat_id': chat_id}
     cwd = await get_terminal_json(request, user, metadata, '/files/cwd')
-    path = '/agents'
+    params = {'provider': provider} if provider else {}
     if cwd and cwd.get('cwd'):
-        path += '?' + urlencode({'cwd': cwd['cwd']})
+        params['cwd'] = cwd['cwd']
+    path = '/agents' + ('?' + urlencode(params) if params else '')
     catalog = await get_terminal_json(request, user, metadata, path)
     if not catalog or catalog.get('protocol_version') != 1:
         return []
@@ -24,6 +45,7 @@ async def get_models(request, user, terminal_id, chat_id=None):
             'object': 'model',
             'agent': {'terminal_id': terminal_id, 'provider': agent['id'], 'model': model['id']},
             'info': {
+                'params': {'model_controls': model_controls(model)},
                 'meta': {
                     'capabilities': {
                         'vision': True,

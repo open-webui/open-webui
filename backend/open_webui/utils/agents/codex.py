@@ -81,11 +81,22 @@ async def run(transport, output, prompt, images, options):
         thread_id = result['thread']['id']
         output.state['session_id'] = thread_id
         await output.flush(force=True)
+        turn_options = {}
+        chat_params = options.get('params') or {}
+        chat_params = {**chat_params, **(chat_params.get('custom_params') or {})}
+        for field, aliases in {
+            'effort': ('reasoningEffort', 'reasoning_effort'),
+            'serviceTier': ('serviceTier', 'service_tier'),
+        }.items():
+            value = next((chat_params.get(key) for key in aliases if chat_params.get(key)), None)
+            if isinstance(value, str) and value.strip():
+                turn_options[field] = value.strip()
         result = await client.request(
             'turn/start',
             {
                 'threadId': thread_id,
                 'input': [{'type': 'text', 'text': prompt}, *[{'type': 'image', 'url': image} for image in images]],
+                **turn_options,
             },
         )
         turn_id = result['turn']['id']
