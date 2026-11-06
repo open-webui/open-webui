@@ -551,7 +551,7 @@ class RelayClient:
             query += ('&' if query else '') + urlencode(kwargs['params'], doseq=True)
         stream = await hub.open(self.user_id, parsed.hostname, self.service)
         body = kwargs.get('data')
-        if 'json' in kwargs:
+        if kwargs.get('json') is not None:
             body = json.dumps(kwargs['json']).encode()
             headers['Content-Type'] = 'application/json'
         if isinstance(body, aiohttp.FormData):
