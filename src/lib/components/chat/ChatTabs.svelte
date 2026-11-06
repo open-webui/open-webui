@@ -2,6 +2,7 @@
 	import type { TerminalContext } from '$lib/types';
 	import type { GitStatus } from '$lib/apis/terminal/git';
 	let gitStatus: GitStatus | null = null;
+	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let gitDiffMode: 'unified' | 'split' = 'unified';
 	let gitHideWhitespace = false;
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
@@ -110,7 +111,6 @@
 	export let mainChatActive = false;
 	export let mainChatStyle = '';
 	export let mainChatGroupId = '';
-	let footerHeight = 0;
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
@@ -135,8 +135,8 @@
 	let viewportWidth = 0;
 
 	let tabs = emptyTabs();
-	const paneStyle = (rect: PanelRect, header = 0, footer = 0) =>
-		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header + footer}px);`;
+	const paneStyle = (rect: PanelRect, header = 0) =>
+		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header}px);`;
 	const focusGroup = (id: string) => {
 		const group = tabs.groups.find((group) => group.id === id);
 		if (group?.activeId) tabs = activateTab(tabs, group.activeId);
@@ -815,6 +815,7 @@
 			hasOpenedTabs = false;
 			dirtyFiles = {};
 			fileContexts = {};
+			fileGitStatuses = {};
 			commentTarget = {};
 		}
 		tabsChatId = chatId;
@@ -990,10 +991,6 @@
 		fullWidth && positions.groups[mainChatGroupId]
 			? paneStyle(positions.groups[mainChatGroupId], 36)
 			: '';
-	$: gitPanelRect =
-		fullWidth && contextTab && visibleTabIds.has(contextTab.id)
-			? positions.groups[tabGroups[contextTab.id]?.id]
-			: null;
 </script>
 
 <svelte:window
@@ -1132,11 +1129,7 @@
 				class="min-h-0 min-w-0 pointer-events-auto overflow-hidden"
 				data-panel-group={tabGroups[tab.id]?.id}
 				style={positions.groups[tabGroups[tab.id]?.id]
-					? paneStyle(
-							positions.groups[tabGroups[tab.id].id],
-							36,
-							fullWidth && contextTab?.id === tab.id ? footerHeight : 0
-						)
+					? paneStyle(positions.groups[tabGroups[tab.id].id], 36)
 					: 'display:none'}
 				class:hidden={!visibleTabIds.has(tab.id)}
 				on:focusin={() => focusGroup(tabGroups[tab.id].id)}
@@ -1245,30 +1238,55 @@
 						}}
 					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
-					<FileNav
-						gitStatus={gitConnection && gitConnection.selector === tab.terminalId
-							? gitStatus
-							: null}
-						gitConnection={gitConnection && gitConnection.selector === tab.terminalId
+					{@const fileConnection = fullWidth
+						? mounted
+							? resolveTerminalConnection(
+									tab.terminalId,
+									$terminalServers ?? [],
+									directTerminals,
+									localStorage.token ?? ''
+								)
+							: null
+						: gitConnection && gitConnection.selector === tab.terminalId
 							? gitConnection
 							: null}
-						{gitDiffMode}
-						{gitHideWhitespace}
-						bind:this={fileViews[tab.id]}
-						bind:dirty={dirtyFiles[tab.id]}
-						terminalId={tab.terminalId}
-						initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
-						initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
-						active={!!$showTabs && visibleTabIds.has(tab.id)}
-						manageFileRequests={false}
-						showTerminalDock={tab.kind === 'files'}
-						onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
-						onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
-						{onAskFile}
-						overlay={dragged}
-						{chatId}
-						bind:terminalContext={fileContexts[tab.id]}
-					/>
+					<div class="flex h-full min-h-0 flex-col">
+						<div class="min-h-0 flex-1">
+							<FileNav
+								gitStatus={fullWidth ? (fileGitStatuses[tab.terminalId] ?? null) : gitStatus}
+								gitConnection={fileConnection}
+								{gitDiffMode}
+								{gitHideWhitespace}
+								bind:this={fileViews[tab.id]}
+								bind:dirty={dirtyFiles[tab.id]}
+								terminalId={tab.terminalId}
+								initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
+								initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
+								active={!!$showTabs && visibleTabIds.has(tab.id)}
+								manageFileRequests={false}
+								showTerminalDock={tab.kind === 'files'}
+								onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
+								onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
+								{onAskFile}
+								overlay={dragged}
+								{chatId}
+								bind:terminalContext={fileContexts[tab.id]}
+							/>
+						</div>
+						{#if fullWidth && tab.kind === 'files' && fileConnection}
+							<GitBar
+								bind:status={fileGitStatuses[tab.terminalId]}
+								bind:diffMode={gitDiffMode}
+								bind:hideWhitespace={gitHideWhitespace}
+								connection={fileConnection}
+								{chatId}
+								directory={fileContexts[tab.id]?.currentDirectory ?? tab.path ?? '.'}
+								active={!!$showTabs && visibleTabIds.has(tab.id)}
+								onOpenFile={(path) => openFile(path, tab.terminalId!)}
+								onOpenDirectory={(path) => openFiles(tab.terminalId, path)}
+							/>
+						{/if}
+					</div>
 				{:else if tab.kind === 'files' && codeInterpreterEnabled}
 					<PyodideFileNav overlay={dragged} />
 				{/if}
@@ -1280,18 +1298,8 @@
 				{$i18n.t('Open a tab using the + menu.')}
 			</div>{/if}
 	</div>
-	<div
-		bind:clientHeight={footerHeight}
-		role="presentation"
-		class="min-w-0 shrink-0 pointer-events-auto"
-		class:hidden={fullWidth && !gitPanelRect}
-		style={gitPanelRect
-			? `position:absolute;left:${gitPanelRect.left * 100}%;bottom:${(1 - gitPanelRect.top - gitPanelRect.height) * 100}%;width:${gitPanelRect.width * 100}%;`
-			: undefined}
-		on:focusin={() => fullWidth && contextTab && focusGroup(tabGroups[contextTab.id].id)}
-		on:pointerdown={() => fullWidth && contextTab && focusGroup(tabGroups[contextTab.id].id)}
-	>
-		{#if gitConnection && tabs.tabs.length}
+	<div class="min-w-0 shrink-0 pointer-events-auto">
+		{#if !fullWidth && gitConnection && tabs.tabs.length}
 			<GitBar
 				bind:status={gitStatus}
 				bind:diffMode={gitDiffMode}
