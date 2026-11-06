@@ -2052,7 +2052,16 @@
 			deleteTarget = null;
 		}
 	}}
-/>
+>
+	<p class="mb-2 text-sm text-gray-700 dark:text-gray-300 [overflow-wrap:anywhere]">
+		{$i18n.t('Are you sure you want to delete "{{NAME}}"?', {
+			NAME: deleteTarget?.name ?? ''
+		})}
+	</p>
+	<p class="text-sm text-gray-500">
+		{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+	</p>
+</ConfirmDialog>
 
 <svelte:document
 	on:selectionchange={captureSelection}

@@ -252,7 +252,7 @@
 				: 'bg-gray-100 dark:bg-white/8'
 			: viewMode === 'grid'
 				? ''
-				: 'hover:bg-gray-50/40 dark:hover:bg-white/4'}
+				: 'hover:bg-gray-100 dark:hover:bg-white/10'}
 			{dragOverFolder ? 'bg-blue-50 dark:bg-blue-500/15 ring-2 ring-blue-500/60 ring-inset' : ''}"
 		role="presentation"
 		on:dragover={(e) => {
