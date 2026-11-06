@@ -115,7 +115,7 @@
 	export let title = '';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
-	export let temporaryChatToggle: import('svelte').Snippet | undefined = undefined;
+	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	$: fullWidth = largeScreen;
 	$: panelVisible = largeScreen || !!$showTabs;
 	$: if (largeScreen !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
@@ -1420,8 +1420,8 @@
 			{/if}
 		</div>
 		{#if group.activeId === mainChatTabId}
-			<div class="flex shrink-0 items-center">
-				{@render temporaryChatToggle?.()}
+			<div class="flex shrink-0 items-center gap-2">
+				{@render tabBarActions?.()}
 			</div>
 		{/if}
 		{#if !fullWidth && (!largeScreen || group.id === tabs.groups[0].id)}

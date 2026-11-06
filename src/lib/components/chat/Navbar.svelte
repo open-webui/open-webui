@@ -62,10 +62,10 @@
 	export let tabbed = false;
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
-	export let temporaryChatToggle: Snippet | undefined = undefined;
+	export let tabBarActions: Snippet | undefined = undefined;
 	$: tabTitleEditor = confirmEdit ? renderTitleEditor : undefined;
 	$: tabActions = renderChatActions;
-	$: temporaryChatToggle = renderTemporaryChatToggle;
+	$: tabBarActions = renderTabBarActions;
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
@@ -227,6 +227,15 @@
 	{/if}
 {/snippet}
 
+{#snippet renderTabBarActions()}
+	{@render renderTemporaryChatToggle()}
+	{#if liveParticipants.length > 0}
+		<div class="flex h-6 shrink-0 items-center px-1">
+			<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-4" />
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet renderChatActions()}
 	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
@@ -262,8 +271,10 @@
 		</Tooltip>
 	{/if}
 
-	{#if liveParticipants.length > 0}
-		<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-5" />
+	{#if !tabbed && liveParticipants.length > 0}
+		<div class="flex h-6 shrink-0 items-center px-1">
+			<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-4" />
+		</div>
 	{/if}
 
 	{#if shareEnabled && chat?.id && (Object.keys(history?.messages ?? {}).length > 0 || scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
