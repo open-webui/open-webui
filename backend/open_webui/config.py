@@ -2269,6 +2269,12 @@ CONTEXT_COMPACTION_RETENTION_PERCENTAGE = min(
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
 ENABLE_TOOL_SEARCH = os.getenv('ENABLE_TOOL_SEARCH', 'False').lower() == 'true'
+TOOL_SEARCH_ENGINE = os.getenv('TOOL_SEARCH_ENGINE', 'bm25')
+TOOL_SEARCH_DECISIONS_API_BASE_URL = os.getenv('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
+TOOL_SEARCH_DECISIONS_API_KEY = os.getenv('TOOL_SEARCH_DECISIONS_API_KEY', '')
+TOOL_SEARCH_DECISIONS_MODEL = os.getenv('TOOL_SEARCH_DECISIONS_MODEL', 'gpt-6-luna')
+TOOL_SEARCH_DECISIONS_THRESHOLD = float(os.getenv('TOOL_SEARCH_DECISIONS_THRESHOLD', '0.5'))
+TOOL_SEARCH_DECISIONS_PROMPT = os.getenv('TOOL_SEARCH_DECISIONS_PROMPT', '')
 
 TOOL_SEARCH_DEFER_THRESHOLD = int(os.getenv('TOOL_SEARCH_DEFER_THRESHOLD', '400'))
 
@@ -3282,6 +3288,12 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
     'chat.tool_search.enable': ENABLE_TOOL_SEARCH,
+    'chat.tool_search.engine': TOOL_SEARCH_ENGINE,
+    'chat.tool_search.decisions.api_base_url': TOOL_SEARCH_DECISIONS_API_BASE_URL,
+    'chat.tool_search.decisions.api_key': TOOL_SEARCH_DECISIONS_API_KEY,
+    'chat.tool_search.decisions.model': TOOL_SEARCH_DECISIONS_MODEL,
+    'chat.tool_search.decisions.threshold': TOOL_SEARCH_DECISIONS_THRESHOLD,
+    'chat.tool_search.decisions.prompt': TOOL_SEARCH_DECISIONS_PROMPT,
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
     'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,

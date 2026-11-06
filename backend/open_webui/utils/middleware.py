@@ -2879,7 +2879,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             metadata['tools'] = tools_dict
 
             if metadata.get('params', {}).get('function_calling') != 'legacy':
-                deferred = await apply_tool_search(form_data, metadata, tools_dict, inlet_filter_tools)
+                deferred = await apply_tool_search(
+                    form_data, metadata, tools_dict, inlet_filter_tools, extra_params=extra_params
+                )
 
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [

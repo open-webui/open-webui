@@ -4039,6 +4039,8 @@ async def search_tools(
     query: str,
     count: int = 5,
     __metadata__: dict = None,
+    __request__: Request = None,
+    __user__: dict = None,
 ) -> str:
     """
     Discover available tools by capability and return their full definitions.
@@ -4050,11 +4052,20 @@ async def search_tools(
     :param count: Maximum number of results to return (default: 5, max: 20)
     :return: JSON with the definitions of the matching tools, which can then be invoked through call_tool
     """
-    from open_webui.utils.tool_search import search_deferred_tools
+    from open_webui.utils.tool_search import ToolSearchError, rank_deferred_tools
 
     tools = __metadata__['tools']
     candidates = {name: tools[name]['spec'] for name in __metadata__['deferred_tools']}
-    matches = search_deferred_tools(query, candidates, count)
+    try:
+        matches = await rank_deferred_tools(
+            query,
+            candidates,
+            count,
+            request=__request__,
+            user=UserModel(**__user__) if __user__ else None,
+        )
+    except ToolSearchError as error:
+        return JSONCodec.dumps({'error': str(error)})
     if not matches:
         return JSONCodec.dumps(
             {'tools': [], 'message': 'No matching tools found. Try different keywords or the exact tool name.'}
