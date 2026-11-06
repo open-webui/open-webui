@@ -1253,7 +1253,11 @@
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
 							<FileNav
-								gitStatus={fullWidth ? (fileGitStatuses[tab.terminalId] ?? null) : gitStatus}
+								gitStatus={fullWidth
+									? (fileGitStatuses[tab.terminalId] ?? null)
+									: fileConnection
+										? gitStatus
+										: null}
 								gitConnection={fileConnection}
 								{gitDiffMode}
 								{gitHideWhitespace}
