@@ -3932,6 +3932,7 @@
 	let mainChatGroupId = '';
 	let tabTitleEditor: import('svelte').Snippet | undefined;
 	let tabActions: import('svelte').Snippet | undefined;
+	let temporaryChatToggle: import('svelte').Snippet | undefined;
 
 	const getChatId = async (_history: typeof history) => {
 		let _chatId = $chatId;
@@ -5409,6 +5410,7 @@
 							tabbed={fullWidthTabs}
 							bind:tabTitleEditor
 							bind:tabActions
+							bind:temporaryChatToggle
 							{liveParticipants}
 							bind:this={navbarElement}
 							readOnly={isShared}
@@ -5790,6 +5792,7 @@
 					title={$chatTitle || $i18n.t('New Chat')}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
 					tabActions={loading ? undefined : tabActions}
+					temporaryChatToggle={loading ? undefined : temporaryChatToggle}
 					bind:terminalContext
 					bind:history
 					bind:files

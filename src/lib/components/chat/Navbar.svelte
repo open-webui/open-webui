@@ -62,8 +62,10 @@
 	export let tabbed = false;
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
+	export let temporaryChatToggle: Snippet | undefined = undefined;
 	$: tabTitleEditor = confirmEdit ? renderTitleEditor : undefined;
 	$: tabActions = renderChatActions;
+	$: temporaryChatToggle = renderTemporaryChatToggle;
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
@@ -297,12 +299,6 @@
 
 <ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
-{#if tabbed && !chat?.id}
-	<div class="absolute right-2.5 top-0 z-30 flex items-center">
-		{@render renderTemporaryChatToggle()}
-	</div>
-{/if}
-
 <button
 	id="new-chat-button"
 	class="hidden"
@@ -313,9 +309,9 @@
 />
 
 <nav
-	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} pb-1 {tabbed
-		? ''
-		: '-mb-12'} flex flex-col items-center drag-region"
+	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
+		? 'pb-0.5'
+		: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
 >
 	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
@@ -416,7 +412,7 @@
 		</div>
 	{/if}
 
-	<div class="absolute {tabbed ? 'top-8' : 'top-[100%]'} left-0 right-0 h-fit">
+	<div class="absolute top-full left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
@@ -424,6 +420,7 @@
 				>
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner
+							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
 							banner={{
 								type: 'info',
 								title: $i18n.t('Trial License'),
@@ -436,6 +433,7 @@
 
 					{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
 						<Banner
+							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
 							banner={{
 								type: 'error',
 								title: $i18n.t('License Error'),
@@ -448,6 +446,7 @@
 
 					{#each $banners.filter((b) => ![...getDismissedBannerIds(), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
 						<Banner
+							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
 							{banner}
 							on:dismiss={(e) => {
 								const bannerId = e.detail;

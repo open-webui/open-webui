@@ -67,21 +67,9 @@ export const emptyTabs = (): PanelTabs => ({
 });
 export const mainChatTabId = 'main-chat';
 
-export function setFullWidthTabs(state: PanelTabs, fullWidth: boolean, label = 'Chat'): PanelTabs {
-	if (!fullWidth) {
-		const next = removeTab(state, mainChatTabId);
-		if (next.groups.length === 1) return next;
-		return {
-			...next,
-			groups: [
-				{
-					id: next.activeGroupId,
-					tabIds: next.groups.flatMap((group) => group.tabIds),
-					activeId: next.activeId
-				}
-			],
-			layout: { type: 'group', groupId: next.activeGroupId }
-		};
+export function setMainChatTab(state: PanelTabs, visible: boolean, label = 'Chat'): PanelTabs {
+	if (!visible) {
+		return setSplitTabs(removeTab(state, mainChatTabId), false);
 	}
 	if (state.tabs.some((tab) => tab.id === mainChatTabId)) return state;
 	const groupId = state.activeGroupId;
@@ -99,6 +87,26 @@ export function setFullWidthTabs(state: PanelTabs, fullWidth: boolean, label = '
 		)
 	};
 	return activateTab(next, state.activeId || mainChatTabId);
+}
+
+export function setSplitTabs(state: PanelTabs, split: boolean): PanelTabs {
+	if (!split) {
+		if (state.groups.length === 1) return state;
+		return {
+			...state,
+			groups: [
+				{
+					id: state.activeGroupId,
+					tabIds: state.groups.flatMap((group) => group.tabIds),
+					activeId: state.activeId
+				}
+			],
+			layout: { type: 'group', groupId: state.activeGroupId }
+		};
+	}
+	const group = state.groups.find((group) => group.tabIds.includes(mainChatTabId));
+	if (!group || group.tabIds.length < 2) return state;
+	return activateTab(splitTab(state, mainChatTabId, group.id, 'left'), state.activeId);
 }
 
 export function activateTab(state: PanelTabs, id: string): PanelTabs {

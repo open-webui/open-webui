@@ -49,7 +49,8 @@
 		type PanelDivider,
 		type SplitEdge,
 		mainChatTabId,
-		setFullWidthTabs,
+		setMainChatTab,
+		setSplitTabs,
 		fileTabId,
 		type PanelTab
 	} from './ChatTabs/tabs';
@@ -70,7 +71,6 @@
 	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
-	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import GitBar from './ChatTabs/GitBar.svelte';
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './ChatTabs/Embeds.svelte';
@@ -80,6 +80,7 @@
 	import Overview from './Overview.svelte';
 	import Modal from '../common/Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import SplitPanel from '../icons/SplitPanel.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext<any>('i18n');
@@ -114,23 +115,16 @@
 	export let title = '';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
-	let expanded = false;
-	$: fullWidth = expanded && largeScreen && !!$showTabs;
-	$: if (fullWidth !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
-		tabs = setFullWidthTabs(tabs, fullWidth, title);
+	export let temporaryChatToggle: import('svelte').Snippet | undefined = undefined;
+	$: fullWidth = largeScreen;
+	$: panelVisible = largeScreen || !!$showTabs;
+	$: if (largeScreen !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
+		tabs = setMainChatTab(tabs, largeScreen, title);
 	}
-	const toggleLayout = async () => {
-		if (panelTarget) releasePanel(panelTarget);
-		expanded = !expanded;
-		localStorage.setItem('chatTabsLayout', expanded ? 'full' : 'side');
-		await tick();
-		document.getElementById(fullWidth ? domId(tabs.activeId) : 'chat-tabs-layout-toggle')?.focus();
-	};
 
 	let largeScreen = false;
 	let dragged = false;
 	let mounted = false;
-	let controlsWidth = 300;
 	let viewportWidth = 0;
 
 	let tabs = emptyTabs();
@@ -197,7 +191,8 @@
 			}
 			// Wait until the drawer has attached its destination to the document.
 			void tick().then(() => {
-				if ($showTabs && panelTarget === destination && destination.isConnected) move(destination);
+				if (panelVisible && panelTarget === destination && destination.isConnected)
+					move(destination);
 			});
 		};
 		update(target);
@@ -345,7 +340,7 @@
 		const groupId = group?.dataset.panelGroup ?? tabs.activeGroupId;
 		const inTabBar = !!event.target.closest('[data-panel-tab-bar]');
 		const edges: { edge: SplitEdge; distance: number }[] = [];
-		if ((fullWidth || (!$showTabs && largeScreen)) && !inTabBar) {
+		if (fullWidth && !inTabBar) {
 			if (event.clientX - rect.left <= rect.width * 0.3)
 				edges.push({ edge: 'left', distance: event.clientX - rect.left });
 			if (rect.right - event.clientX <= rect.width * 0.3)
@@ -357,15 +352,14 @@
 		}
 		const edge = edges.sort((a, b) => a.distance - b.distance)[0]?.edge ?? null;
 		if (main && !edge) {
-			// An already-open side panel receives chats without changing the layout.
 			if (!$showTabs && largeScreen) return null;
 			if (internal || event.clientX < rect.right - rect.width * 0.3) return null;
 			return {
 				groupId: tabs.activeGroupId,
 				edge: null,
-				left: rect.right - Math.min(controlsWidth, rect.width),
+				left: rect.left,
 				top: rect.top,
-				width: Math.min(controlsWidth, rect.width),
+				width: rect.width,
 				height: rect.height
 			};
 		}
@@ -416,13 +410,7 @@
 		}
 		event.preventDefault();
 		const applyDrop = () => {
-			let groupId = bounds.groupId;
-			if (!$showTabs && bounds.edge) {
-				expanded = true;
-				tabs = setFullWidthTabs(tabs, true, title);
-				groupId = tabs.activeGroupId;
-				tabs = activateTab(tabs, mainChatTabId);
-			}
+			const groupId = bounds.groupId;
 			if (savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
 			const existing =
 				internalId ||
@@ -717,6 +705,16 @@
 	);
 	$: canOpenNewTab = showFilesMenuItem || terminalFilesAvailable || newTabViews.length > 0;
 
+	const quickSplit = () => {
+		if (tabs.tabs.length < 2) {
+			const view = availableViews.find((view) => view.available);
+			if (!view) return;
+			if (view.kind === 'files') openFiles();
+			else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
+		}
+		tabs = setSplitTabs(tabs, true);
+	};
+
 	$: directTerminals =
 		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
@@ -799,7 +797,7 @@
 
 	$: if (chatId !== tabsChatId) {
 		if (tabsChatId || !chatId) {
-			tabs = setFullWidthTabs(emptyTabs(), fullWidth, title);
+			tabs = setMainChatTab(emptyTabs(), largeScreen, title);
 			hasOpenedTabs = false;
 			dirtyFiles = {};
 			fileContexts = {};
@@ -810,7 +808,12 @@
 		}
 		tabsChatId = chatId;
 	}
-	$: if (mounted && !fullWidth && $showTabs === true && !tabs.tabs.length) {
+	$: if (
+		mounted &&
+		!largeScreen &&
+		$showTabs === true &&
+		tabs.tabs.every((tab) => tab.id === mainChatTabId)
+	) {
 		const options = [
 			...availableViews
 				.filter((view) => view.available && view.kind !== 'side')
@@ -912,23 +915,13 @@
 		largeScreen = event.matches;
 	};
 
-	const onPointerDown = (event: PointerEvent) => {
-		if (event.target instanceof Element && event.target.closest('#controls-resizer'))
-			dragged = true;
-	};
-	const onPointerUp = () => {
-		dragged = false;
-	};
-
 	onMount(() => {
 		const unsubscribeVisibility = showTabs.subscribe((visible) => {
-			if (!visible && panelTarget) releasePanel(panelTarget);
+			if (!largeScreen && !visible && panelTarget) releasePanel(panelTarget);
 		});
 		const mediaQuery = window.matchMedia('(min-width: 768px)');
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
-		expanded = localStorage.getItem('chatTabsLayout') === 'full';
-		if (expanded && largeScreen && !$showTabs) showTabs.set(true);
 
 		let isDestroyed = false;
 
@@ -943,10 +936,6 @@
 		};
 		init();
 
-		document.addEventListener('pointerdown', onPointerDown);
-		document.addEventListener('pointerup', onPointerUp);
-		document.addEventListener('pointercancel', onPointerUp);
-
 		return () => {
 			unsubscribeVisibility();
 			isDestroyed = true;
@@ -955,9 +944,6 @@
 				showTabs.set(false);
 			}
 			mediaQuery.removeEventListener('change', handleMediaQuery);
-			document.removeEventListener('pointerdown', onPointerDown);
-			document.removeEventListener('pointerup', onPointerUp);
-			document.removeEventListener('pointercancel', onPointerUp);
 		};
 	});
 	// Tab-opening handlers mutate tabs indirectly, so derive visibility and placement after them.
@@ -1048,8 +1034,8 @@
 	on:dragover|capture={dragOverChat}
 	on:drop|capture={dropChat}
 	on:dragleave={leaveChatDrop}
-	class:hidden={!$showTabs || !panelTarget}
-	use:placePanel={$showTabs ? panelTarget : null}
+	class:hidden={!panelVisible || !panelTarget}
+	use:placePanel={panelVisible ? panelTarget : null}
 	class="h-full w-full min-h-0 flex flex-col {fullWidth
 		? 'absolute inset-0 pointer-events-none'
 		: ''}"
@@ -1057,6 +1043,18 @@
 	id="controls-container"
 >
 	<div bind:this={paneCanvas} class="relative flex-1 min-h-0 min-w-0">
+		{#if fullWidth}
+			<button
+				type="button"
+				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40 disabled:opacity-30 pointer-events-auto"
+				aria-label={$i18n.t('Split screen')}
+				title={$i18n.t('Split screen')}
+				disabled={tabs.groups.length > 1 || (tabs.tabs.length < 2 && !canOpenNewTab)}
+				on:click={quickSplit}
+			>
+				<SplitPanel className="size-4.5" strokeWidth="1" />
+			</button>
+		{/if}
 		{#each tabs.groups.filter((group) => fullWidth || group.id === tabs.activeGroupId) as group (group.id)}
 			<div
 				data-panel-group={group.id}
@@ -1164,7 +1162,7 @@
 					<Desktop
 						connection={tab.connection}
 						{chatId}
-						active={!!$showTabs && visibleTabIds.has(tab.id)}
+						active={panelVisible && visibleTabIds.has(tab.id)}
 						overlay={dragged}
 					/>
 				{:else if tab.kind === 'browser'}
@@ -1172,7 +1170,7 @@
 						baseUrl={tab.browserBaseUrl ?? ''}
 						connection={tab.connection ?? null}
 						{chatId}
-						active={!!$showTabs && visibleTabIds.has(tab.id)}
+						active={panelVisible && visibleTabIds.has(tab.id)}
 						initialUrl={tab.path ?? ''}
 						onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, tab.browserBaseUrl, url)}
 						overlay={dragged}
@@ -1190,7 +1188,7 @@
 						bind:this={terminalViews[tab.id]}
 						connection={tab.connection}
 						{chatId}
-						active={!!$showTabs && visibleTabIds.has(tab.id)}
+						active={panelVisible && visibleTabIds.has(tab.id)}
 						overlay={dragged}
 					/>
 				{:else if tab.untitled && tab.connection}
@@ -1248,7 +1246,7 @@
 								terminalId={tab.terminalId}
 								initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
 								initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
-								active={!!$showTabs && visibleTabIds.has(tab.id)}
+								active={panelVisible && visibleTabIds.has(tab.id)}
 								manageFileRequests={false}
 								showTerminalDock={tab.kind === 'files'}
 								onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
@@ -1267,7 +1265,7 @@
 								connection={fileConnection}
 								{chatId}
 								directory={fileContexts[tab.id]?.currentDirectory ?? tab.path ?? '.'}
-								active={!!$showTabs && visibleTabIds.has(tab.id)}
+								active={panelVisible && visibleTabIds.has(tab.id)}
 								onOpenFile={(path) => openFile(path, tab.terminalId!)}
 								onOpenDirectory={(path) => openFiles(tab.terminalId, path)}
 							/>
@@ -1289,7 +1287,11 @@
 {#snippet tabBar(group: PanelGroup)}
 	<div
 		data-panel-tab-bar
-		class="flex h-9 items-center px-2 gap-1 shrink-0 pointer-events-auto select-none col-start-1 row-start-1 min-w-0 z-10 bg-white dark:bg-gray-900"
+		class="flex h-9 items-center px-2 {fullWidth &&
+		positions.groups[group.id]?.top === 0 &&
+		positions.groups[group.id].left + positions.groups[group.id].width > 0.999
+			? 'pr-10'
+			: ''} gap-1 shrink-0 pointer-events-auto select-none col-start-1 row-start-1 min-w-0 z-10 bg-white dark:bg-gray-900"
 	>
 		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
 			<div
@@ -1417,18 +1419,10 @@
 				</Dropdown>
 			{/if}
 		</div>
-		{#if largeScreen && group.id === tabs.groups[0].id}
-			<button
-				id="chat-tabs-layout-toggle"
-				type="button"
-				class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
-				on:click={toggleLayout}
-				aria-label={fullWidth ? $i18n.t('Use side tabs') : $i18n.t('Use full-width tabs')}
-				title={fullWidth ? $i18n.t('Use side tabs') : $i18n.t('Use full-width tabs')}
-				aria-pressed={fullWidth}
-			>
-				<Icon name={fullWidth ? 'split-horizontal' : 'expand'} size={14} />
-			</button>
+		{#if group.tabIds.includes(mainChatTabId)}
+			<div class="flex shrink-0 items-center">
+				{@render temporaryChatToggle?.()}
+			</div>
 		{/if}
 		{#if !fullWidth && (!largeScreen || group.id === tabs.groups[0].id)}
 			<button
@@ -1469,25 +1463,9 @@
 			</Drawer>
 		{/if}
 	</MobileSwipePanel>
-{:else}
-	<ResizableSidePanel
-		open={!!$showTabs && !fullWidth}
-		bind:width={controlsWidth}
-		minWidth={280}
-		minSiblingWidth={360}
-		storageKey="chatControlsSize"
-		className="h-full z-10 bg-white dark:bg-gray-900"
-	>
-		<div
-			use:preservePanel
-			bind:this={panelTarget}
-			class="h-full w-full z-40 pointer-events-auto"
-		></div>
-	</ResizableSidePanel>
-	{#if fullWidth}
-		<!-- Keep the mounted panel in the main chat's layout container. -->
-		<div use:preservePanel bind:this={panelTarget} class="contents"></div>
-	{/if}
+{:else if fullWidth}
+	<!-- Keep the mounted panel in the main chat's layout container. -->
+	<div use:preservePanel bind:this={panelTarget} class="contents"></div>
 {/if}
 
 <style>
