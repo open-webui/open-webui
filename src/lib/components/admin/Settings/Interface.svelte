@@ -55,6 +55,12 @@
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
 		ENABLE_TOOL_PERMISSIONS: false,
+		ENABLE_TOOL_PERMISSIONS_AUTO: false,
+		TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
+		TOOL_PERMISSIONS_DECISIONS_API_KEY: '',
+		TOOL_PERMISSIONS_DECISIONS_MODEL: 'gpt-6-luna',
+		TOOL_PERMISSIONS_DECISIONS_THRESHOLD: 0.5,
+		TOOL_PERMISSIONS_DECISIONS_PROMPT: '',
 		ENABLE_TOOL_SEARCH: false,
 		TOOL_SEARCH_ENGINE: 'bm25',
 		TOOL_SEARCH_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
@@ -68,17 +74,21 @@
 	};
 	let toolSearchAlwaysLoaded = '';
 	let defaultDecisionsPrompt = '';
+	let defaultPermissionsPrompt = '';
 	let toolSearchEmbeddingModel = '';
 	const readChatConfigMetadata = () => {
 		const {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = '',
+			DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT = '',
 			TOOL_SEARCH_EMBEDDING_MODEL = '',
 			...settings
 		} = chatConfig as typeof chatConfig & {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT?: string;
+			DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT?: string;
 			TOOL_SEARCH_EMBEDDING_MODEL?: string;
 		};
 		defaultDecisionsPrompt = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT;
+		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT;
 		toolSearchEmbeddingModel = TOOL_SEARCH_EMBEDDING_MODEL;
 		chatConfig = settings;
 	};
@@ -127,6 +137,8 @@
 							...current.features,
 							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
 							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS,
+							enable_tool_permissions_auto:
+								chatConfig.ENABLE_TOOL_PERMISSIONS && chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO,
 							enable_title_generation: taskConfig.ENABLE_TITLE_GENERATION,
 							enable_follow_up_generation: taskConfig.ENABLE_FOLLOW_UP_GENERATION,
 							enable_tags_generation: taskConfig.ENABLE_TAGS_GENERATION,
@@ -435,6 +447,94 @@
 					</div>
 					<Switch bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
+
+				{#if chatConfig.ENABLE_TOOL_PERMISSIONS}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolPermissionsAuto.label')}
+						description={$i18n.t('settings.admin.interface.toolPermissionsAuto.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+					{#if chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO}
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsUrl.label')}
+								description={$i18n.t(
+									'settings.admin.interface.toolPermissionsDecisionsUrl.description'
+								)}
+								forId="tool-permissions-decisions-url"
+							>
+								<input
+									id="tool-permissions-decisions-url"
+									type="url"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_API_BASE_URL}
+									required
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsKey.label')}
+								forId="tool-permissions-decisions-key"
+							>
+								<SensitiveInput
+									id="tool-permissions-decisions-key"
+									type="password"
+									variant="settings"
+									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_API_KEY}
+									required={false}
+									screenReader={false}
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsModel.label')}
+								forId="tool-permissions-decisions-model"
+							>
+								<input
+									id="tool-permissions-decisions-model"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_MODEL}
+									required
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsThreshold.label')}
+								description={$i18n.t(
+									'settings.admin.interface.toolPermissionsDecisionsThreshold.description'
+								)}
+								forId="tool-permissions-decisions-threshold"
+							>
+								<input
+									id="tool-permissions-decisions-threshold"
+									type="number"
+									min="0"
+									max="1"
+									step="0.01"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_THRESHOLD}
+									required
+								/>
+							</AdminSettingField>
+						</div>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsPrompt.label')}
+							description={$i18n.t(
+								'settings.admin.interface.toolPermissionsDecisionsPrompt.description'
+							)}
+							forId="tool-permissions-decisions-prompt"
+						>
+							<Textarea
+								id="tool-permissions-decisions-prompt"
+								className={textareaClass}
+								bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_PROMPT}
+								placeholder={defaultPermissionsPrompt}
+							/>
+						</AdminSettingField>
+					{/if}
+				{/if}
 
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.interface.toolSearch.label')}

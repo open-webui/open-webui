@@ -170,6 +170,11 @@ async def resolve_tool_call_output(
                 resume = 'model'
             else:
                 pending[0]['status'] = 'pending'
+                mode = ((chat.chat or {}).get('params') or {}).get('tool_approval_mode') or (
+                    (message.get('meta') or {}).get('params') or {}
+                ).get('tool_approval_mode')
+                if mode == 'auto':
+                    resume = 'tools'
 
     event_emitter = await get_event_emitter(
         {
@@ -209,7 +214,7 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         **(message_meta.get('params') if isinstance(message_meta.get('params'), dict) else {}),
     }
     current_approval_mode = chat_params.get('tool_approval_mode')
-    if current_approval_mode in {'ask', 'full'}:
+    if current_approval_mode in {'ask', 'full', 'auto'}:
         params['tool_approval_mode'] = current_approval_mode
     if 'tool_approval_mode' not in params:
         params['tool_approval_mode'] = 'ask'

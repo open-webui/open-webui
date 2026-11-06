@@ -47,6 +47,7 @@ from open_webui.utils.context_compaction import compact_chat_branch, get_chat_co
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
+from open_webui.utils.tool_permissions import DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT
 from open_webui.utils.tool_search import DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT, validate_decisions_config
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,6 +64,12 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
     'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
+    'ENABLE_TOOL_PERMISSIONS_AUTO': 'chat.tool_permissions.auto.enable',
+    'TOOL_PERMISSIONS_DECISIONS_API_BASE_URL': 'chat.tool_permissions.decisions.api_base_url',
+    'TOOL_PERMISSIONS_DECISIONS_API_KEY': 'chat.tool_permissions.decisions.api_key',
+    'TOOL_PERMISSIONS_DECISIONS_MODEL': 'chat.tool_permissions.decisions.model',
+    'TOOL_PERMISSIONS_DECISIONS_THRESHOLD': 'chat.tool_permissions.decisions.threshold',
+    'TOOL_PERMISSIONS_DECISIONS_PROMPT': 'chat.tool_permissions.decisions.prompt',
     'ENABLE_TOOL_SEARCH': 'chat.tool_search.enable',
     'TOOL_SEARCH_ENGINE': 'chat.tool_search.engine',
     'TOOL_SEARCH_DECISIONS_API_BASE_URL': 'chat.tool_search.decisions.api_base_url',
@@ -225,6 +232,12 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int | None = None
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
     ENABLE_TOOL_PERMISSIONS: bool = False
+    ENABLE_TOOL_PERMISSIONS_AUTO: bool = False
+    TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
+    TOOL_PERMISSIONS_DECISIONS_API_KEY: str = ''
+    TOOL_PERMISSIONS_DECISIONS_MODEL: str = 'gpt-6-luna'
+    TOOL_PERMISSIONS_DECISIONS_THRESHOLD: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    TOOL_PERMISSIONS_DECISIONS_PROMPT: str = ''
     ENABLE_TOOL_SEARCH: bool = False
     TOOL_SEARCH_ENGINE: Literal['bm25', 'embeddings', 'decisions'] = 'bm25'
     TOOL_SEARCH_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
@@ -236,29 +249,34 @@ class ChatConfigForm(BaseModel):
     TOOL_SEARCH_ALWAYS_LOADED: list[str] = []
     TOOL_SEARCH_DEFER_BUILTIN_TOOLS: bool = True
 
-    @field_validator('TOOL_SEARCH_DECISIONS_API_BASE_URL')
+    @field_validator('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'TOOL_PERMISSIONS_DECISIONS_API_BASE_URL')
     @classmethod
     def normalize_decisions_url(cls, value: str) -> str:
         return value.strip().rstrip('/')
 
-    @field_validator('TOOL_SEARCH_DECISIONS_MODEL')
+    @field_validator('TOOL_SEARCH_DECISIONS_MODEL', 'TOOL_PERMISSIONS_DECISIONS_MODEL')
     @classmethod
     def normalize_decisions_model(cls, value: str) -> str:
         return value.strip()
 
-    @field_validator('TOOL_SEARCH_DECISIONS_PROMPT')
+    @field_validator('TOOL_SEARCH_DECISIONS_PROMPT', 'TOOL_PERMISSIONS_DECISIONS_PROMPT')
     @classmethod
     def normalize_decisions_prompt(cls, value: str) -> str:
         return value if value.strip() else ''
 
     @model_validator(mode='after')
     def validate_tool_search(self):
+        if self.ENABLE_TOOL_PERMISSIONS_AUTO:
+            validate_decisions_config(
+                self.TOOL_PERMISSIONS_DECISIONS_API_BASE_URL, self.TOOL_PERMISSIONS_DECISIONS_MODEL
+            )
         if self.ENABLE_TOOL_SEARCH and self.TOOL_SEARCH_ENGINE == 'decisions':
             validate_decisions_config(self.TOOL_SEARCH_DECISIONS_API_BASE_URL, self.TOOL_SEARCH_DECISIONS_MODEL)
         return self
 
 
 class ChatConfigResponse(ChatConfigForm):
+    DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT: str = DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT
     DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT: str = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
     TOOL_SEARCH_EMBEDDING_MODEL: str = ''
 
@@ -276,6 +294,7 @@ async def get_chat_config_values() -> dict:
         config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
     if config.get('CONTEXT_COMPACTION_RETENTION_PERCENTAGE') is None:
         config['CONTEXT_COMPACTION_RETENTION_PERCENTAGE'] = 40
+    config['DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT'] = DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT
     config['DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT'] = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
     config['TOOL_SEARCH_EMBEDDING_MODEL'] = values.get('rag.embedding_model') or ''
     return config
@@ -897,9 +916,10 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     updates = form_data.model_dump()
     current = await get_chat_config_values()
     for field in ChatConfigForm.model_fields:
-        if (field == 'TOOL_SEARCH_ENGINE' or field.startswith('TOOL_SEARCH_DECISIONS_')) and (
-            field not in form_data.model_fields_set
-        ):
+        if (
+            field in {'TOOL_SEARCH_ENGINE', 'ENABLE_TOOL_PERMISSIONS_AUTO'}
+            or field.startswith(('TOOL_SEARCH_DECISIONS_', 'TOOL_PERMISSIONS_DECISIONS_'))
+        ) and (field not in form_data.model_fields_set):
             updates[field] = current.get(field, updates[field])
     try:
         form_data = ChatConfigForm.model_validate(updates)

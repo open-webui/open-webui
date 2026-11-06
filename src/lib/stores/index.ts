@@ -432,6 +432,7 @@ type Config = {
 		enable_admin_analytics: boolean;
 		enable_context_compaction?: boolean;
 		enable_tool_permissions?: boolean;
+		enable_tool_permissions_auto?: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_notes?: boolean;

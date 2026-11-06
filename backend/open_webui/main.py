@@ -1241,17 +1241,12 @@ async def chat_completion(
             tool_servers = None
 
         automation_id = form_data.pop('automation_id', None)
-        tool_approval_mode = (
-            'full'
-            if automation_id or chat_id.startswith('channel:')
-            else (
-                form_data.get('params', {}).get('tool_approval_mode')
-                if await Config.get('chat.tool_permissions.enable', False)
-                else 'full'
-            )
-            or 'full'
-        )
+        from open_webui.utils.tool_permissions import resolve_tool_approval_mode
 
+        tool_approval_mode = await resolve_tool_approval_mode(
+            form_data.get('params', {}).get('tool_approval_mode'),
+            is_channel_chat=chat_id.startswith('channel:'),
+        )
         approval_resume = getattr(request.state, 'tool_approval_resume', None)
         metadata = {
             'tool_approval_resume': approval_resume[2]
@@ -1281,7 +1276,10 @@ async def chat_completion(
                 'messages': copy.deepcopy(
                     [message for message in form_data.get('messages', []) if message.get('role') == 'system']
                 ),
-                'params': {'system': request_params['system']} if 'system' in request_params else {},
+                'params': {
+                    **({'system': request_params['system']} if 'system' in request_params else {}),
+                    'tool_approval_mode': tool_approval_mode,
+                },
                 'chat_variables': copy.deepcopy(chat_variables),
             },
             'model': model,
@@ -2327,6 +2325,7 @@ async def get_app_config(request: Request):
         'notifications.enable',
         'chat.context_compaction.enable',
         'chat.tool_permissions.enable',
+        'chat.tool_permissions.auto.enable',
         'web.search.enable',
         'web.search.confirmation.enable',
         'web.search.confirmation.content',
@@ -2441,6 +2440,9 @@ async def get_app_config(request: Request):
                     'enable_notifications': config.get('notifications.enable'),
                     'enable_context_compaction': config.get('chat.context_compaction.enable'),
                     'enable_tool_permissions': config.get('chat.tool_permissions.enable'),
+                    'enable_tool_permissions_auto': bool(
+                        config.get('chat.tool_permissions.enable') and config.get('chat.tool_permissions.auto.enable')
+                    ),
                     'enable_web_search': config.get('web.search.enable'),
                     'enable_web_search_confirmation': config.get('web.search.confirmation.enable'),
                     'web_search_confirmation_content': config.get('web.search.confirmation.content'),

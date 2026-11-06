@@ -2256,6 +2256,13 @@ CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
 
 ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
+ENABLE_TOOL_PERMISSIONS_AUTO = os.getenv('ENABLE_TOOL_PERMISSIONS_AUTO', 'False').lower() == 'true'
+TOOL_PERMISSIONS_DECISIONS_API_BASE_URL = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
+TOOL_PERMISSIONS_DECISIONS_API_KEY = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_KEY', '')
+TOOL_PERMISSIONS_DECISIONS_MODEL = os.getenv('TOOL_PERMISSIONS_DECISIONS_MODEL', 'gpt-6-luna')
+TOOL_PERMISSIONS_DECISIONS_THRESHOLD = float(os.getenv('TOOL_PERMISSIONS_DECISIONS_THRESHOLD', '0.5'))
+TOOL_PERMISSIONS_DECISIONS_PROMPT = os.getenv('TOOL_PERMISSIONS_DECISIONS_PROMPT', '')
+
 
 CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THRESHOLD', '80000'))
 
@@ -3287,6 +3294,12 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
+    'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,
+    'chat.tool_permissions.decisions.api_base_url': TOOL_PERMISSIONS_DECISIONS_API_BASE_URL,
+    'chat.tool_permissions.decisions.api_key': TOOL_PERMISSIONS_DECISIONS_API_KEY,
+    'chat.tool_permissions.decisions.model': TOOL_PERMISSIONS_DECISIONS_MODEL,
+    'chat.tool_permissions.decisions.threshold': TOOL_PERMISSIONS_DECISIONS_THRESHOLD,
+    'chat.tool_permissions.decisions.prompt': TOOL_PERMISSIONS_DECISIONS_PROMPT,
     'chat.tool_search.enable': ENABLE_TOOL_SEARCH,
     'chat.tool_search.engine': TOOL_SEARCH_ENGINE,
     'chat.tool_search.decisions.api_base_url': TOOL_SEARCH_DECISIONS_API_BASE_URL,

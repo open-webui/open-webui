@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveToolApprovalMode } from '$lib/utils/toolPermissions';
 	import type { TerminalContext } from '$lib/types';
 	import {
 		estimateTokens,
@@ -528,13 +529,16 @@
 	let currentDraftKey = '';
 
 	// Chat parameters own the approval mode; chats without an override use the user default.
-	$: toolApprovalMode =
-		(params?.tool_approval_mode ?? $settings?.params?.tool_approval_mode) === 'ask'
-			? 'ask'
-			: 'full';
+	$: toolApprovalMode = resolveToolApprovalMode(
+		params?.tool_approval_mode ?? $settings?.params?.tool_approval_mode,
+		$config?.features?.enable_tool_permissions_auto ?? false
+	);
 
 	const handleToolApprovalModeChange = async (mode: string) => {
-		const tool_approval_mode = mode === 'ask' ? 'ask' : 'full';
+		const tool_approval_mode = resolveToolApprovalMode(
+			mode,
+			$config?.features?.enable_tool_permissions_auto ?? false
+		);
 		browserApprovalMode = tool_approval_mode;
 		params = {
 			...params,

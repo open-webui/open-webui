@@ -154,6 +154,7 @@ from open_webui.utils.task import (
 from open_webui.utils.tether import get_terminal_connections
 from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
+from open_webui.utils.tool_permissions import ToolApprovalRequired, requires_tool_approval
 from open_webui.utils.tool_calling import (
     INCOMPLETE_CALL_ERROR,
     final_answer_payload,
@@ -1103,22 +1104,10 @@ async def chat_completion_tools_handler(
                         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
                         tool_function_params = {k: v for k, v in tool_function_params.items() if k in allowed_params}
 
-                    if tool.get('direct', False):
-                        tool_result = await event_caller(
-                            {
-                                'type': 'execute:tool',
-                                'data': {
-                                    'id': str(uuid4()),
-                                    'name': tool_function_name,
-                                    'params': tool_function_params,
-                                    'server': tool.get('server', {}),
-                                    'session_id': metadata.get('session_id', None),
-                                },
-                            }
-                        )
-                    else:
-                        tool_function = tool['callable']
-                        tool_result = await tool_function(**tool_function_params)
+                    prepared['call_id'] = str(uuid4())
+                    _, tool_result, _, _, _ = await execute_tool_call(
+                        body, {**metadata, 'tools': tools}, event_caller, prepared
+                    )
 
                 except Exception as e:
                     tool_result = {'error': str(e)}
@@ -3178,21 +3167,25 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
     if tool_type != 'mcp':
         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
         params = {key: value for key, value in params.items() if key in allowed_params}
+    requires_approval = await requires_tool_approval(form_data, metadata, tool_call, tool, params)
+    if (
+        requires_approval
+        and is_saved_chat_id(metadata.get('chat_id'))
+        and (metadata.get('message_id') or metadata.get('assistant_message_id'))
+        and metadata.get('params', {}).get('function_calling') != 'legacy'
+    ):
+        tool_call['status'] = 'pending'
+        raise ToolApprovalRequired
     try:
-        if (
-            not is_saved_chat_id(metadata.get('chat_id'))
-            and metadata.get('params', {}).get('tool_approval_mode') == 'ask'
-            and not (name == 'ask_user' and tool_type == 'builtin')
-            and (
-                not event_caller
-                or await event_caller(
-                    {
-                        'type': 'confirmation',
-                        'data': {'tool_call': {'id': tool_call.get('call_id'), 'name': name, 'arguments': params}},
-                    }
-                )
-                is not True  # Disconnection and timeout replies are error objects, not approval.
+        if requires_approval and (
+            not event_caller
+            or await event_caller(
+                {
+                    'type': 'confirmation',
+                    'data': {'tool_call': {'id': tool_call.get('call_id'), 'name': name, 'arguments': params}},
+                }
             )
+            is not True
         ):
             tool_call['status'] = 'failed'
             return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
@@ -3300,7 +3293,8 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                     for entry in pending
                     if entry.get('name') != 'ask_user'
                     and (
-                        entry.get('approved') is True or metadata.get('params', {}).get('tool_approval_mode') == 'full'
+                        entry.get('approved') is True
+                        or metadata.get('params', {}).get('tool_approval_mode') in {'full', 'auto'}
                     )
                 ),
                 None,
@@ -3367,6 +3361,21 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                 **({'embeds': embeds} if embeds else {}),
             }
             output = await complete_tool_call(chat_id, message_id, item, result_item)
+        except ToolApprovalRequired:
+            async with Chats.edit_message_output(chat_id, message_id) as saved:
+                if not saved:
+                    raise HTTPException(404, 'Message not found.')
+                output = saved.get('output') or []
+                target = next(
+                    entry
+                    for entry in output
+                    if entry.get('call_id') == item['call_id'] and entry.get('type') == 'function_call'
+                )
+                target.update(item)
+                target['status'] = 'pending'
+            if event_emitter:
+                await event_emitter({'type': 'chat:completion', 'data': {'done': False, 'output': output}})
+            return True
         except BaseException:
             item['status'] = 'incomplete'
             await asyncio.shield(
@@ -3382,7 +3391,11 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                         'output': [
                             {
                                 'type': 'input_text',
-                                'text': 'Error: tool execution was interrupted; its outcome is unknown.',
+                                'text': (
+                                    'Error: tool execution was interrupted; its outcome is unknown.'
+                                    if item.get('started_at')
+                                    else 'Error: tool review was interrupted; the tool was not executed.'
+                                ),
                             }
                         ],
                     },
@@ -3395,7 +3408,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
         if not pending:
             message['output'] = output
             return False
-        if metadata.get('params', {}).get('tool_approval_mode') != 'full' and not any(
+        if metadata.get('params', {}).get('tool_approval_mode') not in {'full', 'auto'} and not any(
             entry.get('approved') is True for entry in pending
         ):
             return True
@@ -5889,28 +5902,38 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Provider calls have been resolved and staged; execute their saved items directly.
                     response_tool_calls = [output_by_call_id[call['id']] for call in response_tool_calls]
-                    delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
+                    approval_pending = False
                     tool_results = {}
-                    for tool_call in response_tool_calls:
-                        if tool_call.get('name') != 'delegate_task':
-                            tool_results[tool_call['call_id']] = await execute_tool_call(
-                                form_data, metadata, event_caller, tool_call, tool_history
-                            )
-                    tool_results.update(
-                        zip(
-                            [tool_call['call_id'] for tool_call in delegate_calls],
-                            await asyncio.gather(
-                                *(
-                                    execute_tool_call(form_data, metadata, event_caller, tool_call, tool_history)
-                                    for tool_call in delegate_calls
+                    if tool_approval_mode != 'auto':
+                        delegate_calls = [call for call in response_tool_calls if call.get('name') == 'delegate_task']
+                        for tool_call in response_tool_calls:
+                            if tool_call.get('name') != 'delegate_task':
+                                tool_results[tool_call['call_id']] = await execute_tool_call(
+                                    form_data, metadata, event_caller, tool_call, tool_history
                                 )
-                            ),
+                        tool_results.update(
+                            zip(
+                                [tool_call['call_id'] for tool_call in delegate_calls],
+                                await asyncio.gather(
+                                    *(
+                                        execute_tool_call(form_data, metadata, event_caller, tool_call, tool_history)
+                                        for tool_call in delegate_calls
+                                    )
+                                ),
+                            )
                         )
-                    )
 
                     for tool_call in response_tool_calls:
                         tool_call_id = tool_call['call_id']
                         tool_function_name = tool_call.get('name', '')
+                        if tool_approval_mode == 'auto':
+                            try:
+                                tool_results[tool_call_id] = await execute_tool_call(
+                                    form_data, metadata, event_caller, tool_call, tool_history
+                                )
+                            except ToolApprovalRequired:
+                                approval_pending = True
+                                break
                         tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[
                             tool_call['call_id']
                         ]
@@ -6004,7 +6027,16 @@ async def streaming_chat_response_handler(response, ctx):
                         )
 
                     for item in response_tool_calls:
-                        item['status'] = result_status_by_call_id.get(item['call_id'], 'completed')
+                        if item['call_id'] in result_status_by_call_id:
+                            item['status'] = result_status_by_call_id[item['call_id']]
+
+                    if approval_pending:
+                        # Include all completed results before pausing the remaining calls.
+                        await pause_for_tool_approval(
+                            metadata['chat_id'], metadata['message_id'], full_output(), form_data, metadata
+                        )
+                        await event_emitter({'type': 'chat:completion', 'data': {'output': full_output()}})
+                        return
 
                     await emit_output()
                     if final_answer_requested:

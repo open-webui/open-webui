@@ -63,7 +63,16 @@
 			value: 'ask',
 			label: $i18n.t('Ask for approval'),
 			description: $i18n.t('Stop before each tool call until you allow or deny it.')
-		}
+		},
+		...($config?.features?.enable_tool_permissions_auto
+			? [
+					{
+						value: 'auto',
+						label: $i18n.t('Auto'),
+						description: $i18n.t('settings.chat.toolPermissionsAuto.description')
+					}
+				]
+			: [])
 	];
 
 	let fileUploadEnabled = true;
