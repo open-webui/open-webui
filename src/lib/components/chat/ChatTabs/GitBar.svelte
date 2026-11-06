@@ -836,13 +836,13 @@
 														{#if file.unstaged}<button on:click={() => selectFile(file, false)}
 																>{$i18n.t('Working tree changes')}</button
 															>{/if}
-														{#if file.unstaged && file.status !== 'untracked'}<button
-																disabled={busy}
-																on:click={() => {
-																	discardFile = file;
-																	confirmDiscard = true;
-																}}>{$i18n.t('Discard changes')}</button
-															>{/if}
+														<button
+															disabled={busy}
+															on:click={() => {
+																discardFile = file;
+																confirmDiscard = true;
+															}}>{$i18n.t('Discard changes')}</button
+														>
 													</DropdownMenu>
 												</div>
 											</Dropdown>
@@ -1021,7 +1021,9 @@
 <ConfirmDialog
 	bind:show={confirmDiscard}
 	title={$i18n.t('Discard changes')}
-	message={$i18n.t('Discard unsaved working-tree changes to this file? This cannot be undone.')}
+	message={$i18n.t(
+		'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
+	)}
 	on:confirm={() => {
 		if (discardFile) void act('discard', { paths: paths([discardFile]) });
 	}}
