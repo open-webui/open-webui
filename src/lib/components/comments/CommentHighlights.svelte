@@ -412,39 +412,41 @@
 				>
 					{draft.anchor.quote}
 				</div>
-				{#key `${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
-					<CommentComposer
-						bind:this={composer}
-						resource={draft.options}
-						scrollable={false}
-						embedded={true}
-						draftKey={`${$user?.id}:${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.source}:${draft.anchor.start}:${draft.anchor.end}`}
-						onCancel={dismissDraft}
-						onSubmitted={submitted}
-						onSubmit={async (content, temp_id) => {
-							const created = await commentsRequest<ResourceComment>('/', 'POST', {
-								resource_type: draft.options.resource_type,
-								resource_id: draft.options.resource_id,
-								target_type: draft.options.target_type,
-								target_id: draft.options.target_id,
-								anchor: draft.anchor,
-								content,
-								temp_id
-							});
-							if (!mounted || $commentSelectionDraft !== draft) return;
-							postedComment = created;
-							records = {
-								...records,
-								[resourceQuery(created)]: [
-									...(records[resourceQuery(created)] ?? []).filter(
-										(item) => item.id !== created.id
-									),
-									created
-								]
-							};
-						}}
-					/>
-				{/key}
+				<div class="-mr-1 mt-2">
+					{#key `${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
+						<CommentComposer
+							bind:this={composer}
+							resource={draft.options}
+							scrollable={false}
+							embedded={true}
+							draftKey={`${$user?.id}:${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.source}:${draft.anchor.start}:${draft.anchor.end}`}
+							onCancel={dismissDraft}
+							onSubmitted={submitted}
+							onSubmit={async (content, temp_id) => {
+								const created = await commentsRequest<ResourceComment>('/', 'POST', {
+									resource_type: draft.options.resource_type,
+									resource_id: draft.options.resource_id,
+									target_type: draft.options.target_type,
+									target_id: draft.options.target_id,
+									anchor: draft.anchor,
+									content,
+									temp_id
+								});
+								if (!mounted || $commentSelectionDraft !== draft) return;
+								postedComment = created;
+								records = {
+									...records,
+									[resourceQuery(created)]: [
+										...(records[resourceQuery(created)] ?? []).filter(
+											(item) => item.id !== created.id
+										),
+										created
+									]
+								};
+							}}
+						/>
+					{/key}
+				</div>
 			</div>
 		{/if}
 		{#each hovered as { comment } (comment.id)}
