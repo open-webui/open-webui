@@ -3733,6 +3733,19 @@ async def background_tasks_handler(ctx):
                         user_message = user_message[:100] + '...'
 
                     title = None
+                    expected_title = None
+                    if str(message['model']).startswith('agent:'):
+                        first_user = next((m for m in messages if m.get('role') == 'user'), {})
+                        title = (
+                            replace_skill_mentions_with_labels(first_user.get('content', '')).strip()[:50] or 'New Chat'
+                        )
+                        updated = await Chats.update_chat_title_by_id(
+                            metadata['chat_id'], title, expected_title='New Chat'
+                        )
+                        if not updated:
+                            return  # The chat was deleted or already renamed.
+                        await event_emitter({'type': 'chat:title', 'data': title})
+                        expected_title = title
                     if tasks[TASKS.TITLE_GENERATION]:
                         res = await generate_title(
                             request,
@@ -3761,21 +3774,28 @@ async def background_tasks_handler(ctx):
                             title_string = title_string[title_string.find('{') : title_string.rfind('}') + 1]
 
                             try:
-                                title = JSONCodec.loads(title_string).get('title', user_message)
+                                title = JSONCodec.loads(title_string).get('title', expected_title or user_message)
                             except Exception as e:
                                 title = ''
 
                             if not title:
-                                title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))
+                                title = expected_title or replace_skill_mentions_with_labels(
+                                    messages[0].get('content', user_message)
+                                )
 
-                            await Chats.update_chat_title_by_id(metadata['chat_id'], title)
-
-                            await event_emitter(
-                                {
-                                    'type': 'chat:title',
-                                    'data': title,
-                                }
+                            if expected_title is not None and (not isinstance(title, str) or not title.strip()):
+                                title = expected_title
+                            updated = await Chats.update_chat_title_by_id(
+                                metadata['chat_id'], title, expected_title=expected_title
                             )
+
+                            if updated:
+                                await event_emitter(
+                                    {
+                                        'type': 'chat:title',
+                                        'data': title,
+                                    }
+                                )
 
                     if title == None and len(messages) == 2 and (not messages_map or len(messages_map) <= 2):
                         title = replace_skill_mentions_with_labels(messages[0].get('content', user_message))

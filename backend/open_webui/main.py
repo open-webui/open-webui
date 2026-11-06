@@ -1345,8 +1345,10 @@ async def chat_completion(
                 raise HTTPException(status_code=404, detail='Temporary chat expired or unavailable')
 
         initial_title_generation = None
-        if is_new_chat and not agent_model and tasks and TASKS.TITLE_GENERATION in tasks:
+        if is_new_chat and tasks and TASKS.TITLE_GENERATION in tasks:
             initial_title_generation = tasks.pop(TASKS.TITLE_GENERATION)
+        elif is_new_chat and agent_model:
+            initial_title_generation = False  # Still give agent chats a first-message title.
 
         if metadata.get('chat_id') and user:
             chat_id = metadata['chat_id']

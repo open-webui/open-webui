@@ -1015,10 +1015,14 @@ class ChatTable:
             await session.commit()
             return result.rowcount or 0
 
-    async def update_chat_title_by_id(self, id: str, title: str) -> ChatModel | None:
+    async def update_chat_title_by_id(
+        self, id: str, title: str, *, expected_title: str | None = None
+    ) -> ChatModel | None:
         try:
             async with self._chat_transaction(id) as (session, chat_item):
                 if chat_item is None:
+                    return None
+                if expected_title is not None and chat_item.title != expected_title:
                     return None
                 clean_title = self._clean_null_bytes(title)
                 chat_item.title = clean_title

@@ -1282,6 +1282,7 @@
 	</div>
 	<div
 		bind:clientHeight={footerHeight}
+		role="presentation"
 		class="min-w-0 shrink-0 pointer-events-auto"
 		class:hidden={fullWidth && !gitPanelRect}
 		style={gitPanelRect
