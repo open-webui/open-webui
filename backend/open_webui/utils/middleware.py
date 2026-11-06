@@ -2593,7 +2593,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             else:
                 skill_manifest += format_terminal_skill_manifest_entry(skill)
 
-        if skill_tools_enabled:
+        if skill_tools_enabled and skill_manifest:
             if not metadata.get('assistant_message_id'):
                 initial_output.extend(
                     hidden_tool_result(
@@ -2835,7 +2835,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         attrs += f' source="{escape(str(item["source"]), quote=True)}"'
                     knowledge_tags.append(f'<knowledge {attrs}/>')
 
-                if not metadata.get('assistant_message_id'):
+                if knowledge_tags and not metadata.get('assistant_message_id'):
                     initial_output.extend(
                         hidden_tool_result(
                             'list_attached_knowledge',
