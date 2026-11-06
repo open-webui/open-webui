@@ -214,6 +214,7 @@
 	<div
 		use:portal
 		bind:this={contentEl}
+		class="no-drag-region"
 		role="menu"
 		tabindex="-1"
 		on:mouseleave={handleContentMouseLeave}

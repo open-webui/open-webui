@@ -413,7 +413,7 @@
 	<div
 		use:portal
 		bind:this={contentEl}
-		class={contentClass}
+		class="no-drag-region {contentClass}"
 		role="menu"
 		tabindex="-1"
 		style:max-height={resolvedMaxHeight}
