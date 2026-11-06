@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import type { TerminalContext } from '$lib/types';
 import type { TerminalConnection } from '$lib/apis/terminal';
 
@@ -221,7 +222,7 @@ export function splitTab(
 	if (!source || !state.groups.some((group) => group.id === groupId)) return state;
 	if (source.id === groupId && source.tabIds.length === 1) return state;
 	const next = removeFromGroup(state, id);
-	const newGroup: PanelGroup = { id: crypto.randomUUID(), tabIds: [id], activeId: id };
+	const newGroup: PanelGroup = { id: uuidv4(), tabIds: [id], activeId: id };
 	const replace = (layout: PanelLayout): PanelLayout => {
 		if (layout.type === 'group') {
 			if (layout.groupId !== groupId) return layout;
@@ -229,7 +230,7 @@ export function splitTab(
 			const before = edge === 'left' || edge === 'top';
 			return {
 				type: 'split',
-				id: crypto.randomUUID(),
+				id: uuidv4(),
 				direction: edge === 'left' || edge === 'right' ? 'horizontal' : 'vertical',
 				ratio: 0.5,
 				first: before ? leaf : layout,
