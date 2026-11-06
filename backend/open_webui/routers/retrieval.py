@@ -1765,6 +1765,7 @@ async def index_file(
                         'file_id': file.id,
                         'file_name': file.filename,
                         'file_content_type': file.meta.get('content_type'),
+                        'client_ip': request.client.host if request.client else '',
                     }
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 
