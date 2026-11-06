@@ -72,6 +72,7 @@
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
+				{selectedModels}
 				{user}
 				{chatId}
 				{history}

@@ -538,7 +538,7 @@
 								<Message
 									{chatId}
 									bind:history
-									{selectedModels}
+									selectedModels={atSelectedModel ? [atSelectedModel.id] : selectedModels}
 									messageId={message.id}
 									idx={messageIdx}
 									{user}

@@ -38,6 +38,7 @@
 	export let chatId;
 	export let history;
 	export let messageId;
+	export let selectedModels: string[] = [];
 
 	export let siblings;
 
@@ -69,6 +70,9 @@
 	let editScrollContainer: HTMLDivElement;
 
 	let message = structuredClone(history.messages[messageId]);
+	$: canBranch = ![...selectedModels, ...(message.models ?? [])].some((id) =>
+		id.startsWith('agent:')
+	);
 	$: authorId = message.user_id || message.user?.id || user?.id;
 	$: author =
 		message.user?.id === authorId
@@ -118,6 +122,7 @@
 	};
 
 	const editMessageConfirmHandler = async (submit = true) => {
+		if (submit && !canBranch) return;
 		if (!editedContent && (editedFiles ?? []).length === 0) {
 			toast.error($i18n.t('Please enter a message or attach a file.'));
 			return;
@@ -377,15 +382,17 @@
 								{$i18n.t('Cancel')}
 							</button>
 
-							<button
-								id="confirm-edit-message-button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-								on:click={() => {
-									editMessageConfirmHandler();
-								}}
-							>
-								{$i18n.t('Send')}
-							</button>
+							{#if canBranch}
+								<button
+									id="confirm-edit-message-button"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+									on:click={() => {
+										editMessageConfirmHandler();
+									}}
+								>
+									{$i18n.t('Send')}
+								</button>
+							{/if}
 						</div>
 					</div>
 				</div>
