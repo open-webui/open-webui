@@ -87,7 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗨️ **Side chats are saved.** Side chats are now saved as regular chats that appear in the chat list, and stay temporary only when you turn on Temporary Chat in the side chat or your admin enforces temporary chats.
 - 🔓 **Side chat permission.** The Allow Side Chat permission no longer requires the Temporary Chat permission.
 - 🧷 **Context as hidden tool results.** With native function calling, memory recall, the skills list and the attached knowledge list now arrive as hidden tool results after your message instead of in the system prompt, so custom pipes can see a tool message as the last message.
-- 🔤 **Adjusted chat text sizes.** At the default UI scale, chat messages and the message input now use 14.5 pixels instead of 15, while chat titles in the sidebar grow from 13 to 14.5 pixels.
 - 🚧 **Tool call limit.** Reaching the tool call limit now makes the model write a final answer without tools instead of ending the reply with a limit error.
 - 🔦 **Tool Search prompt.** With Tool Search on, the model no longer sees a list of the hidden tools and finds them only by searching.
 - 🎯 **Retrieval defaults.** The defaults for "RAG_TOP_K" and "RAG_TOP_K_RERANKER" are now 10 instead of 3 and "CHUNK_SIZE" is now 1024 instead of 1000, unless you saved your own values.
