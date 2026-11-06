@@ -117,12 +117,6 @@
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 	let expanded = false;
 	$: fullWidth = expanded && largeScreen && !!$showTabs;
-	$: mainChatActive = fullWidth && tabs.groups.some((group) => group.activeId === mainChatTabId);
-	$: mainChatGroupId = tabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
-	$: mainChatStyle =
-		fullWidth && positions.groups[mainChatGroupId]
-			? paneStyle(positions.groups[mainChatGroupId], 36, footerHeight)
-			: '';
 	$: if (fullWidth !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
 		tabs = setFullWidthTabs(tabs, fullWidth, title);
 	}
@@ -975,7 +969,7 @@
 			document.removeEventListener('pointercancel', onPointerUp);
 		};
 	});
-	// Resolve pane placement after the reactive tab-opening handlers.
+	// Tab-opening handlers mutate tabs indirectly, so derive visibility and placement after them.
 	$: positions = fullWidth
 		? panelPositions(tabs.layout)
 		: {
@@ -990,6 +984,12 @@
 			.filter((group) => fullWidth || group.id === tabs.activeGroupId)
 			.map((group) => group.activeId)
 	);
+	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
+	$: mainChatGroupId = tabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
+	$: mainChatStyle =
+		fullWidth && positions.groups[mainChatGroupId]
+			? paneStyle(positions.groups[mainChatGroupId], 36, footerHeight)
+			: '';
 </script>
 
 <svelte:window
