@@ -136,7 +136,7 @@
 
 	let tabs = emptyTabs();
 	const paneStyle = (rect: PanelRect, header = 0, footer = 0) =>
-		`position:absolute;left:${rect.left * 100}%;top:calc((100% - ${footer}px) * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc((100% - ${footer}px) * ${rect.height} - ${header}px);`;
+		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header + footer}px);`;
 	const focusGroup = (id: string) => {
 		const group = tabs.groups.find((group) => group.id === id);
 		if (group?.activeId) tabs = activateTab(tabs, group.activeId);
@@ -988,8 +988,12 @@
 	$: mainChatGroupId = tabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
 	$: mainChatStyle =
 		fullWidth && positions.groups[mainChatGroupId]
-			? paneStyle(positions.groups[mainChatGroupId], 36, footerHeight)
+			? paneStyle(positions.groups[mainChatGroupId], 36)
 			: '';
+	$: gitPanelRect =
+		fullWidth && contextTab && visibleTabIds.has(contextTab.id)
+			? positions.groups[tabGroups[contextTab.id]?.id]
+			: null;
 </script>
 
 <svelte:window
@@ -1128,7 +1132,11 @@
 				class="min-h-0 min-w-0 pointer-events-auto overflow-hidden"
 				data-panel-group={tabGroups[tab.id]?.id}
 				style={positions.groups[tabGroups[tab.id]?.id]
-					? paneStyle(positions.groups[tabGroups[tab.id].id], 36)
+					? paneStyle(
+							positions.groups[tabGroups[tab.id].id],
+							36,
+							fullWidth && contextTab?.id === tab.id ? footerHeight : 0
+						)
 					: 'display:none'}
 				class:hidden={!visibleTabIds.has(tab.id)}
 				on:focusin={() => focusGroup(tabGroups[tab.id].id)}
@@ -1275,7 +1283,12 @@
 	<div
 		bind:clientHeight={footerHeight}
 		class="min-w-0 shrink-0 pointer-events-auto"
-		class:hidden={tabs.activeId === mainChatTabId}
+		class:hidden={fullWidth && !gitPanelRect}
+		style={gitPanelRect
+			? `position:absolute;left:${gitPanelRect.left * 100}%;bottom:${(1 - gitPanelRect.top - gitPanelRect.height) * 100}%;width:${gitPanelRect.width * 100}%;`
+			: undefined}
+		on:focusin={() => fullWidth && contextTab && focusGroup(tabGroups[contextTab.id].id)}
+		on:pointerdown={() => fullWidth && contextTab && focusGroup(tabGroups[contextTab.id].id)}
 	>
 		{#if gitConnection && tabs.tabs.length}
 			<GitBar
