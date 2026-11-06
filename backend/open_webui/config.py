@@ -954,8 +954,8 @@ PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
 BYPASS_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
 
 
-RAG_TOP_K = int(os.getenv('RAG_TOP_K', '3'))
-RAG_TOP_K_RERANKER = int(os.getenv('RAG_TOP_K_RERANKER', '3'))
+RAG_TOP_K = int(os.getenv('RAG_TOP_K', '10'))
+RAG_TOP_K_RERANKER = int(os.getenv('RAG_TOP_K_RERANKER', '10'))
 RAG_RELEVANCE_THRESHOLD = float(os.getenv('RAG_RELEVANCE_THRESHOLD', '0.0'))
 RAG_HYBRID_BM25_WEIGHT = float(os.getenv('RAG_HYBRID_BM25_WEIGHT', '0.5'))
 
@@ -966,6 +966,15 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 )
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
+RAG_FULL_TEXT_CHAR_THRESHOLD = max(
+    0,
+    int(
+        os.getenv(
+            'RAG_FULL_TEXT_CHAR_THRESHOLD',
+            os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+        )
+    ),
+)
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 KNOWLEDGE_MAX_UPLOAD_COUNT = (
@@ -1061,7 +1070,8 @@ TIKTOKEN_CACHE_DIR = os.getenv('TIKTOKEN_CACHE_DIR', f'{CACHE_DIR}/tiktoken')
 TIKTOKEN_ENCODING_NAME = os.getenv('TIKTOKEN_ENCODING_NAME', 'cl100k_base')
 
 
-CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1000'))
+# Approximate MiniLM's 256-token window at four characters per token.
+CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1024'))
 
 CHUNK_MIN_SIZE_TARGET = int(os.getenv('CHUNK_MIN_SIZE_TARGET', '0'))
 
@@ -3014,6 +3024,8 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search': ENABLE_RAG_HYBRID_SEARCH,
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
+    # Retain the stored key so renaming the setting preserves saved thresholds.
+    'rag.full_context_char_threshold': RAG_FULL_TEXT_CHAR_THRESHOLD,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'knowledge.max_upload_count': KNOWLEDGE_MAX_UPLOAD_COUNT,
     'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,

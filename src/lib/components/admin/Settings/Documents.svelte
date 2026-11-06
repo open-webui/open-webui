@@ -1372,6 +1372,22 @@
 					</AdminSettingRow>
 
 					{#if !RAGConfig.RAG_FULL_CONTEXT}
+						<AdminSettingField
+							label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
+							description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
+							forId="full-text-char-threshold"
+						>
+							<input
+								id="full-text-char-threshold"
+								class={inputClass}
+								type="number"
+								bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
+								min="0"
+								step="1"
+								required
+							/>
+						</AdminSettingField>
+
 						<AdminSettingRow
 							label={$i18n.t('settings.admin.documents.hybridSearch.label')}
 							description={$i18n.t('settings.admin.documents.hybridSearch.description')}
