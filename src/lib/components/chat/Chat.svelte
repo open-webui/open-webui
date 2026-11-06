@@ -2469,6 +2469,7 @@
 				return {
 					chatId: isTemporaryChatId($chatId) ? undefined : $chatId || undefined,
 					modelId: model && !('direct' in model && model.direct) ? model.id : '',
+					terminalId: $selectedTerminalId || undefined,
 					voiceModel: $config?.audio?.realtime?.model,
 					voice: model?.info?.meta?.voice?.voice || $config?.audio?.realtime?.voice,
 					messages: createMessagesList(history, history.currentId).map((message) => {
