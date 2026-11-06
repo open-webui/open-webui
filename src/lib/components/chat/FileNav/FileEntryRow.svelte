@@ -508,6 +508,7 @@
 					{#await import('./FileHoverPreview.svelte') then { default: FileHoverPreview }}
 						<FileHoverPreview
 							{entry}
+							sideOffset={viewMode === 'grid' ? 4 : 12}
 							path={entryPath}
 							{terminalUrl}
 							{terminalKey}

@@ -74,6 +74,16 @@
 	let resizing = false;
 	let resizeY = 0;
 	let resizeHeight = 0;
+	let splitWidth = 0;
+	let listWidth: number | null = null;
+	let resizingList = false;
+	let resizeListX = 0;
+	let resizeListWidth = 0;
+	$: maxListWidth = Math.max(160, splitWidth - 220);
+	$: effectiveListWidth = Math.max(
+		160,
+		Math.min(maxListWidth, listWidth ?? (splitWidth >= 800 ? 288 : 240))
+	);
 	let mounted = false;
 	let context = '';
 	let generation = 0;
@@ -798,10 +808,11 @@
 							}}
 						/>{/key}
 				{:else}
-					<div class="flex min-h-0 flex-1 overflow-hidden">
+					<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
 						<div
 							class="git-list min-w-0 flex-1 flex flex-col overflow-hidden"
 							class:showing-diff={!!(selected || selectedCommit)}
+							style:--git-list-width={`${effectiveListWidth}px`}
 						>
 							{#if view === 'changes'}
 								{#if status.files.length}
@@ -1033,6 +1044,53 @@
 								</div>
 							{/if}
 						</div>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions (Focusable splitter supports pointer and keyboard resizing.) -->
+						<div
+							tabindex="0"
+							role="separator"
+							aria-label={$i18n.t('Resize Git list')}
+							aria-orientation="vertical"
+							aria-valuemin={160}
+							aria-valuemax={maxListWidth}
+							aria-valuenow={Math.round(effectiveListWidth)}
+							class="git-list-divider relative z-10 shrink-0 touch-none cursor-col-resize border-l border-gray-100/50 dark:border-white/2 hover:border-gray-200 dark:hover:border-gray-800 transition"
+							on:pointerdown={(event) => {
+								if (event.button !== 0) return;
+								event.preventDefault();
+								event.currentTarget.setPointerCapture(event.pointerId);
+								resizingList = true;
+								resizeListX = event.clientX;
+								resizeListWidth = effectiveListWidth;
+							}}
+							on:pointermove={(event) => {
+								if (resizingList)
+									listWidth = Math.max(
+										160,
+										Math.min(maxListWidth, resizeListWidth + event.clientX - resizeListX)
+									);
+							}}
+							on:pointerup={() => (resizingList = false)}
+							on:pointercancel={() => (resizingList = false)}
+							on:lostpointercapture={() => (resizingList = false)}
+							on:keydown={(event) => {
+								if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+									event.preventDefault();
+									listWidth = Math.max(
+										160,
+										Math.min(
+											maxListWidth,
+											event.key === 'Home'
+												? 160
+												: event.key === 'End'
+													? maxListWidth
+													: effectiveListWidth + (event.key === 'ArrowRight' ? 20 : -20)
+										)
+									);
+								}
+							}}
+						>
+							<span class="absolute inset-y-0 -left-1.5 -right-1.5 bg-transparent"></span>
+						</div>
 						<div
 							class="git-detail min-w-0 flex-1 flex-col overflow-hidden"
 							class:showing-diff={!!(selected || selectedCommit)}
@@ -1172,6 +1230,7 @@
 		container-type: inline-size;
 	}
 	.git-list.showing-diff,
+	.git-list-divider,
 	.git-detail {
 		display: none;
 	}
@@ -1182,20 +1241,17 @@
 		.git-list,
 		.git-list.showing-diff {
 			display: flex;
-			flex: 0 0 240px;
-			border-inline-end: 1px solid #8080800c;
+			flex: 0 0 var(--git-list-width);
+		}
+		.git-list-divider {
+			display: block;
+			width: 1px;
 		}
 		.git-detail {
 			display: flex;
 		}
 		.git-back {
 			display: none;
-		}
-	}
-	@container (min-width: 800px) {
-		.git-list,
-		.git-list.showing-diff {
-			flex-basis: 288px;
 		}
 	}
 </style>
