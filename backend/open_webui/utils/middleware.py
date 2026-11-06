@@ -123,12 +123,11 @@ from open_webui.utils.misc import (
     is_raster_image_content_type,
     merge_system_messages,
     prepend_to_first_user_message_content,
-    replace_system_message_content,
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
 from open_webui.utils.oauth import get_system_oauth_token
-from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body, resolve_system_prompt
+from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body
 from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import (
     convert_responses_stream_to_chat_completions,
@@ -635,6 +634,28 @@ async def apply_source_context_to_messages(
             messages,
             append=False,
         )
+
+
+async def tool_result_with_citations(name, params, result, tool, model, source_ids, user_message, event_emitter) -> str:
+    content = tool_result_content(result)
+    capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
+    if not capabilities.get('citations', True) or name not in CITATION_TOOL_NAMES or not result:
+        return content
+    try:
+        sources = get_citation_source_from_tool_result(name, params, result, (tool or {}).get('tool_id', ''))
+    except Exception as e:
+        log.exception(f'Error extracting citation source: {e}')
+        return content
+    if event_emitter:
+        for source in sources:
+            await event_emitter({'type': 'source', 'data': source})
+    if sources:
+        context = get_source_context(sources, source_ids, include_content=False).strip()
+        if context:
+            citation_context = await rag_template(await Config.get('rag.template'), context, user_message or '')
+            # Save markers with this result so later requests replay the same prefix.
+            content = f'{content}\n\n{citation_context}'
+    return content
 
 
 BASE64_IMAGE_DATA_URI_RE = re.compile(r'data:image/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}', re.IGNORECASE)
@@ -2046,9 +2067,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['model'] = selected_model_id
             metadata['selected_model_id'] = selected_model_id
 
-    # Keep the template before apply_params_to_form_data consumes the model parameters.
-    model_system_prompt_template = (form_data.get('params') or {}).get('system')
-
     payload_tools = form_data.get('tools', None)  # snapshot before filters
     form_data = apply_params_to_form_data(form_data, model)
     log.debug('form_data: %s', form_data)
@@ -2881,21 +2899,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             log.exception(e)
 
-    # The tool loop restores these prompts before rebuilding file and tool source context.
-    system_message = get_system_message(form_data['messages'])
-    base_system_prompt = get_content_from_message(system_message) if system_message else ''
-    resolved_model_system_prompt = await resolve_system_prompt(
-        model_system_prompt_template,
-        metadata,
-        user,
-    )
-    if resolved_model_system_prompt:
-        base_system_prompt = (
-            f'{resolved_model_system_prompt}\n{base_system_prompt}'
-            if base_system_prompt
-            else resolved_model_system_prompt
-        )
-    metadata['base_system_prompt'] = base_system_prompt or None
+    # Compaction summarizes the user's text without injected retrieval context.
     metadata['base_user_prompt'] = get_last_user_message(form_data['messages'])
     metadata['sources'] = sources[:] if sources else []
 
@@ -2994,10 +2998,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         if context_summary:
             summary_content = f'[CONVERSATION SUMMARY]\n{context_summary}'
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
-            base_system_prompt = metadata['base_system_prompt']
-            metadata['base_system_prompt'] = (
-                f'{base_system_prompt}\n{summary_content}' if base_system_prompt else summary_content
-            )
 
     return form_data, metadata, events, False
 
@@ -3140,6 +3140,10 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
         return False
 
     event_emitter, event_caller = await get_event_emitter_and_caller(metadata)
+    citation_source_ids = {}
+    get_source_context(
+        message.get('sources') or metadata.get('sources', []), citation_source_ids, include_content=False
+    )
 
     # Request filters must be able to reject the complete request before tool side effects.
     # Give tools their filtered view without letting it overwrite the prepared history.
@@ -3228,15 +3232,16 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                     request, name, result, tool_type, direct_tool, metadata, user
                 )
                 await terminal_event_handler(name, params, result, event_emitter)
-                citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
-                    'citations', True
-                )
-                if event_emitter and citations_enabled and name in CITATION_TOOL_NAMES and result:
-                    for source in get_citation_source_from_tool_result(
-                        tool_name=name, tool_params=params, tool_result=result, tool_id=tool.get('tool_id', '')
-                    ):
-                        await event_emitter({'type': 'source', 'data': source})
-            content = tool_result_content(result)
+            content = await tool_result_with_citations(
+                item.get('name', ''),
+                params,
+                result,
+                tool,
+                model,
+                citation_source_ids,
+                get_last_user_message(form_data['messages']),
+                event_emitter,
+            )
             output_parts = [{'type': 'input_text', 'text': content}]
             item['status'] = 'failed' if _is_tool_result_error(content) else 'completed'
             display_files = []
@@ -5621,21 +5626,14 @@ async def streaming_chat_response_handler(response, ctx):
                 )
                 final_answer_requested = form_data.get('tool_choice') == 'none'
                 stop_reason = None
-                tool_call_sources = []  # Track citation sources from tool results
-                all_tool_call_sources = []  # Accumulated sources across all iterations
+                citation_source_ids = {}
+                get_source_context(
+                    (message or {}).get('sources') or metadata.get('sources', []),
+                    citation_source_ids,
+                    include_content=False,
+                )
                 user_message = get_last_user_message(form_data['messages'])
                 messages = list(form_data['messages'])
-
-                # Check if citations are enabled for this model
-                citations_enabled = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
-                    'citations', True
-                )
-
-                # Requests that bypass payload processing have no saved source-free prompt.
-                base_system_prompt = metadata.get('base_system_prompt')
-                if base_system_prompt is None:
-                    system_message = get_system_message(form_data['messages'])
-                    base_system_prompt = get_content_from_message(system_message) if system_message else None
 
                 async def emit_output():
                     await save_current_response_stream()
@@ -5851,23 +5849,19 @@ async def streaming_chat_response_handler(response, ctx):
                             event_emitter,
                         )
 
-                        # Extract citation sources from tool results
-                        if citations_enabled and tool_function_name in CITATION_TOOL_NAMES and tool_result:
-                            try:
-                                citation_sources = get_citation_source_from_tool_result(
-                                    tool_name=tool_function_name,
-                                    tool_params=tool_function_params,
-                                    tool_result=tool_result,
-                                    tool_id=tool.get('tool_id', '') if tool else '',
-                                )
-                                tool_call_sources.extend(citation_sources)
-                            except Exception as e:
-                                log.exception(f'Error extracting citation source: {e}')
-
                         results.append(
                             {
                                 'tool_call_id': tool_call_id,
-                                'content': tool_result_content(tool_result),
+                                'content': await tool_result_with_citations(
+                                    tool_function_name,
+                                    tool_function_params,
+                                    tool_result,
+                                    tool,
+                                    model,
+                                    citation_source_ids,
+                                    user_message,
+                                    event_emitter,
+                                ),
                                 **({'files': tool_result_files} if tool_result_files else {}),
                                 **({'embeds': tool_result_embeds} if tool_result_embeds else {}),
                             }
@@ -5907,64 +5901,6 @@ async def streaming_chat_response_handler(response, ctx):
 
                     for item in response_tool_calls:
                         item['status'] = result_status_by_call_id.get(item['call_id'], 'completed')
-
-                    # Emit citation sources to the frontend for display
-                    if citations_enabled:
-                        for source in tool_call_sources:
-                            await event_emitter({'type': 'source', 'data': source})
-
-                        # Rebuild source context from the saved prompts so it never accumulates.
-                        all_tool_call_sources.extend(tool_call_sources)
-                        if all_tool_call_sources and user_message:
-                            base_user_prompt = metadata.get('base_user_prompt') or user_message
-                            set_last_user_message_content(
-                                base_user_prompt,
-                                form_data['messages'],
-                            )
-                            if base_system_prompt is not None:
-                                if get_system_message(form_data['messages']):
-                                    replace_system_message_content(
-                                        base_system_prompt,
-                                        form_data['messages'],
-                                    )
-                                else:
-                                    form_data['messages'] = add_or_update_system_message(
-                                        base_system_prompt,
-                                        form_data['messages'],
-                                    )
-                            else:
-                                replace_system_message_content('', form_data['messages'])
-
-                            # Build context: file sources with content,
-                            # tool sources as citation markers only.
-                            source_ids = {}
-                            source_context = get_source_context(
-                                metadata.get('sources', []), source_ids
-                            ) + get_source_context(
-                                all_tool_call_sources,
-                                source_ids,
-                                include_content=False,
-                            )
-                            source_context = source_context.strip()
-                            if source_context:
-                                rag_content = await rag_template(
-                                    await Config.get('rag.template'),
-                                    source_context,
-                                    user_message,
-                                )
-                                if RAG_SYSTEM_CONTEXT:
-                                    form_data['messages'] = add_or_update_system_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=True,
-                                    )
-                                else:
-                                    form_data['messages'] = add_or_update_user_message(
-                                        rag_content,
-                                        form_data['messages'],
-                                        append=False,
-                                    )
-                        tool_call_sources.clear()
 
                     await emit_output()
                     if final_answer_requested:
@@ -6010,16 +5946,8 @@ async def streaming_chat_response_handler(response, ctx):
                             if current_usage and tool_messages:
                                 tool_messages[0]['usage'] = current_usage
 
-                            # Refresh citation context without restoring compacted history.
                             user_prompt = get_last_user_message_item(form_data['messages'])
-                            for message in messages:
-                                if message.get('contextSummary') and message.get('role') == 'user' and user_prompt:
-                                    message.update(user_prompt)
-                            messages = [
-                                *[message for message in form_data['messages'] if message.get('role') == 'system'],
-                                *[message for message in messages if message.get('role') != 'system'],
-                                *tool_messages,
-                            ]
+                            messages = [*messages, *tool_messages]
 
                             if image_urls:
                                 messages.append(
