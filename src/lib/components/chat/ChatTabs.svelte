@@ -839,7 +839,18 @@
 		$sideChatRequest?.parentId === chatId
 	)
 		sideChatRequest.set(null);
-	$: if ($showTabs === 'files' && showFilesTab) openFiles();
+	const openTerminalFiles = () => {
+		const side = fullWidth && tabs.groups.find((group) => !group.tabIds.includes(mainChatTabId));
+		if (side) focusGroup(side.id);
+		openFiles();
+		const id = $selectedTerminalId ? `files:${$selectedTerminalId}` : 'files';
+		if (
+			fullWidth &&
+			tabs.groups.some((group) => group.tabIds.includes(mainChatTabId) && group.tabIds.includes(id))
+		)
+			tabs = setSplitTabs(tabs, true);
+	};
+	$: if ($showTabs === 'files' && showFilesTab) openTerminalFiles();
 	$: if ($showTabs === 'side') {
 		if (canSideChat) openFeature('side');
 		else sideChatRequest.set(null);

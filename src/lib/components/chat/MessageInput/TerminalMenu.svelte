@@ -70,8 +70,9 @@
 	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
 		selectedTerminalId.set(newId);
-		if (newId && !$mobile && !fullWidthTabs) {
-			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
+		if (newId && !$mobile) {
+			if ($settings?.showFilesOnTerminalSelect ?? true) showTabs.set('files');
+			else if (!fullWidthTabs) showTabs.set(false);
 		}
 
 		// Enable the selected direct terminal, disable all others
@@ -94,8 +95,9 @@
 	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
 		selectedTerminalId.set(newId);
-		if (newId && !$mobile && !fullWidthTabs) {
-			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
+		if (newId && !$mobile) {
+			if ($settings?.showFilesOnTerminalSelect ?? true) showTabs.set('files');
+			else if (!fullWidthTabs) showTabs.set(false);
 		}
 
 		// Disable all direct terminals when switching to a system terminal
