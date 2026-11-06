@@ -24,6 +24,7 @@
 
 	export let show = false;
 	export let disabled = false;
+	export let fullWidthTabs = false;
 
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
@@ -69,7 +70,7 @@
 	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
 		selectedTerminalId.set(newId);
-		if (newId && !$mobile) {
+		if (newId && !$mobile && !fullWidthTabs) {
 			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
@@ -93,7 +94,7 @@
 	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
 		selectedTerminalId.set(newId);
-		if (newId && !$mobile) {
+		if (newId && !$mobile && !fullWidthTabs) {
 			showTabs.set(($settings?.showFilesOnTerminalSelect ?? true) ? 'files' : false);
 		}
 
