@@ -12,6 +12,7 @@
 	import { oneDark } from '@codemirror/theme-one-dark';
 
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import { isHiddenToolCall } from './structuredOutput';
 
 	const i18n = getContext('i18n');
 
@@ -114,6 +115,7 @@
 			} else if (t === 'reasoning') {
 				result.push({ type: 'reasoning', indices: [i], item });
 			} else if (t === 'function_call') {
+				if (isHiddenToolCall(item)) continue;
 				const paired = outputByCallId[item.call_id];
 				result.push({
 					type: 'function_call',

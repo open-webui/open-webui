@@ -104,7 +104,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
-from open_webui.utils.memory import add_memory_context, review_memory_after_turn
+from open_webui.utils.memory import add_memory_context, recall_memories, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -2355,6 +2355,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             raise Exception(f'{e}')
 
+    initial_output = []
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
     if features:
@@ -2381,7 +2382,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 'features.memories',
                 await Config.get('user.permissions'),
             ):
-                form_data = await add_memory_context(request, form_data, user, model)
+                if use_builtin_tools:
+                    if not metadata.get('assistant_message_id'):
+                        initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
+                else:
+                    form_data = await add_memory_context(request, form_data, user, model)
 
         if 'web_search' in features and features['web_search'] and await Config.get('web.search.enable'):
             # features is client-supplied; re-check the permission the native FC path enforces.
@@ -2971,12 +2976,16 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     metadata.pop('initial_output', None)
     if skill_tools_enabled and not metadata.get('assistant_message_id'):
-        initial_output = await preload_skills(
-            form_data['messages'], activated_skill_ids & resolved_skill_ids, metadata.get('tools', {}).get('view_skill')
+        initial_output.extend(
+            await preload_skills(
+                form_data['messages'],
+                activated_skill_ids & resolved_skill_ids,
+                metadata.get('tools', {}).get('view_skill'),
+            )
         )
-        if initial_output:
-            form_data['messages'].extend(convert_output_to_messages(initial_output, raw=True))
-            metadata['initial_output'] = initial_output
+    if initial_output:
+        form_data['messages'].extend(convert_output_to_messages(initial_output, raw=True))
+        metadata['initial_output'] = initial_output
 
     form_data = normalize_messages_for_model(form_data)
 
@@ -3024,6 +3033,32 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     return form_data, metadata, events, False
 
 
+async def preload_memory(request, messages: list[dict], user, model: dict) -> list[dict]:
+    """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
+    result = await recall_memories(request, messages, user, model)
+    if not result:
+        return []
+    call_id = output_id('fc')
+    return [
+        {
+            'type': 'function_call',
+            'id': call_id,
+            'call_id': call_id,
+            'name': 'recall_memories',
+            'hidden': True,
+            'arguments': '{}',
+            'status': 'completed',
+        },
+        {
+            'type': 'function_call_output',
+            'id': output_id('fco'),
+            'call_id': call_id,
+            'output': [{'type': 'input_text', 'text': result}],
+            'status': 'completed',
+        },
+    ]
+
+
 async def preload_skills(messages: list[dict], skill_ids: set[str], tool: dict | None) -> list[dict]:
     """Record explicit activation as ordinary tool history for saved and temporary chats."""
     if not tool or not skill_ids:
@@ -3054,6 +3089,7 @@ async def preload_skills(messages: list[dict], skill_ids: set[str], tool: dict |
                     'id': call_id,
                     'call_id': call_id,
                     'name': 'view_skill',
+                    'hidden': True,
                     'arguments': JSONCodec.dumps({'id': skill_id}),
                     'status': status,
                 },
