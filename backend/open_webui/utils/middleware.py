@@ -2603,7 +2603,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             else:
                 skill_manifest += format_terminal_skill_manifest_entry(skill)
 
-        if skill_manifest:
+        if skill_tools_enabled:
+            if not metadata.get('assistant_message_id'):
+                initial_output.extend(
+                    hidden_tool_result(
+                        'list_available_skills', f'<available_skills>\n{skill_manifest}</available_skills>'
+                    )
+                )
+        elif skill_manifest:
             form_data['messages'] = add_or_update_system_message(
                 f'<available_skills>\n{skill_manifest}</available_skills>',
                 form_data['messages'],
@@ -2840,11 +2847,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         attrs += f' source="{escape(str(item["source"]), quote=True)}"'
                     knowledge_tags.append(f'<knowledge {attrs}/>')
 
-                if knowledge_tags:
-                    form_data['messages'] = add_or_update_system_message(
-                        '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
-                        form_data['messages'],
-                        append=True,
+                if not metadata.get('assistant_message_id'):
+                    initial_output.extend(
+                        hidden_tool_result(
+                            'list_attached_knowledge',
+                            '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
+                        )
                     )
 
             builtin_tools = await get_builtin_tools(
@@ -3025,15 +3033,18 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 async def preload_memory(request, messages: list[dict], user, model: dict) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
     result = await recall_memories(request, messages, user, model)
-    if not result:
-        return []
+    return hidden_tool_result('recall_memories', result) if result else []
+
+
+def hidden_tool_result(name: str, result: str) -> list[dict]:
+    """Use ordinary saved tool output for internal context without displaying it in chat."""
     call_id = output_id('fc')
     return [
         {
             'type': 'function_call',
             'id': call_id,
             'call_id': call_id,
-            'name': 'recall_memories',
+            'name': name,
             'hidden': True,
             'arguments': '{}',
             'status': 'completed',
