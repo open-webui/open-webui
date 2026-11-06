@@ -282,9 +282,13 @@ async def initialize_terminal_directory(request, user, metadata, terminal_id, pa
     if not terminal_id or not path:
         return
     from fastapi import HTTPException
+    from open_webui.utils.tether import get_terminal_connections
 
     if not isinstance(path, str):
         raise HTTPException(400, 'Invalid working directory')
+    # A terminal only the browser reaches gets its folder from the browser.
+    if not any(connection.get('id') == terminal_id for connection in await get_terminal_connections(user)):
+        return
     result = await get_terminal_json(
         request,
         user,
