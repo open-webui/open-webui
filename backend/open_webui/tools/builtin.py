@@ -4041,7 +4041,7 @@ async def search_tools(
     __metadata__: dict = None,
 ) -> str:
     """
-    Search the tools listed in <available_tools> and return their full definitions.
+    Discover available tools by capability and return their full definitions.
     Pass the exact tool name when you already know it.
     Invoke a result with call_tool(tool_name, params), where params is a JSON-encoded object
     matching the tool's parameters. Do not call deferred tools directly by name.

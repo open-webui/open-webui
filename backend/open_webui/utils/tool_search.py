@@ -1,7 +1,7 @@
 """
-Tool search: large tool schemas are left out of the provider `tools` array and listed by name in an
-`<available_tools>` system prompt block. `search_tools` returns the full definitions of matching tools,
-which the model invokes through `call_tool`. Discovery does not change the provider `tools` array.
+Tool search: large tool schemas are left out of the provider `tools` array. Fixed discovery instructions
+direct the model to `search_tools`, which returns matching definitions for invocation through `call_tool`.
+Discovery does not change the provider `tools` array.
 """
 
 import fnmatch
@@ -16,7 +16,6 @@ from open_webui.utils.tool_calling import parse_arguments
 
 SEARCH_TOOL_NAME = 'search_tools'
 CALL_TOOL_NAME = 'call_tool'
-MANIFEST_DESCRIPTION_MAX_CHARS = 100
 MAX_SEARCH_COUNT = 20
 DEFAULT_SEARCH_COUNT = 5
 
@@ -51,31 +50,6 @@ def select_deferred_tools(tools_dict: dict[str, dict], config: dict) -> list[str
     )
 
 
-def _truncate_description(description: str | None) -> str:
-    text = ' '.join(str(description or '').split())
-    if len(text) > MANIFEST_DESCRIPTION_MAX_CHARS:
-        text = text[: MANIFEST_DESCRIPTION_MAX_CHARS - 1].rstrip() + '…'
-    return text
-
-
-def build_deferred_tools_manifest(tools_dict: dict[str, dict], deferred: list[str]) -> str:
-    entries = ''
-    for name in deferred:
-        description = _truncate_description(tools_dict[name].get('spec', {}).get('description'))
-        entries += f'<tool>\n<name>{name}</name>\n<description>{description}</description>\n</tool>\n'
-
-    return (
-        '<available_tools>\n'
-        'The following tools are available but their definitions are not loaded. '
-        f'To use one, call `{SEARCH_TOOL_NAME}` with a short keyword query or the exact tool name to get its '
-        f'definition, then use `{CALL_TOOL_NAME}` with `tool_name` set to its exact name and `params` set '
-        'to a JSON-encoded object containing its arguments. Do not call deferred tools directly. '
-        'For example: call_tool(tool_name="get_weather", params=\'{"city":"Dubai"}\'). '
-        'Never tell the user a capability is unavailable without searching first.\n'
-        f'{entries}</available_tools>'
-    )
-
-
 async def apply_tool_search(
     form_data: dict, metadata: dict, tools_dict: dict[str, dict], extra_tools: list[dict] | None = None
 ) -> set[str]:
@@ -95,7 +69,13 @@ async def apply_tool_search(
 
     metadata['deferred_tools'] = deferred
     form_data['messages'] = add_or_update_system_message(
-        build_deferred_tools_manifest(tools_dict, deferred),
+        '<available_tools>\n'
+        f'Use `{SEARCH_TOOL_NAME}` to discover available capabilities with a short keyword query or an exact '
+        'tool name and get the full definitions of matching tools. '
+        f'Then use `{CALL_TOOL_NAME}` with `tool_name` set to the exact tool name and `params` set '
+        'to a JSON-encoded object containing its arguments. Do not call deferred tools directly. '
+        'Never tell the user a capability is unavailable without searching first.\n'
+        '</available_tools>',
         form_data['messages'],
         append=True,
     )
