@@ -129,7 +129,7 @@
 
 	let tabs = emptyTabs();
 	const paneStyle = (rect: PanelRect, header = 0) =>
-		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px);width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header}px);`;
+		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px * var(--app-text-scale, 1));width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header}px * var(--app-text-scale, 1));`;
 	const focusGroup = (id: string) => {
 		const group = tabs.groups.find((group) => group.id === id);
 		if (group?.activeId) tabs = activateTab(tabs, group.activeId);
