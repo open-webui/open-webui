@@ -1428,29 +1428,28 @@ async def get_image_urls(delta_images, request, metadata, user) -> list[str]:
 
 def add_file_context(messages: list) -> list:
     """
-    Add file URLs to messages for native function calling.
+    Replay attachment references beside their original user messages for native tools.
     """
 
     def format_file_tag(file):
-        # Every file reaching here has a url or a chat id, so id is always set.
-        attrs = f'type="{file.get("type", "file")}" id="{file.get("id") or file.get("url")}"'
-        if file.get('url'):
-            attrs += f' url="{file["url"]}"'
-        if file.get('content_type'):
-            attrs += f' content_type="{file["content_type"]}"'
-        if file.get('name'):
-            attrs += f' name="{file["name"]}"'
-        return f'<file {attrs}/>'
+        attrs = {'type': file.get('type', 'file'), 'id': file.get('id') or file.get('url')}
+        attrs.update({key: file[key] for key in ('url', 'content_type', 'name') if file.get(key)})
+        return (
+            '<file ' + ' '.join(f'{key}="{html.escape(str(value), quote=True)}"' for key, value in attrs.items()) + '/>'
+        )
 
     for message in messages:
         if message.get('role') != 'user':
             continue
-        # Chat references carry no url - they are addressed by id via view_chat.
+        # Notes, collections, and chats can be addressed by ID without a URL.
         attached_files = [
             file
             for file in message.get('files', [])
-            if (file.get('url') and not file.get('url').startswith('data:'))
-            or (file.get('type') == 'chat' and file.get('id'))
+            if isinstance(file, dict)
+            and (
+                (isinstance(file.get('url'), str) and file['url'] and not file['url'].startswith('data:'))
+                or (file.get('type') in ('chat', 'note', 'collection') and file.get('id'))
+            )
         ]
         if not attached_files:
             continue
@@ -2835,6 +2834,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                 knowledge_tags = []
                 for item in get_attached_knowledge(model, metadata):
+                    # Chat attachments are already replayed from each user message's files.
+                    if item.get('source') == 'chat':
+                        continue
                     if not item.get('id') or not item.get('type'):
                         continue
                     attrs = f'type="{escape(str(item["type"]), quote=True)}" id="{escape(str(item["id"]), quote=True)}"'
