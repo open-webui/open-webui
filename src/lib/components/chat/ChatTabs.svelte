@@ -1419,7 +1419,7 @@
 				</Dropdown>
 			{/if}
 		</div>
-		{#if group.tabIds.includes(mainChatTabId)}
+		{#if group.activeId === mainChatTabId}
 			<div class="flex shrink-0 items-center">
 				{@render temporaryChatToggle?.()}
 			</div>
