@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 💸 **Much cheaper tool chats.** Citation instructions, memory recall, the skills list and attached knowledge are no longer rewritten into the system prompt or your message on every tool round, so earlier parts of the conversation stay identical between requests and providers can serve them from their prompt cache, which makes chats with tools much cheaper.
-- 🦾 **Coding agents as models.** On an Open Terminal that offers agents, coding agents such as Claude Code, Codex and Pi now appear in the model picker (one agent per conversation) and can be chatted with or called by voice, with their reasoning effort and service tier as options and their tool requests approved in the chat.
+- 🦾 **Coding agents as models.** On an Open Terminal that offers agents, coding agents such as Claude Code, Codex and Pi now appear in the model picker (one agent per conversation) and can be chatted with or called by voice, with their reasoning effort and service tier as options and their tool requests approved in the chat, while agent chats cannot be regenerated, continued or edited and resent.
 - 🚦 **Auto tool permissions.** Administrators can now turn on an Auto tool permission mode (off by default) next to Full access and Ask for approval, where a review model decides which tool calls run automatically and which ask for approval first.
 - 🔗 **Personal terminals from native apps.** Native apps on your own computer can now sign in with renewable sessions (90 days without use by default, set with "SESSION_EXPIRES_IN"), appear as a personal terminal in chats and receive notifications even with no page open, with terminal output that resumes after a dropped connection.
 - 🖱️ **Drag chats into side panel.** Dragging a chat from the sidebar onto the chat area opens it as a side chat tab, and a side chat can now also be started from an empty new chat.
@@ -66,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🎧 **Background audio on iOS.** With Auto-Playback Response off, tapping in Open WebUI or opening a chat no longer stops audio playing in other apps on iOS. [#33780](https://github.com/open-webui/open-webui/issues/33780)
 - 📌 **File preview from Controls.** A file preview opened from the Controls menu no longer closes when you click inside it. [#33831](https://github.com/open-webui/open-webui/pull/33831), [#33828](https://github.com/open-webui/open-webui/issues/33828)
 - 🔭 **Tab bar and UI scale.** Tab content no longer slides under the tab bar when the UI scale is above 1. [#33830](https://github.com/open-webui/open-webui/pull/33830), [#33829](https://github.com/open-webui/open-webui/issues/33829)
+- 🔕 **Channel notifications clear on read.** Opening a channel now marks its notifications as read.
+- 📓 **Notes search results.** The notes list no longer shows the results of an older search after you type a newer one.
+- ⏩ **Continued replies on Responses connections.** Continuing a reply on a Responses API connection now adds the new text to the existing reply.
+- 🔘 **Desktop app top clicks.** In the desktop app, banners and menus near the top of the window now take clicks instead of dragging the window.
 - 🧱 **Milvus knowledge base uploads.** Adding a file to a knowledge base on Milvus no longer processes the file a second time or stores its chunks twice. [#33745](https://github.com/open-webui/open-webui/pull/33745), [#33744](https://github.com/open-webui/open-webui/issues/33744)
 - 📁 **Working folder in new chats.** The terminal working folder of a new chat is no longer reset to the root when the chat is created before the file browser has finished loading.
 - 🖥️ **Terminal kept on model switch.** Switching to a model without its own default terminal no longer turns off the terminal selected in the chat.
@@ -83,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗨️ **Side chats are saved.** Side chats are now saved as regular chats that appear in the chat list, and stay temporary only when you turn on Temporary Chat in the side chat or your admin enforces temporary chats.
 - 🔓 **Side chat permission.** The Allow Side Chat permission no longer requires the Temporary Chat permission.
 - 🧷 **Context as hidden tool results.** With native function calling, memory recall, the skills list and the attached knowledge list now arrive as hidden tool results after your message instead of in the system prompt, so custom pipes can see a tool message as the last message.
+- 🔤 **Slightly smaller text.** Chat message text and the message input now use 14.5 pixels instead of 15, and chat titles in the sidebar match.
 - 🚧 **Tool call limit.** Reaching the tool call limit now makes the model write a final answer without tools instead of ending the reply with a limit error.
 - 🔦 **Tool Search prompt.** With Tool Search on, the model no longer sees a list of the hidden tools and finds them only by searching.
 - 🎯 **Retrieval defaults.** The defaults for "RAG_TOP_K" and "RAG_TOP_K_RERANKER" are now 10 instead of 3 and "CHUNK_SIZE" is now 1024 instead of 1000, unless you saved your own values.
