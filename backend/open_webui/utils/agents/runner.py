@@ -52,12 +52,14 @@ async def run(request, form_data, user, metadata, model):
             child != metadata.get('user_message_id') for child in (previous_message or {}).get('childrenIds', [])
         ):
             raise ValueError('Agent history cannot be branched in place. Start a new chat instead.')
-    cwd = await get_terminal_json(request, user, metadata, '/files/cwd')
-    if not cwd or not cwd.get('cwd'):
+    # Browsing files must not move an existing agent conversation's workspace.
+    cwd = (previous or {}).get('cwd')
+    if not cwd:
+        directory = await get_terminal_json(request, user, metadata, '/files/cwd')
+        cwd = (directory or {}).get('cwd')
+    if not cwd:
         raise ValueError('Agent working directory is unavailable')
-    if previous and previous.get('cwd') != cwd['cwd']:
-        raise ValueError('The agent workspace changed. Start a new chat for this directory.')
-    output.state['cwd'] = cwd['cwd']
+    output.state['cwd'] = cwd
     files = copy.deepcopy(form_data.get('files') or [])
     uploads = [f for f in files if f.get('type') != 'filesystem' and f.get('id')]
     await upload_files_to_terminal(request, user, uploads, metadata, {})
@@ -96,7 +98,7 @@ async def run(request, form_data, user, metadata, model):
     instructions = '\n\n'.join(text(m.get('content')) for m in messages if m.get('role') == 'system')
     options = {
         'request_id': metadata['message_id'],
-        'cwd': cwd['cwd'],
+        'cwd': cwd,
         'model': agent['model'],
         'resume': (previous or {}).get('session_id'),
         'instructions': instructions,
