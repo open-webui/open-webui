@@ -2481,12 +2481,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Otherwise, save any tools that filter inlets added for merging later.
     inlet_filter_tools = None if payload_tools is not None else form_data.get('tools', None)
 
-    # Mentions always load instructions; selected skills can optionally load through view_skill.
+    # Explicit activation preloads view_skill; lazy selection leaves loading to the model.
     chat_context = metadata.get('chat_context') or {}
     metadata['chat_context'] = chat_context
     skill_versions = chat_context.setdefault('skill_versions', {})
     mentioned_skill_ids = set(chat_context.get('mentioned_skill_ids') or []) | extract_skill_ids_from_messages(
-        form_data.get('messages', [])
+        [message for message in form_data.get('messages', []) if message.get('role') == 'user']
     )
     activated_skill_ids = set(form_data.pop('skill_ids', None) or []) | mentioned_skill_ids
     skill_ids = sorted(activated_skill_ids | set(model.get('info', {}).get('meta', {}).get('skillIds', [])))
@@ -2496,6 +2496,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     terminal_skills = []
 
     model_builtin_tools = model.get('info', {}).get('meta', {}).get('builtinTools') or {}
+    skill_tools_enabled = payload_tools is None and use_builtin_tools and model_builtin_tools.get('skills', True)
 
     if skill_ids or (use_builtin_tools and model_builtin_tools.get('skills', True)):
         from open_webui.models.skills import Skills as SkillsModel
@@ -2524,6 +2525,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         skill_manifest = ''
         for skill in available_skills:
+            if skill_tools_enabled:
+                skill_manifest += (
+                    f'<skill>\n<id>{skill.id}</id>\n<name>{skill.name}</name>\n'
+                    f'<description>{skill.description or ""}</description>\n</skill>\n'
+                )
+                continue
             if skill.id in activated_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
                 from open_webui.models.skills import get_skill_snapshot
 
@@ -2535,7 +2542,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         raise
                     continue
                 skill_versions[skill.id] = version_id
-                skill_tools_enabled = use_builtin_tools and model_builtin_tools.get('skills', True)
                 overview = await skill_overview(
                     snapshot['content'],
                     [f['path'] for f in snapshot['data']['files'] if f['path'] != 'SKILL.md'],
@@ -2577,8 +2583,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             terminal_skill_map = {skill['id']: skill for skill in listed_terminal_skills}
             terminal_skills = [skill for sid in terminal_skill_ids if (skill := terminal_skill_map.get(sid))]
 
-        for skill in terminal_skills:
+        for skill in sorted(terminal_skills, key=lambda skill: skill['id']):
             sid = skill['id']
+            if skill_tools_enabled:
+                skill_manifest += format_terminal_skill_manifest_entry(skill)
+                continue
             if sid in activated_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
                 skill_name = unquote(sid.removeprefix(terminal_skill_prefix))
                 loaded = await get_terminal_skill(
@@ -2956,6 +2965,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             raise Exception(f'{e}')
 
+    metadata.pop('initial_output', None)
+    if skill_tools_enabled and not metadata.get('assistant_message_id'):
+        initial_output = await preload_skills(
+            form_data['messages'], activated_skill_ids & resolved_skill_ids, metadata.get('tools', {}).get('view_skill')
+        )
+        if initial_output:
+            form_data['messages'].extend(convert_output_to_messages(initial_output, raw=True))
+            metadata['initial_output'] = initial_output
+
     form_data = normalize_messages_for_model(form_data)
 
     if compaction_messages is not None:
@@ -3000,6 +3018,51 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
 
     return form_data, metadata, events, False
+
+
+async def preload_skills(messages: list[dict], skill_ids: set[str], tool: dict | None) -> list[dict]:
+    """Record explicit activation as ordinary tool history for saved and temporary chats."""
+    if not tool or not skill_ids:
+        return []
+    completed = {
+        message.get('tool_call_id')
+        for message in messages
+        if message.get('role') == 'tool' and not _is_tool_result_error(message.get('content', ''))
+    }
+    loaded = set()
+    for message in messages:
+        for call in message.get('tool_calls') or []:
+            function = call.get('function') or {}
+            if function.get('name') == 'view_skill' and call.get('id') in completed:
+                try:
+                    loaded.add(JSONCodec.loads(function.get('arguments', '{}')).get('id'))
+                except (ValueError, TypeError, AttributeError):
+                    pass
+    output = []
+    for skill_id in sorted(skill_ids - loaded):
+        result = await tool['callable'](id=skill_id)
+        call_id = output_id('fc')
+        status = 'failed' if _is_tool_result_error(result) else 'completed'
+        output.extend(
+            [
+                {
+                    'type': 'function_call',
+                    'id': call_id,
+                    'call_id': call_id,
+                    'name': 'view_skill',
+                    'arguments': JSONCodec.dumps({'id': skill_id}),
+                    'status': status,
+                },
+                {
+                    'type': 'function_call_output',
+                    'id': output_id('fco'),
+                    'call_id': call_id,
+                    'output': [{'type': 'input_text', 'text': result}],
+                    'status': status,
+                },
+            ]
+        )
+    return output
 
 
 async def get_event_emitter_and_caller(metadata):
@@ -4037,6 +4100,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                         response_output = previous + response_output
                         content = get_output_text(response_output)
 
+                    response_output = [*(metadata.get('initial_output') or []), *response_output]
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -4463,7 +4527,7 @@ async def streaming_chat_response_handler(response, ctx):
 
             # Initialize output: use existing from message if continuing, else create new
             existing_output = message.get('output') if message else None
-            prior_output = []
+            prior_output = metadata.get('initial_output') or []
             if existing_output and metadata.get('assistant_message_id'):
                 prior_output = list(existing_output)
                 if (
