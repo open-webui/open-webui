@@ -80,6 +80,7 @@ export type ListeningPort = {
 };
 
 export type TerminalFeatures = {
+	agents?: boolean;
 	terminal?: boolean;
 	browser?: boolean;
 	desktop?: boolean;

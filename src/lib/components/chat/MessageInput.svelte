@@ -913,19 +913,12 @@
 		modelCapabilitiesById
 	);
 
-	let terminalCapableModels = [];
-	$: terminalCapableModels = getCapableModelIds(
-		selectedModelIds,
-		'terminal',
-		modelCapabilitiesById
-	);
 	$: hasDirectToolServerAccess =
 		$config?.features?.enable_direct_integrations &&
 		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
 	$: showTerminalSelector =
 		terminalSelectionEnabled &&
 		$config?.features?.enable_tool_servers &&
-		terminalCapableModels.length > 0 &&
 		(($terminalServers ?? []).some((t) => t.id) ||
 			(hasDirectToolServerAccess &&
 				(($terminalServers ?? []).some((t) => !t.id) ||
@@ -993,17 +986,6 @@
 	// Disable code interpreter when terminal is active (mutually exclusive)
 	$: if ($selectedTerminalId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
-	}
-
-	// Clear selected terminal when model doesn't support terminal
-	$: if (
-		terminalSelectionEnabled &&
-		inputId === 'chat-input' &&
-		$selectedTerminalId &&
-		selectedModelIds.length > 0 &&
-		terminalCapableModels.length === 0
-	) {
-		selectedTerminalId.set(null);
 	}
 
 	const scrollToBottom = () => {

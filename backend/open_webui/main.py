@@ -829,6 +829,7 @@ app.include_router(configs.router, prefix='/api/v1/configs', tags=['configs'])
 
 from open_webui.env import UVICORN_WORKERS, REDIS_URL
 from open_webui.routers import tether
+
 app.include_router(tether.router, prefix='/api/v1/tether', tags=['tether'])
 app.include_router(auths.router, prefix='/api/v1/auths', tags=['auths'])
 app.include_router(mfa.router, prefix='/api/v1/auths/mfa', tags=['auths'])
@@ -873,7 +874,13 @@ if ENABLE_SCIM:
 
 @app.get('/api/models')
 @app.get('/api/v1/models')  # Experimental: Compatibility with OpenAI API
-async def get_models(request: Request, refresh: bool = False, user=Depends(get_verified_user)):
+async def get_models(
+    request: Request,
+    refresh: bool = False,
+    terminal_id: str | None = None,
+    chat_id: str | None = None,
+    user=Depends(get_verified_user),
+):
     all_models = await get_all_models(request, refresh=refresh, user=user)
 
     # Keep filter pipelines off the model menu; they work backstage.
@@ -917,6 +924,13 @@ async def get_models(request: Request, refresh: bool = False, user=Depends(get_v
         log.debug(
             f'/api/models returned filtered models accessible to the user: {JSONCodec.dumps([model.get("id") for model in models])}'
         )
+    if terminal_id:
+        from open_webui.utils.agents.discovery import get_models as get_agent_models
+
+        try:
+            models.extend(await get_agent_models(request, user, terminal_id, chat_id))
+        except Exception as exc:
+            log.debug('Agent discovery unavailable: %s', type(exc).__name__)
     return {'data': models}
 
 
@@ -1097,16 +1111,26 @@ async def chat_completion(
     model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
 
+    agent_model = None
+    if isinstance(model_id, str) and model_id.startswith('agent:'):
+        from open_webui.utils.agents.discovery import get_models as get_agent_models
+
+        candidates = await get_agent_models(request, user, form_data.get('terminal_id'), form_data.get('chat_id'))
+        agent_model = next((item for item in candidates if item['id'] == model_id), None)
+        if agent_model is None:
+            raise HTTPException(400, 'Agent model is unavailable in the selected terminal')
+        model_item = {}  # Never trust client-supplied model metadata or direct-provider flags.
+
     metadata = {}
     try:
         model_info = None
         fallback_model = None
         missing_base_model = False
         if not model_item.get('direct', False):
-            if model_id not in request.app.state.MODELS:
+            if agent_model is None and model_id not in request.app.state.MODELS:
                 raise Exception('Model not found')
 
-            model = request.app.state.MODELS[model_id]
+            model = agent_model or request.app.state.MODELS[model_id]
             model_info = await Models.get_model_by_id(model_id)
             missing_base_model = bool(
                 model_info and model_info.base_model_id and model_info.base_model_id not in request.app.state.MODELS
@@ -1125,7 +1149,11 @@ async def chat_completion(
                     fallback_model = request.app.state.MODELS.get(fallback_model_id)
 
             # Check if user has access to the model
-            if not BYPASS_MODEL_ACCESS_CONTROL and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL):
+            if (
+                agent_model is None
+                and not BYPASS_MODEL_ACCESS_CONTROL
+                and (user.role != 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL)
+            ):
                 try:
                     access_model_info = (
                         model_info.model_copy(update={'base_model_id': None})
@@ -1214,6 +1242,9 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
+        if any(str(entry.get('model_id', '')).startswith('agent:') for entry in message_ids):
+            if agent_model is None or len(message_ids) != 1 or message_ids[0]['model_id'] != model_id:
+                raise HTTPException(400, 'Use one agent at a time in a conversation')
         chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
         existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
@@ -1314,7 +1345,7 @@ async def chat_completion(
                 raise HTTPException(status_code=404, detail='Temporary chat expired or unavailable')
 
         initial_title_generation = None
-        if is_new_chat and tasks and TASKS.TITLE_GENERATION in tasks:
+        if is_new_chat and not agent_model and tasks and TASKS.TITLE_GENERATION in tasks:
             initial_title_generation = tasks.pop(TASKS.TITLE_GENERATION)
 
         if metadata.get('chat_id') and user:
@@ -1618,6 +1649,10 @@ async def chat_completion(
                         model_controls.get(form_data['model'], {}),
                     )
                 ctx = None
+                if model.get('agent'):
+                    from open_webui.utils.agents.runner import run as run_agent
+
+                    return await run_agent(request, form_data, user, metadata, model)
                 # Saved chats load the message after approved tool calls run, so their results are kept
                 if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
                     ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])

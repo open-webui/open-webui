@@ -130,18 +130,12 @@ def terminal_chat_uploads(connection: dict) -> str:
     return value if value in TERMINAL_CHAT_UPLOAD_MODES else 'default'
 
 
-async def get_terminal_json(
-    request, user, metadata: dict, path: str, extra_params: dict | None = None, *, file: dict | None = None
-):
-    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
-    metadata = metadata or {}
+async def resolve_terminal_connection(request, user, metadata):
+    """Resolve an authorized backend connection and trusted runtime headers."""
     terminal_id = metadata.get('terminal_id')
     if not ENABLE_TOOL_SERVERS or not terminal_id:
         return None
-
-    import aiohttp
-    from open_webui.utils.tether import get_terminal_connections, get_terminal_client
-    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    from open_webui.utils.tether import get_terminal_connections
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
     from open_webui.utils.access_control import has_connection_access
@@ -179,13 +173,33 @@ async def get_terminal_json(
             headers['X-Session-Id'] = metadata['chat_id']
         if context_id:
             headers[TERMINAL_CONTEXT_HEADER] = context_id
+        return connection, headers, cookies
+    return None
+
+
+async def get_terminal_json(
+    request, user, metadata: dict, path: str, extra_params: dict | None = None, *, file: dict | None = None
+):
+    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
+    metadata = metadata or {}
+    terminal_id = metadata.get('terminal_id')
+    if not ENABLE_TOOL_SERVERS or not terminal_id:
+        return None
+
+    import aiohttp
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    from open_webui.utils.tether import get_terminal_client
+
+    resolved = await resolve_terminal_connection(request, user, metadata)
+    if resolved:
+        connection, headers, cookies = resolved
         body = None
         if file:
             from open_webui.models.files import Files
             from open_webui.storage.provider import Storage
 
             source = await Files.get_file_by_id(file['id'])
-            if not source or source.user_id != user_model.id or not source.path:
+            if not source or source.user_id != headers['X-User-Id'] or not source.path:
                 return None
             local_path = await asyncio.to_thread(Storage.get_file, source.path)
             body = aiohttp.FormData()
@@ -198,7 +212,12 @@ async def get_terminal_json(
             headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
         try:
-            async with get_terminal_client(get_terminal_server_url(connection), user_model.id, timeout=timeout, trust_env=True) as session:
+            async with get_terminal_client(
+                get_terminal_server_url(connection),
+                user.id if hasattr(user, 'id') else user['id'],
+                timeout=timeout,
+                trust_env=True,
+            ) as session:
                 async with session.request(
                     'POST' if file else 'GET',
                     f'{get_terminal_server_url(connection)}{path}',

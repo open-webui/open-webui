@@ -20,6 +20,7 @@
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
+	import { getModels } from '$lib/apis';
 	import equal from 'fast-deep-equal';
 
 	import {
@@ -247,6 +248,7 @@
 	let contextUsage = null;
 
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
+		if (modelIds.some((id) => id.startsWith('agent:'))) return modelIds;
 		const selected = resolveDefaultModelIds(
 			$models,
 			modelIds,
@@ -1082,11 +1084,30 @@
 	}
 
 	let lastTerminalSkillSelector: string | null = null;
+	let agentDiscovery = 0;
+	const refreshAgentModels = async () => {
+		const generation = ++agentDiscovery;
+		try {
+			const available = await getModels(
+				localStorage.token,
+				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
+			);
+			if (generation === agentDiscovery) {
+				models.set(available);
+				selectedModels = selectedModels.map((id) =>
+					id.startsWith('agent:') && !available.some((model) => model.id === id) ? '' : id
+				);
+			}
+		} catch (error) {
+			console.error('Agent model discovery failed', error);
+		}
+	};
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
 		terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
 		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
+		void refreshAgentModels();
 	}
 
 	let defaultsModelIds: string[] = [];
@@ -2742,8 +2763,8 @@
 			}
 
 			// Unavailable models filtering
-			selectedModels = selectedModels.filter((modelId) =>
-				$models.map((m) => m.id).includes(modelId)
+			selectedModels = selectedModels.filter(
+				(modelId) => modelId.startsWith('agent:') || $models.map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if ($selectedFolder) {
@@ -2924,7 +2945,7 @@
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+			modelId.startsWith('agent:') || $models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
 		await tick();
@@ -2992,11 +3013,18 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				if (selectedModels[0]?.startsWith('agent:')) {
+					const terminalId = decodeURIComponent(selectedModels[0].split(':')[1]);
+					if (isTerminalAvailable(terminalId)) {
+						selectedTerminalId.set(terminalId);
+						await refreshAgentModels();
+					}
+				}
 
 				// An empty model list is not evidence that the chat's models are gone.
 				if ($models.length > 0) {
-					selectedModels = selectedModels.filter((modelId) =>
-						$models.map((m) => m.id).includes(modelId)
+					selectedModels = selectedModels.filter(
+						(modelId) => modelId.startsWith('agent:') || $models.map((m) => m.id).includes(modelId)
 					);
 				}
 
@@ -3950,7 +3978,7 @@
 			return { status: 'rejected' };
 
 		const _selectedModels = selectedModels.map((modelId) =>
-			$models.map((m) => m.id).includes(modelId) ? modelId : ''
+			modelId.startsWith('agent:') || $models.map((m) => m.id).includes(modelId) ? modelId : ''
 		);
 
 		if (!equal(selectedModels, _selectedModels)) {
