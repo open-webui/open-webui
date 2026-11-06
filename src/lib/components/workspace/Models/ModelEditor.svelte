@@ -94,6 +94,7 @@
 	let commitMessage = '';
 	let savedDraft = '';
 	let defaultMeta: Record<string, any> = {};
+	let defaultFunctionCalling: string | null = null;
 	let allowNavigation = false;
 	let showDiscard = false;
 	let afterDiscard: (() => void) | null = null;
@@ -784,6 +785,7 @@
 		// reflects the actual defaults rather than hardcoded values
 		const modelsConfig = await getModelsDefaults(localStorage.token).catch(() => null);
 		defaultMeta = modelsConfig?.DEFAULT_MODEL_METADATA ?? {};
+		defaultFunctionCalling = modelsConfig?.DEFAULT_FUNCTION_CALLING ?? null;
 
 		// Use admin defaults as base, falling back to hardcoded defaults
 		capabilities = { ...DEFAULT_CAPABILITIES, ...(defaultMeta.capabilities ?? {}) };
@@ -1723,6 +1725,7 @@
 									<div class="space-y-0.5">
 										<Capabilities
 											bind:capabilities
+											functionCalling={params.function_calling ?? defaultFunctionCalling}
 											bind:defaultFeatureIds
 											bind:builtinTools
 											disabled={readOnly}

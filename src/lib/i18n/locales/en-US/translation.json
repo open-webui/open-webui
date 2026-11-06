@@ -3359,7 +3359,7 @@
 	"settings.admin.models.capabilities.citations.label": "Citations",
 	"settings.admin.models.capabilities.codeInterpreter.description": "Model can execute code and perform calculations",
 	"settings.admin.models.capabilities.codeInterpreter.label": "Code Interpreter",
-	"settings.admin.models.capabilities.fileContext.description": "Inject file content into conversation context",
+	"settings.admin.models.capabilities.fileContext.description": "Automatically inject file content into the conversation. Defaults to off in native mode so the model reads files through tools, and on in legacy mode.",
 	"settings.admin.models.capabilities.fileContext.label": "File Context",
 	"settings.admin.models.capabilities.fileUpload.description": "Model accepts file inputs",
 	"settings.admin.models.capabilities.fileUpload.label": "File Upload",

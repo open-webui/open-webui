@@ -769,6 +769,7 @@ class ModelsConfigForm(BaseModel):
 async def get_models_defaults(request: Request, user=Depends(get_verified_user)):
     return {
         'DEFAULT_MODEL_METADATA': await Config.get('models.default_metadata'),
+        'DEFAULT_FUNCTION_CALLING': (await Config.get('models.default_params') or {}).get('function_calling'),
     }
 
 

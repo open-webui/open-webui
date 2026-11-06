@@ -585,6 +585,12 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
     return tools_dict
 
 
+def is_file_context_enabled(model: dict, metadata: dict) -> bool:
+    return (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
+        'file_context', metadata.get('params', {}).get('function_calling') == 'legacy'
+    )
+
+
 def get_attached_knowledge(model: dict, metadata: dict) -> list[dict]:
     model_meta = model.get('info', {}).get('meta', {})
     knowledge = []
@@ -603,8 +609,7 @@ def get_attached_knowledge(model: dict, metadata: dict) -> list[dict]:
             knowledge.append({**item, 'source': source})
             seen.add(key)
 
-    file_context_enabled = (model_meta.get('capabilities') or {}).get('file_context', True)
-    if not file_context_enabled:
+    if not is_file_context_enabled(model, metadata):
         for item in metadata.get('files') or []:
             if not isinstance(item, dict) or item.get('type') not in ('collection', 'note'):
                 continue
@@ -736,7 +741,7 @@ async def get_builtin_tools(
     if (
         is_builtin_tool_enabled('files')
         and get_model_capability('file_upload')
-        and not get_model_capability('file_context')
+        and not is_file_context_enabled(model, metadata)
         and has_chat_files
         and await has_user_chat_permission('file_upload')
     ):
