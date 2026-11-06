@@ -80,6 +80,7 @@
 		user_id?: string;
 		id: string;
 		model: string;
+		modelName?: string;
 		content: string;
 		output?: OutputItem[];
 		contextSummary?: string;
@@ -197,7 +198,9 @@
 	let showDeleteConfirm = false;
 
 	let model = null;
-	$: localizedModelName = model ? resolveLocalizedModelName(model, $i18n.language) : message.model;
+	$: localizedModelName = model
+		? resolveLocalizedModelName(model, $i18n.language)
+		: message.modelName || message.model;
 	$: model = $models.find((m) => m.id === message.model);
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
