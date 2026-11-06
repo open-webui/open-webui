@@ -4332,6 +4332,8 @@
 	"Uses the proposed revision as your prompt.": "",
 	"Using default prompt suggestions": "Using default prompt suggestions",
 	"Using Entire Document": "",
+	"Full text is always enabled by your administrator.": "",
+	"This attachment fits within the full text threshold, so its entire text is included automatically.": "",
 	"Using Focused Retrieval": "",
 	"Using the default arena model with all models. Click the plus button to add custom models.": "",
 	"Value": "",

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { config } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -319,6 +320,9 @@
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== '')
 		});
+		if (res) {
+			config.set(await getBackendConfig());
+		}
 		dispatch('save');
 	};
 

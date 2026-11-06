@@ -377,6 +377,13 @@ type Document = {
 };
 
 type Config = {
+	file?: {
+		max_size?: number | null;
+		max_count?: number | null;
+		full_context?: boolean;
+		full_text_char_threshold?: number;
+		image_compression?: { width?: number | null; height?: number | null };
+	};
 	metadata?: {
 		auth_logo_position?: 'center' | 'top-right';
 		login_footer?: string;
