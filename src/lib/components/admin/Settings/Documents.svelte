@@ -1361,33 +1361,32 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.documents.sections.retrieval.title')}>
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
+						description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
+						forId="full-text-char-threshold"
+					>
+						<input
+							id="full-text-char-threshold"
+							class={inputClass}
+							type="number"
+							bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
+							disabled={RAGConfig.RAG_FULL_CONTEXT}
+							min="0"
+							step="1"
+							required
+						/>
+					</AdminSettingField>
+
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.documents.fullContextMode.label')}
-						description={RAGConfig.RAG_FULL_CONTEXT
-							? $i18n.t('settings.admin.documents.fullContextMode.description')
-							: $i18n.t('Use segmented retrieval for focused context.')}
+						description={$i18n.t('settings.admin.documents.fullContextMode.description')}
 						let:labelId
 					>
 						<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					{#if !RAGConfig.RAG_FULL_CONTEXT}
-						<AdminSettingField
-							label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
-							description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
-							forId="full-text-char-threshold"
-						>
-							<input
-								id="full-text-char-threshold"
-								class={inputClass}
-								type="number"
-								bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
-								min="0"
-								step="1"
-								required
-							/>
-						</AdminSettingField>
-
 						<AdminSettingRow
 							label={$i18n.t('settings.admin.documents.hybridSearch.label')}
 							description={$i18n.t('settings.admin.documents.hybridSearch.description')}
