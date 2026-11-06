@@ -1,10 +1,9 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import type { GitStatus } from '$lib/apis/terminal/git';
-	let gitStatus: GitStatus | null = null;
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
-	let gitDiffMode: 'unified' | 'split' = 'unified';
-	let gitHideWhitespace = false;
+	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
+	let fileGitHideWhitespace: Record<string, boolean> = {};
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import Sortable from 'sortablejs';
 	import { beforeNavigate, goto } from '$app/navigation';
@@ -226,17 +225,6 @@
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
 	$: terminalContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
-	// Resolve before reactive Files-tab creation, which can run later in the same update.
-	$: gitConnection =
-		mounted &&
-		$config?.features?.enable_tool_servers &&
-		(contextTab?.connection ??
-			resolveTerminalConnection(
-				contextTab?.terminalId ?? $selectedTerminalId,
-				$terminalServers ?? [],
-				directTerminals,
-				localStorage.token ?? ''
-			));
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -816,6 +804,8 @@
 			dirtyFiles = {};
 			fileContexts = {};
 			fileGitStatuses = {};
+			fileGitDiffModes = {};
+			fileGitHideWhitespace = {};
 			commentTarget = {};
 		}
 		tabsChatId = chatId;
@@ -1238,29 +1228,21 @@
 						}}
 					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
-					{@const fileConnection = fullWidth
-						? mounted
-							? resolveTerminalConnection(
-									tab.terminalId,
-									$terminalServers ?? [],
-									directTerminals,
-									localStorage.token ?? ''
-								)
-							: null
-						: gitConnection && gitConnection.selector === tab.terminalId
-							? gitConnection
-							: null}
+					{@const fileConnection = mounted
+						? resolveTerminalConnection(
+								tab.terminalId,
+								$terminalServers ?? [],
+								directTerminals,
+								localStorage.token ?? ''
+							)
+						: null}
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
 							<FileNav
-								gitStatus={fullWidth
-									? (fileGitStatuses[tab.terminalId] ?? null)
-									: fileConnection
-										? gitStatus
-										: null}
+								gitStatus={fileGitStatuses[tab.terminalId] ?? null}
 								gitConnection={fileConnection}
-								{gitDiffMode}
-								{gitHideWhitespace}
+								gitDiffMode={fileGitDiffModes[tab.terminalId] ?? 'unified'}
+								gitHideWhitespace={fileGitHideWhitespace[tab.terminalId] ?? false}
 								bind:this={fileViews[tab.id]}
 								bind:dirty={dirtyFiles[tab.id]}
 								terminalId={tab.terminalId}
@@ -1277,11 +1259,11 @@
 								bind:terminalContext={fileContexts[tab.id]}
 							/>
 						</div>
-						{#if fullWidth && tab.kind === 'files' && fileConnection}
+						{#if tab.kind === 'files' && fileConnection}
 							<GitBar
 								bind:status={fileGitStatuses[tab.terminalId]}
-								bind:diffMode={gitDiffMode}
-								bind:hideWhitespace={gitHideWhitespace}
+								bind:diffMode={fileGitDiffModes[tab.terminalId]}
+								bind:hideWhitespace={fileGitHideWhitespace[tab.terminalId]}
 								connection={fileConnection}
 								{chatId}
 								directory={fileContexts[tab.id]?.currentDirectory ?? tab.path ?? '.'}
@@ -1301,21 +1283,6 @@
 			>
 				{$i18n.t('Open a tab using the + menu.')}
 			</div>{/if}
-	</div>
-	<div class="min-w-0 shrink-0 pointer-events-auto">
-		{#if !fullWidth && gitConnection && tabs.tabs.length}
-			<GitBar
-				bind:status={gitStatus}
-				bind:diffMode={gitDiffMode}
-				bind:hideWhitespace={gitHideWhitespace}
-				connection={gitConnection}
-				{chatId}
-				directory={terminalContext?.currentDirectory ?? '.'}
-				active={!!$showTabs}
-				onOpenFile={(path) => openFile(path, gitConnection.selector)}
-				onOpenDirectory={(path) => openFiles(gitConnection.selector, path)}
-			/>
-		{/if}
 	</div>
 </div>
 
