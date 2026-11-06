@@ -8,7 +8,14 @@ from open_webui.utils.terminals import get_terminal_json
 def model_controls(model):
     controls = {}
     for key, label, values, value_key, label_key, default_key in (
-        ('reasoning_effort', 'Reasoning effort', 'supportedReasoningEfforts', 'reasoningEffort', 'reasoningEffort', 'defaultReasoningEffort'),
+        (
+            'reasoning_effort',
+            'Reasoning effort',
+            'supportedReasoningEfforts',
+            'reasoningEffort',
+            'reasoningEffort',
+            'defaultReasoningEffort',
+        ),
         ('service_tier', 'Service tier', 'serviceTiers', 'id', 'name', 'defaultServiceTier'),
     ):
         options = {
@@ -55,7 +62,7 @@ async def get_models(request, user, terminal_id, chat_id=None, *, provider=None)
                         'code_interpreter': False,
                         'builtin_tools': False,
                     }
-                }
+                },
             },
         }
         for agent in catalog.get('agents', [])
