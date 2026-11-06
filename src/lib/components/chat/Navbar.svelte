@@ -420,7 +420,7 @@
 				>
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner
-							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
+							className="px-[11px] rounded-lg"
 							banner={{
 								type: 'info',
 								title: $i18n.t('Trial License'),
@@ -433,7 +433,7 @@
 
 					{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
 						<Banner
-							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
+							className="px-[11px] rounded-lg"
 							banner={{
 								type: 'error',
 								title: $i18n.t('License Error'),
@@ -446,7 +446,7 @@
 
 					{#each $banners.filter((b) => ![...getDismissedBannerIds(), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
 						<Banner
-							className={tabbed ? 'px-[11px] rounded-lg' : undefined}
+							className="px-[11px] rounded-lg"
 							{banner}
 							on:dismiss={(e) => {
 								const bannerId = e.detail;
