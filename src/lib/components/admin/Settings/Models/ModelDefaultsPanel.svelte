@@ -222,9 +222,7 @@
 					{/if}
 				</div>
 
-				<div class="py-1.5">
-					<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
-				</div>
+				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 
 				<div>
 					<button
