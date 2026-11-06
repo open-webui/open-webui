@@ -17,6 +17,7 @@ import aiohttp
 import mimeparse
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.tool_calling import prepare_tool_call
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
@@ -341,10 +342,13 @@ def get_provider_function(item: dict) -> dict:
     function = item.get('provider_function')
     if not isinstance(function, dict):
         function = item
-    arguments = function.get('arguments', '{}')
+    # Repair only the provider copy; failed calls and their original arguments remain intact.
+    function = dict(function)
+    if error := prepare_tool_call(function):
+        function['arguments'] = JSONCodec.dumps({'error': error})
     return {
         'name': function.get('name', ''),
-        'arguments': arguments if isinstance(arguments, str) else JSONCodec.dumps(arguments),
+        'arguments': function['arguments'],
     }
 
 

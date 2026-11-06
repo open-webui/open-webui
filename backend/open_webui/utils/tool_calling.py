@@ -37,6 +37,12 @@ def parse_arguments(raw):
                 raw = ast.literal_eval(text)
             except (ValueError, SyntaxError, RecursionError, MemoryError) as exc:
                 raise ValueError('Tool arguments must be a complete JSON object.') from exc
+        if isinstance(raw, str):
+            # Some providers encode the entire argument object twice. Unwrap only one extra layer.
+            try:
+                raw = json.loads(raw)
+            except (ValueError, RecursionError) as exc:
+                raise ValueError('Tool arguments must be a complete JSON object.') from exc
     if not isinstance(raw, dict):
         raise ValueError('Tool arguments must be a JSON object.')
     _check_json_value(raw)
@@ -157,10 +163,10 @@ def recover_tool_calls(text, allowed_names):
             return []
         try:
             if match[1] is not None:
-                data = json.loads(match[1])
+                data = parse_arguments(match[1])
                 function = data.get('function', data)
                 name = function['name']
-                arguments = function.get('arguments', function.get('parameters', {}))
+                arguments = function.get('arguments', function.get('parameters', function.get('args', {})))
             else:
                 name, body = match[2], match[3]
                 arguments, end = {}, 0
