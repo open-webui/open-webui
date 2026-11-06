@@ -472,7 +472,7 @@
 						{comment.meta.anchor.quote}
 					</div>
 				{/if}
-				<div class="mt-1 text-[0.8125rem] text-gray-600 dark:text-gray-300 break-words">
+				<div class="mt-2 text-[0.8125rem] text-gray-600 dark:text-gray-300 break-words">
 					<Markdown
 						id={`comment-preview-${comment.id}`}
 						content={comment.content}
