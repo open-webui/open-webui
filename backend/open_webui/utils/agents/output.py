@@ -9,13 +9,15 @@ from uuid import uuid4
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
 from open_webui.utils.auth import create_token
+from open_webui.utils.tool_permissions import requires_tool_approval
 
 
 class Output:
     """Use WebUI's persisted output cards; provider runners retain native item data."""
 
-    def __init__(self, metadata, user, check_connection):
+    def __init__(self, metadata, user, check_connection, form_data):
         self.metadata, self.user = metadata, user
+        self.form_data = form_data
         self.check_connection = check_connection
         self.items = []
         self.state = {}
@@ -136,19 +138,38 @@ class Output:
             'status': 'pending',
             'native': native,
         }
+        resolution = None
+        # Questions need an answer even when tool execution has Full access.
+        if name != 'ask_user' and not await requires_tool_approval(
+            self.form_data,
+            self.metadata,
+            item,
+            {
+                'type': 'agent',
+                'tool_id': f'agent:{self.state["provider"]}:{name}',
+                'spec': {
+                    'name': name,
+                    'description': f'Native {self.state["provider"]} agent tool in {self.state["cwd"]}',
+                },
+            },
+            arguments,
+        ):
+            resolution = {'action': 'approve'}
         self.items.append(item)
-        await self.flush(force=True, persist=True)
+        if resolution is None:
+            await self.flush(force=True, persist=True)
         deadline = time.monotonic() + timeout if timeout is not None else None
         # Persisted resolutions work across workers and survive browser refreshes.
         while True:
             self.check_connection()
-            message = await Chats.get_message_by_id_and_message_id(
-                self.metadata['chat_id'], self.metadata['message_id']
-            )
-            if not message:
-                raise ValueError('Agent conversation was removed')
-            saved = next((i for i in message.get('output', []) if i.get('call_id') == call_id), {})
-            resolution = saved.get('agent_resolution')
+            if resolution is None:
+                message = await Chats.get_message_by_id_and_message_id(
+                    self.metadata['chat_id'], self.metadata['message_id']
+                )
+                if not message:
+                    raise ValueError('Agent conversation was removed')
+                saved = next((i for i in message.get('output', []) if i.get('call_id') == call_id), {})
+                resolution = saved.get('agent_resolution')
             if not resolution and deadline is not None and time.monotonic() >= deadline:
                 resolution = {'action': 'reject', 'timed_out': True}
             if resolution:

@@ -33,7 +33,7 @@ async def run(request, form_data, user, metadata, model):
         raise ValueError('Unsupported terminal agent')
     metadata['terminal_id'] = agent['terminal_id']
     transport = await TerminalTransport.resolve(request, user, metadata)
-    output = Output(metadata, user, transport.raise_if_failed)
+    output = Output(metadata, user, transport.raise_if_failed, form_data)
     output.state = {**agent}
     previous = None
     parent = (metadata.get('user_message') or {}).get('parentId')
