@@ -1406,11 +1406,16 @@
 		}
 	};
 
-	const isComposerDrop = (event: DragEvent) =>
-		event.target instanceof Element &&
-		event.target.closest('[data-composer-id]')?.getAttribute('data-composer-id') === inputId;
+	const isAttachmentDrop = (event: DragEvent) => {
+		if (!(event.target instanceof Element)) return false;
+		const composer = event.target.closest('[data-composer-id]');
+		if (composer) return composer.getAttribute('data-composer-id') === inputId;
+		// Files can land anywhere in this chat's dropzone. Sidebar items still target
+		// the composer so dragging a chat into a split panel keeps working.
+		return event.dataTransfer?.types.includes('Files') ?? false;
+	};
 	const onDragOver = (e: DragEvent) => {
-		if (!isComposerDrop(e)) {
+		if (!isAttachmentDrop(e)) {
 			dragged = false;
 			return;
 		}
@@ -1437,7 +1442,7 @@
 	};
 
 	const onDrop = async (e: DragEvent) => {
-		if (!isComposerDrop(e)) return;
+		if (!isAttachmentDrop(e)) return;
 		e.preventDefault();
 		console.log(e);
 

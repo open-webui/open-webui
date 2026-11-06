@@ -140,6 +140,7 @@
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Modal from '../common/Modal.svelte';
@@ -5327,6 +5328,7 @@
 						<Spinner className="size-5" />
 					</div>
 				{:else}
+					<FilesOverlay show={dragged} />
 					{#if embedded}
 						<div
 							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
