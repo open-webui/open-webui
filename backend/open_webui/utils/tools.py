@@ -586,8 +586,10 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
 
 
 def is_file_context_enabled(model: dict, metadata: dict) -> bool:
+    # Calls without a session get no file tools, so they need the file text.
     return (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get(
-        'file_context', metadata.get('params', {}).get('function_calling') == 'legacy'
+        'file_context',
+        metadata.get('params', {}).get('function_calling') == 'legacy' or not metadata.get('session_id'),
     )
 
 
