@@ -1287,7 +1287,7 @@
 {#snippet tabBar(group: PanelGroup)}
 	<div
 		data-panel-tab-bar
-		class="flex h-9 items-center px-2 {fullWidth &&
+		class="flex h-9 items-center px-1.5 {fullWidth &&
 		positions.groups[group.id]?.top === 0 &&
 		positions.groups[group.id].left + positions.groups[group.id].width > 0.999
 			? 'pr-10'
