@@ -3002,7 +3002,7 @@
 	"settings.admin.documents.fullContextMode.description": "Include complete documents regardless of the full text threshold.",
 	"settings.admin.documents.fullContextMode.label": "Always Use Full Text",
 	"settings.admin.documents.fullTextCharThreshold.label": "Full Text Threshold (Characters)",
-	"settings.admin.documents.fullTextCharThreshold.description": "Include the complete extracted text of each uploaded file up to this character count. Only larger attachments switch to retrieval; text is never truncated at this threshold. Knowledge-base attachments count their files together. Set to 0 to always use retrieval. Explicit full-context selections still take priority.",
+	"settings.admin.documents.fullTextCharThreshold.description": "Include the complete extracted text of each uploaded file up to this character count. Only larger files switch to retrieval; text is never truncated at this threshold. Set to 0 to always use retrieval. Explicit full-context selections still take priority.",
 	"settings.admin.documents.googleDrive.description": "Allow Google Drive as a document source.",
 	"settings.admin.documents.googleDrive.label": "Google Drive",
 	"settings.admin.documents.headers.description": "Additional JSON headers sent to the external document loader.",

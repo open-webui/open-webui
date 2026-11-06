@@ -1623,20 +1623,9 @@ async def get_sources_from_items(
                     extracted_collections.append(knowledge_base.id)
 
                 else:
-                    force_full_context = item.get('context') == 'full' or bypass_embedding_and_retrieval
-                    files = None
-                    documents = []
-                    if force_full_context or char_threshold > 0:
+                    if item.get('context') == 'full' or bypass_embedding_and_retrieval:
                         files = await Knowledges.get_files_by_id(knowledge_base.id)
                         documents = [(file.data or {}).get('content') or '' for file in files]
-                    # Missing extracted text must fall back to the index, not silently omit files.
-                    auto_full_context = (
-                        char_threshold > 0
-                        and bool(documents)
-                        and all(documents)
-                        and sum(len(content) for content in documents) <= char_threshold
-                    )
-                    if force_full_context or auto_full_context:
                         query_result = {
                             'documents': [documents],
                             'metadatas': [
@@ -1651,8 +1640,7 @@ async def get_sources_from_items(
                                 # Legacy KB: item.collection_names is client-supplied.
                                 # Validate against the KB's actual files to prevent
                                 # cross-tenant collection name substitution.
-                                if files is None:
-                                    files = await Knowledges.get_files_by_id(knowledge_base.id)
+                                files = await Knowledges.get_files_by_id(knowledge_base.id)
                                 owned_names = {f'file-{f.id}' for f in files}
                                 owned_names.add(knowledge_base.id)
                                 valid_names = [n for n in (item.get('collection_names') or []) if n in owned_names]
