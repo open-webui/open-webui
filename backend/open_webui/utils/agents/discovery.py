@@ -32,14 +32,16 @@ def model_controls(model):
     return controls
 
 
-async def get_models(request, user, terminal_id, chat_id=None, *, provider=None):
+async def get_models(request, user, terminal_id, chat_id=None, *, provider=None, cwd=None):
     if not terminal_id:
         return []
     metadata = {'terminal_id': terminal_id, 'chat_id': chat_id}
-    cwd = await get_terminal_json(request, user, metadata, '/files/cwd')
+    if not cwd:
+        directory = await get_terminal_json(request, user, metadata, '/files/cwd')
+        cwd = (directory or {}).get('cwd')
     params = {'provider': provider} if provider else {}
-    if cwd and cwd.get('cwd'):
-        params['cwd'] = cwd['cwd']
+    if cwd:
+        params['cwd'] = cwd
     path = '/agents' + ('?' + urlencode(params) if params else '')
     catalog = await get_terminal_json(request, user, metadata, path)
     if not catalog or catalog.get('protocol_version') != 1:

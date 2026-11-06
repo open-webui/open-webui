@@ -1143,7 +1143,8 @@
 			const defaultFeature = (feature: 'web_search' | 'image_generation' | 'code_interpreter') =>
 				featureAvailable(feature) &&
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
-			const terminalId = currentModels[0]?.info?.meta?.terminalId;
+			const folderTerminalId = !history.currentId ? $selectedFolder?.data?.terminal_id : null;
+			const terminalId = folderTerminalId || currentModels[0]?.info?.meta?.terminalId;
 			const defaults: Record<string, any> = {
 				selectedToolIds: [
 					...new Set(
@@ -1174,7 +1175,8 @@
 				terminalId:
 					terminalId &&
 					isTerminalAvailable(terminalId) &&
-					currentModels.every((model) => model.info?.meta?.terminalId === terminalId)
+					(folderTerminalId ||
+						currentModels.every((model) => model.info?.meta?.terminalId === terminalId))
 						? terminalId
 						: $selectedTerminalId
 			};
@@ -2000,8 +2002,13 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
-			// Folder default models apply to new chats only.
+			// Folder defaults apply to new chats only.
 			if (!history.currentId && folder) {
+				if (folder.data?.terminal_id) {
+					selectedTerminalId.set(folder.data.terminal_id);
+					await refreshAgentModels();
+					if (history.currentId || $selectedFolder?.id !== folder.id) return;
+				}
 				const folderModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
 				if (!equal(selectedModels, folderModels)) {
 					selectedModels = folderModels;
@@ -2770,6 +2777,10 @@
 		} else {
 			if ($selectedFolder) {
 				// Folder defaults are explicit; never inherit a previous chat's selection.
+				if ($selectedFolder.data?.terminal_id) {
+					selectedTerminalId.set($selectedFolder.data.terminal_id);
+					await refreshAgentModels();
+				}
 				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
 			} else {
 				if (sessionStorage.selectedModels) {
@@ -4554,7 +4565,11 @@
 						: $config?.features?.enable_tools
 				),
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
-				terminal_id: terminalEnabled && requestTerminalId ? requestTerminalId : undefined,
+				terminal_id: terminalEnabled && requestTerminalId ? requestTerminalId : null,
+				terminal_cwd:
+					!_chatId && terminalContext?.terminalId === requestTerminalId
+						? terminalContext.currentDirectory
+						: undefined,
 				tool_servers: $config?.features?.enable_tool_servers
 					? [
 							...($toolServers ?? []).filter(

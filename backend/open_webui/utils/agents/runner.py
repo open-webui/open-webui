@@ -53,7 +53,7 @@ async def run(request, form_data, user, metadata, model):
         ):
             raise ValueError('Agent history cannot be branched in place. Start a new chat instead.')
     # Browsing files must not move an existing agent conversation's workspace.
-    cwd = (previous or {}).get('cwd')
+    cwd = (previous or {}).get('cwd') or metadata.get('initial_terminal_cwd')
     if not cwd:
         directory = await get_terminal_json(request, user, metadata, '/files/cwd')
         cwd = (directory or {}).get('cwd')

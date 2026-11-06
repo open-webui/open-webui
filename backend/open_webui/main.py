@@ -879,6 +879,7 @@ async def get_models(
     refresh: bool = False,
     terminal_id: str | None = None,
     chat_id: str | None = None,
+    cwd: str | None = None,
     user=Depends(get_verified_user),
 ):
     all_models = await get_all_models(request, refresh=refresh, user=user)
@@ -928,7 +929,7 @@ async def get_models(
         from open_webui.utils.agents.discovery import get_models as get_agent_models
 
         try:
-            models.extend(await get_agent_models(request, user, terminal_id, chat_id))
+            models.extend(await get_agent_models(request, user, terminal_id, chat_id, cwd=cwd))
         except Exception as exc:
             log.debug('Agent discovery unavailable: %s', type(exc).__name__)
     return {'data': models}
@@ -1111,6 +1112,15 @@ async def chat_completion(
     model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
 
+    from open_webui.utils.terminals import get_folder_terminal_defaults, initialize_folder_terminal
+
+    folder_defaults = {}
+    requested_directory = form_data.pop('terminal_cwd', None)
+    if 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id'):
+        folder_defaults = await get_folder_terminal_defaults(user, form_data.get('folder_id'))
+        if 'terminal_id' not in form_data and folder_defaults.get('terminal_id'):
+            form_data['terminal_id'] = folder_defaults['terminal_id']
+
     agent_model = None
     if isinstance(model_id, str) and model_id.startswith('agent:'):
         from open_webui.utils.agents.discovery import get_models as get_agent_models
@@ -1119,7 +1129,9 @@ async def chat_completion(
         if len(parts) != 4:
             raise HTTPException(400, 'Invalid agent model')
         candidates = await get_agent_models(
-            request, user, form_data.get('terminal_id'), form_data.get('chat_id'), provider=parts[2]
+            request, user, form_data.get('terminal_id'), form_data.get('chat_id'), provider=parts[2],
+            cwd=(requested_directory or folder_defaults.get('working_directory'))
+            if form_data.get('terminal_id') == folder_defaults.get('terminal_id') else None,
         )
         agent_model = next((item for item in candidates if item['id'] == model_id), None)
         if agent_model is None:
@@ -1658,6 +1670,10 @@ async def chat_completion(
                         model_controls.get(form_data['model'], {}),
                     )
                 ctx = None
+                if is_new_chat:
+                    await initialize_folder_terminal(
+                        request, user, metadata, folder_defaults, form_data.get('terminal_id'), requested_directory
+                    )
                 if model.get('agent'):
                     from open_webui.utils.agents.runner import run as run_agent
 

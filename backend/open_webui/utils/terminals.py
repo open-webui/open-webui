@@ -178,7 +178,15 @@ async def resolve_terminal_connection(request, user, metadata):
 
 
 async def get_terminal_json(
-    request, user, metadata: dict, path: str, extra_params: dict | None = None, *, file: dict | None = None
+    request,
+    user,
+    metadata: dict,
+    path: str,
+    extra_params: dict | None = None,
+    *,
+    file: dict | None = None,
+    method: str = 'GET',
+    body: dict | None = None,
 ):
     """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
     metadata = metadata or {}
@@ -193,6 +201,7 @@ async def get_terminal_json(
     resolved = await resolve_terminal_connection(request, user, metadata)
     if resolved:
         connection, headers, cookies = resolved
+        json_body = body
         body = None
         if file:
             from open_webui.models.files import Files
@@ -219,11 +228,12 @@ async def get_terminal_json(
                 trust_env=True,
             ) as session:
                 async with session.request(
-                    'POST' if file else 'GET',
+                    'POST' if file else method,
                     f'{get_terminal_server_url(connection)}{path}',
                     headers=headers,
                     cookies=cookies,
                     data=body,
+                    json=None if file else json_body,
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                     allow_redirects=False,
                 ) as response:
@@ -249,6 +259,46 @@ async def get_terminal_json(
         )
         return result.get('data') if isinstance(result, dict) else None
     return None
+
+
+async def get_folder_terminal_defaults(user, folder_id):
+    if not folder_id:
+        return {}
+    from fastapi import HTTPException
+    from open_webui.models.folders import Folders
+    from open_webui.utils.access_control.folders import has_folder_access
+
+    folder = await Folders.get_folder_by_id(folder_id)
+    if not folder or not await has_folder_access(user.id, folder, 'write', None):
+        raise HTTPException(403, 'Folder is unavailable')
+    data = folder.data or {}
+    return {
+        'terminal_id': data.get('terminal_id'),
+        'working_directory': data.get('working_directory'),
+    }
+
+
+async def initialize_folder_terminal(request, user, metadata, defaults, terminal_id, directory=None):
+    if not terminal_id or terminal_id != defaults.get('terminal_id'):
+        return
+    path = directory or defaults.get('working_directory')
+    if not path:
+        return
+    from fastapi import HTTPException
+
+    if not isinstance(path, str):
+        raise HTTPException(400, 'Invalid folder working directory')
+    result = await get_terminal_json(
+        request,
+        user,
+        {**metadata, 'terminal_id': terminal_id},
+        '/files/cwd',
+        method='POST',
+        body={'path': path},
+    )
+    if not result or not result.get('cwd'):
+        raise HTTPException(400, 'Folder working directory is unavailable. Check the terminal connection and path.')
+    metadata['initial_terminal_cwd'] = result['cwd']
 
 
 async def filter_user_terminal_tools(request, user, tools: dict, metadata: dict, extra_params: dict):

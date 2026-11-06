@@ -15,6 +15,7 @@
 		settings,
 		showFileNavPath,
 		showFileNavDir,
+		selectedFolder,
 		selectedTerminalId
 	} from '$lib/stores';
 	import {
@@ -61,6 +62,10 @@
 	let savedPath = '/';
 	// savedPath is only a placeholder until a directory has loaded.
 	let savedPathLoaded = false;
+	$: folderDirectory =
+		!onSelectDirectory && !chatId && $selectedFolder?.data?.terminal_id === effectiveTerminalId
+			? $selectedFolder.data.working_directory
+			: null;
 	let savedFileRoot: TerminalFileRoot | null = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
@@ -78,6 +83,7 @@
 	export let terminalId: string | null = null;
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
+	export let onSelectDirectory: ((path: string) => void) | null = null;
 	export let manageFileRequests = true;
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
@@ -368,6 +374,7 @@
 	let showSearch = false;
 	let searchInput: HTMLInputElement;
 	const toggleSearch = async () => {
+		if (onSelectDirectory) return;
 		showSearch = !showSearch;
 		if (!showSearch) searchQuery = '';
 		await tick();
@@ -397,7 +404,9 @@
 		normalizePath(name).split('/').filter(Boolean).at(-1) ?? name.replace(/\/+$/, '');
 
 	const normalizeEntries = (items: FileEntry[]) =>
-		items.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
+		items
+			.filter((entry) => !onSelectDirectory || entry.type === 'directory')
+			.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
 
 	const asDirectoryPath = (path: string) => {
 		const normalized = normalizePath(path || '/');
@@ -677,6 +686,7 @@
 	let prevTerminalUrl = '';
 	let prevTerminalId = effectiveTerminalId;
 	let prevChatId = chatId;
+	let prevFolderDirectory: string | null = null;
 	let mounted = false;
 	let disposed = false;
 	$: {
@@ -687,6 +697,8 @@
 		const chatChanged = chatId !== prevChatId;
 		const oldChatId = prevChatId;
 		if (chatChanged) prevChatId = chatId;
+		const folderChanged = folderDirectory !== prevFolderDirectory;
+		prevFolderDirectory = folderDirectory;
 
 		const terminalChanged =
 			terminal && (terminal.url !== prevTerminalUrl || effectiveTerminalId !== prevTerminalId);
@@ -708,9 +720,11 @@
 				}
 				// Chat just got created (null → real ID): persist the current
 				// browsed path as the new session's cwd — don't re-fetch.
-				if (savedPathLoaded) setCwd(terminal.url, terminal.key, savedPath, chatId);
-			} else if (terminalChanged || chatChanged) {
-				++loadGeneration;
+				if (!onSelectDirectory && savedPathLoaded)
+					setCwd(terminal.url, terminal.key, savedPath, chatId);
+			} else if (terminalChanged || chatChanged || folderChanged) {
+				const generation = ++loadGeneration;
+				savedPathLoaded = false;
 				openedFile = null;
 				if (terminalContext) terminalContext = { ...terminalContext, file: null };
 				// Terminal switched, new chat started, or switched between
@@ -720,7 +734,10 @@
 				entries = [];
 				resetTreeState();
 				(async () => {
-					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+					const cwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					if (disposed || generation !== loadGeneration) return;
+					const serverPath = applyCwd(cwd);
+					savedPath = folderDirectory || serverPath;
 					loadDir(savedPath);
 				})();
 			}
@@ -1043,7 +1060,8 @@
 		loading = false;
 
 		// Set working directory on the terminal server (fire-and-forget)
-		if (!initialFile) setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
+		if (!onSelectDirectory && !initialFile)
+			setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -1869,7 +1887,15 @@
 		let handledDisplayFile = false;
 
 		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
-			if (!manageFileRequests || !active || !request || !selectedTerminal || comparison) return;
+			if (
+				onSelectDirectory ||
+				!manageFileRequests ||
+				!active ||
+				!request ||
+				!selectedTerminal ||
+				comparison
+			)
+				return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			let filePath = typeof request === 'string' ? request : request.path;
@@ -1903,7 +1929,13 @@
 		});
 
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
-			if (!filePath || !selectedTerminal || effectiveTerminalId !== $selectedTerminalId) return;
+			if (
+				onSelectDirectory ||
+				!filePath ||
+				!selectedTerminal ||
+				effectiveTerminalId !== $selectedTerminalId
+			)
+				return;
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
@@ -1937,7 +1969,7 @@
 				savedPath =
 					terminalContext && terminalContext.terminalId === effectiveTerminalId
 						? terminalContext.currentDirectory
-						: serverPath;
+						: folderDirectory || serverPath;
 				savedPath = clampToFileRoot(savedPath);
 				if (initialFile) {
 					const path = normalizePath(initialFile.path);
@@ -2125,7 +2157,7 @@
 			fileSize={openedFile?.size ?? pendingFile?.size}
 			{loading}
 			{showSearch}
-			onToggleSearch={toggleSearch}
+			onToggleSearch={onSelectDirectory ? null : toggleSearch}
 			writable={currentWritable}
 			canGoBack={!initialFile && canGoBack}
 			canGoForward={!initialFile && canGoForward}
@@ -2741,8 +2773,21 @@
 			{/if}
 		</div>
 
+		{#if onSelectDirectory}
+			<div
+				class="flex shrink-0 items-center justify-end border-t border-gray-50 px-2 pt-3 dark:border-gray-850/30"
+			>
+				<button
+					type="button"
+					class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
+					on:click={() => onSelectDirectory?.(currentPath)}>{$i18n.t('Use this directory')}</button
+				>
+			</div>
+		{/if}
+
 		<!-- Read-only session output -->
-		{#if showTerminalDock}
+		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
 				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
