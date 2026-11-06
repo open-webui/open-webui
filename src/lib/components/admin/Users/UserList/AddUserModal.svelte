@@ -235,6 +235,7 @@
 										type="text"
 										inputmode="email"
 										bind:value={_user.email}
+										on:blur={() => (_user.email = _user.email.normalize('NFC'))}
 										aria-label={$i18n.t('Email')}
 										placeholder={$i18n.t('Enter Your Email')}
 										required

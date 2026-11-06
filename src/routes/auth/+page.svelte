@@ -387,6 +387,7 @@
 												>
 												<input
 													bind:value={email}
+													on:blur={() => (email = email.normalize('NFC'))}
 													type="text"
 													inputmode="email"
 													id="email"

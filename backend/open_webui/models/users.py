@@ -7,6 +7,7 @@ import time
 from typing import Literal, Optional
 from open_webui.env import DATABASE_USER_ACTIVE_STATUS_UPDATE_INTERVAL
 from open_webui.internal.db import Base, JSONField, get_async_db_context
+from open_webui.utils.email import NFCEmail, email_key, normalize_email
 from open_webui.utils.misc import throttle
 from open_webui.utils.validate import validate_image_url
 from pydantic import (
@@ -22,6 +23,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     Date,
+    Index,
     String,
     Text,
     case,
@@ -142,7 +144,16 @@ class User(Base):  # identity & profile
 
     __tablename__: str = 'user'  # Identity & Credentials
     id = Column(String, primary_key=True, unique=True)  # unique user id
-    email = Column(String, unique=True)  # user email address
+    email = Column(NFCEmail, unique=True)  # user email address
+    __table_args__ = (
+        Index(
+            'uq_user_email_nfc_lower',
+            email_key(email),
+            unique=True,
+            sqlite_where=email.is_not(None),
+            postgresql_where=email.is_not(None),
+        ),
+    )
     username = Column(String(50), nullable=True)  # custom handle
     role = Column(String, default='pending')  # permissions role
     name = Column(String, nullable=False)  # display name
@@ -360,6 +371,11 @@ class UserUpdateForm(BaseModel):
     profile_image_url: str | None = None
     password: str | None = None
 
+    @field_validator('email')
+    @classmethod
+    def normalize_email_input(cls, value: str | None) -> str | None:
+        return normalize_email(value) if value is not None else None
+
     @field_validator('profile_image_url', mode='before')
     @classmethod
     def check_profile_image_url(cls, v: str | None) -> str | None:
@@ -380,6 +396,7 @@ class UsersTable:
         oauth: dict | None = None,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
+        email = normalize_email(email)
         try:
             profile_image_url = validate_image_url(profile_image_url)
         except ValueError:
@@ -436,10 +453,10 @@ class UsersTable:
         email: str,
         db: AsyncSession | None = None,
     ) -> UserModel | None:
-        """Case-insensitive email lookup using SQL lower()."""
+        """Match canonical equivalents, including legacy NFD email addresses."""
         async with get_async_db_context(db) as session:
-            email_filter = func.lower(User.email) == email.lower()
-            query = select(User).where(email_filter)
+            email_filter = email_key(User.email) == normalize_email(email.lower())
+            query = select(User).where(User.email.is_not(None), email_filter)
             match = (await session.execute(query)).scalars().first()
             if match is None:
                 return
@@ -804,6 +821,8 @@ class UsersTable:
             return UserModel.model_validate(user)
 
     async def update_user_by_id(self, id: str, updated: dict, db: AsyncSession | None = None) -> UserModel | None:
+        if 'email' in updated:
+            updated = {**updated, 'email': normalize_email(updated['email'])}
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)
             if not user:

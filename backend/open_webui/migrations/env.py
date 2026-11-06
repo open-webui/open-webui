@@ -16,6 +16,7 @@ from open_webui.models.chat_messages import ChatMessage  # noqa: F401
 from open_webui.models.chats import Chat  # noqa: F401
 from open_webui.models.comments import Comment, CommentReaction  # noqa: F401
 from open_webui.models.notifications import Notification  # noqa: F401
+from open_webui.utils.email import register_sqlite_email_normalization
 from sqlalchemy import create_engine, engine_from_config, inspect, pool
 
 alembic_config = alembic.context.config
@@ -76,6 +77,7 @@ def run_migrations_online() -> None:
     """Execute migrations against a live database connection."""
     live_connectable = _get_engine_connectable()
     enable_iam_token_auth(live_connectable)
+    register_sqlite_email_normalization(live_connectable)
     with live_connectable.connect() as live_connection:
         if DATABASE_SCHEMA and live_connection.dialect.name == 'postgresql':
             inspector = inspect(live_connection)

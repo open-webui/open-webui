@@ -319,7 +319,7 @@ export const userSignIn = async (email: string, password: string) => {
 		},
 		credentials: 'include',
 		body: JSON.stringify({
-			email: email,
+			email: email.normalize('NFC'),
 			password: password
 		})
 	})
@@ -357,7 +357,7 @@ export const userSignUp = async (
 		credentials: 'include',
 		body: JSON.stringify({
 			name: name,
-			email: email,
+			email: email.normalize('NFC'),
 			password: password,
 			profile_image_url: profile_image_url
 		})
@@ -455,7 +455,7 @@ export const addUser = async (
 		},
 		body: JSON.stringify({
 			name: name,
-			email: email,
+			email: email.normalize('NFC'),
 			password: password,
 			role: role,
 			...(profile_image_url && { profile_image_url: profile_image_url })

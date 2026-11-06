@@ -37,6 +37,7 @@ from open_webui.models.auths import Auths
 from open_webui.models.config import Config
 from open_webui.models.users import Users
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.email import normalize_email
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import parse_duration
 from pytz import UTC
@@ -450,8 +451,8 @@ async def get_current_user(
                 )
             else:
                 if WEBUI_AUTH_TRUSTED_EMAIL_HEADER:
-                    trusted_email = request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER, '').lower()
-                    if trusted_email and user.email != trusted_email:
+                    trusted_email = normalize_email(request.headers.get(WEBUI_AUTH_TRUSTED_EMAIL_HEADER, '').lower())
+                    if trusted_email and normalize_email(user.email) != trusted_email:
                         raise HTTPException(
                             status_code=status.HTTP_401_UNAUTHORIZED,
                             detail='User mismatch. Please sign in again.',

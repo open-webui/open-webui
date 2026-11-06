@@ -1002,7 +1002,7 @@ async def update_user_by_id(
     if user:
         if form_data.email is not None and form_data.email.lower() != user.email:
             email_user = await Users.get_user_by_email(form_data.email.lower(), db=db)
-            if email_user:
+            if email_user and email_user.id != user_id:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=ERROR_MESSAGES.EMAIL_TAKEN,

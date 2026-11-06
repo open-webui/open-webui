@@ -30,6 +30,7 @@ from open_webui.env import (
     OPEN_WEBUI_DIR,
     USE_SLIM,
 )
+from open_webui.utils.email import register_sqlite_email_normalization
 from open_webui.utils.json_codec import JSONCodec
 from sqlalchemy import Dialect, MetaData, create_engine, event, types
 from sqlalchemy.engine.url import make_url
@@ -410,6 +411,7 @@ else:
         engine = _create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)
 
 enable_iam_token_auth(engine)
+register_sqlite_email_normalization(engine)
 
 
 # Sync session — used ONLY for startup config loading (config.py runs at import time)
@@ -493,6 +495,7 @@ else:
         )
 
 enable_iam_token_auth(async_engine)
+register_sqlite_email_normalization(async_engine)
 
 
 AsyncSessionLocal = async_sessionmaker(

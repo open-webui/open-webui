@@ -10,6 +10,7 @@ from typing import Literal
 import bcrypt
 from open_webui.internal.db import Base, get_async_db, get_async_db_context
 from open_webui.models.users import User, UserModel, UserProfileImageResponse, Users, UserStatus
+from open_webui.utils.email import NFCEmail, email_key, normalize_email
 from open_webui.utils.validate import validate_image_url
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from sqlalchemy import JSON, Boolean, Column, String, Text, delete, select, update
@@ -30,7 +31,7 @@ class Auth(Base):  # credential ↔ user linkage
     __tablename__ = 'auth'
 
     id = Column(String, primary_key=True, unique=True)  # mirrors User.id
-    email = Column(String)  # login address, kept in sync with User.email
+    email = Column(NFCEmail)  # login address, kept in sync with User.email
     password = Column(Text)  # argon2 / bcrypt hash
     active = Column(Boolean)  # account soft-disable toggle
     mfa = Column(JSON, nullable=True)
@@ -174,6 +175,8 @@ class SigninForm(BaseModel):
     email: str
     password: str
 
+    _normalize_email = field_validator('email')(normalize_email)
+
 
 class LdapForm(BaseModel):
     user: str
@@ -194,6 +197,8 @@ class SignupForm(BaseModel):
     email: str
     password: str
     profile_image_url: str | None = '/user.png'
+
+    _normalize_email = field_validator('email')(normalize_email)
 
     @field_validator('profile_image_url')
     @classmethod
@@ -296,6 +301,7 @@ class AuthsTable:
         db: AsyncSession | None = None,
     ) -> UserModel | None:
         """Create an Auth + User pair inside a single transaction."""
+        email = normalize_email(email)
         async with get_async_db_context(db) as session:
             log.info('insert_new_auth')
 
@@ -370,7 +376,12 @@ class AuthsTable:
         # single JOIN avoids N+1 — returns (Auth, User) tuple or None
         async with get_async_db_context(db) as session:
             joined_query = (
-                select(Auth, User).join(User, Auth.id == User.id).where(Auth.email == email, Auth.active.is_(True))
+                select(Auth, User)
+                .join(User, Auth.id == User.id)
+                .where(
+                    email_key(Auth.email) == normalize_email(email.lower()),
+                    Auth.active.is_(True),
+                )
             )
             match = (await session.execute(joined_query)).first()
             if not match:
@@ -385,14 +396,14 @@ class AuthsTable:
         db: AsyncSession | None = None,
     ) -> bool:
         """Set a new email on the auth record and propagate to the user row."""
+        email = normalize_email(email)
         async with get_async_db_context(db) as session:
             auth_row = await session.get(Auth, user_id)
             if auth_row is None:
                 return False
-            auth_row.email = email
-            await session.commit()
-            await Users.update_user_by_id(user_id, {'email': email}, db=session)
-            return True
+            # Users updates both rows in one transaction. A uniqueness failure
+            # must not leave the credential with an email the user row rejected.
+            return await Users.update_user_by_id(user_id, {'email': email}, db=session) is not None
         # Password modification
 
     async def update_user_password_by_id(
