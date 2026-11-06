@@ -278,16 +278,13 @@ async def get_folder_terminal_defaults(user, folder_id):
     }
 
 
-async def initialize_folder_terminal(request, user, metadata, defaults, terminal_id, directory=None):
-    if not terminal_id or terminal_id != defaults.get('terminal_id'):
-        return
-    path = directory or defaults.get('working_directory')
-    if not path:
+async def initialize_terminal_directory(request, user, metadata, terminal_id, path):
+    if not terminal_id or not path:
         return
     from fastapi import HTTPException
 
     if not isinstance(path, str):
-        raise HTTPException(400, 'Invalid folder working directory')
+        raise HTTPException(400, 'Invalid working directory')
     result = await get_terminal_json(
         request,
         user,
@@ -297,7 +294,7 @@ async def initialize_folder_terminal(request, user, metadata, defaults, terminal
         body={'path': path},
     )
     if not result or not result.get('cwd'):
-        raise HTTPException(400, 'Folder working directory is unavailable. Check the terminal connection and path.')
+        raise HTTPException(400, 'Working directory is unavailable. Check the terminal connection and path.')
     metadata['initial_terminal_cwd'] = result['cwd']
 
 

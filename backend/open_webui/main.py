@@ -1112,7 +1112,7 @@ async def chat_completion(
     model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
 
-    from open_webui.utils.terminals import get_folder_terminal_defaults, initialize_folder_terminal
+    from open_webui.utils.terminals import get_folder_terminal_defaults, initialize_terminal_directory
 
     folder_defaults = {}
     requested_directory = form_data.pop('terminal_cwd', None)
@@ -1120,6 +1120,10 @@ async def chat_completion(
         folder_defaults = await get_folder_terminal_defaults(user, form_data.get('folder_id'))
         if 'terminal_id' not in form_data and folder_defaults.get('terminal_id'):
             form_data['terminal_id'] = folder_defaults['terminal_id']
+        if not requested_directory and form_data.get('terminal_id') == folder_defaults.get('terminal_id'):
+            requested_directory = folder_defaults.get('working_directory')
+    else:
+        requested_directory = None
 
     agent_model = None
     if isinstance(model_id, str) and model_id.startswith('agent:'):
@@ -1130,8 +1134,7 @@ async def chat_completion(
             raise HTTPException(400, 'Invalid agent model')
         candidates = await get_agent_models(
             request, user, form_data.get('terminal_id'), form_data.get('chat_id'), provider=parts[2],
-            cwd=(requested_directory or folder_defaults.get('working_directory'))
-            if form_data.get('terminal_id') == folder_defaults.get('terminal_id') else None,
+            cwd=requested_directory,
         )
         agent_model = next((item for item in candidates if item['id'] == model_id), None)
         if agent_model is None:
@@ -1671,8 +1674,8 @@ async def chat_completion(
                     )
                 ctx = None
                 if is_new_chat:
-                    await initialize_folder_terminal(
-                        request, user, metadata, folder_defaults, form_data.get('terminal_id'), requested_directory
+                    await initialize_terminal_directory(
+                        request, user, metadata, form_data.get('terminal_id'), requested_directory
                     )
                 if model.get('agent'):
                     from open_webui.utils.agents.runner import run as run_agent
