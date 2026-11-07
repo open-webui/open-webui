@@ -78,6 +78,7 @@
 	} from '$lib/apis/terminal';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
+	import Spinner from '../common/Spinner.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
@@ -1424,15 +1425,16 @@
 					}}>{$i18n.t('Retry')}</button
 				>
 			</div>
-		{:else if !viewReady}
+		{:else if chatLoading || !viewReady}
 			<div
 				role="status"
+				aria-label={$i18n.t('Loading…')}
 				class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
 			>
-				{$i18n.t('Loading…')}
+				<Spinner className="size-5" />
 			</div>
 		{/if}
-		{#if fullWidth}
+		{#if fullWidth && viewReady && !chatLoading}
 			<button
 				type="button"
 				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40 disabled:opacity-30 pointer-events-auto"
@@ -1738,7 +1740,7 @@
 				{/if}
 			</div>
 		{/each}
-		{#if !tabs.tabs.length && canOpenNewTab}<div
+		{#if viewReady && !chatLoading && !viewError && !tabs.tabs.length && canOpenNewTab}<div
 				class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
 			>
 				{$i18n.t('Open a tab using the + menu.')}
@@ -1842,7 +1844,7 @@
 					</div>
 				{/each}
 			</div>
-			{#if canOpenNewTab}
+			{#if canOpenNewTab && viewReady && !chatLoading}
 				<Dropdown align="start" closeOnSelect>
 					<button
 						type="button"
