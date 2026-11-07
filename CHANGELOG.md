@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧳 **Tabs remembered per chat.** The open tabs, split layout and selected terminal of each chat are now saved privately for each user on the server and restored when you reopen the chat, even on another device, and signing out warns you about unsaved file edits.
 - 🧾 **Editable spreadsheets.** Excel files in the file view can now be edited in the preview, with a formula bar, pasting from other spreadsheets and resizable columns, and saved back to the file, while formula cells and protected sheets stay read-only.
 - 🖋️ **Markdown and code editing.** Markdown files in the file view now open in a rich text editor that saves back to Markdown, and the code editor suggests words that already appear in the file.
-- 🔖 **Git status in the file browser.** Files and folders in the file browser are marked with a Git status letter such as M, A, D or U, and folders show that they contain changes.
+- 🔖 **File browser Git status.** Files and folders in the file browser are marked with a Git status letter such as M, A, D or U, and folders show that they contain changes.
 - 🧲 **Drag files into chat.** Files from the terminal file browser can be dragged, one or several at once, into the message input to attach them.
 - 🧬 **Git changes in the editor.** The code editor now marks the lines of a file that were added or changed since the last commit.
 - 🩺 **Terminal system info.** The terminal menu now has a System info view with the terminal's CPU, memory, disk, network, uptime and top processes.
