@@ -18,9 +18,7 @@
 	export let onClear: () => void = () => {};
 </script>
 
-<div
-	class="flex h-8 items-center gap-2 px-2 bg-gray-50 dark:bg-white/[0.03] shrink-0 border-t border-gray-50 dark:border-gray-850/30"
->
+<div class="flex h-6 shrink-0 items-center gap-1 pl-3 pr-2">
 	<span class="text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400 flex-1 truncate">
 		{$i18n.t('{{count}} selected', { count })}
 	</span>

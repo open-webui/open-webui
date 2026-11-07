@@ -1,5 +1,6 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
+	import { highlightCodeBlock } from '$lib/utils/codeHighlight';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -67,7 +68,19 @@
 	let renderHTML = null;
 	let renderError: { type: 'diagram' | 'visualization'; detail: string } | null = null;
 
-	let highlightedCode = null;
+	let highlightedCode: string | null = null;
+	let highlightGeneration = 0;
+	async function highlightDocument(code: string, language: string) {
+		const generation = ++highlightGeneration;
+		highlightedCode = null;
+		try {
+			const html = await highlightCodeBlock(code, language);
+			if (generation === highlightGeneration) highlightedCode = html;
+		} catch {
+			// Keep the escaped source visible if a grammar cannot be loaded.
+		}
+	}
+	$: if (markdown?.document && !edit && !isDiff) void highlightDocument(code, lang);
 	let executing = false;
 
 	let stdout = null;
@@ -436,6 +449,7 @@
 	});
 
 	onDestroy(() => {
+		highlightGeneration++;
 		if (localPyodideWorker) {
 			localPyodideWorker.terminate();
 			localPyodideWorker = null;
@@ -471,7 +485,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-1.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-0.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -484,7 +498,7 @@
 				<div class="flex max-w-full items-center gap-0.5 shrink-0 overflow-x-auto">
 					{#if isDiff && edit}
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+							class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 							aria-pressed={editingDiff}
 							on:click={() => {
 								editingDiff = !editingDiff;
@@ -495,7 +509,7 @@
 						</button>
 					{/if}
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+						class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -510,13 +524,13 @@
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
 							<div
-								class="run-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white cursor-not-allowed opacity-60"
+								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5 cursor-not-allowed opacity-60"
 							>
 								{$i18n.t('Running')}
 							</div>
 						{:else if run && markdown?.allowRemoteContent !== false}
 							<button
-								class="run-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -532,7 +546,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+							class="save-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -540,13 +554,13 @@
 					{/if}
 
 					<button
-						class="copy-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+						class="copy-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
 
 					{#if preview && ['html', 'svg'].includes(lang) && $visibleControls['chat.code_preview']}
 						<button
-							class="run-code-button flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+							class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
 							on:click={previewCode}
 						>
 							<div>
@@ -583,6 +597,14 @@
 								_code = value;
 							}}
 						/>
+					{:else if markdown?.document}
+						<div class="document-code">
+							{#if highlightedCode}
+								{@html highlightedCode}
+							{:else}
+								<pre><code>{code}</code></pre>
+							{/if}
+						</div>
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"
@@ -663,3 +685,26 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.document-code :global(pre) {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		overflow-x: auto;
+		font-size: 0.8125rem;
+		line-height: normal;
+		background: transparent !important;
+	}
+	.document-code :global(code) {
+		font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+		font-size: inherit;
+		white-space: pre;
+	}
+	:global(.dark) .document-code :global(.shiki),
+	:global(.dark) .document-code :global(.shiki span) {
+		color: var(--shiki-dark) !important;
+		font-style: var(--shiki-dark-font-style) !important;
+		font-weight: var(--shiki-dark-font-weight) !important;
+		text-decoration: var(--shiki-dark-text-decoration) !important;
+	}
+</style>

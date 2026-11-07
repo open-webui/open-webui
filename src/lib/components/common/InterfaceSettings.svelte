@@ -56,7 +56,6 @@
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
 	let scrollOnResponseGeneration = true;
-	let showFilesOnTerminalSelect = true;
 	let terminalFileDisplay: 'sidebar' | 'inline' = 'sidebar';
 	let userLocation = false;
 
@@ -381,7 +380,6 @@
 		splitLargeChunks = currentSettings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = currentSettings?.scrollOnBranchChange ?? true;
 		scrollOnResponseGeneration = currentSettings?.scrollOnResponseGeneration ?? true;
-		showFilesOnTerminalSelect = currentSettings?.showFilesOnTerminalSelect ?? true;
 		terminalFileDisplay = currentSettings?.terminalFileDisplay === 'inline' ? 'inline' : 'sidebar';
 
 		temporaryChatByDefault = currentSettings?.temporaryChatByDefault ?? false;
@@ -1541,33 +1539,6 @@
 			</div>
 			<p class={settingDescriptionClass}>
 				{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
-			</p>
-		</div>
-
-		<div>
-			<div class={settingRowClass}>
-				<label
-					id="show-files-on-terminal-select-label"
-					class={settingLabelClass}
-					for="show-files-on-terminal-select-label-control"
-				>
-					{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
-				</label>
-
-				<div class={settingControlClass}>
-					<Switch
-						ariaLabelledbyId="show-files-on-terminal-select-label"
-						tooltip={true}
-						bind:state={showFilesOnTerminalSelect}
-						inherited={isDefaultSetting('showFilesOnTerminalSelect')}
-						on:change={() => {
-							saveSettings({ showFilesOnTerminalSelect });
-						}}
-					/>
-				</div>
-			</div>
-			<p class={settingDescriptionClass}>
-				{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
 			</p>
 		</div>
 

@@ -101,7 +101,6 @@ class InterfaceSettings(BaseModel):
     splitLargeChunks: bool | None = None
     scrollOnBranchChange: bool | None = None
     scrollOnResponseGeneration: bool | None = None
-    showFilesOnTerminalSelect: bool | None = None
     temporaryChatByDefault: bool | None = None
     userLocation: bool | None = None
     showChatTitleInTab: bool | None = None
@@ -860,6 +859,9 @@ class UsersTable:
             from open_webui.models.notifications import delete_user_notifications
 
             await delete_user_notifications(id, db=session)
+            from open_webui.models.chat_views import ChatViewState
+
+            await session.execute(delete(ChatViewState).where(ChatViewState.user_id == id))
             await session.execute(delete(User).where(User.id == id))
             await session.commit()
             return True

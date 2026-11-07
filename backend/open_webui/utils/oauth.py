@@ -1100,7 +1100,7 @@ class OAuthClientManager:
             # Get the OAuth session
             session = await OAuthSessions.get_session_by_provider_and_user_id(client_id, user_id)
             if not session:
-                log.warning(f'No OAuth session found for user {user_id}, client_id {client_id}')
+                log.debug('No OAuth session found for user %s, client_id %s', user_id, client_id)
                 return None
 
             if (
@@ -1147,6 +1147,9 @@ class OAuthClientManager:
                 log.error(f'Failed to refresh token for session {session.id}')
                 return None
 
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            # Transient provider failure: the grant is still valid, keep the session
+            raise
         except Exception as e:
             log.error(f'Error refreshing token for session {session.id}: {e}')
             return None
@@ -1191,10 +1194,12 @@ class OAuthClientManager:
             if should_send_oauth_resource(client_info):
                 refresh_data['resource'] = client_info.resource
 
-            client_auth = None
+            refresh_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
             if hasattr(client, 'client_secret') and client.client_secret:
                 if client.client_kwargs.get('token_endpoint_auth_method') == 'client_secret_basic':
-                    client_auth = aiohttp.BasicAuth(client.client_id, client.client_secret)
+                    refresh_headers['Authorization'] = aiohttp.encode_basic_auth(
+                        client.client_id, client.client_secret, encoding='latin1'
+                    )
                     # Some providers reject a body client_id next to Basic as a second credential (#19415)
                     del refresh_data['client_id']
                 else:
@@ -1213,8 +1218,7 @@ class OAuthClientManager:
                 async with session_http.post(
                     token_endpoint,
                     data=refresh_data,
-                    auth=client_auth,
-                    headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                    headers=refresh_headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     if r.status == 200:
@@ -1231,8 +1235,12 @@ class OAuthClientManager:
                     else:
                         error_text = await r.text()
                         log.error(f'Token refresh failed for client_id {client_id}: {r.status} - {error_text}')
+                        if r.status == 429 or r.status >= 500:
+                            r.raise_for_status()
                         return None
 
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            raise
         except Exception as e:
             log.error(f'Exception during token refresh for client_id {client_id}: {e}')
             return None
@@ -1559,11 +1567,13 @@ class OAuthManager:
                 'refresh_token': token_data['refresh_token'],
                 'client_id': client.client_id,
             }
-            client_auth = None
+            refresh_headers = {'Content-Type': 'application/x-www-form-urlencoded'}
             # Add client_secret if available (some providers require it)
             if hasattr(client, 'client_secret') and client.client_secret:
                 if client.client_kwargs.get('token_endpoint_auth_method') == 'client_secret_basic':
-                    client_auth = aiohttp.BasicAuth(client.client_id, client.client_secret)
+                    refresh_headers['Authorization'] = aiohttp.encode_basic_auth(
+                        client.client_id, client.client_secret, encoding='latin1'
+                    )
                     if not OAUTH_ACCESS_TOKEN_REQUEST_INCLUDE_CLIENT_ID:
                         del refresh_data['client_id']
                 else:
@@ -1582,8 +1592,7 @@ class OAuthManager:
                 async with session_http.post(
                     token_endpoint,
                     data=refresh_data,
-                    auth=client_auth,
-                    headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                    headers=refresh_headers,
                     ssl=AIOHTTP_CLIENT_SESSION_SSL,
                 ) as r:
                     if r.status == 200:
@@ -1744,6 +1753,9 @@ class OAuthManager:
                 user_oauth_groups = []
 
         user_current_groups: list[GroupModel] = await Groups.get_groups_by_member_id(user.id, db=db)
+        if oauth_claim and claim_data is None and token_claims is not None and user_current_groups:
+            log.warning('Token exchange denied: no readable groups claim in userinfo or the token')
+            raise HTTPException(status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
         all_available_groups: list[GroupModel] = await Groups.get_all_groups(db=db)
 
         # Create groups if they don't exist and creation is enabled

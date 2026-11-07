@@ -12,6 +12,7 @@ export type OutputItem = {
 	call_id?: string;
 	name?: string;
 	status?: string;
+	hidden?: boolean;
 	arguments?: unknown;
 	content?: OutputContentPart[];
 	summary?: OutputContentPart[] | string;
@@ -355,6 +356,10 @@ function buildDetailToken(
 	return null;
 }
 
+export function isHiddenToolCall(item: OutputItem): boolean {
+	return item.type === 'function_call' && item.hidden === true;
+}
+
 export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDisplayItem[] {
 	const displayItems: OutputDisplayItem[] = [];
 	const currentDetailTokens: OutputDetailToken[] = [];
@@ -391,8 +396,14 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 			return;
 		}
 
+		if (isHiddenToolCall(item)) {
+			return;
+		}
+
 		if (item.type === 'function_call_output') {
-			const inlineFile = getInlineFileFromToolOutput(toolCallByCallId[item.call_id ?? ''], item);
+			const call = toolCallByCallId[item.call_id ?? ''];
+			if (call && isHiddenToolCall(call)) return;
+			const inlineFile = getInlineFileFromToolOutput(call, item);
 			if (inlineFile) {
 				flushDetails();
 				displayItems.push({

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	const i18n: any = getContext('i18n');
 	export let data: unknown;
 	export let key: string | null = null;
 	export let root = true;
@@ -27,25 +29,23 @@
 
 {#if isExpandable}
 	<div class="json-node" class:json-root={root}>
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<span class="json-toggle" on:click={toggle}>
-			<span class="json-arrow" class:json-expanded={expanded}>▶</span>
+		<button
+			type="button"
+			class="json-toggle"
+			on:click={toggle}
+			aria-expanded={expanded}
+			aria-label={`${expanded ? $i18n.t('Collapse') : $i18n.t('Expand')} ${key ?? (type === 'array' ? $i18n.t('Array') : $i18n.t('Object'))}`}
+		>
+			<span class="json-arrow" class:json-expanded={expanded} aria-hidden="true">▶</span>
 			{#if key !== null}<span class="json-key">{key}</span><span class="json-colon">: </span>{/if}
 			{#if !expanded}<span class="json-preview">{bracket[0]} {preview} {bracket[1]}</span>{/if}
 			{#if expanded}<span class="json-bracket">{bracket[0]}</span>{/if}
-		</span>
+		</button>
 		{#if expanded}
 			<div class="json-children">
 				{#each entries as [k, v], i}
 					<div class="json-entry">
-						<svelte:self
-							data={v}
-							key={type === 'array' ? null : k}
-							root={false}
-							depth={depth + 1}
-							{expandDepth}
-						/>
+						<svelte:self data={v} key={k} root={false} depth={depth + 1} {expandDepth} />
 						{#if i < entries.length - 1}<span class="json-comma">,</span>{/if}
 					</div>
 				{/each}
@@ -83,6 +83,12 @@
 	.json-toggle {
 		cursor: pointer;
 		user-select: none;
+		text-align: left;
+		border-radius: 0.125rem;
+	}
+	.json-toggle:focus-visible {
+		outline: 2px solid currentColor;
+		outline-offset: 2px;
 	}
 	.json-toggle:hover {
 		opacity: 0.7;

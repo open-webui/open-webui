@@ -32,10 +32,10 @@
 
 	<Tooltip content={$i18n.t('Run now')}>
 		<button
-			class="flex size-7 items-center justify-center text-gray-400 transition disabled:opacity-60"
+			class="flex size-7 items-center justify-center text-gray-400 transition aria-disabled:opacity-60"
 			on:click={runNowHandler}
 			type="button"
-			disabled={loading}
+			aria-disabled={loading}
 			aria-label={$i18n.t('Run now')}
 		>
 			{#if loading}

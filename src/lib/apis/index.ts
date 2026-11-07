@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { config } from '$lib/stores';
+import { config, selectedTerminalId, selectedFolder, chatId } from '$lib/stores';
 import { WEBUI_BASE_URL } from '$lib/constants';
 import { convertOpenApiToToolPayload, resolveSchema } from '$lib/utils';
 import { normalizeTags } from '$lib/utils/tags';
@@ -29,6 +29,18 @@ export const getModels = async (
 	refresh: boolean = false
 ) => {
 	const searchParams = new URLSearchParams();
+	if (!base && get(selectedTerminalId)) {
+		searchParams.set('terminal_id', get(selectedTerminalId)!);
+		if (get(chatId)) searchParams.set('chat_id', get(chatId));
+		const folder = get(selectedFolder);
+		if (
+			!get(chatId) &&
+			folder?.data?.terminal_id === get(selectedTerminalId) &&
+			folder?.data?.working_directory
+		) {
+			searchParams.set('cwd', folder.data.working_directory);
+		}
+	}
 	if (refresh) {
 		searchParams.append('refresh', 'true');
 	}
@@ -1100,7 +1112,7 @@ export const generateAutoCompletion = async (
 		throw error;
 	}
 
-	const response = res?.choices[0]?.message?.content ?? '';
+	const response = res?.choices?.[0]?.message?.content ?? '';
 
 	try {
 		const jsonStartIndex = response.indexOf('{');

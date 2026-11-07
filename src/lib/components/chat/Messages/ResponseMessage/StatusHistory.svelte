@@ -29,7 +29,7 @@
 
 {#if history && history.length > 0}
 	{#if status?.hidden !== true}
-		<div class="text-[0.9375rem] flex flex-col w-full">
+		<div class="text-[0.90625rem] flex flex-col w-full">
 			<div class="relative w-full">
 				<button
 					class="absolute inset-0"

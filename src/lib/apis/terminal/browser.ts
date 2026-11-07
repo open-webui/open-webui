@@ -9,6 +9,17 @@ export type BrowserSession = {
 	chrome_available: boolean;
 };
 
+export const getBrowserSession = (
+	connection: TerminalConnection,
+	chatId: string | null,
+	id: string
+) =>
+	terminalRequest<BrowserSession>(
+		connection,
+		chatId,
+		`/browser/sessions/${encodeURIComponent(id)}`
+	);
+
 export const createBrowserSession = (
 	connection: TerminalConnection,
 	chatId: string | null,

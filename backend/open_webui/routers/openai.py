@@ -1559,8 +1559,14 @@ async def generate_chat_completion(
     if not is_responses and 'messages' in payload:
         for message in payload['messages']:
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
-                message['content'] = ''.join(
-                    part.get('text', '') for part in message['content'] if part.get('type') in ('input_text', 'text')
+                parts = message['content']
+                text = ''.join(part.get('text', '') for part in parts if part.get('type') in ('input_text', 'text'))
+                cache_control = next(
+                    (part['cache_control'] for part in reversed(parts) if part.get('cache_control')), None
+                )
+                # Prompt-cache markers only work on a content block, so keep the text as one
+                message['content'] = (
+                    [{'type': 'text', 'text': text, 'cache_control': cache_control}] if cache_control and text else text
                 )
 
     is_streaming_request = bool(payload.get('stream', False))

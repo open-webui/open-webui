@@ -10,7 +10,7 @@ import uuid
 from ssl import CERT_NONE, CERT_REQUIRED, PROTOCOL_TLS
 
 import jwt
-from aiohttp import BasicAuth, ClientSession
+from aiohttp import ClientSession, encode_basic_auth
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse, Response
 from ldap3 import NONE, Connection, Server, Tls
@@ -87,7 +87,10 @@ from pydantic import BaseModel, Field, StrictStr, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from open_webui.routers import sessions
+
 router = APIRouter(route_class=MfaRoute)
+router.include_router(sessions.router, prefix='/sessions')
 
 log = logging.getLogger(__name__)
 
@@ -918,6 +921,9 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
         data = decode_token(token)
         if data and data.get('id'):
             actor = await Users.get_user_by_id(data['id'], db=db)
+        if data and data.get('typ', 'session') == 'session' and data.get('sid') and data.get('id'):
+            from open_webui.models.auth_sessions import AuthSessions
+            await AuthSessions.revoke(data['sid'], data['id'])
         await invalidate_token(request, token)
         await publish_event(
             request,
@@ -1571,7 +1577,9 @@ async def get_token_client_id(client, token: str) -> str | None:
             async with session.post(
                 introspection_endpoint,
                 data={'token': token, 'token_type_hint': 'access_token'},
-                auth=BasicAuth(client.client_id, client.client_secret or ''),
+                headers={
+                    'Authorization': encode_basic_auth(client.client_id, client.client_secret or '', encoding='latin1')
+                },
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 if r.status != 200:

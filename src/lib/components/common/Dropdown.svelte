@@ -330,10 +330,10 @@
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
-		// Submenus and listboxes can be portaled outside contentEl.
+		// Submenus, listboxes and modals can be portaled outside contentEl.
 		const portaled =
 			event.target instanceof Element
-				? event.target.closest('[role="menu"], [role="listbox"]')
+				? event.target.closest('[role="menu"], [role="listbox"], [aria-modal="true"]')
 				: null;
 		if (portaled && !portaled.contains(triggerEl)) return;
 		event.preventDefault();
@@ -413,7 +413,7 @@
 	<div
 		use:portal
 		bind:this={contentEl}
-		class={contentClass}
+		class="no-drag-region {contentClass}"
 		role="menu"
 		tabindex="-1"
 		style:max-height={resolvedMaxHeight}

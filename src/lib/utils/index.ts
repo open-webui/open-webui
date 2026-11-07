@@ -800,13 +800,20 @@ export const getImportOrigin = (_chats) => {
 };
 
 export const getUserPosition = async (raw = false) => {
-	// Ask the browser for coordinates; we have not installed a crystal ball.
-	const position = await new Promise((resolve, reject) => {
-		navigator.geolocation.getCurrentPosition(resolve, reject);
-	}).catch((error) => {
-		console.error('Error getting user location:', error);
-		throw error;
-	});
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+		// The browser's acquisition timeout excludes time spent waiting for permission.
+		timer = setTimeout(() => reject(new Error('Location request timed out.')), 10_000);
+		navigator.geolocation.getCurrentPosition(resolve, reject, {
+			timeout: 10_000,
+			maximumAge: 5 * 60_000
+		});
+	})
+		.finally(() => clearTimeout(timer))
+		.catch((error) => {
+			console.error('Error getting user location:', error);
+			throw error;
+		});
 
 	if (!position) {
 		return 'Location not available';

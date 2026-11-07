@@ -79,7 +79,31 @@ export type ListeningPort = {
 	process: string | null;
 };
 
+export type TerminalSystemInfo = {
+	sampled_at: number;
+	hostname: string;
+	os: string;
+	arch: string;
+	environment: 'host' | 'container';
+	uptime_seconds: number | null;
+	service_uptime_seconds: number;
+	cpu: { percent: number | null; cores: number | null; scope: 'host' | 'cgroup' };
+	memory: { total: number; used: number; scope: 'host' | 'cgroup' } | null;
+	disk: { path: string; total: number; used: number; free: number } | null;
+	network: { name: string; up: boolean | null; addresses: string[] }[] | null;
+	process_scope: 'user' | 'environment';
+	processes:
+		| {
+				pid: number;
+				name: string;
+				cpu_percent: number | null;
+				memory_bytes: number;
+		  }[]
+		| null;
+};
+
 export type TerminalFeatures = {
+	agents?: boolean;
 	terminal?: boolean;
 	browser?: boolean;
 	desktop?: boolean;
@@ -160,7 +184,10 @@ export const resolveTerminalConnection = (
 		return {
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
-			key: token,
+			// Panels outlive Tether's token rotations; read the current session at request time.
+			get key() {
+				return typeof localStorage === 'undefined' ? token : (localStorage.getItem('token') ?? '');
+			},
 			system: true
 		};
 	}
@@ -170,13 +197,24 @@ export const resolveTerminalConnection = (
 		: null;
 };
 
+export class TerminalRequestError extends Error {
+	constructor(
+		message: string,
+		public status: number
+	) {
+		super(message);
+		this.name = 'TerminalRequestError';
+	}
+}
+
 export const terminalRequest = async <T>(
 	connection: TerminalConnection,
 	chatId: string | null,
 	path: string,
 	options: RequestInit = {}
 ): Promise<T> => {
-	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
+	if (!get(config)?.features?.enable_tool_servers)
+		throw new TerminalRequestError('Tool servers are disabled', 403);
 	const response = await fetch(`${connection.baseUrl}${path}`, {
 		...options,
 		headers: {
@@ -187,12 +225,13 @@ export const terminalRequest = async <T>(
 	});
 	if (!response.ok) {
 		const body = await response.json().catch(() => null);
-		throw new Error(
+		throw new TerminalRequestError(
 			typeof body?.detail === 'string'
 				? body.detail
 				: typeof body?.error === 'string'
 					? body.error
-					: `Terminal request failed (${response.status})`
+					: `Terminal request failed (${response.status})`,
+			response.status
 		);
 	}
 	return response.json();

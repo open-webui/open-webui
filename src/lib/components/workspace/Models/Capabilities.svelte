@@ -68,6 +68,11 @@
 	type Capability = keyof typeof capabilityLabels;
 
 	export let capabilities: Partial<Record<Capability, boolean>> = {};
+	export let functionCalling: string | null = null;
+	$: effectiveCapabilities = {
+		...capabilities,
+		file_context: capabilities.file_context ?? functionCalling === 'legacy'
+	};
 
 	export let defaultFeatureIds: string[] = [];
 	export let builtinTools: Record<string, boolean> = {};
@@ -81,7 +86,7 @@
 			(key !== 'terminal' || hasTerminal) &&
 			(capabilityLabels[key].enabled ?? true)
 	);
-	$: enabledCapabilityIds = availableCapabilities.filter((key) => capabilities[key]);
+	$: enabledCapabilityIds = availableCapabilities.filter((key) => effectiveCapabilities[key]);
 	$: availableFeatures = featureKeys.filter((key) => enabledCapabilityIds.includes(key));
 	$: enabledDefaultIds = availableFeatures.filter((key) => defaultFeatureIds.includes(key));
 	const setDefault = (key: string, enabled: boolean) => {
@@ -114,7 +119,8 @@
 				<ModelSettingToggle
 					label={capabilityLabels[key].label}
 					description={capabilityLabels[key].description}
-					bind:checked={capabilities[key]}
+					checked={effectiveCapabilities[key]}
+					on:change={(e) => (capabilities[key] = e.detail)}
 					{disabled}
 				/>
 			{/each}
@@ -152,6 +158,7 @@
 				{#each availableFeatures.filter((key) => $visibleControls[`model_editor.defaults.${key}`]) as key}
 					<ModelSettingToggle
 						label={capabilityLabels[key].label}
+						description={`${capabilityLabels[key].description}. ${$i18n.t('Start enabled in new chats')}.`}
 						checked={defaultFeatureIds.includes(key)}
 						{disabled}
 						on:change={(e) => setDefault(key, e.detail)}
