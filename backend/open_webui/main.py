@@ -463,7 +463,7 @@ async def lifespan(app: FastAPI):
                         'path': '/internal',
                         'query_string': b'',
                         'headers': Headers({}).raw,
-                        'client': ('127.0.0.1', 12345),
+                        'client': ('', 12345),
                         'server': ('127.0.0.1', 80),
                         'scheme': 'http',
                         'app': app,
