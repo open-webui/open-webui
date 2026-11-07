@@ -717,7 +717,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .document-markdown {
-	font-size: 0.75rem;
+	font-size: 0.8125rem;
 	line-height: 1.5;
 	overflow-wrap: anywhere;
 }
@@ -754,7 +754,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	margin-block: 0.125rem;
 }
 .document-markdown blockquote {
-	font-size: 0.75rem;
+	font-size: inherit;
 }
 .document-markdown strong {
 	font-weight: 600;
