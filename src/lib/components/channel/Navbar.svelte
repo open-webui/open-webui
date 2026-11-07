@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { mobile, showSidebar, user } from '$lib/stores';
+	import { mobile, searchPreset, showSearch, showSidebar, user } from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
@@ -18,6 +18,7 @@
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
 	import Users from '../icons/Users.svelte';
 	import Pin from '../icons/Pin.svelte';
+	import Search from '../icons/Search.svelte';
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 	import ChannelMenu from './ChannelMenu.svelte';
 
@@ -162,6 +163,22 @@
 			>
 				<slot name="actions">
 					{#if channel}
+						<Tooltip content={$i18n.t('Search')}>
+							<button
+								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								aria-label={$i18n.t('Search')}
+								type="button"
+								on:click={() => {
+									searchPreset.set({ kind: 'message', scope: `channel:${channel.id}` });
+									showSearch.set(true);
+								}}
+							>
+								<div class=" flex items-center gap-1 m-auto self-center shrink-0">
+									<Search className=" size-4" strokeWidth="1.5" />
+								</div>
+							</button>
+						</Tooltip>
+
 						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
 								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
