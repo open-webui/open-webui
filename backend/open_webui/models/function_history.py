@@ -1,12 +1,12 @@
 """Immutable snapshots of function configuration; the live row remains Production."""
 
-import difflib
 import time
 import uuid
 from copy import deepcopy
 
 from fastapi import HTTPException
 from open_webui.internal.db import Base, get_async_db_context
+from open_webui.utils.misc import unified_text_diff
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Text, select, update
 
@@ -147,12 +147,7 @@ def function_diff(before, after):
         if left.get(key) != right.get(key)
     }
     old, new = left.get('content') or '', right.get('content') or ''
-    # splitlines handles a missing final newline and CRLF without breaking the renderer.
-    patch = '\n'.join(
-        difflib.unified_diff(
-            old.splitlines(), new.splitlines(), fromfile='selected.py', tofile='production.py', lineterm=''
-        )
-    )
+    patch = '\n'.join(unified_text_diff(old, new, 'selected.py', 'production.py'))
     return {
         'from_id': before.id,
         'to_id': after.id,
