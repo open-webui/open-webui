@@ -1750,6 +1750,24 @@ async def view_chat(
                 )
             current_id = msg.get('parentId') if msg else None
 
+        truncation = {}
+        max_chars = await Config.get('chats.view_max_chars')
+        if max_chars and sum(len(str(message['content'] or '')) for message in messages) > max_chars:
+            remaining_chars = max_chars
+            kept_messages = []
+            for message in messages:
+                if remaining_chars <= 0:
+                    break
+                content = str(message['content'] or '')[:remaining_chars]
+                kept_messages.append({**message, 'content': content})
+                remaining_chars -= len(content)
+            truncation = {
+                'truncated': True,
+                'total_messages': len(messages),
+                'returned_messages': len(kept_messages),
+            }
+            messages = kept_messages
+
         # Reverse to get chronological order
         messages.reverse()
 
@@ -1760,6 +1778,7 @@ async def view_chat(
                 'messages': messages,
                 'updated_at': chat.updated_at,
                 'created_at': chat.created_at,
+                **truncation,
             },
             ensure_ascii=False,
         )
