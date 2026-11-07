@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ⏩ **Continued replies on Responses connections.** Continuing a reply on a Responses API connection now adds the new text to the existing reply.
 - 🔘 **Desktop app top clicks.** In the desktop app, banners and menus near the top of the window now take clicks instead of dragging the window.
 - 📡 **Tabs over plain HTTP.** The New File, New Terminal and Browser tabs in the side panel now open when Open WebUI is reached over plain HTTP on a LAN or Docker address. [#33847](https://github.com/open-webui/open-webui/pull/33847), [#33845](https://github.com/open-webui/open-webui/issues/33845)
+- 🔬 **Preview zoom stability.** Zooming in PDF, Word and PowerPoint previews no longer resets or drifts when you switch tabs, change slides or resize the pane. [#33836](https://github.com/open-webui/open-webui/pull/33836)
 - 🧱 **Milvus knowledge base uploads.** Adding a file to a knowledge base on Milvus no longer processes the file a second time or stores its chunks twice. [#33745](https://github.com/open-webui/open-webui/pull/33745), [#33744](https://github.com/open-webui/open-webui/issues/33744)
 - 📁 **Working folder in new chats.** The terminal working folder of a new chat is no longer reset to the root when the chat is created before the file browser has finished loading.
 - 🖥️ **Terminal kept on model switch.** Switching to a model without its own default terminal no longer turns off the terminal selected in the chat.
@@ -91,6 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗨️ **Side chats are saved.** Side chats are now saved as regular chats that appear in the chat list, and stay temporary only when you turn on Temporary Chat in the side chat or your admin enforces temporary chats.
 - 🔓 **Side chat permission.** The Allow Side Chat permission no longer requires the Temporary Chat permission.
 - 🧷 **Context as hidden tool results.** With native function calling, memory recall, the skills list and the attached knowledge list now arrive as hidden tool results after your message instead of in the system prompt, so custom pipes can see a tool message as the last message.
+- ⛔ **Show Files on Terminal Select removed.** The Show Files on Terminal Select setting has been removed from the Interface settings.
 - 🚧 **Tool call limit.** Reaching the tool call limit now makes the model write a final answer without tools instead of ending the reply with a limit error.
 - 🔦 **Tool Search prompt.** With Tool Search on, the model no longer sees a list of the hidden tools and finds them only by searching.
 - 🎯 **Retrieval defaults.** The defaults for "RAG_TOP_K" and "RAG_TOP_K_RERANKER" are now 10 instead of 3 and "CHUNK_SIZE" is now 1024 instead of 1000, unless you saved your own values.
