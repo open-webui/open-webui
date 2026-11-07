@@ -1,12 +1,12 @@
 """Prompt history model for version tracking."""
 
-import difflib
 import time
 import uuid
 from typing import Optional
 
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.users import UserResponse, Users
+from open_webui.utils.misc import unified_text_diff
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Index, Text, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -172,15 +172,7 @@ class PromptHistoryTable:
             from_content = from_snapshot.get('content', '')
             to_content = to_snapshot.get('content', '')
 
-            diff_lines = list(
-                difflib.unified_diff(
-                    from_content.splitlines(),
-                    to_content.splitlines(),
-                    fromfile=f'v{from_id[:8]}',
-                    tofile=f'v{to_id[:8]}',
-                    lineterm='',
-                )
-            )
+            diff_lines = unified_text_diff(from_content, to_content, f'v{from_id[:8]}', f'v{to_id[:8]}')
 
             return {
                 'from_id': from_id,

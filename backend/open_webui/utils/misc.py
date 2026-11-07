@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections.abc
+import difflib
 import hashlib
 import ipaddress
 import logging
@@ -15,12 +16,14 @@ from typing import Callable, Optional, Sequence, Union
 
 import aiohttp
 import mimeparse
+from fastapi import HTTPException
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.tool_calling import prepare_tool_call
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
+MAX_DIFF_LINES = 5000
 
 
 def deep_update(d, u):
@@ -1336,3 +1339,11 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             yield bytes(buffer)
 
     return yield_safe_stream_chunks()
+
+
+def unified_text_diff(old: str, new: str, fromfile: str, tofile: str) -> list[str]:
+    # splitlines handles a missing final newline and CRLF without breaking the renderer.
+    old_lines, new_lines = old.splitlines(), new.splitlines()
+    if max(len(old_lines), len(new_lines)) > MAX_DIFF_LINES:
+        raise HTTPException(status_code=413, detail=f'Diff is limited to {MAX_DIFF_LINES} lines per version')
+    return list(difflib.unified_diff(old_lines, new_lines, fromfile=fromfile, tofile=tofile, lineterm=''))
