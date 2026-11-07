@@ -1303,11 +1303,19 @@
 	};
 
 	let revealedSearchMessage = '';
-	$: if (!embedded && !loading && messagesRef && chat && chat.id === $page.params.id) {
+	$: if (
+		!embedded &&
+		!loading &&
+		messagesRef &&
+		chat &&
+		chat.id === $page.params.id &&
+		(!fullWidthTabs || mainChatActive)
+	) {
 		const target = $page.url.searchParams.get('message');
 		const key = `${chat.id}:${target}`;
 		if (target && history.messages[target] && key !== revealedSearchMessage) {
 			revealedSearchMessage = key;
+			pendingScrollToBottom = false;
 			autoScroll = false;
 			history.currentId = getDeepestChildId(history, target);
 			tick().then(() => messagesRef?.scrollToMessage(target));
@@ -3206,7 +3214,7 @@
 					loading = false;
 					await tick();
 					if (signal.aborted) return;
-					if (!$page.url.searchParams.has('message')) scrollToBottom();
+					pendingScrollToBottom = !$page.url.searchParams.has('message');
 					messageInput?.focus({ preventScroll: true });
 				}
 				return true;
@@ -3980,6 +3988,13 @@
 	let tabTitleEditor: import('svelte').Snippet | undefined;
 	let tabActions: import('svelte').Snippet | undefined;
 	let tabBarActions: import('svelte').Snippet | undefined;
+
+	let pendingScrollToBottom = false;
+	// The main chat pane stays hidden until the tab layout is restored.
+	$: if (pendingScrollToBottom && (!fullWidthTabs || mainChatActive)) {
+		pendingScrollToBottom = false;
+		scrollToBottom();
+	}
 
 	const getChatId = async (_history: typeof history) => {
 		let _chatId = $chatId;
