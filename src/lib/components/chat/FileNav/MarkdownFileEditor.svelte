@@ -155,6 +155,7 @@
 				{html}
 				link={true}
 				image={true}
+				allowExternalImages={true}
 				editable={!readOnly}
 				className="document-markdown prose prose-sm dark:prose-invert min-w-0 max-w-none p-3 min-h-[12rem]"
 				placeholder={$i18n.t('Markdown editor')}

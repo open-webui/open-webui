@@ -314,6 +314,7 @@
 	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
+	export let allowExternalImages = false;
 	export let fileHandler = false;
 	export let attachments = false;
 	export let suggestions: Partial<import('@tiptap/suggestion').SuggestionOptions>[] | null = null;
@@ -1013,7 +1014,9 @@
 					: []),
 
 				CharacterCount.configure({}),
-				...(image ? [Image.configure({ allowBase64: attachments })] : []),
+				...(image
+					? [Image.configure({ allowBase64: attachments, allowExternal: allowExternalImages })]
+					: []),
 				...(attachments ? [FileAttachment.configure({ context: componentContext })] : []),
 				...(fileHandler
 					? [

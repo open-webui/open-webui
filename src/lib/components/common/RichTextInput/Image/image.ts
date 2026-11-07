@@ -16,6 +16,7 @@ export interface ImageOptions {
 	 * @example true
 	 */
 	allowBase64: boolean;
+	allowExternal: boolean;
 
 	/**
 	 * HTML attributes to add to the image element.
@@ -65,6 +66,7 @@ export const Image = Node.create<ImageOptions>({
 		return {
 			inline: false,
 			allowBase64: false,
+			allowExternal: false,
 			HTMLAttributes: {}
 		};
 	},
@@ -135,12 +137,12 @@ export const Image = Node.create<ImageOptions>({
 			if (editorFiles && node.attrs.src.startsWith('data://')) {
 				const file = editorFiles.find((f) => f.id === fileId);
 				if (file) {
-					img.setAttribute('src', safeImageUrl(file.url || ''));
+					img.setAttribute('src', safeImageUrl(file.url || '', this.options.allowExternal));
 				} else {
 					img.setAttribute('src', '/image-placeholder.png');
 				}
 			} else {
-				img.setAttribute('src', safeImageUrl(node.attrs.src || ''));
+				img.setAttribute('src', safeImageUrl(node.attrs.src || '', this.options.allowExternal));
 			}
 
 			img.setAttribute('alt', node.attrs.alt || '');
@@ -151,7 +153,7 @@ export const Image = Node.create<ImageOptions>({
 				if (files && node.attrs.src.startsWith('data://')) {
 					const file = files.find((f) => f.id === fileId);
 					if (file) {
-						img.setAttribute('src', safeImageUrl(file.url || ''));
+						img.setAttribute('src', safeImageUrl(file.url || '', this.options.allowExternal));
 					} else {
 						img.setAttribute('src', '/image-placeholder.png');
 					}

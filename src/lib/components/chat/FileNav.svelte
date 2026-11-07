@@ -2775,13 +2775,13 @@
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							class={viewMode === 'grid'
-								? 'grid grid-cols-[repeat(auto-fill,minmax(min(80px,100%),1fr))] gap-1 p-2'
+								? 'grid grid-cols-[repeat(auto-fill,minmax(min(112px,100%),1fr))] gap-1 p-2'
 								: ''}
 						>
 							{#if creatingFolder}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
+										? 'order-last flex h-28 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'grid'}
@@ -2814,7 +2814,7 @@
 							{#if creatingFile}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
+										? 'order-last flex h-28 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'list'}

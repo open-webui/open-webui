@@ -75,6 +75,39 @@
 			? 'select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100'
 			: 'select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition';
 	$: rowIndent = `${8 + depth * 16}px`;
+	const fitGridName = (node: HTMLElement, name: string) => {
+		const fit = () => {
+			if (!node.clientWidth) return;
+			node.textContent = name;
+			if (node.scrollHeight <= node.clientHeight) return;
+			const characters = Array.from(name);
+			const dot = name.lastIndexOf('.');
+			const extensionLength = dot > 0 ? Array.from(name.slice(dot)).length : 0;
+			let low = Math.max(2, extensionLength + 1);
+			let high = characters.length - 1;
+			let fitted = name;
+			while (low <= high) {
+				const count = Math.floor((low + high) / 2);
+				const tail = Math.max(extensionLength, Math.floor(count / 2));
+				node.textContent = `${characters.slice(0, count - tail).join('')}…${characters.slice(-tail).join('')}`;
+				if (node.scrollHeight <= node.clientHeight) {
+					fitted = node.textContent;
+					low = count + 1;
+				} else high = count - 1;
+			}
+			node.textContent = fitted;
+		};
+		const observer = new ResizeObserver(fit);
+		observer.observe(node);
+		fit();
+		return {
+			update(value: string) {
+				name = value;
+				fit();
+			},
+			destroy: () => observer.disconnect()
+		};
+	};
 
 	const formatRelativeTime = (epoch: number): string => {
 		const diff = Math.floor(Date.now() / 1000) - epoch;
@@ -346,9 +379,10 @@
 						type="button"
 						class="flex min-w-0 flex-1 items-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 {viewMode ===
 						'grid'
-							? 'h-24 flex-col gap-0.5 px-1 py-2 text-center'
+							? 'h-28 flex-col gap-0.5 px-1 py-2 text-center'
 							: 'gap-1.5 py-1.5 pr-2 text-left'}"
 						title={viewMode === 'grid' || hoverDisabled ? entry.name : undefined}
+						aria-label={viewMode === 'grid' ? entry.name : undefined}
 						draggable={canMutate}
 						on:dragend={() => (dragging = false)}
 						on:dragstart={(e) => {
@@ -450,12 +484,19 @@
 								on:blur={submitRename}
 								on:click|stopPropagation
 							/>
-						{:else}
+						{:else if viewMode === 'grid' && entry.type === 'directory'}
 							<span
-								class="text-xs text-gray-800 dark:text-gray-200 {viewMode === 'grid'
-									? 'w-full min-w-0 shrink-0 truncate leading-4'
-									: 'flex-1 truncate'}"
+								class="h-4 w-full min-w-0 shrink-0 truncate text-xs leading-4 text-gray-800 dark:text-gray-200"
 							>
+								{entry.name}
+							</span>
+						{:else if viewMode === 'grid'}
+							<span
+								use:fitGridName={entry.name}
+								class="h-8 w-full min-w-0 shrink-0 overflow-hidden [overflow-wrap:anywhere] text-xs leading-4 text-gray-800 dark:text-gray-200"
+							></span>
+						{:else}
+							<span class="flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
 								{entry.name}
 							</span>
 						{/if}

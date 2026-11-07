@@ -199,7 +199,7 @@
 				>
 					<!-- Direct terminals (gated by permission) -->
 					{#if directTerminals.length > 0}
-						<div class="flex items-center justify-between px-3 py-1">
+						<div class="flex items-center justify-between pl-2 pr-1 py-1">
 							<span
 								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 							>
@@ -295,7 +295,7 @@
 
 					<!-- System terminals -->
 					{#if systemTerminals.length > 0}
-						<div class="flex items-center justify-between px-3 py-1">
+						<div class="flex items-center justify-between pl-2 pr-1 py-1">
 							<span
 								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 							>
