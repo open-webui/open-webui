@@ -333,6 +333,7 @@
 	};
 	onMount(() => {
 		returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+		panel.focus({ preventScroll: true });
 		void start();
 	});
 	onDestroy(() => {
