@@ -1305,6 +1305,7 @@ async def chat_completion(
             else None,
             'user_id': user.id,
             'user_agent': request.headers.get('user-agent', '') or '',
+            'client_ip': request.client.host if request.client else '',
             'internal': getattr(request.state, 'internal', False) is True,
             'chat_id': chat_id,
             'user_message': user_message,
