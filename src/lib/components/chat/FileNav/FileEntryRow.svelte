@@ -462,7 +462,7 @@
 	{/if}
 {/snippet}
 
-<li class="group min-w-0 {viewMode === 'grid' ? 'self-start' : ''}" data-file-row>
+<li class="group min-w-0 {viewMode === 'grid' ? 'self-start' : ''}" data-file-row={entryPath}>
 	<div
 		class="w-full flex items-center transition-colors duration-75 {viewMode === 'grid'
 			? 'relative rounded-xl'
@@ -550,14 +550,14 @@
 				role="checkbox"
 				aria-checked={selected}
 				aria-label={$i18n.t('Select {{name}}', { name: entry.name })}
-				class="mr-2 flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors {selected
-					? 'bg-gray-900 border-gray-900 text-white dark:bg-gray-200 dark:border-gray-200 dark:text-gray-900'
+				class="mr-1.5 flex size-3 shrink-0 items-center justify-center rounded-[3px] border transition-colors {selected
+					? 'bg-gray-100 border-gray-400 text-gray-700 dark:bg-gray-700 dark:border-gray-500 dark:text-gray-200'
 					: 'border-gray-300 dark:border-gray-600'} {viewMode === 'grid'
-					? 'absolute top-1 left-1 z-10 !size-6 !mr-0'
+					? 'absolute top-1.5 left-1.5 z-10 !mr-0'
 					: ''}"
 				on:click|stopPropagation={(event) => onSelect(entry, event, entryPath, rowIndex)}
 			>
-				{#if selected}<Icon name="check" size={10} strokeWidth={2} />{/if}
+				{#if selected}<Icon name="check" size={8} strokeWidth={2} />{/if}
 			</button>
 		{/if}
 

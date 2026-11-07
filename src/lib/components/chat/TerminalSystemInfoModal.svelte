@@ -160,7 +160,7 @@
 							<div class="flex items-center justify-between gap-3 mb-1.5 text-xs">
 								<span class="text-gray-500 dark:text-gray-400"
 									>{metric.label}{#if data.environment === 'container' && metric.scope === 'host'}
-										· {$i18n.t('Host')}{/if}</span
+										{' · ' + $i18n.t('Host')}{/if}</span
 								>
 								<span class="tabular-nums text-gray-700 dark:text-gray-300">{metric.value}</span>
 							</div>

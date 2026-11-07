@@ -1892,6 +1892,199 @@
 	let lastClickedIndex: number | null = null;
 	let selectionMode = false;
 
+	let selectingFiles = false;
+	let keepSelectionToolbar = false;
+	const selectFilesByDrag = (node: HTMLElement) => {
+		let start: PointerEvent | null = null;
+		let point: PointerEvent;
+		let origin = { x: 0, y: 0 };
+		let original = new Set<string>();
+		let directory = '';
+		let context = '';
+		let armed = false;
+		let timer: ReturnType<typeof setTimeout>;
+		let frame = 0;
+		let box: HTMLDivElement | null = null;
+		let suppressClick = false;
+		const finish = (cancelled = false) => {
+			if (!start) return;
+			if (cancelled && directory === currentPath && context === dragContext)
+				selectedEntries = original;
+			suppressClick = selectingFiles;
+			selectingFiles = false;
+			clearTimeout(timer);
+			cancelAnimationFrame(frame);
+			box?.remove();
+			box = null;
+			if (node.hasPointerCapture(start.pointerId)) node.releasePointerCapture(start.pointerId);
+			start = null;
+			document.removeEventListener('pointermove', move);
+			document.removeEventListener('pointerup', end);
+			document.removeEventListener('pointercancel', cancel);
+			document.removeEventListener('touchmove', preventScroll);
+			document.removeEventListener('keydown', keydown, true);
+			window.removeEventListener('blur', cancel);
+		};
+		const update = () => {
+			if (!start || !box) return;
+			if (
+				!active ||
+				selectedFile ||
+				isSearching ||
+				directory !== currentPath ||
+				context !== dragContext
+			) {
+				finish();
+				return;
+			}
+			const viewport = node.getBoundingClientRect();
+			if (point.clientX >= viewport.left && point.clientX <= viewport.right) {
+				node.scrollTop +=
+					point.clientY < viewport.top + 24 ? -8 : point.clientY > viewport.bottom - 24 ? 8 : 0;
+			}
+			const x =
+				Math.max(0, Math.min(node.clientWidth, point.clientX - viewport.left)) + node.scrollLeft;
+			const y =
+				Math.max(0, Math.min(node.clientHeight, point.clientY - viewport.top)) + node.scrollTop;
+			const left = Math.min(origin.x, x),
+				top = Math.min(origin.y, y);
+			const right = Math.max(origin.x, x),
+				bottom = Math.max(origin.y, y);
+			const screenLeft = Math.max(viewport.left, viewport.left + left - node.scrollLeft);
+			const screenTop = Math.max(viewport.top, viewport.top + top - node.scrollTop);
+			Object.assign(box.style, {
+				left: `${screenLeft}px`,
+				top: `${screenTop}px`,
+				width: `${Math.max(0, Math.min(viewport.right, viewport.left + right - node.scrollLeft) - screenLeft)}px`,
+				height: `${Math.max(0, Math.min(viewport.bottom, viewport.top + bottom - node.scrollTop) - screenTop)}px`
+			});
+			const next = new Set(start.shiftKey || start.metaKey || start.ctrlKey ? original : []);
+			for (const row of node.querySelectorAll<HTMLElement>('[data-file-row]')) {
+				const rect = row.getBoundingClientRect();
+				const rx = rect.left - viewport.left + node.scrollLeft;
+				const ry = rect.top - viewport.top + node.scrollTop;
+				if (rx >= right || rx + rect.width <= left || ry >= bottom || ry + rect.height <= top)
+					continue;
+				const path = row.dataset.fileRow!;
+				if ((start.metaKey || start.ctrlKey) && original.has(path)) next.delete(path);
+				else next.add(path);
+			}
+			if (
+				next.size !== selectedEntries.size ||
+				[...next].some((path) => !selectedEntries.has(path))
+			)
+				selectedEntries = next;
+			frame = requestAnimationFrame(update);
+		};
+		const move = (event: PointerEvent) => {
+			if (!start || event.pointerId !== start.pointerId) return;
+			point = event;
+			if (Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) < 5) return;
+			if (!armed) {
+				finish();
+				return;
+			}
+			if (box) return;
+			selectingFiles = true;
+			lastClickedIndex = null;
+			node.setPointerCapture(event.pointerId);
+			box = document.createElement('div');
+			box.className = 'pointer-events-none fixed z-50 border border-blue-500/70 bg-blue-500/10';
+			box.setAttribute('aria-hidden', 'true');
+			document.body.appendChild(box);
+			update();
+		};
+		const end = (event: PointerEvent) => {
+			if (event.pointerId !== start?.pointerId) return;
+			if (box) {
+				point = event;
+				cancelAnimationFrame(frame);
+				update();
+			}
+			finish();
+		};
+		const cancel = () => finish(true);
+		const keydown = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			cancel();
+		};
+		const preventScroll = (event: TouchEvent) => {
+			if (event.touches.length > 1) cancel();
+			else if (armed) event.preventDefault();
+		};
+		const begin = (event: PointerEvent) => {
+			suppressClick = false;
+			if (start) {
+				cancel();
+				return;
+			}
+			if (
+				!event.isPrimary ||
+				event.button !== 0 ||
+				selectedFile ||
+				comparison ||
+				isSearching ||
+				loading ||
+				uploading ||
+				creatingFile ||
+				creatingFolder
+			)
+				return;
+			if (
+				!(event.target instanceof Element) ||
+				event.target.closest(
+					'button, input, textarea, a, [contenteditable="true"], [draggable="true"]'
+				)
+			)
+				return;
+			const rect = node.getBoundingClientRect();
+			if (event.clientX >= rect.left + node.clientWidth) return;
+			start = point = event;
+			origin = {
+				x: event.clientX - rect.left + node.scrollLeft,
+				y: event.clientY - rect.top + node.scrollTop
+			};
+			original = new Set(selectedEntries);
+			keepSelectionToolbar = original.size > 0;
+			directory = currentPath;
+			context = dragContext;
+			closeDirectoryMenu();
+			armed = event.pointerType !== 'touch';
+			if (armed) event.preventDefault();
+			else timer = setTimeout(() => (armed = true), 500);
+			document.addEventListener('pointermove', move);
+			document.addEventListener('pointerup', end);
+			document.addEventListener('pointercancel', cancel);
+			document.addEventListener('touchmove', preventScroll, { passive: false });
+			document.addEventListener('keydown', keydown, true);
+			window.addEventListener('blur', cancel);
+		};
+		const click = (event: MouseEvent) => {
+			if (!suppressClick) return;
+			suppressClick = false;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		};
+		const contextMenu = (event: MouseEvent) => {
+			if (start?.pointerType !== 'touch') return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		};
+		node.addEventListener('pointerdown', begin);
+		node.addEventListener('click', click, true);
+		node.addEventListener('contextmenu', contextMenu, true);
+		return {
+			destroy() {
+				finish();
+				node.removeEventListener('pointerdown', begin);
+				node.removeEventListener('click', click, true);
+				node.removeEventListener('contextmenu', contextMenu, true);
+			}
+		};
+	};
+
 	const dragAttachments = (event: DragEvent, path: string) => {
 		if (!effectiveTerminalId) return;
 		const paths = selectedEntries.has(path) ? selectedEntries : new Set([path]);
@@ -2580,7 +2773,7 @@
 		{/if}
 
 		<!-- Bulk action bar -->
-		{#if selectedCount > 0 && !isSearching}
+		{#if (selectingFiles ? keepSelectionToolbar : selectedCount > 0) && !isSearching}
 			<BulkActionBar
 				count={selectedCount}
 				{canCompare}
@@ -2622,12 +2815,17 @@
 		<!-- Content -->
 		<div
 			bind:this={viewerRoot}
+			use:selectFilesByDrag
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
 				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
 			}}
 			on:contextmenu={(e) => {
+				if (selectingFiles) {
+					e.preventDefault();
+					return;
+				}
 				if (comparison || selectedFile || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
