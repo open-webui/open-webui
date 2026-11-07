@@ -27,8 +27,6 @@
 	export let disabled = false;
 
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
-	const needsSavedChat = (terminal: any, chatId: string | null) =>
-		chatContext(terminal)?.context_id === 'chat_id' && !isSavedChatId(chatId);
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
 		(t) =>
@@ -127,10 +125,8 @@
 	let info: { connection: TerminalConnection; chatId: string | null; label: string } | null = null;
 	const openInfo = async (selector: string, label: string) => {
 		if (
-			needsSavedChat(
-				systemTerminals.find((t) => t.id === selector),
-				$activeChatId
-			)
+			chatContext(systemTerminals.find((t) => t.id === selector))?.context_id === 'chat_id' &&
+			!isSavedChatId($activeChatId)
 		)
 			return;
 		const connection = resolveTerminalConnection(
@@ -369,7 +365,7 @@
 										</div>
 									{/if}
 								</button>
-								{#if !needsSavedChat(terminal, $activeChatId)}
+								{#if chatContext(terminal)?.context_id !== 'chat_id' || isSavedChatId($activeChatId)}
 									<div
 										class="absolute inset-y-0 {$selectedTerminalId === terminal.id
 											? 'right-6'
