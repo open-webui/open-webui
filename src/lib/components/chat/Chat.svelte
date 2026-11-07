@@ -1094,9 +1094,13 @@
 			);
 			if (generation === agentDiscovery) {
 				models.set(available);
-				selectedModels = selectedModels.map((id) =>
-					id.startsWith('agent:') && !available.some((model) => model.id === id) ? '' : id
+				const remaining = selectedModels.filter(
+					(id) => !id.startsWith('agent:') || available.some((model) => model.id === id)
 				);
+				selectedModels =
+					remaining.length || equal(remaining, selectedModels)
+						? remaining
+						: normalizeSelectedModels(remaining);
 			}
 		} catch (error) {
 			console.error('Agent model discovery failed', error);
@@ -3030,6 +3034,8 @@
 					if (isTerminalAvailable(terminalId)) {
 						selectedTerminalId.set(terminalId);
 						await refreshAgentModels();
+					} else if ($terminalServers !== null) {
+						selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
 					}
 				}
 
