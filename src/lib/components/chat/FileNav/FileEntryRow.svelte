@@ -303,6 +303,7 @@
 			if (timer) clearTimeout(timer);
 			cancelAnimationFrame(frame);
 			send(target, 'dragleave');
+			if (transfer) send(node, 'dragend');
 			ghost?.remove();
 			timer = null;
 			start = point = null;
@@ -367,6 +368,11 @@
 		};
 		const end = (event: TouchEvent) => {
 			if (didLongPress) event.preventDefault();
+			if (transfer) {
+				point = event.changedTouches[0] ?? point;
+				cancelAnimationFrame(frame);
+				update();
+			}
 			if (transfer && accepted) send(target, 'drop');
 			cleanup();
 		};
@@ -769,10 +775,7 @@
 							class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click|stopPropagation={() => {
-								if (!canMutate) {
-									e.stopPropagation();
-									return;
-								}
+								if (!writable) return;
 								menuOpen = false;
 								onNewFolder?.(directoryPath);
 							}}
@@ -787,10 +790,7 @@
 							class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click|stopPropagation={() => {
-								if (!canMutate) {
-									e.stopPropagation();
-									return;
-								}
+								if (!writable) return;
 								menuOpen = false;
 								onNewFile?.(directoryPath);
 							}}

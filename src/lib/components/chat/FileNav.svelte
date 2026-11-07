@@ -1830,9 +1830,11 @@
 	};
 
 	const handleMovePaths = async (sources: string[], destFolder: string) => {
+		const context = dragContext;
 		const movedSources: string[] = [];
 		const roots = [...new Set(sources.map((path) => normalizePath(path).replace(/\/$/, '')))];
 		for (const source of roots) {
+			if (context !== dragContext) break;
 			if (roots.some((parent) => parent !== source && source.startsWith(`${parent}/`))) continue;
 			if (
 				visibleEntries.find((entry) => entry.fullPath.replace(/\/$/, '') === source)?.writable ===
@@ -1841,7 +1843,7 @@
 				continue;
 			if (await moveOne(source, destFolder)) movedSources.push(source);
 		}
-		if (movedSources.length > 0) {
+		if (movedSources.length > 0 && context === dragContext) {
 			await refreshAfterMove(movedSources, destFolder);
 		}
 	};
@@ -2246,7 +2248,6 @@
 		if (!active) return;
 		if (event.key === 'Escape' && fileAsk) {
 			fileAsk = null;
-			event.preventDefault();
 		} else handleKeydown(event);
 	}}
 	on:click={handleWindowClick}
