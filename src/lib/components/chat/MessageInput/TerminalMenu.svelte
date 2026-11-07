@@ -21,7 +21,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
-	import Computer from '$lib/components/icons/Computer.svelte';
+	import Devices from '$lib/components/icons/Devices.svelte';
 
 	const i18n = getContext<any>('i18n');
 
@@ -357,7 +357,7 @@
 								>
 									<div class="flex flex-1 gap-2 items-center truncate">
 										{#if section.devices}
-											<Computer className="size-3.5 shrink-0" strokeWidth="2" />
+											<Devices className="size-3.5 shrink-0" strokeWidth="2" />
 										{:else}
 											<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
 										{/if}
