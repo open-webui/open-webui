@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🗂️ **Faster sidebar chat list.** The chat list in the sidebar now appears as soon as its own data is ready instead of waiting for the channel list. [#33686](https://github.com/open-webui/open-webui/pull/33686)
 - 🧮 **Faster Redis filter lookups.** With Redis enabled, chat requests now look up the filters of a model faster. [#33668](https://github.com/open-webui/open-webui/pull/33668)
 - 🌿 **Git panel feedback and resizing.** The Git panel now shows what it is doing, such as staging, pushing or fetching, and its file list can be resized.
+- 🌍 **Client IP header placeholders.** Custom headers of connections can now use "{{USER_IP}}" and "{{X_FORWARDED_FOR}}" to pass the client address on to the upstream provider, and both are empty for automations and background jobs. [#33833](https://github.com/open-webui/open-webui/pull/33833), [#33819](https://github.com/open-webui/open-webui/issues/33819)
 - 🗒️ **Descriptions in model pickers.** The tool, skill, filter, action and sub-agent pickers in the model editor now show each item's description under its name. [#33723](https://github.com/open-webui/open-webui/pull/33723)
 - 🧹 **Discard any Git change.** The Git panel can now discard staged and new files too, and its confirmation warns that files not in the last commit are deleted and that this cannot be undone.
 - 🔔 **Notifications open their chat.** Clicking a desktop notification now brings Open WebUI to the front and opens the related chat, channel or calendar.
@@ -70,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 📓 **Notes search results.** The notes list no longer shows the results of an older search after you type a newer one.
 - ⏩ **Continued replies on Responses connections.** Continuing a reply on a Responses API connection now adds the new text to the existing reply.
 - 🔘 **Desktop app top clicks.** In the desktop app, banners and menus near the top of the window now take clicks instead of dragging the window.
+- 📡 **Tabs over plain HTTP.** The New File, New Terminal and Browser tabs in the side panel now open when Open WebUI is reached over plain HTTP on a LAN or Docker address. [#33847](https://github.com/open-webui/open-webui/pull/33847), [#33845](https://github.com/open-webui/open-webui/issues/33845)
 - 🧱 **Milvus knowledge base uploads.** Adding a file to a knowledge base on Milvus no longer processes the file a second time or stores its chunks twice. [#33745](https://github.com/open-webui/open-webui/pull/33745), [#33744](https://github.com/open-webui/open-webui/issues/33744)
 - 📁 **Working folder in new chats.** The terminal working folder of a new chat is no longer reset to the root when the chat is created before the file browser has finished loading.
 - 🖥️ **Terminal kept on model switch.** Switching to a model without its own default terminal no longer turns off the terminal selected in the chat.
