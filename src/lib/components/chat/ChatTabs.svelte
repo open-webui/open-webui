@@ -921,7 +921,6 @@
 		$sideChatRequest?.parentId === chatId
 	)
 		sideChatRequest.set(null);
-	$: if ($showTabs === 'files' && showFilesTab) openFiles();
 	$: if ($showTabs === 'side') {
 		if (canSideChat) openFeature('side');
 		else sideChatRequest.set(null);
