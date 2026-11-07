@@ -167,7 +167,6 @@
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	$: isTemporary = temporary ?? $temporaryChatEnabled;
 	export let terminalContext: TerminalContext | null = null;
-	export let fullWidthTabs = false;
 	export let terminalSelectionEnabled = true;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
@@ -2840,7 +2839,6 @@
 										<!-- Terminal Server Selector -->
 										{#if showTerminalSelector}
 											<TerminalMenu
-												{fullWidthTabs}
 												bind:show={showTerminalMenu}
 												disabled={generating ||
 													(!!history?.currentId &&

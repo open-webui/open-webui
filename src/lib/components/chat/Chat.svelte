@@ -5554,7 +5554,6 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
-										{fullWidthTabs}
 										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
@@ -5656,7 +5655,6 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
-										{fullWidthTabs}
 										{terminalContext}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
@@ -5727,7 +5725,6 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
-									{fullWidthTabs}
 									chatId={$chatId}
 									{terminalContext}
 									callActive={!!(bridge?.connected || bridge?.connecting)}

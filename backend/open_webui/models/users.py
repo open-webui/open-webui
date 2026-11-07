@@ -101,7 +101,6 @@ class InterfaceSettings(BaseModel):
     splitLargeChunks: bool | None = None
     scrollOnBranchChange: bool | None = None
     scrollOnResponseGeneration: bool | None = None
-    showFilesOnTerminalSelect: bool | None = None
     temporaryChatByDefault: bool | None = None
     userLocation: bool | None = None
     showChatTitleInTab: bool | None = None
