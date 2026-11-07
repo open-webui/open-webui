@@ -379,7 +379,7 @@
 						type="button"
 						class="flex min-w-0 flex-1 items-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 {viewMode ===
 						'grid'
-							? 'h-28 flex-col gap-0.5 px-1 py-2 text-center'
+							? 'h-24 flex-col gap-0.5 px-1 py-2 text-center'
 							: 'gap-1.5 py-1.5 pr-2 text-left'}"
 						title={viewMode === 'grid' || hoverDisabled ? entry.name : undefined}
 						aria-label={viewMode === 'grid' ? entry.name : undefined}
