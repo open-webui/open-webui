@@ -40,6 +40,7 @@
 		pdfData instanceof Uint8Array ? pdfData.slice() : pdfData.slice(0);
 
 	const updateLayout = () => {
+		if (rootEl && !rootEl.clientWidth) return;
 		hideThumbs = (rootEl?.clientWidth ?? window.innerWidth) < 720;
 	};
 

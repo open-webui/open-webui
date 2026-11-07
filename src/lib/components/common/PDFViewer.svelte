@@ -319,8 +319,7 @@
 
 	export const resetView = () => {
 		if (pzInstance) {
-			pzInstance.moveTo(0, 0);
-			pzInstance.zoomAbs(0, 0, 1);
+			initPanzoom();
 			zoomLevel = 1;
 			rerenderPages(1);
 		}
@@ -529,11 +528,19 @@
 			wrappers.push(wrapper);
 		}
 
+		const { x, y, scale } = pzInstance?.getTransform() ?? { x: 0, y: 0, scale: 1 };
+		const keepView =
+			singlePage && renderedPage && renderedPage !== selectedPage && Math.abs(scale - 1) >= 0.01;
 		sceneElement.replaceChildren(...wrappers);
 		void renderCommentMarkers();
 		lastRenderedZoom = 1;
+		zoomLevel = 1;
 		renderedPage = singlePage ? selectedPage : 0;
 		initPanzoom();
+		if (keepView) {
+			pzInstance?.zoomAbs(0, 0, scale);
+			pzInstance?.moveTo(x, y);
+		}
 		await scrollToTargetPage();
 		syncVisiblePage();
 	};
@@ -714,9 +721,7 @@
 	{/if}
 
 	<div
-		class={singlePage
-			? 'overflow-hidden h-full flex items-center justify-center overscroll-contain'
-			: 'overflow-y-auto h-full'}
+		class={singlePage ? 'overflow-hidden h-full overscroll-contain' : 'overflow-y-auto h-full'}
 		bind:this={outerContainer}
 		role="application"
 		aria-label={`${itemLabel} viewer`}
@@ -727,7 +732,10 @@
 		on:pointerdown={focusViewer}
 		on:keydown={handleKeyDown}
 	>
-		<div bind:this={sceneElement} class={singlePage ? '' : 'w-full'}></div>
+		<div
+			bind:this={sceneElement}
+			class={singlePage ? 'w-full h-full flex items-center justify-center' : 'w-full'}
+		></div>
 	</div>
 
 	{#if !error && pdfDoc}
