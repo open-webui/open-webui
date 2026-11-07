@@ -58,7 +58,10 @@
 			const removed =
 				chunk.fromA === chunk.toA || !base.length
 					? 0
-					: base.lineAt(chunk.endA).number - base.lineAt(chunk.fromA).number + 1;
+					: base.lineAt(chunk.endA).number -
+						base.lineAt(chunk.fromA).number +
+						1 -
+						Number(base.lineAt(chunk.endA).from === base.length);
 			const start = doc.lineAt(chunk.fromB).number;
 			const end = doc.lineAt(chunk.endB).number;
 			for (let number = start; number <= end; number++) {
