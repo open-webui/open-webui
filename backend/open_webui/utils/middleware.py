@@ -3189,6 +3189,17 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
             tool_call['status'] = 'failed'
             return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
 
+        if (
+            event_caller
+            and name.startswith('browser_')
+            and (tool_type == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
+        ):
+            try:
+                async with asyncio.timeout(15):
+                    await event_caller({'type': 'terminal:browser', 'data': {}})
+            except TimeoutError:
+                pass
+
         tool_call['started_at'] = time.time()
         started = time.perf_counter()
         try:

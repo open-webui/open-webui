@@ -1310,7 +1310,12 @@
 		});
 	};
 
-	const terminalEventHandler = (type: string, data: any, message: any) => {
+	const terminalEventHandler = async (type: string, data: any, message: any, cb?: Function) => {
+		if (type === 'terminal:browser') {
+			await terminalTabs?.ensureBrowserTab();
+			cb?.(true);
+			return;
+		}
 		const attachment = history.messages[message?.parentId]?.files?.find(
 			(file: any) => file.type === 'filesystem'
 		);
@@ -1816,7 +1821,7 @@
 					eventConfirmationInputType = data?.input?.type ?? data?.type ?? '';
 					eventConfirmationInputOptions = data?.input?.options ?? data?.options ?? [];
 				} else if (type.startsWith('terminal:')) {
-					terminalEventHandler(type, data, message);
+					terminalEventHandler(type, data, message, cb);
 				} else {
 					console.log('Unknown message type', data);
 				}

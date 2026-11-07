@@ -533,6 +533,17 @@
 			connection: connection ?? undefined
 		});
 	};
+	const readyBrowserTabs = new Set<string>();
+	export async function ensureBrowserTab() {
+		const findBrowserTab = () =>
+			tabs.tabs.find((tab) => tab.kind === 'browser' && tab.terminalId === $selectedTerminalId);
+		if (!findBrowserTab()) openBrowser();
+		for (let waited = 0; waited < 10_000; waited += 100) {
+			const browserTab = findBrowserTab();
+			if (!browserTab || readyBrowserTabs.has(browserTab.id)) return;
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+	}
 	const closeTab = async (id: string) => {
 		if (id === mainChatTabId) return;
 		if (closing.has(id)) return;
@@ -551,6 +562,7 @@
 			if (tab.kind === 'artifacts') showArtifacts.set(false);
 			if (tab.kind === 'preview') showEmbeds.set(false);
 			tabs = removeTab(tabs, id);
+			readyBrowserTabs.delete(id);
 			delete dirtyFiles[id];
 			delete fileContexts[id];
 			if (!tabs.tabs.length) showTabs.set(false);
@@ -1276,6 +1288,7 @@
 						active={panelVisible && visibleTabIds.has(tab.id)}
 						initialUrl={tab.path ?? ''}
 						onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, tab.browserBaseUrl, url)}
+						onReady={() => readyBrowserTabs.add(tab.id)}
 						overlay={dragged}
 						onNavigate={(path, label) => {
 							tabs = {
