@@ -9,6 +9,7 @@
 		selectedTerminalId,
 		settings,
 		terminalServers,
+		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -146,7 +147,8 @@
 		if (systemTerminal) {
 			if (
 				systemChatContext === false ||
-				(isTemporaryChatId($activeChatId) && systemChatContext?.context_id === 'chat_id')
+				(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
+					systemChatContext?.context_id === 'chat_id')
 			) {
 				return null;
 			}
