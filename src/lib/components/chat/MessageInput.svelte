@@ -72,7 +72,7 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import { getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import { filesystemFile, getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -1408,9 +1408,12 @@
 		// (e.g. Notes, Workspace, pinned Models), which also set 'text/plain'.
 		if (
 			e.dataTransfer?.types?.includes('Files') ||
+			e.dataTransfer?.types?.includes('application/x-terminal-file') ||
 			e.dataTransfer?.types?.includes('application/x-open-webui-drag')
 		) {
 			dragged = true;
+			if (e.dataTransfer?.types.includes('application/x-terminal-file'))
+				e.dataTransfer.dropEffect = 'copy';
 		} else {
 			dragged = false;
 		}
@@ -1426,7 +1429,62 @@
 	const onDrop = async (e: DragEvent) => {
 		if (!isAttachmentDrop(e)) return;
 		e.preventDefault();
-		console.log(e);
+		const terminalFiles = e.dataTransfer?.getData('application/x-terminal-file');
+		if (terminalFiles) {
+			e.stopPropagation();
+			dragged = false;
+			try {
+				if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true))
+					throw new Error($i18n.t('You do not have permission to upload files.'));
+				const entries = JSON.parse(terminalFiles);
+				if (
+					!Array.isArray(entries) ||
+					entries.some(
+						(entry) =>
+							!entry ||
+							typeof entry.path !== 'string' ||
+							!entry.path ||
+							typeof entry.name !== 'string' ||
+							typeof entry.terminal_id !== 'string' ||
+							!entry.terminal_id ||
+							(entry.session_id !== null && typeof entry.session_id !== 'string')
+					)
+				)
+					throw new Error($i18n.t('Invalid file attachment.'));
+				const attachments = entries.map((entry) =>
+					filesystemFile(entry, entry.terminal_id, entry.session_id)
+				);
+				const existing = files.filter((file) => file.type === 'filesystem');
+				const terminalId = existing[0]?.terminal_id ?? attachments[0]?.terminal_id;
+				if (
+					attachments.some(
+						(file) =>
+							file.terminal_id !== terminalId || (file.session_id && file.session_id !== chatId)
+					)
+				)
+					throw new Error(
+						$i18n.t('Attached files must belong to this chat and the same terminal.')
+					);
+				const additions = attachments.filter(
+					(file, index) =>
+						!existing.some((item) => (item.path ?? item.url ?? item.id) === file.path) &&
+						attachments.findIndex((item) => item.path === file.path) === index
+				);
+				if (
+					$config?.file?.max_count != null &&
+					files.length + additions.length > $config.file.max_count
+				)
+					throw new Error(
+						$i18n.t('You can only chat with a maximum of {{maxCount}} file(s) at a time.', {
+							maxCount: $config.file.max_count
+						})
+					);
+				files = [...files, ...additions];
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : String(error));
+			}
+			return;
+		}
 
 		// Check if the dropped data is a sidebar chat, folder, note, or model item
 		const textData = e.dataTransfer?.getData('text/plain');

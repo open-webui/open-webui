@@ -1801,6 +1801,18 @@
 	let lastClickedIndex: number | null = null;
 	let selectionMode = false;
 
+	const dragAttachments = (event: DragEvent, path: string) => {
+		if (!effectiveTerminalId) return;
+		const paths = selectedEntries.has(path) ? selectedEntries : new Set([path]);
+		const attachments = visibleEntries
+			.filter((entry) => entry.type === 'file' && paths.has(entry.fullPath))
+			.map((entry) =>
+				filesystemFile({ ...entry, path: entry.fullPath }, effectiveTerminalId!, chatId ?? null)
+			);
+		if (attachments.length)
+			event.dataTransfer?.setData('application/x-terminal-file', JSON.stringify(attachments));
+	};
+
 	$: selectedCount = selectedEntries.size;
 	$: comparisonEntries = [...selectedEntries]
 		.map((path) => visibleEntries.find((entry) => entry.fullPath === path))
@@ -2861,6 +2873,7 @@
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
+									onDragStart={dragAttachments}
 									onOpen={(row) =>
 										openEntry({
 											...row,

@@ -97,6 +97,7 @@
 	export let terminalSessionId: string | undefined = undefined;
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
+	export let onDragStart: ((event: DragEvent, path: string) => void) | null = null;
 	export let onNewFolder: ((path: string) => void) | undefined = undefined;
 	export let onNewFile: ((path: string) => void) | undefined = undefined;
 	export let onSelectForComparison: (() => void) | undefined = undefined;
@@ -468,19 +469,21 @@
 							: 'gap-1.5 py-1.5 pr-2 text-left'}"
 						title={viewMode === 'grid' || hoverDisabled ? entry.name : undefined}
 						aria-label={viewMode === 'grid' ? entry.name : undefined}
-						draggable={canMutate}
+						draggable={canMutate || (entry.type === 'file' && onDragStart !== null)}
 						on:dragend={() => (dragging = false)}
 						on:dragstart={(e) => {
 							openPreview = false;
-							if (!canMutate) {
+							if (!canMutate && !(entry.type === 'file' && onDragStart)) {
 								e.preventDefault();
 								return;
 							}
 							dragging = true;
 							const filePath = entryPath.replace(/\/$/, '');
+							onDragStart?.(e, filePath);
 							// If dragging a selected item, drag all selected
 							if (selected && selectedPaths.size > 1) {
-								e.dataTransfer?.setData(dragType, JSON.stringify({ paths: [...selectedPaths] }));
+								if (canMutate)
+									e.dataTransfer?.setData(dragType, JSON.stringify({ paths: [...selectedPaths] }));
 								// Custom drag ghost showing count
 								const ghost = document.createElement('div');
 								ghost.style.cssText =
@@ -489,23 +492,12 @@
 								document.body.appendChild(ghost);
 								e.dataTransfer?.setDragImage(ghost, 0, 0);
 								requestAnimationFrame(() => ghost.remove());
-							} else {
+							} else if (canMutate) {
 								e.dataTransfer?.setData(
 									dragType,
 									JSON.stringify({
 										path: entry.type === 'directory' ? directoryPath : filePath,
 										name: entry.name
-									})
-								);
-							}
-							if (entry.type === 'file' && terminalUrl) {
-								e.dataTransfer?.setData(
-									'application/x-terminal-file',
-									JSON.stringify({
-										path: filePath,
-										name: entry.name,
-										url: terminalUrl,
-										key: terminalKey
 									})
 								);
 							}
