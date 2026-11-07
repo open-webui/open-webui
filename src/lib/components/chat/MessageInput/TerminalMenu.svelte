@@ -369,32 +369,26 @@
 										</div>
 									{/if}
 								</button>
-								<div
-									class="absolute inset-y-0 {$selectedTerminalId === terminal.id
-										? 'right-6'
-										: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/instance:opacity-100 group-hover/instance:pointer-events-auto group-focus-within/instance:opacity-100 group-focus-within/instance:pointer-events-auto"
-								>
-									<Tooltip
-										content={$i18n.t(
-											needsSavedChat(terminal, $activeChatId)
-												? 'Save this chat to view system info'
-												: 'System info'
-										)}
-										placement="top"
+								{#if !needsSavedChat(terminal, $activeChatId)}
+									<div
+										class="absolute inset-y-0 {$selectedTerminalId === terminal.id
+											? 'right-6'
+											: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/instance:opacity-100 group-hover/instance:pointer-events-auto group-focus-within/instance:opacity-100 group-focus-within/instance:pointer-events-auto"
 									>
-										<button
-											type="button"
-											disabled={needsSavedChat(terminal, $activeChatId)}
-											aria-label={$i18n.t('System info for {{name}}', {
-												name: terminal.name || terminal.id
-											})}
-											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2 disabled:opacity-40 disabled:cursor-not-allowed"
-											on:click|stopPropagation={() =>
-												openInfo(terminal.id, terminal.name || terminal.id)}
-											><Activity className="size-3.5" /></button
-										>
-									</Tooltip>
-								</div>
+										<Tooltip content={$i18n.t('System info')} placement="top">
+											<button
+												type="button"
+												aria-label={$i18n.t('System info for {{name}}', {
+													name: terminal.name || terminal.id
+												})}
+												class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2"
+												on:click|stopPropagation={() =>
+													openInfo(terminal.id, terminal.name || terminal.id)}
+												><Activity className="size-3.5" /></button
+											>
+										</Tooltip>
+									</div>
+								{/if}
 							</div>
 						{/each}
 					{/if}

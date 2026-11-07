@@ -4575,6 +4575,5 @@
 	"Details": "Details",
 	"Uptime": "Uptime",
 	"{{count}} cores": "{{count}} cores",
-	"System info": "System info",
-	"Save this chat to view system info": "Save this chat to view system info"
+	"System info": "System info"
 }
