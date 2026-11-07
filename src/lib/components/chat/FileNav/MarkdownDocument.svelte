@@ -13,6 +13,29 @@
 			}
 		]
 	});
+	/** Local document resources never become arbitrary network requests. */
+	export function resolveDocumentPath(documentPath: string, reference: string): string | null {
+		if (!reference || reference.startsWith('#') || reference.startsWith('//')) return null;
+		if (/^[a-z][a-z\d+.-]*:/i.test(reference) && !/^[a-z]:[\\/]/i.test(reference)) return null;
+		let path: string;
+		try {
+			path = decodeURIComponent(reference.split(/[?#]/)[0]).replace(/\\/g, '/');
+		} catch {
+			return null;
+		}
+		if (/[\x00-\x1f]/.test(path)) return null;
+		const base = documentPath.replace(/\\/g, '/');
+		if (!path.startsWith('/') && !/^[a-z]:\//i.test(path))
+			path = base.slice(0, base.lastIndexOf('/') + 1) + path;
+		const prefix = /^[a-z]:\//i.test(path) ? path.slice(0, 3) : '/';
+		const parts: string[] = [];
+		for (const part of path.slice(prefix.length).split('/')) {
+			if (part === '..') parts.pop();
+			else if (part && part !== '.') parts.push(part);
+		}
+		return prefix + parts.join('/');
+	}
+
 </script>
 
 <script lang="ts">
@@ -35,28 +58,6 @@
 	export let chatId: string | null = null;
 	export let resourceVersion = 0;
 	export let onLocalLink: (path: string) => void = () => {};
-	/** Local document resources never become arbitrary network requests. */
-	function resolveDocumentPath(documentPath: string, reference: string): string | null {
-		if (!reference || reference.startsWith('#') || reference.startsWith('//')) return null;
-		if (/^[a-z][a-z\d+.-]*:/i.test(reference) && !/^[a-z]:[\\/]/i.test(reference)) return null;
-		let path: string;
-		try {
-			path = decodeURIComponent(reference.split(/[?#]/)[0]).replace(/\\/g, '/');
-		} catch {
-			return null;
-		}
-		if (/[\x00-\x1f]/.test(path)) return null;
-		const base = documentPath.replace(/\\/g, '/');
-		if (!path.startsWith('/') && !/^[a-z]:\//i.test(path))
-			path = base.slice(0, base.lastIndexOf('/') + 1) + path;
-		const prefix = /^[a-z]:\//i.test(path) ? path.slice(0, 3) : '/';
-		const parts: string[] = [];
-		for (const part of path.slice(prefix.length).split('/')) {
-			if (part === '..') parts.pop();
-			else if (part && part !== '.') parts.push(part);
-		}
-		return prefix + parts.join('/');
-	}
 
 	let generation = 0;
 	let urls = new Map<string, Promise<string | null>>();

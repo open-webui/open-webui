@@ -1,5 +1,10 @@
 <script>
 	import { setTheme } from '$lib/utils/theme';
+	import {
+		playNotificationSound,
+		setNotificationSoundEnabled,
+		unlockNotificationAudio
+	} from '$lib/utils/audio';
 	import CommentsHost from '$lib/components/comments/CommentsHost.svelte';
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
@@ -31,7 +36,6 @@
 		isApp,
 		appInfo,
 		toolServers,
-		playingNotificationSound,
 		channels,
 		channelId,
 		channelRequestQueues,
@@ -803,15 +807,10 @@
 				if (done) {
 					if (
 						($settings?.notificationSound ?? true) &&
-						($settings?.notificationSoundAlways ?? false)
+						($settings?.notificationSoundAlways ?? false) &&
+						$isLastActiveTab
 					) {
-						playingNotificationSound.set(true);
-
-						const audio = new Audio(`/audio/notification.mp3`);
-						audio.play().finally(() => {
-							// Ensure the global state is reset after the sound finishes
-							playingNotificationSound.set(false);
-						});
+						void playNotificationSound($settings?.notificationSoundType);
 					}
 
 					if ($isLastActiveTab) {
@@ -836,7 +835,8 @@
 								goto(`/c/${event.chat_id}`);
 							},
 							content: contentPreview,
-							title: displayTitle
+							title: displayTitle,
+							playSound: !($settings?.notificationSoundAlways ?? false)
 						},
 						duration: 15000,
 						unstyled: true
@@ -1491,11 +1491,20 @@
 		}
 	}
 
+	$: if (typeof window !== 'undefined')
+		setNotificationSoundEnabled($settings?.notificationSound ?? true);
+
+	const unlockNotificationSound = () => {
+		if ($settings?.notificationSound ?? true) void unlockNotificationAudio();
+	};
+
 	onDestroy(() => {
 		stopTether();
 		bc.close();
 	});
 </script>
+
+<svelte:window on:click={unlockNotificationSound} on:keydown={unlockNotificationSound} />
 
 <svelte:head>
 	<!-- LICENSE covers this Open WebUI branding surface, including name, logo,
