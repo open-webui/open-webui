@@ -98,6 +98,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let allowEmbeds = false;
+	export let allowToolApproval = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -298,6 +299,7 @@
 			{compactPreview}
 			{done}
 			{allowEmbeds}
+			{allowToolApproval}
 			{editCodeBlock}
 			{topPadding}
 			{sourceIds}

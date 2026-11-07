@@ -45,6 +45,7 @@
 	export let readOnly = false;
 	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
+	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -115,6 +116,7 @@
 				{submitMessage}
 				{deleteMessage}
 				{allowDelete}
+				{allowToolApproval}
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
@@ -144,6 +146,7 @@
 					{submitMessage}
 					{deleteMessage}
 					{allowDelete}
+					{allowToolApproval}
 					{continueResponse}
 					{regenerateResponse}
 					{mergeResponses}

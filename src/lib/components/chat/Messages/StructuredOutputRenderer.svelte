@@ -33,6 +33,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let allowEmbeds = false;
+	export let allowToolApproval: boolean = false;
 	export let sourceIds: string[] = [];
 	export let formatMessageContent: (content: string) => string = (content) => content;
 	export let onSave: any = () => {};
@@ -140,7 +141,7 @@
 			messageDone={done}
 			{compactPreview}
 			{allowEmbeds}
-			resolvable={!!chatId && !!messageId && save}
+			resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
 			{resolvingCallId}
 			onResolve={resolveToolCall}
 		>
@@ -152,7 +153,7 @@
 							attributes={detailToken.attributes}
 							resultContent={detailToken.text}
 							grouped={true}
-							resolvable={!!chatId && !!messageId && save}
+							resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
 							resolving={resolvingCallId === detailToken.attributes?.id}
 							onResolve={(approved) => resolveToolCall(detailToken.attributes?.id ?? '', approved)}
 							open={$settings?.expandDetails ?? false}
@@ -214,7 +215,7 @@
 				attributes={detailToken.attributes}
 				resultContent={detailToken.text}
 				{allowEmbeds}
-				resolvable={!!chatId && !!messageId && save}
+				resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
 				resolving={resolvingCallId === detailToken.attributes?.id}
 				onResolve={(approved) => resolveToolCall(detailToken.attributes?.id ?? '', approved)}
 				open={$settings?.expandDetails ?? false}
