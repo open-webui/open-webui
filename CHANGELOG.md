@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧾 **Editable spreadsheets.** Excel files in the file view can now be edited in the preview, with a formula bar, pasting from other spreadsheets and resizable columns, and saved back to the file, while formula cells and protected sheets stay read-only.
 - 🖋️ **Markdown and code editing.** Markdown files in the file view now open in a rich text editor that saves back to Markdown, where pasted or dropped images are uploaded to the terminal, and the code editor suggests words that already appear in the file.
 - 🔖 **File browser Git status.** Files and folders in the file browser are marked with a Git status letter such as M, A, D or U, and folders show that they contain changes.
+- 🔲 **Drag to select files.** Several files in the file browser can now be selected by dragging a selection box over them.
 - 🧲 **Drag files into chat.** Files from the terminal file browser can be dragged, one or several at once, into the message input to attach them, also with a long press on touch screens.
 - 🧬 **Git changes in the editor.** The code editor now marks the lines of a file that were added or changed since the last commit.
 - 🩺 **Terminal system info.** The terminal menu now has a System info view with the terminal's CPU, memory, disk, network, uptime and top processes.
