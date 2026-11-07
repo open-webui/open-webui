@@ -15,7 +15,7 @@ import posixpath
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import aiohttp
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
@@ -517,6 +517,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
         token = payload.get('token', '')
     except (TimeoutError, JSONCodec.JSONDecodeError):
         await ws.close(code=4001, reason='Auth timeout or invalid payload')
+        return None
+    except WebSocketDisconnect:
         return None
     except Exception:
         await ws.close(code=4001, reason='Invalid token')
