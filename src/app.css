@@ -25,7 +25,7 @@ html {
 }
 
 #sidebar-chat-item {
-	font-size: 0.90625rem;
+	font-size: 0.8125rem;
 	/* sidebar item sizing scales for the chat list entries */
 	min-height: calc(32px * var(--app-text-scale, 1));
 	padding-inline: calc(11px * var(--app-text-scale, 1));
