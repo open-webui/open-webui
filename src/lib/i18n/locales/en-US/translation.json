@@ -3828,6 +3828,7 @@
 	"settings.personal.personalization.savedMemories.label": "Saved Memories",
 	"settings.personal.personalization.sections.memory.title": "Memory",
 	"settings.personal.personalization.title": "Personalization",
+	"settings.personal.shortcuts.quickOpen.label": "Quick Open",
 	"settings.personal.shortcuts.closeTab.label": "Close Tab",
 	"settings.personal.shortcuts.newBrowser.label": "New Browser",
 	"settings.personal.shortcuts.newChatTab.label": "New Chat Tab",
@@ -4540,5 +4541,7 @@
 	"YouTube": "",
 	"YouTube video player": "",
 	"Zoom in": "",
-	"Zoom out": ""
+	"Zoom out": "",
+	"Searching...": "Searching...",
+	"Type a file name or path to search.": "Type a file name or path to search."
 }

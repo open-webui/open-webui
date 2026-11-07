@@ -68,6 +68,7 @@
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './ChatTabs/UntitledFile.svelte';
+	import QuickOpen from './ChatTabs/QuickOpen.svelte';
 	import Browser from './ChatTabs/Browser.svelte';
 	import Desktop from './ChatTabs/Desktop.svelte';
 	import XTerminal from './XTerminal.svelte';
@@ -165,6 +166,8 @@
 	let closing = new Set<string>();
 	let navigationApproved = false;
 	let selectedConnection: TerminalConnection | null = null;
+	let showQuickOpen = false;
+	$: if (!terminalFilesAvailable) showQuickOpen = false;
 	let terminalEnabled = false;
 	let desktopEnabled = false;
 	let browserEnabled = false;
@@ -737,6 +740,12 @@
 		const shortcut = matchKeybinding(event);
 		let action: (() => void) | undefined;
 		switch (shortcut) {
+			case Shortcut.QUICK_OPEN:
+				if (terminalFilesAvailable && selectedConnection)
+					action = () => {
+						showQuickOpen = true;
+					};
+				break;
 			case Shortcut.OPEN_FILES:
 				if (showFilesTab) action = () => openFiles();
 				break;
@@ -1067,6 +1076,19 @@
 			<span class="truncate">{$i18n.t('Open in side panel')}</span>
 		</div>
 	</div>
+{/if}
+
+{#if showQuickOpen && terminalFilesAvailable && selectedConnection}
+	{#key `${selectedConnection.selector}:${chatId}`}
+		<QuickOpen
+			connection={selectedConnection}
+			{chatId}
+			onclose={() => {
+				showQuickOpen = false;
+			}}
+			onselect={(path) => openFile(path, selectedConnection!.selector)}
+		/>
+	{/key}
 {/if}
 
 <Modal

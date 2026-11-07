@@ -18,6 +18,7 @@ type ShortcutRegistry = {
 
 export enum Shortcut {
 	// Workspace tabs
+	QUICK_OPEN = 'quickOpen',
 	OPEN_FILES = 'openFiles',
 	OPEN_DESKTOP = 'openDesktop',
 	NEW_CHAT_TAB = 'newChatTab',
@@ -71,6 +72,7 @@ export enum Shortcut {
 }
 
 export const CONFIGURABLE_SHORTCUTS = [
+	Shortcut.QUICK_OPEN,
 	Shortcut.OPEN_FILES,
 	Shortcut.OPEN_DESKTOP,
 	Shortcut.NEW_CHAT_TAB,
@@ -111,6 +113,7 @@ export type ConfigurableShortcut = (typeof CONFIGURABLE_SHORTCUTS)[number];
 export type KeybindingsMap = Record<ConfigurableShortcut, string>;
 
 export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
+	[Shortcut.QUICK_OPEN]: 'Cmd+P',
 	[Shortcut.OPEN_FILES]: 'Cmd+Shift+E',
 	[Shortcut.OPEN_DESKTOP]: 'Cmd+Alt+D',
 	[Shortcut.NEW_CHAT_TAB]: 'Cmd+Alt+O',
@@ -257,6 +260,12 @@ export function matchKeybinding(event: KeyboardEvent): ConfigurableShortcut | nu
 }
 
 export const shortcuts: ShortcutRegistry = {
+	[Shortcut.QUICK_OPEN]: {
+		name: (t) => t('settings.personal.shortcuts.quickOpen.label'),
+		keys: [],
+		category: 'Tabs',
+		configurable: true
+	},
 	[Shortcut.OPEN_FILES]: {
 		name: (t) => t('settings.personal.shortcuts.openFiles.label'),
 		keys: [],
