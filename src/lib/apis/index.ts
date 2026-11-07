@@ -1112,7 +1112,7 @@ export const generateAutoCompletion = async (
 		throw error;
 	}
 
-	const response = res?.choices[0]?.message?.content ?? '';
+	const response = res?.choices?.[0]?.message?.content ?? '';
 
 	try {
 		const jsonStartIndex = response.indexOf('{');
