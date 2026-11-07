@@ -78,11 +78,15 @@
 						: ''
 			};
 		}
+		const selectedContext =
+			terminalContext?.terminalId === connection.selector ? terminalContext : null;
+		if (selectedContext) cwd = selectedContext.currentDirectory;
 		initialization = getCwd(connection.baseUrl, connection.key, chatId ?? undefined).then(
 			(result) => {
 				if (disposed) return;
 				home = result?.home ?? '';
-				if (chatId) cwd = result?.cwd ?? '';
+				// A new chat ID remounts this menu before its session cwd may be ready.
+				if (chatId && !selectedContext) cwd = result?.cwd ?? '';
 			}
 		);
 		if (!locked) void refreshRecentFolders();
