@@ -2,6 +2,10 @@
 	import { getContext, tick } from 'svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import {
+		excelToTable,
+		parseSpreadsheetPaste,
+		type ExcelWorkbookEditor,
+		type CellEdit,
 		cellAddress,
 		intersects,
 		selectionBounds,
@@ -13,6 +17,19 @@
 	export let sheetNames: string[] = [];
 	export let selectedSheet = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
+	export let editor: ExcelWorkbookEditor | null = null;
+	export let onDirtyChange: (dirty: boolean) => void = () => {};
+	export let onSave: (() => Promise<void>) | null = null;
+	export let saving = false;
+	let changed = false,
+		canUndo = false,
+		canRedo = false;
+	let input: HTMLTextAreaElement | null = null;
+	let editingCell: Cell | null = null;
+	let editStart = '';
+	let renderedSheet = '';
+	let restoreAddress = '';
+	let renderVersion = 0;
 	const i18n: any = getContext('i18n');
 	const t = (value: string) => $i18n.t(value);
 	type Cell = GridCell & { element: HTMLTableCellElement };
@@ -32,6 +49,21 @@
 	}
 	function shortcuts(node: HTMLDivElement) {
 		const handler = (event: KeyboardEvent) => {
+			if (editor && (event.ctrlKey || event.metaKey)) {
+				const key = event.key.toLowerCase();
+				if (key === 's') {
+					event.preventDefault();
+					event.stopPropagation();
+					void saveWorkbook();
+					return;
+				}
+				if (!input && ['z', 'y'].includes(key) && !(event.target instanceof HTMLInputElement)) {
+					event.preventDefault();
+					event.stopPropagation();
+					history(key === 'y' || event.shiftKey);
+					return;
+				}
+			}
 			if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
 				event.preventDefault();
 				void openSearch();
@@ -66,6 +98,144 @@
 			)
 		: [];
 	$: if (query) matchIndex = -1;
+
+	$: (editor, saving, notifyChange());
+	export const captureEdit = () =>
+		input && editingCell ? { address: editingCell.address, text: input.value } : null;
+	export async function restoreEdit(draft: { address: string; text: string } | null) {
+		await tick();
+		if (!draft) return;
+		const cell = cells.find((cell) => cell.address === draft.address);
+		if (cell) startEdit(cell, draft.text);
+	}
+	function notifyChange() {
+		changed = !!editor?.dirty || (!!input && input.value !== editStart);
+		canUndo = !!editor?.canUndo;
+		canRedo = !!editor?.canRedo;
+		onDirtyChange(changed);
+	}
+	async function renderEdits() {
+		if (!editor) return;
+		const version = ++renderVersion;
+		const sheet = selectedSheet;
+		let result;
+		try {
+			result = await excelToTable(editor.workbook.Sheets[sheet]);
+		} catch (error) {
+			status = String(error);
+			return;
+		}
+		if (version !== renderVersion || sheet !== selectedSheet) return;
+		restoreAddress = focus?.address ?? '';
+		html = result.html;
+	}
+	function applyEdits(edits: CellEdit[]) {
+		if (!editor || saving) return false;
+		try {
+			editor.apply(selectedSheet, edits);
+			notifyChange();
+			void renderEdits();
+			return true;
+		} catch (error) {
+			status = String(error).replace(/^Error: /, '');
+			return false;
+		}
+	}
+	export function flushEdit() {
+		if (!input || !editingCell) return true;
+		const cell = editingCell,
+			text = input.value;
+		if (text !== editStart && !applyEdits([{ address: cell.address, text }])) return false;
+		const removed = input;
+		input = null;
+		editingCell = null;
+		removed.remove();
+		notifyChange();
+		return true;
+	}
+	export function cancelEdit() {
+		const removed = input;
+		input = null;
+		editingCell = null;
+		removed?.remove();
+		notifyChange();
+		focus?.element.focus();
+	}
+	function startEdit(cell: Cell, replacement?: string) {
+		if (!editor || saving || !flushEdit()) return;
+		if (!editor.canEdit(selectedSheet, cell.address)) {
+			status = t('Formula cells, table headers, and protected sheets are read-only.');
+			return;
+		}
+		select(cell);
+		editingCell = cell;
+		editStart = editor.input(selectedSheet, cell.address);
+		input = document.createElement('textarea');
+		input.className = 'excel-cell-input';
+		input.setAttribute('aria-label', `${t('Edit cell')} ${cell.address}`);
+		input.spellcheck = false;
+		input.value = replacement ?? editStart;
+		input.addEventListener('input', notifyChange);
+		input.addEventListener('blur', () => {
+			flushEdit();
+		});
+		input.addEventListener('keydown', (event) => {
+			if (event.isComposing) return;
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				event.stopPropagation();
+				cancelEdit();
+			}
+			if ((event.key === 'Enter' && !event.altKey) || event.key === 'Tab') {
+				event.preventDefault();
+				event.stopPropagation();
+				if (!flushEdit()) return;
+				const target =
+					event.key === 'Tab'
+						? at(cell.row, cell.col + (event.shiftKey ? -1 : 1))
+						: at(cell.row + (event.shiftKey ? -1 : 1), cell.col);
+				if (target) select(target);
+			}
+		});
+		cell.element.append(input);
+		input.focus();
+		input.setSelectionRange(input.value.length, input.value.length);
+		notifyChange();
+	}
+	function paste(event: ClipboardEvent) {
+		if (!editor || saving || input || !focus || !fromTarget(event.target)) return;
+		event.preventDefault();
+		try {
+			const matrix = parseSpreadsheetPaste(event.clipboardData?.getData('text/plain') ?? '');
+			if (matrix.length * matrix[0].length > 10000)
+				throw new Error('Paste up to 10,000 cells at a time.');
+			const start = anchor ? selectionBounds(anchor, focus, cells) : focus;
+			applyEdits(
+				matrix.flatMap((row, r) =>
+					row.map((text, c) => ({ address: cellAddress(start.row + r, start.col + c), text }))
+				)
+			);
+		} catch (error) {
+			status = String(error).replace(/^Error: /, '');
+		}
+	}
+	function history(redo: boolean) {
+		if (!editor || saving || !flushEdit()) return;
+		if (redo) editor.redo();
+		else editor.undo();
+		notifyChange();
+		void renderEdits();
+	}
+	async function saveWorkbook() {
+		if (!flushEdit() || !onSave || saving) return;
+		try {
+			await onSave();
+			notifyChange();
+			status = t('Saved');
+		} catch (error) {
+			status = String(error).replace(/^Error: /, '');
+		}
+	}
 
 	function select(cell: Cell, extend = false, moveFocus = true) {
 		if (!extend || !anchor) anchor = cell;
@@ -148,12 +318,21 @@
 	}
 	function doubleClick(event: MouseEvent) {
 		const handle = (event.target as Element).closest<HTMLElement>('[data-resize]');
-		if (!handle) return;
+		if (!handle) {
+			const cell = fromTarget(event.target);
+			if (cell && !(event.target as Element).closest('a')) startEdit(cell);
+			return;
+		}
 		event.preventDefault();
 		fitColumn(Number(handle.dataset.resize));
 	}
 	function pointerDown(event: PointerEvent) {
-		if (event.button !== 0) return;
+		if (event.button !== 0 || event.target === input) return;
+		if (!flushEdit()) {
+			event.preventDefault();
+			input?.focus();
+			return;
+		}
 		const handle = (event.target as Element).closest<HTMLElement>('[data-resize]');
 		if (handle) {
 			const col = Number(handle.dataset.resize);
@@ -188,6 +367,7 @@
 		resizing = null;
 	};
 	function keydown(event: KeyboardEvent) {
+		if (event.target === input || event.isComposing) return;
 		const command = event.ctrlKey || event.metaKey;
 
 		const handle = (event.target as Element).closest<HTMLElement>('[data-resize]');
@@ -204,6 +384,23 @@
 			return;
 		}
 		if (!fromTarget(event.target) || !focus) return;
+		if (editor && !saving) {
+			if (event.key === 'F2' || (!command && !event.altKey && event.key.length === 1)) {
+				event.preventDefault();
+				startEdit(focus, event.key === 'F2' ? undefined : event.key);
+				return;
+			}
+			if (['Backspace', 'Delete'].includes(event.key)) {
+				event.preventDefault();
+				const range = selectionBounds(anchor ?? focus, focus, cells);
+				applyEdits(
+					cells
+						.filter((cell) => intersects(cell, range))
+						.map((cell) => ({ address: cell.address, text: '' }))
+				);
+				return;
+			}
+		}
 		if (command && event.key.toLowerCase() === 'a') {
 			event.preventDefault();
 			anchor = cells[0];
@@ -287,7 +484,7 @@
 	const copiedText = () =>
 		anchor && focus ? selectionTSV(cells, rows, cols, selectionBounds(anchor, focus, cells)) : '';
 	function copy(event: ClipboardEvent) {
-		if (!anchor || !focus || !fromTarget(event.target)) return;
+		if (input || !anchor || !focus || !fromTarget(event.target)) return;
 		event.preventDefault();
 		event.clipboardData?.setData('text/plain', copiedText());
 		status = t('Copied to clipboard');
@@ -429,6 +626,12 @@
 			});
 		};
 		async function refresh() {
+			const sameSheet = renderedSheet === selectedSheet;
+			const previousAnchor = sameSheet ? anchor?.address : '';
+			const previousFocus = sameSheet ? restoreAddress || focus?.address : '';
+			const focusGrid = !!restoreAddress || node.contains(document.activeElement);
+			const previousRows = sameSheet ? rows[rows.length - 1] : 0,
+				previousCols = sameSheet ? cols[cols.length - 1] : 0;
 			const version = ++generation;
 			await tick();
 			if (version !== generation) return;
@@ -451,6 +654,11 @@
 				Number(col.getAttribute('data-col'))
 			);
 			const table = node.querySelector('table');
+			table?.setAttribute('aria-readonly', String(!editor || saving));
+			extendGrid(
+				Math.max(0, (previousRows ?? 0) - rows[rows.length - 1]),
+				Math.max(0, (previousCols ?? 0) - cols[cols.length - 1])
+			);
 			usedRange = table?.dataset.usedRange ?? '';
 			lastUsedRow = Number(table?.dataset.lastRow ?? 0);
 			lastUsedCol = Number(table?.dataset.lastCol ?? 0);
@@ -460,14 +668,19 @@
 			formula = '';
 			matchIndex = -1;
 			for (const [col, width] of widths.get(selectedSheet) ?? []) setWidth(col, width);
-			const target = cells.find((c) => c.address === pendingLink) ?? cells[0];
-			if (target) select(target, false, !!pendingLink);
+			const target = cells.find((c) => c.address === (pendingLink || previousFocus)) ?? cells[0];
+			anchor = cells.find((c) => c.address === previousAnchor) ?? null;
+			if (target) select(target, !!anchor, !!pendingLink || focusGrid);
 			pendingLink = '';
+			restoreAddress = '';
+			renderedSheet = selectedSheet;
+			notifyChange();
 		}
 		node.addEventListener('scroll', scroll, { passive: true });
 		node.addEventListener('pointerdown', pointerDown);
 		node.addEventListener('keydown', keydown);
 		node.addEventListener('copy', copy);
+		node.addEventListener('paste', paste);
 		node.addEventListener('click', followLink);
 		node.addEventListener('dblclick', doubleClick);
 		window.addEventListener('pointermove', pointerMove);
@@ -484,6 +697,7 @@
 				node.removeEventListener('pointerdown', pointerDown);
 				node.removeEventListener('keydown', keydown);
 				node.removeEventListener('copy', copy);
+				node.removeEventListener('paste', paste);
 				node.removeEventListener('click', followLink);
 				node.removeEventListener('dblclick', doubleClick);
 				window.removeEventListener('pointermove', pointerMove);
@@ -567,13 +781,38 @@
 					class="shrink-0 px-2 py-1 text-xs rounded-md transition-colors {selectedSheet === name
 						? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200 font-normal'
 						: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-					on:click={() => onSheetChange?.(name)}>{name}</button
+					disabled={saving}
+					on:click={() => {
+						if (flushEdit()) onSheetChange?.(name);
+					}}>{name}</button
 				>{/each}
 		</div>
-		<span class="excel-status text-gray-400 dark:text-gray-500" aria-live="polite"
+		<span
+			class="excel-status text-gray-400 dark:text-gray-500"
+			role="status"
+			title={status}
+			aria-live="polite"
 			>{status || (usedRange ? `${t('Used range')}: ${usedRange}` : t('Empty sheet'))}</span
 		>
 		<div class="flex shrink-0 items-center gap-0.5 text-gray-500 dark:text-gray-400">
+			{#if editor}
+				<button
+					type="button"
+					class="excel-control"
+					aria-label={t('Undo')}
+					title={t('Undo')}
+					disabled={!canUndo || saving}
+					on:click={() => history(false)}><Icon name="undo" size={13} /></button
+				>
+				<button
+					type="button"
+					class="excel-control"
+					aria-label={t('Redo')}
+					title={t('Redo')}
+					disabled={!canRedo || saving}
+					on:click={() => history(true)}><Icon name="redo" size={13} /></button
+				>
+			{/if}
 			<button
 				class="excel-control"
 				type="button"
@@ -796,6 +1035,25 @@
 	:global(.dark) .excel-viewport :global(.excel-resize:hover),
 	:global(.dark) .excel-viewport :global(.excel-resize:focus-visible) {
 		background: linear-gradient(to left, var(--color-gray-400) 1px, transparent 1px);
+	}
+	.excel-viewport :global(.excel-cell-input) {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		min-height: 26px;
+		padding: 4px 7px;
+		margin: 0;
+		resize: none;
+		border: 1px solid var(--color-gray-600, #4b5563);
+		outline: none;
+		box-shadow: none;
+		border-radius: 0;
+		background: white;
+		color: #111827;
+		font: inherit;
+		line-height: inherit;
+		text-align: inherit;
 	}
 	.excel-footer {
 		display: flex;

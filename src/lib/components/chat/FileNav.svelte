@@ -86,14 +86,17 @@
 					directory: currentPath,
 					selectedFile,
 					expanded: [...expandedDirs],
-					preview: filePreviewRef?.captureView(),
+					preview: (commentPreviewRef ?? filePreviewRef)?.captureView(),
 					dirty: dirty || saving,
 					scrollTop: viewerRoot?.scrollTop ?? 0
 				};
 	const restoreView = async () => {
 		if (disposed || viewRestored || !initialView) return;
 		const view = initialView;
-		if (view.preview && selectedFile === view.selectedFile) {
+		if (view.preview?.kind === 'xlsx' && selectedFile === view.selectedFile) {
+			await tick();
+			await commentPreviewRef?.restoreView(view.preview);
+		} else if (view.preview && selectedFile === view.selectedFile) {
 			diskChanged = view.preview.dirty && fileContent !== view.preview.baseText;
 			await tick();
 			await filePreviewRef?.restoreView(
@@ -211,14 +214,14 @@
 		if (!confirmed) return false;
 		if (sending) {
 			try {
-				await filePreviewRef.save();
+				await (commentPreviewRef ?? filePreviewRef).save();
 			} catch (error) {
 				toast.error(String(error));
 				return false;
 			}
 			if (dirty) return false;
 		} else {
-			filePreviewRef?.discard();
+			await (commentPreviewRef ?? filePreviewRef)?.discard();
 			dirty = false;
 		}
 		return true;
@@ -644,6 +647,7 @@
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
+	let commentPreviewRef: CommentFilePreview;
 	let commentGeneration = 0;
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
@@ -2312,6 +2316,25 @@
 				</button>
 			</Tooltip>
 
+			{#if getFileExt(selectedFile) === 'xlsx' && selectedTerminal}
+				<Tooltip content={$i18n.t('Save')}>
+					<button
+						type="button"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+						on:click={() =>
+							commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
+						disabled={saving || !dirty || !selectedFileWritable}
+						aria-label={$i18n.t('Save')}
+					>
+						{#if saving}
+							<Spinner className="size-3.5" />
+						{:else}
+							<Icon name="check" size={11} strokeWidth={1.7} />
+						{/if}
+					</button>
+				</Tooltip>
+			{/if}
+
 			{#if isTextFile}
 				{#if isHtml && showRaw}
 					<Tooltip content={$i18n.t('Save')}>
@@ -2488,7 +2511,8 @@
 				>
 				<button
 					class="underline"
-					on:click={() => filePreviewRef.save().catch((e) => toast.error(String(e)))}
+					on:click={() =>
+						(commentPreviewRef ?? filePreviewRef).save().catch((e) => toast.error(String(e)))}
 					>{$i18n.t('Save local changes')}</button
 				>
 			</div>{/if}
@@ -2524,6 +2548,14 @@
 					{#if supportsComments(selectedFile) && selectedTerminal}
 						{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 							<CommentFilePreview
+								bind:this={commentPreviewRef}
+								bind:dirty
+								bind:saving
+								readOnly={!selectedFileWritable}
+								onSaved={(preview) => {
+									diskChanged = false;
+									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
+								}}
 								path={selectedFile}
 								baseUrl={selectedTerminal.url}
 								apiKey={selectedTerminal.key}

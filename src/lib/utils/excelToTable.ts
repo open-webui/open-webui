@@ -1,3 +1,5 @@
+import * as XLSX from 'xlsx';
+import { OfficePackage, attr, children, elements } from './comments/package';
 import type { CellObject, Range, WorkBook, WorkSheet } from 'xlsx';
 
 export type PreviewSheet = WorkSheet & { '!previewStyles'?: Record<string, string> };
@@ -5,10 +7,8 @@ export type PreviewSheet = WorkSheet & { '!previewStyles'?: Record<string, strin
 // SheetJS CE reads values and number formats, but not fonts, borders or alignment.
 // Keep presentation metadata separate from the workbook's editable cell values.
 export async function readExcelWorkbook(data: ArrayBuffer): Promise<WorkBook> {
-	const XLSX = await import('xlsx');
 	const workbook = XLSX.read(data, { type: 'array', cellStyles: true, cellNF: true });
 	if (new Uint8Array(data)[0] !== 0x50 || new Uint8Array(data)[1] !== 0x4b) return workbook; // XLS / CSV have no OOXML styles.
-	const { OfficePackage, elements, children, attr } = await import('./comments/package');
 	const pkg = await OfficePackage.open(data);
 	const main = await pkg.main();
 	const rels = await pkg.relationships(main);
@@ -247,7 +247,6 @@ export interface ExcelTableResult {
 
 /** Render from cells, not sheet_to_json: formatted text, formulas and coordinates matter. */
 export async function excelToTable(worksheet: PreviewSheet): Promise<ExcelTableResult> {
-	const XLSX = await import('xlsx');
 	const range = XLSX.utils.decode_range(worksheet['!ref'] ?? 'A1');
 	const merges = worksheet['!merges'] ?? [];
 	for (const merge of merges) {
@@ -424,4 +423,341 @@ export function selectionTSV(
 				.join('\t')
 		)
 		.join('\n');
+}
+
+export type CellEdit = { address: string; text: string };
+type Change = { sheet: string; address: string; before?: CellObject; after?: CellObject };
+type Transaction = Change[];
+const signature = (cell?: CellObject) =>
+	JSON.stringify([cell?.t === 'z' ? undefined : cell?.t, cell?.v, cell?.f]);
+const key = (sheet: string, address: string) => `${sheet}\0${address}`;
+
+/** Spreadsheet clipboard text, including quoted tabs, newlines and doubled quotes. */
+export function parseSpreadsheetPaste(text: string): string[][] {
+	if (text.length > 4 * 1024 * 1024) throw new Error('Paste up to 4 MiB of text at a time.');
+	const rows: string[][] = [[]];
+	let value = '',
+		quoted = false;
+	for (let i = 0; i < text.length; i++) {
+		const c = text[i];
+		if (c === '"' && (quoted || !value)) {
+			if (quoted && text[i + 1] === '"') {
+				value += '"';
+				i++;
+			} else quoted = !quoted;
+		} else if (!quoted && (c === '\t' || c === '\n' || c === '\r')) {
+			if (rows.length > 10000 || rows[rows.length - 1].length >= 10000)
+				throw new Error('Paste up to 10,000 cells at a time.');
+			rows[rows.length - 1].push(value);
+			value = '';
+			if (c !== '\t') {
+				if (c === '\r' && text[i + 1] === '\n') i++;
+				rows.push([]);
+			}
+		} else value += c;
+	}
+	if (quoted) throw new Error('The pasted text has an unclosed quote.');
+	rows[rows.length - 1].push(value);
+	if (rows.length > 1 && /[\r\n]$/.test(text)) rows.pop();
+	const width = Math.max(...rows.map((row) => row.length));
+	if (rows.length * width > 10000) throw new Error('Paste up to 10,000 cells at a time.');
+	return rows.map((row) => [...row, ...Array(width - row.length).fill('')]);
+}
+
+export class ExcelWorkbookEditor {
+	private history: Transaction[] = [];
+	private position = 0;
+	private changes = new Map<string, Change>();
+	private savedState = '[]';
+	private protectedSheets = new Set<string>();
+	private readOnlyRanges = new Map<string, XLSX.Range[]>();
+	private sheetPaths = new Map<string, string>();
+	private original: ArrayBuffer;
+	private expected: ArrayBuffer;
+	private constructor(
+		readonly workbook: WorkBook,
+		bytes: ArrayBuffer
+	) {
+		this.original = this.expected = bytes;
+	}
+	static async open(workbook: WorkBook, bytes: ArrayBuffer) {
+		const editor = new ExcelWorkbookEditor(workbook, bytes);
+		const pkg = await OfficePackage.open(bytes);
+		if (Object.keys(pkg.zip.files).some((path) => path.startsWith('_xmlsignatures/')))
+			throw new Error('Signed workbooks are read-only.');
+		const main = await pkg.main(),
+			doc = await pkg.xml(main);
+		if (!doc) throw new Error('Could not read workbook.');
+		const rels = await pkg.relationships(main);
+		for (const sheet of elements(doc, 'sheet')) {
+			const path = rels.find((r) => r.id === attr(sheet, 'id'))?.path;
+			if (!path) continue;
+			const xml = await pkg.xml(path);
+			const name = attr(sheet, 'name');
+			if (!xml) continue;
+			editor.sheetPaths.set(name, path);
+			editor.readOnlyRanges.set(
+				name,
+				elements(xml, 'f')
+					.filter((f) => attr(f, 'ref'))
+					.map((f) => XLSX.utils.decode_range(attr(f, 'ref')))
+			);
+			// Table header names also live in table definitions and structured formula references.
+			for (const rel of (await pkg.relationships(path)).filter((r) => r.type.endsWith('/table'))) {
+				const table = (await pkg.xml(rel.path))?.documentElement;
+				if (!table || attr(table, 'headerRowCount') === '0') continue;
+				const range = XLSX.utils.decode_range(attr(table, 'ref'));
+				range.e.r = range.s.r;
+				editor.readOnlyRanges.get(name)!.push(range);
+			}
+			if (elements(xml, 'sheetProtection').length) editor.protectedSheets.add(name);
+		}
+		return editor;
+	}
+	canEdit(sheet: string, address: string) {
+		const ws = this.workbook.Sheets[sheet];
+		if (!ws || !this.sheetPaths.has(sheet) || this.protectedSheets.has(sheet)) return false;
+		const { r, c } = XLSX.utils.decode_cell(address);
+		if (
+			this.readOnlyRanges
+				.get(sheet)
+				?.some((range) => r >= range.s.r && r <= range.e.r && c >= range.s.c && c <= range.e.c)
+		)
+			return false;
+		const cell = ws[address];
+		return !cell?.f && !cell?.F;
+	}
+	input(sheet: string, address: string) {
+		const cell = this.workbook.Sheets[sheet]?.[address];
+		return cell?.f ? `=${cell.f}` : cell?.v == null ? '' : String(cell.v);
+	}
+	get canUndo() {
+		return this.position > 0;
+	}
+	get canRedo() {
+		return this.position < this.history.length;
+	}
+	private state() {
+		return JSON.stringify(
+			[...this.changes]
+				.filter(([, c]) => signature(c.before) !== signature(c.after))
+				.map(([id, c]) => [id, signature(c.after)])
+				.sort(([a], [b]) => a.localeCompare(b))
+		);
+	}
+	get dirty() {
+		return this.state() !== this.savedState;
+	}
+	apply(sheet: string, edits: CellEdit[]) {
+		const ws = this.workbook.Sheets[sheet];
+		if (edits.length > 10000) throw new Error('Paste up to 10,000 cells at a time.');
+		const transaction: Transaction = [];
+		const bounds = XLSX.utils.decode_range(ws?.['!ref'] ?? edits[0]?.address ?? 'A1');
+		for (const { address, text } of edits) {
+			if (!/^[A-Z]{1,3}[1-9]\d{0,6}$/.test(address)) throw new Error('Invalid cell address.');
+			const { r, c } = XLSX.utils.decode_cell(address);
+			if (r > 1048575 || c > 16383) throw new Error('The paste exceeds the worksheet boundary.');
+			if (!this.canEdit(sheet, address))
+				throw new Error('Formula cells, table headers, and protected sheets are read-only.');
+			if (text.length > 32767 || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text))
+				throw new Error('Cell text is too long or contains unsupported control characters.');
+			const merge = ws['!merges']?.find(
+				(m) => r >= m.s.r && r <= m.e.r && c >= m.s.c && c <= m.e.c
+			);
+			if (merge && (r !== merge.s.r || c !== merge.s.c || edits.length > 1))
+				throw new Error('Paste into unmerged cells.');
+			bounds.s.r = Math.min(bounds.s.r, r);
+			bounds.s.c = Math.min(bounds.s.c, c);
+			bounds.e.r = Math.max(bounds.e.r, r);
+			bounds.e.c = Math.max(bounds.e.c, c);
+			if ((bounds.e.r - bounds.s.r + 1) * (bounds.e.c - bounds.s.c + 1) > 200000)
+				throw new Error('This edit would exceed the preview size limit.');
+			const before: CellObject | undefined = ws[address];
+			if (text === this.input(sheet, address)) continue;
+			const after = { ...before } as CellObject;
+			delete after.w;
+			delete after.h;
+			delete after.r;
+			if (text.startsWith('='))
+				throw new Error(
+					'Formula editing is not supported yet. Start with an apostrophe to enter literal text.'
+				);
+			if (text === '') {
+				after.t = 'z';
+				delete after.v;
+			} else if (text.startsWith("'")) {
+				after.t = 's';
+				after.v = text.slice(1);
+			} else if (/^(true|false)$/i.test(text)) {
+				after.t = 'b';
+				after.v = text.toLowerCase() === 'true';
+			} else if (
+				/^[+-]?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?%?$/.test(text) &&
+				Number.isFinite(Number(text.replace(/%$/, ''))) &&
+				text
+					.replace(/[eE].*|%$/g, '')
+					.replace(/[^0-9]/g, '')
+					.replace(/^0+/, '').length <= 15
+			) {
+				after.t = 'n';
+				after.v = Number(text.replace(/%$/, '')) / (text.endsWith('%') ? 100 : 1);
+			} else {
+				after.t = 's';
+				after.v = text;
+			}
+			if (signature(before) !== signature(after))
+				transaction.push({ sheet, address, before, after });
+		}
+		// Validate the entire transaction before touching any cells.
+		if (!transaction.length) return;
+		this.history.splice(this.position);
+		this.history.push(transaction);
+		this.position++;
+		this.applyChanges(transaction, false);
+	}
+	private applyChanges(transaction: Transaction, undo: boolean) {
+		for (const change of transaction) {
+			const cell = undo ? change.before : change.after;
+			const ws = this.workbook.Sheets[change.sheet];
+			if (cell) ws[change.address] = cell;
+			else delete ws[change.address];
+			const id = key(change.sheet, change.address);
+			const first = this.changes.get(id) ?? change;
+			this.changes.set(id, { ...first, after: cell });
+			const range = XLSX.utils.decode_range(ws['!ref'] ?? change.address);
+			const { r, c } = XLSX.utils.decode_cell(change.address);
+			range.s.r = Math.min(range.s.r, r);
+			range.s.c = Math.min(range.s.c, c);
+			range.e.r = Math.max(range.e.r, r);
+			range.e.c = Math.max(range.e.c, c);
+			ws['!ref'] = XLSX.utils.encode_range(range);
+		}
+	}
+	undo() {
+		if (this.canUndo) this.applyChanges(this.history[--this.position], true);
+	}
+	redo() {
+		if (this.canRedo) this.applyChanges(this.history[this.position++], false);
+	}
+	matches(bytes: ArrayBuffer) {
+		const a = new Uint8Array(this.expected),
+			b = new Uint8Array(bytes);
+		return a.length === b.length && a.every((v, i) => v === b[i]);
+	}
+	markSaved(bytes: ArrayBuffer) {
+		this.expected = bytes;
+		this.savedState = this.state();
+	}
+	capture() {
+		return {
+			kind: 'xlsx',
+			original: this.original,
+			expected: this.expected,
+			history: this.history.slice(),
+			position: this.position,
+			savedState: this.savedState,
+			changes: [...this.changes]
+		};
+	}
+	restore(view: ReturnType<ExcelWorkbookEditor['capture']>) {
+		this.original = view.original;
+		this.expected = view.expected;
+		this.history = view.history;
+		this.position = view.position;
+		this.savedState = view.savedState;
+		this.changes = new Map(view.changes);
+		this.applyChanges([...this.changes.values()], false);
+	}
+	async bytes(): Promise<ArrayBuffer> {
+		const pkg = await OfficePackage.open(this.original);
+		const changed = [...this.changes.values()].filter(
+			(c) => signature(c.before) !== signature(c.after)
+		);
+		for (const sheet of new Set(changed.map((c) => c.sheet))) {
+			const path = this.sheetPaths.get(sheet)!;
+			const doc = await pkg.xml(path);
+			if (!doc) throw new Error('Could not read worksheet.');
+			const data = elements(doc, 'sheetData')[0];
+			if (!data) throw new Error('Could not read worksheet cells.');
+			const create = (name: string) =>
+				doc.createElementNS(data.namespaceURI, `${data.prefix ? data.prefix + ':' : ''}${name}`);
+			for (const change of changed.filter((c) => c.sheet === sheet)) {
+				const { r, c } = XLSX.utils.decode_cell(change.address);
+				let row = children(data).find((row) => Number(attr(row, 'r')) === r + 1);
+				if (!row) {
+					row = create('row');
+					row.setAttribute('r', String(r + 1));
+					data.insertBefore(row, children(data).find((n) => Number(attr(n, 'r')) > r + 1) ?? null);
+				}
+				row.removeAttribute('spans');
+				let cell = children(row).find((cell) => attr(cell, 'r') === change.address);
+				if (!cell) {
+					cell = create('c');
+					cell.setAttribute('r', change.address);
+					row.insertBefore(
+						cell,
+						children(row).find((n) => XLSX.utils.decode_cell(attr(n, 'r')).c > c) ?? null
+					);
+				}
+				for (const n of children(cell).filter((n) => ['v', 'is', 'f'].includes(n.localName)))
+					cell.removeChild(n);
+				cell.removeAttribute('t');
+				const value = change.after;
+				if (value?.v != null) {
+					const node = create(value.t === 's' ? 'is' : 'v');
+					if (value.t === 's') {
+						cell.setAttribute('t', 'inlineStr');
+						const text = create('t');
+						text.setAttributeNS('http://www.w3.org/XML/1998/namespace', 'xml:space', 'preserve');
+						text.textContent = String(value.v).replace(
+							/_x[0-9a-f]{4}_/gi,
+							(value) => '_x005F_' + value.slice(1)
+						);
+						node.appendChild(text);
+					} else {
+						cell.setAttribute('t', value.t === 'b' ? 'b' : 'n');
+						node.textContent = value.t === 'b' ? (value.v ? '1' : '0') : String(value.v);
+					}
+					cell.insertBefore(node, cell.firstChild);
+				}
+			}
+			const dimension = elements(doc, 'dimension')[0];
+			if (dimension) dimension.setAttribute('ref', this.workbook.Sheets[sheet]['!ref'] ?? 'A1');
+			pkg.zip.file(path, new XMLSerializer().serializeToString(doc), { createFolders: false });
+		}
+		// Excel recalculates dependent formulas on open; no browser formula engine is involved.
+		if (changed.length) {
+			const main = await pkg.main(),
+				doc = await pkg.xml(main);
+			if (!doc) throw new Error('Could not read workbook.');
+			let calc = elements(doc, 'calcPr')[0];
+			if (!calc) {
+				const root = doc.documentElement;
+				calc = doc.createElementNS(
+					root.namespaceURI,
+					`${root.prefix ? root.prefix + ':' : ''}calcPr`
+				);
+				const following = [
+					'oleSize',
+					'customWorkbookViews',
+					'pivotCaches',
+					'smartTagPr',
+					'smartTagTypes',
+					'webPublishing',
+					'fileRecoveryPr',
+					'webPublishObjects',
+					'extLst'
+				];
+				root.insertBefore(
+					calc,
+					children(root).find((n) => following.includes(n.localName)) ?? null
+				);
+			}
+			calc.setAttribute('fullCalcOnLoad', '1');
+			calc.setAttribute('forceFullCalc', '1');
+			calc.setAttribute('calcMode', 'auto');
+			pkg.zip.file(main, new XMLSerializer().serializeToString(doc), { createFolders: false });
+		}
+		return pkg.zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
+	}
 }
