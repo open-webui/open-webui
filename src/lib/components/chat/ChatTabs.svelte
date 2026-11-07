@@ -508,12 +508,15 @@
 	let draggedTabId = '';
 	let pendingTabDrop: (() => void) | null = null;
 	const clearChatDropPreview = () => (chatDropPreview = null);
-	const canDropChat = (event: DragEvent) =>
+	const canDropChat = (event: Pick<DragEvent, 'dataTransfer'>) =>
 		canSideChat &&
 		($user?.role === 'admin' || !($user?.permissions?.chat?.temporary_enforced ?? false)) &&
 		event.dataTransfer?.types.includes('application/x-open-webui-chat');
-	const chatDropBounds = (event: DragEvent): SplitDrop | null => {
-		const internal = event.dataTransfer?.types.includes('application/x-chat-panel-tab');
+	const chatDropBounds = (
+		event: Pick<DragEvent, 'target' | 'clientX' | 'clientY' | 'dataTransfer'>
+	): SplitDrop | null => {
+		const internal =
+			!!draggedTabId || event.dataTransfer?.types.includes('application/x-chat-panel-tab');
 		if ((!internal && !canDropChat(event)) || !(event.target instanceof Element)) return null;
 		if (!internal && event.target.closest('[data-composer-id]')) return null;
 		const group = event.target.closest<HTMLElement>('[data-panel-group]');
@@ -781,6 +784,24 @@
 	let tabDropHandled = false;
 	const sortableTabs = (node: HTMLElement) => {
 		let nextSibling: ChildNode | null = null;
+		let touchDrag = false;
+		const trackTouch = (event: TouchEvent) => {
+			if (!touchDrag) return;
+			const point = event.touches[0] ?? event.changedTouches[0];
+			chatDropPreview = point
+				? chatDropBounds({
+						target: document.elementFromPoint(point.clientX, point.clientY),
+						clientX: point.clientX,
+						clientY: point.clientY,
+						dataTransfer: null
+					})
+				: null;
+		};
+		const preventTouchMenu = (event: Event) => {
+			if ((event.target as Element).closest('[role="tab"]')) event.preventDefault();
+		};
+		document.addEventListener('touchmove', trackTouch, { passive: true });
+		node.addEventListener('contextmenu', preventTouchMenu);
 		const sortable = new Sortable(node, {
 			animation: 150,
 			direction: 'horizontal',
@@ -789,16 +810,33 @@
 			delay: 200,
 			delayOnTouchOnly: true,
 			touchStartThreshold: 5,
+			// Touch events let Sortable cancel scrolling after the hold without disabling quick swipes.
+			supportPointer: false,
+			fallbackOnBody: true,
 			ghostClass: 'opacity-40',
 			setData: (transfer: DataTransfer, item: HTMLElement) =>
 				transfer.setData('application/x-chat-panel-tab', item.dataset.panelTab ?? ''),
-			onStart: ({ item }: { item: HTMLElement }) => {
+			onStart: ({ item, originalEvent }: { item: HTMLElement; originalEvent?: Event }) => {
 				nextSibling = item.nextSibling;
+				touchDrag = !!originalEvent && 'touches' in originalEvent;
+				clearChatDropPreview();
 				tabDropHandled = false;
 				draggedTabId = item.dataset.panelTab ?? '';
 				dragged = true;
 			},
-			onEnd: ({ item, from }: { item: HTMLElement; from: HTMLElement }) => {
+			onEnd: ({
+				item,
+				from,
+				originalEvent
+			}: {
+				item: HTMLElement;
+				from: HTMLElement;
+				originalEvent?: Event;
+			}) => {
+				const cancelled = originalEvent?.type === 'touchcancel';
+				if (touchDrag && originalEvent && 'touches' in originalEvent)
+					trackTouch(originalEvent as TouchEvent);
+				const touchTarget = touchDrag && !cancelled ? chatDropPreview : null;
 				const id = item.dataset.panelTab!;
 				const group = tabGroups[id];
 				const order = Array.from(from.querySelectorAll<HTMLElement>('[data-panel-tab]'))
@@ -806,15 +844,27 @@
 					.filter((tabId) => group?.tabIds.includes(tabId));
 				// Restore the DOM before Svelte reconciles its keyed tabs.
 				from.insertBefore(item, nextSibling?.parentNode === from ? nextSibling : null);
-				if (!tabDropHandled) tabs = moveTab(tabs, id, order.indexOf(id));
+				if (touchTarget) {
+					tabs = touchTarget.edge
+						? splitTab(tabs, id, touchTarget.groupId, touchTarget.edge)
+						: moveTabToGroup(tabs, id, touchTarget.groupId);
+				} else if (!tabDropHandled && !cancelled) tabs = moveTab(tabs, id, order.indexOf(id));
 				const drop = pendingTabDrop;
 				pendingTabDrop = null;
 				drop?.();
 				draggedTabId = '';
 				dragged = false;
+				touchDrag = false;
+				clearChatDropPreview();
 			}
 		});
-		return { destroy: () => sortable.destroy() };
+		return {
+			destroy: () => {
+				sortable.destroy();
+				document.removeEventListener('touchmove', trackTouch);
+				node.removeEventListener('contextmenu', preventTouchMenu);
+			}
+		};
 	};
 	const navigateTabs = (event: KeyboardEvent) => {
 		if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab')
@@ -1907,6 +1957,10 @@
 {/if}
 
 <style>
+	.panel-tab {
+		-webkit-touch-callout: none;
+	}
+
 	.panel-tab:not(:has(:global(button:not([role='tab'])))) {
 		padding-inline: 0.625rem;
 	}

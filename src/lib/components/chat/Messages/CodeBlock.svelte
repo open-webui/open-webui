@@ -1,5 +1,6 @@
 <script lang="ts">
 	import hljs from 'highlight.js';
+	import { highlightCodeBlock } from '$lib/utils/codeHighlight';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
@@ -67,7 +68,19 @@
 	let renderHTML = null;
 	let renderError: { type: 'diagram' | 'visualization'; detail: string } | null = null;
 
-	let highlightedCode = null;
+	let highlightedCode: string | null = null;
+	let highlightGeneration = 0;
+	async function highlightDocument(code: string, language: string) {
+		const generation = ++highlightGeneration;
+		highlightedCode = null;
+		try {
+			const html = await highlightCodeBlock(code, language);
+			if (generation === highlightGeneration) highlightedCode = html;
+		} catch {
+			// Keep the escaped source visible if a grammar cannot be loaded.
+		}
+	}
+	$: if (markdown?.document && !edit && !isDiff) void highlightDocument(code, lang);
 	let executing = false;
 
 	let stdout = null;
@@ -436,6 +449,7 @@
 	});
 
 	onDestroy(() => {
+		highlightGeneration++;
 		if (localPyodideWorker) {
 			localPyodideWorker.terminate();
 			localPyodideWorker = null;
@@ -583,6 +597,14 @@
 								_code = value;
 							}}
 						/>
+					{:else if markdown?.document}
+						<div class="document-code">
+							{#if highlightedCode}
+								{@html highlightedCode}
+							{:else}
+								<pre><code>{code}</code></pre>
+							{/if}
+						</div>
 					{:else}
 						<pre
 							class=" hljs p-4 px-5 overflow-x-auto"
@@ -663,3 +685,26 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	.document-code :global(pre) {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		overflow-x: auto;
+		font-size: 0.8125rem;
+		line-height: normal;
+		background: transparent !important;
+	}
+	.document-code :global(code) {
+		font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+		font-size: inherit;
+		white-space: pre;
+	}
+	:global(.dark) .document-code :global(.shiki),
+	:global(.dark) .document-code :global(.shiki span) {
+		color: var(--shiki-dark) !important;
+		font-style: var(--shiki-dark-font-style) !important;
+		font-weight: var(--shiki-dark-font-weight) !important;
+		text-decoration: var(--shiki-dark-text-decoration) !important;
+	}
+</style>

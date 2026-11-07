@@ -6,7 +6,6 @@
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
-	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { sanitizeSvg } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
@@ -52,41 +51,28 @@
 		lastLoaded = content;
 	};
 	$: syncContent(fileContent, selectedFile);
-	$: dirty = editing ? editContent !== (fileContent ?? '') : codeValue !== (fileContent ?? '');
+	$: dirty = codeValue !== (fileContent ?? '');
 	export const getSelection = () =>
-		editing && editTextarea?.selectionStart !== editTextarea?.selectionEnd
-			? {
-					text: editContent.slice(editTextarea.selectionStart, editTextarea.selectionEnd),
-					location: ''
-				}
-			: isMarkdown && !showRaw
-				? markdownEditorRef?.getSelection()
-				: fileCodeEditorRef?.getSelection();
-	export const save = () => (editing ? saveEdit() : saveCodeFile());
+		isMarkdown && !showRaw && !searchTarget
+			? markdownEditorRef?.getSelection()
+			: fileCodeEditorRef?.getSelection();
+	export const save = () => saveCodeFile();
 
 	export const captureView = () => ({
 		baseText: fileContent ?? '',
-		text: editing ? editContent : codeValue,
+		text: codeValue,
 		dirty,
-		editing,
 		showRaw,
-		editor: fileCodeEditorRef?.captureView(),
-		selection: editTextarea ? [editTextarea.selectionStart, editTextarea.selectionEnd] : null,
-		scrollTop: editTextarea?.scrollTop ?? 0
+		editor: fileCodeEditorRef?.captureView()
 	});
 	export async function restoreView(view: any) {
 		if (!view) return;
-		editing = view.editing;
 		showRaw = view.showRaw;
-		codeValue = editContent = view.text;
+		codeValue = view.text;
 		lastLoaded = fileContent;
 		bufferPath = selectedFile;
 		await tick();
 		fileCodeEditorRef?.restoreView(view.editor);
-		if (editTextarea && view.selection) {
-			editTextarea.setSelectionRange(view.selection[0], view.selection[1]);
-			editTextarea.scrollTop = view.scrollTop;
-		}
 	}
 
 	// Office preview props
@@ -110,52 +96,12 @@
 		requestId: number;
 	} | null = null;
 
-	export let editing = false;
-	let editContent = '';
 	export let saving = false;
-	let editTextarea: HTMLTextAreaElement;
-
-	// Reset edit state when switching files
-	$: (selectedFile, resetEdit());
-
-	const resetEdit = () => {
-		editing = false;
-		editContent = '';
-		saving = false;
-		codeValue = fileContent ?? '';
-	};
-
-	export const startEdit = async () => {
-		if (readOnly) return;
-		editContent = fileContent ?? '';
-		editing = true;
-		showRaw = true;
-		await tick();
-		editTextarea?.focus();
-	};
-
-	export const saveEdit = async () => {
-		if (!onSave || readOnly) return;
-		saving = true;
-		const target = selectedFile,
-			content = editContent;
-		try {
-			await onSave(content);
-			if (selectedFile === target && editContent === content) editing = false;
-		} finally {
-			saving = false;
-		}
-	};
 
 	export const discard = () => {
 		codeValue = fileContent ?? '';
-		editContent = fileContent ?? '';
 		fileCodeEditorRef?.setValue(codeValue);
 		dirty = false;
-	};
-	export const cancelEdit = () => {
-		editing = false;
-		editContent = '';
 	};
 
 	/** Save code file directly from CodeMirror */
@@ -163,9 +109,11 @@
 		if (!onSave || readOnly) return;
 		saving = true;
 		try {
-			if (isMarkdown && !showRaw) await markdownEditorRef?.flushUploads();
+			if (isMarkdown && !showRaw && !searchTarget) await markdownEditorRef?.flushUploads();
 			const content =
-				isMarkdown && !showRaw ? codeValue : (fileCodeEditorRef?.getValue() ?? codeValue);
+				isMarkdown && !showRaw && !searchTarget
+					? codeValue
+					: (fileCodeEditorRef?.getValue() ?? codeValue);
 			await onSave(content);
 		} finally {
 			saving = false;
@@ -186,7 +134,6 @@
 	$: isJson = JSON_EXTS.has(getExt(selectedFile));
 	$: isSvg = getExt(selectedFile) === 'svg';
 	$: isNotebook = getExt(selectedFile) === 'ipynb';
-	$: isCode = isCodeFile(selectedFile);
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: isPptx = getExt(selectedFile) === 'pptx';
 
@@ -239,46 +186,17 @@
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
 
-	// Shiki code highlighting (SVG only)
-	let highlightedHtml: string | null = null;
-	let highlightingFile: string | null = null;
-
-	$: if (isSvg && fileContent !== null && selectedFile) {
-		const currentFile = selectedFile;
-		highlightingFile = currentFile;
-		import('shiki')
-			.then(({ codeToHtml }) =>
-				codeToHtml(fileContent!, {
-					lang: 'xml',
-					themes: { light: 'github-light', dark: 'github-dark' },
-					defaultColor: 'light'
-				})
-			)
-			.then((html) => {
-				if (highlightingFile === currentFile) highlightedHtml = html;
-			})
-			.catch(() => {
-				if (highlightingFile === currentFile) highlightedHtml = null;
-			});
-	} else {
-		highlightedHtml = null;
-	}
-
 	// JSON parsing
 	let parsedJson: unknown = undefined;
-	let jsonError: string | null = null;
 
 	$: if (isJson && fileContent !== null) {
 		try {
 			parsedJson = JSON.parse(fileContent);
-			jsonError = null;
 		} catch (e) {
 			parsedJson = undefined;
-			jsonError = e instanceof Error ? e.message : $i18n.t('Invalid JSON');
 		}
 	} else {
 		parsedJson = undefined;
-		jsonError = null;
 	}
 
 	// Notebook parsing
@@ -306,7 +224,7 @@
 	let panzoomRef: PanzoomContainer;
 	let pptxPreviewRef: PptxPreview;
 	let imageZoomLevel = 1;
-	$: svgPreview = isSvg && !showRaw && !editing && !searchTarget && !!fileContent;
+	$: svgPreview = isSvg && !showRaw && !searchTarget && !!fileContent;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
 		pptxPreviewRef?.resetView();
@@ -419,11 +337,11 @@
 			className="w-full h-full"
 		/>
 	{:else if fileContent !== null}
-		{#if searchTarget}
+		{#if searchTarget || showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
 					{gitBaseContent}
-					{readOnly}
+					readOnly={readOnly || !onSave}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
 					filePath={selectedFile}
@@ -463,17 +381,6 @@
 				class="w-full h-full border-none bg-white"
 				title={$i18n.t('HTML Preview')}
 			/>
-		{:else if isHtml && showRaw}
-			<div class="absolute inset-0">
-				<FileCodeEditor
-					{gitBaseContent}
-					{readOnly}
-					bind:this={fileCodeEditorRef}
-					bind:value={codeValue}
-					filePath={selectedFile}
-					onSave={readOnly ? null : saveCodeFile}
-				/>
-			</div>
 		{:else if isMarkdown && !showRaw && onSave && !readOnly}
 			{#key selectedFile}
 				<MarkdownFileEditor
@@ -500,17 +407,6 @@
 					{onLocalLink}
 				/>
 			{/key}
-		{:else if isMarkdown && showRaw}
-			<div class="absolute inset-0">
-				<FileCodeEditor
-					{gitBaseContent}
-					{readOnly}
-					bind:this={fileCodeEditorRef}
-					bind:value={codeValue}
-					filePath={selectedFile}
-					onSave={readOnly ? null : saveCodeFile}
-				/>
-			</div>
 		{:else if isCsv && !showRaw && csvRows.length > 0}
 			<div class="absolute inset-0 overflow-auto px-3 pb-3">
 				<table class="csv-table text-xs font-mono border-collapse">
@@ -552,14 +448,6 @@
 			<div class="overflow-auto h-full">
 				<JsonTreeView data={parsedJson} />
 			</div>
-		{:else if isJson && !showRaw && jsonError}
-			<div class="p-3 text-xs">
-				<div class="text-gray-500 dark:text-gray-400 mb-2">
-					{$i18n.t('JSON parse error: {{error}}', { error: jsonError })}
-				</div>
-				<pre
-					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
-			</div>
 		{:else if isSvg && !showRaw && fileContent}
 			{#key selectedFile}
 				<PanzoomContainer
@@ -571,32 +459,17 @@
 					{@html sanitizeSvg(fileContent)}
 				</PanzoomContainer>
 			{/key}
-		{:else if isCode && !showRaw}
+		{:else}
 			<div class="absolute inset-0">
 				<FileCodeEditor
 					{gitBaseContent}
-					{readOnly}
+					readOnly={readOnly || !onSave}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
 					filePath={selectedFile}
 					onSave={readOnly ? null : saveCodeFile}
 				/>
 			</div>
-		{:else if isSvg && highlightedHtml && !showRaw}
-			<div class="shiki-preview overflow-auto h-full text-xs">
-				{@html highlightedHtml}
-			</div>
-		{:else if editing}
-			<textarea
-				aria-label={$i18n.t('File content')}
-				bind:this={editTextarea}
-				bind:value={editContent}
-				class="w-full h-full text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre break-all leading-relaxed p-3 bg-transparent border-none outline-none resize-none"
-				spellcheck="false"
-			/>
-		{:else}
-			<pre
-				class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed p-3">{fileContent}</pre>
 		{/if}
 	{:else}
 		<div class="text-xs text-gray-400 text-center pt-8">
@@ -736,46 +609,5 @@
 	:global(.office-preview ol) {
 		padding-left: 1.5em;
 		margin: 0.5em 0;
-	}
-	/* Shiki code highlighting */
-	.shiki-preview :global(pre.shiki) {
-		margin: 0;
-		padding: 0.75rem 1rem;
-		font-size: 0.75rem;
-		line-height: 1.6;
-		border-radius: 0;
-		overflow-x: auto;
-		min-height: 100%;
-	}
-	.shiki-preview :global(pre.shiki code) {
-		counter-reset: line;
-	}
-	.shiki-preview :global(pre.shiki code > .line) {
-		counter-increment: line;
-		display: inline-block;
-		width: 100%;
-		white-space: pre;
-	}
-	.shiki-preview :global(pre.shiki code > .line::before) {
-		content: counter(line);
-		display: inline-block;
-		width: 2.5em;
-		text-align: right;
-		margin-right: 1em;
-		color: #9ca3af;
-		user-select: none;
-		font-size: 0.65rem;
-	}
-	:global(.dark) .shiki-preview :global(pre.shiki code > .line::before) {
-		color: #4b5563;
-	}
-	/* Shiki dual-theme: swap CSS variables in dark mode */
-	:global(.dark) .shiki-preview :global(.shiki),
-	:global(.dark) .shiki-preview :global(.shiki span) {
-		color: var(--shiki-dark) !important;
-		background-color: var(--shiki-dark-bg) !important;
-		font-style: var(--shiki-dark-font-style) !important;
-		font-weight: var(--shiki-dark-font-weight) !important;
-		text-decoration: var(--shiki-dark-text-decoration) !important;
 	}
 </style>

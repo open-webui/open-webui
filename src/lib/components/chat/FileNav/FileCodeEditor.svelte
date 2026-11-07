@@ -172,7 +172,10 @@
 	let languageGeneration = 0;
 	const detectLanguage = async (path: string | null) => {
 		const version = ++languageGeneration;
-		const match = path ? LanguageDescription.matchFilename(languages, path) : null;
+		const filename = path?.split(/[\\/]/).pop() ?? '';
+		const match =
+			LanguageDescription.matchFilename(languages, filename) ??
+			LanguageDescription.matchFilename(languages, filename.toLowerCase());
 		editor?.dispatch({ effects: editorLanguage.reconfigure([]) });
 		try {
 			const language = await match?.load();
@@ -248,13 +251,15 @@
 				placeholder ? editorPlaceholder(placeholder) : []
 			]),
 			EditorView.theme({
-				'&': { fontSize: '0.75rem', height: '100%' },
+				'&': { fontSize: '0.8125rem', height: '100%' },
 				'.cm-content': {
-					padding: '0.5rem 0',
-					fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace'
+					padding: '0.5rem 0'
 				},
-				'.cm-scroller': { overflow: 'auto' },
-				'.cm-focused': { outline: 'none' }
+				'.cm-scroller': {
+					overflow: 'auto',
+					fontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, monospace'
+				},
+				'&.cm-focused': { outline: 'none' }
 			})
 		];
 
@@ -290,11 +295,27 @@
 
 <style>
 	.file-code-editor {
+		--editor-bg: #fff;
+		--editor-fg: #525252;
 		width: 100%;
 		height: 100%;
 	}
+	:global(.dark) .file-code-editor {
+		--editor-bg: #121212;
+		--editor-fg: #d4d4d4;
+	}
 	.file-code-editor :global(.cm-editor) {
 		height: 100%;
+		background-color: var(--editor-bg);
+		color: var(--editor-fg);
+	}
+	.file-code-editor :global(.cm-gutters) {
+		background-color: var(--editor-bg) !important;
+		color: color-mix(in oklab, var(--editor-fg) 48%, var(--editor-bg));
+	}
+	.file-code-editor :global(.cm-activeLine),
+	.file-code-editor :global(.cm-activeLineGutter) {
+		background-color: color-mix(in oklab, var(--editor-fg) 6%, transparent);
 	}
 
 	.file-code-editor :global(.cm-lineNumbers .cm-git-line-added) {

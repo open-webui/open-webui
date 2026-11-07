@@ -39,7 +39,6 @@
 		type TerminalFileRoot,
 		type TerminalCwd
 	} from '$lib/apis/terminal';
-	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
 	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
@@ -104,7 +103,7 @@
 			await filePreviewRef?.restoreView(
 				view.preview.dirty || view.preview.baseText === fileContent
 					? view.preview
-					: { ...view.preview, text: fileContent ?? '', editor: undefined, editing: false }
+					: { ...view.preview, text: fileContent ?? '', editor: undefined }
 			);
 		}
 		for (const path of view.expanded ?? []) {
@@ -731,7 +730,6 @@
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	// File preview toolbar state (bound from FilePreview)
-	let editing = false;
 	let showRaw = false;
 	let saving = false;
 
@@ -747,7 +745,6 @@
 	$: isJson = ['json', 'jsonc', 'jsonl', 'json5'].includes(getFileExt(selectedFile));
 	$: isSvg = getFileExt(selectedFile) === 'svg';
 	$: isNotebook = getFileExt(selectedFile) === 'ipynb';
-	$: isCode = isCodeFile(selectedFile);
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
@@ -2360,7 +2357,7 @@
 			onSort={toggleSort}
 			onToggleHidden={toggleHidden}
 		>
-			{#if isMarkdown && fileContent !== null && !editing}
+			{#if isMarkdown && fileContent !== null}
 				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
 					<Tooltip content={$i18n.t(mode.label)}>
 						<button
@@ -2375,13 +2372,12 @@
 						</button>
 					</Tooltip>
 				{/each}
-			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 						on:click={async () => {
 							if (!(await protectBuffer())) return;
-							if (editing) filePreviewRef?.cancelEdit();
 							showRaw = !showRaw;
 						}}
 						aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
@@ -2472,7 +2468,7 @@
 							{/if}
 						</button>
 					</Tooltip>
-				{:else if isCode}
+				{:else if showRaw || (!isCsv && !isJson && !isSvg && !isNotebook) || dirty}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -2486,42 +2482,6 @@
 							{:else}
 								<Icon name="check" size={11} strokeWidth={1.7} />
 							{/if}
-						</button>
-					</Tooltip>
-				{:else if editing}
-					<Tooltip content={$i18n.t('Cancel')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-							on:click={() => filePreviewRef?.cancelEdit()}
-							aria-label={$i18n.t('Cancel')}
-						>
-							<Icon name="xmark" size={11} strokeWidth={1.7} />
-						</button>
-					</Tooltip>
-					<Tooltip content={$i18n.t('Save')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-							on:click={() =>
-								filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
-							disabled={saving || !selectedFileWritable}
-							aria-label={$i18n.t('Save')}
-						>
-							{#if saving}
-								<Spinner className="size-3.5" />
-							{:else}
-								<Icon name="check" size={11} strokeWidth={1.7} />
-							{/if}
-						</button>
-					</Tooltip>
-				{:else}
-					<Tooltip content={$i18n.t('Edit')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-							on:click={() => filePreviewRef?.startEdit()}
-							disabled={!selectedFileWritable}
-							aria-label={$i18n.t('Edit')}
-						>
-							<Icon name="pencil" size={11} strokeWidth={1.4} />
 						</button>
 					</Tooltip>
 				{/if}
@@ -2674,7 +2634,6 @@
 						<FilePreview
 							{gitBaseContent}
 							bind:this={filePreviewRef}
-							bind:editing
 							bind:showRaw
 							bind:saving
 							bind:dirty

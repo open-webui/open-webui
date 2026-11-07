@@ -198,7 +198,7 @@
 </script>
 
 <div
-	class="min-h-full"
+	class="file-markdown-editor min-h-full"
 	role="presentation"
 	on:paste|capture={attachImages}
 	on:drop|capture={attachImages}
@@ -248,3 +248,46 @@
 		<Spinner className="size-4" />
 	{/if}
 </div>
+
+<style>
+	.file-markdown-editor :global(.tiptap .hljs-keyword) {
+		color: #c678dd;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-string) {
+		color: #98c379;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-number) {
+		color: #d19a66;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-comment) {
+		color: #5c6370;
+		font-style: italic;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-function) {
+		color: #61afef;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-title) {
+		color: #61afef;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-built_in) {
+		color: #e5c07b;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-attr) {
+		color: #d19a66;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-tag) {
+		color: #e06c75;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-name) {
+		color: #e06c75;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-selector-class) {
+		color: #d19a66;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-variable) {
+		color: #e06c75;
+	}
+	.file-markdown-editor :global(.tiptap .hljs-type) {
+		color: #e5c07b;
+	}
+</style>
