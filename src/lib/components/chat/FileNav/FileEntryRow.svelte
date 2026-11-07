@@ -277,10 +277,9 @@
 		renameValue = '';
 	};
 
-	let didLongPress = false;
-
 	// Touch uses the same drop handlers as mouse dragging, including chat attachments.
 	const touchDrag = (node: HTMLButtonElement) => {
+		let held = false;
 		let timer: ReturnType<typeof setTimeout> | null = null;
 		let start: Touch | null = null;
 		let point: Touch | null = null;
@@ -310,6 +309,7 @@
 			transfer = null;
 			target = ghost = null;
 			dragging = false;
+			held = false;
 			document.removeEventListener('touchmove', move);
 			document.removeEventListener('touchend', end);
 			document.removeEventListener('touchcancel', cancel);
@@ -346,7 +346,7 @@
 				return;
 			}
 			point = event.touches[0];
-			if (!didLongPress) {
+			if (!held) {
 				if (Math.hypot(point.clientX - start.clientX, point.clientY - start.clientY) > 8) cleanup();
 				return;
 			}
@@ -367,7 +367,7 @@
 			update();
 		};
 		const end = (event: TouchEvent) => {
-			if (didLongPress) event.preventDefault();
+			if (held) event.preventDefault();
 			if (transfer) {
 				point = event.changedTouches[0] ?? point;
 				cancelAnimationFrame(frame);
@@ -379,11 +379,10 @@
 		const cancel = () => cleanup();
 		const begin = (event: TouchEvent) => {
 			cleanup();
-			didLongPress = false;
 			if (renaming || event.touches.length !== 1) return;
 			start = point = event.touches[0];
 			timer = setTimeout(() => {
-				didLongPress = true;
+				held = true;
 				openPreview = false;
 				onLongPress();
 				if (!selected) onSelect(entry, event as unknown as MouseEvent, entryPath, rowIndex);
@@ -394,7 +393,7 @@
 			window.addEventListener('blur', cancel);
 		};
 		const contextMenu = (event: Event) => {
-			if (start || didLongPress) event.preventDefault();
+			if (start || held) event.preventDefault();
 		};
 		node.addEventListener('touchstart', begin, { passive: true });
 		node.addEventListener('contextmenu', contextMenu);
@@ -416,10 +415,6 @@
 	const handleClick = (e: MouseEvent) => {
 		openPreview = false;
 		if (renaming) return;
-		if (didLongPress) {
-			didLongPress = false;
-			return;
-		}
 
 		// Modifier click → toggle/range select
 		if (e.metaKey || e.ctrlKey || e.shiftKey) {
