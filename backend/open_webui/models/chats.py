@@ -58,7 +58,7 @@ def chat_search_content_query(text: str) -> str:
 
 
 def chat_search_terms(text: str) -> list[str]:
-    return list(dict.fromkeys(re.findall(r'[a-z0-9]+', text.lower())))
+    return list(dict.fromkeys(re.findall(r'[a-z0-9]+', text.lower())))[:12]
 
 
 def chat_message_list(chat: dict) -> list:
