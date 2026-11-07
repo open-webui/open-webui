@@ -171,7 +171,7 @@
 					on:click={() => selectDirectory('')}
 				>
 					<Folder className="size-3.5 shrink-0" strokeWidth="2" />
-					<span class="flex-1 text-start">{$i18n.t('Home')}</span>
+					<span class="flex-1 text-start">{$i18n.t('No folder')}</span>
 					{#if !directory}
 						<Check
 							className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
