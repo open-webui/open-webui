@@ -69,6 +69,7 @@
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './ChatTabs/UntitledFile.svelte';
 	import QuickOpen from './ChatTabs/QuickOpen.svelte';
+	import VoiceNote from './ChatTabs/VoiceNote.svelte';
 	import Browser from './ChatTabs/Browser.svelte';
 	import Desktop from './ChatTabs/Desktop.svelte';
 	import XTerminal from './XTerminal.svelte';
@@ -167,6 +168,29 @@
 	let navigationApproved = false;
 	let selectedConnection: TerminalConnection | null = null;
 	let showQuickOpen = false;
+	let voiceNote: VoiceNote;
+	let voiceNoteTarget: {
+		connection: TerminalConnection;
+		chatId: string | null;
+		directory?: string;
+	} | null = null;
+	$: canVoiceNote = terminalFilesAvailable && !!$user;
+	$: canTranscribeVoiceNote = $user?.role === 'admin' || ($user?.permissions?.chat?.stt ?? true);
+	const openVoiceNote = () => {
+		if (voiceNoteTarget) {
+			voiceNote?.finishRecording();
+			return;
+		}
+		if (!canVoiceNote || !selectedConnection || !$user) return;
+		voiceNoteTarget = {
+			connection: selectedConnection,
+			chatId,
+			directory:
+				contextTab?.terminalId === selectedConnection.selector
+					? terminalContext?.currentDirectory
+					: undefined
+		};
+	};
 	$: if (!terminalFilesAvailable) showQuickOpen = false;
 	let terminalEnabled = false;
 	let desktopEnabled = false;
@@ -740,6 +764,9 @@
 		const shortcut = matchKeybinding(event);
 		let action: (() => void) | undefined;
 		switch (shortcut) {
+			case Shortcut.VOICE_NOTE:
+				if (voiceNoteTarget || canVoiceNote) action = openVoiceNote;
+				break;
 			case Shortcut.QUICK_OPEN:
 				if (terminalFilesAvailable && selectedConnection)
 					action = () => {
@@ -839,20 +866,20 @@
 		chatId;
 		pruneTabs();
 	}
+	$: selectedConnection =
+		terminalFilesAvailable && mounted
+			? resolveTerminalConnection(
+					$selectedTerminalId,
+					$terminalServers ?? [],
+					directTerminals,
+					localStorage.token ?? ''
+				)
+			: null;
 	const checkTerminal = async () => {
 		const version = ++featureVersion;
 		terminalEnabled = false;
 		desktopEnabled = false;
 		browserEnabled = false;
-		selectedConnection =
-			terminalFilesAvailable && mounted
-				? resolveTerminalConnection(
-						$selectedTerminalId,
-						$terminalServers ?? [],
-						directTerminals,
-						localStorage.token ?? ''
-					)
-				: null;
 		if (!selectedConnection) return;
 		try {
 			const result = await terminalRequest<{
@@ -868,11 +895,7 @@
 		}
 	};
 	$: {
-		terminalFilesAvailable;
-		$selectedTerminalId;
-		$terminalServers;
-		$settings;
-		mounted;
+		selectedConnection;
 		chatId;
 		void checkTerminal();
 	}
@@ -1075,6 +1098,19 @@
 			<span class="truncate">{$i18n.t('Open in side panel')}</span>
 		</div>
 	</div>
+{/if}
+
+{#if voiceNoteTarget}
+	{@const target = voiceNoteTarget}
+	<VoiceNote
+		bind:this={voiceNote}
+		{...target}
+		canTranscribe={canTranscribeVoiceNote}
+		onclose={() => {
+			voiceNoteTarget = null;
+		}}
+		onsaved={(path) => openFile(path, target.connection.selector)}
+	/>
 {/if}
 
 {#if showQuickOpen && terminalFilesAvailable && selectedConnection}
@@ -1518,6 +1554,13 @@
 										>{$i18n.t('Desktop')}</span
 									><HotkeyHint name="openDesktop" className="ms-auto" /></button
 								>{/if}
+							{#if canVoiceNote}
+								<button on:click={openVoiceNote}>
+									<Icon name="microphone" size={14} />
+									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
+									<HotkeyHint name="voiceNote" className="ms-auto" />
+								</button>
+							{/if}
 							{#each newTabViews as view}
 								<button
 									on:click={() =>

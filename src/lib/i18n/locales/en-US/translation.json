@@ -4543,5 +4543,17 @@
 	"Zoom in": "",
 	"Zoom out": "",
 	"Searching...": "Searching...",
-	"Type a file name or path to search.": "Type a file name or path to search."
+	"Type a file name or path to search.": "Type a file name or path to search.",
+	"Voice Note": "Voice Note",
+	"Use arrow keys to move.": "Use arrow keys to move.",
+	"Record again": "Record again",
+	"Transcribe": "Transcribe",
+	"Transcript": "Transcript",
+	"Processing...": "Processing...",
+	"Could not load the recording folder.": "Could not load the recording folder.",
+	"No audio was recorded.": "No audio was recorded.",
+	"Could not transcribe the recording.": "Could not transcribe the recording.",
+	"Could not save the voice note. Retry or download the recording.": "Could not save the voice note. Retry or download the recording.",
+	"settings.personal.shortcuts.voiceNote.label": "Voice Note",
+	"Stop recording": "Stop recording"
 }
