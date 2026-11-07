@@ -520,7 +520,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     if result is None:
         return None
     user, connection = result
-    ws.scope['terminal_resume'] = {key: payload[key] for key in ('resume', 'cursor', 'flow_control') if key in payload}
+    ws.state.auth = payload
     chat_id = payload.get('chat_id', '')
     return user, connection, chat_id if isinstance(chat_id, str) else '', token
 
@@ -665,11 +665,11 @@ async def _proxy_terminal_websocket(
             auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
                 key = normalize_bearer_token(connection.get('key', ''))
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': key, **ws.scope.get('terminal_resume', {})}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': key}))
             elif auth_type == 'session' and is_terminal_orchestrator(connection):
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': token, **ws.scope.get('terminal_resume', {})}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': token}))
             else:
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': '', **ws.scope.get('terminal_resume', {})}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': ''}))
 
             if session_id is not None:
                 await publish_event(
