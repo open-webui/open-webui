@@ -1,7 +1,8 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import type { TerminalConnection } from '$lib/apis/terminal';
-	import type { GitStatus } from '$lib/apis/terminal/git';
+	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
+	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
@@ -651,6 +652,73 @@
 	let filePreviewRef: FilePreview;
 	let commentPreviewRef: CommentFilePreview;
 	let commentGeneration = 0;
+	let gitBaseContent: string | null = null;
+	let gitBaseGeneration = 0;
+	let gitBaseKey = '';
+	const loadGitBase = async (
+		connection: TerminalConnection | null,
+		session: string | null,
+		status: GitStatus | null,
+		file: GitFile | null,
+		path: string | null,
+		content: string | null,
+		loading: boolean,
+		_version: number
+	) => {
+		const generation = ++gitBaseGeneration;
+		const key = JSON.stringify([connection, session, path]);
+		if (key !== gitBaseKey) gitBaseContent = null;
+		gitBaseKey = key;
+		const root = status?.is_repo && status.root ? normalizePath(status.root) : null;
+		if (
+			!connection ||
+			root === null ||
+			!path ||
+			content === null ||
+			loading ||
+			file?.binary ||
+			!normalizePath(path).startsWith(`${root.replace(/\/$/, '')}/`)
+		) {
+			gitBaseContent = null;
+			return;
+		}
+		try {
+			let base = content;
+			if (file?.status === 'untracked' || file?.status === 'added') base = '';
+			else if (file) {
+				const [unstaged, staged] = await Promise.all([
+					file.unstaged
+						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+								file: file.path,
+								staged: 'false'
+							})
+						: null,
+					file.staged
+						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+								file: file.path,
+								staged: 'true'
+							})
+						: null
+				]);
+				if (unstaged) base = reverseGitDiff(base, unstaged.diff);
+				if (staged) base = reverseGitDiff(base, staged.diff);
+			}
+			if (generation === gitBaseGeneration) gitBaseContent = base;
+		} catch {
+			// A stale patch or unavailable Git service must not interfere with editing.
+			if (generation === gitBaseGeneration) gitBaseContent = null;
+		}
+	};
+	$: void loadGitBase(
+		gitConnection,
+		chatId,
+		gitStatus,
+		currentGitFile,
+		selectedFile,
+		fileContent,
+		fileLoading,
+		commentGeneration
+	);
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
 
@@ -2108,6 +2176,7 @@
 	});
 
 	onDestroy(() => {
+		++gitBaseGeneration;
 		overwriteChoice?.(false);
 		disposed = true;
 		++loadGeneration;
@@ -2603,6 +2672,7 @@
 						{/key}
 					{:else}
 						<FilePreview
+							{gitBaseContent}
 							bind:this={filePreviewRef}
 							bind:editing
 							bind:showRaw

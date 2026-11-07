@@ -34,6 +34,7 @@
 	export let fileModelData: ArrayBuffer | null = null;
 	export let fileDocxData: ArrayBuffer | null = null;
 	export let fileContent: string | null = null;
+	export let gitBaseContent: string | null = null;
 
 	// Terminal connection for notebook execution
 	export let baseUrl: string = '';
@@ -417,6 +418,7 @@
 		{#if searchTarget}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{gitBaseContent}
 					{readOnly}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
@@ -460,6 +462,7 @@
 		{:else if isHtml && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{gitBaseContent}
 					{readOnly}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
@@ -496,6 +499,7 @@
 		{:else if isMarkdown && showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{gitBaseContent}
 					{readOnly}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
@@ -559,6 +563,7 @@
 		{:else if isCode && !showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
+					{gitBaseContent}
 					{readOnly}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}

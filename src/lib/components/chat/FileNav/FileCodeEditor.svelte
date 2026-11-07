@@ -2,8 +2,22 @@
 	import '$lib/utils/codemirror';
 	import { toast } from 'svelte-sonner';
 	import { basicSetup, EditorView } from 'codemirror';
-	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
-	import { Compartment, EditorState } from '@codemirror/state';
+	import {
+		keymap,
+		placeholder as editorPlaceholder,
+		GutterMarker,
+		gutterLineClass
+	} from '@codemirror/view';
+	import {
+		Compartment,
+		EditorState,
+		RangeSet,
+		StateEffect,
+		StateField,
+		type Range,
+		type Text
+	} from '@codemirror/state';
+	import { Chunk } from '@codemirror/merge';
 	import { indentWithTab, historyField } from '@codemirror/commands';
 	import { completeAnyWord } from '@codemirror/autocomplete';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
@@ -16,6 +30,7 @@
 	export let placeholder = '';
 	export let ariaLabel = '';
 	export let filePath: string | null = null;
+	export let gitBaseContent: string | null = null;
 	export let onSave: ((content: string) => Promise<void>) | null = null;
 	export let searchTarget: {
 		line: number;
@@ -23,6 +38,61 @@
 		length: number;
 		requestId: number;
 	} | null = null;
+
+	class GitLineMarker extends GutterMarker {
+		readonly elementClass: string;
+		constructor(elementClass: string) {
+			super();
+			this.elementClass = elementClass;
+		}
+	}
+	const added = new GitLineMarker('cm-git-line-added');
+	const modified = new GitLineMarker('cm-git-line-modified');
+	const diffConfig = { timeout: 50 };
+	const setGitBase = StateEffect.define<string | null>();
+
+	function markers(base: Text, doc: Text, chunks: readonly Chunk[]) {
+		const ranges: Range<GutterMarker>[] = [];
+		for (const chunk of chunks) {
+			if (chunk.fromB === chunk.toB) continue;
+			const removed =
+				chunk.fromA === chunk.toA || !base.length
+					? 0
+					: base.lineAt(chunk.endA).number - base.lineAt(chunk.fromA).number + 1;
+			const start = doc.lineAt(chunk.fromB).number;
+			const end = doc.lineAt(chunk.endB).number;
+			for (let number = start; number <= end; number++) {
+				const line = doc.line(number);
+				if (line.from === doc.length && !line.length) continue;
+				ranges.push((number - start < removed ? modified : added).range(line.from));
+			}
+		}
+		return RangeSet.of(ranges);
+	}
+
+	const gitLineChanges = StateField.define<{
+		base: Text | null;
+		chunks: readonly Chunk[];
+		markers: RangeSet<GutterMarker>;
+	}>({
+		create: () => ({ base: null, chunks: [], markers: RangeSet.empty }),
+		update(value, transaction) {
+			const effect = transaction.effects.find((effect) => effect.is(setGitBase));
+			if (!effect && (!transaction.docChanged || value.base === null)) return value;
+			const base = effect
+				? effect.value === null
+					? null
+					: EditorState.create({ doc: effect.value }).doc
+				: value.base;
+			if (base === null) return { base, chunks: [], markers: RangeSet.empty };
+			const doc = transaction.state.doc;
+			const chunks = effect
+				? Chunk.build(base, doc, diffConfig)
+				: Chunk.updateB(value.chunks, base, doc, transaction.changes, diffConfig);
+			return { base, chunks, markers: markers(base, doc, chunks) };
+		},
+		provide: (field) => gutterLineClass.from(field, (value) => value.markers)
+	});
 
 	let container: HTMLDivElement;
 	let editor: EditorView | null = null;
@@ -49,6 +119,7 @@
 			EditorState.fromJSON(view.editorJSON, { extensions }, { history: historyField })
 		);
 		value = internalValue = editor.state.doc.toString();
+		editor.dispatch({ effects: setGitBase.of(gitBaseContent) });
 		editor.scrollDOM.scrollTop = view.scrollTop ?? 0;
 		editor.scrollDOM.scrollLeft = view.scrollLeft ?? 0;
 	}
@@ -136,6 +207,7 @@
 	$: if (editor && searchTarget) {
 		revealSearchTarget();
 	}
+	$: if (editor) editor.dispatch({ effects: setGitBase.of(gitBaseContent) });
 
 	onMount(() => {
 		const isDark = document.documentElement.classList.contains('dark');
@@ -143,6 +215,7 @@
 
 		extensions = [
 			basicSetup,
+			gitLineChanges,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			keymap.of([
 				indentWithTab,
@@ -219,5 +292,18 @@
 	}
 	.file-code-editor :global(.cm-editor) {
 		height: 100%;
+	}
+
+	.file-code-editor :global(.cm-lineNumbers .cm-git-line-added) {
+		box-shadow: inset 2px 0 0 rgba(5, 150, 105, 0.65);
+	}
+	.file-code-editor :global(.cm-lineNumbers .cm-git-line-modified) {
+		box-shadow: inset 2px 0 0 rgba(217, 119, 6, 0.6);
+	}
+	:global(.dark) .file-code-editor :global(.cm-lineNumbers .cm-git-line-added) {
+		box-shadow: inset 2px 0 0 rgba(52, 211, 153, 0.75);
+	}
+	:global(.dark) .file-code-editor :global(.cm-lineNumbers .cm-git-line-modified) {
+		box-shadow: inset 2px 0 0 rgba(251, 191, 36, 0.7);
 	}
 </style>

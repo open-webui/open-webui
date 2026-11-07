@@ -111,3 +111,33 @@ export function emphasizePair(oldRow: DiffRow, newRow: DiffRow) {
 		].filter((segment) => segment.text.length > 0);
 	}
 }
+
+// Reverse a Git patch against the saved file, leaving the editor's unsaved buffer alone.
+export function reverseGitDiff(content: string, patch: string): string {
+	const lines = content.replace(/\r\n/g, '\n').match(/[^\n]*\n|[^\n]+$/g) ?? [];
+	const base: string[] = [];
+	let index = 0;
+	let previous = '';
+	for (const row of parseDiffRows(patch.replace(/\r\n/g, '\n'))) {
+		if (row.type === 'hunk') {
+			const match = row.content.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+			if (!match) throw new Error('Invalid Git hunk');
+			const start = Number(match[1]) - (match[2] === '0' ? 0 : 1);
+			if (start < index || start > lines.length) throw new Error('Git diff is out of date');
+			base.push(...lines.slice(index, start));
+			index = start;
+		} else if (row.type === 'meta' && row.content.startsWith('\\ No newline')) {
+			if (previous !== 'addition' && base.length)
+				base[base.length - 1] = base[base.length - 1].replace(/\n$/, '');
+		} else if (row.oldNumber !== null || row.newNumber !== null) {
+			if (row.type !== 'deletion') {
+				if (lines[index]?.replace(/\n$/, '') !== row.content)
+					throw new Error('Git diff is out of date');
+				index++;
+			}
+			if (row.type !== 'addition') base.push(`${row.content}\n`);
+			previous = row.type;
+		}
+	}
+	return base.concat(lines.slice(index)).join('');
+}
