@@ -229,7 +229,7 @@
 					}}
 				>
 					<FolderOpen className="size-3.5 shrink-0" strokeWidth="2" />
-					<span>{$i18n.t('Open Folder')}</span>
+					<span>{$i18n.t('Open folder')}</span>
 				</button>
 			</DropdownMenu>
 		</div>
