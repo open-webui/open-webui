@@ -248,7 +248,13 @@
 	let contextUsage = null;
 
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
-		if (modelIds.some((id) => id.startsWith('agent:'))) return modelIds;
+		if (
+			modelIds.some(
+				(id) =>
+					id.startsWith('agent:') && decodeURIComponent(id.split(':')[1]) === $selectedTerminalId
+			)
+		)
+			return modelIds;
 		const selected = resolveDefaultModelIds(
 			$models,
 			modelIds,
