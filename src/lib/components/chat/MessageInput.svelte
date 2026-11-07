@@ -2890,6 +2890,7 @@
 										{#if showTerminalSelector}
 											<TerminalMenu
 												bind:show={showTerminalMenu}
+												directoryLocked={!!history?.currentId}
 												chatId={isSavedChatId(chatId) ? chatId : null}
 												bind:terminalContext
 												disabled={generating ||

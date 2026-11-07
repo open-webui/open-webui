@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getCwd, setCwd, type TerminalConnection } from '$lib/apis/terminal';
 	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/terminal/recentFolders';
+	import { selectedFolder } from '$lib/stores';
 	import type { TerminalContext } from '$lib/types';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -21,6 +22,7 @@
 	export let userId: string;
 	export let terminalContext: TerminalContext | null = null;
 	export let disabled = false;
+	export let locked = false;
 
 	let show = false;
 	let showPicker = false;
@@ -36,10 +38,9 @@
 	const folderName = (path: string) => path.replace(/\/+$/, '').split('/').pop() || '/';
 	const normalize = (path: string) => path.replace(/\/+$/, '') || '/';
 
-	$: directory =
-		terminalContext?.terminalId === connection.selector
-			? (terminalContext.currentDirectory ?? cwd)
-			: cwd;
+	$: if (!locked && terminalContext?.terminalId === connection.selector)
+		cwd = terminalContext.currentDirectory;
+	$: directory = cwd;
 	$: options = [...new Set([directory, ...recent].filter(Boolean).map(normalize))].filter((path) =>
 		path.toLowerCase().includes(search.trim().toLowerCase())
 	);
@@ -69,7 +70,13 @@
 
 	onMount(() => {
 		if (!chatId && terminalContext?.terminalId !== connection.selector) {
-			terminalContext = { terminalId: connection.selector, currentDirectory: '' };
+			terminalContext = {
+				terminalId: connection.selector,
+				currentDirectory:
+					$selectedFolder?.data?.terminal_id === connection.selector
+						? ($selectedFolder.data.working_directory ?? '')
+						: ''
+			};
 		}
 		initialization = getCwd(connection.baseUrl, connection.key, chatId ?? undefined).then(
 			(result) => {
@@ -78,7 +85,7 @@
 				if (chatId) cwd = result?.cwd ?? '';
 			}
 		);
-		void refreshRecentFolders();
+		if (!locked) void refreshRecentFolders();
 	});
 	onDestroy(() => (disposed = true));
 

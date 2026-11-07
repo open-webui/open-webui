@@ -1196,8 +1196,8 @@
 			return;
 		loading = false;
 
-		// Set working directory on the terminal server (fire-and-forget)
-		if (!onSelectDirectory && !initialFile)
+		// Browsing an existing chat must not change its execution directory.
+		if (!chatId && !onSelectDirectory && !initialFile)
 			setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {

@@ -1130,12 +1130,22 @@
 		}
 	};
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
-		terminalContext = null;
+		if (terminalContext?.terminalId !== $selectedTerminalId) terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
 		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
 		void refreshAgentModels();
 	}
+
+	const applyFolderTerminal = (folder: any) => {
+		const terminalId = folder?.data?.terminal_id;
+		if (!terminalId) return;
+		selectedTerminalId.set(terminalId);
+		terminalContext = {
+			terminalId,
+			currentDirectory: folder.data.working_directory ?? ''
+		};
+	};
 
 	let defaultsModelIds: string[] = [];
 	let modelDefaults: Record<string, any> | null = null;
@@ -2032,7 +2042,7 @@
 			// Folder defaults apply to new chats only.
 			if (!history.currentId && folder) {
 				if (folder.data?.terminal_id) {
-					selectedTerminalId.set(folder.data.terminal_id);
+					applyFolderTerminal(folder);
 					await refreshAgentModels();
 					if (history.currentId || $selectedFolder?.id !== folder.id) return;
 				}
@@ -2806,7 +2816,7 @@
 			if ($selectedFolder) {
 				// Folder defaults are explicit; never inherit a previous chat's selection.
 				if ($selectedFolder.data?.terminal_id) {
-					selectedTerminalId.set($selectedFolder.data.terminal_id);
+					applyFolderTerminal($selectedFolder);
 					await refreshAgentModels();
 				}
 				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
