@@ -21,7 +21,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
-	import Devices from '$lib/components/icons/Devices.svelte';
+	import Server from '$lib/components/icons/Server.svelte';
 
 	const i18n = getContext<any>('i18n');
 
@@ -124,6 +124,7 @@
 
 	$: selectedSystemTerminal = systemTerminals.find((t) => t.id === $selectedTerminalId);
 	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
+	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
 		selectedSystemTerminal?.name ||
@@ -181,7 +182,11 @@
 				aria-label={selectedLabel}
 				class={triggerClass}
 			>
-				<Cloud className="size-3.5" strokeWidth="2" />
+				{#if selectedDevice}
+					<Server className="size-3.5" strokeWidth="2" />
+				{:else}
+					<Cloud className="size-3.5" strokeWidth="2" />
+				{/if}
 
 				{#if $selectedTerminalId && selectedLabel}
 					<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
@@ -194,7 +199,11 @@
 		<Dropdown bind:show align="start">
 			<Tooltip content={selectedLabel} placement="top">
 				<button type="button" aria-label={selectedLabel} class={triggerClass}>
-					<Cloud className="size-3.5" strokeWidth="2" />
+					{#if selectedDevice}
+						<Server className="size-3.5" strokeWidth="2" />
+					{:else}
+						<Cloud className="size-3.5" strokeWidth="2" />
+					{/if}
 
 					{#if $selectedTerminalId && selectedLabel}
 						<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
@@ -357,7 +366,7 @@
 								>
 									<div class="flex flex-1 gap-2 items-center truncate">
 										{#if section.devices}
-											<Devices className="size-3.5 shrink-0" strokeWidth="2" />
+											<Server className="size-3.5 shrink-0" strokeWidth="2" />
 										{:else}
 											<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
 										{/if}
