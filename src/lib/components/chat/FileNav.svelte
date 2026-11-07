@@ -243,7 +243,8 @@
 		};
 	};
 	const captureSelection = (event?: Event) => {
-		if (!active || usingFileAsk) return;
+		if (!active || usingFileAsk || dirtyChoice || asking) return;
+		fileAsk = null;
 		const grid =
 			event instanceof CustomEvent && event.type === 'spreadsheetselection'
 				? (event.detail as { text: string; location: string; anchor: Range })
@@ -1573,6 +1574,8 @@
 		}
 	};
 
+	$: dragContext = JSON.stringify([selectedTerminal?.url, chatId ?? null]);
+
 	// Drag-and-drop upload
 	type UploadEntry = { path: string; file?: File };
 
@@ -1632,6 +1635,7 @@
 		if (rawMove) {
 			try {
 				const data = JSON.parse(rawMove);
+				if (data.context !== dragContext) return;
 				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
 				await handleMovePaths(paths, currentPath);
 			} catch {}
@@ -1827,7 +1831,14 @@
 
 	const handleMovePaths = async (sources: string[], destFolder: string) => {
 		const movedSources: string[] = [];
-		for (const source of sources) {
+		const roots = [...new Set(sources.map((path) => normalizePath(path).replace(/\/$/, '')))];
+		for (const source of roots) {
+			if (roots.some((parent) => parent !== source && source.startsWith(`${parent}/`))) continue;
+			if (
+				visibleEntries.find((entry) => entry.fullPath.replace(/\/$/, '') === source)?.writable ===
+				false
+			)
+				continue;
 			if (await moveOne(source, destFolder)) movedSources.push(source);
 		}
 		if (movedSources.length > 0) {
@@ -2316,6 +2327,7 @@
 		{/if}
 
 		<FileNavToolbar
+			{dragContext}
 			gitFile={currentGitFile}
 			gitDiffOpen={showGitDiff}
 			onToggleGitDiff={() => {
@@ -2886,6 +2898,7 @@
 							{/if}
 							{#each visibleEntries as entry (entry.fullPath)}
 								<FileEntryRow
+									{dragContext}
 									{entry}
 									gitFile={treeGitStatuses.get(gitTreePath(entry.fullPath)) ?? null}
 									{viewMode}

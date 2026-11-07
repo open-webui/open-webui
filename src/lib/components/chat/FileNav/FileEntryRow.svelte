@@ -19,6 +19,7 @@
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 
 	export let dragType = 'application/x-terminal-file-move';
+	export let dragContext = '';
 	export let variant: 'terminal' | 'workspace' = 'terminal';
 	export let viewMode: 'grid' | 'list' = 'list';
 	const i18n: any = getContext('i18n');
@@ -276,37 +277,132 @@
 		renameValue = '';
 	};
 
-	// Long-press for touch selection
-	let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 	let didLongPress = false;
 
-	const onPointerDown = (e: PointerEvent) => {
-		if (e.pointerType !== 'touch') return;
-		didLongPress = false;
-		longPressTimer = setTimeout(() => {
-			didLongPress = true;
-			onLongPress();
-			onSelect(entry, e as any, entryPath, rowIndex);
-		}, 500);
-	};
-
-	const onPointerUp = () => {
-		if (longPressTimer) {
-			clearTimeout(longPressTimer);
-			longPressTimer = null;
-		}
-	};
-
-	const onPointerCancel = () => {
-		if (longPressTimer) {
-			clearTimeout(longPressTimer);
-			longPressTimer = null;
-		}
+	// Touch uses the same drop handlers as mouse dragging, including chat attachments.
+	const touchDrag = (node: HTMLButtonElement) => {
+		let timer: ReturnType<typeof setTimeout> | null = null;
+		let start: Touch | null = null;
+		let point: Touch | null = null;
+		let transfer: DataTransfer | null = null;
+		let target: Element | null = null;
+		let ghost: HTMLDivElement | null = null;
+		let frame = 0;
+		let accepted = false;
+		const send = (element: Element | null, type: string) =>
+			element?.dispatchEvent(
+				new DragEvent(type, {
+					bubbles: true,
+					cancelable: true,
+					dataTransfer: transfer,
+					clientX: point?.clientX ?? 0,
+					clientY: point?.clientY ?? 0
+				})
+			) === false;
+		const cleanup = () => {
+			if (timer) clearTimeout(timer);
+			cancelAnimationFrame(frame);
+			send(target, 'dragleave');
+			ghost?.remove();
+			timer = null;
+			start = point = null;
+			transfer = null;
+			target = ghost = null;
+			dragging = false;
+			document.removeEventListener('touchmove', move);
+			document.removeEventListener('touchend', end);
+			document.removeEventListener('touchcancel', cancel);
+			window.removeEventListener('blur', cancel);
+		};
+		const update = () => {
+			if (!point || !ghost) return;
+			ghost.style.transform = `translate(${point.clientX + 12}px, ${point.clientY + 12}px)`;
+			const next = document.elementFromPoint(point.clientX, point.clientY);
+			if (next !== target) {
+				send(target, 'dragleave');
+				target = next;
+				send(target, 'dragenter');
+			}
+			accepted = send(target, 'dragover');
+			// Scroll the nearest list while holding near its edge.
+			for (let parent = target; parent; parent = parent.parentElement) {
+				if (
+					!(parent instanceof HTMLElement) ||
+					parent.scrollHeight <= parent.clientHeight ||
+					!['auto', 'scroll'].includes(getComputedStyle(parent).overflowY)
+				)
+					continue;
+				const rect = parent.getBoundingClientRect();
+				const dy = point.clientY < rect.top + 28 ? -6 : point.clientY > rect.bottom - 28 ? 6 : 0;
+				parent.scrollTop += dy;
+				break;
+			}
+			frame = requestAnimationFrame(update);
+		};
+		const move = (event: TouchEvent) => {
+			if (!start || event.touches.length !== 1) {
+				cleanup();
+				return;
+			}
+			point = event.touches[0];
+			if (!didLongPress) {
+				if (Math.hypot(point.clientX - start.clientX, point.clientY - start.clientY) > 8) cleanup();
+				return;
+			}
+			event.preventDefault();
+			if (transfer || Math.hypot(point.clientX - start.clientX, point.clientY - start.clientY) <= 8)
+				return;
+			transfer = new DataTransfer();
+			if (send(node, 'dragstart') || !transfer.types.length) {
+				cleanup();
+				return;
+			}
+			ghost = document.createElement('div');
+			ghost.textContent =
+				selected && selectedPaths.size > 1 ? `${selectedPaths.size} items` : entry.name;
+			ghost.style.cssText =
+				'position:fixed;left:0;top:0;z-index:99999;pointer-events:none;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:8px;padding:6px 10px;background:#374151;color:white;font-size:12px;';
+			document.body.appendChild(ghost);
+			update();
+		};
+		const end = (event: TouchEvent) => {
+			if (didLongPress) event.preventDefault();
+			if (transfer && accepted) send(target, 'drop');
+			cleanup();
+		};
+		const cancel = () => cleanup();
+		const begin = (event: TouchEvent) => {
+			cleanup();
+			didLongPress = false;
+			if (renaming || event.touches.length !== 1) return;
+			start = point = event.touches[0];
+			timer = setTimeout(() => {
+				didLongPress = true;
+				openPreview = false;
+				onLongPress();
+				if (!selected) onSelect(entry, event as unknown as MouseEvent, entryPath, rowIndex);
+			}, 500);
+			document.addEventListener('touchmove', move, { passive: false });
+			document.addEventListener('touchend', end, { passive: false });
+			document.addEventListener('touchcancel', cancel);
+			window.addEventListener('blur', cancel);
+		};
+		const contextMenu = (event: Event) => {
+			if (start || didLongPress) event.preventDefault();
+		};
+		node.addEventListener('touchstart', begin, { passive: true });
+		node.addEventListener('contextmenu', contextMenu);
+		return {
+			destroy() {
+				cleanup();
+				node.removeEventListener('touchstart', begin);
+				node.removeEventListener('contextmenu', contextMenu);
+			}
+		};
 	};
 
 	onDestroy(() => {
 		if (closeActiveHoverPreview === closeHoverPreview) closeActiveHoverPreview = null;
-		if (longPressTimer) clearTimeout(longPressTimer);
 		clearExpandTimer();
 	});
 
@@ -376,7 +472,10 @@
 		role="presentation"
 		on:dragover={(e) => {
 			if (entry.type !== 'directory') return;
-			if (!writable) return;
+			if (!canMutate) {
+				e.stopPropagation();
+				return;
+			}
 			if (!e.dataTransfer?.types.includes(dragType)) return;
 			e.preventDefault();
 			e.stopPropagation();
@@ -396,7 +495,10 @@
 		}}
 		on:drop={async (e) => {
 			if (entry.type !== 'directory') return;
-			if (!writable) return;
+			if (!canMutate) {
+				e.stopPropagation();
+				return;
+			}
 			const raw = e.dataTransfer?.getData(dragType);
 			if (!raw) return;
 			e.preventDefault();
@@ -405,6 +507,7 @@
 			clearExpandTimer();
 			try {
 				const data = JSON.parse(raw);
+				if (data.context !== dragContext) return;
 				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
 				const destFolder = directoryPath;
 				await onMove(
@@ -479,11 +582,14 @@
 							}
 							dragging = true;
 							const filePath = entryPath.replace(/\/$/, '');
-							onDragStart?.(e, filePath);
+							onDragStart?.(e, entryPath);
 							// If dragging a selected item, drag all selected
 							if (selected && selectedPaths.size > 1) {
 								if (canMutate)
-									e.dataTransfer?.setData(dragType, JSON.stringify({ paths: [...selectedPaths] }));
+									e.dataTransfer?.setData(
+										dragType,
+										JSON.stringify({ paths: [...selectedPaths], context: dragContext })
+									);
 								// Custom drag ghost showing count
 								const ghost = document.createElement('div');
 								ghost.style.cssText =
@@ -497,14 +603,14 @@
 									dragType,
 									JSON.stringify({
 										path: entry.type === 'directory' ? directoryPath : filePath,
-										name: entry.name
+										name: entry.name,
+										context: dragContext
 									})
 								);
 							}
 						}}
-						on:pointerdown={onPointerDown}
-						on:pointerup={onPointerUp}
-						on:pointercancel={onPointerCancel}
+						use:touchDrag
+						style="-webkit-touch-callout: none; user-select: none;"
 						aria-expanded={variant === 'workspace' && entry.type === 'directory'
 							? expanded
 							: props['aria-expanded']}
@@ -663,7 +769,10 @@
 							class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click|stopPropagation={() => {
-								if (!writable) return;
+								if (!canMutate) {
+									e.stopPropagation();
+									return;
+								}
 								menuOpen = false;
 								onNewFolder?.(directoryPath);
 							}}
@@ -678,7 +787,10 @@
 							class="{menuItemClass} disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click|stopPropagation={() => {
-								if (!writable) return;
+								if (!canMutate) {
+									e.stopPropagation();
+									return;
+								}
 								menuOpen = false;
 								onNewFile?.(directoryPath);
 							}}

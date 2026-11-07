@@ -13,6 +13,7 @@
 	import { formatFileSize } from '$lib/utils';
 
 	export let dragType = 'application/x-terminal-file-move';
+	export let dragContext = '';
 	const i18n: any = getContext('i18n');
 
 	export let breadcrumbs: { label: string; path: string }[] = [];
@@ -134,6 +135,7 @@
 					dragOverCrumb = null;
 					try {
 						const data = JSON.parse(raw);
+						if (data.context !== dragContext) return;
 						const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
 						await onMove(paths, crumb.path);
 					} catch {}

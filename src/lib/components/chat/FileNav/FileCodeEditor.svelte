@@ -19,7 +19,7 @@
 	} from '@codemirror/state';
 	import { Chunk } from '@codemirror/merge';
 	import { indentWithTab, historyField } from '@codemirror/commands';
-	import { completeAnyWord } from '@codemirror/autocomplete';
+	import { acceptCompletion, completeAnyWord } from '@codemirror/autocomplete';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
@@ -224,6 +224,7 @@
 			gitLineChanges,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			keymap.of([
+				{ key: 'Tab', run: acceptCompletion },
 				indentWithTab,
 				{
 					key: 'Mod-s',
