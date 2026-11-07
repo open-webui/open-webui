@@ -192,13 +192,18 @@
 							)}</span
 						>
 					</div>
-					<div class="space-y-1.5">
-						<h3 class="text-xs font-medium text-gray-700 dark:text-gray-300">
+					<details class="group/network">
+						<summary
+							class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 [&::-webkit-details-marker]:hidden"
+						>
+							<ChevronDown
+								className="size-3 -rotate-90 transition-transform group-open/network:rotate-0"
+							/>
 							{$i18n.t('Network')}
-						</h3>
+						</summary>
 						<dl
 							aria-label={$i18n.t('Network')}
-							class="space-y-1 text-xs text-gray-500 dark:text-gray-400"
+							class="mt-1.5 space-y-1 text-xs text-gray-500 dark:text-gray-400"
 						>
 							{#if data.network === null}<div>
 									{$i18n.t('Network')}: {$i18n.t('Unavailable')}
@@ -213,7 +218,7 @@
 									</div>{/each}
 							{/if}
 						</dl>
-					</div>
+					</details>
 					<div class="space-y-1.5">
 						<h3 class="text-xs font-medium text-gray-700 dark:text-gray-300">
 							{$i18n.t('Processes')}
