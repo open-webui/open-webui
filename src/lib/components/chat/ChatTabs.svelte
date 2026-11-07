@@ -60,6 +60,8 @@
 		terminalRequest,
 		type TerminalConnection
 	} from '$lib/apis/terminal';
+	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
+	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
@@ -716,6 +718,76 @@
 		tabs = setSplitTabs(tabs, true);
 	};
 
+	const toggleSplit = () => {
+		if (tabs.groups.length > 1) tabs = setSplitTabs(tabs, false);
+		else quickSplit();
+	};
+
+	const handleWorkspaceShortcut = (event: KeyboardEvent) => {
+		if (
+			event.defaultPrevented ||
+			event.repeat ||
+			$settings?.keyboardShortcuts === false ||
+			document.querySelector('.modal, [role="alertdialog"]') ||
+			(event.target instanceof Element &&
+				event.target.closest('[role="dialog"], [role="menu"], [role="listbox"]'))
+		)
+			return;
+
+		const shortcut = matchKeybinding(event);
+		let action: (() => void) | undefined;
+		switch (shortcut) {
+			case Shortcut.OPEN_FILES:
+				if (showFilesTab) action = () => openFiles();
+				break;
+			case Shortcut.OPEN_DESKTOP:
+				if (desktopEnabled && selectedConnection) action = openDesktop;
+				break;
+			case Shortcut.NEW_CHAT_TAB:
+				if (canSideChat) action = () => openFeature('side');
+				break;
+			case Shortcut.OPEN_COMMENTS:
+				if (showCommentsTab) action = () => openFeature('comments');
+				break;
+			case Shortcut.NEW_FILE:
+				if (terminalFilesAvailable && selectedConnection) action = newFile;
+				break;
+			case Shortcut.NEW_TERMINAL:
+				if (terminalEnabled && selectedConnection) action = newTerminal;
+				break;
+			case Shortcut.NEW_BROWSER:
+				if (browserEnabled && selectedConnection) action = () => openBrowser();
+				break;
+			case Shortcut.CLOSE_TAB:
+				if (panelVisible && tabs.activeId)
+					action = () => {
+						void closeTab(tabs.activeId);
+					};
+				break;
+			case Shortcut.NEXT_TAB:
+			case Shortcut.PREVIOUS_TAB: {
+				const group = tabs.groups.find((group) => group.id === tabs.activeGroupId);
+				if (!panelVisible || !group || group.tabIds.length < 2) break;
+				const index = group.tabIds.indexOf(group.activeId);
+				const direction = shortcut === Shortcut.NEXT_TAB ? 1 : -1;
+				const id = group.tabIds[(index + direction + group.tabIds.length) % group.tabIds.length];
+				action = () => {
+					selectTab(id);
+					document.getElementById(domId(id))?.focus();
+				};
+				break;
+			}
+			case Shortcut.TOGGLE_SPLIT:
+				if (fullWidth && (tabs.tabs.length > 1 || canOpenNewTab)) action = toggleSplit;
+				break;
+		}
+		if (!action) return;
+		// Handle before editors and terminals consume the chord, but after modal recording.
+		event.preventDefault();
+		event.stopPropagation();
+		action();
+	};
+
 	$: directTerminals =
 		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
@@ -917,6 +989,7 @@
 	};
 
 	onMount(() => {
+		document.addEventListener('keydown', handleWorkspaceShortcut, true);
 		const unsubscribeVisibility = showTabs.subscribe((visible) => {
 			if (!largeScreen && !visible && panelTarget) releasePanel(panelTarget);
 		});
@@ -938,6 +1011,7 @@
 		init();
 
 		return () => {
+			document.removeEventListener('keydown', handleWorkspaceShortcut, true);
 			unsubscribeVisibility();
 			isDestroyed = true;
 			mounted = false;
@@ -1049,9 +1123,15 @@
 				type="button"
 				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40 disabled:opacity-30 pointer-events-auto"
 				aria-label={$i18n.t('Split screen')}
-				title={$i18n.t('Split screen')}
-				disabled={tabs.groups.length > 1 || (tabs.tabs.length < 2 && !canOpenNewTab)}
-				on:click={quickSplit}
+				title={[
+					$i18n.t('Split screen'),
+					$settings?.keyboardShortcuts !== false ? formatChord($keybindings.toggleSplit) : ''
+				]
+					.filter(Boolean)
+					.join(' · ')}
+				aria-pressed={tabs.groups.length > 1}
+				disabled={tabs.tabs.length < 2 && !canOpenNewTab}
+				on:click={toggleSplit}
 			>
 				<SplitPanel className="size-4.5" strokeWidth="1" />
 			</button>
@@ -1366,6 +1446,12 @@
 						{:else}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+								title={[
+									$i18n.t('Close'),
+									$settings?.keyboardShortcuts !== false ? formatChord($keybindings.closeTab) : ''
+								]
+									.filter(Boolean)
+									.join(' · ')}
 								aria-label={tab.kind === 'voice'
 									? $i18n.t('End call')
 									: `${$i18n.t('Close')} ${tab.label}`}
@@ -1383,23 +1469,33 @@
 						aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
 					>
 					<div slot="content">
-						<DropdownMenu className="w-48">
+						<DropdownMenu className="min-w-56">
 							{#if showFilesMenuItem}
 								<button on:click={() => openFiles()}
-									><Icon name="folder" size={14} />{$i18n.t('Files')}</button
+									><Icon name="folder" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('Files')}</span
+									><HotkeyHint name="openFiles" className="ms-auto" /></button
 								>
 							{/if}
 							{#if terminalFilesAvailable}<button on:click={newFile}
-									><Icon name="page" size={14} />{$i18n.t('New File')}</button
+									><Icon name="page" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('New File')}</span
+									><HotkeyHint name="newFile" className="ms-auto" /></button
 								>{/if}
 							{#if terminalEnabled}<button on:click={newTerminal}
-									><Icon name="terminal" size={14} />{$i18n.t('New Terminal')}</button
+									><Icon name="terminal" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('New Terminal')}</span
+									><HotkeyHint name="newTerminal" className="ms-auto" /></button
 								>{/if}
 							{#if browserEnabled}<button on:click={() => openBrowser()}
-									><Icon name="browser" size={14} />{$i18n.t('Browser')}</button
+									><Icon name="browser" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('Browser')}</span
+									><HotkeyHint name="newBrowser" className="ms-auto" /></button
 								>{/if}
 							{#if desktopEnabled}<button on:click={openDesktop}
-									><Icon name="monitor" size={14} />{$i18n.t('Desktop')}</button
+									><Icon name="monitor" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('Desktop')}</span
+									><HotkeyHint name="openDesktop" className="ms-auto" /></button
 								>{/if}
 							{#each newTabViews as view}
 								<button
@@ -1412,7 +1508,12 @@
 										<Annotation className="size-3.5 shrink-0" />
 									{:else}
 										<Icon name={tabIcon(view.kind as PanelTab['kind'])} size={14} />
-									{/if}{view.label}
+									{/if}<span class="flex-1 text-start">{view.label}</span>
+									{#if view.kind === 'side'}
+										<HotkeyHint name="newChatTab" className="ms-auto" />
+									{:else if view.kind === 'comments'}
+										<HotkeyHint name="openComments" className="ms-auto" />
+									{/if}
 								</button>
 							{/each}
 						</DropdownMenu>

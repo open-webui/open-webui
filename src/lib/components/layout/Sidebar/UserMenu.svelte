@@ -1,4 +1,5 @@
 <script lang="ts">
+	import HotkeyHint from '$lib/components/common/HotkeyHint.svelte';
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
@@ -566,6 +567,7 @@
 						<KeyIcon className="size-3.5" />
 					</div>
 					<div class=" self-center truncate">{$i18n.t('Keyboard')}</div>
+					<HotkeyHint name="showShortcuts" className="ms-auto" />
 				</button>
 			{/if}
 
@@ -616,6 +618,7 @@
 					<Settings className="size-3.5" strokeWidth="1.5" />
 				</div>
 				<div class=" self-center truncate">{$i18n.t('Settings')}</div>
+				<HotkeyHint name="openSettings" className="ms-auto" />
 			</button>
 
 			<button
