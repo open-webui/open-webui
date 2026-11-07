@@ -5,6 +5,7 @@
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import {
@@ -276,7 +277,7 @@
 		let number = 1;
 		while (tabs.tabs.some((tab) => tab.untitled && tab.label === `Untitled-${number}`)) number++;
 		openPanel({
-			id: crypto.randomUUID(),
+			id: uuidv4(),
 			kind: 'file',
 			label: `Untitled-${number}`,
 			terminalId: selectedConnection.selector,
@@ -296,7 +297,7 @@
 			const initialPrompt = pending?.parentId === chatId ? pending.prompt : '';
 			if (pending?.parentId === chatId) sideChatRequest.set(null);
 			openPanel({
-				id: crypto.randomUUID(),
+				id: uuidv4(),
 				kind,
 				label: `${view.label} ${sideChatNumber}`,
 				sideChatNumber,
@@ -418,7 +419,7 @@
 			let id = existing;
 			if (!id) {
 				focusGroup(groupId);
-				id = crypto.randomUUID();
+				id = uuidv4();
 				tabs = openTab(tabs, { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId });
 			}
 			tabs = bounds.edge
@@ -466,7 +467,7 @@
 			terminalNumber++;
 		}
 		openPanel({
-			id: crypto.randomUUID(),
+			id: uuidv4(),
 			kind: 'terminal',
 			label: `${$i18n.t('Terminal')} ${terminalNumber}`,
 			terminalNumber,
@@ -518,7 +519,7 @@
 				? `${connection.baseUrl}/chats/${encodeURIComponent(chatId)}`
 				: connection?.baseUrl);
 		openPanel({
-			id: crypto.randomUUID(),
+			id: uuidv4(),
 			kind: 'browser',
 			label: port ? `localhost:${port}` : $i18n.t('Browser'),
 			path: url,
