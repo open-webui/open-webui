@@ -1291,7 +1291,7 @@
 		positions.groups[group.id]?.top === 0 &&
 		positions.groups[group.id].left + positions.groups[group.id].width > 0.999
 			? 'pr-10'
-			: ''} gap-1 shrink-0 pointer-events-auto select-none col-start-1 row-start-1 min-w-0 z-10 bg-white dark:bg-gray-900"
+			: ''} gap-1 shrink-0 pointer-events-auto select-none col-start-1 row-start-1 min-w-0 z-10"
 	>
 		<div class="flex items-center gap-0.5 flex-1 min-w-0 py-0.5">
 			<div
