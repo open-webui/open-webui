@@ -852,6 +852,8 @@
 				const drop = pendingTabDrop;
 				pendingTabDrop = null;
 				drop?.();
+				// Consume Sortable's fallback click suppression so it cannot swallow the next tap.
+				if (touchDrag) document.documentElement.dispatchEvent(new MouseEvent('click'));
 				draggedTabId = '';
 				dragged = false;
 				touchDrag = false;
