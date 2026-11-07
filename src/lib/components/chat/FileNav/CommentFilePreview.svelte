@@ -407,7 +407,9 @@
 			onDirtyChange={(value) => (dirty = value)}
 			onSave={save}
 		/>
-	{:else if previewError}<p class="p-4 text-sm text-gray-500 dark:text-gray-400">
+	{:else if previewError}<p
+			class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+		>
 			{$i18n.t('Preview failed')}
 		</p>{/if}
 	{#if unplaced.length || commentState === 'error' || commentState === 'partial'}

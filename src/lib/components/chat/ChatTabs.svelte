@@ -1568,7 +1568,10 @@
 				on:pointerdown={() => focusGroup(tabGroups[tab.id].id)}
 			>
 				{#if tab.terminalId && !connection}
-					<div role="status" class="p-4 text-sm text-gray-500">
+					<div
+						role="status"
+						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+					>
 						{$i18n.t('Terminal connection unavailable')}
 					</div>
 				{:else if tab.kind === 'voice'}
@@ -1621,9 +1624,17 @@
 					/>
 				{:else if tab.kind === 'browser' || tab.kind === 'terminal'}
 					{#if owner.pending.has(tab.id)}
-						<p role="status" class="p-4 text-sm text-gray-500">{$i18n.t('Connecting…')}</p>
+						<p
+							role="status"
+							class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+						>
+							{$i18n.t('Connecting…')}
+						</p>
 					{:else if !tab.sessionId || failure}
-						<div role="status" class="p-4 text-sm text-gray-500 space-y-3">
+						<div
+							role="status"
+							class="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+						>
 							<p>
 								{failure?.status === 404
 									? $i18n.t('Session no longer available')

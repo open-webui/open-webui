@@ -226,7 +226,7 @@
 
 			<div slot="content">
 				<DropdownMenu
-					className="min-w-56 max-w-56 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					className="w-60 max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 				>
 					<!-- Direct terminals (gated by permission) -->
 					{#if directTerminals.length > 0}

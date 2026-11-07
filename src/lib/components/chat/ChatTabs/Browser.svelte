@@ -459,7 +459,7 @@
 					on:load={loaded}
 				></iframe>{/key}
 		{/if}
-		{#if !currentUrl && !frameUrl}<div class="flex h-full overflow-y-auto px-6 pt-8 pb-20">
+		{#if !currentUrl && !frameUrl}<div class="flex h-full overflow-y-auto p-6">
 				<div class="m-auto w-full max-w-xs">
 					<div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
 						<Icon name="browser" size={18} strokeWidth={1.4} class="text-gray-400" />

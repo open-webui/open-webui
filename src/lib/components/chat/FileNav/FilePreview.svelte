@@ -314,7 +314,11 @@
 						: undefined}
 				/>
 			{:catch}
-				<div class="p-4 text-sm text-gray-500 dark:text-gray-400">{$i18n.t('Preview failed')}</div>
+				<div
+					class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+				>
+					{$i18n.t('Preview failed')}
+				</div>
 			{/await}
 		{/key}
 	{:else if fileSqliteData !== null}

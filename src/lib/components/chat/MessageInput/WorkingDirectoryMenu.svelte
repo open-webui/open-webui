@@ -157,7 +157,7 @@
 			</button>
 		</Tooltip>
 		<div slot="content">
-			<DropdownMenu className="w-56 max-w-[calc(100vw-2rem)]">
+			<DropdownMenu className="w-60 max-w-[calc(100vw-2rem)]">
 				<SearchInput bind:value={search} placeholder={$i18n.t('Search folders')} />
 				<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
 				<button

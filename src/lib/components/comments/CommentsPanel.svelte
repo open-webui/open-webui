@@ -260,7 +260,9 @@
 		class:flex={!items.length}
 		class:flex-col={!items.length}
 	>
-		{#if loading}<div class="flex justify-center py-5"><Spinner className="size-5" /></div>{/if}
+		{#if loading}<div class="flex items-center justify-center py-5" class:flex-1={!items.length}>
+				<Spinner className="size-5" />
+			</div>{/if}
 		{#if error}<div class="px-4 py-2">
 				<p role="alert" class="text-xs text-gray-500 dark:text-gray-400">{error}</p>
 				<button

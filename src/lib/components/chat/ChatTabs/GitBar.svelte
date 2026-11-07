@@ -945,7 +945,7 @@
 										</div>
 									{/each}
 									{#if !status.files.length}<div
-											class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No changes')}
 										</div>{/if}
@@ -1041,7 +1041,7 @@
 											>
 										</div>{/each}
 									{#if !commits.length}<div
-											class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No commits yet')}
 										</div>{/if}
@@ -1118,20 +1118,22 @@
 										>{/if}
 								</div>
 								<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden text-[0.6875rem]">
-									{#if loadingDiff}<p class="p-3 text-gray-400">
+									{#if loadingDiff}<p
+											class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+										>
 											{$i18n.t('Loading...')}
 										</p>{:else if diff}<GitDiff
 											code={diff}
 											mode={diffMode}
 											{hideWhitespace}
 										/>{:else}<div
-											class="flex h-full items-center justify-center text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No text changes')}
 										</div>{/if}
 								</div>
 							{:else}<div
-									class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+									class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 								>
 									{$i18n.t(
 										view === 'history'

@@ -427,7 +427,7 @@
 				<Spinner className="size-4" />
 			</div>
 		{:else if error}
-			<div class="flex items-center justify-center flex-1 p-6">
+			<div class="flex items-center justify-center flex-1 p-6 text-center">
 				<div class="text-xs text-gray-500 dark:text-gray-400">{error}</div>
 			</div>
 		{:else if entries.length === 0 && !creatingFolder && !creatingFile}
