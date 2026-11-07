@@ -93,6 +93,10 @@ class Vector:
                 from open_webui.retrieval.vector.dbs.valkey import ValkeyClient
 
                 return ValkeyClient()
+            case VectorType.SILICIUM:
+                from open_webui.retrieval.vector.dbs.silicium import SiliciumClient
+
+                return SiliciumClient()
             case _:
                 raise ValueError(f'Unsupported vector type: {vector_type}')
 
