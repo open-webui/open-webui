@@ -308,7 +308,12 @@
 							<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
 						</div>
 
-						<div class="text-gray-500">
+						<div class="flex shrink-0 items-center gap-2 text-gray-500">
+							{#if selectedToolIds.length > 0}
+								<span class="text-xs">
+									{$i18n.t('{{COUNT}} selected', { COUNT: selectedToolIds.length })}
+								</span>
+							{/if}
 							<ChevronRight />
 						</div>
 					</div>
@@ -331,7 +336,12 @@
 							<span class="ml-0.5 text-gray-500">{Object.keys(skills).length}</span>
 						</div>
 
-						<div class="text-gray-500">
+						<div class="flex shrink-0 items-center gap-2 text-gray-500">
+							{#if selectedSkillIds.length > 0}
+								<span class="text-xs">
+									{$i18n.t('{{COUNT}} selected', { COUNT: selectedSkillIds.length })}
+								</span>
+							{/if}
 							<ChevronRight />
 						</div>
 					</div>
