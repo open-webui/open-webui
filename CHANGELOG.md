@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- 💸 **Much cheaper tool chats.** Citation instructions, memory recall, the skills list and attached knowledge are no longer rewritten into the system prompt or your message on every tool round, so earlier parts of the conversation stay identical between requests and providers can serve them from their prompt cache, which makes chats with tools much cheaper.
+- 💸 **Much cheaper tool chats.** Citation instructions, memory recall, the skills list and attached knowledge are no longer rewritten into the system prompt or your message on every tool round, so earlier parts of the conversation stay identical between requests and providers can serve them from their prompt cache, which makes chats with tools much cheaper. [#33852](https://github.com/open-webui/open-webui/issues/33852)
 - 🦾 **Coding agents as models.** On an Open Terminal that offers agents, coding agents such as Claude Code, Codex and Pi now appear in the model picker (one agent per conversation) and can be chatted with or called by voice, with their reasoning effort and service tier as options and their tool requests approved in the chat, while agent chats cannot be regenerated, continued or edited and resent.
 - 🚦 **Auto tool permissions.** Administrators can now turn on an Auto tool permission mode (off by default) next to Full access and Ask for approval, where a review model decides which tool calls run automatically and which ask for approval first.
 - 🔗 **Personal terminals from native apps.** Native apps on your own computer can now sign in with renewable sessions (90 days without use by default, set with "SESSION_EXPIRES_IN"), appear as a personal terminal in chats and receive notifications even with no page open, with terminal output that resumes after a dropped connection.
@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🧳 **Tabs remembered per chat.** The open tabs, split layout and selected terminal of each chat are now saved privately for each user on the server and restored when you reopen the chat, even on another device, and signing out warns you about unsaved file edits.
 - 🧾 **Editable spreadsheets.** Excel files in the file view can now be edited in the preview, with a formula bar, pasting from other spreadsheets and resizable columns, and saved back to the file, while formula cells and protected sheets stay read-only.
 - 🖋️ **Markdown and code editing.** Markdown files in the file view now open in a rich text editor that saves back to Markdown, and the code editor suggests words that already appear in the file.
+- 🔖 **Git status in the file browser.** Files and folders in the file browser are marked with a Git status letter such as M, A, D or U, and folders show that they contain changes.
+- 🧲 **Drag files into chat.** Files from the terminal file browser can be dragged, one or several at once, into the message input to attach them.
+- 🧬 **Git changes in the editor.** The code editor now marks the lines of a file that were added or changed since the last commit.
 - 🩺 **Terminal system info.** The terminal menu now has a System info view with the terminal's CPU, memory, disk, network, uptime and top processes.
 - 🎼 **Notification sound styles.** The notification sound setting now offers Chime, Soft, Bell and Tap sounds, with a play button to preview each one.
 - 🎙️ **Voice notes in files.** A new shortcut, Cmd+Alt+M (Ctrl+Alt+M elsewhere), records a voice note, can transcribe it, and saves the recording with a Markdown note in the current folder of the selected terminal.
