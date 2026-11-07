@@ -1919,7 +1919,7 @@ async def fork_chat_by_id(
     }
 
     # The source chat's folder may no longer be writable by the caller.
-    folder_id = chat.folder_id if is_owner else None
+    folder_id = chat.folder_id
     if folder_id is not None and not await has_folder_write_access(user.id, folder_id, db=db):
         folder_id = None
 

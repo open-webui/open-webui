@@ -1223,7 +1223,12 @@
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
-				? { showRaw, currentSlide, selectedExcelSheet, scroll: viewerRoot?.scrollTop ?? 0 }
+				? {
+						showRaw,
+						currentSlide,
+						selectedExcelSheet,
+						scroll: viewerRoot?.scrollTop ?? 0
+					}
 				: null;
 		const current = () =>
 			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
@@ -2272,7 +2277,22 @@
 			onSort={toggleSort}
 			onToggleHidden={toggleHidden}
 		>
-			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+			{#if isMarkdown && fileContent !== null && !editing}
+				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
+					<Tooltip content={$i18n.t(mode.label)}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 aria-pressed:text-gray-900 dark:aria-pressed:text-white disabled:opacity-30"
+							aria-label={$i18n.t(mode.label)}
+							aria-pressed={showRaw === mode.raw}
+							on:click={() => {
+								showRaw = mode.raw;
+							}}
+						>
+							<Icon name={mode.icon} size={11} strokeWidth={1.4} />
+						</button>
+					</Tooltip>
+				{/each}
+			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
@@ -2321,8 +2341,7 @@
 					<button
 						type="button"
 						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-						on:click={() =>
-							commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
+						on:click={() => commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
 						disabled={saving || !dirty || !selectedFileWritable}
 						aria-label={$i18n.t('Save')}
 					>
@@ -2354,7 +2373,7 @@
 					</Tooltip>
 				{:else if isHtml}
 					<!-- HTML preview mode: no edit/save buttons -->
-				{:else if isMarkdown && showRaw}
+				{:else if isMarkdown}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -2370,8 +2389,6 @@
 							{/if}
 						</button>
 					</Tooltip>
-				{:else if isMarkdown}
-					<!-- Markdown preview mode: no edit/save buttons -->
 				{:else if isCode}
 					<Tooltip content={$i18n.t('Save')}>
 						<button

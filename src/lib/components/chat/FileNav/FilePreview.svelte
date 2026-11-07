@@ -2,6 +2,7 @@
 	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
 	import { getContext, tick } from 'svelte';
 	import { downloadFileBlob } from '$lib/apis/terminal';
+	import MarkdownFileEditor from './MarkdownFileEditor.svelte';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
@@ -19,6 +20,7 @@
 
 	let pdfPagesPreviewRef: PdfPagesPreview;
 	let fileCodeEditorRef: FileCodeEditor;
+	let markdownEditorRef: MarkdownFileEditor;
 
 	const i18n: any = getContext('i18n');
 
@@ -56,7 +58,9 @@
 					text: editContent.slice(editTextarea.selectionStart, editTextarea.selectionEnd),
 					location: ''
 				}
-			: fileCodeEditorRef?.getSelection();
+			: isMarkdown && !showRaw
+				? markdownEditorRef?.getSelection()
+				: fileCodeEditorRef?.getSelection();
 	export const save = () => (editing ? saveEdit() : saveCodeFile());
 
 	export const captureView = () => ({
@@ -292,7 +296,7 @@
 
 	// Auto-switch to raw/editor mode for empty previewable files so the user
 	// can start editing immediately instead of seeing a blank preview.
-	$: if (fileContent !== null && fileContent.trim() === '' && (isMarkdown || isCsv || isJson)) {
+	$: if (fileContent !== null && fileContent.trim() === '' && (isCsv || isJson)) {
 		showRaw = true;
 	}
 
@@ -463,12 +467,23 @@
 					onSave={readOnly ? null : saveCodeFile}
 				/>
 			</div>
+		{:else if isMarkdown && !showRaw && onSave && !readOnly}
+			{#key selectedFile}
+				<MarkdownFileEditor
+					bind:this={markdownEditorRef}
+					bind:value={codeValue}
+					path={selectedFile ?? ''}
+					{baseUrl}
+					{apiKey}
+					{chatId}
+					{readOnly}
+					onSave={readOnly ? null : saveCodeFile}
+				/>
+			{/key}
 		{:else if isMarkdown && !showRaw}
 			{#key selectedFile}
 				<MarkdownDocument
-					content={fileContent}
-					onSave={readOnly ? null : onSave}
-					bind:saving
+					content={codeValue}
 					id={`file-${selectedFile}`}
 					path={selectedFile ?? ''}
 					{baseUrl}

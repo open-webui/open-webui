@@ -123,12 +123,6 @@ export const Image = Node.create<ImageOptions>({
 
 	addNodeView() {
 		return ({ node, editor }) => {
-			const domImg = document.createElement('img');
-			domImg.setAttribute('src', node.attrs.src || '');
-			domImg.setAttribute('alt', node.attrs.alt || '');
-			domImg.setAttribute('title', node.attrs.title || '');
-
-			const container = document.createElement('div');
 			const img = document.createElement('img');
 
 			const fileId = node.attrs.src.replace('data://', '');
@@ -164,11 +158,8 @@ export const Image = Node.create<ImageOptions>({
 				}
 			});
 
-			container.append(img);
-			return {
-				dom: img,
-				contentDOM: domImg
-			};
+			// Images are leaf nodes; a detached contentDOM breaks cursor positioning.
+			return { dom: img };
 		};
 	},
 
