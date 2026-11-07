@@ -512,6 +512,11 @@
 	let terminalContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
 		const attachments = [structuredClone(file)];
+		if (fullWidthTabs) {
+			terminalTabs?.focusMainChat();
+			await tick();
+			if (!$showCallOverlay) messageInput?.focus({ preventScroll: true });
+		}
 		const last = history.currentId ? history.messages[history.currentId] : null;
 		if (last?.role === 'assistant' && !last.done) {
 			chatRequestQueues.update((queues) => ({
@@ -920,6 +925,8 @@
 	};
 	onDestroy(() => chatLoadController.abort());
 	const navigateHandler = async () => {
+		loading = true;
+		terminalTabs?.prepareChatSwitch();
 		const signal = startChatLoad();
 		modelDefaults = null;
 		cancelBrowserInteractions();
@@ -2687,6 +2694,7 @@
 	};
 
 	const initNewChat = async () => {
+		terminalTabs?.prepareChatSwitch();
 		loading = true;
 		if (
 			!embedded &&
@@ -2969,6 +2977,7 @@
 	};
 
 	const loadChat = async (signal = startChatLoad()) => {
+		if (chatIdProp && chatIdProp !== $chatId) terminalTabs?.prepareChatSwitch();
 		if (chatIdProp && chatIdProp !== $chatId) {
 			terminalContext = null;
 			history = { messages: {}, currentId: null };
@@ -5788,6 +5797,7 @@
 
 			{#if !embedded}
 				<ChatTabs
+					chatLoading={loading}
 					bind:fullWidth={fullWidthTabs}
 					bind:mainChatActive
 					bind:mainChatStyle

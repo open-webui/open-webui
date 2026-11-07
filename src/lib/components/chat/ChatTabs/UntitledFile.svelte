@@ -24,12 +24,20 @@
 	export let dirty = false;
 	export let onSaved: (path: string) => void;
 	export let isOpen: (path: string) => boolean;
-	let value = '';
+	export let initialView: any = null;
+	let value = initialView?.value ?? '';
+	export const captureView = () => ({
+		value,
+		fileName,
+		directory,
+		editor: editor?.captureView(),
+		dirty: dirty || saving
+	});
 	let editor: FileCodeEditor;
 	let saving = false;
 	let showSave = false;
-	let fileName = label;
-	let directory = initialDirectory ?? '/';
+	let fileName = initialView?.fileName ?? label;
+	let directory = initialView?.directory ?? initialDirectory ?? '/';
 	let root = '/';
 	let entries: FileEntry[] = [];
 	let loading = false;
@@ -40,7 +48,7 @@
 	let disposed = false;
 	let fileNameInput: HTMLInputElement;
 	let saveResult: ((saved: boolean) => void) | null = null;
-	let closeChoice: ((choice: 'save' | 'discard' | 'cancel') => void) | null = null;
+	let closeChoice: ((confirmed: boolean) => void) | null = null;
 	$: dirty = value.length > 0;
 	$: byteCount = new TextEncoder().encode(value).length;
 	$: fullPath = joinTerminalPath(directory, fileName.trim());
@@ -134,20 +142,21 @@
 	export const requestClose = async () => {
 		if (saving || showSave || closeChoice) return false;
 		if (!dirty) return true;
-		const choice = await new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+		const confirmed = await new Promise<boolean>((resolve) => {
 			closeChoice = resolve;
 		});
 		closeChoice = null;
 		await tick();
-		return choice === 'discard' || (choice === 'save' && (await save()));
+		return confirmed;
 	};
 	onMount(() => {
+		editor?.restoreView(initialView?.editor);
 		editor?.focus();
 	});
 	onDestroy(() => {
 		disposed = true;
 		saveResult?.(false);
-		closeChoice?.('cancel');
+		closeChoice?.(false);
 	});
 </script>
 
@@ -249,12 +258,10 @@
 
 <ConfirmDialog
 	show={closeChoice !== null}
+	confirmFirst
+	primaryAction="cancel"
 	title={$i18n.t('Unsaved changes')}
-	confirmLabel={$i18n.t('Save')}
-	on:confirm={() => closeChoice?.('save')}
-	on:cancel={() => closeChoice?.('cancel')}
->
-	<button class="rounded-lg px-3 py-2 text-sm" on:click={() => closeChoice?.('discard')}
-		>{$i18n.t('Discard changes')}</button
-	>
-</ConfirmDialog>
+	message={$i18n.t('Discard unsaved changes and close this file?')}
+	on:confirm={() => closeChoice?.(true)}
+	on:cancel={() => closeChoice?.(false)}
+/>

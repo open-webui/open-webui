@@ -37,6 +37,8 @@
 	} from '$lib/utils';
 
 	export let initialPrompt = '';
+	export let initialView: any = null;
+	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
@@ -52,6 +54,7 @@
 		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
 	// Snapshot the active branch once; later parent edits and streaming stay in the parent.
 	const context = (() => {
+		if (initialView?.context) return initialView.context;
 		if (chatId) return [];
 		const branch: any[] = [];
 		let current = history?.currentId;
@@ -97,7 +100,7 @@
 	let selectedModels = [modelId];
 	let atSelectedModel: Model | undefined = undefined;
 	$: sideModelId = atSelectedModel?.id ?? selectedModels[0];
-	let files: any[] = [];
+	let files: any[] = initialView?.files ?? [];
 	let params: Record<string, any> = { ...$settings.params };
 	let selectedToolIds: string[] = [];
 	let selectedSkillIds: string[] = [];
@@ -167,7 +170,7 @@
 		.join('\n\n');
 	let id = chatId;
 	let messages: any[] = [];
-	let draft = '';
+	let draft = initialView?.draft ?? '';
 	let error = '';
 	let busy = false;
 	let sending = false;
@@ -528,8 +531,9 @@
 		}
 		void tick().then(() => {
 			if (disposed) return;
-			if (canSend && initialPrompt) {
-				draft = initialPrompt;
+			if (initialView) input?.setText(draft);
+			if (canSend && initialPrompt && !initialView) {
+				draft = initialView?.draft ?? initialPrompt;
 				input?.setText(draft);
 				void send();
 			}

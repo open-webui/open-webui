@@ -197,13 +197,24 @@ export const resolveTerminalConnection = (
 		: null;
 };
 
+export class TerminalRequestError extends Error {
+	constructor(
+		message: string,
+		public status: number
+	) {
+		super(message);
+		this.name = 'TerminalRequestError';
+	}
+}
+
 export const terminalRequest = async <T>(
 	connection: TerminalConnection,
 	chatId: string | null,
 	path: string,
 	options: RequestInit = {}
 ): Promise<T> => {
-	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
+	if (!get(config)?.features?.enable_tool_servers)
+		throw new TerminalRequestError('Tool servers are disabled', 403);
 	const response = await fetch(`${connection.baseUrl}${path}`, {
 		...options,
 		headers: {
@@ -214,12 +225,13 @@ export const terminalRequest = async <T>(
 	});
 	if (!response.ok) {
 		const body = await response.json().catch(() => null);
-		throw new Error(
+		throw new TerminalRequestError(
 			typeof body?.detail === 'string'
 				? body.detail
 				: typeof body?.error === 'string'
 					? body.error
-					: `Terminal request failed (${response.status})`
+					: `Terminal request failed (${response.status})`,
+			response.status
 		);
 	}
 	return response.json();

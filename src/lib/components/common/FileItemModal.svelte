@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { WorkBook } from 'xlsx';
+	import ExcelPreview from './ExcelPreview.svelte';
 	import DOMPurify from 'dompurify';
 
 	import { getContext, onMount, tick } from 'svelte';
@@ -145,11 +146,11 @@
 	const loadExcelContent = async () => {
 		try {
 			excelError = false;
-			const [arrayBuffer, { read }] = await Promise.all([
+			const [arrayBuffer, { readExcelWorkbook }] = await Promise.all([
 				getFileContentById(item.id),
-				import('xlsx')
+				import('$lib/utils/excelToTable')
 			]);
-			excelWorkbook = read(arrayBuffer, { type: 'array' });
+			excelWorkbook = await readExcelWorkbook(arrayBuffer);
 			excelSheetNames = excelWorkbook.SheetNames;
 
 			if (excelSheetNames.length > 0) {
@@ -167,7 +168,7 @@
 		const { excelToTable } = await import('$lib/utils/excelToTable');
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
 		const result = await excelToTable(worksheet);
-		excelHtml = DOMPurify.sanitize(result.html);
+		excelHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 		rowCount = result.rowCount;
 	};
 
@@ -545,31 +546,16 @@
 								{$i18n.t('Failed to load Excel/CSV file. Please try downloading it instead.')}
 							</div>
 						{:else}
-							{#if excelSheetNames.length > 1}
-								<div
-									class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-normal bg-transparent dark:text-gray-200"
-								>
-									{#each excelSheetNames as sheetName}
-										<button
-											class="min-w-fit py-1.5 px-4 border-b {selectedSheet === sheetName
-												? ' '
-												: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
-											type="button"
-											on:click={() => {
-												selectedSheet = sheetName;
-											}}>{sheetName}</button
-										>
-									{/each}
-								</div>
-							{/if}
-
-							{#if excelHtml}
-								<div class="office-preview overflow-auto max-h-[60vh]">
-									{@html excelHtml}
-								</div>
-							{:else}
-								<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
-							{/if}
+							<div class="h-[60vh]">
+								<ExcelPreview
+									html={excelHtml}
+									sheetNames={excelSheetNames}
+									{selectedSheet}
+									onSheetChange={(sheet) => {
+										selectedSheet = sheet;
+									}}
+								/>
+							</div>
 						{/if}
 					{:else if isCode}
 						<div class="max-h-[60vh] overflow-scroll scrollbar-hidden text-sm relative">

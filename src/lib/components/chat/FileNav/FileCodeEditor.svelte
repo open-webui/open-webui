@@ -4,7 +4,7 @@
 	import { basicSetup, EditorView } from 'codemirror';
 	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
-	import { indentWithTab } from '@codemirror/commands';
+	import { indentWithTab, historyField } from '@codemirror/commands';
 	import { completeAnyWord } from '@codemirror/autocomplete';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
@@ -30,6 +30,28 @@
 	let editorLanguage = new Compartment();
 	let editorReadOnly = new Compartment();
 	let internalValue = '';
+	let extensions: any[] = [];
+	let pendingView: any = null;
+	export const captureView = () =>
+		editor
+			? {
+					editorJSON: editor.state.toJSON({ history: historyField }),
+					text: editor.state.doc.toString(),
+					scrollTop: editor.scrollDOM.scrollTop,
+					scrollLeft: editor.scrollDOM.scrollLeft
+				}
+			: pendingView;
+	export function restoreView(view: any) {
+		if (!view) return;
+		pendingView = view;
+		if (!editor || !view.editorJSON) return;
+		editor.setState(
+			EditorState.fromJSON(view.editorJSON, { extensions }, { history: historyField })
+		);
+		value = internalValue = editor.state.doc.toString();
+		editor.scrollDOM.scrollTop = view.scrollTop ?? 0;
+		editor.scrollDOM.scrollLeft = view.scrollLeft ?? 0;
+	}
 	let lastSearchTargetRequestId = 0;
 
 	export const getSelection = () => {
@@ -119,7 +141,7 @@
 		const isDark = document.documentElement.classList.contains('dark');
 		internalValue = value;
 
-		const extensions = [
+		extensions = [
 			basicSetup,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			keymap.of([
@@ -165,6 +187,7 @@
 			parent: container
 		});
 
+		if (pendingView) restoreView(pendingView);
 		revealSearchTarget();
 
 		// Watch dark mode

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
 	import { getContext, tick } from 'svelte';
 	import { downloadFileBlob } from '$lib/apis/terminal';
 	import MarkdownDocument from './MarkdownDocument.svelte';
@@ -57,6 +58,31 @@
 				}
 			: fileCodeEditorRef?.getSelection();
 	export const save = () => (editing ? saveEdit() : saveCodeFile());
+
+	export const captureView = () => ({
+		baseText: fileContent ?? '',
+		text: editing ? editContent : codeValue,
+		dirty,
+		editing,
+		showRaw,
+		editor: fileCodeEditorRef?.captureView(),
+		selection: editTextarea ? [editTextarea.selectionStart, editTextarea.selectionEnd] : null,
+		scrollTop: editTextarea?.scrollTop ?? 0
+	});
+	export async function restoreView(view: any) {
+		if (!view) return;
+		editing = view.editing;
+		showRaw = view.showRaw;
+		codeValue = editContent = view.text;
+		lastLoaded = fileContent;
+		bufferPath = selectedFile;
+		await tick();
+		fileCodeEditorRef?.restoreView(view.editor);
+		if (editTextarea && view.selection) {
+			editTextarea.setSelectionRange(view.selection[0], view.selection[1]);
+			editTextarea.scrollTop = view.scrollTop;
+		}
+	}
 
 	// Office preview props
 	export let fileOfficeHtml: string | null = null;
@@ -368,28 +394,12 @@
 	{:else if fileDocxData !== null}
 		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
 	{:else if fileOfficeHtml !== null}
-		<div class="flex flex-col h-full">
-			<div class="office-preview overflow-auto flex-1 min-h-0">
-				{@html fileOfficeHtml}
-			</div>
-			{#if excelSheetNames.length > 1}
-				<div
-					class="flex items-center gap-1 py-1.5 px-1.5 border-t border-gray-100/40 dark:border-gray-800/25 overflow-x-auto"
-				>
-					{#each excelSheetNames as sheet}
-						<button
-							class="shrink-0 px-2 py-1 text-xs rounded-md transition-colors
-								{selectedExcelSheet === sheet
-								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200 font-normal'
-								: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
-							on:click={() => onSheetChange?.(sheet)}
-						>
-							{sheet}
-						</button>
-					{/each}
-				</div>
-			{/if}
-		</div>
+		<ExcelPreview
+			html={fileOfficeHtml}
+			sheetNames={excelSheetNames}
+			selectedSheet={selectedExcelSheet}
+			{onSheetChange}
+		/>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
 		<PptxPreview
 			bind:this={pptxPreviewRef}

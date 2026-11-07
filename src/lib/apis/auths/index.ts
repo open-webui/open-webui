@@ -380,6 +380,8 @@ export const userSignUp = async (
 };
 
 export const userSignOut = async () => {
+	const { clearChatViews } = await import('$lib/stores/chatViewStates');
+	clearChatViews();
 	const token = localStorage.getItem('token');
 	// Stop local access even if the hosted server cannot be reached.
 	await window.tether?.signedOut();

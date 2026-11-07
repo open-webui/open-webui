@@ -5,9 +5,23 @@
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import {
+		chatViewEntry,
+		loadChatView,
+		changeChatView,
+		flushChatView,
+		updateViewTab,
+		createViewSession,
+		promoteChatView,
+		registerChatViewCapture,
+		chatViewChanges,
+		hasChatViewDrafts,
+		clearChatViews
+	} from '$lib/stores/chatViewStates';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
-	import { beforeNavigate, goto } from '$app/navigation';
+	import { beforeNavigate } from '$app/navigation';
 	import {
 		artifactContents,
 		config,
@@ -38,6 +52,7 @@
 	import {
 		emptyTabs,
 		openTab,
+		openTabInSidePanel,
 		activateTab,
 		removeTab,
 		moveTab,
@@ -58,6 +73,7 @@
 	import {
 		resolveTerminalConnection,
 		terminalRequest,
+		TerminalRequestError,
 		type TerminalConnection
 	} from '$lib/apis/terminal';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
@@ -84,6 +100,8 @@
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
 	import Modal from '../common/Modal.svelte';
+	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	let stopTerminalChoice: ((stop: boolean) => void) | null = null;
 	import XMark from '../icons/XMark.svelte';
 	import SplitPanel from '../icons/SplitPanel.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
@@ -93,6 +111,7 @@
 	export let history;
 
 	export let chatId: string | null = null;
+	export let chatLoading = false;
 	export let folderId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
@@ -123,9 +142,6 @@
 	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	$: fullWidth = largeScreen;
 	$: panelVisible = largeScreen || !!$showTabs;
-	$: if (largeScreen !== tabs.tabs.some((tab) => tab.id === mainChatTabId)) {
-		tabs = setMainChatTab(tabs, largeScreen, title);
-	}
 
 	let largeScreen = false;
 	let dragged = false;
@@ -141,14 +157,156 @@
 	};
 	let terminalViews: Record<string, XTerminal> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
-	export async function bindTerminalChat(id: string) {
-		await tick();
-		await Promise.all(
-			tabs.tabs
-				.filter((tab) => tab.kind === 'terminal')
-				.map((tab) => terminalViews[tab.id]?.bindChat(id))
-		);
+	let browserViews: Record<string, Browser> = {};
+	let gitViews: Record<string, GitBar> = {};
+	let sideViews: Record<string, SideChat> = {};
+	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
+	let viewReady = false;
+	let viewError = '';
+	let switchVersion = 0;
+	let promotion: Promise<void> | null = null;
+	let sessionFailures: Record<string, { message: string; status?: number }> = {};
+	let sessionAttempts: Record<string, number> = {};
+
+	export function captureView() {
+		if (!viewEntry || !viewReady) return;
+		const owner = viewEntry;
+		for (const tab of tabs.tabs) {
+			const draft = fileViews[tab.id]?.captureView?.();
+			if (draft) owner.drafts.set(tab.id, draft);
+			if (gitViews[tab.id]) owner.transient[`git:${tab.id}`] = gitViews[tab.id].captureView();
+			if (sideViews[tab.id]) owner.transient[`side:${tab.id}`] = sideViews[tab.id].captureView();
+		}
+		owner.transient.gitDiffModes = fileGitDiffModes;
+		owner.transient.gitHideWhitespace = fileGitHideWhitespace;
+		const panels = {
+			...tabs,
+			tabs: tabs.tabs.map((tab) => ({
+				...tab,
+				...(tab.kind === 'files' && owner.drafts.get(tab.id)?.directory
+					? { directory: owner.drafts.get(tab.id).directory }
+					: {})
+			}))
+		};
+		changeChatView(owner, { ...owner.state, panels, selectedTerminalId: $selectedTerminalId });
 	}
+	export function prepareChatSwitch() {
+		stopTerminalChoice?.(false);
+		stopTerminalChoice = null;
+		captureView();
+		if (viewEntry) void flushChatView(viewEntry);
+		viewReady = false;
+		tabs = emptyTabs();
+		++switchVersion;
+		tabsChatId = undefined;
+	}
+	export async function bindTerminalChat(id: string) {
+		if (!viewEntry || viewEntry.chatId === id) return;
+		if (promotion) return promotion;
+		const owner = viewEntry;
+		captureView();
+		promotion = promoteChatView(
+			owner,
+			id,
+			async () => {
+				await tick();
+				for (const tab of owner.state.panels.tabs) {
+					if (!tab.sessionId) continue;
+					if (tab.kind === 'terminal') {
+						if (!terminalViews[tab.id]) throw new Error('Terminal is not connected');
+						await terminalViews[tab.id].bindChat(id);
+					} else if (tab.kind === 'browser') {
+						if (!browserViews[tab.id]) throw new Error('Browser is not connected');
+						await browserViews[tab.id].bindChat(id);
+					}
+				}
+			},
+			$temporaryChatEnabled
+		)
+			.then(() => {
+				tabsChatId = id;
+				viewEntry = owner;
+				viewError = '';
+			})
+			.finally(() => {
+				promotion = null;
+			});
+		return promotion;
+	}
+
+	async function restoreChatView(id: string | null) {
+		if (!$user?.id) return;
+		const version = ++switchVersion;
+		captureView();
+		if (viewEntry) void flushChatView(viewEntry);
+		viewReady = false;
+		tabs = emptyTabs();
+		viewError = '';
+		tabsChatId = id;
+		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
+		viewEntry = owner;
+		try {
+			await loadChatView(owner);
+			if (version !== switchVersion) return;
+			if (!owner.transient.initialized && !owner.state.panels.tabs.length)
+				owner.state.selectedTerminalId = $selectedTerminalId;
+			owner.state.panels = setMainChatTab(owner.state.panels, true, title);
+			owner.transient.initialized = true;
+			tabs = owner.state.panels;
+			selectedTerminalId.set(owner.state.selectedTerminalId);
+			dirtyFiles = {};
+			fileContexts = {};
+			fileGitStatuses = {};
+			fileGitDiffModes = owner.transient.gitDiffModes ?? {};
+			fileGitHideWhitespace = owner.transient.gitHideWhitespace ?? {};
+			commentTarget = {};
+			sessionFailures = {};
+			sessionAttempts = {};
+			viewReady = true;
+			hasOpenedTabs = tabs.tabs.some((tab) => tab.kind !== 'chat');
+		} catch (error) {
+			if (version === switchVersion) viewError = String(error);
+		}
+	}
+	const persistPanels = (panels: typeof tabs, selector: string | null, ready: boolean) => {
+		if (!ready || !viewEntry || chatLoading || viewEntry.promoting) return;
+		if (viewEntry.state.panels !== panels || viewEntry.state.selectedTerminalId !== selector)
+			changeChatView(viewEntry, { ...viewEntry.state, panels, selectedTerminalId: selector });
+	};
+	$: persistPanels(tabs, $selectedTerminalId, viewReady);
+	$: if (viewEntry && viewEntry.userId !== $user?.id) {
+		viewReady = false;
+		viewEntry = null;
+		tabs = emptyTabs();
+		tabsChatId = undefined;
+		clearChatViews();
+	}
+	const captureConnections = (..._connections: unknown[]) => {
+		captureView();
+		// A returning component must read disk before restoring its cached draft.
+		for (const tab of tabs.tabs) {
+			if (tab.terminalId && !terminalAccessible(tab.terminalId)) delete dirtyFiles[tab.id];
+		}
+		dirtyFiles = { ...dirtyFiles };
+	};
+	$: if (mounted && viewReady) captureConnections($terminalServers, $settings, $config, $user);
+	const tabConnection = (tab: PanelTab) =>
+		tab.terminalId && terminalAccessible(tab.terminalId)
+			? resolveTerminalConnection(
+					tab.terminalId,
+					$terminalServers ?? [],
+					directTerminals,
+					localStorage.token ?? ''
+				)
+			: null;
+	const startSession = (owner: NonNullable<typeof viewEntry>, tab: PanelTab) => {
+		const connection = tabConnection(tab);
+		if (connection) {
+			delete sessionFailures[tab.id];
+			void createViewSession(owner, tab.id, connection);
+		}
+	};
+
 	let fileViews: Record<
 		string,
 		{
@@ -156,16 +314,16 @@
 			requestClose: () => Promise<boolean>;
 			browseDirectory?: (path: string) => unknown;
 			revealPage?: (page: number | null) => void;
+			captureView?: () => any;
 		}
 	> = {};
 	let dirtyFiles: Record<string, boolean> = {};
 	let fileContexts: Record<string, TerminalContext | null> = {};
 	let panelTarget: HTMLElement | null = null;
-	let tabsChatId = chatId;
+	let tabsChatId: string | null | undefined = undefined;
 	let hasOpenedTabs = false;
 	let commentTarget: { comment_id?: string } = {};
 	let closing = new Set<string>();
-	let navigationApproved = false;
 	let selectedConnection: TerminalConnection | null = null;
 	let showQuickOpen = false;
 	let voiceNote: VoiceNote;
@@ -266,9 +424,11 @@
 		tabs = activateTab(tabs, id);
 		showTabs.set(true);
 	};
-	const openPanel = (tab: PanelTab) => {
+	const openPanel = (tab: PanelTab, inSidePanel = false) => {
+		if (!viewReady || !viewEntry) return;
 		hasOpenedTabs = true;
-		tabs = openTab(tabs, tab);
+		tabs = inSidePanel ? openTabInSidePanel(tabs, tab) : openTab(tabs, tab);
+		changeChatView(viewEntry, { ...viewEntry.state, panels: tabs });
 		showTabs.set(true);
 	};
 	const openFiles = (selector = $selectedTerminalId, directory?: string) => {
@@ -315,7 +475,10 @@
 			context: contextTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
 		});
 	};
-	const openFeature = (kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side') => {
+	const openFeature = (
+		kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side',
+		inSidePanel = false
+	) => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		const view = availableViews.find((view) => view.kind === kind)!;
 		if (kind === 'side') {
@@ -325,25 +488,21 @@
 			const pending = $sideChatRequest;
 			const initialPrompt = pending?.parentId === chatId ? pending.prompt : '';
 			if (pending?.parentId === chatId) sideChatRequest.set(null);
-			openPanel({
-				id: uuidv4(),
-				kind,
-				label: `${view.label} ${sideChatNumber}`,
-				sideChatNumber,
-				initialPrompt
-			});
+			openPanel(
+				{
+					id: uuidv4(),
+					kind,
+					label: `${view.label} ${sideChatNumber}`,
+					sideChatNumber,
+					initialPrompt
+				},
+				inSidePanel
+			);
 			return;
 		}
 		openPanel({ id: kind, kind, label: view.label });
 	};
-	const updateSideChat = (tabId: string, chat: { id: string; title?: string }) => {
-		tabs = {
-			...tabs,
-			tabs: tabs.tabs.map((tab) =>
-				tab.id === tabId ? { ...tab, chatId: chat.id, label: chat.title || tab.label } : tab
-			)
-		};
-	};
+
 	type SplitDrop = PanelRect & { groupId: string; edge: SplitEdge | null };
 	let chatDropPreview: SplitDrop | null = null;
 	let draggedTabId = '';
@@ -495,14 +654,16 @@
 		) {
 			terminalNumber++;
 		}
+		const id = uuidv4();
 		openPanel({
-			id: uuidv4(),
+			id,
 			kind: 'terminal',
 			label: `${$i18n.t('Terminal')} ${terminalNumber}`,
 			terminalNumber,
 			terminalId: selectedConnection.selector,
 			connection: { ...selectedConnection }
 		});
+		if (viewEntry && viewReady) startSession(viewEntry, tabs.tabs.find((tab) => tab.id === id)!);
 	};
 	const openDesktop = () => {
 		if (!desktopEnabled || !selectedConnection) return;
@@ -547,8 +708,9 @@
 			(connection && chatContextNeedsSavedChat(terminal) && chatId
 				? `${connection.baseUrl}/chats/${encodeURIComponent(chatId)}`
 				: connection?.baseUrl);
+		const id = uuidv4();
 		openPanel({
-			id: uuidv4(),
+			id,
 			kind: 'browser',
 			label: port ? `localhost:${port}` : $i18n.t('Browser'),
 			path: url,
@@ -556,15 +718,41 @@
 			browserBaseUrl: proxyBase,
 			connection: connection ?? undefined
 		});
+		if (viewEntry && viewReady) startSession(viewEntry, tabs.tabs.find((tab) => tab.id === id)!);
 	};
 	const closeTab = async (id: string) => {
 		if (id === mainChatTabId) return;
 		if (closing.has(id)) return;
 		closing.add(id);
+		const owner = viewEntry;
+		if (!owner) return;
 		try {
-			const tab = tabs.tabs.find((item) => item.id === id);
+			await owner.pending.get(id);
+			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
-			if (fileViews[id]?.hasUnsavedChanges()) {
+			if (tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')) {
+				const connection = tabConnection(tab);
+				if (connection) {
+					if (
+						tab.kind === 'terminal' &&
+						!(await new Promise<boolean>((resolve) => {
+							stopTerminalChoice = resolve;
+						}))
+					)
+						return;
+					try {
+						await terminalRequest(
+							connection,
+							owner.chatId,
+							`${tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(tab.sessionId)}`,
+							{ method: 'DELETE' }
+						);
+					} catch (error) {
+						if (!(error instanceof TerminalRequestError) || error.status !== 404) throw error;
+					}
+				}
+			}
+			if (owner === viewEntry && fileViews[id]?.hasUnsavedChanges()) {
 				selectTab(id);
 				if (!(await fileViews[id].requestClose())) return;
 			}
@@ -574,12 +762,18 @@
 			}
 			if (tab.kind === 'artifacts') showArtifacts.set(false);
 			if (tab.kind === 'preview') showEmbeds.set(false);
-			tabs = removeTab(tabs, id);
+			owner.drafts.delete(id);
+			changeChatView(owner, { ...owner.state, panels: removeTab(owner.state.panels, id) });
+			if (owner !== viewEntry) return;
+			tabs = owner.state.panels;
 			delete dirtyFiles[id];
 			delete fileContexts[id];
-			if (!tabs.tabs.length) showTabs.set(false);
+			if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
+				showTabs.set(false);
 			await tick();
 			document.getElementById(domId(tabs.activeId))?.focus();
+		} catch (error) {
+			toast.error(String(error));
 		} finally {
 			closing.delete(id);
 		}
@@ -840,32 +1034,6 @@
 			directTerminals.some((terminal) => terminal.url === selector)
 		);
 	};
-	const pruneTabs = () => {
-		const hadTabs = tabs.tabs.length > 0;
-		for (const tab of tabs.tabs) {
-			// An open side chat owns its model and context; changing the parent must not discard it.
-			if (tab.kind === 'side' || tab.kind === 'chat') continue;
-			const available = tab.terminalId
-				? !!$selectedTerminalId && terminalAccessible(tab.terminalId)
-				: availableViews.some((view) => view.kind === tab.kind && view.available);
-			if (!available) {
-				tabs = removeTab(tabs, tab.id);
-				delete dirtyFiles[tab.id];
-				delete fileContexts[tab.id];
-			}
-		}
-		if (hadTabs && !tabs.tabs.length) showTabs.set(false);
-	};
-	$: {
-		availableViews;
-		$selectedTerminalId;
-		$terminalServers;
-		$settings;
-		$config;
-		$user;
-		chatId;
-		pruneTabs();
-	}
 	$: selectedConnection =
 		terminalFilesAvailable && mounted
 			? resolveTerminalConnection(
@@ -900,21 +1068,18 @@
 		void checkTerminal();
 	}
 
-	$: if (chatId !== tabsChatId) {
-		if (tabsChatId || !chatId) {
-			tabs = setMainChatTab(emptyTabs(), largeScreen, title);
-			hasOpenedTabs = false;
-			dirtyFiles = {};
-			fileContexts = {};
-			fileGitStatuses = {};
-			fileGitDiffModes = {};
-			fileGitHideWhitespace = {};
-			commentTarget = {};
-		}
-		tabsChatId = chatId;
+	$: if (mounted && !chatLoading && $user?.id && chatId !== tabsChatId) {
+		if (viewEntry && !viewEntry.chatId && chatId && viewReady) {
+			tabsChatId = chatId;
+			void bindTerminalChat(chatId).catch((error) => {
+				viewError = String(error);
+			});
+		} else void restoreChatView(chatId);
 	}
 	$: if (
 		mounted &&
+		viewReady &&
+		!chatLoading &&
 		!largeScreen &&
 		$showTabs === true &&
 		tabs.tabs.every((tab) => tab.id === mainChatTabId)
@@ -944,28 +1109,29 @@
 		$sideChatRequest?.parentId === chatId
 	)
 		sideChatRequest.set(null);
-	$: if ($showTabs === 'side') {
-		if (canSideChat) openFeature('side');
+	$: if (viewReady && $showTabs === 'side') {
+		if (canSideChat) openFeature('side', true);
 		else sideChatRequest.set(null);
 		showTabs.set(tabs.tabs.length > 0);
 	}
 	$: if (
+		viewReady &&
 		($showTabs === 'comments' || (typeof $showTabs === 'object' && $showTabs)) &&
 		showCommentsTab
 	) {
 		commentTarget = typeof $showTabs === 'object' ? $showTabs : {};
 		openFeature('comments');
 	}
-	$: if ($showArtifacts && showArtifactsTab) {
+	$: if (viewReady && $showArtifacts && showArtifactsTab) {
 		openFeature('artifacts');
 		showArtifacts.set(false);
 	}
-	$: if ($showEmbeds && showPreviewTab) {
+	$: if (viewReady && $showEmbeds && showPreviewTab) {
 		openFeature('preview');
 		showEmbeds.set(false);
 	}
-	$: if ($showCallOverlay) openFeature('voice');
-	$: if ($showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
+	$: if (viewReady && $showCallOverlay) openFeature('voice');
+	$: if (viewReady && $showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
 		const request = $showFileNavPath;
 		showFileNavPath.set(null);
 		openFile(
@@ -976,26 +1142,16 @@
 	}
 
 	beforeNavigate(({ from, to, cancel, willUnload }) => {
-		if (navigationApproved || from?.url.pathname === to?.url.pathname) return;
-		showOverview.set(false);
-		const dirtyTabs = tabs.tabs.filter((tab) => fileViews[tab.id]?.hasUnsavedChanges());
-		if (!dirtyTabs.length) return;
-		cancel();
-		if (willUnload || !to) return;
-		void (async () => {
-			for (const tab of dirtyTabs) {
-				selectTab(tab.id);
-				if (!(await fileViews[tab.id].requestClose())) return;
-			}
-			navigationApproved = true;
-			try {
-				await goto(to.url);
-			} finally {
-				navigationApproved = false;
-			}
-		})();
+		if (from?.url.pathname === to?.url.pathname) return;
+		captureView();
+		if (viewEntry) void flushChatView(viewEntry);
+		if (willUnload && hasChatViewDrafts()) cancel();
 	});
 	onDestroy(() => {
+		stopTerminalChoice?.(false);
+		captureView();
+		if (viewEntry) void flushChatView(viewEntry);
+		++switchVersion;
 		++countVersion;
 		++featureVersion;
 		showOverview.set(false);
@@ -1020,6 +1176,13 @@
 	};
 
 	onMount(() => {
+		const unregisterCapture = registerChatViewCapture(captureView);
+		const unsubscribeViews = chatViewChanges.subscribe(() => {
+			if (viewEntry && viewReady) {
+				tabs = viewEntry.state.panels;
+				viewError = viewEntry.error;
+			}
+		});
 		document.addEventListener('keydown', handleWorkspaceShortcut, true);
 		const unsubscribeVisibility = showTabs.subscribe((visible) => {
 			if (!largeScreen && !visible && panelTarget) releasePanel(panelTarget);
@@ -1042,6 +1205,8 @@
 		init();
 
 		return () => {
+			unregisterCapture();
+			unsubscribeViews();
 			document.removeEventListener('keydown', handleWorkspaceShortcut, true);
 			unsubscribeVisibility();
 			isDestroyed = true;
@@ -1053,27 +1218,44 @@
 		};
 	});
 	// Tab-opening handlers mutate tabs indirectly, so derive visibility and placement after them.
+	$: displayTabs = fullWidth ? tabs : setMainChatTab(tabs, false);
 	$: positions = fullWidth
-		? panelPositions(tabs.layout)
+		? panelPositions(displayTabs.layout)
 		: {
-				groups: { [tabs.activeGroupId]: { left: 0, top: 0, width: 1, height: 1 } },
+				groups: { [displayTabs.activeGroupId]: { left: 0, top: 0, width: 1, height: 1 } },
 				dividers: []
 			};
 	$: tabGroups = Object.fromEntries(
-		tabs.groups.flatMap((group) => group.tabIds.map((id) => [id, group]))
+		displayTabs.groups.flatMap((group) => group.tabIds.map((id) => [id, group]))
 	);
 	$: visibleTabIds = new Set(
-		tabs.groups
-			.filter((group) => fullWidth || group.id === tabs.activeGroupId)
+		displayTabs.groups
+			.filter((group) => fullWidth || group.id === displayTabs.activeGroupId)
 			.map((group) => group.activeId)
 	);
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
-	$: mainChatGroupId = tabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
+	$: mainChatGroupId =
+		displayTabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
 	$: mainChatStyle =
 		fullWidth && positions.groups[mainChatGroupId]
 			? paneStyle(positions.groups[mainChatGroupId], 36)
 			: '';
 </script>
+
+<ConfirmDialog
+	show={!!stopTerminalChoice}
+	title={$i18n.t('Stop terminal?')}
+	message={$i18n.t('Stop this terminal and close the tab?')}
+	confirmLabel={$i18n.t('Stop terminal')}
+	on:confirm={() => {
+		stopTerminalChoice?.(true);
+		stopTerminalChoice = null;
+	}}
+	on:cancel={() => {
+		stopTerminalChoice?.(false);
+		stopTerminalChoice = null;
+	}}
+/>
 
 <svelte:window
 	bind:innerWidth={viewportWidth}
@@ -1175,6 +1357,29 @@
 	id="controls-container"
 >
 	<div bind:this={paneCanvas} class="relative flex-1 min-h-0 min-w-0">
+		{#if viewError}
+			<div
+				role="alert"
+				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-white dark:bg-gray-900 p-3 text-sm"
+			>
+				{viewError}
+				<button
+					class="underline ml-2"
+					on:click={() => {
+						if (viewEntry?.promoting && chatId) void bindTerminalChat(chatId).catch(() => {});
+						else if (viewReady && viewEntry) void flushChatView(viewEntry);
+						else void restoreChatView(chatId);
+					}}>{$i18n.t('Retry')}</button
+				>
+			</div>
+		{:else if !viewReady}
+			<div
+				role="status"
+				class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
+			>
+				{$i18n.t('Loading…')}
+			</div>
+		{/if}
 		{#if fullWidth}
 			<button
 				type="button"
@@ -1193,7 +1398,7 @@
 				<SplitPanel className="size-4.5" strokeWidth="1" />
 			</button>
 		{/if}
-		{#each tabs.groups.filter((group) => fullWidth || group.id === tabs.activeGroupId) as group (group.id)}
+		{#each displayTabs.groups.filter((group) => fullWidth || group.id === displayTabs.activeGroupId) as group (group.id)}
 			<div
 				data-panel-group={group.id}
 				role="presentation"
@@ -1247,7 +1452,13 @@
 				></div>
 			</div>
 		{/each}
-		{#each tabs.tabs.filter((tab) => tab.kind !== 'chat') as tab (tab.id)}
+		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.kind !== 'chat') as tab (`${viewEntry?.instanceId}:${tab.id}`)}
+			{@const owner = viewEntry!}
+			{@const connection =
+				mounted && $config && $user && $settings && $terminalServers !== null
+					? tabConnection(tab)
+					: null}
+			{@const failure = sessionFailures[tab.id]}
 			<div
 				id={`${domId(tab.id)}-view`}
 				role="tabpanel"
@@ -1261,7 +1472,11 @@
 				on:focusin={() => focusGroup(tabGroups[tab.id].id)}
 				on:pointerdown={() => focusGroup(tabGroups[tab.id].id)}
 			>
-				{#if tab.kind === 'voice'}
+				{#if tab.terminalId && !connection}
+					<div role="status" class="p-4 text-sm text-gray-500">
+						{$i18n.t('Terminal connection unavailable')}
+					</div>
+				{:else if tab.kind === 'voice'}
 					<CallPanel
 						{bridge}
 						bind:callMode
@@ -1279,9 +1494,15 @@
 					<Artifacts overlay={dragged} />
 				{:else if tab.kind === 'side'}
 					<SideChat
+						bind:this={sideViews[tab.id]}
+						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
-						onChatUpdate={(chat) => updateSideChat(tab.id, chat)}
-						parentChatId={chatId ?? ''}
+						onChatUpdate={(chat) =>
+							updateViewTab(owner, tab.id, {
+								chatId: chat.id,
+								...(chat.title ? { label: chat.title } : {})
+							})}
+						parentChatId={owner.chatId ?? ''}
 						parentFolderId={folderId}
 						{history}
 						{modelId}
@@ -1289,53 +1510,93 @@
 						initialPrompt={tab.initialPrompt ?? ''}
 					/>
 				{:else if tab.kind === 'comments' && currentComments}
-					{#key `${$user?.id}:${chatId}:${currentComments.comment_id ?? ''}`}
+					{#key `${$user?.id}:$chatId={owner.chatId}:${currentComments.comment_id ?? ''}`}
 						<CommentsPanel
 							embedded={true}
 							bind:view={currentComments}
 							onCountChange={setCommentCount}
 						/>
 					{/key}
-				{:else if tab.kind === 'desktop' && tab.connection}
+				{:else if tab.kind === 'desktop' && connection}
 					<Desktop
-						connection={tab.connection}
-						{chatId}
+						connection={connection!}
+						chatId={owner.chatId}
 						active={panelVisible && visibleTabIds.has(tab.id)}
 						overlay={dragged}
 					/>
-				{:else if tab.kind === 'browser'}
-					<Browser
-						baseUrl={tab.browserBaseUrl ?? ''}
-						connection={tab.connection ?? null}
-						{chatId}
-						active={panelVisible && visibleTabIds.has(tab.id)}
-						initialUrl={tab.path ?? ''}
-						onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, tab.browserBaseUrl, url)}
-						overlay={dragged}
-						onNavigate={(path, label) => {
-							tabs = {
-								...tabs,
-								tabs: tabs.tabs.map((item) =>
-									item.id === tab.id ? { ...item, path, label } : item
-								)
-							};
-						}}
-					/>
-				{:else if tab.kind === 'terminal' && tab.connection}
-					<XTerminal
-						bind:this={terminalViews[tab.id]}
-						connection={tab.connection}
-						{chatId}
-						active={panelVisible && visibleTabIds.has(tab.id)}
-						overlay={dragged}
-					/>
-				{:else if tab.untitled && tab.connection}
+				{:else if tab.kind === 'browser' || tab.kind === 'terminal'}
+					{#if owner.pending.has(tab.id)}
+						<p role="status" class="p-4 text-sm text-gray-500">{$i18n.t('Connecting…')}</p>
+					{:else if !tab.sessionId || failure}
+						<div role="status" class="p-4 text-sm text-gray-500 space-y-3">
+							<p>
+								{failure?.status === 404
+									? $i18n.t('Session no longer available')
+									: (failure?.message ??
+										owner.sessionErrors[tab.id] ??
+										$i18n.t('Session no longer available'))}
+							</p>
+							{#if failure && failure.status !== 404}
+								<button
+									class="underline"
+									on:click={() => {
+										delete sessionFailures[tab.id];
+										sessionFailures = { ...sessionFailures };
+										sessionAttempts = {
+											...sessionAttempts,
+											[tab.id]: (sessionAttempts[tab.id] ?? 0) + 1
+										};
+									}}>{$i18n.t('Retry')}</button
+								>
+							{:else}
+								<button class="underline" on:click={() => startSession(owner, tab)}
+									>{$i18n.t(
+										tab.kind === 'terminal' ? 'Start new terminal' : 'Reopen browser'
+									)}</button
+								>
+							{/if}
+						</div>
+					{:else}
+						{#key `${tab.sessionId}:${sessionAttempts[tab.id] ?? 0}`}
+							{#if tab.kind === 'terminal'}
+								<XTerminal
+									bind:this={terminalViews[tab.id]}
+									connection={connection!}
+									chatId={owner.chatId}
+									sessionId={tab.sessionId}
+									active={panelVisible && visibleTabIds.has(tab.id)}
+									overlay={dragged}
+									onUnavailable={(message, status) => {
+										if (owner === viewEntry)
+											sessionFailures = { ...sessionFailures, [tab.id]: { message, status } };
+									}}
+								/>
+							{:else}
+								<Browser
+									bind:this={browserViews[tab.id]}
+									{connection}
+									chatId={owner.chatId}
+									sessionId={tab.sessionId}
+									active={panelVisible && visibleTabIds.has(tab.id)}
+									overlay={dragged}
+									onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, undefined, url)}
+									onNavigate={(path, label) => updateViewTab(owner, tab.id, { path, label })}
+									onUnavailable={(message, status) => {
+										if (owner === viewEntry)
+											sessionFailures = { ...sessionFailures, [tab.id]: { message, status } };
+									}}
+								/>
+							{/if}
+						{/key}
+					{/if}
+				{:else if tab.untitled && connection}
 					<UntitledFile
+						initialView={owner.drafts.get(tab.id)}
 						bind:this={fileViews[tab.id]}
 						bind:dirty={dirtyFiles[tab.id]}
 						label={tab.label}
-						connection={tab.connection}
-						{chatId}
+						connection={connection!}
+						chatId={owner.chatId}
 						initialDirectory={tab.context?.currentDirectory}
 						isOpen={(path) =>
 							tabs.tabs.some(
@@ -1347,20 +1608,13 @@
 									item.path === path
 							)}
 						onSaved={(path) => {
-							tabs = {
-								...tabs,
-								tabs: tabs.tabs.map((item) =>
-									item.id === tab.id
-										? {
-												...item,
-												untitled: false,
-												dirty: false,
-												path,
-												label: path.split('/').pop() || path
-											}
-										: item
-								)
-							};
+							owner.drafts.delete(tab.id);
+							updateViewTab(owner, tab.id, {
+								untitled: false,
+								dirty: false,
+								path,
+								label: path.split('/').pop() || path
+							});
 						}}
 					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
@@ -1375,6 +1629,19 @@
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
 							<FileNav
+								onFileSaved={(content) => {
+									const draft = owner.drafts.get(tab.id);
+									if (draft?.preview) {
+										draft.preview.baseText = content;
+										draft.dirty = draft.preview.dirty = draft.preview.text !== content;
+									}
+								}}
+								initialView={owner.drafts.get(tab.id)}
+								onViewChange={(view) => {
+									owner.drafts.set(tab.id, view);
+									if (tab.kind === 'files')
+										updateViewTab(owner, tab.id, { directory: view.directory });
+								}}
 								gitStatus={fileGitStatuses[tab.terminalId] ?? null}
 								gitConnection={fileConnection}
 								gitDiffMode={fileGitDiffModes[tab.terminalId] ?? 'unified'}
@@ -1383,7 +1650,7 @@
 								bind:dirty={dirtyFiles[tab.id]}
 								terminalId={tab.terminalId}
 								initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
-								initialDirectory={tab.kind === 'files' ? (tab.path ?? null) : null}
+								initialDirectory={tab.kind === 'files' ? (tab.directory ?? tab.path ?? null) : null}
 								active={panelVisible && visibleTabIds.has(tab.id)}
 								manageFileRequests={false}
 								showTerminalDock={tab.kind === 'files'}
@@ -1391,18 +1658,23 @@
 								onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
 								{onAskFile}
 								overlay={dragged}
-								{chatId}
+								chatId={owner.chatId}
 								bind:terminalContext={fileContexts[tab.id]}
 							/>
 						</div>
 						{#if tab.kind === 'files' && fileConnection}
 							<GitBar
+								bind:this={gitViews[tab.id]}
+								initialView={owner.transient[`git:${tab.id}`]}
 								bind:status={fileGitStatuses[tab.terminalId]}
 								bind:diffMode={fileGitDiffModes[tab.terminalId]}
 								bind:hideWhitespace={fileGitHideWhitespace[tab.terminalId]}
 								connection={fileConnection}
-								{chatId}
-								directory={fileContexts[tab.id]?.currentDirectory ?? tab.path ?? '.'}
+								chatId={owner.chatId}
+								directory={fileContexts[tab.id]?.currentDirectory ??
+									tab.directory ??
+									tab.path ??
+									'.'}
 								active={panelVisible && visibleTabIds.has(tab.id)}
 								onOpenFile={(path) => openFile(path, tab.terminalId!)}
 								onOpenDirectory={(path) => openFiles(tab.terminalId, path)}

@@ -18,6 +18,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chat_views import ChatViewStateForm, ChatViewStates
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -1398,6 +1399,45 @@ async def compact_chat_by_id(
             data={'dropped_messages': result.get('dropped_messages')},
         )
     return result
+
+
+# A view is private to its authenticated viewer, even for shared chats.
+@router.get('/{id}/view')
+async def get_chat_view(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.get_accessible_chat_by_id(id, user, db=db):
+        raise HTTPException(status_code=404, detail='Chat not found')
+    return {'state': await ChatViewStates.get(user.id, id, db)}
+
+
+async def bounded_chat_view(request: Request):
+    # Bound the body before JSON/schema parsing, including chunked requests.
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > 1024 * 1024:
+            raise HTTPException(status_code=413, detail='Chat view is too large')
+    try:
+        return ChatViewStateForm.model_validate_json(bytes(body))
+    except ValueError:
+        raise HTTPException(status_code=422, detail='Invalid chat view')
+
+
+@router.post('/{id}/view')
+async def update_chat_view(
+    id: str,
+    form: ChatViewStateForm = Depends(bounded_chat_view),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.get_accessible_chat_by_id(id, user, db=db):
+        raise HTTPException(status_code=404, detail='Chat not found')
+    return await ChatViewStates.upsert(
+        user.id, id, form.state.model_dump(exclude_unset=True), db
+    )
 
 
 # Get Chat By Id

@@ -28,10 +28,12 @@
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
-	let expanded = false;
+	export let initialView: any = null;
+	let expanded = initialView?.expanded ?? false;
+	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
-	let view: 'changes' | 'history' | 'pull requests' = 'changes';
+	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
 	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
 	let prRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
@@ -62,20 +64,20 @@
 	let showRename = false;
 	let showUncommit = false;
 	let showDeleteBranch = false;
-	let summary = '';
-	let description = '';
+	let summary = initialView?.summary ?? '';
+	let description = initialView?.description ?? '';
 	let error = '';
 	let detectionError = '';
 	let busy = false;
 	let loadingDiff = false;
 	let confirmDiscard = false;
 	let discardFile: GitFile | null = null;
-	let height = 280;
+	let height = initialView?.height ?? 280;
 	let resizing = false;
 	let resizeY = 0;
 	let resizeHeight = 0;
 	let splitWidth = 0;
-	let listWidth: number | null = null;
+	let listWidth: number | null = initialView?.listWidth ?? null;
 	let resizingList = false;
 	let resizeListX = 0;
 	let resizeListWidth = 0;
@@ -227,6 +229,7 @@
 		watchError = '';
 		gitEnabled = false;
 		if (key !== context) {
+			const restoring = !context && initialView;
 			clearSyncFeedback();
 			pendingStaging = null;
 			context = key;
@@ -235,7 +238,7 @@
 			status = null;
 			error = '';
 			detectionError = '';
-			expanded = false;
+			expanded = restoring?.expanded ?? false;
 			showBranches =
 				showWorktrees =
 				showRename =
@@ -243,11 +246,12 @@
 				showDeleteBranch =
 				confirmDiscard =
 					false;
-			summary = description = '';
+			summary = restoring?.summary ?? '';
+			description = restoring?.description ?? '';
 			commits = [];
 			prCapabilities = null;
 			prRoot = '';
-			view = 'changes';
+			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
 		if (enabled && connection) {

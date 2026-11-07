@@ -75,6 +75,41 @@
 	// Keep the error fallback discoverable by the i18n extractor.
 	// t('Unknown error')
 
+	export let initialView: any = null;
+	export let onViewChange: ((view: any) => void) | null = null;
+	export let onFileSaved: ((content: string) => void) | null = null;
+	let viewRestored = !initialView;
+	export const captureView = () =>
+		!viewRestored && initialView
+			? initialView
+			: {
+					directory: currentPath,
+					selectedFile,
+					expanded: [...expandedDirs],
+					preview: filePreviewRef?.captureView(),
+					dirty: dirty || saving,
+					scrollTop: viewerRoot?.scrollTop ?? 0
+				};
+	const restoreView = async () => {
+		if (disposed || viewRestored || !initialView) return;
+		const view = initialView;
+		if (view.preview && selectedFile === view.selectedFile) {
+			diskChanged = view.preview.dirty && fileContent !== view.preview.baseText;
+			await tick();
+			await filePreviewRef?.restoreView(
+				view.preview.dirty || view.preview.baseText === fileContent
+					? view.preview
+					: { ...view.preview, text: fileContent ?? '', editor: undefined, editing: false }
+			);
+		}
+		for (const path of view.expanded ?? []) {
+			if (disposed) return;
+			if (!expandedDirs.has(path)) await toggleExpand(path);
+		}
+		if (viewerRoot) viewerRoot.scrollTop = view.scrollTop ?? 0;
+		viewRestored = true;
+	};
+
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
@@ -159,21 +194,22 @@
 	let loadGeneration = 0;
 	export let dirty = false;
 	let diskChanged = false;
+	let overwriteChoice: ((replace: boolean) => void) | null = null;
 	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
 		null;
 	let dirtyChoice: {
 		sending: boolean;
-		resolve: (choice: 'save' | 'discard' | 'cancel') => void;
+		resolve: (confirmed: boolean) => void;
 	} | null = null;
 	const protectBuffer = async (sending = false) => {
 		if (!dirty && !saving) return true;
 		if (saving || dirtyChoice) return false;
-		const choice = await new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+		const confirmed = await new Promise<boolean>((resolve) => {
 			dirtyChoice = { sending, resolve };
 		});
 		dirtyChoice = null;
-		if (choice === 'cancel') return false;
-		if (choice === 'save') {
+		if (!confirmed) return false;
+		if (sending) {
 			try {
 				await filePreviewRef.save();
 			} catch (error) {
@@ -181,8 +217,7 @@
 				return false;
 			}
 			if (dirty) return false;
-		}
-		if (choice === 'discard') {
+		} else {
 			filePreviewRef?.discard();
 			dirty = false;
 		}
@@ -203,11 +238,16 @@
 			file: openedFile
 		};
 	};
-	const captureSelection = () => {
+	const captureSelection = (event?: Event) => {
 		if (!active || usingFileAsk) return;
+		const grid =
+			event instanceof CustomEvent && event.type === 'spreadsheetselection'
+				? (event.detail as { text: string; location: string; anchor: Range })
+				: null;
 		const selection = window.getSelection();
-		if (!onAskFile || !openedFile || !selection?.rangeCount || selection.isCollapsed) return;
-		const range = selection.getRangeAt(0);
+		if (!onAskFile || !openedFile || (!grid && (!selection?.rangeCount || selection.isCollapsed)))
+			return;
+		const range = grid?.anchor ?? selection!.getRangeAt(0);
 		if (!viewerRoot?.contains(range.startContainer) || !viewerRoot.contains(range.endContainer))
 			return;
 		if (
@@ -216,8 +256,8 @@
 			)
 		)
 			return;
-		const source = filePreviewRef?.getSelection();
-		const text = source?.text ?? selection.toString();
+		const source = grid ?? filePreviewRef?.getSelection();
+		const text = source?.text ?? selection!.toString();
 		if (!text.trim()) return;
 		if (new TextEncoder().encode(text).length > 16384) {
 			toast.error($i18n.t('Select less text (maximum 16 KiB).'));
@@ -263,12 +303,21 @@
 	// $i18n.t('File saved'); $i18n.t('Failed to save file');
 	const saveFile = async (content: string) => {
 		const target = saveConnection;
-		if (!target || !selectedFileWritable) throw new Error('File is not writable.');
+		if (
+			diskChanged &&
+			!(await new Promise<boolean>((resolve) => {
+				overwriteChoice = resolve;
+			}))
+		)
+			throw new Error('Save cancelled.');
+		const current = getTerminal();
+		if (!target || !current || current.url !== target.url || !selectedFileWritable)
+			throw new Error('File is not writable.');
 		const name = target.path.split('/').pop()!;
 		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
 		const result = await uploadToTerminal(
 			target.url,
-			target.key,
+			current.key,
 			dir,
 			new File([content], name, { type: 'text/plain' }),
 			target.chatId ?? undefined
@@ -279,6 +328,7 @@
 			diskChanged = false;
 		}
 		await tick();
+		onFileSaved?.(content);
 	};
 
 	// Sessions panel state
@@ -1051,6 +1101,7 @@
 			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		}
 		currentPath = directory;
+		onViewChange?.(captureView());
 		savedPath = directory;
 		savedPathLoaded = true;
 		pushNavHistory(directory);
@@ -1293,16 +1344,15 @@
 					);
 					if (result) {
 						const arrayBuffer = await result.blob.arrayBuffer();
-						const XLSX = await import('xlsx');
-						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+						const { readExcelWorkbook, excelToTable } = await import('$lib/utils/excelToTable');
+						const wb = await readExcelWorkbook(arrayBuffer);
 						next.excelWorkbook = wb;
 						next.excelSheetNames = wb.SheetNames;
 						if (next.excelSheetNames.length > 0) {
 							next.selectedExcelSheet = next.excelSheetNames[0];
-							const { excelToTable } = await import('$lib/utils/excelToTable');
 							const result = await excelToTable(wb.Sheets[next.selectedExcelSheet]);
 							const DOMPurify = (await import('dompurify')).default;
-							next.fileOfficeHtml = DOMPurify.sanitize(result.html);
+							next.fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 						}
 					}
 				} else if (ext === 'pptx') {
@@ -1881,6 +1931,7 @@
 
 	// Lifecycle
 	onMount(() => {
+		document.addEventListener('spreadsheetselection', captureSelection);
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';
 		const terminal = getTerminal();
@@ -1985,8 +2036,11 @@
 						{ page: initialFile.page }
 					);
 				} else {
-					await loadDir(initialDirectory ?? savedPath, { restoreTree: true });
+					await loadDir(initialView?.directory ?? initialDirectory ?? savedPath, {
+						restoreTree: true
+					});
 				}
+				await restoreView();
 			})();
 		}
 
@@ -2020,6 +2074,7 @@
 		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
+			document.removeEventListener('spreadsheetselection', captureSelection);
 			unsubFileNav();
 			unsubFileNavDir();
 			window.removeEventListener('keydown', onKeyDown);
@@ -2030,15 +2085,31 @@
 	});
 
 	onDestroy(() => {
+		overwriteChoice?.(false);
 		disposed = true;
 		++loadGeneration;
-		dirtyChoice?.resolve('cancel');
+		dirtyChoice?.resolve(false);
 		clearMatchRequest();
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
 		if (fileVideoUrl) URL.revokeObjectURL(fileVideoUrl);
 		if (fileAudioUrl) URL.revokeObjectURL(fileAudioUrl);
 	});
 </script>
+
+<ConfirmDialog
+	show={!!overwriteChoice}
+	title={$i18n.t('File changed on disk')}
+	message={$i18n.t('This file changed on disk. Replace it with your edits?')}
+	confirmLabel={$i18n.t('Replace')}
+	on:confirm={() => {
+		overwriteChoice?.(true);
+		overwriteChoice = null;
+	}}
+	on:cancel={() => {
+		overwriteChoice?.(false);
+		overwriteChoice = null;
+	}}
+/>
 
 <ConfirmDialog
 	bind:show={showDeleteConfirm}
@@ -2502,7 +2573,7 @@
 								const { excelToTable } = await import('$lib/utils/excelToTable');
 								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
 								const DOMPurify = (await import('dompurify')).default;
-								fileOfficeHtml = DOMPurify.sanitize(result.html);
+								fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 							}}
 							baseUrl={previewBaseUrl}
 							apiKey={selectedTerminal?.key ?? ''}
@@ -2665,7 +2736,10 @@
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'grid'}
-										<FileGridIcon entry={{ name: newFolderName, type: 'directory' }} itemCount={0} />
+										<FileGridIcon
+											entry={{ name: newFolderName, type: 'directory' }}
+											itemCount={0}
+										/>
 									{:else}
 										<FileTypeIcon name={newFolderName} type="directory" />
 									{/if}
@@ -2975,15 +3049,12 @@
 {/if}
 <ConfirmDialog
 	show={dirtyChoice !== null}
+	confirmFirst
+	primaryAction={dirtyChoice?.sending ? 'confirm' : 'cancel'}
 	title={$i18n.t('Unsaved changes')}
-	confirmLabel={dirtyChoice?.sending ? $i18n.t('Save and send') : $i18n.t('Save')}
-	on:confirm={() => dirtyChoice?.resolve('save')}
-	on:cancel={() => dirtyChoice?.resolve('cancel')}
->
-	<p class="text-sm text-gray-500">{$i18n.t('Save your changes before continuing?')}</p>
-	{#if dirtyChoice && !dirtyChoice.sending}<button
-			type="button"
-			class="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-			on:click={() => dirtyChoice?.resolve('discard')}>{$i18n.t('Discard changes')}</button
-		>{/if}
-</ConfirmDialog>
+	message={dirtyChoice?.sending
+		? $i18n.t('Save your changes before sending?')
+		: $i18n.t('Discard unsaved changes and continue?')}
+	on:confirm={() => dirtyChoice?.resolve(true)}
+	on:cancel={() => dirtyChoice?.resolve(false)}
+/>

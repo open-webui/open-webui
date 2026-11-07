@@ -206,9 +206,9 @@
 				return;
 			}
 			if (ext === 'xlsx' || ext === 'xls') {
-				const XLSX = await import('xlsx');
+				const { readExcelWorkbook } = await import('$lib/utils/excelToTable');
 				if (!alive) return;
-				workbook = XLSX.read(bytes, { type: 'array' });
+				workbook = await readExcelWorkbook(bytes);
 				await setSheet(workbook.Sheets[initialSheet] ? initialSheet : workbook.SheetNames[0]);
 				loading = false;
 			}

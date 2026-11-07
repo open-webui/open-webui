@@ -25,6 +25,8 @@ export type PanelTab = {
 	terminalNumber?: number;
 	path?: string;
 	page?: number | null;
+	sessionId?: string;
+	directory?: string;
 	dirty?: boolean;
 	untitled?: boolean;
 	connection?: TerminalConnection;
@@ -50,6 +52,11 @@ export type PanelTabs = {
 	groups: PanelGroup[];
 	activeGroupId: string;
 	layout: PanelLayout;
+};
+export type ChatViewState = {
+	schemaVersion: 1;
+	selectedTerminalId: string | null;
+	panels: PanelTabs;
 };
 export type PanelRect = { left: number; top: number; width: number; height: number };
 export type PanelDivider = PanelRect & {
@@ -140,6 +147,18 @@ export function openTab(state: PanelTabs, tab: PanelTab): PanelTabs {
 				},
 		tab.id
 	);
+}
+
+export function openTabInSidePanel(state: PanelTabs, tab: PanelTab): PanelTabs {
+	const mainGroup = state.groups.find((group) => group.tabIds.includes(mainChatTabId));
+	if (!mainGroup) return openTab(state, tab);
+	const sideGroup =
+		state.groups.find((group) => group.id === state.activeGroupId && group.id !== mainGroup.id) ??
+		state.groups.find((group) => group.id !== mainGroup.id);
+	const next = openTab(activateTab(state, mainChatTabId), tab);
+	return sideGroup
+		? moveTabToGroup(next, tab.id, sideGroup.id)
+		: splitTab(next, tab.id, mainGroup.id, 'right');
 }
 
 function removeLayoutGroup(layout: PanelLayout, groupId: string): PanelLayout | null {
