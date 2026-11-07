@@ -11,6 +11,7 @@
 		showSettings,
 		terminalServers,
 		selectedTerminalId,
+		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
 	import { getToolServersData } from '$lib/apis';
@@ -32,7 +33,10 @@
 		(t) =>
 			t.id &&
 			chatContext(t) !== false &&
-			!(isTemporaryChatId($activeChatId) && chatContext(t)?.context_id === 'chat_id')
+			!(
+				($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
+				chatContext(t)?.context_id === 'chat_id'
+			)
 	);
 	$: directTerminals = (
 		$config?.features?.enable_direct_integrations &&

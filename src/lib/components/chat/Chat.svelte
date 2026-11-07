@@ -1090,6 +1090,15 @@
 		selectedTerminalId.set(null);
 	}
 
+	$: if (
+		$temporaryChatEnabled &&
+		($terminalServers ?? []).some(
+			(t) => t.id && t.id === $selectedTerminalId && t.contexts?.chat?.context_id === 'chat_id'
+		)
+	) {
+		selectedTerminalId.set(null);
+	}
+
 	let lastTerminalSkillSelector: string | null = null;
 	let agentDiscovery = 0;
 	const refreshAgentModels = async () => {
