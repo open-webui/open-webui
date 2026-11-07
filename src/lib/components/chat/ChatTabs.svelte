@@ -410,7 +410,11 @@
 		activeTab?.kind === 'chat'
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
-	$: terminalContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
+	const syncTerminalContext = (context: TerminalContext | null) => {
+		if (context) terminalContext = context;
+		else if (terminalContext?.file) terminalContext = { ...terminalContext, file: null };
+	};
+	$: syncTerminalContext((contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null);
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>

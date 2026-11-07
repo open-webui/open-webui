@@ -1138,13 +1138,12 @@
 	}
 
 	const applyFolderTerminal = (folder: any) => {
-		const terminalId = folder?.data?.terminal_id;
-		if (!terminalId) return;
+		if (!folder) return;
+		const terminalId = folder.data?.terminal_id || null;
 		selectedTerminalId.set(terminalId);
-		terminalContext = {
-			terminalId,
-			currentDirectory: folder.data.working_directory ?? ''
-		};
+		terminalContext = terminalId
+			? { terminalId, currentDirectory: folder.data?.working_directory ?? '' }
+			: null;
 	};
 
 	let defaultsModelIds: string[] = [];
@@ -1181,7 +1180,10 @@
 				featureAvailable(feature) &&
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
 			const folderTerminalId = !history.currentId ? $selectedFolder?.data?.terminal_id : null;
-			const terminalId = folderTerminalId || currentModels[0]?.info?.meta?.terminalId;
+			const terminalId =
+				!history.currentId && $selectedFolder
+					? folderTerminalId
+					: currentModels[0]?.info?.meta?.terminalId;
 			const defaults: Record<string, any> = {
 				selectedToolIds: [
 					...new Set(
@@ -2041,8 +2043,8 @@
 			await tick();
 			// Folder defaults apply to new chats only.
 			if (!history.currentId && folder) {
+				applyFolderTerminal(folder);
 				if (folder.data?.terminal_id) {
-					applyFolderTerminal(folder);
 					await refreshAgentModels();
 					if (history.currentId || $selectedFolder?.id !== folder.id) return;
 				}
@@ -2815,8 +2817,8 @@
 		} else {
 			if ($selectedFolder) {
 				// Folder defaults are explicit; never inherit a previous chat's selection.
+				applyFolderTerminal($selectedFolder);
 				if ($selectedFolder.data?.terminal_id) {
-					applyFolderTerminal($selectedFolder);
 					await refreshAgentModels();
 				}
 				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
@@ -2895,6 +2897,9 @@
 			messages: {},
 			currentId: null
 		};
+
+		// Apply folder defaults after restoring the draft and model defaults.
+		applyFolderTerminal($selectedFolder);
 
 		chatFiles = [];
 		params = {};
