@@ -311,6 +311,7 @@
 			dragging = false;
 			held = false;
 			document.removeEventListener('touchmove', move);
+			document.removeEventListener('touchstart', cancelMultiTouch);
 			document.removeEventListener('touchend', end);
 			document.removeEventListener('touchcancel', cancel);
 			window.removeEventListener('blur', cancel);
@@ -377,6 +378,9 @@
 			cleanup();
 		};
 		const cancel = () => cleanup();
+		const cancelMultiTouch = (event: TouchEvent) => {
+			if (event.touches.length > 1) cleanup();
+		};
 		const begin = (event: TouchEvent) => {
 			cleanup();
 			if (renaming || event.touches.length !== 1) return;
@@ -388,6 +392,7 @@
 				if (!selected) onSelect(entry, event as unknown as MouseEvent, entryPath, rowIndex);
 			}, 500);
 			document.addEventListener('touchmove', move, { passive: false });
+			document.addEventListener('touchstart', cancelMultiTouch, { passive: true });
 			document.addEventListener('touchend', end, { passive: false });
 			document.addEventListener('touchcancel', cancel);
 			window.addEventListener('blur', cancel);

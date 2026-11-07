@@ -10,7 +10,9 @@
 	} from '@codemirror/view';
 	import {
 		Compartment,
+		EditorSelection,
 		EditorState,
+		Prec,
 		RangeSet,
 		StateEffect,
 		StateField,
@@ -223,6 +225,26 @@
 			basicSetup,
 			gitLineChanges,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
+			Prec.high(
+				keymap.of(
+					['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].map((key) => ({
+						key,
+						run: (view: EditorView) => {
+							const { selection } = view.state;
+							if (selection.ranges.some((range) => !range.empty)) {
+								view.dispatch({
+									selection: EditorSelection.create(
+										selection.ranges.map((range) => EditorSelection.cursor(range.head)),
+										selection.mainIndex
+									)
+								});
+							}
+							// Let the normal arrow command move on this same keypress.
+							return false;
+						}
+					}))
+				)
+			),
 			keymap.of([
 				{ key: 'Tab', run: acceptCompletion },
 				indentWithTab,

@@ -143,6 +143,8 @@
 	// Keep typing from invalidating the keyed selection and remounting the input.
 	let fileAskInput = '';
 	let usingFileAsk = false;
+	let selectingWithPointer = false;
+	let pendingSelection: Event | undefined;
 	let asking = false;
 	const positionFileAsk = (node: HTMLFormElement, anchor: Range | HTMLElement) => {
 		document.body.appendChild(node);
@@ -244,11 +246,22 @@
 	};
 	const captureSelection = (event?: Event) => {
 		if (!active || usingFileAsk || dirtyChoice || asking) return;
-		fileAsk = null;
 		const grid =
 			event instanceof CustomEvent && event.type === 'spreadsheetselection'
 				? (event.detail as { text: string; location: string; anchor: Range })
 				: null;
+		// Focused cells publish their own selection; the browser's text selection is unrelated.
+		if (
+			!grid &&
+			document.activeElement?.matches('[data-cell]') &&
+			viewerRoot?.contains(document.activeElement)
+		)
+			return;
+		if (selectingWithPointer) {
+			pendingSelection = event;
+			return;
+		}
+		fileAsk = null;
 		const selection = window.getSelection();
 		if (!onAskFile || !openedFile || (!grid && (!selection?.rangeCount || selection.isCollapsed)))
 			return;
@@ -2253,7 +2266,24 @@
 	on:click={handleWindowClick}
 	on:pointerdown|capture={(event) => {
 		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+		selectingWithPointer =
+			event.button === 0 && !usingFileAsk && !!viewerRoot?.contains(event.target as Node);
+		pendingSelection = undefined;
 		if (fileAsk && !dirtyChoice && !usingFileAsk) fileAsk = null;
+	}}
+	on:pointerup={() => {
+		if (!selectingWithPointer) return;
+		selectingWithPointer = false;
+		captureSelection(pendingSelection);
+		pendingSelection = undefined;
+	}}
+	on:pointercancel={() => {
+		selectingWithPointer = false;
+		pendingSelection = undefined;
+	}}
+	on:blur={() => {
+		selectingWithPointer = false;
+		pendingSelection = undefined;
 	}}
 />
 
