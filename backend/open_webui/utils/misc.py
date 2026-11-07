@@ -355,6 +355,71 @@ def get_provider_function(item: dict) -> dict:
     }
 
 
+def merge_tool_call_batches(output: list[dict]) -> list[dict]:
+    """Replay each batch under its original provider ID with one ordered, combined result."""
+    batches = {}
+    results = {}
+    for item in output:
+        if item.get('type') == 'function_call' and item.get('provider_batch'):
+            batches.setdefault(item['provider_batch']['call_id'], []).append(item)
+        elif item.get('type') == 'function_call_output':
+            results[item.get('call_id')] = item
+    if not batches:
+        return output
+
+    members = {call['call_id']: batch_id for batch_id, calls in batches.items() for call in calls}
+    replay = []
+    emitted = set()
+    remaining = {batch_id: {call['call_id'] for call in calls} for batch_id, calls in batches.items()}
+    for item in output:
+        batch_id = members.get(item.get('call_id'))
+        if batch_id is None or item.get('type') not in {'function_call', 'function_call_output'}:
+            replay.append(item)
+            continue
+        calls = batches[batch_id]
+        batch = calls[0]['provider_batch']
+        # Approval pauses can leave only part of a batch complete. Never replay an unpaired call.
+        if len(calls) != batch['size'] or any(call['call_id'] not in results for call in calls):
+            continue
+        if item['type'] == 'function_call':
+            if batch_id not in emitted:
+                replay.append(
+                    {
+                        'type': 'function_call',
+                        'id': calls[0].get('id', batch_id),
+                        'call_id': batch_id,
+                        **batch['function'],
+                        'status': 'completed',
+                    }
+                )
+                emitted.add(batch_id)
+            continue
+        remaining[batch_id].discard(item['call_id'])
+        if remaining[batch_id]:
+            continue
+        entries, images = [], []
+        for call in calls:
+            result = results[call['call_id']]
+            parts = result.get('output', [])
+            entries.append(
+                {
+                    'tool_name': call['provider_batch']['tool_name'],
+                    'status': result.get('status', call.get('status')),
+                    'output': [part for part in parts if part.get('type') != 'input_image'],
+                }
+            )
+            images.extend(part for part in parts if part.get('type') == 'input_image')
+        replay.append(
+            {
+                'type': 'function_call_output',
+                'call_id': batch_id,
+                'output': [{'type': 'input_text', 'text': JSONCodec.dumps({'results': entries})}, *images],
+                'status': 'completed',
+            }
+        )
+    return replay
+
+
 def convert_output_to_messages(
     output: list,
     raw: bool = False,
@@ -386,6 +451,7 @@ def convert_output_to_messages(
     if not output or not isinstance(output, list):
         return []
 
+    output = merge_tool_call_batches(output)
     messages = []
     pending_tool_calls = []
     pending_content = []

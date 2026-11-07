@@ -12,6 +12,7 @@ import re
 import unicodedata
 from collections import OrderedDict
 from urllib.parse import urlsplit
+from uuid import uuid4
 
 import aiohttp
 import regex
@@ -92,8 +93,10 @@ async def apply_tool_search(
         '<available_tools>\n'
         f'Use `{SEARCH_TOOL_NAME}` to discover available capabilities with a short keyword query or an exact '
         'tool name and get the full definitions of matching tools. '
-        f'Then use `{CALL_TOOL_NAME}` with `tool_name` set to the exact tool name and `params` set '
-        'to a JSON-encoded object containing its arguments. Do not call deferred tools directly. '
+        f'Then use `{CALL_TOOL_NAME}` with a `calls` array of one or more objects, each with `tool_name` '
+        'set to the exact tool name and `params` set to a JSON-encoded object containing its arguments. '
+        'Batch independent calls together; wait for results before calling tools that depend on them. '
+        'Do not call deferred tools directly. '
         'Never tell the user a capability is unavailable without searching first.\n'
         '</available_tools>',
         form_data['messages'],
@@ -101,6 +104,7 @@ async def apply_tool_search(
     )
     tools_dict[SEARCH_TOOL_NAME] = {
         'tool_id': f'builtin:{SEARCH_TOOL_NAME}',
+        'hidden': True,
         'callable': await get_async_tool_function_and_apply_extra_params(
             search_tools,
             {**(extra_params or {}), '__metadata__': metadata},
@@ -116,22 +120,72 @@ async def apply_tool_search(
         'spec': {
             'name': CALL_TOOL_NAME,
             'description': (
-                'Invoke a tool found by search_tools. Use its exact name and encode its arguments as a JSON '
-                'object string matching the returned definition. Use "{}" for a tool without arguments.'
+                'Invoke one or more tools found by search_tools in a single batch. Each call uses the exact '
+                'tool name and a JSON object string of arguments matching its definition. Use "{}" for no '
+                'arguments. Calls keep individual approvals and results; execution is not atomic.'
             ),
             'strict': True,
             'parameters': {
                 'type': 'object',
                 'properties': {
-                    'tool_name': {'type': 'string', 'description': 'Exact tool name returned by search_tools.'},
-                    'params': {'type': 'string', 'description': 'JSON-encoded object of arguments for the tool.'},
+                    'calls': {
+                        'type': 'array',
+                        'minItems': 1,
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'tool_name': {'type': 'string', 'description': 'Exact name from search_tools.'},
+                                'params': {'type': 'string', 'description': 'JSON-encoded object of arguments.'},
+                            },
+                            'required': ['tool_name', 'params'],
+                            'additionalProperties': False,
+                        },
+                    },
                 },
-                'required': ['tool_name', 'params'],
+                'required': ['calls'],
                 'additionalProperties': False,
             },
         },
     }
     return set(deferred)
+
+
+def split_tool_call_batches(calls: list[dict], tools: dict[str, dict]) -> list[dict]:
+    """Stage batch members as ordinary calls so approvals and execution remain per tool."""
+    if tools.get(CALL_TOOL_NAME, {}).get('tool_id') != f'builtin:{CALL_TOOL_NAME}':
+        return calls
+    expanded = []
+    for call in calls:
+        function = call.get('function', {})
+        if function.get('name') != CALL_TOOL_NAME or call.get('execution_error'):
+            expanded.append(call)
+            continue
+        try:
+            arguments = parse_arguments(function.get('arguments', ''))
+            if 'calls' not in arguments:
+                # Keep accepting the original single-call payload for saved conversations.
+                expanded.append(call)
+                continue
+            entries = arguments['calls']
+            if set(arguments) != {'calls'} or not isinstance(entries, list) or not entries:
+                raise ValueError('call_tool requires a non-empty calls array.')
+            if any(not isinstance(entry, dict) or set(entry) != {'tool_name', 'params'} for entry in entries):
+                raise ValueError('Each call requires tool_name and params.')
+        except (TypeError, ValueError) as error:
+            expanded.append({**call, 'execution_error': f'Error: {error}'})
+            continue
+        call_id = call.get('id') or f'call_{uuid4().hex[:24]}'
+        batch = {'call_id': call_id, 'function': dict(function), 'size': len(entries)}
+        for index, entry in enumerate(entries):
+            expanded.append(
+                {
+                    **call,
+                    'id': call_id if index == 0 else f'call_{uuid4().hex[:24]}',
+                    'function': {'name': CALL_TOOL_NAME, 'arguments': JSONCodec.dumps(entry)},
+                    'provider_batch': {**batch, 'tool_name': entry['tool_name']},
+                }
+            )
+    return expanded
 
 
 def resolve_tool_call(tool_call: dict, tools: dict[str, dict]) -> str | None:

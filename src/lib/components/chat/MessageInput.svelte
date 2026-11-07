@@ -2893,9 +2893,7 @@
 												directoryLocked={!!history?.currentId}
 												chatId={isSavedChatId(chatId) ? chatId : null}
 												bind:terminalContext
-												disabled={generating ||
-													(!!history?.currentId &&
-														history.messages[history.currentId]?.done != true)}
+												disabled={generating || !!history?.currentId || isSavedChatId(chatId)}
 											/>
 										{/if}
 

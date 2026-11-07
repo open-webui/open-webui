@@ -4045,8 +4045,9 @@ async def search_tools(
     """
     Discover available tools by capability and return their full definitions.
     Pass the exact tool name when you already know it.
-    Invoke a result with call_tool(tool_name, params), where params is a JSON-encoded object
-    matching the tool's parameters. Do not call deferred tools directly by name.
+    Invoke results with call_tool(calls=[{"tool_name": "exact_name", "params": "{}"}, ...]).
+    Each params value is a JSON-encoded object matching that tool's parameters.
+    Batch independent calls together. Do not call deferred tools directly by name.
 
     :param query: Keywords describing the capability you need (e.g. "jira create issue"), or an exact tool name
     :param count: Maximum number of results to return (default: 5, max: 20)

@@ -105,6 +105,14 @@
 		};
 
 		for (const token of tokenList) {
+			if (
+				token.type === 'details' &&
+				token.attributes?.type === 'tool_calls' &&
+				token.attributes?.hidden === 'true' &&
+				!['pending', 'queued', 'requires_approval'].includes(token.attributes?.status ?? '')
+			) {
+				continue;
+			}
 			if (isGroupableDetailToken(token)) {
 				detailGroup.push(token);
 			} else {

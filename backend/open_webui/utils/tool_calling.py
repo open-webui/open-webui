@@ -20,6 +20,12 @@ INCOMPLETE_CALL_ERROR = (
 )
 
 
+def set_tool_call_visibility(item, tools):
+    """Copy trusted tool visibility metadata onto display output, without changing execution."""
+    if item.get('type') == 'function_call' and tools.get(item.get('name'), {}).get('hidden') is True:
+        item['hidden'] = True
+
+
 def parse_arguments(raw):
     """Accept complete JSON or JSON-compatible Python literals, never invent missing values."""
     if isinstance(raw, str):

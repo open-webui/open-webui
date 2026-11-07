@@ -357,7 +357,11 @@ function buildDetailToken(
 }
 
 export function isHiddenToolCall(item: OutputItem): boolean {
-	return item.type === 'function_call' && item.hidden === true;
+	return (
+		item.type === 'function_call' &&
+		item.hidden === true &&
+		!['pending', 'queued', 'requires_approval'].includes(item.status ?? '')
+	);
 }
 
 export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDisplayItem[] {

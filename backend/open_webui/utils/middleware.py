@@ -160,10 +160,11 @@ from open_webui.utils.tool_calling import (
     final_answer_payload,
     prepare_tool_call,
     recover_tool_calls,
+    set_tool_call_visibility,
     split_tool_calls,
     tool_repetition_error,
 )
-from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call
+from open_webui.utils.tool_search import apply_tool_search, resolve_tool_call, split_tool_call_batches
 from open_webui.utils.tools import (
     connect_mcp_server,
     display_file,
@@ -4652,6 +4653,8 @@ async def streaming_chat_response_handler(response, ctx):
                 )
 
             def full_output():
+                for item in output:
+                    set_tool_call_visibility(item, metadata.get('tools', {}))
                 if is_message_continuation():
                     return [
                         *prior_output[:-1],
@@ -4867,6 +4870,11 @@ async def streaming_chat_response_handler(response, ctx):
 
                     async def emit_response_completion_event(response_data: dict):
                         nonlocal stream_size
+                        for item in [
+                            response_data.get('item') or {},
+                            *((response_data.get('response') or {}).get('output') or []),
+                        ]:
+                            set_tool_call_visibility(item, metadata.get('tools', {}))
                         if response_data.get('type', '').endswith('.delta'):
                             await queue_pending_delta_data(
                                 response_data,
@@ -5822,7 +5830,7 @@ async def streaming_chat_response_handler(response, ctx):
                     output_by_call_id = {
                         item.get('call_id'): item for item in output if item.get('type') == 'function_call'
                     }
-                    for tool_call in tool_calls.pop(0):
+                    for tool_call in split_tool_call_batches(tool_calls.pop(0), metadata.get('tools', {})):
                         error = tool_call.get('execution_error') or resolve_tool_call(
                             tool_call, metadata.get('tools', {})
                         )
@@ -5854,6 +5862,8 @@ async def streaming_chat_response_handler(response, ctx):
                         item['status'] = 'failed' if error else item['status']
                         if 'provider_function' in tool_call:
                             item['provider_function'] = tool_call['provider_function']
+                        if 'provider_batch' in tool_call:
+                            item['provider_batch'] = tool_call['provider_batch']
                         if error:
                             output.append(
                                 {

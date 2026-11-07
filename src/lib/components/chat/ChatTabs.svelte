@@ -414,7 +414,9 @@
 		if (context) terminalContext = context;
 		else if (terminalContext?.file) terminalContext = { ...terminalContext, file: null };
 	};
-	$: syncTerminalContext((contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null);
+	$: syncTerminalContext(
+		(contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null
+	);
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
