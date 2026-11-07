@@ -524,7 +524,7 @@
 			);
 			return;
 		}
-		openPanel({ id: kind, kind, label: view.label });
+		openPanel({ id: kind, kind, label: view.label }, inSidePanel);
 	};
 
 	type SplitDrop = PanelRect & { groupId: string; edge: SplitEdge | null };
@@ -1217,7 +1217,7 @@
 		openFeature('comments');
 	}
 	$: if (viewReady && $showArtifacts && showArtifactsTab) {
-		openFeature('artifacts');
+		openFeature('artifacts', true);
 		showArtifacts.set(false);
 	}
 	$: if (viewReady && $showEmbeds && showPreviewTab) {

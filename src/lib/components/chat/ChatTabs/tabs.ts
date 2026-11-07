@@ -152,6 +152,8 @@ export function openTab(state: PanelTabs, tab: PanelTab): PanelTabs {
 export function openTabInSidePanel(state: PanelTabs, tab: PanelTab): PanelTabs {
 	const mainGroup = state.groups.find((group) => group.tabIds.includes(mainChatTabId));
 	if (!mainGroup) return openTab(state, tab);
+	if (state.tabs.some((item) => item.id === tab.id) && !mainGroup.tabIds.includes(tab.id))
+		return activateTab(state, tab.id);
 	const sideGroup =
 		state.groups.find((group) => group.id === state.activeGroupId && group.id !== mainGroup.id) ??
 		state.groups.find((group) => group.id !== mainGroup.id);
