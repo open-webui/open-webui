@@ -9,6 +9,7 @@
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { copyToClipboard, formatFileSize } from '$lib/utils';
 	import { listFiles, type FileEntry } from '$lib/apis/terminal';
+	import type { GitFile } from '$lib/apis/terminal/git';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -23,6 +24,67 @@
 	const i18n: any = getContext('i18n');
 
 	export let entry: FileEntry;
+	export let gitFile: GitFile | null = null;
+	$: gitDecoration = gitFile
+		? ((
+				{
+					added: {
+						char: 'A',
+						label: $i18n.t('Added'),
+						color: 'text-emerald-700/85 dark:text-emerald-300/85'
+					},
+					untracked: {
+						char: 'U',
+						label: $i18n.t('Untracked'),
+						color: 'text-[#476f36] dark:text-[#91bd91]'
+					},
+					modified: {
+						char: 'M',
+						label: $i18n.t('Modified'),
+						color: 'text-[#735c2a] dark:text-[#c7ad78]'
+					},
+					deleted: {
+						char: 'D',
+						label: $i18n.t('Deleted'),
+						color: 'text-rose-600/85 dark:text-rose-300/85'
+					},
+					renamed: {
+						char: 'R',
+						label: $i18n.t('Renamed'),
+						color: 'text-sky-600/85 dark:text-sky-300/85'
+					},
+					copied: {
+						char: 'C',
+						label: $i18n.t('Copied'),
+						color: 'text-sky-600/80 dark:text-sky-300/80'
+					},
+					'type-changed': {
+						char: 'T',
+						label: $i18n.t('Type changed'),
+						color: 'text-violet-600/80 dark:text-violet-300/80'
+					},
+					conflict: {
+						char: '!',
+						label: $i18n.t('Conflict'),
+						color: 'text-orange-600/90 dark:text-orange-300/90'
+					}
+				} as Record<string, { char: string; label: string; color: string }>
+			)[gitFile.status] ?? {
+				char: '?',
+				label: $i18n.t('Changed'),
+				color: 'text-gray-700 dark:text-gray-300'
+			})
+		: null;
+	$: nameColor = gitDecoration?.color ?? 'text-gray-800 dark:text-gray-200';
+	$: gitLabel =
+		gitDecoration && gitFile
+			? `${entry.type === 'directory' ? $i18n.t('Contains {{status}}', { status: gitDecoration.label }) : gitDecoration.label} · ${[
+					gitFile.staged ? $i18n.t('Staged changes') : '',
+					gitFile.unstaged ? $i18n.t('Unstaged changes') : ''
+				]
+					.filter(Boolean)
+					.join(', ')}`
+			: '';
 	export let currentPath: string;
 	export let fullPath: string | null = null;
 	export let depth = 0;
@@ -274,6 +336,29 @@
 	};
 </script>
 
+{#snippet gitBadge()}
+	{#if gitFile && gitDecoration}
+		<span
+			role="img"
+			aria-label={gitLabel}
+			title={gitLabel}
+			class="flex shrink-0 items-center gap-1 text-[0.625rem] font-mono font-medium {viewMode ===
+			'list'
+				? 'mx-1'
+				: 'mx-0.5'}"
+		>
+			{#if entry.type === 'directory'}
+				<span class="size-1.5 rounded-full bg-current {gitDecoration.color}"></span>
+			{:else if gitFile.binary}
+				<span class={gitDecoration.color}>{gitDecoration.char}</span>
+			{:else}
+				<span class="text-green-600 dark:text-green-400">+{gitFile.additions ?? 0}</span>
+				<span class="text-red-500 dark:text-red-400">-{gitFile.deletions ?? 0}</span>
+			{/if}
+		</span>
+	{/if}
+{/snippet}
+
 <li class="group min-w-0 {viewMode === 'grid' ? 'self-start' : ''}" data-file-row>
 	<div
 		class="w-full flex items-center transition-colors duration-75 {viewMode === 'grid'
@@ -485,20 +570,21 @@
 								on:click|stopPropagation
 							/>
 						{:else if viewMode === 'grid' && entry.type === 'directory'}
-							<span
-								class="h-4 w-full min-w-0 shrink-0 truncate text-xs leading-4 text-gray-800 dark:text-gray-200"
-							>
+							<span class="h-4 w-full min-w-0 shrink-0 truncate text-xs leading-4 {nameColor}">
 								{entry.name}
 							</span>
 						{:else if viewMode === 'grid'}
 							<span
 								use:fitGridName={entry.name}
-								class="h-8 w-full min-w-0 shrink-0 overflow-hidden [overflow-wrap:anywhere] text-xs leading-4 text-gray-800 dark:text-gray-200"
+								class="h-8 w-full min-w-0 shrink-0 overflow-hidden [overflow-wrap:anywhere] text-xs leading-4 {nameColor}"
 							></span>
 						{:else}
-							<span class="flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
+							<span class="flex-1 truncate text-xs {nameColor}">
 								{entry.name}
 							</span>
+						{/if}
+						{#if viewMode === 'list' && !renaming}
+							{@render gitBadge()}
 						{/if}
 						{#if !writable && !renaming && variant !== 'workspace' && viewMode !== 'grid'}
 							<span class="text-[0.625rem] text-gray-400 shrink-0">{$i18n.t('Read-only')}</span>
@@ -507,6 +593,7 @@
 							<span
 								class="flex w-full min-w-0 shrink-0 items-center justify-center gap-1 text-[11px] leading-3.5 text-gray-500 dark:text-gray-400"
 							>
+								{@render gitBadge()}
 								{#if entry.type === 'directory'}
 									{#key folderContentsVersion}
 										<span use:observeFolderContents class="min-w-0 truncate"

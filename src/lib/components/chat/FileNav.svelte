@@ -3,6 +3,7 @@
 	import type { TerminalConnection } from '$lib/apis/terminal';
 	import type { GitStatus } from '$lib/apis/terminal/git';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
+	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
@@ -625,6 +626,7 @@
 	let selectedFile: string | null = null;
 	let showGitDiff = false;
 	let gitFileKey = '';
+	$: treeGitStatuses = gitTreeStatus(gitStatus);
 	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
 		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
 		showGitDiff = false;
@@ -2844,6 +2846,7 @@
 							{#each visibleEntries as entry (entry.fullPath)}
 								<FileEntryRow
 									{entry}
+									gitFile={treeGitStatuses.get(gitTreePath(entry.fullPath)) ?? null}
 									{viewMode}
 									currentPath={entry.parentPath}
 									fullPath={entry.fullPath}
