@@ -27,6 +27,10 @@ export default defineConfig({
 					src: 'node_modules/onnxruntime-web/dist/*.jsep.*',
 
 					dest: 'wasm'
+				},
+				{
+					src: 'node_modules/pdfjs-dist/wasm/*',
+					dest: 'wasm'
 				}
 			]
 		})
