@@ -698,6 +698,12 @@
 						const body = new FormData();
 						body.append('file', blob, data.file.name);
 						options = { method: 'POST', body };
+					} else if (data.body) {
+						options = {
+							method: data.method,
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(data.body)
+						};
 					}
 					const result = await terminalRequest(connection, event.chat_id, data.path, options);
 					cb?.({ data: result });

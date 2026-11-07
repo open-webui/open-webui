@@ -188,7 +188,7 @@ async def get_terminal_json(
     method: str = 'GET',
     body: dict | None = None,
 ):
-    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
+    """Read or send JSON, or upload a file, through an admin terminal or a personal terminal's browser."""
     metadata = metadata or {}
     terminal_id = metadata.get('terminal_id')
     if not ENABLE_TOOL_SERVERS or not terminal_id:
@@ -253,6 +253,8 @@ async def get_terminal_json(
                     'terminal_id': terminal_id,
                     'path': path,
                     'session_id': metadata.get('session_id'),
+                    'method': method,
+                    'body': body,
                     **({'file': file} if file else {}),
                 },
             }
@@ -282,18 +284,16 @@ async def initialize_terminal_directory(request, user, metadata, terminal_id, pa
     if not terminal_id or not path:
         return
     from fastapi import HTTPException
-    from open_webui.utils.tether import get_terminal_connections
+    from open_webui.socket.main import get_event_call
 
     if not isinstance(path, str):
         raise HTTPException(400, 'Invalid working directory')
-    # A terminal only the browser reaches gets its folder from the browser.
-    if not any(connection.get('id') == terminal_id for connection in await get_terminal_connections(user)):
-        return
     result = await get_terminal_json(
         request,
         user,
         {**metadata, 'terminal_id': terminal_id},
         '/files/cwd',
+        {'__event_call__': await get_event_call(metadata)},
         method='POST',
         body={'path': path},
     )
