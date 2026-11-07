@@ -22,9 +22,18 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { getTaskIdsByChatId, resumeTemporaryChat, stopTasksByChatId } from '$lib/apis';
-	import { createNewChat, getAllTags, getChatById, updateChatById } from '$lib/apis/chats';
+	import {
+		createNewChat,
+		getAllTags,
+		getChatById,
+		resolveChatMessageToolCall,
+		updateChatById
+	} from '$lib/apis/chats';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
-	import { applyResponseStreamEvent } from '../Messages/structuredOutput';
+	import {
+		applyResponseStreamEvent,
+		getPendingAskUserFromMessage
+	} from '../Messages/structuredOutput';
 	import Messages from '../Messages.svelte';
 	import MessageInput from '../MessageInput.svelte';
 	import FilesOverlay from '../MessageInput/FilesOverlay.svelte';
@@ -162,6 +171,43 @@
 		onConfirm: (value: any) => resolveInteraction(interaction, value),
 		onCancel: () => resolveInteraction(interaction, { status: 'cancelled', answers: {} })
 	};
+	const resolvePendingAskUser = async (action: 'answer' | 'reject', answers?: unknown) => {
+		const { message, call } = pendingAskUser;
+		error = '';
+		try {
+			await resolveChatMessageToolCall(
+				localStorage.token,
+				id,
+				message.id,
+				call.call_id || call.id,
+				action,
+				{ answers }
+			);
+			// reconnect reads done to tell whether the resumed reply is still running
+			message.done = false;
+		} catch (err) {
+			error = getErrorMessage(err);
+		}
+		void reconnect();
+	};
+	$: pendingAskUser =
+		[...messages]
+			.reverse()
+			.filter((message) => (message.user_id ? message.user_id === $user?.id : !isShared))
+			.map(getPendingAskUserFromMessage)
+			.find(Boolean) ?? null;
+	$: savedAskUserPrompt = pendingAskUser
+		? {
+				show: true,
+				questions: Array.isArray(pendingAskUser.args?.questions)
+					? pendingAskUser.args.questions
+					: [],
+				allowOther: pendingAskUser.args?.allow_other !== false,
+				timeoutMs: null,
+				onConfirm: (value: any) => void resolvePendingAskUser('answer', value?.answers ?? {}),
+				onCancel: () => void resolvePendingAskUser('reject')
+			}
+		: null;
 	let system = [
 		systemPrompt,
 		'This is a separate side conversation. Earlier messages are reference context only. Answer the side question; do not continue the parent task.'
@@ -333,7 +379,7 @@
 	const send = async () => {
 		if (!canSend || disposed) return;
 		const question = draft.trim();
-		if ((!question && !files.length) || busy || sending || recovering) return;
+		if ((!question && !files.length) || busy || sending || recovering || pendingAskUser) return;
 		if (!atSelectedModel && selectedModels.length !== 1) {
 			error = $i18n.t('Select only one model');
 			return;
@@ -400,6 +446,7 @@
 				parentId: userMessage.id,
 				childrenIds: [] as string[],
 				role: 'assistant',
+				user_id: $user?.id,
 				content: '',
 				output: [],
 				done: false,
@@ -633,7 +680,7 @@
 				onToolApprovalModeChange={(mode: string) => {
 					params = { ...params, tool_approval_mode: mode };
 				}}
-				{askUser}
+				askUser={savedAskUserPrompt ?? askUser}
 				dropzoneId={`${inputId}-pane`}
 				{inputId}
 				{messagesContainerId}

@@ -87,6 +87,7 @@
 	import {
 		applyResponseStreamEvent,
 		getOutputText,
+		getPendingAskUserFromMessage,
 		setOutputText
 	} from './Messages/structuredOutput';
 
@@ -620,41 +621,6 @@
 				break;
 			}
 		}
-	};
-
-	const parseToolArguments = (args) => {
-		if (!args) {
-			return {};
-		}
-		let value = args;
-		while (typeof value === 'string') {
-			try {
-				value = JSON.parse(value);
-			} catch {
-				break;
-			}
-		}
-		return typeof value === 'object' && value !== null && !Array.isArray(value) ? value : {};
-	};
-
-	const getPendingAskUserFromMessage = (message) => {
-		if (message?.role !== 'assistant' || !Array.isArray(message.output)) {
-			return null;
-		}
-
-		const call = message.output.find(
-			(item) =>
-				item?.type === 'function_call' &&
-				item?.name === 'ask_user' &&
-				item?.status === 'pending' &&
-				(item?.call_id || item?.id)
-		);
-
-		if (call) {
-			return { message, call, args: parseToolArguments(call.arguments) };
-		}
-
-		return null;
 	};
 
 	const findPendingAskUser = (chatHistory) => {
