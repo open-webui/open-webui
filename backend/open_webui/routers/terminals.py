@@ -340,6 +340,12 @@ async def proxy_terminal(
     headers = {'X-User-Id': user.id}
     # Forward per-session cwd tracking header
     session_id = request.path_params.get('chat_id') or request.headers.get('x-session-id')
+    if (
+        safe_path.rstrip('/') == 'system/info'
+        and (terminal_context_config(connection, 'chat') or {}).get('context_id') == 'chat_id'
+        and not terminal_context_id(connection, {'chat_id': session_id}, 'chat')
+    ):
+        return JSONResponse({'error': 'A saved chat is required for this terminal'}, status_code=409)
     if session_id:
         headers['X-Session-Id'] = session_id
         if not terminal_context_available(connection, 'chat'):

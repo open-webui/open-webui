@@ -79,6 +79,29 @@ export type ListeningPort = {
 	process: string | null;
 };
 
+export type TerminalSystemInfo = {
+	sampled_at: number;
+	hostname: string;
+	os: string;
+	arch: string;
+	environment: 'host' | 'container';
+	uptime_seconds: number | null;
+	service_uptime_seconds: number;
+	cpu: { percent: number | null; cores: number | null; scope: 'host' | 'cgroup' };
+	memory: { total: number; used: number; scope: 'host' | 'cgroup' } | null;
+	disk: { path: string; total: number; used: number; free: number } | null;
+	network: { name: string; up: boolean | null; addresses: string[] }[] | null;
+	process_scope: 'user' | 'environment';
+	processes:
+		| {
+				pid: number;
+				name: string;
+				cpu_percent: number | null;
+				memory_bytes: number;
+		  }[]
+		| null;
+};
+
 export type TerminalFeatures = {
 	agents?: boolean;
 	terminal?: boolean;
