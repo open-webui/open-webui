@@ -53,6 +53,7 @@
 	export let tab = '';
 	export let closeOnOutsideClick = true;
 	$: if (!show) tab = '';
+	$: hasInternalList = ['tools', 'skills', 'files', 'notes', 'knowledge', 'chats'].includes(tab);
 
 	let showAttachWebpageModal = false;
 	$: toolApprovalModes = [
@@ -140,6 +141,8 @@
 	bind:show
 	{closeOnOutsideClick}
 	visualViewportAware
+	maxHeight="18rem"
+	contentClass="flex flex-col overflow-hidden!"
 	onOpenChange={(state) => {
 		if (state === false) {
 			onClose();
@@ -150,9 +153,11 @@
 		<slot />
 	</Tooltip>
 
-	<div slot="content">
+	<div slot="content" class="flex min-h-0 flex-col">
 		<DropdownMenu
-			className="w-70 max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin transition"
+			className="w-70 min-h-0 transition {hasInternalList
+				? 'flex flex-col overflow-hidden'
+				: 'overflow-y-auto overflow-x-hidden scrollbar-thin'}"
 		>
 			{#if tab === ''}
 				<div in:fly={{ x: -20, duration: 150 }}>
@@ -277,10 +282,7 @@
 					</button>
 				</div>
 			{:else if tab === 'attachments'}
-				<div
-					class="max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-					in:fly={{ x: 20, duration: 150 }}
-				>
+				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						type="button"
@@ -615,7 +617,7 @@
 					{/if}
 				</div>
 			{:else if tab === 'tool_permissions'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -667,7 +669,7 @@
 					</div>
 				</div>
 			{:else if tab === 'knowledge'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -687,7 +689,7 @@
 					<Knowledge {onSelect} />
 				</div>
 			{:else if tab === 'notes'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -707,7 +709,7 @@
 					<Notes {onSelect} />
 				</div>
 			{:else if tab === 'files'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -727,7 +729,7 @@
 					<Files {onSelect} />
 				</div>
 			{:else if tab === 'chats'}
-				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
 						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"

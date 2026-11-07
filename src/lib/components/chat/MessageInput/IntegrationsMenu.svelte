@@ -512,10 +512,10 @@
 		{/if}
 	</div>
 {:else if tab === 'tools' && tools}
-	<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
+	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 		<button
 			role="menuitem"
-			class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 			on:click={() => {
 				toolQuery = '';
 				tab = '';
@@ -648,10 +648,10 @@
 		</div>
 	</div>
 {:else if tab === 'skills' && skills}
-	<div class="flex max-h-72 min-h-0 flex-col gap-0.5" in:fly={{ x: 20, duration: 150 }}>
+	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 		<button
 			role="menuitem"
-			class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 			on:click={() => {
 				skillQuery = '';
 				tab = '';

@@ -148,12 +148,12 @@
 					? 'cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
 					: directory
 						? 'cursor-pointer text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200'
-						: 'cursor-pointer text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'}"
+						: 'cursor-pointer text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'}"
 			>
 				<Folder className="size-3.5 shrink-0" strokeWidth="2" />
-				<span data-input-label class="max-w-[9.375rem] truncate"
-					>{directory ? folderName(directory) : $i18n.t('Choose...')}</span
-				>
+				{#if directory}
+					<span data-input-label class="max-w-[9.375rem] truncate">{folderName(directory)}</span>
+				{/if}
 			</button>
 		</Tooltip>
 		<div slot="content">
@@ -171,7 +171,7 @@
 					on:click={() => selectDirectory('')}
 				>
 					<Folder className="size-3.5 shrink-0" strokeWidth="2" />
-					<span class="flex-1 text-start">{$i18n.t('No folder')}</span>
+					<span class="flex-1 text-start">{$i18n.t('Home')}</span>
 					{#if !directory}
 						<Check
 							className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
