@@ -727,35 +727,25 @@
 	const closeTab = async (id: string) => {
 		if (id === mainChatTabId) return;
 		if (closing.has(id)) return;
-		closing.add(id);
 		const owner = viewEntry;
 		if (!owner) return;
+		closing.add(id);
 		try {
 			await owner.pending.get(id);
 			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
-			if (tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')) {
-				const connection = tabConnection(tab);
-				if (connection) {
-					if (
-						tab.kind === 'terminal' &&
-						!(await new Promise<boolean>((resolve) => {
-							stopTerminalChoice = resolve;
-						}))
-					)
-						return;
-					try {
-						await terminalRequest(
-							connection,
-							owner.chatId,
-							`${tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(tab.sessionId)}`,
-							{ method: 'DELETE' }
-						);
-					} catch (error) {
-						if (!(error instanceof TerminalRequestError) || error.status !== 404) throw error;
-					}
-				}
-			}
+			const connection =
+				tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')
+					? tabConnection(tab)
+					: null;
+			if (
+				connection &&
+				tab.kind === 'terminal' &&
+				!(await new Promise<boolean>((resolve) => {
+					stopTerminalChoice = resolve;
+				}))
+			)
+				return;
 			if (owner === viewEntry && fileViews[id]?.hasUnsavedChanges()) {
 				selectTab(id);
 				if (!(await fileViews[id].requestClose())) return;
@@ -767,15 +757,43 @@
 			if (tab.kind === 'artifacts') showArtifacts.set(false);
 			if (tab.kind === 'preview') showEmbeds.set(false);
 			owner.drafts.delete(id);
-			changeChatView(owner, { ...owner.state, panels: removeTab(owner.state.panels, id) });
-			if (owner !== viewEntry) return;
-			tabs = owner.state.panels;
-			delete dirtyFiles[id];
-			delete fileContexts[id];
-			if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
-				showTabs.set(false);
-			await tick();
-			document.getElementById(domId(tabs.activeId))?.focus();
+			const previousPanels = owner.state.panels;
+			const closedPanels = removeTab(previousPanels, id);
+			changeChatView(owner, { ...owner.state, panels: closedPanels });
+			if (owner === viewEntry) {
+				tabs = owner.state.panels;
+				delete dirtyFiles[id];
+				delete fileContexts[id];
+				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
+					showTabs.set(false);
+				await tick();
+				if (owner === viewEntry) document.getElementById(domId(tabs.activeId))?.focus();
+			}
+			if (connection && tab.sessionId) {
+				try {
+					await terminalRequest(
+						connection,
+						owner.chatId,
+						`${tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(tab.sessionId)}`,
+						{ method: 'DELETE' }
+					);
+				} catch (error) {
+					if (!(error instanceof TerminalRequestError) || error.status !== 404) {
+						changeChatView(owner, {
+							...owner.state,
+							panels:
+								owner.state.panels === closedPanels
+									? previousPanels
+									: openTab(owner.state.panels, tab)
+						});
+						if (owner === viewEntry) {
+							tabs = owner.state.panels;
+							showTabs.set(true);
+						}
+						throw error;
+					}
+				}
+			}
 		} catch (error) {
 			toast.error(String(error));
 		} finally {
