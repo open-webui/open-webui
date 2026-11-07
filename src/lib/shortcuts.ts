@@ -122,7 +122,7 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.NEW_CHAT_TAB]: 'Cmd+Alt+O',
 	[Shortcut.OPEN_COMMENTS]: 'Cmd+Shift+Y',
 
-	[Shortcut.NEW_FILE]: 'Cmd+N',
+	[Shortcut.NEW_FILE]: 'Cmd+Alt+N',
 	[Shortcut.NEW_TERMINAL]: 'Ctrl+`',
 	[Shortcut.NEW_BROWSER]: 'Cmd+Shift+B',
 	[Shortcut.CLOSE_TAB]: 'Cmd+W',

@@ -5,6 +5,7 @@
 	import { keymap, placeholder as editorPlaceholder } from '@codemirror/view';
 	import { Compartment, EditorState } from '@codemirror/state';
 	import { indentWithTab } from '@codemirror/commands';
+	import { completeAnyWord } from '@codemirror/autocomplete';
 	import { indentUnit, LanguageDescription } from '@codemirror/language';
 	import { languages } from '@codemirror/language-data';
 	import { oneDark } from '@codemirror/theme-one-dark';
@@ -120,6 +121,7 @@
 
 		const extensions = [
 			basicSetup,
+			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			keymap.of([
 				indentWithTab,
 				{
