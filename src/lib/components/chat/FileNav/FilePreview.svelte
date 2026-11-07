@@ -162,8 +162,10 @@
 	export const saveCodeFile = async () => {
 		if (!onSave || readOnly) return;
 		saving = true;
-		const content = fileCodeEditorRef?.getValue() ?? codeValue;
 		try {
+			if (isMarkdown && !showRaw) await markdownEditorRef?.flushUploads();
+			const content =
+				isMarkdown && !showRaw ? codeValue : (fileCodeEditorRef?.getValue() ?? codeValue);
 			await onSave(content);
 		} finally {
 			saving = false;
@@ -304,6 +306,7 @@
 	let panzoomRef: PanzoomContainer;
 	let pptxPreviewRef: PptxPreview;
 	let imageZoomLevel = 1;
+	$: svgPreview = isSvg && !showRaw && !editing && !searchTarget && !!fileContent;
 	export const resetImageView = () => {
 		panzoomRef?.reset();
 		pptxPreviewRef?.resetView();
@@ -316,6 +319,7 @@
 
 <div
 	class="flex-1 {fileImageUrl !== null ||
+	svgPreview ||
 	fileVideoUrl !== null ||
 	fileDocxData !== null ||
 	fileModelData !== null ||
@@ -557,9 +561,16 @@
 					class="text-xs font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all leading-relaxed">{fileContent}</pre>
 			</div>
 		{:else if isSvg && !showRaw && fileContent}
-			<div class="svg-preview w-full h-full flex items-center justify-center overflow-auto p-3">
-				{@html sanitizeSvg(fileContent)}
-			</div>
+			{#key selectedFile}
+				<PanzoomContainer
+					bind:this={panzoomRef}
+					bind:zoomLevel={imageZoomLevel}
+					className="svg-preview w-full h-full flex items-center justify-center p-3"
+					options={{ zoomDoubleClickSpeed: 1 }}
+				>
+					{@html sanitizeSvg(fileContent)}
+				</PanzoomContainer>
+			{/key}
 		{:else if isCode && !showRaw}
 			<div class="absolute inset-0">
 				<FileCodeEditor
@@ -593,7 +604,7 @@
 		</div>
 	{/if}
 
-	{#if !fileLoading && fileImageUrl !== null}
+	{#if !fileLoading && (fileImageUrl !== null || svgPreview)}
 		<div
 			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
 		>
