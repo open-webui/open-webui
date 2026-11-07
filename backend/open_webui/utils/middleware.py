@@ -5854,7 +5854,10 @@ async def streaming_chat_response_handler(response, ctx):
                             else f'Error: Tool "{item["name"]}" not found.'
                         )
                         blocked = tool_repetition_error(item, tool_history)
-                        stop_reason = stop_reason or round_error or blocked or tool_call.get('execution_error')
+                        is_incomplete = tool_call.get('execution_error') == INCOMPLETE_CALL_ERROR
+                        stop_reason = (
+                            stop_reason or round_error or blocked or (INCOMPLETE_CALL_ERROR if is_incomplete else None)
+                        )
                         error = f'Error: {round_error}' if round_error else error or blocked
                         if error:
                             tool_history.append(item)
