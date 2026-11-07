@@ -1871,9 +1871,11 @@
 		</div>
 	{/if}
 
-	<div class={sectionHeadingClass}>
-		{$i18n.t('settings.personal.interface.sections.artifacts.title')}
-	</div>
+	{#if ['settings.detect_artifacts', 'settings.iframe_sandbox_allow_scripts', 'settings.iframe_sandbox_allow_same_origin', 'settings.iframe_sandbox_allow_forms', 'settings.iframe_sandbox_allow_downloads'].some((id) => $visibleControls[id])}
+		<div class={sectionHeadingClass}>
+			{$i18n.t('settings.personal.interface.sections.artifacts.title')}
+		</div>
+	{/if}
 
 	{#if $visibleControls['settings.detect_artifacts']}
 		<div>
