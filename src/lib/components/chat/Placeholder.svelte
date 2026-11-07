@@ -260,7 +260,7 @@
 				{#if !($selectedFolder && folderReadOnly)}
 					<MessageInput
 						{chatId}
-						{terminalContext}
+						bind:terminalContext
 						{callActive}
 						{callEnabled}
 						bind:this={messageInput}

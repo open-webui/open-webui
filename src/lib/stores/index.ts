@@ -296,6 +296,7 @@ type Settings = {
 	responseAutoCopy?: any;
 	richTextInput?: boolean;
 	showFormattingToolbar?: boolean;
+	showInputSelections?: boolean;
 	params?: any;
 	userLocation?: any;
 	webSearch?: any;

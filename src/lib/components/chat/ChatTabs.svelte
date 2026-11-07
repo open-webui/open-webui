@@ -152,9 +152,11 @@
 	let tabs = emptyTabs();
 	const paneStyle = (rect: PanelRect, header = 0) =>
 		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px * var(--app-text-scale, 1));width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header}px * var(--app-text-scale, 1));`;
-	const focusGroup = (id: string) => {
+	const focusGroup = (id: string, event?: Event) => {
+		// Tab activation reads the composer's directory before changing the active context.
+		if (event?.target instanceof Element && event.target.closest('[data-panel-tab]')) return;
 		const group = tabs.groups.find((group) => group.id === id);
-		if (group?.activeId) tabs = activateTab(tabs, group.activeId);
+		if (group?.activeId && tabs.activeGroupId !== id) tabs = activateTab(tabs, group.activeId);
 	};
 	let terminalViews: Record<string, XTerminal> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
@@ -422,6 +424,11 @@
 		tabs = activateTab(tabs, mainChatTabId);
 	};
 	const selectTab = (id: string) => {
+		const tab = tabs.tabs.find((tab) => tab.id === id);
+		if (tab?.kind === 'files') {
+			openFiles(tab.terminalId ?? null);
+			return;
+		}
 		tabs = activateTab(tabs, id);
 		showTabs.set(true);
 	};
@@ -434,6 +441,10 @@
 	};
 	const openFiles = (selector = $selectedTerminalId, directory?: string) => {
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
+		directory ??=
+			terminalContext?.terminalId === selector
+				? terminalContext.currentDirectory || undefined
+				: undefined;
 		const id = selector ? `files:${selector}` : 'files';
 		openPanel({
 			id,
@@ -442,7 +453,13 @@
 			terminalId: selector ?? undefined,
 			path: directory
 		});
-		if (directory) void fileViews[id]?.browseDirectory?.(directory);
+		const view = fileViews[id];
+		if (
+			directory &&
+			view &&
+			view.captureView()?.directory?.replace(/\/+$/, '') !== directory.replace(/\/+$/, '')
+		)
+			void view.browseDirectory(directory);
 	};
 	const openFile = (path: string, selector: string, page?: number | null) => {
 		if (!terminalAccessible(selector)) return;
@@ -1476,8 +1493,8 @@
 				role="presentation"
 				class="absolute min-h-0 min-w-0 pointer-events-none flex flex-col overflow-hidden"
 				style={paneStyle(positions.groups[group.id])}
-				on:focusin={() => focusGroup(group.id)}
-				on:pointerdown={() => focusGroup(group.id)}
+				on:focusin={(event) => focusGroup(group.id, event)}
+				on:pointerdown={(event) => focusGroup(group.id, event)}
 			>
 				{@render tabBar(group)}
 			</div>

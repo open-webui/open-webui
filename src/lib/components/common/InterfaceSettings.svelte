@@ -69,6 +69,7 @@
 
 	let richTextInput = true;
 	let showFormattingToolbar = false;
+	let showInputSelections = false;
 	let insertPromptAsRichText = false;
 	let promptAutocomplete = false;
 
@@ -354,6 +355,7 @@
 
 		richTextInput = currentSettings?.richTextInput ?? true;
 		showFormattingToolbar = currentSettings?.showFormattingToolbar ?? false;
+		showInputSelections = currentSettings?.showInputSelections ?? false;
 		insertPromptAsRichText = currentSettings?.insertPromptAsRichText ?? false;
 		promptAutocomplete = currentSettings?.promptAutocomplete ?? false;
 
@@ -1704,6 +1706,33 @@
 		</div>
 		<p class={settingDescriptionClass}>
 			{$i18n.t('settings.personal.interface.enterKeyBehavior.description')}
+		</p>
+	</div>
+
+	<div>
+		<div class={settingRowClass}>
+			<label
+				id="show-input-selections-label"
+				class={settingLabelClass}
+				for="show-input-selections-label-control"
+			>
+				{$i18n.t('settings.personal.interface.showInputSelections.label')}
+			</label>
+
+			<div class={settingControlClass}>
+				<Switch
+					ariaLabelledbyId="show-input-selections-label"
+					tooltip={true}
+					bind:state={showInputSelections}
+					inherited={isDefaultSetting('showInputSelections')}
+					on:change={() => {
+						saveSettings({ showInputSelections });
+					}}
+				/>
+			</div>
+		</div>
+		<p class={settingDescriptionClass}>
+			{$i18n.t('settings.personal.interface.showInputSelections.description')}
 		</p>
 	</div>
 

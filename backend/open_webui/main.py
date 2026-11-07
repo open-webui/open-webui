@@ -1120,7 +1120,7 @@ async def chat_completion(
         folder_defaults = await get_folder_terminal_defaults(user, form_data.get('folder_id'))
         if 'terminal_id' not in form_data and folder_defaults.get('terminal_id'):
             form_data['terminal_id'] = folder_defaults['terminal_id']
-        if not requested_directory and form_data.get('terminal_id') == folder_defaults.get('terminal_id'):
+        if requested_directory is None and form_data.get('terminal_id') == folder_defaults.get('terminal_id'):
             requested_directory = folder_defaults.get('working_directory')
     else:
         requested_directory = None

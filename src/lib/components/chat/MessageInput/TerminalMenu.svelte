@@ -3,6 +3,8 @@
 	import { resolveTerminalConnection, type TerminalConnection } from '$lib/apis/terminal';
 	import TerminalSystemInfoModal from '../TerminalSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
+	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
+	import type { TerminalContext } from '$lib/types';
 
 	import {
 		chatId as activeChatId,
@@ -27,6 +29,8 @@
 
 	export let show = false;
 	export let disabled = false;
+	export let chatId: string | null = null;
+	export let terminalContext: TerminalContext | null = null;
 
 	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
@@ -124,6 +128,12 @@
 
 	$: selectedSystemTerminal = systemTerminals.find((t) => t.id === $selectedTerminalId);
 	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
+	$: folderConnection = resolveTerminalConnection(
+		$selectedTerminalId,
+		systemTerminals,
+		directTerminals,
+		''
+	);
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
@@ -425,6 +435,18 @@
 			chatId={info.chatId}
 			label={info.label}
 			onClose={() => (info = null)}
+		/>
+	{/key}
+{/if}
+
+{#if folderConnection && (chatContext(selectedSystemTerminal)?.context_id !== 'chat_id' || isSavedChatId(chatId))}
+	{#key `${$user?.id}:${folderConnection.selector}:${chatId ?? ''}`}
+		<WorkingDirectoryMenu
+			connection={folderConnection}
+			{chatId}
+			userId={$user?.id ?? ''}
+			bind:terminalContext
+			{disabled}
 		/>
 	{/key}
 {/if}

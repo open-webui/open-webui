@@ -81,6 +81,7 @@ class InterfaceSettings(BaseModel):
     chatFadeStreamingText: bool | None = None
     richTextInput: bool | None = None
     showFormattingToolbar: bool | None = None
+    showInputSelections: bool | None = None
     insertPromptAsRichText: bool | None = None
     promptAutocomplete: bool | None = None
     insertSuggestionPrompt: bool | None = None

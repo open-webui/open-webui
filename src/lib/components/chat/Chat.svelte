@@ -5584,7 +5584,7 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
-										{terminalContext}
+										bind:terminalContext
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5685,7 +5685,7 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
-										{terminalContext}
+										bind:terminalContext
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5756,7 +5756,7 @@
 							<div class="flex items-center h-full">
 								<Placeholder
 									chatId={$chatId}
-									{terminalContext}
+									bind:terminalContext
 									callActive={!!(bridge?.connected || bridge?.connecting)}
 									callEnabled={!isShared}
 									bind:selectedModelIdx

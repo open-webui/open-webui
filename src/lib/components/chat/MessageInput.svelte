@@ -116,7 +116,6 @@
 	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
 	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
-	import Component from '../icons/Component.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
@@ -317,10 +316,12 @@
 	let copiedStatusChatId = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
-	let integrationsMenuCloseOnOutsideClick = true;
+	let showInputMenu = false;
+	let inputMenuTab = '';
+	let inputMenuCloseOnOutsideClick = true;
 
 	$: if (!showValvesModal) {
-		integrationsMenuCloseOnOutsideClick = true;
+		inputMenuCloseOnOutsideClick = true;
 	}
 
 	let chatInputDraft: any;
@@ -935,6 +936,8 @@
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
 		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
+
+	$: showInputSelections = $settings?.showInputSelections ?? false;
 
 	let showToolsButton = false;
 	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
@@ -1945,7 +1948,7 @@
 		await tick();
 	}}
 	on:close={() => {
-		integrationsMenuCloseOnOutsideClick = true;
+		inputMenuCloseOnOutsideClick = true;
 	}}
 />
 
@@ -2557,7 +2560,9 @@
 							<div class=" flex justify-between mt-0.5 mb-2 mx-0.5 max-w-full" dir="ltr">
 								<div class="ml-1 self-end flex items-center">
 									<InputMenu
-										onCompare={openComparison}
+										bind:show={showInputMenu}
+										bind:tab={inputMenuTab}
+										closeOnOutsideClick={inputMenuCloseOnOutsideClick}
 										bind:files
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(
@@ -2626,58 +2631,45 @@
 										>
 											<PlusAlt className="size-5" />
 										</button>
+
+										<svelte:fragment slot="integrations">
+											{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
+												<IntegrationsMenu
+													bind:show={showInputMenu}
+													bind:tab={inputMenuTab}
+													selectedModels={selectedModelIds}
+													{toggleFilters}
+													{showWebSearchButton}
+													{showImageGenerationButton}
+													{showCodeInterpreterButton}
+													bind:selectedToolIds
+													bind:selectedSkillIds
+													bind:selectedFilterIds
+													bind:webSearchEnabled
+													bind:imageGenerationEnabled
+													bind:codeInterpreterEnabled
+													oauthRedirectHandler={(tool: {
+														id: string;
+														serverId: string;
+														authType?: string | null;
+													}) => oauthRedirectHandler(tool, chatInputDraft)}
+													{onWebSearchToggle}
+													onShowValves={(e) => {
+														const { type, id } = e;
+														selectedValvesType = type;
+														selectedValvesItemId = id;
+														showValvesModal = true;
+														inputMenuCloseOnOutsideClick = false;
+													}}
+												/>
+											{/if}
+										</svelte:fragment>
 									</InputMenu>
 
-									{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
-										<div
-											class="flex self-center w-[0.0625rem] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
-										/>
-
-										<IntegrationsMenu
-											selectedModels={selectedModelIds}
-											{toggleFilters}
-											{showWebSearchButton}
-											{showImageGenerationButton}
-											{showCodeInterpreterButton}
-											bind:selectedToolIds
-											bind:selectedSkillIds
-											bind:selectedFilterIds
-											bind:webSearchEnabled
-											bind:imageGenerationEnabled
-											bind:codeInterpreterEnabled
-											oauthRedirectHandler={(tool: {
-												id: string;
-												serverId: string;
-												authType?: string | null;
-											}) => oauthRedirectHandler(tool, chatInputDraft)}
-											{onWebSearchToggle}
-											closeOnOutsideClick={integrationsMenuCloseOnOutsideClick}
-											onShowValves={(e) => {
-												const { type, id } = e;
-												selectedValvesType = type;
-												selectedValvesItemId = id;
-												showValvesModal = true;
-												integrationsMenuCloseOnOutsideClick = false;
-											}}
-											onClose={async () => {
-												await tick();
-
-												if (!$mobile) {
-													const chatInput = document.getElementById(inputId);
-													chatInput?.focus();
-												}
-											}}
-										>
-											<button
-												type="button"
-												id="integration-menu-button"
-												class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
-												aria-label={$i18n.t('Integrations')}
-											>
-												<Component className="size-4.5" strokeWidth="1.5" />
-											</button>
-										</IntegrationsMenu>
-									{/if}
+									<div
+										aria-hidden="true"
+										class="flex self-center w-[0.0625rem] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
+									></div>
 
 									{#if hasChatVariables}
 										<Tooltip content={$i18n.t('Chat Variables')} placement="top">
@@ -2721,7 +2713,7 @@
 									{/if}
 
 									<div class="ml-1 flex gap-1.5 shrink-0">
-										{#if (selectedToolIds ?? []).length > 0 && $visibleControls['chat.selected_tools']}
+										{#if showInputSelections && (selectedToolIds ?? []).length > 0 && $visibleControls['chat.selected_tools']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Tools', {
 													COUNT: (selectedToolIds ?? []).length
@@ -2744,7 +2736,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if (selectedSkillIds ?? []).length > 0 && $visibleControls['chat.selected_skills']}
+										{#if showInputSelections && (selectedSkillIds ?? []).length > 0 && $visibleControls['chat.selected_skills']}
 											<Tooltip
 												content={$i18n.t('{{COUNT}} Available Skills', {
 													COUNT: (selectedSkillIds ?? []).length
@@ -2769,7 +2761,7 @@
 
 										{#each selectedFilterIds as filterId (filterId)}
 											{@const filter = toggleFilters.find((f) => f.id === filterId)}
-											{#if filter && $visibleControls['chat.selected_filters']}
+											{#if showInputSelections && filter && $visibleControls['chat.selected_filters']}
 												<Tooltip
 													content={resolveLocalizedFunction(
 														filter,
@@ -2838,7 +2830,7 @@
 											{/if}
 										{/each}
 
-										{#if webSearchEnabled && showWebSearchButton && $visibleControls['chat.selected_web_search']}
+										{#if showInputSelections && webSearchEnabled && showWebSearchButton && $visibleControls['chat.selected_web_search']}
 											<Tooltip content={$i18n.t('Web Search')} placement="top">
 												<button
 													aria-label={$i18n.t('Web Search')}
@@ -2855,7 +2847,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if imageGenerationEnabled && showImageGenerationButton && $visibleControls['chat.selected_image_generation']}
+										{#if showInputSelections && imageGenerationEnabled && showImageGenerationButton && $visibleControls['chat.selected_image_generation']}
 											<Tooltip content={$i18n.t('Image')} placement="top">
 												<button
 													aria-label={$i18n.t('Image')}
@@ -2872,7 +2864,7 @@
 											</Tooltip>
 										{/if}
 
-										{#if codeInterpreterEnabled && showCodeInterpreterButton && $visibleControls['chat.selected_code_interpreter']}
+										{#if showInputSelections && codeInterpreterEnabled && showCodeInterpreterButton && $visibleControls['chat.selected_code_interpreter']}
 											<Tooltip content={$i18n.t('Code Interpreter')} placement="top">
 												<button
 													aria-label={codeInterpreterEnabled
@@ -2898,6 +2890,8 @@
 										{#if showTerminalSelector}
 											<TerminalMenu
 												bind:show={showTerminalMenu}
+												chatId={isSavedChatId(chatId) ? chatId : null}
+												bind:terminalContext
 												disabled={generating ||
 													(!!history?.currentId &&
 														history.messages[history.currentId]?.done != true)}
