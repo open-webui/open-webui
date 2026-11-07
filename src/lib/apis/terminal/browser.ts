@@ -20,16 +20,24 @@ export const getBrowserSession = (
 		`/browser/sessions/${encodeURIComponent(id)}`
 	);
 
-export const createBrowserSession = (
+export const createBrowserSession = async (
 	connection: TerminalConnection,
 	chatId: string | null,
 	url = ''
-) =>
-	terminalRequest<BrowserSession>(connection, chatId, '/browser/sessions', {
+) => {
+	const session = await terminalRequest<BrowserSession>(connection, chatId, '/browser/sessions', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ url })
 	});
+	if (!session.chrome_available || session.mode === 'chrome') return session;
+	try {
+		return await updateBrowserSession(connection, chatId, session.id, { mode: 'chrome' });
+	} catch {
+		// Reset the server too: Chrome startup may have failed after changing the mode.
+		return updateBrowserSession(connection, chatId, session.id, { mode: 'proxy' });
+	}
+};
 
 export const updateBrowserSession = (
 	connection: TerminalConnection,

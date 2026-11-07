@@ -66,8 +66,8 @@
 				() => {}
 			);
 	};
-	const switchMode = async (mode: 'proxy' | 'chrome', remember = true) => {
-		if (!session || !sessionConnection || switching || session.mode === mode) return;
+	const switchMode = async (mode: 'proxy' | 'chrome', force = false) => {
+		if (!session || !sessionConnection || switching || (!force && session.mode === mode)) return;
 		switching = true;
 		try {
 			session = await updateBrowserSession(sessionConnection, sessionChatId, session.id, {
@@ -82,11 +82,25 @@
 					frameUrl = browserFrameUrl(browserViewUrl(sessionConnection, session), currentUrl);
 			}
 			error = '';
-			if (remember) localStorage.setItem('browserMode', mode);
+			return true;
 		} catch (reason) {
 			error = reason instanceof Error ? reason.message : String(reason);
+			if (mode === 'chrome') {
+				switching = false;
+				await fallbackToProxy(error);
+			}
 		} finally {
 			switching = false;
+		}
+	};
+	const fallbackToProxy = async (message: string) => {
+		if (!session || !sessionConnection || switching) return;
+		// The server may already be in Chrome mode even if its startup request failed.
+		const switched = await switchMode('proxy', true);
+		connectionStatus = '';
+		if (switched) {
+			loading = false;
+			error = `${$i18n.t('Chrome failed. Switched to Proxy.')} ${message}`;
 		}
 	};
 	const frameCommand = (command: string, url?: string) =>
@@ -340,7 +354,7 @@
 				>
 				<div slot="content">
 					<DropdownMenu className="w-48 font-normal">
-						{#each session.chrome_available ? ['proxy', 'chrome'] : ['proxy'] as mode}
+						{#each session.chrome_available ? ['chrome', 'proxy'] : ['proxy'] as mode}
 							<button
 								type="button"
 								role="menuitemradio"
@@ -419,6 +433,7 @@
 					mobile={deviceMode === 'mobile'}
 					{quality}
 					onError={(message) => (error = message)}
+					onFailure={(message) => void fallbackToProxy(message)}
 					onStatus={(message) => (connectionStatus = message)}
 					onState={(state) => {
 						if (!state.url) return;

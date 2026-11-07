@@ -13,6 +13,7 @@
 		canGoForward: boolean;
 	}) => void;
 	export let onError: (error: string) => void = () => {};
+	export let onFailure: (error: string) => void = onError;
 	export let onStatus: (status: string) => void = () => {};
 	let surface: HTMLDivElement;
 	let frame = '';
@@ -23,6 +24,8 @@
 	let vncSocket: WebSocket | null = null;
 	let vncGeneration = 0;
 	let vncRetry: ReturnType<typeof setTimeout>;
+	let vncTimeout: ReturnType<typeof setTimeout>;
+	let vncAttempts = 0;
 	let width = 1024;
 	let height = 768;
 	let displayWidth = width;
@@ -30,6 +33,7 @@
 	let socket: WebSocket | null = null;
 	let disposed = false;
 	let retry: ReturnType<typeof setTimeout>;
+	let connectionTimeout: ReturnType<typeof setTimeout>;
 	let attempts = 0;
 	let hasConnected = false;
 	let pendingNavigation: string | null = null;
@@ -41,6 +45,7 @@
 	const stopVnc = () => {
 		vncGeneration++;
 		clearTimeout(vncRetry);
+		clearTimeout(vncTimeout);
 		releaseModifiers();
 		viewer?.disconnect();
 		viewer = null;
@@ -59,13 +64,18 @@
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			const channel = new WebSocket(url);
 			vncSocket = channel;
+			vncTimeout = setTimeout(() => channel.close(), 15000);
 			channel.onopen = () => {
 				if (generation !== vncGeneration) return;
 				viewer = new RFB(vncSurface, channel);
 				viewer.scaleViewport = true;
 				viewer.resizeSession = false;
 				viewer.qualityLevel = { low: 4, balanced: 6, crisp: 9 }[quality];
-				viewer.addEventListener('connect', () => onStatus(''));
+				viewer.addEventListener('connect', () => {
+					clearTimeout(vncTimeout);
+					vncAttempts = 0;
+					onStatus('');
+				});
 			};
 			channel.onclose = (event) => {
 				if (generation !== vncGeneration) return;
@@ -74,6 +84,11 @@
 					onStatus('');
 					onError('Browser opened in another viewer. Reopen this tab.');
 				} else if (active && !disposed) {
+					if (++vncAttempts >= 3) {
+						onStatus('');
+						onFailure('Chrome display connection failed.');
+						return;
+					}
 					onStatus('Reconnecting…');
 					vncRetry = setTimeout(startVnc, 2000);
 				}
@@ -81,7 +96,7 @@
 		} catch (error) {
 			if (generation === vncGeneration) {
 				onStatus('');
-				onError(error instanceof Error ? error.message : String(error));
+				onFailure(error instanceof Error ? error.message : String(error));
 			}
 		}
 	};
@@ -173,6 +188,7 @@
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			socket = new WebSocket(url);
 			const channel = socket;
+			connectionTimeout = setTimeout(() => channel.close(), 15000);
 			let framePending = Promise.resolve();
 			socket.binaryType = 'arraybuffer';
 			socket.onopen = async () => {
@@ -202,12 +218,16 @@
 						});
 						await framePending;
 						if (disposed || socket !== channel) return;
+						clearTimeout(connectionTimeout);
+						hasConnected = true;
+						attempts = 0;
 						command('frameAck', { window: 3 });
 						onStatus('');
 						return;
 					}
 					const message = JSON.parse(event.data);
 					if (message.type === 'frame' || message.type === 'state') {
+						clearTimeout(connectionTimeout);
 						hasConnected = true;
 						attempts = 0;
 						if (message.type === 'frame' || message.transport !== 'vnc') onStatus('');
@@ -216,14 +236,16 @@
 					if (message.type === 'state') {
 						transport = message.transport ?? 'jpeg';
 						onState(message);
-						onError(message.error || '');
+						if (message.error) onFailure(message.error);
+						else onError('');
 					}
 				} catch (error) {
-					onError(error instanceof Error ? error.message : String(error));
+					onFailure(error instanceof Error ? error.message : String(error));
 				}
 			};
 			socket.onclose = (event) => {
 				if (disposed) return;
+				clearTimeout(connectionTimeout);
 				stopVnc();
 				transport = '';
 				if (event.code >= 4000 && event.code < 5000) {
@@ -235,9 +257,14 @@
 					);
 					return;
 				}
+				if (++attempts >= 3) {
+					onStatus('');
+					onFailure('Chrome connection failed.');
+					return;
+				}
 				onError('');
 				onStatus(hasConnected ? 'Reconnecting…' : 'Connecting…');
-				retry = setTimeout(connect, Math.min(1000 * 2 ** attempts++, 10000));
+				retry = setTimeout(connect, Math.min(1000 * 2 ** (attempts - 1), 10000));
 			};
 		};
 		connect();
@@ -247,6 +274,7 @@
 			disposed = true;
 			onStatus('');
 			clearTimeout(retry);
+			clearTimeout(connectionTimeout);
 			observer.disconnect();
 			stopVnc();
 			socket?.close();
