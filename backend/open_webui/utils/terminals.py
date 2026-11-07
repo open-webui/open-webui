@@ -1,11 +1,14 @@
 """Shared routing helpers for admin-configured terminal servers."""
 
 import asyncio
+import base64
 import hashlib
 import logging
+import mimetypes
 import ntpath
 import posixpath
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
@@ -17,6 +20,10 @@ from open_webui.utils.skill_files import (
     skill_content_page,
     skill_overview,
 )
+
+if TYPE_CHECKING:
+    from fastapi import Request
+    from open_webui.models.users import UserModel
 
 TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
 TERMINAL_CONTEXT_DEFAULT = 'default'
@@ -187,8 +194,9 @@ async def get_terminal_json(
     file: dict | None = None,
     method: str = 'GET',
     body: dict | None = None,
+    binary: bool = False,
 ):
-    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
+    """Read JSON (or raw bytes) or upload a file through an admin terminal or a personal terminal's browser."""
     metadata = metadata or {}
     terminal_id = metadata.get('terminal_id')
     if not ENABLE_TOOL_SERVERS or not terminal_id:
@@ -237,6 +245,8 @@ async def get_terminal_json(
                     ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
                     allow_redirects=False,
                 ) as response:
+                    if binary and 200 <= response.status < 300:
+                        return await response.read()
                     return await response.json() if 200 <= response.status < 300 else None
         except TimeoutError as error:
             raise TimeoutError(
@@ -385,6 +395,15 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
         log.warning('File terminal unavailable (%s)', type(error).__name__)
         for entry in files:
             entry['terminal_error'] = 'File saved in Open WebUI, but the selected terminal is unavailable.'
+
+
+async def load_terminal_image(request: 'Request', user: 'UserModel', metadata: dict, path: str) -> str:
+    """Read an image from the selected terminal as a data URL."""
+    data = await get_terminal_json(request, user, metadata, f'/files/view?path={quote(path, safe="")}', binary=True)
+    if not isinstance(data, bytes):
+        raise ValueError(f'Could not read {path} from the terminal')
+    mime_type = mimetypes.guess_type(path)[0] or 'application/octet-stream'
+    return f'data:{mime_type};base64,{base64.b64encode(data).decode("utf-8")}'
 
 
 async def get_terminal_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:

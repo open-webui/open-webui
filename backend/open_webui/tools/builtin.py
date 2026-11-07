@@ -69,7 +69,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import upload_files_to_terminal
+from open_webui.utils.terminals import load_terminal_image, upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -461,7 +461,7 @@ async def edit_image(
     Supports targeted edits such as adding, removing, replacing, inpainting, extending, or compositing image content.
 
     :param prompt: A description of the transformation to apply to the provided images
-    :param image_urls: Source image URLs to modify or use as composition inputs
+    :param image_urls: Source image URLs, or paths on the selected terminal, to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
     :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
@@ -471,6 +471,10 @@ async def edit_image(
 
     try:
         user = UserModel(**__user__) if __user__ else None
+
+        for index, url in enumerate(image_urls):
+            if url.startswith('/') and not url.startswith('/api/v1/files/'):
+                image_urls[index] = await load_terminal_image(__request__, user, __metadata__ or {}, url)
 
         images = await image_edits(
             request=__request__,
