@@ -1055,15 +1055,18 @@ async def ydoc_document_join(sid, data):
         user_name = user.get('name', '')
         user_color = data.get('user_color', '#000000')
 
-        if (
-            sid not in await YDOC_MANAGER.get_users(document_id)
-            and await YDOC_MANAGER.count_documents_for_user(sid) >= YDOC_MANAGER.MAX_DOCUMENTS_PER_SESSION
-        ):
-            log.warning(f'Session {sid} is at the open-document limit. Rejecting join.')
-            return
+        # Serialise per user so parallel joins cannot exceed the limit
+        async with SOCKET_EVENT_LOCKS.setdefault(('user', user_id), asyncio.Lock()):
+            user_sids = get_session_ids_by_user_ids([user_id])
+            if sid not in await YDOC_MANAGER.get_users(document_id) and (
+                sum([await YDOC_MANAGER.count_documents_for_user(user_sid) for user_sid in user_sids])
+                >= YDOC_MANAGER.MAX_DOCUMENTS_PER_USER
+            ):
+                log.warning('User %s is at the open-document limit. Rejecting join.', user_id)
+                return
 
-        log.info('User %s joining document %s', user_id, document_id)
-        await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
+            log.info('User %s joining document %s', user_id, document_id)
+            await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
 
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
