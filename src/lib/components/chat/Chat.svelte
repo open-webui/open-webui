@@ -517,6 +517,7 @@
 	let files: any[] = [];
 	let terminalContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
+		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
 		const attachments = [structuredClone(file)];
 		if (fullWidthTabs) {
 			terminalTabs?.focusMainChat();
@@ -3750,6 +3751,7 @@
 		inputFiles: any[],
 		bridgeRequest: { userMessageId: string; modelId: string } | null = null
 	) => {
+		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -4820,6 +4822,10 @@
 	};
 
 	const submitMessage = async (parentId, prompt) => {
+		if (selectedModels.includes('')) {
+			toast.error($i18n.t('Model not selected'));
+			return;
+		}
 		let userPrompt = prompt;
 		let userMessageId = uuidv4();
 
