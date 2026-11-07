@@ -680,7 +680,7 @@
 						{:else if viewMode === 'grid'}
 							<span
 								use:fitGridName={entry.name}
-								class="h-8 w-full min-w-0 shrink-0 overflow-hidden [overflow-wrap:anywhere] text-xs leading-4 {nameColor}"
+								class="max-h-8 w-full min-w-0 shrink-0 overflow-hidden [overflow-wrap:anywhere] text-xs leading-4 {nameColor}"
 							></span>
 						{:else}
 							<span class="flex-1 truncate text-xs {nameColor}">

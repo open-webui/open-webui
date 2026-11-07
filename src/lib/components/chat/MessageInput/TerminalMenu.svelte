@@ -21,6 +21,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
+	import Computer from '$lib/components/icons/Computer.svelte';
 
 	const i18n = getContext<any>('i18n');
 
@@ -38,6 +39,12 @@
 				chatContext(t)?.context_id === 'chat_id'
 			)
 	);
+	// Tether presences are the user's own paired devices, listed apart from servers.
+	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
+	$: systemSections = [
+		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
+		{ devices: true, terminals: systemTerminals.filter(isDevice) }
+	].filter((section) => section.terminals.length > 0);
 	$: directTerminals = (
 		$config?.features?.enable_direct_integrations &&
 		($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
@@ -297,15 +304,15 @@
 						{/each}
 					{/if}
 
-					<!-- System terminals -->
-					{#if systemTerminals.length > 0}
+					<!-- System terminals, then the user's own devices -->
+					{#each systemSections as section}
 						<div class="flex items-center justify-between pl-2 pr-1 py-1">
 							<span
 								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 							>
-								{$i18n.t('System')}
+								{section.devices ? $i18n.t('Your devices') : $i18n.t('System')}
 							</span>
-							{#if $user?.role === 'admin'}
+							{#if !section.devices && $user?.role === 'admin'}
 								<Tooltip content={$i18n.t('Add Terminal')} placement="top">
 									<button
 										type="button"
@@ -331,7 +338,7 @@
 							{/if}
 						</div>
 
-						{#each systemTerminals as terminal}
+						{#each section.terminals as terminal}
 							<div
 								class="group/instance relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							>
@@ -349,7 +356,11 @@
 									on:click={() => selectSystem(terminal)}
 								>
 									<div class="flex flex-1 gap-2 items-center truncate">
-										<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+										{#if section.devices}
+											<Computer className="size-3.5 shrink-0" strokeWidth="2" />
+										{:else}
+											<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+										{/if}
 										<span class="truncate">{terminal.name || $i18n.t('Terminal')}</span>
 									</div>
 									{#if $selectedTerminalId === terminal.id}
@@ -391,7 +402,7 @@
 								{/if}
 							</div>
 						{/each}
-					{/if}
+					{/each}
 				</DropdownMenu>
 			</div>
 		</Dropdown>
