@@ -3,6 +3,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { copyToClipboard } from '$lib/utils';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
@@ -70,11 +71,11 @@
 		reader.readAsDataURL(inputFiles[0]);
 	};
 
-	const copyUrl = () => {
-		navigator.clipboard.writeText(
+	const copyUrl = async () => {
+		const copied = await copyToClipboard(
 			`${WEBUI_API_BASE_URL}/channels/webhooks/${webhook.id}/${webhook.token}`
 		);
-		toast.success($i18n.t('Copied'));
+		if (copied) toast.success($i18n.t('Copied'));
 	};
 </script>
 
