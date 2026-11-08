@@ -1225,6 +1225,7 @@
 		showEmbeds.set(false);
 	}
 	$: if (viewReady && $showCallOverlay) openFeature('voice');
+	$: if (viewReady && $showTabs === 'voice') openFeature('voice');
 	$: if (viewReady && $showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
 		const request = $showFileNavPath;
 		showFileNavPath.set(null);

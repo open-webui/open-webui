@@ -175,7 +175,11 @@ export const showSettings: Writable<boolean | string | SettingsModalRequest> = w
 export const showChangelog = writable(false);
 
 export const showTabs = writable<
-	boolean | 'comments' | 'side' | (CommentTarget & { tab: 'comments'; comment_id?: string })
+	| boolean
+	| 'comments'
+	| 'side'
+	| 'voice'
+	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
 export const showOverview = writable(false);

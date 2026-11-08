@@ -3018,7 +3018,7 @@
 														on:click={async () => {
 															if (callActive) {
 																showCallOverlay.set(true);
-																showTabs.set(true);
+																showTabs.set('voice');
 																return;
 															}
 															if (selectedModels.length > 1) {
