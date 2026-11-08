@@ -625,6 +625,7 @@ app.state.SCIM_TOKEN = SCIM_TOKEN
 # Models
 
 app.state.BASE_MODELS = []
+app.state.BASE_MODELS_SNAPSHOT = None
 
 # WebUI
 

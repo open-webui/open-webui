@@ -490,6 +490,16 @@ class EventDefinitions(BaseModel):
     MODEL_DISABLED: EventDefinition = EventDefinition(
         name='model.disabled', description='A model was disabled.', message='Model disabled'
     )
+    MODEL_AVAILABLE: EventDefinition = EventDefinition(
+        name='model.available',
+        description='A model appeared in the fetched model list.',
+        message='Model available',
+    )
+    MODEL_UNAVAILABLE: EventDefinition = EventDefinition(
+        name='model.unavailable',
+        description='A model disappeared from the fetched model list.',
+        message='Model unavailable',
+    )
     MODEL_ACCESS_UPDATED: EventDefinition = EventDefinition(
         name='model.access_updated', description='Model access was updated.', message='Model access updated'
     )
