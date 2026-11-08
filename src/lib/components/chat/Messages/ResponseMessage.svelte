@@ -1231,6 +1231,12 @@
 										.split('\n')
 										.map((line) => line.slice(2))
 										.map((line) => (line.endsWith(',') ? line.slice(0, -1) : line))
+										.map((line) =>
+											line.replace(
+												/: (\d+)$/,
+												(_, count) => `: ${Number(count).toLocaleString($i18n.language)}`
+											)
+										)
 										.join('\n')}
 									<span id="usage-{message.id}" hidden>{usage}</span>
 									<Tooltip
