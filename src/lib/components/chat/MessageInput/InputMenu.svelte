@@ -311,7 +311,6 @@
 						<ChevronLeft />
 						<div>{$i18n.t('Add Context')}</div>
 					</button>
-					<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
 
 					{#if $visibleControls['chat.attach_webpage']}
 						<Tooltip
