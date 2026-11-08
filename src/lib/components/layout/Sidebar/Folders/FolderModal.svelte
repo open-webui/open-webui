@@ -488,7 +488,7 @@
 
 {#if show && showDirectoryPicker && data.terminal_id}
 	<Modal bind:show={showDirectoryPicker} ariaLabel={$i18n.t('Choose working directory')} size="md">
-		<div class="p-4">
+		<div class="px-2 py-4">
 			<div class="mb-3 flex items-center justify-between text-sm">
 				<span>{$i18n.t('Choose working directory')}</span>
 				<button

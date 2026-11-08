@@ -4,6 +4,7 @@
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
+	import CloneRepository from './FileNav/CloneRepository.svelte';
 	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
@@ -22,6 +23,7 @@
 	} from '$lib/stores';
 	import {
 		getCwd,
+		getTerminalFeatures,
 		getFileMatches,
 		listFiles,
 		readFile,
@@ -123,6 +125,25 @@
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
 	export let onSelectDirectory: ((path: string) => void) | null = null;
+	let showCloneRepository = false;
+	let gitAvailable = false;
+	let cloneSupportVersion = 0;
+	async function checkCloneSupport(
+		terminal: { url: string; key: string } | null,
+		session: string | null,
+		enabled: boolean
+	) {
+		const version = ++cloneSupportVersion;
+		gitAvailable = false;
+		showCloneRepository = false;
+		if (!terminal || !enabled) return;
+		const features = await getTerminalFeatures(
+			{ baseUrl: terminal.url, key: terminal.key },
+			session
+		);
+		if (!disposed && version === cloneSupportVersion) gitAvailable = features.git === true;
+	}
+	$: void checkCloneSupport(selectedTerminal, chatId, !!onSelectDirectory);
 	export let manageFileRequests = true;
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
@@ -3177,15 +3198,51 @@
 		</div>
 
 		{#if onSelectDirectory}
-			<div
-				class="flex shrink-0 items-center justify-end border-t border-gray-50 px-2 pt-3 dark:border-gray-850/30"
-			>
-				<button
-					type="button"
-					class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-					disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
-					on:click={() => onSelectDirectory?.(currentPath)}>{$i18n.t('Use this directory')}</button
-				>
+			<div class="shrink-0 border-t border-gray-50 pt-3 dark:border-gray-850/30">
+				{#if gitAvailable && showCloneRepository && selectedTerminal}
+					{#key `${effectiveTerminalId}:${chatId}`}
+						<CloneRepository
+							terminal={selectedTerminal}
+							{chatId}
+							directory={currentPath}
+							disabled={loading || !!error || !savedPathLoaded || !currentWritable}
+							onCancel={() => (showCloneRepository = false)}
+							onCloned={async (path) => {
+								const selector = effectiveTerminalId,
+									session = chatId;
+								showCloneRepository = false;
+								await loadDir(path);
+								if (!disposed && selector === effectiveTerminalId && session === chatId)
+									onSelectDirectory?.(path);
+							}}
+						/>
+					{/key}
+				{:else}
+					<div class="flex items-center justify-end gap-2 px-2">
+						{#if gitAvailable}
+							<button
+								type="button"
+								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-850"
+								disabled={loading ||
+									!!error ||
+									!savedPathLoaded ||
+									!currentWritable ||
+									!!selectedFile}
+								on:click={() => (showCloneRepository = true)}
+							>
+								<Icon name="git-branch" size={14} />
+								{$i18n.t('Clone repository')}
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="flex h-7 items-center rounded-lg bg-gray-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
+							on:click={() => onSelectDirectory?.(currentPath)}
+							>{$i18n.t('Use this directory')}</button
+						>
+					</div>
+				{/if}
 			</div>
 		{/if}
 

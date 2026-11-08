@@ -113,7 +113,7 @@ export type TerminalFeatures = {
 
 // Missing flags mean unsupported; never probe a new endpoint on an older server.
 export async function getTerminalFeatures(
-	connection: TerminalConnection,
+	connection: Pick<TerminalConnection, 'baseUrl' | 'key'>,
 	chatId: string | null,
 	signal?: AbortSignal
 ): Promise<TerminalFeatures> {
@@ -208,7 +208,7 @@ export class TerminalRequestError extends Error {
 }
 
 export const terminalRequest = async <T>(
-	connection: TerminalConnection,
+	connection: Pick<TerminalConnection, 'baseUrl' | 'key'>,
 	chatId: string | null,
 	path: string,
 	options: RequestInit = {}

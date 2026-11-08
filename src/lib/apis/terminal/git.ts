@@ -1,6 +1,11 @@
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
-import type { TerminalConnection } from './index';
+import {
+	joinTerminalPath,
+	terminalRequest,
+	type TerminalConnection,
+	type TerminalProcessOutput
+} from './index';
 
 export type GitFile = {
 	path: string;
@@ -117,4 +122,68 @@ export function gitAction<T>(
 		body = { name: fields.branch };
 	}
 	return gitRequest<T>(connection, chatId, directory, operation, {}, body, method);
+}
+
+const repositoryFolderName = (url: string) =>
+	url
+		.trim()
+		.replace(/\/+$/, '')
+		.split(/[/:]/)
+		.pop()
+		?.replace(/\.git$/, '') ?? '';
+
+export async function cloneRepository(
+	connection: Pick<TerminalConnection, 'baseUrl' | 'key'>,
+	chatId: string | null,
+	directory: string,
+	url: string,
+	signal?: AbortSignal
+): Promise<string> {
+	url = url.trim();
+	const name = repositoryFolderName(url);
+	if (
+		/[\s\x00-\x1f\x7f]/.test(url) ||
+		!(/^(https?|ssh):\/\/[^/]+\/.+/.test(url) || /^[\w.-]+@[\w.-]+:.+/.test(url))
+	)
+		throw new Error('Enter an HTTP(S) or SSH repository URL');
+	if (!name || name === '.' || name === '..' || /[/\\\x00-\x1f\x7f]/.test(name))
+		throw new Error('Repository URL must include a valid repository name');
+	if (!directory) throw new Error('Choose a destination directory');
+
+	const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+	let result = await terminalRequest<TerminalProcessOutput>(
+		connection,
+		chatId,
+		'/execute?wait=1&tail=20',
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				command: `git clone -- ${quote(url)} ${quote(`./${name}`)}`,
+				cwd: directory,
+				env: {
+					GIT_TERMINAL_PROMPT: '0',
+					GIT_SSH_COMMAND: 'ssh -oBatchMode=yes -oStrictHostKeyChecking=yes -oConnectTimeout=15'
+				}
+			}),
+			signal
+		}
+	);
+	while (result.status === 'running') {
+		result = await terminalRequest<TerminalProcessOutput>(
+			connection,
+			chatId,
+			`/execute/${encodeURIComponent(result.id)}/status?wait=1&tail=20`,
+			{ signal }
+		);
+	}
+	if (result.status !== 'done' || result.exit_code !== 0) {
+		throw new Error(
+			result.output
+				?.map((entry) => entry.data)
+				.join('')
+				.trim() || 'Failed to clone repository'
+		);
+	}
+	return joinTerminalPath(directory, name);
 }
