@@ -9,6 +9,7 @@
 	const i18n: any = getContext('i18n');
 
 	import {
+		baseModels,
 		channelRequestQueues,
 		channels,
 		models,
@@ -635,7 +636,7 @@
 					{
 						users: userSuggestions,
 						apps: $config?.features?.enable_apps ?? false,
-						models: $models,
+						models: $baseModels,
 						channels: channelSuggestions ? $channels : []
 					}
 				);

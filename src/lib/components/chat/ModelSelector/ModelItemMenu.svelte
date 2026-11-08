@@ -28,7 +28,7 @@
 	export let onClose: Function = () => {};
 
 	$: canEdit =
-		!model?.id?.startsWith('agent:') &&
+		model?.owned_by !== 'agent' &&
 		(model?.preset || model?.info?.base_model_id
 			? model?.info?.user_id === $user?.id
 			: $user?.role === 'admin');

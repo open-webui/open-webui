@@ -194,7 +194,7 @@
 			readChatConfigMetadata();
 
 			workspaceModels = await getBaseModels(localStorage.token);
-			baseModels = await getModels(localStorage.token, null, false);
+			baseModels = (await getModels(localStorage.token)).filter((model: any) => model.owned_by !== 'agent');
 
 			models = baseModels.map((m: any) => {
 				const workspaceModel = workspaceModels.find((wm: any) => wm.id === m.id);

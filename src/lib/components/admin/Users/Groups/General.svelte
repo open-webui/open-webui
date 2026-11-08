@@ -2,7 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { getModelsConfig } from '$lib/apis/configs';
-	import { models } from '$lib/stores';
+	import { baseModels, models } from '$lib/stores';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -39,9 +39,9 @@
 		data = { ...data, config: { ...data?.config, default_models: [] } };
 	}
 	$: modelItems = [
-		...$models.map((model) => ({ value: model.id, label: model.name || model.id, model })),
+		...$baseModels.map((model) => ({ value: model.id, label: model.name || model.id, model })),
 		...(data?.config?.default_models ?? [])
-			.filter((id: string) => !$models.some((model) => model.id === id))
+			.filter((id: string) => !$baseModels.some((model) => model.id === id))
 			.map((id: string) => ({
 				value: id,
 				label: id,
@@ -217,7 +217,7 @@
 	{#if !data?.config?.default_models?.length}
 		<p class="text-xs text-gray-500">
 			{inheritedModelSource}{inheritedModelIds.length ? ': ' : ''}{inheritedModelIds
-				.map((id) => $models.find((model) => model.id === id)?.name || id)
+				.map((id) => $baseModels.find((model) => model.id === id)?.name || id)
 				.join(', ')}
 		</p>
 	{/if}

@@ -14,7 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { user, config, models, settings } from '$lib/stores';
+	import { baseModels, user, config, settings } from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import FileNav from '$lib/components/chat/FileNav.svelte';
@@ -86,9 +86,7 @@
 	$: modelTerminalId = data.terminal_id;
 	$: modelDirectory = data.working_directory;
 	$: loadTerminalModels(show, modelTerminalId, modelDirectory);
-	$: folderModels = modelTerminalId
-		? terminalModels
-		: $models.filter((model) => !model.id.startsWith('agent:'));
+	$: folderModels = modelTerminalId ? terminalModels : $baseModels;
 
 	onDestroy(() => {
 		clearTimeout(modelTimer);

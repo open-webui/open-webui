@@ -2,6 +2,7 @@
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
 	import {
+		baseModels,
 		config,
 		mobile,
 		models,
@@ -1035,8 +1036,11 @@ ${content}
 		await tick();
 
 		selectedModelId =
-			resolveDefaultModelIds($models, $settings?.models, $config?.default_models?.split(','))[0] ??
-			'';
+			resolveDefaultModelIds(
+				$baseModels,
+				$settings?.models,
+				$config?.default_models?.split(',')
+			)[0] ?? '';
 
 		const dropzoneElement = document.getElementById('note-editor');
 

@@ -81,6 +81,10 @@ export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
 
+export const baseModels = derived(models, ($models) =>
+	$models.filter((model) => model.owned_by !== 'agent')
+);
+
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const skills: Writable<null | any[]> = writable(null);

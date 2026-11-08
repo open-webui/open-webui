@@ -32,10 +32,10 @@ def model_controls(model):
     return controls
 
 
-async def get_models(request, user, terminal_id, chat_id=None, *, provider=None, cwd=None):
+async def get_models(request, user, metadata, *, provider=None, cwd=None):
+    terminal_id = metadata.get('terminal_id')
     if not terminal_id:
         return []
-    metadata = {'terminal_id': terminal_id, 'chat_id': chat_id}
     if not cwd:
         directory = await get_terminal_json(request, user, metadata, '/files/cwd')
         cwd = (directory or {}).get('cwd')
