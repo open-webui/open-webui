@@ -97,35 +97,37 @@
 </script>
 
 <div class="space-y-0.5">
-	<ModelSettingsSection
-		label={$i18n.t('settings.admin.models.capabilities.title')}
-		description={$i18n.t(
-			'Choose which features are available for this model. The connected model and provider must support them.'
-		)}
-	>
-		<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
-			<span class="min-w-0 truncate"
-				>{enabledCapabilityIds
-					.slice(0, 3)
-					.map((key) => capabilityLabels[key].label)
-					.join(', ') || $i18n.t('None')}</span
-			>
-			{#if enabledCapabilityIds.length > 3}<span class="shrink-0 text-gray-500"
-					>+{enabledCapabilityIds.length - 3}</span
-				>{/if}
-		</span>
-		<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
-			{#each availableCapabilities.filter((key) => $visibleControls[`model_editor.capabilities.${key}`]) as key}
-				<ModelSettingToggle
-					label={capabilityLabels[key].label}
-					description={capabilityLabels[key].description}
-					checked={effectiveCapabilities[key]}
-					on:change={(e) => (capabilities[key] = e.detail)}
-					{disabled}
-				/>
-			{/each}
-		</div>
-	</ModelSettingsSection>
+	{#if availableCapabilities.some((key) => $visibleControls[`model_editor.capabilities.${key}`])}
+		<ModelSettingsSection
+			label={$i18n.t('settings.admin.models.capabilities.title')}
+			description={$i18n.t(
+				'Choose which features are available for this model. The connected model and provider must support them.'
+			)}
+		>
+			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+				<span class="min-w-0 truncate"
+					>{enabledCapabilityIds
+						.slice(0, 3)
+						.map((key) => capabilityLabels[key].label)
+						.join(', ') || $i18n.t('None')}</span
+				>
+				{#if enabledCapabilityIds.length > 3}<span class="shrink-0 text-gray-500"
+						>+{enabledCapabilityIds.length - 3}</span
+					>{/if}
+			</span>
+			<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each availableCapabilities.filter((key) => $visibleControls[`model_editor.capabilities.${key}`]) as key}
+					<ModelSettingToggle
+						label={capabilityLabels[key].label}
+						description={capabilityLabels[key].description}
+						checked={effectiveCapabilities[key]}
+						on:change={(e) => (capabilities[key] = e.detail)}
+						{disabled}
+					/>
+				{/each}
+			</div>
+		</ModelSettingsSection>
+	{/if}
 
 	<!-- Previous DefaultFeatures labels retained for i18n extraction:
 	{$i18n.t('settings.admin.models.defaultFeatures.webSearch.label')}
