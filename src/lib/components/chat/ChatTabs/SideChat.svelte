@@ -634,6 +634,13 @@
 				mergeResponses={() => {}}
 				chatActionHandler={() => {}}
 				allowDelete={false}
+				allowToolApproval={canSend}
+				onToolCallResolved={(res: { message_id: string }) => {
+					// reconnect reads done to tell whether the resumed reply is still running
+					const message = messages.find((m) => m.id === res.message_id);
+					if (message) message.done = false;
+					void reconnect();
+				}}
 				editCodeBlock={false}
 				{autoScroll}
 				{messagesContainerId}
