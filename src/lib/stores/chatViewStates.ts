@@ -138,6 +138,7 @@ export async function flushChatView(entry: Entry): Promise<void> {
 	clearTimeout(entry.timer);
 	if (!entry.loaded || !entry.persistent || entry.promoting) return;
 	if (entry.write) return entry.write;
+	if (entry.persistedRevision >= entry.revision) return;
 	entry.write = (async () => {
 		try {
 			while (
