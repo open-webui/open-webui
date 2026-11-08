@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# CONTEXT-COMPACTION-FIX: turn-closing checkpoints + output-aware token estimate.
+# Applied at image build time by deploy/laptop/openwebui-patch. Drop once upstream.
+
 import copy
 import logging
 import re
@@ -192,8 +195,20 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         messages_map = history.get('messages') or {}
 
     messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
-    compacted_messages = messages[:-1]
-    recent_messages = messages[-1:]
+    boundary = len(messages) - 1
+    last = messages[boundary]
+    if (
+        boundary
+        and last.get('role') == 'assistant'
+        and not last.get('content')
+        and not last.get('output')
+        and messages[boundary - 1].get('role') == 'user'
+    ):
+        # Empty assistant placeholder (failed/aborted turn): keep the user's
+        # prompt verbatim in the retained window instead of only in the summary.
+        boundary -= 1
+    compacted_messages = messages[:boundary]
+    recent_messages = messages[boundary:]
     if not compacted_messages or not recent_messages:
         return {'ok': True, 'compacted': False, 'reason': 'too_short'}
 
@@ -208,9 +223,39 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
         previous_summary,
         config['prompt_template'],
     )
+
+    checkpoint = recent_messages[0]
+    checkpoint_id = checkpoint.get('id') or current_id
     await Chats.upsert_message_to_chat_by_id_and_message_id(
-        chat.id, current_id, {'contextSummary': summary}, touch=False
+        chat.id, checkpoint_id, {'contextSummary': summary}, touch=False
     )
+
+    # A retained assistant turn replays its whole `output` trail on the next
+    # request, and compaction cannot bound that (a long tool loop can be
+    # megabytes). Mark the turn closed so the replay keeps the visible content
+    # and drops the trail the summary covers. The stored `output` is untouched,
+    # so the UI keeps the full transcript.
+    retained = recent_messages[-1]
+    retained_output = list(retained.get('output') or [])
+    if retained.get('role') == 'assistant' and retained.get('id') and retained_output:
+        from open_webui.utils.middleware import output_id
+
+        retained_output.append(
+            {
+                'type': 'open_webui:context_compaction',
+                'id': output_id('cc'),
+                'call_id': None,
+                'summary': summary,
+            }
+        )
+        if retained.get('id') == checkpoint_id:
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                chat.id, checkpoint_id, {'output': retained_output}, touch=False
+            )
+        else:
+            await Chats.upsert_message_to_chat_by_id_and_message_id(
+                chat.id, retained['id'], {'output': retained_output}, touch=False
+            )
 
     return {
         'ok': True,
@@ -306,6 +351,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
         if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+            tokens += _estimate_tokens(messages[idx].get('output'))
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 
@@ -327,44 +373,56 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
     for idx in range(len(messages) - 1, -1, -1):
         message = messages[idx]
         value = message.get('contextSummary') or message.get('context_summary')
-        if isinstance(value, str) and value.strip():
-            return messages[idx:], value
-
-        marker = next(
-            (
-                item
-                for item in reversed(message.get('output') or [])
-                if item.get('type') == 'open_webui:context_compaction'
-            ),
-            None,
-        )
-        if not marker:
+        summary = value if isinstance(value, str) and value.strip() else None
+        markers = [
+            item for item in message.get('output') or [] if item.get('type') == 'open_webui:context_compaction'
+        ]
+        marker = markers[-1] if markers else None
+        if not summary and marker is None:
             continue
 
-        # A tool-loop checkpoint can retain output from an earlier reply.
-        for cut_idx in range(idx, -1, -1):
-            output = messages[cut_idx].get('output') or []
-            start = next(
-                (
-                    position
-                    for position, item in enumerate(output)
-                    if item.get('type') == 'function_call' and item.get('call_id') == marker['call_id']
-                ),
-                None,
-            )
-            if start is not None:
-                while start and output[start - 1].get('type') != 'function_call_output':
-                    start -= 1
-                return [
-                    *messages[max(0, cut_idx - 1) : cut_idx],
-                    {
-                        **messages[cut_idx],
-                        'output': [
-                            item for item in output[start:] if item.get('type') != 'open_webui:context_compaction'
-                        ],
-                    },
-                    *messages[cut_idx + 1 :],
-                ], marker['summary']
+        # A mid-turn marker names the tool call the retained window resumes at.
+        # A tool-loop checkpoint can retain output from an earlier reply, so
+        # search backwards from the marker's message.
+        if marker is not None and marker.get('call_id'):
+            for cut_idx in range(idx, -1, -1):
+                output = messages[cut_idx].get('output') or []
+                start = next(
+                    (
+                        position
+                        for position, item in enumerate(output)
+                        if item.get('type') == 'function_call' and item.get('call_id') == marker.get('call_id')
+                    ),
+                    None,
+                )
+                if start is not None:
+                    while start and output[start - 1].get('type') != 'function_call_output':
+                        start -= 1
+                    return [
+                        *messages[max(0, cut_idx - 1) : cut_idx],
+                        {
+                            **messages[cut_idx],
+                            'output': [
+                                item
+                                for item in output[start:]
+                                if item.get('type') != 'open_webui:context_compaction'
+                            ],
+                        },
+                        *messages[cut_idx + 1 :],
+                    ], summary or marker.get('summary')
+
+        # No resume point: the checkpoint closed the turn. Keep the message's
+        # visible content and shed the tool trail, which a long agentic turn can
+        # grow to megabytes and which the summary already covers.
+        if message.get('role') == 'assistant' and message.get('output'):
+            return [
+                *messages[max(0, idx - 1) : idx],
+                {**message, 'output': []},
+                *messages[idx + 1 :],
+            ], summary or marker.get('summary')
+
+        if summary:
+            return messages[idx:], summary
 
     return messages, None
 
@@ -376,6 +434,10 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
         if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+            # The recorded usage describes the prompt of *that* request; the
+            # message's own `output` (tool calls/results produced during it) is
+            # replayed on the next request and is not part of that prompt.
+            tokens += _estimate_tokens(messages[idx].get('output'))
             return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
