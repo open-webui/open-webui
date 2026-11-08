@@ -276,6 +276,30 @@
 	}
 	const persistPanels = (panels: typeof tabs, selector: string | null, ready: boolean) => {
 		if (!ready || !viewEntry || chatLoading || viewEntry.promoting) return;
+		// The Files tab follows the terminal picked for the chat and starts over there.
+		if (selector && selector !== viewEntry.state.selectedTerminalId) {
+			const moved = panels.tabs.filter(
+				(tab) => tab.kind === 'files' && tab.terminalId !== selector
+			);
+			for (const tab of moved) {
+				viewEntry.drafts.delete(tab.id);
+				delete fileContexts[tab.id];
+			}
+			panels = {
+				...panels,
+				tabs: panels.tabs.map((tab) =>
+					moved.includes(tab)
+						? {
+								...tab,
+								label: $i18n.t('Files'),
+								terminalId: selector,
+								path: undefined,
+								directory: undefined
+							}
+						: tab
+				)
+			};
+		}
 		if (viewEntry.state.panels !== panels || viewEntry.state.selectedTerminalId !== selector)
 			changeChatView(viewEntry, { ...viewEntry.state, panels, selectedTerminalId: selector });
 	};
