@@ -50,7 +50,7 @@ async def get_models(request, user, metadata, *, provider=None, cwd=None):
         {
             'id': f'agent:{quote(terminal_id, safe="")}:{agent["id"]}:{quote(model["id"], safe="")}',
             'name': f'{agent["id"]}/{model["id"]}',
-            'owned_by': 'agent',
+            'owned_by': 'terminal',
             'object': 'model',
             'agent': {'terminal_id': terminal_id, 'provider': agent['id'], 'model': model['id']},
             'info': {

@@ -363,7 +363,7 @@
 		return models
 			.filter(
 				(baseModel) =>
-					baseModel.owned_by !== 'agent' &&
+					baseModel.owned_by !== 'terminal' &&
 					(!currentModelId ||
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
@@ -692,7 +692,7 @@
 				const base_model = $baseModels
 					.filter(
 						(m) =>
-							m.owned_by !== 'agent' &&
+							m.owned_by !== 'terminal' &&
 							((!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));

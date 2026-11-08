@@ -1080,7 +1080,7 @@
 		const generation = ++agentDiscovery;
 		models.update((available) =>
 			available.filter(
-				(model) => model.owned_by !== 'agent' || model.agent.terminal_id === $selectedTerminalId
+				(model) => model.owned_by !== 'terminal' || model.agent.terminal_id === $selectedTerminalId
 			)
 		);
 		try {
