@@ -878,7 +878,7 @@
 		}
 
 		if (mounted && terminal) {
-			if (chatChanged && chatId && !oldChatId) {
+			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
