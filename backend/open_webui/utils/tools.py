@@ -1378,7 +1378,9 @@ async def get_terminal_cwd(
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
-        async with get_terminal_client(base_url, headers.get('X-User-Id'), 
+        async with get_terminal_client(
+            base_url,
+            headers.get('X-User-Id'),
             timeout=aiohttp.ClientTimeout(total=5),
             trust_env=True,
         ) as session:
@@ -1406,7 +1408,9 @@ async def get_terminal_system_prompt(
     """
     base = base_url.rstrip('/')
     try:
-        async with get_terminal_client(base_url, headers.get('X-User-Id'), 
+        async with get_terminal_client(
+            base_url,
+            headers.get('X-User-Id'),
             timeout=aiohttp.ClientTimeout(total=3),
             trust_env=True,
         ) as session:
@@ -1563,8 +1567,12 @@ async def get_terminal_tools(
     if connection.get('owner_id') == user.id:
         url = connection['url']
         openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id})
-        server_data = {'id': terminal_id, 'url': url, 'openapi': openapi,
-                       'specs': convert_openapi_to_tool_payload(openapi)}
+        server_data = {
+            'id': terminal_id,
+            'url': url,
+            'openapi': openapi,
+            'specs': convert_openapi_to_tool_payload(openapi),
+        }
     else:
         terminal_servers = await get_terminal_servers(request)
         server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
@@ -1918,8 +1926,11 @@ async def execute_tool_server(
             else:
                 body_params = params
 
-        async with get_terminal_client(url, (headers or {}).get('X-User-Id'), 
-            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER)
+        async with get_terminal_client(
+            url,
+            (headers or {}).get('X-User-Id'),
+            trust_env=True,
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER),
         ) as session:
             request_method = getattr(session, http_method.lower())
 

@@ -1134,7 +1134,11 @@ async def chat_completion(
         if len(parts) != 4:
             raise HTTPException(400, 'Invalid agent model')
         candidates = await get_agent_models(
-            request, user, form_data.get('terminal_id'), form_data.get('chat_id'), provider=parts[2],
+            request,
+            user,
+            form_data.get('terminal_id'),
+            form_data.get('chat_id'),
+            provider=parts[2],
             cwd=requested_directory,
         )
         agent_model = next((item for item in candidates if item['id'] == model_id), None)

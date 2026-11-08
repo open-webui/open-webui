@@ -2850,9 +2850,7 @@ class ChatTable:
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 recipients = await delete_resource_comments('chat', select(Chat.id).filter_by(id=id), db=session)
                 await session.execute(
-                    delete(ChatViewState).where(
-                        ChatViewState.chat_id.in_(select(Chat.id).filter_by(id=id))
-                    )
+                    delete(ChatViewState).where(ChatViewState.chat_id.in_(select(Chat.id).filter_by(id=id)))
                 )
                 await session.execute(delete(Chat).filter_by(id=id))
                 await session.commit()
@@ -2901,9 +2899,7 @@ class ChatTable:
                     'chat', select(Chat.id).filter_by(user_id=user_id), db=session
                 )
                 await session.execute(
-                    delete(ChatViewState).where(
-                        ChatViewState.chat_id.in_(select(Chat.id).filter_by(user_id=user_id))
-                    )
+                    delete(ChatViewState).where(ChatViewState.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
                 await session.execute(delete(Chat).filter_by(user_id=user_id))
                 await session.commit()

@@ -1121,8 +1121,11 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
             try:
                 await notify(
-                    u.id, f'channel:{channel.id}:{message.id}', f'{channel.name} / Open WebUI',
-                    message.content, '/channels/' + quote(channel.id, safe=''),
+                    u.id,
+                    f'channel:{channel.id}:{message.id}',
+                    f'{channel.name} / Open WebUI',
+                    message.content,
+                    '/channels/' + quote(channel.id, safe=''),
                 )
             except Exception:
                 log.exception('Tether channel notification failed')

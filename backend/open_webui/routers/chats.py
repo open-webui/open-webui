@@ -50,7 +50,7 @@ from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
 from open_webui.utils.tool_permissions import DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT, get_tool_permissions_auto_config
 from open_webui.utils.tool_search import DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT, validate_decisions_config
-from pydantic import AliasChoices, BaseModel, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -237,33 +237,12 @@ class ChatConfigForm(BaseModel):
     ENABLE_TOOL_PERMISSIONS: bool = False
     ENABLE_TOOL_CALL_LABELS: bool = False
     ENABLE_TOOL_PERMISSIONS_AUTO: bool = False
-    TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: str = Field(
-        default='https://api.openai.com/v1',
-        validation_alias=AliasChoices(
-            'TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL', 'TOOL_PERMISSIONS_DECISIONS_API_BASE_URL'
-        ),
-    )
-    TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: str = Field(
-        default='',
-        validation_alias=AliasChoices('TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY', 'TOOL_PERMISSIONS_DECISIONS_API_KEY'),
-    )
-    TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: str = Field(
-        default='gpt-6-luna',
-        validation_alias=AliasChoices('TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL', 'TOOL_PERMISSIONS_DECISIONS_MODEL'),
-    )
-    TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: float = Field(
-        default=0.5,
-        validation_alias=AliasChoices(
-            'TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD', 'TOOL_PERMISSIONS_DECISIONS_THRESHOLD'
-        ),
-        ge=0,
-        le=1,
-        allow_inf_nan=False,
-    )
     TOOL_PERMISSIONS_AUTO_ENGINE: Literal['', 'decisions'] = ''
-    TOOL_PERMISSIONS_AUTO_PROMPT: str = Field(
-        default='', validation_alias=AliasChoices('TOOL_PERMISSIONS_AUTO_PROMPT', 'TOOL_PERMISSIONS_DECISIONS_PROMPT')
-    )
+    TOOL_PERMISSIONS_AUTO_PROMPT: str = ''
+    TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
+    TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: str = ''
+    TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: str = 'gpt-6-luna'
+    TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
     ENABLE_TOOL_SEARCH: bool = False
     TOOL_SEARCH_ENGINE: Literal['bm25', 'embeddings', 'decisions'] = 'bm25'
     TOOL_SEARCH_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
@@ -303,13 +282,6 @@ class ChatConfigForm(BaseModel):
 
 class ChatConfigResponse(ChatConfigForm):
     DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT: str = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
-    TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
-    TOOL_PERMISSIONS_DECISIONS_API_KEY: str = ''
-    TOOL_PERMISSIONS_DECISIONS_MODEL: str = 'gpt-6-luna'
-    TOOL_PERMISSIONS_DECISIONS_THRESHOLD: float = 0.5
-    # Deprecated response aliases for older settings clients.
-    TOOL_PERMISSIONS_DECISIONS_PROMPT: str = ''
-    DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT: str = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
     DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT: str = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
     TOOL_SEARCH_EMBEDDING_MODEL: str = ''
 
@@ -329,12 +301,9 @@ async def get_chat_config_values() -> dict:
         config['CONTEXT_COMPACTION_RETENTION_PERCENTAGE'] = 40
     auto_config = await get_tool_permissions_auto_config()
     config['TOOL_PERMISSIONS_AUTO_PROMPT'] = auto_config['prompt']
-    config['TOOL_PERMISSIONS_DECISIONS_PROMPT'] = auto_config['prompt']
     for key in ('api_base_url', 'api_key', 'model', 'threshold'):
         config[f'TOOL_PERMISSIONS_AUTO_DECISIONS_{key.upper()}'] = auto_config[key]
-        config[f'TOOL_PERMISSIONS_DECISIONS_{key.upper()}'] = auto_config[key]
     config['DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT'] = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
-    config['DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT'] = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
     config['DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT'] = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
     config['TOOL_SEARCH_EMBEDDING_MODEL'] = values.get('rag.embedding_model') or ''
     return config
@@ -958,7 +927,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     for field in ChatConfigForm.model_fields:
         if (
             field in {'TOOL_SEARCH_ENGINE', 'ENABLE_TOOL_PERMISSIONS_AUTO', 'ENABLE_TOOL_CALL_LABELS'}
-            or field.startswith(('TOOL_SEARCH_DECISIONS_', 'TOOL_PERMISSIONS_DECISIONS_', 'TOOL_PERMISSIONS_AUTO_'))
+            or field.startswith(('TOOL_SEARCH_DECISIONS_', 'TOOL_PERMISSIONS_AUTO_'))
         ) and (field not in form_data.model_fields_set):
             updates[field] = current.get(field, updates[field])
     try:

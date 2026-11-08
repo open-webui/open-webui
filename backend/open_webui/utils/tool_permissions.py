@@ -28,16 +28,11 @@ async def get_tool_permissions_auto_config():
     storage_keys = {
         key: f'chat.tool_permissions.auto.{"prompt" if key == "prompt" else "decisions." + key}' for key in keys
     }
-    values = await Config.get_many(*storage_keys.values(), *(f'chat.tool_permissions.decisions.{key}' for key in keys))
-    settings = {}
-    for key, storage_key in storage_keys.items():
-        value = values.get(storage_key)
-        if value is None:
-            value = Config.default_value(storage_key)
-        if value is None:
-            value = values.get(f'chat.tool_permissions.decisions.{key}', '' if key == 'prompt' else None)
-        settings[key] = value
-    return settings
+    values = await Config.get_many(*storage_keys.values())
+    return {
+        key: values[storage_key] if values.get(storage_key) is not None else Config.default_value(storage_key)
+        for key, storage_key in storage_keys.items()
+    }
 
 
 def set_tool_approval_prompt(messages, policy=None):

@@ -924,6 +924,7 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
             actor = await Users.get_user_by_id(data['id'], db=db)
         if data and data.get('typ', 'session') == 'session' and data.get('sid') and data.get('id'):
             from open_webui.models.auth_sessions import AuthSessions
+
             await AuthSessions.revoke(data['sid'], data['id'])
         await invalidate_token(request, token)
         await publish_event(

@@ -239,7 +239,9 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, ticket: str, kind:
         headers['Authorization'] = data['relay']['authorization']
     tasks = []
     try:
-        async with get_terminal_client(base, user.id, cookies=data['relay'].get('cookies', {}), trust_env=True) as client:
+        async with get_terminal_client(
+            base, user.id, cookies=data['relay'].get('cookies', {}), trust_env=True
+        ) as client:
             async with client.ws_connect(
                 url,
                 headers=headers,
@@ -398,7 +400,9 @@ async def proxy_terminal(
     if content_type:
         headers['Content-Type'] = content_type
 
-    session = get_terminal_client(base_url, user.id,
+    session = get_terminal_client(
+        base_url,
+        user.id,
         timeout=aiohttp.ClientTimeout(total=300, connect=10),
         trust_env=True,
     )

@@ -157,7 +157,9 @@ async def delete_notifications(*, resource_type=None, resource_ids=None, object_
     return set(recipients)
 
 
-async def update_notifications_read_at_by_resource_id(*, user_id: str, resource_type: str, resource_id: str, db) -> bool:
+async def update_notifications_read_at_by_resource_id(
+    *, user_id: str, resource_type: str, resource_id: str, db
+) -> bool:
     now = time.time_ns()
     result = await db.execute(
         update(Notification)

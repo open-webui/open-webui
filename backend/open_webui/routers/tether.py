@@ -123,7 +123,10 @@ async def connect(ws: WebSocket):
                         if hub.redis:
                             replaced = await hub.redis.eval(
                                 "if redis.call('get', KEYS[1]) == ARGV[1] then redis.call('set', KEYS[1], ARGV[2], 'EX', 60); return 1 else return 0 end",
-                                1, key, record, updated_record,
+                                1,
+                                key,
+                                record,
+                                updated_record,
                             )
                             if not replaced:
                                 raise ValueError('Tether connection was replaced')
