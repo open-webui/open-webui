@@ -534,6 +534,19 @@ export const formatMessageTimestampFull = (inputDate, locale: string) =>
 		minute: '2-digit'
 	}) ?? '';
 
+const copyWithExecCommand = (text: string, html: string | null = null) => {
+	const setClipboardData = (event: ClipboardEvent) => {
+		event.preventDefault();
+		event.clipboardData?.clearData();
+		event.clipboardData?.setData('text/plain', text);
+		if (html) event.clipboardData?.setData('text/html', html);
+	};
+	document.addEventListener('copy', setClipboardData);
+	const copied = document.execCommand('copy');
+	document.removeEventListener('copy', setClipboardData);
+	return copied;
+};
+
 export const copyToClipboard = async (text, html = null, formatted = false) => {
 	if (formatted) {
 		let styledHtml = '';
@@ -605,6 +618,8 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			styledHtml = html;
 		}
 
+		if (!navigator.clipboard) return copyWithExecCommand(text, styledHtml);
+
 		// Create a blob with HTML content
 		const blob = new Blob([styledHtml], { type: 'text/html' });
 
@@ -624,36 +639,8 @@ export const copyToClipboard = async (text, html = null, formatted = false) => {
 			return await copyToClipboard(text);
 		}
 	} else {
+		if (!navigator.clipboard) return copyWithExecCommand(text);
 		let result = false;
-		if (!navigator.clipboard) {
-			const span = document.createElement('span');
-			span.textContent = text;
-			span.style.whiteSpace = 'pre';
-			span.style.position = 'fixed';
-			span.style.top = '0';
-			span.style.left = '0';
-			span.style.opacity = '0';
-			document.body.appendChild(span);
-
-			const range = document.createRange();
-			range.selectNodeContents(span);
-			const selection = window.getSelection();
-			selection?.removeAllRanges();
-			selection?.addRange(range);
-
-			try {
-				const successful = document.execCommand('copy');
-				const msg = successful ? 'successful' : 'unsuccessful';
-				console.log('Fallback: Copying text command was ' + msg);
-				result = successful;
-			} catch (err) {
-				console.error('Fallback: Oops, unable to copy', err);
-			}
-
-			selection?.removeAllRanges();
-			document.body.removeChild(span);
-			return result;
-		}
 
 		result = await navigator.clipboard
 			.writeText(text)
