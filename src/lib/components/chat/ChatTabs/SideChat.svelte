@@ -102,9 +102,15 @@
 	let isShared = false;
 	let readOnly = false;
 	let temporary =
-		!chatId && $user?.role !== 'admin' && ($user?.permissions?.chat?.temporary_enforced ?? false);
+		!chatId &&
+		$user?.role !== 'admin' &&
+		($user?.permissions?.chat?.temporary ?? true) &&
+		($user?.permissions?.chat?.temporary_enforced ?? false);
 	$: canUseTemporary = $user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true);
-	$: canSave = $user?.role === 'admin' || !($user?.permissions?.chat?.temporary_enforced ?? false);
+	$: canSave =
+		$user?.role === 'admin' ||
+		!canUseTemporary ||
+		!($user?.permissions?.chat?.temporary_enforced ?? false);
 	$: canSend = loaded && !readOnly && sideChatAllowed && (temporary ? canUseTemporary : canSave);
 	let selectedModels = [modelId];
 	let atSelectedModel: Model | undefined = undefined;
