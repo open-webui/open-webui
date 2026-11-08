@@ -780,3 +780,42 @@ export function setOutputText(output: OutputItem[], text: string): OutputItem[] 
 			: item
 	);
 }
+
+function parseToolArguments(args: unknown): Record<string, unknown> {
+	if (!args) {
+		return {};
+	}
+	let value = args;
+	while (typeof value === 'string') {
+		try {
+			value = JSON.parse(value);
+		} catch {
+			break;
+		}
+	}
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+		? (value as Record<string, unknown>)
+		: {};
+}
+
+export function getPendingAskUserFromMessage<T extends { role?: string; output?: unknown }>(
+	message: T
+) {
+	if (message?.role !== 'assistant' || !Array.isArray(message.output)) {
+		return null;
+	}
+
+	const call = message.output.find(
+		(item: OutputItem) =>
+			item?.type === 'function_call' &&
+			item?.name === 'ask_user' &&
+			item?.status === 'pending' &&
+			(item?.call_id || item?.id)
+	);
+
+	if (call) {
+		return { message, call, args: parseToolArguments(call.arguments) };
+	}
+
+	return null;
+}
