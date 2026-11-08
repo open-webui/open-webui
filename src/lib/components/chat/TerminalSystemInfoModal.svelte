@@ -214,7 +214,13 @@
 									{$i18n.t('Network')}: {$i18n.t('Unavailable')}
 								</div>{:else}
 								{#each data.network as network}<div class="flex items-baseline gap-3 min-w-0">
-										<dt title={network.up === null ? '—' : network.up ? $i18n.t('Up') : $i18n.t('Down')}>
+										<dt
+											title={network.up === null
+												? '—'
+												: network.up
+													? $i18n.t('Up')
+													: $i18n.t('Down')}
+										>
 											{network.name}
 										</dt>
 										<dd class="break-all text-gray-600 dark:text-gray-400">
@@ -239,9 +245,9 @@
 								class="w-full table-fixed text-xs tabular-nums text-gray-600 dark:text-gray-400"
 							>
 								<caption class="sr-only"
-									>{data.process_scope === 'user' ? $i18n.t('Your processes') : $i18n.t('Top processes')} · {$i18n.t(
-										'CPU: 100% = one core'
-									)}</caption
+									>{data.process_scope === 'user'
+										? $i18n.t('Your processes')
+										: $i18n.t('Top processes')} · {$i18n.t('CPU: 100% = one core')}</caption
 								>
 								<thead class="text-gray-500 dark:text-gray-500"
 									><tr>
