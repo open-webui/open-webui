@@ -3452,6 +3452,10 @@
 		</form>
 	{/key}
 {/if}
+<!-- Retired save prompts: keep their translations.
+{$i18n.t('Save and send')}
+{$i18n.t('Save your changes before continuing?')}
+-->
 <ConfirmDialog
 	show={dirtyChoice !== null}
 	confirmFirst

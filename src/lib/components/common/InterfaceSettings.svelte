@@ -1513,6 +1513,10 @@
 		</p>
 	</div>
 
+	<!-- Retired terminal setting: keep its translations.
+	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
+	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
+	-->
 	{#if hasTerminal}
 		<div>
 			<div class={settingRowClass}>

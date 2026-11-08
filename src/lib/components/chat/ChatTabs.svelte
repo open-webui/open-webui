@@ -132,6 +132,9 @@
 	export let canSideChat = false;
 
 	export let codeInterpreterEnabled = false;
+	// Retired layout controls: keep their translations.
+	// $i18n.t('Use full-width tabs')
+	// $i18n.t('Use side tabs')
 	export let fullWidth = false;
 	export let mainChatActive = false;
 	export let mainChatStyle = '';

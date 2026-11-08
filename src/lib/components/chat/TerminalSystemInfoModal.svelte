@@ -182,16 +182,21 @@
 					{/each}
 					<div
 						class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
-						title={`${data.os} · ${$i18n.t(data.environment === 'container' ? 'Container' : 'Host')}`}
+						title={`${data.os} · ${data.environment === 'container' ? $i18n.t('Container') : $i18n.t('Host')}`}
 					>
+						<!-- Retired labels: keep their translations.
+						{$i18n.t('CPU cores')}
+						{$i18n.t('{{count}} cores')}
+						-->
 						<span>{$i18n.t('{{count}} cores', { count: data.cpu.cores ?? '—' })}</span>
 						<span>{data.arch}</span>
 						<span title={`${$i18n.t('Service uptime')}: ${duration(data.service_uptime_seconds)}`}
-							>{$i18n.t(data.environment === 'container' ? 'Host uptime' : 'Uptime')}: {duration(
+							>{data.environment === 'container' ? $i18n.t('Host uptime') : $i18n.t('Uptime')}: {duration(
 								data.uptime_seconds
 							)}</span
 						>
 					</div>
+					<!-- Retired label: keep its translation. {$i18n.t('Details')} -->
 					<details class="group/network">
 						<summary
 							class="flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 [&::-webkit-details-marker]:hidden"
@@ -209,7 +214,7 @@
 									{$i18n.t('Network')}: {$i18n.t('Unavailable')}
 								</div>{:else}
 								{#each data.network as network}<div class="flex items-baseline gap-3 min-w-0">
-										<dt title={network.up === null ? '—' : $i18n.t(network.up ? 'Up' : 'Down')}>
+										<dt title={network.up === null ? '—' : network.up ? $i18n.t('Up') : $i18n.t('Down')}>
 											{network.name}
 										</dt>
 										<dd class="break-all text-gray-600 dark:text-gray-400">
@@ -234,7 +239,7 @@
 								class="w-full table-fixed text-xs tabular-nums text-gray-600 dark:text-gray-400"
 							>
 								<caption class="sr-only"
-									>{$i18n.t(data.process_scope === 'user' ? 'Your processes' : 'Top processes')} · {$i18n.t(
+									>{data.process_scope === 'user' ? $i18n.t('Your processes') : $i18n.t('Top processes')} · {$i18n.t(
 										'CPU: 100% = one core'
 									)}</caption
 								>

@@ -137,6 +137,17 @@
 				? 'push'
 				: 'fetch';
 	$: syncLabel = { publish: 'Publish', pull: 'Pull', push: 'Push', fetch: 'Fetch' }[syncAction];
+	// Extraction hints for the dynamic feedback labels below.
+	// $i18n.t('Published')
+	// $i18n.t('Pulled')
+	// $i18n.t('Pushed')
+	// $i18n.t('Fetched')
+	// $i18n.t('Publishing…')
+	// $i18n.t('Pulling…')
+	// $i18n.t('Pushing…')
+	// $i18n.t('Fetching…')
+	// $i18n.t('Staging…')
+	// $i18n.t('Unstaging…')
 	$: syncMessage = syncFeedback
 		? syncComplete
 			? { publish: 'Published', pull: 'Pulled', push: 'Pushed', fetch: 'Fetched' }[syncFeedback]
@@ -1163,6 +1174,9 @@
 	</div>
 {/if}
 
+<!-- Retired warning: keep its translation.
+{$i18n.t('Discard unsaved working-tree changes to this file? This cannot be undone.')}
+-->
 <ConfirmDialog
 	bind:show={confirmDiscard}
 	title={$i18n.t('Discard changes')}

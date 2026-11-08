@@ -186,6 +186,9 @@
 	$: csvHeader = csvRows.length > 0 ? csvRows[0] : [];
 	$: csvBody = csvRows.length > 1 ? csvRows.slice(1) : [];
 
+	// Retired errors: keep their translations.
+	// $i18n.t('Invalid JSON')
+	// $i18n.t('JSON parse error: {{error}}')
 	// JSON parsing
 	let parsedJson: unknown = undefined;
 

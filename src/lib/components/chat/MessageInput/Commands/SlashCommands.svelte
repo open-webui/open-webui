@@ -381,7 +381,7 @@
 		{:else if item.data.id === 'comments' || item.data.id === 'side'}
 			<button
 				type="button"
-				aria-label={$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}
+				aria-label={item.data.id === 'side' ? $i18n.t('Side chat') : $i18n.t('Comments')}
 				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
 					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 				on:mousedown={(e) => e.preventDefault()}
@@ -399,7 +399,7 @@
 				</span>
 				<span class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
 					<span class="min-w-0 flex-1 truncate"
-						>{$i18n.t(item.data.id === 'side' ? 'Side chat' : 'Comments')}</span
+						>{item.data.id === 'side' ? $i18n.t('Side chat') : $i18n.t('Comments')}</span
 					>
 					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/{item.data.id}</span>
 				</span>

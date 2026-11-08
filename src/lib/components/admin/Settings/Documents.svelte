@@ -994,6 +994,9 @@
 					</AdminSettingField>
 				{/if}
 
+				<!-- Retired retrieval hint: keep its translation.
+				{$i18n.t('Use segmented retrieval for focused context.')}
+				-->
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.documents.bypassEmbeddingAndRetrieval.label')}
 					description={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL

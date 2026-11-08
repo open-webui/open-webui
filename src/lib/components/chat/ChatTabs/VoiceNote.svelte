@@ -527,7 +527,7 @@
 							>{$i18n.t('Cancel')}</button
 						>
 						<button class={primaryButtonClass} disabled={busy || !draft.name.trim()} on:click={save}
-							>{$i18n.t(busy ? 'Processing...' : 'Save')}</button
+							>{busy ? $i18n.t('Processing...') : $i18n.t('Save')}</button
 						>
 					</div>
 				</div>
