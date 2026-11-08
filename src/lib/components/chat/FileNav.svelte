@@ -32,7 +32,6 @@
 		createDirectory,
 		deleteEntry,
 		moveEntry,
-		setCwd,
 		type FileEntry,
 		type TerminalContentMatch,
 		type TerminalFileMatch,
@@ -854,10 +853,7 @@
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
 				}
-				// Chat just got created (null → real ID): persist the current
-				// browsed path as the new session's cwd — don't re-fetch.
-				if (!onSelectDirectory && savedPathLoaded)
-					setCwd(terminal.url, terminal.key, savedPath, chatId);
+				// Keep the draft's browsed path; chat submission initializes the session cwd.
 			} else if (terminalChanged || chatChanged || folderChanged) {
 				const generation = ++loadGeneration;
 				savedPathLoaded = false;
@@ -1195,10 +1191,6 @@
 		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
 			return;
 		loading = false;
-
-		// Browsing an existing chat must not change its execution directory.
-		if (!chatId && !onSelectDirectory && !initialFile)
-			setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =

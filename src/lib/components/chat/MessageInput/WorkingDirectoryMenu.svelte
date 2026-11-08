@@ -98,7 +98,10 @@
 	async function selectDirectory(path: string) {
 		if (disabled || saving) return;
 		saving = true;
-		const result = await setCwd(connection.baseUrl, connection.key, path, chatId ?? undefined);
+		// A draft has no terminal session yet; submission applies this choice after creating the chat.
+		const result = chatId
+			? await setCwd(connection.baseUrl, connection.key, path, chatId)
+			: { cwd: path || home };
 		if (disposed) return;
 		if (!result?.cwd) {
 			saving = false;
