@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { getContext, onDestroy, tick } from 'svelte';
-	import type { Editor } from '@tiptap/core';
+	import { getAllContexts, getContext, mount, unmount, onDestroy, tick } from 'svelte';
+	import { Node, type Editor } from '@tiptap/core';
 	import type { Transaction } from '@tiptap/pm/state';
 	import { Marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -12,7 +12,9 @@
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { downloadFileBlob, uploadNewFileToTerminal } from '$lib/apis/terminal';
-	import { resolveDocumentPath } from './MarkdownDocument.svelte';
+	import MarkdownDocument, { resolveDocumentPath } from './MarkdownDocument.svelte';
+	import KatexRenderer from '../Messages/Markdown/KatexRenderer.svelte';
+	import markedKatexExtension from '$lib/utils/marked/katex-extension';
 
 	export let value = '';
 	export let path = '';
@@ -22,8 +24,41 @@
 	export let readOnly = false;
 	export let onSave: (() => Promise<void>) | null = null;
 	const i18n = getContext<any>('i18n');
+	const context = getAllContexts();
+	const math = markedKatexExtension();
+	const sourceFromElement = (element: HTMLElement) => {
+		try {
+			return decodeURIComponent(element.getAttribute('data-markdown-source') ?? '');
+		} catch {
+			return element.textContent ?? '';
+		}
+	};
+	const sourceHtml = (source: string, inline: boolean) => {
+		const element = document.createElement(inline ? 'span' : 'div');
+		// Encode source so XML-sensitive syntax such as Mermaid arrows survives sanitization.
+		element.setAttribute('data-markdown-source', encodeURIComponent(source));
+		element.textContent = source;
+		return element.outerHTML;
+	};
 	const markdown = new Marked({
 		breaks: false,
+		extensions: [
+			...math.extensions.map((extension) => ({
+				...extension,
+				level: extension.level as 'inline' | 'block',
+				renderer: (token: { raw: string }) => sourceHtml(token.raw, extension.level === 'inline')
+			})),
+			{ name: 'markdownBlock', renderer: (token) => sourceHtml(token.raw, false) }
+		],
+		walkTokens(token) {
+			if (
+				(token.type === 'blockquote' &&
+					/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/.test(token.text)) ||
+				(token.type === 'code' && token.lang?.trim() === 'mermaid')
+			) {
+				token.type = 'markdownBlock';
+			}
+		},
 		renderer: {
 			list: (body, ordered, start) =>
 				body.includes('data-type="taskItem"')
@@ -39,6 +74,13 @@
 	});
 	const serializer = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
 	serializer.use(gfm);
+	serializer.addRule('markdownSource', {
+		filter: (node: HTMLElement) => node.hasAttribute('data-markdown-source'),
+		replacement: (_content: string, node: HTMLElement) => {
+			const source = sourceFromElement(node);
+			return node.nodeName === 'DIV' ? `\n\n${source}\n\n` : source;
+		}
+	});
 	serializer.addRule('taskCheckbox', {
 		filter: (node: HTMLElement) => node.nodeName === 'INPUT',
 		replacement: () => ''
@@ -49,6 +91,152 @@
 		replacement: (content: string, node: HTMLElement) =>
 			`- [${node.getAttribute('data-checked') === 'true' ? 'x' : ' '}] ${content.trim().replace(/\n(?=.)/g, '\n    ')}\n`
 	});
+
+	// Node views render Markdown without feeding their rendered HTML back into the serializer.
+	const extensions = [true, false].map((inline) =>
+		Node.create({
+			name: inline ? 'markdownInline' : 'markdownBlock',
+			group: inline ? 'inline' : 'block',
+			inline,
+			atom: true,
+			addAttributes: () => ({
+				source: {
+					default: '',
+					parseHTML: sourceFromElement,
+					renderHTML: ({ source }) => ({ 'data-markdown-source': encodeURIComponent(source) })
+				}
+			}),
+			parseHTML: () => [{ tag: `${inline ? 'span' : 'div'}[data-markdown-source]` }],
+			renderHTML: ({ node, HTMLAttributes }) => [
+				inline ? 'span' : 'div',
+				HTMLAttributes,
+				node.attrs.source
+			],
+			renderText: ({ node }) => node.attrs.source,
+			addNodeView:
+				() =>
+				({ node, editor, getPos }) => {
+					const dom = document.createElement(inline ? 'span' : 'div');
+					dom.className = inline
+						? 'inline-flex max-w-full items-center align-baseline'
+						: 'relative my-2';
+					const preview = document.createElement(inline ? 'span' : 'div');
+					preview.setAttribute('role', 'button');
+					preview.setAttribute('aria-label', $i18n.t('Edit'));
+					preview.tabIndex = editor.isEditable ? 0 : -1;
+					const input = document.createElement('textarea');
+					input.className = inline
+						? 'm-0 max-w-full resize-none p-0 font-mono text-sm leading-5 outline-none'
+						: 'w-full p-0 font-mono text-sm outline-none';
+					input.setAttribute('aria-label', $i18n.t('Source'));
+					input.value = node.attrs.source;
+					input.hidden = true;
+					dom.append(preview, input);
+					dom.contentEditable = 'false';
+					let editing = false;
+					let component: ReturnType<typeof mount> | undefined;
+					const render = () => {
+						if (component) void unmount(component);
+						component = undefined;
+						const token = inline ? math.extensions[0].tokenizer(node.attrs.source, []) : null;
+						if (inline && !token) {
+							preview.textContent = node.attrs.source;
+						} else {
+							preview.textContent = '';
+							component = token
+								? mount(KatexRenderer, {
+										target: preview,
+										context,
+										props: { content: token.text, displayMode: token.displayMode }
+									})
+								: mount(MarkdownDocument, {
+										target: preview,
+										context,
+										props: {
+											content: node.attrs.source,
+											id: `editor-${crypto.randomUUID()}`,
+											path,
+											baseUrl,
+											apiKey,
+											chatId
+										}
+									});
+						}
+					};
+					input.oninput = () => {
+						const pos = getPos();
+						if (!editor.isEditable || typeof pos !== 'number') return;
+						editor.view.dispatch(
+							editor.state.tr.setNodeMarkup(pos, undefined, { source: input.value })
+						);
+					};
+					const startEditing = () => {
+						if (!editor.isEditable) return;
+						editing = true;
+						preview.hidden = true;
+						input.hidden = false;
+						input.rows = inline ? 1 : Math.max(3, input.value.split('\n').length);
+						if (inline)
+							input.style.width = `${Math.min(48, Math.max(12, input.value.length + 2))}ch`;
+						input.focus();
+					};
+					preview.addEventListener(
+						'click',
+						(event) => {
+							if ((event.target as Element).closest('a, button, input')) return;
+							event.preventDefault();
+							event.stopPropagation();
+							startEditing();
+						},
+						true
+					);
+					preview.addEventListener(
+						'keydown',
+						(event) => {
+							if ((event.target as Element).closest('a, button, input')) return;
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault();
+								event.stopPropagation();
+								startEditing();
+							}
+						},
+						true
+					);
+					input.onblur = () => {
+						editing = false;
+						preview.hidden = false;
+						input.hidden = true;
+						render();
+					};
+					input.onkeydown = (event) => {
+						if (inline && event.key === 'Enter' && !event.shiftKey) {
+							event.preventDefault();
+							input.blur();
+							editor.commands.focus();
+						}
+					};
+					render();
+					return {
+						dom,
+						stopEvent: () => true,
+						ignoreMutation: () => true,
+						update(next) {
+							if (next.type !== node.type) return false;
+							if (next.attrs.source !== node.attrs.source) {
+								node = next;
+								if (input.value !== node.attrs.source) input.value = node.attrs.source;
+								if (!editing) render();
+							}
+							return true;
+						},
+						destroy: () => {
+							input.onblur = null;
+							if (component) void unmount(component);
+						}
+					};
+				}
+		})
+	);
 
 	let editor: Editor | null = null;
 	let html: string | null = null;
@@ -231,6 +419,7 @@
 	{#if html !== null}
 		{#key revision}
 			<RichTextInput
+				{extensions}
 				messageInput={false}
 				json={true}
 				bind:value={documentJSON}

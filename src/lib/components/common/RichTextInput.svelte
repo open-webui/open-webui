@@ -404,6 +404,7 @@
 	export let json = false;
 	export let raw = false;
 	export let editable = true;
+	export let extensions: import('@tiptap/core').AnyExtension[] = [];
 	export let collaboration = false;
 
 	export let showFormattingToolbar = true;
@@ -955,6 +956,7 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
+				...extensions,
 				StarterKit.configure({
 					link: link ? { autolink: autoFormat, linkOnPaste: autoFormat } : false,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
