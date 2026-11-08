@@ -328,7 +328,13 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
         message = messages[idx]
         value = message.get('contextSummary') or message.get('context_summary')
         if isinstance(value, str) and value.strip():
-            return messages[idx:], value
+            # Rerun without the summary so a tool-loop reply keeps its mid-turn trim.
+            if message.get('output'):
+                [trimmed_message], _ = _apply_latest_summary_checkpoint(
+                    [{**message, 'contextSummary': None, 'context_summary': None}]
+                )
+                message = {**message, 'output': trimmed_message['output']}
+            return [message, *messages[idx + 1 :]], value
 
         marker = next(
             (
