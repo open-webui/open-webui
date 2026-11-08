@@ -36,7 +36,7 @@ async def get_tool_permissions_auto_config():
 
 
 def set_tool_approval_prompt(messages, policy=None):
-    messages = [dict(message) for message in messages]
+    messages = [dict(message) if message.get('role') in {'system', 'developer'} else message for message in messages]
     for message in messages:
         if message.get('role') not in {'system', 'developer'}:
             continue
