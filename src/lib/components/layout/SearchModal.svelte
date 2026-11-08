@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { folders, mobile, settings, tags } from '$lib/stores';
+	import { copyToClipboard } from '$lib/utils';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -285,11 +286,10 @@
 
 	async function copyLink() {
 		if (!selected) return;
-		try {
-			await navigator.clipboard.writeText(new URL(selected.url, location.origin).href);
+		if (await copyToClipboard(new URL(selected.url, location.origin).href)) {
 			toast.success($i18n.t('Link copied to clipboard'));
 			panel = null;
-		} catch {
+		} else {
 			toast.error($i18n.t('Unable to copy link'));
 		}
 	}

@@ -13,7 +13,16 @@
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { config, models, tools, functions, user, settings, visibleControls } from '$lib/stores';
+	import {
+		baseModels,
+		config,
+		models,
+		tools,
+		functions,
+		user,
+		settings,
+		visibleControls
+	} from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -221,7 +230,7 @@
 	};
 	$: reportedModel =
 		providerModel ??
-		$models.find((entry) => entry.id === (info.base_model_id || id)) ??
+		$baseModels.find((entry) => entry.id === (info.base_model_id || id)) ??
 		(info.base_model_id ? null : model);
 
 	$: modifiedParamCount = Object.entries(params).reduce((count, [key, value]) => {
@@ -354,6 +363,7 @@
 		return models
 			.filter(
 				(baseModel) =>
+					baseModel.owned_by !== 'terminal' &&
 					(!currentModelId ||
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
@@ -679,9 +689,11 @@
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
-				const base_model = $models
+				const base_model = $baseModels
 					.filter(
-						(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
+						(m) =>
+							m.owned_by !== 'terminal' &&
+							((!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
@@ -1362,7 +1374,7 @@
 														id="workspace-base-model"
 														placeholder={$i18n.t('Select a base model')}
 														searchPlaceholder={$i18n.t('Search a model')}
-														items={getBaseModelItems($models)}
+														items={getBaseModelItems($baseModels)}
 														triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
 														selectionOnly
 														{includeHidden}
@@ -1737,13 +1749,13 @@
 													'Models this model can delegate to. Users must have access to them. Leave empty to use the current model.'
 												)}
 												summary={subagents.model_ids
-													.map((id) => $models.find((model) => model.id === id)?.name || id)
+													.map((id) => $baseModels.find((model) => model.id === id)?.name || id)
 													.join(', ') || $i18n.t('Current Model')}
 											>
 												<TypeaheadSelector
 													id="model-subagents"
 													label={$i18n.t('Models')}
-													items={($models ?? [])
+													items={($baseModels ?? [])
 														.filter((model) => !('direct' in model && model.direct))
 														.map((model) => ({
 															id: model.id,

@@ -5,7 +5,7 @@
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { models } from '$lib/stores';
+	import { baseModels, models } from '$lib/stores';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Minus from '$lib/components/icons/Minus.svelte';
 	import PencilSolid from '$lib/components/icons/PencilSolid.svelte';
@@ -76,7 +76,7 @@
 		}
 
 		if (!edit) {
-			if ($models.find((model) => model.name === name)) {
+			if ($baseModels.find((model) => model.name === name)) {
 				loading = false;
 				toast.error($i18n.t('Model name already exists, please choose a different one'));
 				return;
@@ -367,7 +367,7 @@
 									{#each modelIds as modelId, modelIdx}
 										<div class=" flex gap-2 w-full justify-between items-center">
 											<div class=" text-sm flex-1 py-1 rounded-lg">
-												{$models.find((model) => model.id === modelId)?.name}
+												{$baseModels.find((model) => model.id === modelId)?.name}
 											</div>
 											<div class="shrink-0">
 												<button
@@ -401,7 +401,7 @@
 								aria-label={$i18n.t('Select a model')}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
-								{#each $models.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
+								{#each $baseModels.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
 									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
 								{/each}
 							</select>

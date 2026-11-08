@@ -214,13 +214,13 @@
 	};
 
 	const toggleResponseAutoCopy = async () => {
-		if (externalSettings) {
+		if (externalSettings || !responseAutoCopy) {
 			saveSettings({ responseAutoCopy: responseAutoCopy });
 			return;
 		}
 
 		const permission = await navigator.clipboard
-			.readText()
+			?.readText()
 			.then(() => {
 				return 'granted';
 			})

@@ -11,6 +11,7 @@
 		type GitCommit,
 		type GitBranch
 	} from '$lib/apis/terminal/git';
+	import { copyToClipboard } from '$lib/utils';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
 	import { parseDiffRows } from '../Messages/diff';
@@ -538,9 +539,7 @@
 													>{/if}
 												<button
 													on:click={async () => {
-														try {
-															await navigator.clipboard.writeText(branch.name);
-														} catch {
+														if (!(await copyToClipboard(branch.name))) {
 															error = $i18n.t('Could not copy branch name');
 														}
 													}}><Icon name="copy" size={13} />{$i18n.t('Copy branch name')}</button
@@ -1040,9 +1039,7 @@
 																><Icon name="undo" size={13} />{$i18n.t('Undo last commit')}</button
 															>{/if}<button
 															on:click={async () => {
-																try {
-																	await navigator.clipboard.writeText(commit.hash);
-																} catch {
+																if (!(await copyToClipboard(commit.hash))) {
 																	error = $i18n.t('Could not copy commit hash');
 																}
 															}}><Icon name="copy" size={13} />{$i18n.t('Copy commit hash')}</button

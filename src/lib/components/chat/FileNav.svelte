@@ -81,17 +81,23 @@
 	export let onViewChange: ((view: any) => void) | null = null;
 	export let onFileSaved: ((content: string) => void) | null = null;
 	let viewRestored = !initialView;
-	export const captureView = () =>
-		!viewRestored && initialView
-			? initialView
-			: {
-					directory: currentPath,
-					selectedFile,
-					expanded: [...expandedDirs],
-					preview: (commentPreviewRef ?? filePreviewRef)?.captureView(),
-					dirty: dirty || saving,
-					scrollTop: viewerRoot?.scrollTop ?? 0
-				};
+	export const captureView = () => {
+		const view =
+			!viewRestored && initialView
+				? initialView
+				: {
+						directory: currentPath,
+						selectedFile,
+						expanded: [...expandedDirs],
+						preview: (commentPreviewRef ?? filePreviewRef)?.captureView(),
+						dirty: dirty || saving,
+						scrollTop: viewerRoot?.scrollTop ?? 0
+					};
+		return {
+			...view,
+			isHome: homeDirectory !== null && asDirectoryPath(view.directory) === homeDirectory
+		};
+	};
 	const restoreView = async () => {
 		if (disposed || viewRestored || !initialView) return;
 		const view = initialView;
@@ -431,6 +437,7 @@
 
 	// Directory state
 	let currentPath = savedPath;
+	let homeDirectory: string | null = null;
 	let fileRoot: TerminalFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
 	let currentWritable = true;
@@ -871,7 +878,7 @@
 		}
 
 		if (mounted && terminal) {
-			if (chatChanged && chatId && !oldChatId) {
+			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
@@ -1109,6 +1116,7 @@
 	};
 
 	const applyCwd = (cwd: TerminalCwd | null) => {
+		homeDirectory = cwd?.home ? asDirectoryPath(cwd.home) : null;
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
 		setFileRoot(rootFromCwd(cwd));
 		const path = cwdPath ?? fileRoot?.path ?? '/';

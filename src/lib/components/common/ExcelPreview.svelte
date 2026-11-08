@@ -12,6 +12,7 @@
 		selectionTSV,
 		type GridCell
 	} from '$lib/utils/excelToTable';
+	import { copyToClipboard } from '$lib/utils';
 
 	export let html: string;
 	export let sheetNames: string[] = [];
@@ -490,10 +491,9 @@
 		status = t('Copied to clipboard');
 	}
 	async function copySelection() {
-		try {
-			await navigator.clipboard.writeText(copiedText());
+		if (await copyToClipboard(copiedText())) {
 			status = t('Copied to clipboard');
-		} catch {
+		} else {
 			status = t('Could not copy. Select a cell and press Ctrl+C or ⌘C.');
 		}
 	}

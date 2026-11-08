@@ -23,7 +23,6 @@
 	export let userId: string;
 	export let terminalContext: TerminalContext | null = null;
 	export let disabled = false;
-	export let locked = false;
 	export let inMenu = false;
 
 	let show = false;
@@ -40,7 +39,7 @@
 	const folderName = (path: string) => path.replace(/\/+$/, '').split('/').pop() || '/';
 	const normalize = (path: string) => path.replace(/\/+$/, '') || '/';
 
-	$: if (!locked && terminalContext?.terminalId === connection.selector)
+	$: if (terminalContext?.terminalId === connection.selector)
 		cwd = terminalContext.currentDirectory;
 	$: directory = cwd;
 	$: options = [...new Set([directory, ...recent].filter(Boolean).map(normalize))].filter((path) =>
@@ -91,7 +90,7 @@
 				if (chatId && !selectedContext) cwd = result?.cwd ?? '';
 			}
 		);
-		if (!locked) void refreshRecentFolders();
+		void refreshRecentFolders();
 	});
 	onDestroy(() => (disposed = true));
 

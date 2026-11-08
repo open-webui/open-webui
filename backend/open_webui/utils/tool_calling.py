@@ -293,9 +293,9 @@ def tool_repetition_error(call, previous_calls):
 
 def prepare_tool_call(call, schema=None, *, display_labels=False, approval_review=False):
     """Normalize a call before approval; return an actionable error for the model."""
-    raw = call.get('arguments', '{}')
+    original_arguments = call.get('arguments', '{}')
     try:
-        arguments = dict(parse_arguments(raw))
+        arguments = dict(parse_arguments(original_arguments))
         if display_labels and '__labels__' in arguments:
             labels = arguments.pop('__labels__')
             call.pop('display_labels', None)
@@ -312,8 +312,8 @@ def prepare_tool_call(call, schema=None, *, display_labels=False, approval_revie
     except ValueError as exc:
         return f'Error: {exc} Correct the arguments before retrying.'
     normalized = json.dumps(arguments, ensure_ascii=False)
-    if normalized != raw:
-        call.setdefault('original_arguments', raw)
+    if normalized != original_arguments:
+        call.setdefault('original_arguments', original_arguments)
     call['arguments'] = normalized
     return None
 

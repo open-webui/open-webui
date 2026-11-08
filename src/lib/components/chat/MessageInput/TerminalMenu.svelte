@@ -31,7 +31,6 @@
 	export let show = false;
 	export let inMenu = false;
 	export let disabled = false;
-	export let directoryLocked = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 
@@ -456,8 +455,7 @@
 			{chatId}
 			userId={$user?.id ?? ''}
 			bind:terminalContext
-			locked={directoryLocked || isSavedChatId(chatId)}
-			disabled={disabled || directoryLocked || isSavedChatId(chatId)}
+			{disabled}
 		/>
 	{/key}
 {/if}

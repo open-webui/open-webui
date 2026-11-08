@@ -196,6 +196,7 @@ RUN if [ "$USE_OLLAMA" = "true" ]; then \
     date +%s > /tmp/ollama_build_hash && \
     echo "Cache broken at timestamp: `cat /tmp/ollama_build_hash`" && \
     curl -fsSL https://ollama.com/install.sh | sh && \
+    command -v ollama && \
     rm -rf /var/lib/apt/lists/*; \
     fi
 

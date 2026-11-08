@@ -193,14 +193,16 @@
 					? token.attributes?.display_label
 					: token.attributes?.running_label
 		);
+	$: toolNames = tokens
+		.filter((token) => token.attributes?.type === 'tool_calls')
+		.map((token) => token.attributes?.name ?? 'tool');
 	$: groupLabel =
 		!hasRejected &&
 		!hasError &&
 		pendingToolTokens.length === 0 &&
 		codeInterpreterCount === 0 &&
-		toolLabels.length &&
-		toolLabels.every(Boolean)
-			? toolLabels.join(', ')
+		toolLabels.some(Boolean)
+			? toolLabels.map((label, index) => label || toolNames[index]).join(', ')
 			: '';
 </script>
 
