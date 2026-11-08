@@ -190,18 +190,7 @@
 						},
 						true
 					);
-					preview.addEventListener(
-						'keydown',
-						(event) => {
-							if ((event.target as Element).closest('a, button, input')) return;
-							if (event.key === 'Enter' || event.key === ' ') {
-								event.preventDefault();
-								event.stopPropagation();
-								startEditing();
-							}
-						},
-						true
-					);
+					preview.onfocus = startEditing;
 					input.onblur = () => {
 						editing = false;
 						preview.hidden = false;
