@@ -24,10 +24,12 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 	import Server from '$lib/components/icons/Server.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
 	const i18n = getContext<any>('i18n');
 
 	export let show = false;
+	export let inMenu = false;
 	export let disabled = false;
 	export let directoryLocked = false;
 	export let chatId: string | null = null;
@@ -174,16 +176,18 @@
 	)
 		info = null;
 
-	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
-		disabled
-			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
-					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
-				}`
-	}`;
+	$: triggerClass = inMenu
+		? `flex w-full min-w-0 items-center gap-2 h-[1.6875rem] px-2 text-[0.8125rem] rounded-xl text-left ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}`
+		: `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
+				disabled
+					? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
+					: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
+							$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
+						}`
+			}`;
 </script>
 
-<div class="flex items-center translate-x-0.5">
+<div class={inMenu ? 'w-full' : 'flex items-center translate-x-0.5'}>
 	{#if disabled}
 		<Tooltip content={selectedLabel} placement="top">
 			<button
@@ -199,11 +203,12 @@
 					<Cloud className="size-3.5" strokeWidth="2" />
 				{/if}
 
-				{#if $selectedTerminalId && selectedLabel}
-					<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
+				{#if inMenu || ($selectedTerminalId && selectedLabel)}
+					<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
 						>{selectedLabel}</span
 					>
 				{/if}
+				{#if inMenu}<ChevronRight />{/if}
 			</button>
 		</Tooltip>
 	{:else}
@@ -216,17 +221,20 @@
 						<Cloud className="size-3.5" strokeWidth="2" />
 					{/if}
 
-					{#if $selectedTerminalId && selectedLabel}
-						<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
+					{#if inMenu || ($selectedTerminalId && selectedLabel)}
+						<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
 							>{selectedLabel}</span
 						>
 					{/if}
+					{#if inMenu}<ChevronRight />{/if}
 				</button>
 			</Tooltip>
 
 			<div slot="content">
 				<DropdownMenu
-					className="w-60 max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					className="{inMenu
+						? 'w-70'
+						: 'w-60'} max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 				>
 					<!-- Direct terminals (gated by permission) -->
 					{#if directTerminals.length > 0}
@@ -443,6 +451,7 @@
 {#if folderConnection && (chatContext(selectedSystemTerminal)?.context_id !== 'chat_id' || isSavedChatId(chatId))}
 	{#key `${$user?.id}:${folderConnection.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
+			{inMenu}
 			connection={folderConnection}
 			{chatId}
 			userId={$user?.id ?? ''}

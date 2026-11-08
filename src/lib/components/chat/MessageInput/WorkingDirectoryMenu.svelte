@@ -10,6 +10,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SearchInput from './InputMenu/SearchInput.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -23,6 +24,7 @@
 	export let terminalContext: TerminalContext | null = null;
 	export let disabled = false;
 	export let locked = false;
+	export let inMenu = false;
 
 	let show = false;
 	let showPicker = false;
@@ -133,7 +135,7 @@
 	}
 </script>
 
-<div class="flex items-center translate-x-0.5">
+<div class={inMenu ? 'w-full' : 'flex items-center translate-x-0.5'}>
 	<Dropdown
 		bind:show
 		align="start"
@@ -147,21 +149,25 @@
 				type="button"
 				disabled={disabled || saving}
 				aria-label={$i18n.t('Choose working directory')}
-				class="flex min-w-0 items-center gap-1.5 translate-y-[1px] rounded-lg p-1 text-[0.8125rem] transition {disabled ||
-				saving
+				class="flex min-w-0 items-center text-[0.8125rem] transition {inMenu
+					? 'w-full gap-2 h-[1.6875rem] px-2 rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40'
+					: 'gap-1.5 translate-y-[1px] rounded-lg p-1'} {disabled || saving
 					? 'cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
 					: directory
 						? 'cursor-pointer text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200'
 						: 'cursor-pointer text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'}"
 			>
 				<Folder className="size-3.5 shrink-0" strokeWidth="2" />
-				{#if directory}
-					<span data-input-label class="max-w-[9.375rem] truncate">{folderName(directory)}</span>
+				{#if inMenu || directory}
+					<span class="truncate {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
+						>{directory ? folderName(directory) : $i18n.t('Working Directory')}</span
+					>
 				{/if}
+				{#if inMenu}<ChevronRight />{/if}
 			</button>
 		</Tooltip>
 		<div slot="content">
-			<DropdownMenu className="w-60 max-w-[calc(100vw-2rem)]">
+			<DropdownMenu className="{inMenu ? 'w-70' : 'w-60'} max-w-[calc(100vw-2rem)]">
 				<SearchInput bind:value={search} placeholder={$i18n.t('Search folders')} />
 				<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
 				<button

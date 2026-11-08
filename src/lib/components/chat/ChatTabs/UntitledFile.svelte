@@ -221,8 +221,12 @@
 				><input type="checkbox" bind:checked={showHidden} />{$i18n.t('Hidden')}</label
 			>
 		</div>
-		<div class="min-h-24 overflow-y-auto py-1">
-			{#if loading}<p class="p-3 text-xs text-gray-400">{$i18n.t('Loading...')}</p>
+		<div class="min-h-24 overflow-y-auto py-1" class:flex={loading} class:flex-col={loading}>
+			{#if loading}<p
+					class="flex flex-1 items-center justify-center p-3 text-center text-xs text-gray-400"
+				>
+					{$i18n.t('Loading...')}
+				</p>
 			{:else}{#each entries.filter((entry) => entry.type === 'directory' && (showHidden || !entry.name.startsWith('.'))) as entry}
 					<button
 						type="button"

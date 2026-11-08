@@ -263,7 +263,11 @@
 		{#if loading}<div class="flex items-center justify-center py-5" class:flex-1={!items.length}>
 				<Spinner className="size-5" />
 			</div>{/if}
-		{#if error}<div class="px-4 py-2">
+		{#if error && !loading}<div
+				class={items.length
+					? 'px-4 py-2'
+					: 'flex flex-1 flex-col items-center justify-center px-4 py-6 text-center'}
+			>
 				<p role="alert" class="text-xs text-gray-500 dark:text-gray-400">{error}</p>
 				<button
 					type="button"
@@ -272,7 +276,7 @@
 				>
 			</div>{/if}
 		{#if resource && !loading}
-			{#if !items.length}<div
+			{#if !items.length && !error}<div
 					class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-gray-500"
 				>
 					{$i18n.t('No comments yet')}

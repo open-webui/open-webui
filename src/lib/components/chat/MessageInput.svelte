@@ -263,6 +263,7 @@
 	export let oauthRedirectHandler: Function = () => {};
 
 	let showTerminalMenu = false;
+	let terminalControlsInMenu = false;
 
 	function fitControlLabels(controls: HTMLElement) {
 		let frame: number;
@@ -270,8 +271,12 @@
 			cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
 				const labels = controls.querySelectorAll<HTMLElement>('[data-input-label]');
+				const terminalControls = controls.querySelector<HTMLElement>('[data-terminal-controls]');
 				// Measure all labels together so separate controls cannot compete for the same space.
 				for (const label of labels) label.style.display = '';
+				if (terminalControls) terminalControls.style.display = '';
+				terminalControlsInMenu = !!terminalControls && controls.scrollWidth > controls.clientWidth;
+				if (terminalControls && terminalControlsInMenu) terminalControls.style.display = 'none';
 				if (controls.scrollWidth > controls.clientWidth) {
 					for (const label of labels) label.style.display = 'none';
 				}
@@ -2634,6 +2639,19 @@
 											<PlusAlt className="size-5" />
 										</button>
 
+										<svelte:fragment slot="terminal">
+											{#if showTerminalSelector && terminalControlsInMenu}
+												<TerminalMenu
+													inMenu
+													directoryLocked={!!history?.currentId}
+													chatId={isSavedChatId(chatId) ? chatId : null}
+													bind:terminalContext
+													disabled={generating || !!history?.currentId || isSavedChatId(chatId)}
+												/>
+												<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+											{/if}
+										</svelte:fragment>
+
 										<svelte:fragment slot="integrations">
 											{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 												<IntegrationsMenu
@@ -2888,15 +2906,17 @@
 											</Tooltip>
 										{/if}
 
-										<!-- Terminal Server Selector -->
+										<!-- Keep this instance mounted to measure the full labels even while the controls are in the menu. -->
 										{#if showTerminalSelector}
-											<TerminalMenu
-												bind:show={showTerminalMenu}
-												directoryLocked={!!history?.currentId}
-												chatId={isSavedChatId(chatId) ? chatId : null}
-												bind:terminalContext
-												disabled={generating || !!history?.currentId || isSavedChatId(chatId)}
-											/>
+											<div data-terminal-controls class="flex items-center gap-1.5 shrink-0">
+												<TerminalMenu
+													bind:show={showTerminalMenu}
+													directoryLocked={!!history?.currentId}
+													chatId={isSavedChatId(chatId) ? chatId : null}
+													bind:terminalContext
+													disabled={generating || !!history?.currentId || isSavedChatId(chatId)}
+												/>
+											</div>
 										{/if}
 
 										{#each pendingOAuthTools as pendingTool (pendingTool.id)}

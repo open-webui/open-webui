@@ -476,7 +476,7 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="text-xs text-gray-400 text-center pt-8">
+		<div class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400">
 			{$i18n.t('Could not read file.')}
 		</div>
 	{/if}

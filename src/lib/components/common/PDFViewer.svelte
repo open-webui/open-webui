@@ -715,7 +715,9 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else if error}
-		<div class="absolute inset-0 flex items-center justify-center text-sm text-red-500">
+		<div
+			class="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-500"
+		>
 			{error}
 		</div>
 	{/if}
