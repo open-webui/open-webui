@@ -1,5 +1,6 @@
 import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
+import { v4 as uuidv4 } from 'uuid';
 import { getChatView, updateChatView } from '$lib/apis/chats/view';
 import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
 import { createBrowserSession } from '$lib/apis/terminal/browser';
@@ -83,7 +84,7 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 	const existing = chatId && entries.get(key(userId, chatId));
 	if (existing) return existing;
 	const entry: Entry = {
-		instanceId: crypto.randomUUID(),
+		instanceId: uuidv4(),
 		userId,
 		chatId,
 		state: { schemaVersion: 1, selectedTerminalId: null, panels: emptyTabs() },
