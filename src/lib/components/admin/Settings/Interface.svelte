@@ -57,11 +57,12 @@
 		ENABLE_TOOL_PERMISSIONS: false,
 		ENABLE_TOOL_CALL_LABELS: false,
 		ENABLE_TOOL_PERMISSIONS_AUTO: false,
-		TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
-		TOOL_PERMISSIONS_DECISIONS_API_KEY: '',
-		TOOL_PERMISSIONS_DECISIONS_MODEL: 'gpt-6-luna',
-		TOOL_PERMISSIONS_DECISIONS_THRESHOLD: 0.5,
-		TOOL_PERMISSIONS_DECISIONS_PROMPT: '',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: '',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: 'gpt-6-luna',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: 0.5,
+		TOOL_PERMISSIONS_AUTO_ENGINE: '',
+		TOOL_PERMISSIONS_AUTO_PROMPT: '',
 		ENABLE_TOOL_SEARCH: false,
 		TOOL_SEARCH_ENGINE: 'bm25',
 		TOOL_SEARCH_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
@@ -80,16 +81,28 @@
 	const readChatConfigMetadata = () => {
 		const {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = '',
-			DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT = '',
+			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT = '',
+			DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT: _legacyDefaultPrompt,
+			TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: _legacyAPI_BASE_URL,
+			TOOL_PERMISSIONS_DECISIONS_API_KEY: _legacyAPI_KEY,
+			TOOL_PERMISSIONS_DECISIONS_MODEL: _legacyMODEL,
+			TOOL_PERMISSIONS_DECISIONS_THRESHOLD: _legacyTHRESHOLD,
+			TOOL_PERMISSIONS_DECISIONS_PROMPT: _legacyPrompt,
 			TOOL_SEARCH_EMBEDDING_MODEL = '',
 			...settings
 		} = chatConfig as typeof chatConfig & {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT?: string;
+			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT?: string;
 			DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT?: string;
+			TOOL_PERMISSIONS_DECISIONS_API_BASE_URL?: string;
+			TOOL_PERMISSIONS_DECISIONS_API_KEY?: string;
+			TOOL_PERMISSIONS_DECISIONS_MODEL?: string;
+			TOOL_PERMISSIONS_DECISIONS_THRESHOLD?: number;
+			TOOL_PERMISSIONS_DECISIONS_PROMPT?: string;
 			TOOL_SEARCH_EMBEDDING_MODEL?: string;
 		};
 		defaultDecisionsPrompt = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT;
-		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_DECISIONS_PROMPT;
+		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT;
 		toolSearchEmbeddingModel = TOOL_SEARCH_EMBEDDING_MODEL;
 		chatConfig = settings;
 	};
@@ -469,76 +482,92 @@
 						/>
 					</AdminSettingRow>
 					{#if chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO}
-						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							<AdminSettingField
-								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsUrl.label')}
-								description={$i18n.t(
-									'settings.admin.interface.toolPermissionsDecisionsUrl.description'
-								)}
-								forId="tool-permissions-decisions-url"
+						<AdminSettingRow
+							label={$i18n.t('settings.admin.interface.toolPermissionsAutoEngine.label')}
+							let:labelId
+						>
+							<SettingsSelect
+								id={`${labelId}-control`}
+								bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_ENGINE}
 							>
-								<input
-									id="tool-permissions-decisions-url"
-									type="url"
-									class={inputClass}
-									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_API_BASE_URL}
-									required
-								/>
-							</AdminSettingField>
-							<AdminSettingField
-								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsKey.label')}
-								forId="tool-permissions-decisions-key"
-							>
-								<SensitiveInput
-									id="tool-permissions-decisions-key"
-									type="password"
-									variant="settings"
-									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_API_KEY}
-									required={false}
-									screenReader={false}
-								/>
-							</AdminSettingField>
-							<AdminSettingField
-								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsModel.label')}
-								forId="tool-permissions-decisions-model"
-							>
-								<input
-									id="tool-permissions-decisions-model"
-									class={inputClass}
-									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_MODEL}
-									required
-								/>
-							</AdminSettingField>
-							<AdminSettingField
-								label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsThreshold.label')}
-								description={$i18n.t(
-									'settings.admin.interface.toolPermissionsDecisionsThreshold.description'
-								)}
-								forId="tool-permissions-decisions-threshold"
-							>
-								<input
-									id="tool-permissions-decisions-threshold"
-									type="number"
-									min="0"
-									max="1"
-									step="0.01"
-									class={inputClass}
-									bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_THRESHOLD}
-									required
-								/>
-							</AdminSettingField>
-						</div>
+								<option value="">{$i18n.t('Default')}</option>
+								<option value="decisions">Decisions API</option>
+							</SettingsSelect>
+						</AdminSettingRow>
+						{#if chatConfig.TOOL_PERMISSIONS_AUTO_ENGINE === 'decisions'}
+							<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsUrl.label')}
+									description={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsUrl.description'
+									)}
+									forId="tool-permissions-decisions-url"
+								>
+									<input
+										id="tool-permissions-decisions-url"
+										type="url"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL}
+										required
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsKey.label')}
+									forId="tool-permissions-decisions-key"
+								>
+									<SensitiveInput
+										id="tool-permissions-decisions-key"
+										type="password"
+										variant="settings"
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY}
+										required={false}
+										screenReader={false}
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsModel.label')}
+									forId="tool-permissions-decisions-model"
+								>
+									<input
+										id="tool-permissions-decisions-model"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL}
+										required
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsThreshold.label'
+									)}
+									description={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsThreshold.description'
+									)}
+									forId="tool-permissions-decisions-threshold"
+								>
+									<input
+										id="tool-permissions-decisions-threshold"
+										type="number"
+										min="0"
+										max="1"
+										step="0.01"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD}
+										required
+									/>
+								</AdminSettingField>
+							</div>
+						{/if}
 						<AdminSettingField
-							label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsPrompt.label')}
+							label={$i18n.t('settings.admin.interface.toolPermissionsAutoPrompt.label')}
 							description={$i18n.t(
-								'settings.admin.interface.toolPermissionsDecisionsPrompt.description'
+								'settings.admin.interface.toolPermissionsAutoPrompt.description'
 							)}
-							forId="tool-permissions-decisions-prompt"
+							forId="tool-permissions-auto-prompt"
 						>
 							<Textarea
-								id="tool-permissions-decisions-prompt"
+								id="tool-permissions-auto-prompt"
 								className={textareaClass}
-								bind:value={chatConfig.TOOL_PERMISSIONS_DECISIONS_PROMPT}
+								bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_PROMPT}
 								placeholder={defaultPermissionsPrompt}
 							/>
 						</AdminSettingField>

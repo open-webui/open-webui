@@ -19,6 +19,7 @@ from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
 from open_webui.utils.models import get_filtered_models
+from open_webui.utils.tool_calling import strip_tool_approval_prompt
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
 
@@ -260,7 +261,10 @@ async def process_pending_internal_messages(
         # Runs saved before chat_context was introduced only have the assembled prompt.
         if run.get('chat_context') is None and run.get('system_prompt'):
             chat_context['messages'] = [
-                {'role': 'system', 'content': strip_deferred_tools_manifest(run['system_prompt'])}
+                {
+                    'role': 'system',
+                    'content': strip_tool_approval_prompt(strip_deferred_tools_manifest(run['system_prompt'])),
+                }
             ]
         form_data = {
             'model': model_id,

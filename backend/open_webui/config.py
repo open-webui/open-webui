@@ -2262,6 +2262,16 @@ ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lowe
 ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
 ENABLE_TOOL_CALL_LABELS = os.getenv('ENABLE_TOOL_CALL_LABELS', 'False').lower() == 'true'
 ENABLE_TOOL_PERMISSIONS_AUTO = os.getenv('ENABLE_TOOL_PERMISSIONS_AUTO', 'False').lower() == 'true'
+TOOL_PERMISSIONS_AUTO_ENGINE = os.getenv('TOOL_PERMISSIONS_AUTO_ENGINE', '')
+# None distinguishes an unset prompt from an explicit reset to the default policy.
+TOOL_PERMISSIONS_AUTO_PROMPT = os.getenv('TOOL_PERMISSIONS_AUTO_PROMPT')
+TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL')
+TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY')
+TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL')
+TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD')
+if TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD is not None:
+    TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD = float(TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD)
+# Deprecated environment defaults, used only when their Auto replacements are unset.
 TOOL_PERMISSIONS_DECISIONS_API_BASE_URL = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
 TOOL_PERMISSIONS_DECISIONS_API_KEY = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_KEY', '')
 TOOL_PERMISSIONS_DECISIONS_MODEL = os.getenv('TOOL_PERMISSIONS_DECISIONS_MODEL', 'gpt-6-luna')
@@ -3302,6 +3312,12 @@ DEFAULT_CONFIG = {
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
     'chat.tool_call_labels.enable': ENABLE_TOOL_CALL_LABELS,
     'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,
+    'chat.tool_permissions.auto.engine': TOOL_PERMISSIONS_AUTO_ENGINE,
+    'chat.tool_permissions.auto.prompt': TOOL_PERMISSIONS_AUTO_PROMPT,
+    'chat.tool_permissions.auto.decisions.api_base_url': TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL,
+    'chat.tool_permissions.auto.decisions.api_key': TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY,
+    'chat.tool_permissions.auto.decisions.model': TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL,
+    'chat.tool_permissions.auto.decisions.threshold': TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD,
     'chat.tool_permissions.decisions.api_base_url': TOOL_PERMISSIONS_DECISIONS_API_BASE_URL,
     'chat.tool_permissions.decisions.api_key': TOOL_PERMISSIONS_DECISIONS_API_KEY,
     'chat.tool_permissions.decisions.model': TOOL_PERMISSIONS_DECISIONS_MODEL,

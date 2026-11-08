@@ -154,10 +154,15 @@ from open_webui.utils.task import (
 from open_webui.utils.tether import get_terminal_connections
 from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
-from open_webui.utils.tool_permissions import ToolApprovalRequired, requires_tool_approval
+from open_webui.utils.tool_permissions import (
+    ToolApprovalRequired,
+    get_tool_permissions_auto_config,
+    requires_tool_approval,
+    set_tool_approval_prompt,
+)
 from open_webui.utils.tool_calling import (
     INCOMPLETE_CALL_ERROR,
-    add_tool_call_labels,
+    add_tool_call_metadata,
     final_answer_payload,
     prepare_tool_call,
     recover_tool_calls,
@@ -2417,6 +2422,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                         append=True,
                     )
 
+    form_data['messages'] = set_tool_approval_prompt(form_data['messages'])
     tool_ids = form_data.pop('tool_ids', None)
     terminal_id = form_data.pop('terminal_id', None)
     if not ENABLE_TOOL_SERVERS:
@@ -2877,10 +2883,27 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data, metadata, tools_dict, inlet_filter_tools, extra_params=extra_params
                 )
 
-                if await Config.get('chat.tool_call_labels.enable'):
-                    add_tool_call_labels(
-                        tools_dict, (metadata.get('variables') or {}).get('{{USER_LANGUAGE}}') or 'English'
-                    )
+                settings = await Config.get_many(
+                    'chat.tool_call_labels.enable',
+                    'chat.tool_permissions.enable',
+                    'chat.tool_permissions.auto.enable',
+                    'chat.tool_permissions.auto.engine',
+                )
+                approval = (
+                    metadata.get('params', {}).get('tool_approval_mode') == 'auto'
+                    and settings.get('chat.tool_permissions.enable')
+                    and settings.get('chat.tool_permissions.auto.enable')
+                    and settings.get('chat.tool_permissions.auto.engine', '') == ''
+                )
+                add_tool_call_metadata(
+                    tools_dict,
+                    labels=settings.get('chat.tool_call_labels.enable', False),
+                    approval=approval,
+                    language=(metadata.get('variables') or {}).get('{{USER_LANGUAGE}}') or 'English',
+                )
+                form_data['messages'] = set_tool_approval_prompt(
+                    form_data['messages'], (await get_tool_permissions_auto_config())['prompt'] if approval else None
+                )
 
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
@@ -3149,7 +3172,10 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
     tool = metadata.get('tools', {}).get(name)
     error = (
         prepare_tool_call(
-            tool_call, tool.get('spec', {}).get('parameters'), display_labels=tool.get('display_labels', False)
+            tool_call,
+            tool.get('spec', {}).get('parameters'),
+            display_labels=tool.get('display_labels', False),
+            approval_review=tool.get('approval_review', False),
         )
         if tool
         else f'Error: Tool "{name}" not found.'
@@ -5861,6 +5887,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 item,
                                 tool.get('spec', {}).get('parameters'),
                                 display_labels=tool.get('display_labels', False),
+                                approval_review=tool.get('approval_review', False),
                             )
                             if tool
                             else f'Error: Tool "{item["name"]}" not found.'
