@@ -1269,7 +1269,14 @@
 	};
 
 	let revealedSearchMessage = '';
-	$: if (!embedded && !loading && messagesRef && chat && chat.id === $page.params.id) {
+	$: if (
+		!embedded &&
+		!loading &&
+		messagesRef &&
+		chat &&
+		chat.id === $page.params.id &&
+		(!fullWidthTabs || mainChatActive)
+	) {
 		const target = $page.url.searchParams.get('message');
 		const key = `${chat.id}:${target}`;
 		if (target && history.messages[target] && key !== revealedSearchMessage) {
@@ -3172,7 +3179,6 @@
 					loading = false;
 					await tick();
 					if (signal.aborted) return;
-					if (!$page.url.searchParams.has('message')) scrollToBottom();
 					messageInput?.focus({ preventScroll: true });
 				}
 				return true;
@@ -3224,6 +3230,15 @@
 			});
 		}
 	};
+
+	$: if (
+		!loading &&
+		(!fullWidthTabs || mainChatActive) &&
+		autoScroll &&
+		!$page.url.searchParams.has('message')
+	) {
+		scrollToBottom();
+	}
 
 	const scrollToTop = async () => {
 		await messagesRef?.scrollToTop();
