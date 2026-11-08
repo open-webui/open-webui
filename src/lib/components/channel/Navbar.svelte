@@ -172,19 +172,6 @@
 			>
 				<slot name="actions">
 					{#if channel}
-						<Tooltip content={$i18n.t('Search')}>
-							<button
-								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
-								aria-label={$i18n.t('Search')}
-								type="button"
-								on:click={() => {
-									showChannelSearchModal = true;
-								}}
-							>
-								<Search className="size-4" strokeWidth="1.5" />
-							</button>
-						</Tooltip>
-
 						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
 								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
@@ -195,7 +182,7 @@
 								}}
 							>
 								<div class=" flex items-center gap-1 m-auto self-center shrink-0">
-									<Pin className=" size-4" strokeWidth="1.5" />
+									<Pin className=" size-3.5" strokeWidth="1.5" />
 								</div>
 							</button>
 						</Tooltip>
@@ -220,6 +207,19 @@
 								</button>
 							</Tooltip>
 						{/if}
+						<Tooltip content={$i18n.t('Search')}>
+							<button
+								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								aria-label={$i18n.t('Search')}
+								type="button"
+								on:click={() => {
+									showChannelSearchModal = true;
+								}}
+							>
+								<Search className="size-3.5" strokeWidth="1.5" />
+							</button>
+						</Tooltip>
+
 						<ChannelMenu {channel} />
 					{/if}
 				</slot>
