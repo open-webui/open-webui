@@ -52,6 +52,7 @@ from open_webui.utils.tool_permissions import DEFAULT_TOOL_PERMISSIONS_AUTO_PROM
 from open_webui.utils.tool_search import DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT, validate_decisions_config
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import ClientDisconnect
 
 log = logging.getLogger(__name__)
 
@@ -1424,10 +1425,13 @@ async def get_chat_view(
 async def bounded_chat_view(request: Request):
     # Bound the body before JSON/schema parsing, including chunked requests.
     body = bytearray()
-    async for chunk in request.stream():
-        body.extend(chunk)
-        if len(body) > 1024 * 1024:
-            raise HTTPException(status_code=413, detail='Chat view is too large')
+    try:
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 1024 * 1024:
+                raise HTTPException(status_code=413, detail='Chat view is too large')
+    except ClientDisconnect:
+        raise HTTPException(status_code=499)
     try:
         return ChatViewStateForm.model_validate_json(bytes(body))
     except ValueError:
