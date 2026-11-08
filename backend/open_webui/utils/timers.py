@@ -414,7 +414,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                 'path': '/api/v1/timers/internal',
                 'query_string': b'',
                 'headers': Headers({}).raw,
-                'client': ('127.0.0.1', 0),
+                'client': ('', 0),
                 'server': ('127.0.0.1', 80),
                 'scheme': 'http',
                 'app': app,

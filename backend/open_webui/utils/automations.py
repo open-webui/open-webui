@@ -149,7 +149,7 @@ def _build_request(
         'path': '/api/v1/automations/internal',
         'query_string': b'',
         'headers': Headers({}).raw,
-        'client': ('127.0.0.1', 0),
+        'client': ('', 0),
         'server': ('127.0.0.1', 80),
         'scheme': 'http',
         'app': app,
