@@ -51,6 +51,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ✂️ **Chat read limit.** Admins can limit how much of an earlier chat the Chat History tools return, with "VIEW_CHAT_MAX_CHARS" or the new Chat Read Limit field in Admin Settings > General, and the newest messages are kept while older ones are cut. [#33695](https://github.com/open-webui/open-webui/pull/33695), [#33608](https://github.com/open-webui/open-webui/issues/33608)
 - 🕒 **Reply finish time.** Assistant replies now show the time they finished instead of the time the prompt was sent. [#33895](https://github.com/open-webui/open-webui/pull/33895)
 - 🧐 **Channel message search.** Each channel header has a Search button that searches the messages of that channel.
+- 🖌️ **Edit images from the terminal.** The image edit tool can now take source images from the selected terminal by file path, as PNG, JPEG, WebP or GIF up to 25 megapixels. [#33824](https://github.com/open-webui/open-webui/issues/33824)
+- 📢 **Model availability events.** Open WebUI now publishes model.available and model.unavailable events when a model appears in or disappears from the fetched model list.
 - 🗒️ **Descriptions in model pickers.** The tool, skill, filter, action and sub-agent pickers in the model editor now show each item's description under its name. [#33723](https://github.com/open-webui/open-webui/pull/33723)
 - 🧹 **Discard any Git change.** The Git panel can now discard staged and new files too, and its confirmation warns that files not in the last commit are deleted and that this cannot be undone.
 - 🔔 **Notifications open their chat.** Clicking a desktop notification now brings Open WebUI to the front and opens the related chat, channel or calendar.
