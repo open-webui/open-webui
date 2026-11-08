@@ -1339,6 +1339,8 @@
 	"Headers must be a valid JSON object": "",
 	"Height": "",
 	"Hello, {{name}}": "",
+	"Hello, {{name}}!": "",
+	"Hello!": "",
 	"Help": "",
 	"Help me study": "",
 	"Help me study vocabulary: write a sentence for me to fill in the blank, and I'll try to pick the correct option.": "",

@@ -127,6 +127,17 @@
 		</Tooltip>
 	{/if}
 
+	<!-- Personalized greeting -->
+	{#if !$selectedFolder}
+		<div class="w-full text-2xl @sm:text-3xl font-semibold text-gray-800 dark:text-gray-100 text-center mb-4">
+			{#if $user?.name}
+				{$i18n.t('Hello, {{name}}!', { name: $user.name })}
+			{:else}
+				{$i18n.t('Hello!')}
+			{/if}
+		</div>
+	{/if}
+
 	<div class="w-full text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4">
 		<div class="w-full flex flex-col justify-center items-center">
 			{#if $selectedFolder}
