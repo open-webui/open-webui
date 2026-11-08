@@ -347,6 +347,8 @@ def get_provider_function(item: dict) -> dict:
         function = item
     # Repair only the provider copy; failed calls and their original arguments remain intact.
     function = dict(function)
+    if 'original_arguments' in function:
+        function['arguments'] = function['original_arguments']
     if error := prepare_tool_call(function):
         function['arguments'] = JSONCodec.dumps({'error': error})
     return {
