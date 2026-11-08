@@ -88,9 +88,7 @@
 
 			if (!redirectPath) {
 				redirectPath =
-					sessionStorage.getItem('auth:continue') ||
-					$page.url.searchParams.get('redirect') ||
-					'/';
+					sessionStorage.getItem('auth:continue') || $page.url.searchParams.get('redirect') || '/';
 			}
 
 			await goto(redirectPath);

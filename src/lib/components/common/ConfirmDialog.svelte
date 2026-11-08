@@ -222,7 +222,8 @@
 				<div class="mt-5 flex justify-between gap-1.5">
 					{#each confirmFirst ? ['confirm', 'cancel'] : ['cancel', 'confirm'] as action (action)}
 						<button
-							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action === primaryAction
+							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action ===
+							primaryAction
 								? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
 								: 'bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white'}"
 							on:click={action === 'confirm' ? confirmHandler : cancelHandler}
