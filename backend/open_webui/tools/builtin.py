@@ -33,6 +33,7 @@ from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
     EditImageForm,
+    get_image_data_url,
     image_edits,
     image_generations,
 )
@@ -69,7 +70,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import upload_files_to_terminal
+from open_webui.utils.terminals import get_terminal_file, upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -461,7 +462,7 @@ async def edit_image(
     Supports targeted edits such as adding, removing, replacing, inpainting, extending, or compositing image content.
 
     :param prompt: A description of the transformation to apply to the provided images
-    :param image_urls: Source image URLs to modify or use as composition inputs
+    :param image_urls: Source image URLs or absolute file paths to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
     :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
@@ -472,9 +473,15 @@ async def edit_image(
     try:
         user = UserModel(**__user__) if __user__ else None
 
+        resolved_images = []
+        for url in image_urls:
+            if url.startswith('/') and not url.startswith('/api/v1/files/'):
+                data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
+                url = await asyncio.to_thread(get_image_data_url, data)
+            resolved_images.append(url)
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls, size=size),
+            form_data=EditImageForm(prompt=prompt, image=resolved_images, size=size),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')

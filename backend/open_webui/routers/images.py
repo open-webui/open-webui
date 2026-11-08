@@ -155,6 +155,21 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
     return data_url
 
 
+def get_image_data_url(data: bytes) -> str:
+    """Validate image bytes and encode them with their detected MIME type."""
+    with Image.open(io.BytesIO(data)) as image:
+        if image.format not in {'PNG', 'JPEG', 'MPO', 'WEBP', 'GIF'}:
+            raise ValueError('Image must be PNG, JPEG, WebP, or GIF.')
+        if image.width * image.height > 25_000_000:
+            raise ValueError('Image must be at most 25 megapixels.')
+        mime_type = Image.MIME[image.format]
+        image.verify()
+    # verify() does not decode pixels for every format.
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+    return f'data:{mime_type};base64,{base64.b64encode(data).decode("utf-8")}'
+
+
 def get_image_file_item(base64_string, param_name='image'):
     header, encoded = base64_string.split(',', 1)
     mime_type = header.split(';')[0].lstrip('data:') or 'image/png'

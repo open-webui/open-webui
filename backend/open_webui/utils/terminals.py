@@ -387,6 +387,40 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
             entry['terminal_error'] = 'File saved in Open WebUI, but the selected terminal is unavailable.'
 
 
+async def get_terminal_file(request, user, metadata: dict, path: str, *, max_bytes: int) -> bytes:
+    """Read a bounded file through the authorized terminal connection."""
+    import aiohttp
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+    from open_webui.utils.tether import get_terminal_client
+
+    resolved = await resolve_terminal_connection(request, user, metadata)
+    if not resolved:
+        raise ValueError('Reading files requires a terminal connection reachable by Open WebUI.')
+    connection, headers, cookies = resolved
+    base_url = get_terminal_server_url(connection)
+    async with get_terminal_client(
+        base_url,
+        user.id if hasattr(user, 'id') else user['id'],
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL),
+        trust_env=True,
+    ) as session:
+        async with session.get(
+            f'{base_url}/files/view?path={quote(path, safe="")}',
+            headers=headers,
+            cookies=cookies,
+            ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+            allow_redirects=False,
+        ) as response:
+            if response.status != 200:
+                raise ValueError(f'Could not read {path} from the terminal.')
+            data = bytearray()
+            async for chunk in response.content.iter_chunked(64 * 1024):
+                if len(data) + len(chunk) > max_bytes:
+                    raise ValueError(f'File exceeds the {max_bytes}-byte limit.')
+                data.extend(chunk)
+    return bytes(data)
+
+
 async def get_terminal_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:
     """Load the selected terminal user's home AGENTS.md afresh for this turn."""
     try:
