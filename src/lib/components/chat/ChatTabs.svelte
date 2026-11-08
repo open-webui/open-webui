@@ -1788,7 +1788,9 @@
 									if (tab.kind === 'files')
 										updateViewTab(owner, tab.id, {
 											directory: view.directory,
-											label: view.directory?.split('/').filter(Boolean).pop() || $i18n.t('Files')
+											label: view.isHome
+												? $i18n.t('Home')
+												: view.directory?.split('/').filter(Boolean).pop() || $i18n.t('Files')
 										});
 								}}
 								onFilesMoved={() => {
