@@ -534,7 +534,9 @@
 					{ id: uuidv4(), prompt: instruction, files: attachments }
 				]
 			}));
-		} else await submitPrompt(instruction, attachments);
+		} else if ((await getChatId(history, attachments)) !== null) {
+			await submitPrompt(instruction, attachments);
+		}
 	};
 
 	let params = {};
@@ -3749,7 +3751,6 @@
 		bridgeRequest: { userMessageId: string; modelId: string } | null = null
 	) => {
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
-		if ((await getChatId(history, inputFiles)) === null) return { status: 'rejected' as const };
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -3964,11 +3965,10 @@
 	let tabActions: import('svelte').Snippet | undefined;
 	let tabBarActions: import('svelte').Snippet | undefined;
 
-	let initializedTerminalDirectory = '';
+	let initializedTerminalChatId: string | null = null;
 	const initializeTerminalDirectory = async (id: string, context: TerminalContext | null) => {
+		if (initializedTerminalChatId === id) return;
 		if (!$config?.features?.enable_tool_servers || !context?.currentDirectory) return;
-		const key = JSON.stringify([id, context.terminalId, context.currentDirectory]);
-		if (initializedTerminalDirectory === key) return;
 		const userSettings: any = $settings;
 		const connection = resolveTerminalConnection(
 			context.terminalId,
@@ -3982,7 +3982,7 @@
 			throw new Error(
 				$i18n.t('Working directory is unavailable. Check the terminal connection and path.')
 			);
-		initializedTerminalDirectory = key;
+		initializedTerminalChatId = id;
 	};
 
 	const getChatId = async (_history: typeof history, inputFiles = files) => {
@@ -3994,7 +3994,7 @@
 			!Object.keys(_history.messages).length &&
 			terminalContext &&
 			terminalContext.terminalId === terminalId
-				? { ...terminalContext }
+				? terminalContext
 				: null;
 		// Empty embedded drafts create their backing chat only when the first message is sent.
 		if (!_chatId) {
@@ -5010,7 +5010,7 @@
 	const initChatHandler = async (_history: typeof history) => {
 		let _chatId = $chatId;
 		const selectedFolderId = $selectedFolder?.id;
-		const context = terminalContext ? { ...terminalContext } : null;
+		const context = terminalContext;
 
 		if (!$temporaryChatEnabled) {
 			const createdChat = await createNewChat(
