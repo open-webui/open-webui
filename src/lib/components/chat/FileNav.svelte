@@ -2785,29 +2785,6 @@
 			</div>
 		{/if}
 
-		<!-- Bulk action bar -->
-		{#if (selectingFiles ? keepSelectionToolbar : selectedCount > 0) && !isSearching}
-			<BulkActionBar
-				count={selectedCount}
-				{canCompare}
-				onCompare={() => {
-					if (canCompare)
-						openComparison([
-							comparisonFile(comparisonEntries[0]),
-							comparisonFile(comparisonEntries[1])
-						]);
-				}}
-				canDelete={selectedEntriesWritable}
-				onDelete={() => {
-					deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
-					showDeleteConfirm = true;
-				}}
-				onDownload={bulkDownload}
-				onSelectAll={selectAll}
-				onClear={clearSelection}
-			/>
-		{/if}
-
 		{#if diskChanged}<div
 				role="status"
 				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
@@ -2829,10 +2806,17 @@
 		<div
 			bind:this={viewerRoot}
 			use:selectFilesByDrag
+			class:pb-8={!selectedFile && !isSearching && selectedCount > 0}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
 			on:click={(e) => {
 				closeDirectoryMenu();
-				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
+				if (
+					!comparison &&
+					selectedCount > 0 &&
+					(e.target === e.currentTarget ||
+						(e.target instanceof Element && e.target.matches('[data-file-list]')))
+				)
+					clearSelection();
 			}}
 			on:contextmenu={(e) => {
 				if (selectingFiles) {
@@ -3073,6 +3057,7 @@
 				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
+							data-file-list
 							class={viewMode === 'grid'
 								? 'grid grid-cols-[repeat(auto-fill,minmax(min(80px,100%),1fr))] gap-1 p-2'
 								: ''}
@@ -3196,6 +3181,33 @@
 				{/if}
 			{/if}
 		</div>
+
+		<!-- Float above the list footer without moving the rows. -->
+		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
+			<div class="relative z-10 h-0 shrink-0">
+				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-900">
+					<BulkActionBar
+						count={selectedCount}
+						{canCompare}
+						onCompare={() => {
+							if (canCompare)
+								openComparison([
+									comparisonFile(comparisonEntries[0]),
+									comparisonFile(comparisonEntries[1])
+								]);
+						}}
+						canDelete={selectedEntriesWritable}
+						onDelete={() => {
+							deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+							showDeleteConfirm = true;
+						}}
+						onDownload={bulkDownload}
+						onSelectAll={selectAll}
+						onClear={clearSelection}
+					/>
+				</div>
+			</div>
+		{/if}
 
 		{#if onSelectDirectory}
 			<div class="shrink-0 border-t border-gray-50 pt-3 dark:border-gray-850/30">
