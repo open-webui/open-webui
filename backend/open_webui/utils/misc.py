@@ -349,8 +349,16 @@ def get_provider_function(item: dict) -> dict:
     function = dict(function)
     if 'original_arguments' in function:
         function['arguments'] = function['original_arguments']
+    raw_arguments = function.get('arguments')
     if error := prepare_tool_call(function):
         function['arguments'] = JSONCodec.dumps({'error': error})
+    else:
+        try:
+            # A valid JSON object goes back as the model wrote it, so its cached output still matches.
+            if isinstance(JSONCodec.loads(raw_arguments), dict):
+                function['arguments'] = raw_arguments
+        except (TypeError, ValueError):
+            pass
     return {
         'name': function.get('name', ''),
         'arguments': function['arguments'],
