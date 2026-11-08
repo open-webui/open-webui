@@ -200,7 +200,7 @@
 		codeInterpreterCount === 0 &&
 		toolLabels.length &&
 		toolLabels.every(Boolean)
-			? toolLabels.join(' · ')
+			? toolLabels.join(', ')
 			: '';
 </script>
 
@@ -252,7 +252,7 @@
 				<div class="flex-1 line-clamp-1">
 					{#if groupLabel}
 						<span
-							class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+							class="text-gray-400 dark:text-gray-500 {hasActiveDetails ? 'shimmer' : ''}"
 							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
 						>
 					{:else}

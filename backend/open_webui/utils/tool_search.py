@@ -116,6 +116,7 @@ async def apply_tool_search(
     # Middleware resolves this before approvals and execution, preserving the target tool's behavior.
     tools_dict[CALL_TOOL_NAME] = {
         'tool_id': f'builtin:{CALL_TOOL_NAME}',
+        'hidden': True,
         'type': 'builtin',
         'spec': {
             'name': CALL_TOOL_NAME,

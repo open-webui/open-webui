@@ -5877,6 +5877,8 @@ async def streaming_chat_response_handler(response, ctx):
                         item['status'] = 'failed' if error else item['status']
                         if 'provider_function' in tool_call:
                             item['provider_function'] = tool_call['provider_function']
+                            # The first resolved call reuses the hidden dispatcher's output item.
+                            item['hidden'] = tool.get('hidden') is True if tool else False
                         if 'provider_batch' in tool_call:
                             item['provider_batch'] = tool_call['provider_batch']
                         if error:
