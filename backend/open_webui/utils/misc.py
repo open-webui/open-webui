@@ -476,6 +476,9 @@ def convert_output_to_messages(
                 message['thinking'] = '\n'.join(pending_reasoning)
             else:
                 message['reasoning_content'] = '\n'.join(pending_reasoning)
+        elif pending_tool_calls and reasoning_format == 'reasoning_content':
+            # DeepSeek rejects a tool call turn without reasoning_content.
+            message['reasoning_content'] = ''
 
         if pending_reasoning_details:
             message['reasoning_details'] = pending_reasoning_details
