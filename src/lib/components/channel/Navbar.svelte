@@ -143,15 +143,15 @@
 						{:else}
 							<div class=" size-4 shrink-0 justify-center flex items-center">
 								{#if isPublicChannel(channel)}
-									<Hashtag className="size-4" strokeWidth="1.5" />
+									<Hashtag className="size-3.5" strokeWidth="1.5" />
 								{:else}
-									<Lock className="size-4" strokeWidth="1.5" />
+									<Lock className="size-3.5" strokeWidth="1.5" />
 								{/if}
 							</div>
 						{/if}
 
 						<div
-							class=" min-w-0 truncate text-left text-sm font-medium leading-5 text-gray-700 dark:text-gray-300"
+							class=" min-w-0 truncate text-left text-sm leading-5 text-gray-700 dark:text-gray-300"
 						>
 							{#if channel?.name}
 								{channel.name}

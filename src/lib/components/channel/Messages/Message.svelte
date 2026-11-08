@@ -15,7 +15,6 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
-	import { autoUpdate } from '@floating-ui/dom';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -71,13 +70,10 @@
 
 	let showButtons = false;
 
-	// The top layer escapes scroll clipping without moving actions out of the message's tab order.
-	const positionActions = (node: HTMLElement, keepOpen: boolean) => {
+	const trackActions = (node: HTMLElement, keepOpen: boolean) => {
 		const anchor = node.parentElement!;
 		const messageElement = anchor.parentElement!;
-		let cleanup: (() => void) | undefined;
 		let destroyed = false;
-		node.showPopover();
 
 		const update = () => {
 			if (destroyed) return;
@@ -89,16 +85,6 @@
 					));
 			node.style.opacity = visible ? '1' : '0';
 			node.style.pointerEvents = visible ? 'auto' : 'none';
-			if (visible && !cleanup) {
-				cleanup = autoUpdate(messageElement, node, () => {
-					const rect = anchor.getBoundingClientRect();
-					node.style.left = `${rect.right - node.offsetWidth}px`;
-					node.style.top = `${rect.top}px`;
-				});
-			} else if (!visible) {
-				cleanup?.();
-				cleanup = undefined;
-			}
 		};
 		const scheduleUpdate = () => requestAnimationFrame(update);
 		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
@@ -113,7 +99,6 @@
 			},
 			destroy() {
 				destroyed = true;
-				cleanup?.();
 				for (const element of [messageElement, node]) {
 					for (const event of events) element.removeEventListener(event, scheduleUpdate);
 				}
@@ -273,10 +258,9 @@
 			{#if !edit && !disabled && !$$slots.header}
 				<div class="absolute right-1 -top-3">
 					<div
-						use:positionActions={showButtons}
-						popover="manual"
-						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
-						style="inset: auto; margin: 0; color: inherit; opacity: 0; pointer-events: none;"
+						use:trackActions={showButtons}
+						class="absolute right-0 top-0 z-20 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						style="opacity: 0; pointer-events: none;"
 					>
 						<slot name="actions">
 							{#if onReaction}
