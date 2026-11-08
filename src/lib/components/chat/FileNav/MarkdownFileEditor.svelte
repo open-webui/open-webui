@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { getAllContexts, getContext, mount, unmount, onDestroy, tick } from 'svelte';
 	import { Node, type Editor } from '@tiptap/core';
 	import type { Transaction } from '@tiptap/pm/state';
@@ -154,7 +155,7 @@
 										context,
 										props: {
 											content: node.attrs.source,
-											id: `editor-${crypto.randomUUID()}`,
+											id: `editor-${uuidv4()}`,
 											path,
 											baseUrl,
 											apiKey,
