@@ -574,7 +574,11 @@
 	const clearChatDropPreview = () => (chatDropPreview = null);
 	const canDropChat = (event: Pick<DragEvent, 'dataTransfer'>) =>
 		canSideChat &&
-		($user?.role === 'admin' || !($user?.permissions?.chat?.temporary_enforced ?? false)) &&
+		($user?.role === 'admin' ||
+			!(
+				($user?.permissions?.chat?.temporary ?? true) &&
+				($user?.permissions?.chat?.temporary_enforced ?? false)
+			)) &&
 		event.dataTransfer?.types.includes('application/x-open-webui-chat');
 	const chatDropBounds = (
 		event: Pick<DragEvent, 'target' | 'clientX' | 'clientY' | 'dataTransfer'>
