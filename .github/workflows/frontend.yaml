@@ -16,6 +16,9 @@ concurrency:
   group: frontend-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+
 jobs:
   # ── Format, i18n, and production build ────────────────────────────────────
   format-and-build:
