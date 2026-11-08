@@ -166,7 +166,7 @@
 	};
 
 	const loadMoreItems = async () => {
-		if (allItemsLoaded) return;
+		if (allItemsLoaded || itemsLoading) return;
 		page += 1;
 		await getItemsPage();
 	};
@@ -177,6 +177,8 @@
 	};
 
 	const handleSearchInput = () => {
+		searchController?.abort();
+		itemsLoading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (loaded) {

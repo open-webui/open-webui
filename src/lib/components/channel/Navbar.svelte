@@ -18,6 +18,8 @@
 	import ChannelInfoModal from './ChannelInfoModal.svelte';
 	import Users from '../icons/Users.svelte';
 	import Pin from '../icons/Pin.svelte';
+	import Search from '../icons/Search.svelte';
+	import SearchModal from '../layout/SearchModal.svelte';
 	import PinnedMessagesModal from './PinnedMessagesModal.svelte';
 	import ChannelMenu from './ChannelMenu.svelte';
 
@@ -25,6 +27,7 @@
 
 	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
+	let showChannelSearchModal = false;
 
 	const hasPublicReadGrant = (grants: any) =>
 		Array.isArray(grants) &&
@@ -53,6 +56,13 @@
 </script>
 
 {#if !readOnly}
+	{#if showChannelSearchModal}
+		<SearchModal
+			bind:show={showChannelSearchModal}
+			kind="message"
+			scope={`channel:${channel.id}`}
+		/>
+	{/if}
 	<PinnedMessagesModal bind:show={showChannelPinnedMessagesModal} {channel} {onPin} />
 	<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
 {/if}
@@ -162,6 +172,19 @@
 			>
 				<slot name="actions">
 					{#if channel}
+						<Tooltip content={$i18n.t('Search')}>
+							<button
+								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								aria-label={$i18n.t('Search')}
+								type="button"
+								on:click={() => {
+									showChannelSearchModal = true;
+								}}
+							>
+								<Search className="size-4" strokeWidth="1.5" />
+							</button>
+						</Tooltip>
+
 						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
 								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"

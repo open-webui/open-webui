@@ -340,7 +340,8 @@ export const searchFiles = async (
 	limit: number = 20,
 	type: 'file' | 'directory' | 'any' = 'any',
 	sessionId?: string,
-	showHidden: boolean = false
+	showHidden: boolean = false,
+	signal?: AbortSignal
 ): Promise<TerminalFileSearchResponse | null> => {
 	const headers: Record<string, string> = bearerHeaders(apiKey);
 	if (sessionId) headers['X-Session-Id'] = sessionId;
@@ -354,13 +355,16 @@ export const searchFiles = async (
 	});
 	const base = baseUrl.replace(/\/$/, '');
 	const searchRes = await fetch(`${base}/files/search?${searchParams.toString()}`, {
-		headers
+		headers,
+		signal
 	}).catch(() => null);
 
 	if (searchRes?.ok) {
 		const json = await searchRes.json().catch(() => null);
 		if (Array.isArray(json?.results)) return { results: json.results };
 	}
+
+	if (signal?.aborted) return null;
 
 	const globParams = new URLSearchParams({
 		pattern: query.trim() ? `*${query.trim()}*` : '*',
@@ -369,9 +373,10 @@ export const searchFiles = async (
 		max_results: String(limit)
 	});
 	const globRes = await fetch(`${base}/files/glob?${globParams.toString()}`, {
-		headers
+		headers,
+		signal
 	}).catch((err) => {
-		console.error('open-terminal searchFiles error:', err);
+		if (!signal?.aborted) console.error('open-terminal searchFiles error:', err);
 		return null;
 	});
 	if (!globRes?.ok) return null;

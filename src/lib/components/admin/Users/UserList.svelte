@@ -44,6 +44,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 	let orderBy = 'created_at'; // default sort key
 	let direction = 'asc'; // default sort order
 
@@ -95,15 +96,18 @@
 	};
 
 	const getUserList = async () => {
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
 		try {
-			const res = await getUsers(localStorage.token, query, orderBy, direction, page).catch(
+			const res = await getUsers(localStorage.token, query, orderBy, direction, page, signal).catch(
 				(error) => {
 					toast.error(`${error}`);
 					return null;
 				}
 			);
 
-			if (res) {
+			if (res && !signal.aborted) {
 				users = res.users;
 				total = res.total;
 				adminUserCount.set(total);
@@ -114,6 +118,7 @@
 	};
 
 	const handleSearchInput = () => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (page !== 1) {
@@ -129,6 +134,7 @@
 	}
 
 	onDestroy(() => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
 </script>
