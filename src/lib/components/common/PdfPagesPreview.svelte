@@ -40,6 +40,7 @@
 		pdfData instanceof Uint8Array ? pdfData.slice() : pdfData.slice(0);
 
 	const updateLayout = () => {
+		if (rootEl && !rootEl.clientWidth) return;
 		hideThumbs = (rootEl?.clientWidth ?? window.innerWidth) < 720;
 	};
 
@@ -75,7 +76,7 @@
 			pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 			pdfDoc?.destroy();
-			pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
+			pdfDoc = await pdfjs.getDocument({ data: pdfData, wasmUrl: '/wasm/' }).promise;
 
 			const rendered: string[] = [];
 			for (let i = 1; i <= pdfDoc.numPages; i++) {

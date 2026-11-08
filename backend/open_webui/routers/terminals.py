@@ -15,16 +15,16 @@ import posixpath
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import aiohttp
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
-from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.utils.access_control import has_connection_access
 from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
 from open_webui.utils.browser import browser_access, browser_ticket
+from open_webui.utils.tether import RelayInterrupted, get_terminal_connections, get_terminal_client
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.terminals import (
@@ -195,7 +195,7 @@ async def watch_access(server_id, sid, ticket):
     while True:
         await asyncio.sleep(10)
         current_user, _ = await browser_access(server_id, sid, ticket)
-        latest = await Config.get('terminal_server.connections', []) or []
+        latest = await get_terminal_connections(current_user)
         current = next((c for c in latest if c.get('id') == server_id), None)
         if (
             not current
@@ -211,7 +211,7 @@ async def watch_access(server_id, sid, ticket):
 async def browser_ws(ws: WebSocket, server_id: str, sid: str, ticket: str, kind: str):
     try:
         user, data = await browser_access(server_id, sid, ticket)
-        connections = await Config.get('terminal_server.connections', []) or []
+        connections = await get_terminal_connections(user)
         connection = next((c for c in connections if c.get('id') == server_id), None)
         if (
             kind not in ('ws', 'stream', 'vnc')
@@ -239,7 +239,9 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, ticket: str, kind:
         headers['Authorization'] = data['relay']['authorization']
     tasks = []
     try:
-        async with aiohttp.ClientSession(cookies=data['relay'].get('cookies', {}), trust_env=True) as client:
+        async with get_terminal_client(
+            base, user.id, cookies=data['relay'].get('cookies', {}), trust_env=True
+        ) as client:
             async with client.ws_connect(
                 url,
                 headers=headers,
@@ -270,13 +272,13 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
     if not ENABLE_TOOL_SERVERS:
         return []
 
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await get_terminal_connections(user)
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
 
     return [
         {
             'id': connection.get('id', ''),
-            'url': connection.get('url', ''),
+            'url': '' if connection.get('owner_id') else connection.get('url', ''),
             'name': connection.get('name', ''),
             'contexts': terminal_contexts(connection),
             'config': {'chat_uploads': terminal_chat_uploads(connection)},
@@ -302,7 +304,7 @@ async def proxy_terminal(
     if not ENABLE_TOOL_SERVERS:
         return JSONResponse({'error': 'Tool servers are disabled'}, status_code=403)
 
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await get_terminal_connections(user)
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
@@ -340,6 +342,12 @@ async def proxy_terminal(
     headers = {'X-User-Id': user.id}
     # Forward per-session cwd tracking header
     session_id = request.path_params.get('chat_id') or request.headers.get('x-session-id')
+    if (
+        safe_path.rstrip('/') == 'system/info'
+        and (terminal_context_config(connection, 'chat') or {}).get('context_id') == 'chat_id'
+        and not terminal_context_id(connection, {'chat_id': session_id}, 'chat')
+    ):
+        return JSONResponse({'error': 'A saved chat is required for this terminal'}, status_code=409)
     if session_id:
         headers['X-Session-Id'] = session_id
         if not terminal_context_available(connection, 'chat'):
@@ -392,13 +400,15 @@ async def proxy_terminal(
     if content_type:
         headers['Content-Type'] = content_type
 
-    session = aiohttp.ClientSession(
+    session = get_terminal_client(
+        base_url,
+        user.id,
         timeout=aiohttp.ClientTimeout(total=300, connect=10),
         trust_env=True,
     )
 
     try:
-        body = await request.body()
+        body = request.stream()
 
         upstream_response = await session.request(
             method=request.method,
@@ -476,6 +486,9 @@ async def proxy_terminal(
     except ClientDisconnect:
         await session.close()
         return Response(status_code=499)
+    except RelayInterrupted as error:
+        await session.close()
+        return JSONResponse(error.result(), status_code=502)
     except (aiohttp.ClientConnectionError, TimeoutError) as error:
         await session.close()
         log.error('Terminal proxy error: %s', str(error) or type(error).__name__)
@@ -509,6 +522,8 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     except (TimeoutError, JSONCodec.JSONDecodeError):
         await ws.close(code=4001, reason='Auth timeout or invalid payload')
         return None
+    except WebSocketDisconnect:
+        return None
     except Exception:
         await ws.close(code=4001, reason='Invalid token')
         return None
@@ -517,6 +532,7 @@ async def _resolve_authenticated_connection(ws: WebSocket, server_id: str):
     if result is None:
         return None
     user, connection = result
+    ws.state.auth = payload
     chat_id = payload.get('chat_id', '')
     return user, connection, chat_id if isinstance(chat_id, str) else '', token
 
@@ -537,11 +553,14 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
         return None
 
     # Resolve terminal server
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await get_terminal_connections(user)
     connection = next((c for c in connections if c.get('id') == server_id), None)
 
     if connection is None:
-        await ws.close(code=4004, reason='Terminal server not found')
+        if server_id.startswith('tether:'):
+            await ws.close(code=1013, reason='Tether is offline. Reconnecting.')
+        else:
+            await ws.close(code=4004, reason='Terminal server not found')
         return None
 
     if not connection.get('enabled', True):
@@ -645,7 +664,7 @@ async def _proxy_terminal_websocket(
 
     request = Request({**ws.scope, 'type': 'http', 'method': 'GET'})
     opened = False
-    session = aiohttp.ClientSession()
+    session = get_terminal_client(base_url, user.id)
     try:
         async with session.ws_connect(
             upstream_url,
@@ -658,11 +677,11 @@ async def _proxy_terminal_websocket(
             auth_type = connection.get('auth_type', 'bearer')
             if auth_type == 'bearer':
                 key = normalize_bearer_token(connection.get('key', ''))
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': key}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': key}))
             elif auth_type == 'session' and is_terminal_orchestrator(connection):
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': token}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': token}))
             else:
-                await upstream.send_str(_json.dumps({'type': 'auth', 'token': ''}))
+                await upstream.send_str(_json.dumps({**ws.state.auth, 'token': ''}))
 
             if session_id is not None:
                 await publish_event(
@@ -687,7 +706,8 @@ async def _proxy_terminal_websocket(
                         elif 'text' in msg and msg['text']:
                             await upstream.send_str(msg['text'])
                 except Exception:
-                    pass
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal connection interrupted. Reconnecting.')
 
             async def _upstream_to_client():
                 """Forward upstream → client."""
@@ -702,11 +722,11 @@ async def _proxy_terminal_websocket(
                             aiohttp.WSMsgType.ERROR,
                         ):
                             break
-                    if session_id is None:
-                        code = upstream.close_code or 1011
-                        await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
+                    code = upstream.close_code or 1011
+                    await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
                 except Exception:
-                    pass
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal connection interrupted. Reconnecting.')
 
             async def _watch_access():
                 try:
@@ -717,6 +737,8 @@ async def _proxy_terminal_websocket(
                             return
                 except Exception:
                     log.exception('Terminal access recheck failed')
+                    with suppress(Exception):
+                        await ws.close(code=1011, reason='Terminal access check unavailable. Reconnecting.')
 
             # End the proxy as soon as any task finishes (e.g. a
             # graceful upstream CLOSE) and cancel the rest, which would
@@ -734,13 +756,10 @@ async def _proxy_terminal_websocket(
                 await asyncio.gather(*tasks, return_exceptions=True)
     except Exception as e:
         log.exception('Terminal WebSocket proxy error: %s', e)
-        if session_id is None:
-            status = getattr(e, 'status', None)
-            code = {401: 4001, 403: 4003, 404: 4004}.get(status, 1011)
-            try:
-                await ws.close(code=code)
-            except Exception:
-                pass
+        status = getattr(e, 'status', getattr(e, 'status_code', None))
+        code = {401: 4001, 403: 4003, 404: 4004}.get(status, 1011)
+        with suppress(Exception):
+            await ws.close(code=code)
     finally:
         await session.close()
         if opened:

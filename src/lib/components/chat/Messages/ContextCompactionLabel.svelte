@@ -10,7 +10,7 @@
 	export let compactPreview = false;
 
 	$: rowClass = `flex w-full min-w-0 items-center gap-1.5 pt-0.5 pb-0.5 ${
-		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
+		compactPreview ? 'text-xs' : 'text-[0.90625rem]'
 	} text-gray-400 dark:text-gray-500`;
 </script>
 

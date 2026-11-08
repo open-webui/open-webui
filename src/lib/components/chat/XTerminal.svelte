@@ -3,8 +3,13 @@
 	import { Terminal } from '@xterm/xterm';
 	import { FitAddon } from '@xterm/addon-fit';
 	import { WebLinksAddon } from '@xterm/addon-web-links';
+	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
-	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
+	import {
+		terminalRequest,
+		TerminalRequestError,
+		type TerminalConnection
+	} from '$lib/apis/terminal';
 	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
 
 	export let connection: TerminalConnection;
@@ -23,12 +28,21 @@
 	let themeObserver: MutationObserver;
 	let pingInterval: ReturnType<typeof setInterval>;
 	let destroyed = false;
-	let sessionId = '';
+	export let sessionId = '';
+	export let onUnavailable: (message: string, status?: number) => void = () => {};
 	let sessionChatId = chatId;
 	let bindingChat: Promise<void> | null = null;
 	let finishConnection: (ready: boolean) => void;
 	const connectionReady = new Promise<boolean>((resolve) => (finishConnection = resolve));
 	let reportedActive: boolean | null = null;
+	let cursor = 0;
+	let outputEnd: number | null = null;
+	let outputPending = Promise.resolve();
+	let outputBatch = outputPending;
+	let outputBatchBytes = 0;
+	let reconnectTimer: ReturnType<typeof setTimeout>;
+	let reconnectDelay = 1000;
+	let reconnecting = false;
 
 	export async function bindChat(id: string) {
 		if (readOnly || destroyed || sessionChatId === id) return;
@@ -98,24 +112,13 @@
 	async function connect() {
 		connecting = true;
 		try {
-			const session = await terminalRequest<{ id: string }>(
+			if (!sessionId) throw new Error('Session no longer available');
+			await terminalRequest(
 				connection,
 				sessionChatId,
-				'/api/terminals',
-				{
-					method: 'POST'
-				}
+				`/api/terminals/${encodeURIComponent(sessionId)}`
 			);
-			sessionId = session.id;
-			if (destroyed) {
-				await terminalRequest(
-					connection,
-					sessionChatId,
-					`/api/terminals/${encodeURIComponent(sessionId)}`,
-					{ method: 'DELETE' }
-				);
-				return;
-			}
+			if (destroyed) return;
 			ws = openTerminalSocket(
 				connection,
 				sessionChatId,
@@ -123,6 +126,7 @@
 				() => {
 					if (destroyed) return;
 					connected = true;
+					reconnecting = false;
 					finishConnection(true);
 					connecting = false;
 					reportActivity(active);
@@ -132,42 +136,105 @@
 					pingInterval = setInterval(() => {
 						if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
 					}, 25000);
-				}
+				},
+				{ resume: true, cursor, flow_control: true }
 			);
+			const socket = ws;
+			let flowControlled = false;
+			let ackPending = false;
 			ws.onmessage = (event) => {
 				if (destroyed) return;
 				if (typeof event.data === 'string') {
 					try {
-						if (JSON.parse(event.data).type === 'chat') return;
+						const message = JSON.parse(event.data);
+						if (message.type === 'chat') return;
+						if (message.type === 'flow_control') {
+							flowControlled = true;
+							return;
+						}
+						if (message.type === 'output') {
+							outputEnd = message.end;
+							if (message.truncated) write('\r\n[Earlier output is no longer available]\r\n');
+							return;
+						}
 					} catch {
 						/* Render non-JSON terminal output below. */
 					}
 				}
-				if (event.data instanceof ArrayBuffer) term?.write(new Uint8Array(event.data));
-				else write(event.data);
+				if (event.data instanceof ArrayBuffer) {
+					const data = new Uint8Array(event.data);
+					const end = outputEnd;
+					outputEnd = null;
+					// Let xterm batch parsing instead of scheduling a timer for every chunk.
+					outputPending = outputBatch.then(
+						() =>
+							new Promise<void>((resolve) => {
+								if (!term || destroyed) {
+									resolve();
+									return;
+								}
+								term.write(data, () => {
+									if (end !== null) cursor = end;
+									if (flowControlled && end !== null && !ackPending) {
+										ackPending = true;
+										queueMicrotask(() => {
+											ackPending = false;
+											if (socket.readyState === WebSocket.OPEN)
+												socket.send(JSON.stringify({ type: 'ack', cursor }));
+										});
+									}
+									reconnectDelay = 1000;
+									resolve();
+								});
+							})
+					);
+					outputBatchBytes += data.byteLength;
+					if (outputBatchBytes >= 64 * 1024) {
+						outputBatch = outputPending;
+						outputBatchBytes = 0;
+					}
+				} else write(event.data);
 			};
-			ws.onclose = () => {
-				if (destroyed) return;
+			ws.onclose = async (event) => {
 				disconnect();
-				write('\r\n\x1b[90m[Connection closed]\x1b[0m\r\n');
+				await outputPending;
+				if (destroyed) return;
+				if (event.code === 1000 || [4001, 4003, 4004].includes(event.code)) {
+					reconnecting = false;
+					onUnavailable(
+						event.code === 4001 || event.code === 4003
+							? 'Terminal access denied'
+							: 'Session no longer available',
+						event.code === 4001 || event.code === 4003 ? 403 : 404
+					);
+					write(
+						event.code === 4001 || event.code === 4003
+							? '\r\n[Terminal access denied. Check your sign-in and permissions.]\r\n'
+							: '\r\n[Session no longer available.]\r\n'
+					);
+					return;
+				}
+				reconnecting = true;
+				reconnectTimer = setTimeout(() => void connect(), reconnectDelay);
+				reconnectDelay = Math.min(reconnectDelay * 2, 10000);
 			};
 			ws.onerror = () => {
 				if (destroyed) return;
 				disconnect();
-				write('\r\n\x1b[31m[Terminal connection failed]\x1b[0m\r\n');
 			};
 		} catch (error) {
 			if (destroyed) return;
 			disconnect();
+			onUnavailable(
+				String(error),
+				error instanceof TerminalRequestError ? error.status : undefined
+			);
 			write(`\r\n\x1b[31m[${error}]\x1b[0m\r\n`);
 		}
 	}
 
 	$: if (active && term) requestAnimationFrame(fit);
 	$: if (connected) reportActivity(active);
-	$: if (connected && chatId && !sessionChatId) {
-		void bindChat(chatId).catch((error) => write(`\r\n[${error}]\r\n`));
-	}
 
 	onMount(() => {
 		document.addEventListener('visibilitychange', reportVisibility);
@@ -191,6 +258,13 @@
 		term.loadAddon(fitAddon);
 		term.loadAddon(new WebLinksAddon());
 		term.open(terminalEl);
+		try {
+			const webgl = new WebglAddon();
+			webgl.onContextLoss(() => webgl.dispose());
+			term.loadAddon(webgl);
+		} catch {
+			// Keep the default renderer when WebGL is unavailable.
+		}
 		resizeObserver = new ResizeObserver(fit);
 		resizeObserver.observe(terminalEl);
 		requestAnimationFrame(fit);
@@ -213,6 +287,7 @@
 	onDestroy(() => {
 		document.removeEventListener('visibilitychange', reportVisibility);
 		destroyed = true;
+		clearTimeout(reconnectTimer);
 		disconnect();
 		ws?.close();
 		resizeObserver?.disconnect();
@@ -223,6 +298,14 @@
 </script>
 
 <div class="terminal-view h-full min-h-0 relative bg-white dark:bg-transparent">
+	{#if reconnecting}
+		<div
+			class="absolute top-1 right-2 z-10 rounded bg-white/90 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900/90 dark:text-gray-300"
+			role="status"
+		>
+			Connection interrupted. Reconnecting to the same terminal…
+		</div>
+	{/if}
 	<div
 		bind:this={terminalEl}
 		class="absolute inset-0 pl-2 pr-0.5"

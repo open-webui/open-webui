@@ -36,10 +36,10 @@
 	// $i18n.t('Failed to load chat'); $i18n.t('Select a conversation to preview');
 	export let show = false;
 	export let onClose = () => {};
+	export let kind: 'all' | SearchKind = 'all';
+	export let scope = '';
 	let query = '';
-	let kind: 'all' | SearchKind = 'all';
 	let sharing = 'all';
-	let scope = '';
 	let kinds: SearchKind[] = ['chat'];
 	let scopes: SearchScope[] = [];
 	let results: SearchResult[] = [];
@@ -398,7 +398,7 @@
 			>
 		</div>
 		{#if sharing !== 'all' || scope}
-			<div class="flex flex-wrap items-center gap-1 px-3 pb-1.5">
+			<div class="-mt-1 flex flex-wrap items-center gap-1 px-3 pb-1.5">
 				{#if sharing !== 'all'}<button
 						class="{quietButton} !h-[1.375rem] bg-gray-50/60 dark:bg-gray-800/40"
 						on:click={() => (sharing = 'all')}

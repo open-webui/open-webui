@@ -2,6 +2,7 @@ import asyncio
 import logging
 import re
 import time
+from itertools import zip_longest
 from typing import Any, Optional
 
 from open_webui.models.config import Config
@@ -325,42 +326,26 @@ async def retrieve_external_knowledge_for_connection(
     chunks = []
     provider = (connection.get('provider') or '').lower()
 
-    for query in queries:
-        if provider == 'qdrant':
-            chunks.extend(
-                await _retrieve_qdrant(
-                    connection,
-                    auth_config,
-                    knowledge,
-                    query,
-                    count,
-                    getattr(request.app.state, 'EMBEDDING_FUNCTION', None),
-                )
-            )
-        elif provider == 'milvus':
-            chunks.extend(
-                await _retrieve_milvus(
-                    connection,
-                    auth_config,
-                    knowledge,
-                    query,
-                    count,
-                    getattr(request.app.state, 'EMBEDDING_FUNCTION', None),
-                )
-            )
-        elif provider == 'pgvector':
-            chunks.extend(
-                await _retrieve_pgvector(
-                    connection,
-                    auth_config,
-                    knowledge,
-                    query,
-                    count,
-                    getattr(request.app.state, 'EMBEDDING_FUNCTION', None),
-                )
-            )
-        else:
-            raise RuntimeError(f'Unsupported external knowledge provider: {connection.get("provider")}')
+    retrieve = {
+        'qdrant': _retrieve_qdrant,
+        'milvus': _retrieve_milvus,
+        'pgvector': _retrieve_pgvector,
+    }.get(provider)
+    if not retrieve:
+        raise RuntimeError(f'Unsupported external knowledge provider: {connection.get("provider")}')
+
+    embedding_function = getattr(request.app.state, 'EMBEDDING_FUNCTION', None)
+    query_chunks = await asyncio.gather(
+        *(retrieve(connection, auth_config, knowledge, query, count, embedding_function) for query in queries)
+    )
+
+    # Score direction differs per provider and metric, so merge by rank
+    seen_contents = set()
+    for chunks_at_rank in zip_longest(*query_chunks):
+        for chunk in chunks_at_rank:
+            if chunk and chunk['content'] not in seen_contents:
+                seen_contents.add(chunk['content'])
+                chunks.append(chunk)
 
     chunks = chunks[:count]
     log.info(

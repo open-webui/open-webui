@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { settings, playingNotificationSound, isLastActiveTab } from '$lib/stores';
+	import { settings, isLastActiveTab } from '$lib/stores';
+	import { playNotificationSound } from '$lib/utils/audio';
 	import DOMPurify from 'dompurify';
 	import { marked } from 'marked';
 
@@ -14,6 +15,7 @@
 	export let onClick: Function = () => {};
 	export let title: string = 'HI';
 	export let content: string;
+	export let playSound = true;
 
 	let startX = 0,
 		startY = 0;
@@ -66,20 +68,8 @@
 	}
 
 	onMount(() => {
-		if (!navigator.userActivation.hasBeenActive) {
-			return;
-		}
-
-		if ($settings?.notificationSound ?? true) {
-			if (!$playingNotificationSound && $isLastActiveTab) {
-				playingNotificationSound.set(true);
-
-				const audio = new Audio(`/audio/notification.mp3`);
-				audio.play().finally(() => {
-					// Ensure the global state is reset after the sound finishes
-					playingNotificationSound.set(false);
-				});
-			}
+		if (playSound && ($settings?.notificationSound ?? true) && $isLastActiveTab) {
+			void playNotificationSound($settings?.notificationSoundType);
 		}
 	});
 </script>

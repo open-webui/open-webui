@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { config } from '$lib/stores';
+	import { getBackendConfig } from '$lib/apis';
 	import { toast } from 'svelte-sonner';
 
 	import { onMount, getContext, createEventDispatcher } from 'svelte';
@@ -84,6 +85,7 @@
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 
 	const embeddingModelUpdateHandler = async () => {
+		if (updateEmbeddingModelLoading) return;
 		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
 			toast.error(
 				$i18n.t(
@@ -318,6 +320,9 @@
 				.map((ext) => ext.trim())
 				.filter((ext) => ext !== '')
 		});
+		if (res) {
+			config.set(await getBackendConfig());
+		}
 		dispatch('save');
 	};
 
@@ -989,6 +994,9 @@
 					</AdminSettingField>
 				{/if}
 
+				<!-- Retired retrieval hint: keep its translation.
+				{$i18n.t('Use segmented retrieval for focused context.')}
+				-->
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.documents.bypassEmbeddingAndRetrieval.label')}
 					description={RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL
@@ -1250,7 +1258,7 @@
 									on:click={() => {
 										embeddingModelUpdateHandler();
 									}}
-									disabled={updateEmbeddingModelLoading}
+									aria-disabled={updateEmbeddingModelLoading}
 									aria-label={$i18n.t('settings.admin.documents.updateEmbeddingModel.label')}
 								>
 									{#if updateEmbeddingModelLoading}
@@ -1360,11 +1368,26 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.documents.sections.retrieval.title')}>
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+					<AdminSettingField
+						label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
+						description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
+						forId="full-text-char-threshold"
+					>
+						<input
+							id="full-text-char-threshold"
+							class={inputClass}
+							type="number"
+							bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
+							disabled={RAGConfig.RAG_FULL_CONTEXT}
+							min="0"
+							step="1"
+							required
+						/>
+					</AdminSettingField>
+
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.documents.fullContextMode.label')}
-						description={RAGConfig.RAG_FULL_CONTEXT
-							? $i18n.t('settings.admin.documents.fullContextMode.description')
-							: $i18n.t('Use segmented retrieval for focused context.')}
+						description={$i18n.t('settings.admin.documents.fullContextMode.description')}
 						let:labelId
 					>
 						<Switch bind:state={RAGConfig.RAG_FULL_CONTEXT} ariaLabelledbyId={labelId} />

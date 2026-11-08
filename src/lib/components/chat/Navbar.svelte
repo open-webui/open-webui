@@ -62,8 +62,10 @@
 	export let tabbed = false;
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
+	export let tabBarActions: Snippet | undefined = undefined;
 	$: tabTitleEditor = confirmEdit ? renderTitleEditor : undefined;
 	$: tabActions = renderChatActions;
+	$: tabBarActions = renderTabBarActions;
 	export let onSaveTempChat: () => {};
 	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
@@ -186,9 +188,9 @@
 	</Tooltip>
 {/snippet}
 
-{#snippet renderChatActions()}
+{#snippet renderTemporaryChatToggle()}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
-		{#if !chat?.id && !tabbed}
+		{#if !chat?.id}
 			<Tooltip content={$i18n.t(`Temporary Chat`)}>
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -221,7 +223,23 @@
 					{/if}
 				</button>
 			</Tooltip>
-		{:else if chat?.id && $temporaryChatEnabled}
+		{/if}
+	{/if}
+{/snippet}
+
+{#snippet renderTabBarActions()}
+	{@render renderTemporaryChatToggle()}
+	{#if liveParticipants.length > 0}
+		<div class="flex h-6 shrink-0 items-center px-1">
+			<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-4" />
+		</div>
+	{/if}
+{/snippet}
+
+{#snippet renderChatActions()}
+	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
+	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
+		{#if chat?.id && $temporaryChatEnabled}
 			<Tooltip content={$i18n.t(`Save Chat`)}>
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -253,8 +271,10 @@
 		</Tooltip>
 	{/if}
 
-	{#if liveParticipants.length > 0}
-		<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-5" />
+	{#if !tabbed && liveParticipants.length > 0}
+		<div class="flex h-6 shrink-0 items-center px-1">
+			<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-4" />
+		</div>
 	{/if}
 
 	{#if shareEnabled && chat?.id && (Object.keys(history?.messages ?? {}).length > 0 || scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
@@ -300,12 +320,11 @@
 />
 
 <nav
-	class:hidden={tabbed}
-	class="sticky top-0 z-30 w-full {$mobile
-		? 'pt-1.5'
-		: ''} pb-1 -mb-12 flex flex-col items-center drag-region"
+	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
+		? 'pb-0.5'
+		: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
 >
-	<div class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
+	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
 			id="navbar-bg-gradient-to-b"
 			class="{chat?.id
@@ -381,7 +400,7 @@
 
 					{#if !tabbed}{@render renderChatActions()}{/if}
 
-					{#if history.currentId || $selectedTerminalId}
+					{#if history.currentId || $selectedTerminalId || $user?.role === 'admin' || ($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false))}
 						<Tooltip content={$i18n.t('Tabs')}>
 							<button
 								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -398,13 +417,13 @@
 		</div>
 	</div>
 
-	{#if $temporaryChatEnabled && isTemporaryChatId($chatId)}
+	{#if !tabbed && $temporaryChatEnabled && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
 	{/if}
 
-	<div class="absolute top-[100%] left-0 right-0 h-fit">
+	<div class="absolute top-full left-0 right-0 h-fit">
 		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
@@ -412,6 +431,7 @@
 				>
 					{#if ($config?.license_metadata?.type ?? null) === 'trial'}
 						<Banner
+							className="px-[11px] rounded-lg"
 							banner={{
 								type: 'info',
 								title: $i18n.t('Trial License'),
@@ -424,6 +444,7 @@
 
 					{#if ($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats}
 						<Banner
+							className="px-[11px] rounded-lg"
 							banner={{
 								type: 'error',
 								title: $i18n.t('License Error'),
@@ -436,6 +457,7 @@
 
 					{#each $banners.filter((b) => ![...getDismissedBannerIds(), ...closedBannerIds].includes(b.id)) as banner (banner.id)}
 						<Banner
+							className="px-[11px] rounded-lg"
 							{banner}
 							on:dismiss={(e) => {
 								const bannerId = e.detail;

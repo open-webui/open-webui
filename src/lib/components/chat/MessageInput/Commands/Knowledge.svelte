@@ -27,6 +27,7 @@
 	let selectedIdx = 0;
 	let items = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 
 	export let filteredItems = [];
 	let webUploadEnabled: boolean = true;
@@ -74,20 +75,31 @@
 
 	$: items = [...folderItems, ...knowledgeItems, ...fileItems];
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
+		searchController?.abort();
+		knowledgeItems = [];
+		fileItems = [];
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getItems();
 		}, 200);
+	};
+
+	$: if (query !== undefined) {
+		handleSearchInput();
 	}
 
 	onDestroy(() => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
 
 	const getItems = () => {
-		getKnowledgeItems();
-		getKnowledgeFileItems();
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+		getKnowledgeItems(signal);
+		getKnowledgeFileItems(signal);
 	};
 
 	$: folderItems = $folders
@@ -99,12 +111,21 @@
 		}))
 		.filter((folder) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
-	const getKnowledgeItems = async () => {
-		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => {
+	const getKnowledgeItems = async (signal: AbortSignal) => {
+		const res = await searchKnowledgeBases(
+			localStorage.token,
+			query,
+			null,
+			null,
+			null,
+			null,
+			null,
+			signal
+		).catch(() => {
 			return null;
 		});
 
-		if (res) {
+		if (res && !signal.aborted) {
 			knowledgeItems = res.items.map((item) => {
 				return {
 					...item,
@@ -114,12 +135,21 @@
 		}
 	};
 
-	const getKnowledgeFileItems = async () => {
-		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => {
+	const getKnowledgeFileItems = async (signal: AbortSignal) => {
+		const res = await searchKnowledgeFiles(
+			localStorage.token,
+			query,
+			null,
+			null,
+			null,
+			1,
+			false,
+			signal
+		).catch(() => {
 			return null;
 		});
 
-		if (res) {
+		if (res && !signal.aborted) {
 			fileItems = res.items.map((item) => {
 				return {
 					...item,

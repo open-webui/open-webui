@@ -311,3 +311,7 @@ cypress/videos
 cypress/screenshots
 .vscode/settings.json
 .cptr
+/evals/
+
+# Local temporary fixtures and screenshots
+/tmp/

@@ -9,6 +9,7 @@
 		selectedTerminalId,
 		settings,
 		terminalServers,
+		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
@@ -39,6 +40,7 @@
 	let selectedIdx = 0;
 	export let filteredItems: any[] = [];
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 
 	let filesystemItems: any[] = [];
 	let knowledgeItems: any[] = [];
@@ -89,25 +91,40 @@
 
 	$: selectedIdx = Math.min(selectedIdx, Math.max(filteredItems.length - 1, 0));
 
-	$: if (query !== undefined) {
+	const handleSearchInput = () => {
+		searchController?.abort();
+		knowledgeItems = [];
+		fileItems = [];
+		filesystemItems = [];
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			getItems();
 		}, 200);
+	};
+
+	$: if (query !== undefined) {
+		handleSearchInput();
 	}
 
 	onDestroy(() => {
+		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
 
 	const getItems = () => {
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
 		const terminal = getSelectedTerminal();
-		getFilesystemItems(terminal);
-		getKnowledgeItems();
-		getKnowledgeFileItems();
+		getFilesystemItems(terminal, signal);
+		getKnowledgeItems(signal);
+		getKnowledgeFileItems(signal);
 	};
 
-	const getFilesystemItems = async (terminal = getSelectedTerminal()) => {
+	const getFilesystemItems = async (
+		terminal: { url: string; key: string } | null,
+		signal: AbortSignal
+	) => {
 		if (!terminal) {
 			filesystemItems = [];
 			return;
@@ -123,9 +140,11 @@
 			20,
 			'any',
 			sessionId || undefined,
-			localStorage.getItem('fileNav:showHidden') === 'true'
+			localStorage.getItem('fileNav:showHidden') === 'true',
+			signal
 		).catch(() => null);
 
+		if (signal.aborted) return;
 		if (terminalId !== $selectedTerminalId || sessionId !== $activeChatId) return;
 		filesystemItems = (res?.results ?? []).map((item: any) => ({
 			...filesystemFile(item, terminalId!, sessionId || null),
@@ -146,7 +165,8 @@
 		if (systemTerminal) {
 			if (
 				systemChatContext === false ||
-				(isTemporaryChatId($activeChatId) && systemChatContext?.context_id === 'chat_id')
+				(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
+					systemChatContext?.context_id === 'chat_id')
 			) {
 				return null;
 			}
@@ -169,10 +189,19 @@
 		}))
 		.filter((folder: any) => folder.name.toLowerCase().includes(query.toLowerCase()));
 
-	const getKnowledgeItems = async () => {
-		const res = await searchKnowledgeBases(localStorage.token, query).catch(() => null);
+	const getKnowledgeItems = async (signal: AbortSignal) => {
+		const res = await searchKnowledgeBases(
+			localStorage.token,
+			query,
+			null,
+			null,
+			null,
+			null,
+			null,
+			signal
+		).catch(() => null);
 
-		if (res) {
+		if (res && !signal.aborted) {
 			knowledgeItems = res.items.map((item: any) => ({
 				...item,
 				type: 'collection'
@@ -180,10 +209,19 @@
 		}
 	};
 
-	const getKnowledgeFileItems = async () => {
-		const res = await searchKnowledgeFiles(localStorage.token, query).catch(() => null);
+	const getKnowledgeFileItems = async (signal: AbortSignal) => {
+		const res = await searchKnowledgeFiles(
+			localStorage.token,
+			query,
+			null,
+			null,
+			null,
+			1,
+			false,
+			signal
+		).catch(() => null);
 
-		if (res) {
+		if (res && !signal.aborted) {
 			fileItems = res.items.map((item: any) => ({
 				...item,
 				type: 'file',

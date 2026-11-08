@@ -145,6 +145,7 @@
 	};
 
 	const runNowHandler = async () => {
+		if (loading) return;
 		loading = true;
 		const res = await runAutomationById(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);

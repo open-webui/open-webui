@@ -86,6 +86,7 @@
 				...adminConfig,
 				SKILL_CONTENT_MAX_CHARS: adminConfig.SKILL_CONTENT_MAX_CHARS ?? null,
 				SKILL_PREVIEW_MAX_CHARS: adminConfig.SKILL_PREVIEW_MAX_CHARS ?? null,
+				VIEW_CHAT_MAX_CHARS: adminConfig.VIEW_CHAT_MAX_CHARS ?? null,
 				DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
 				I18N: cleaned
 			});
@@ -376,6 +377,21 @@
 						step="1"
 						placeholder={$i18n.t('Default')}
 						bind:value={adminConfig.SKILL_PREVIEW_MAX_CHARS}
+					/>
+				</AdminSettingField>
+				<AdminSettingField
+					forId="view-chat-max-chars"
+					label={$i18n.t('settings.admin.general.viewChatMaxChars.label')}
+					description={$i18n.t('settings.admin.general.viewChatMaxChars.description')}
+				>
+					<input
+						id="view-chat-max-chars"
+						class={inputClass}
+						type="number"
+						min="1"
+						step="1"
+						placeholder={$i18n.t('No limit')}
+						bind:value={adminConfig.VIEW_CHAT_MAX_CHARS}
 					/>
 				</AdminSettingField>
 				<AdminSettingRow

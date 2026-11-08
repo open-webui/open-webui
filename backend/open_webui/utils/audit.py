@@ -141,11 +141,11 @@ def log_model_usage(request: Request, user: UserModel, model_id: str, usage: Opt
         logger.error('Failed to log model usage: {}', e)
 
 
-def redact_passwords(body: str) -> str:
-    if 'password' not in body.lower():
-        return body
+def redact_secrets(body: str) -> str:
+    # Secrets cut off by the size limit have no closing quote.
+    quoted = r'"(?:[^"\\]|\\.)*\\?(?:"|$)'
     return re.sub(
-        r'"(\w*password)"\s*:\s*"(?:[^"\\]|\\.)*"',
+        rf'"(\w*(?:password|secret|token|key|authorization)s?)"\s*:\s*(?:{quoted}|\[(?:{quoted}|[^\]"])*(?:\]|$))',
         r'"\1": "********"',
         body,
         flags=re.IGNORECASE,
@@ -330,8 +330,8 @@ class AuditLoggingMiddleware:
             response_body = context.response_body.decode('utf-8', errors='replace')
 
             # Redact sensitive information
-            request_body = redact_passwords(request_body)
-            response_body = redact_passwords(response_body)
+            request_body = redact_secrets(request_body)
+            response_body = redact_secrets(response_body)
 
             entry = AuditLogEntry(
                 id=request.state.audit_request_id,

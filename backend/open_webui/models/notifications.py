@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from open_webui.internal.db import Base
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import JSON, BigInteger, CheckConstraint, Column, Index, Text, UniqueConstraint, delete, update
+from sqlalchemy import JSON, BigInteger, CheckConstraint, Column, Index, Text, UniqueConstraint, delete, func, update
 
 log = logging.getLogger(__name__)
 
@@ -155,6 +155,27 @@ async def delete_notifications(*, resource_type=None, resource_ids=None, object_
         (await db.execute(delete(Notification).where(condition).returning(Notification.user_id))).scalars().all()
     )
     return set(recipients)
+
+
+async def update_notifications_read_at_by_resource_id(
+    *, user_id: str, resource_type: str, resource_id: str, db
+) -> bool:
+    now = time.time_ns()
+    result = await db.execute(
+        update(Notification)
+        .where(
+            Notification.user_id == user_id,
+            Notification.resource_type == resource_type,
+            Notification.resource_id == resource_id,
+            Notification.read_at.is_(None),
+        )
+        .values(
+            seen_at=func.coalesce(Notification.seen_at, now),
+            read_at=now,
+            updated_at=now,
+        )
+    )
+    return result.rowcount > 0
 
 
 async def delete_user_notifications(user_id, db):

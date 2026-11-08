@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections.abc
+import difflib
 import hashlib
 import ipaddress
 import logging
@@ -15,11 +16,14 @@ from typing import Callable, Optional, Sequence, Union
 
 import aiohttp
 import mimeparse
+from fastapi import HTTPException
 from open_webui.env import CHAT_STREAM_RESPONSE_CHUNK_MAX_BUFFER_SIZE
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.tool_calling import prepare_tool_call
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
+MAX_DIFF_LINES = 5000
 
 
 def deep_update(d, u):
@@ -341,11 +345,79 @@ def get_provider_function(item: dict) -> dict:
     function = item.get('provider_function')
     if not isinstance(function, dict):
         function = item
-    arguments = function.get('arguments', '{}')
+    # Repair only the provider copy; failed calls and their original arguments remain intact.
+    function = dict(function)
+    if error := prepare_tool_call(function):
+        function['arguments'] = JSONCodec.dumps({'error': error})
     return {
         'name': function.get('name', ''),
-        'arguments': arguments if isinstance(arguments, str) else JSONCodec.dumps(arguments),
+        'arguments': function['arguments'],
     }
+
+
+def merge_tool_call_batches(output: list[dict]) -> list[dict]:
+    """Replay each batch under its original provider ID with one ordered, combined result."""
+    batches = {}
+    results = {}
+    for item in output:
+        if item.get('type') == 'function_call' and item.get('provider_batch'):
+            batches.setdefault(item['provider_batch']['call_id'], []).append(item)
+        elif item.get('type') == 'function_call_output':
+            results[item.get('call_id')] = item
+    if not batches:
+        return output
+
+    members = {call['call_id']: batch_id for batch_id, calls in batches.items() for call in calls}
+    replay = []
+    emitted = set()
+    remaining = {batch_id: {call['call_id'] for call in calls} for batch_id, calls in batches.items()}
+    for item in output:
+        batch_id = members.get(item.get('call_id'))
+        if batch_id is None or item.get('type') not in {'function_call', 'function_call_output'}:
+            replay.append(item)
+            continue
+        calls = batches[batch_id]
+        batch = calls[0]['provider_batch']
+        # Approval pauses can leave only part of a batch complete. Never replay an unpaired call.
+        if len(calls) != batch['size'] or any(call['call_id'] not in results for call in calls):
+            continue
+        if item['type'] == 'function_call':
+            if batch_id not in emitted:
+                replay.append(
+                    {
+                        'type': 'function_call',
+                        'id': calls[0].get('id', batch_id),
+                        'call_id': batch_id,
+                        **batch['function'],
+                        'status': 'completed',
+                    }
+                )
+                emitted.add(batch_id)
+            continue
+        remaining[batch_id].discard(item['call_id'])
+        if remaining[batch_id]:
+            continue
+        entries, images = [], []
+        for call in calls:
+            result = results[call['call_id']]
+            parts = result.get('output', [])
+            entries.append(
+                {
+                    'tool_name': call['provider_batch']['tool_name'],
+                    'status': result.get('status', call.get('status')),
+                    'output': [part for part in parts if part.get('type') != 'input_image'],
+                }
+            )
+            images.extend(part for part in parts if part.get('type') == 'input_image')
+        replay.append(
+            {
+                'type': 'function_call_output',
+                'call_id': batch_id,
+                'output': [{'type': 'input_text', 'text': JSONCodec.dumps({'results': entries})}, *images],
+                'status': 'completed',
+            }
+        )
+    return replay
 
 
 def convert_output_to_messages(
@@ -379,6 +451,7 @@ def convert_output_to_messages(
     if not output or not isinstance(output, list):
         return []
 
+    output = merge_tool_call_batches(output)
     messages = []
     pending_tool_calls = []
     pending_content = []
@@ -927,26 +1000,38 @@ def _strip_null_bytes_deep(obj):
     return obj
 
 
+def _has_null_bytes_or_surrogates(obj) -> bool:
+    """True if any string, key or value, has a null byte or surrogate."""
+    if isinstance(obj, str):
+        if '\x00' in obj:
+            return True
+        # O(1) in CPython, so ASCII strings such as base64 images skip the surrogate scan.
+        if obj.isascii():
+            return False
+        try:
+            obj.encode('utf-8')
+            return False
+        except UnicodeEncodeError:
+            return True
+    elif isinstance(obj, dict):
+        return any(_has_null_bytes_or_surrogates(k) or _has_null_bytes_or_surrogates(v) for k, v in obj.items())
+    elif isinstance(obj, list):
+        return any(_has_null_bytes_or_surrogates(v) for v in obj)
+    return False
+
+
 def sanitize_data_for_db(obj):
     """Recursively sanitize all strings in a data structure for database storage.
 
-    Performs a fast pre-check: serializes the structure once and scans for
+    Performs a fast pre-check: scans every string once for
     null bytes or invalid UTF-8 surrogates. If none are found, the
     original object is returned immediately, skipping the expensive
     recursive walk.
     """
     if isinstance(obj, str):
         return sanitize_text_for_db(obj)
-    # Fast path: check for null bytes and surrogate code points in the serialized form.
-    # json.dumps is implemented in C and much faster than a Python-level
-    # recursive walk over every leaf string.
-    try:
-        serialized = JSONCodec.dumps(obj, ensure_ascii=False)
-        if '\\u0000' not in serialized:
-            serialized.encode('utf-8')
-            return obj
-    except (TypeError, ValueError, UnicodeEncodeError):
-        pass
+    if not _has_null_bytes_or_surrogates(obj):
+        return obj
     return _strip_null_bytes_deep(obj)
 
 
@@ -1320,3 +1405,11 @@ def stream_chunks_handler(stream: aiohttp.StreamReader):
             yield bytes(buffer)
 
     return yield_safe_stream_chunks()
+
+
+def unified_text_diff(old: str, new: str, fromfile: str, tofile: str) -> list[str]:
+    # splitlines handles a missing final newline and CRLF without breaking the renderer.
+    old_lines, new_lines = old.splitlines(), new.splitlines()
+    if max(len(old_lines), len(new_lines)) > MAX_DIFF_LINES:
+        raise HTTPException(status_code=413, detail=f'Diff is limited to {MAX_DIFF_LINES} lines per version')
+    return list(difflib.unified_diff(old_lines, new_lines, fromfile=fromfile, tofile=tofile, lineterm=''))

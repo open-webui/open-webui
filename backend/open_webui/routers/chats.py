@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
@@ -17,6 +18,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chat_views import ChatViewStateForm, ChatViewStates
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -46,7 +48,9 @@ from open_webui.utils.context_compaction import compact_chat_branch, get_chat_co
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.models import get_all_models
-from pydantic import BaseModel
+from open_webui.utils.tool_permissions import DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT, get_tool_permissions_auto_config
+from open_webui.utils.tool_search import DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT, validate_decisions_config
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -61,7 +65,21 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
     'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
+    'ENABLE_TOOL_CALL_LABELS': 'chat.tool_call_labels.enable',
+    'ENABLE_TOOL_PERMISSIONS_AUTO': 'chat.tool_permissions.auto.enable',
+    'TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL': 'chat.tool_permissions.auto.decisions.api_base_url',
+    'TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY': 'chat.tool_permissions.auto.decisions.api_key',
+    'TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL': 'chat.tool_permissions.auto.decisions.model',
+    'TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD': 'chat.tool_permissions.auto.decisions.threshold',
+    'TOOL_PERMISSIONS_AUTO_ENGINE': 'chat.tool_permissions.auto.engine',
+    'TOOL_PERMISSIONS_AUTO_PROMPT': 'chat.tool_permissions.auto.prompt',
     'ENABLE_TOOL_SEARCH': 'chat.tool_search.enable',
+    'TOOL_SEARCH_ENGINE': 'chat.tool_search.engine',
+    'TOOL_SEARCH_DECISIONS_API_BASE_URL': 'chat.tool_search.decisions.api_base_url',
+    'TOOL_SEARCH_DECISIONS_API_KEY': 'chat.tool_search.decisions.api_key',
+    'TOOL_SEARCH_DECISIONS_MODEL': 'chat.tool_search.decisions.model',
+    'TOOL_SEARCH_DECISIONS_THRESHOLD': 'chat.tool_search.decisions.threshold',
+    'TOOL_SEARCH_DECISIONS_PROMPT': 'chat.tool_search.decisions.prompt',
     'TOOL_SEARCH_DEFER_THRESHOLD': 'chat.tool_search.defer_threshold',
     'TOOL_SEARCH_ALWAYS_LOADED': 'chat.tool_search.always_loaded',
     'TOOL_SEARCH_DEFER_BUILTIN_TOOLS': 'chat.tool_search.defer_builtin_tools',
@@ -217,10 +235,55 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int | None = None
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
     ENABLE_TOOL_PERMISSIONS: bool = False
+    ENABLE_TOOL_CALL_LABELS: bool = False
+    ENABLE_TOOL_PERMISSIONS_AUTO: bool = False
+    TOOL_PERMISSIONS_AUTO_ENGINE: Literal['', 'decisions'] = ''
+    TOOL_PERMISSIONS_AUTO_PROMPT: str = ''
+    TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
+    TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: str = ''
+    TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: str = 'gpt-6-luna'
+    TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
     ENABLE_TOOL_SEARCH: bool = False
+    TOOL_SEARCH_ENGINE: Literal['bm25', 'embeddings', 'decisions'] = 'bm25'
+    TOOL_SEARCH_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
+    TOOL_SEARCH_DECISIONS_API_KEY: str = ''
+    TOOL_SEARCH_DECISIONS_MODEL: str = 'gpt-6-luna'
+    TOOL_SEARCH_DECISIONS_THRESHOLD: float = Field(default=0.5, ge=0, le=1, allow_inf_nan=False)
+    TOOL_SEARCH_DECISIONS_PROMPT: str = ''
     TOOL_SEARCH_DEFER_THRESHOLD: int = 400
     TOOL_SEARCH_ALWAYS_LOADED: list[str] = []
     TOOL_SEARCH_DEFER_BUILTIN_TOOLS: bool = True
+
+    @field_validator('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL')
+    @classmethod
+    def normalize_decisions_url(cls, value: str) -> str:
+        return value.strip().rstrip('/')
+
+    @field_validator('TOOL_SEARCH_DECISIONS_MODEL', 'TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL')
+    @classmethod
+    def normalize_decisions_model(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator('TOOL_SEARCH_DECISIONS_PROMPT', 'TOOL_PERMISSIONS_AUTO_PROMPT')
+    @classmethod
+    def normalize_review_prompt(cls, value: str) -> str:
+        return value if value.strip() else ''
+
+    @model_validator(mode='after')
+    def validate_tool_search(self):
+        if self.ENABLE_TOOL_PERMISSIONS_AUTO and self.TOOL_PERMISSIONS_AUTO_ENGINE == 'decisions':
+            validate_decisions_config(
+                self.TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL, self.TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL
+            )
+        if self.ENABLE_TOOL_SEARCH and self.TOOL_SEARCH_ENGINE == 'decisions':
+            validate_decisions_config(self.TOOL_SEARCH_DECISIONS_API_BASE_URL, self.TOOL_SEARCH_DECISIONS_MODEL)
+        return self
+
+
+class ChatConfigResponse(ChatConfigForm):
+    DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT: str = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
+    DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT: str = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
+    TOOL_SEARCH_EMBEDDING_MODEL: str = ''
 
 
 class CompactChatForm(BaseModel):
@@ -228,7 +291,7 @@ class CompactChatForm(BaseModel):
 
 
 async def get_chat_config_values() -> dict:
-    values = await Config.get_many(*CHAT_CONFIG_KEYS.values())
+    values = await Config.get_many(*CHAT_CONFIG_KEYS.values(), 'rag.embedding_model')
     config = {field: values[storage_key] for field, storage_key in CHAT_CONFIG_KEYS.items() if storage_key in values}
     if config.get('CONTEXT_COMPACTION_MODEL') is None:
         config['CONTEXT_COMPACTION_MODEL'] = ''
@@ -236,6 +299,13 @@ async def get_chat_config_values() -> dict:
         config['CONTEXT_COMPACTION_TOKEN_CAP'] = config.get('CONTEXT_COMPACTION_TOKEN_THRESHOLD', 80000)
     if config.get('CONTEXT_COMPACTION_RETENTION_PERCENTAGE') is None:
         config['CONTEXT_COMPACTION_RETENTION_PERCENTAGE'] = 40
+    auto_config = await get_tool_permissions_auto_config()
+    config['TOOL_PERMISSIONS_AUTO_PROMPT'] = auto_config['prompt']
+    for key in ('api_base_url', 'api_key', 'model', 'threshold'):
+        config[f'TOOL_PERMISSIONS_AUTO_DECISIONS_{key.upper()}'] = auto_config[key]
+    config['DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT'] = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
+    config['DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT'] = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
+    config['TOOL_SEARCH_EMBEDDING_MODEL'] = values.get('rag.embedding_model') or ''
     return config
 
 
@@ -844,13 +914,26 @@ async def import_chats(
 # Chat Config
 
 
-@router.get('/config', response_model=ChatConfigForm)
+@router.get('/config', response_model=ChatConfigResponse)
 async def get_chat_config(user=Depends(get_admin_user)):
     return await get_chat_config_values()
 
 
-@router.post('/config', response_model=ChatConfigForm)
+@router.post('/config', response_model=ChatConfigResponse)
 async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user)):
+    # Older clients do not send the engine settings; preserve their saved values.
+    updates = form_data.model_dump()
+    current = await get_chat_config_values()
+    for field in ChatConfigForm.model_fields:
+        if (
+            field in {'TOOL_SEARCH_ENGINE', 'ENABLE_TOOL_PERMISSIONS_AUTO', 'ENABLE_TOOL_CALL_LABELS'}
+            or field.startswith(('TOOL_SEARCH_DECISIONS_', 'TOOL_PERMISSIONS_AUTO_'))
+        ) and (field not in form_data.model_fields_set):
+            updates[field] = current.get(field, updates[field])
+    try:
+        form_data = ChatConfigForm.model_validate(updates)
+    except ValidationError as error:
+        raise HTTPException(422, detail=error.errors(include_input=False, include_context=False)) from None
     threshold = form_data.CONTEXT_COMPACTION_TOKEN_THRESHOLD
     if threshold is None:
         threshold = CONTEXT_COMPACTION_TOKEN_THRESHOLD
@@ -1215,7 +1298,7 @@ async def get_shared_chat_by_id(
             live = (
                 shared.chat.get('share_mode') == 'continue'
                 and user is not None
-                and await Chats.get_accessible_chat_by_id(shared.chat_id, user, db=db, permission='write') is not None
+                and await Chats.has_chat_access(shared.chat_id, user, db=db, permission='write')
             )
             chat = (
                 await Chats.get_chat_by_id(shared.chat_id, db=db)
@@ -1239,9 +1322,7 @@ async def get_shared_chat_by_id(
         if chat:
             data = await shared_chat_response(chat, user, db=db)
             data['chat']['share_mode'] = (
-                'continue'
-                if await Chats.get_accessible_chat_by_id(chat.id, user, db=db, permission='write', chat=chat)
-                else None
+                'continue' if await Chats.has_chat_access(chat.id, user, db=db, permission='write', chat=chat) else None
             )
             return data
 
@@ -1328,6 +1409,43 @@ async def compact_chat_by_id(
     return result
 
 
+# A view is private to its authenticated viewer, even for shared chats.
+@router.get('/{id}/view')
+async def get_chat_view(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.get_accessible_chat_by_id(id, user, db=db):
+        raise HTTPException(status_code=404, detail='Chat not found')
+    return {'state': await ChatViewStates.get(user.id, id, db)}
+
+
+async def bounded_chat_view(request: Request):
+    # Bound the body before JSON/schema parsing, including chunked requests.
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > 1024 * 1024:
+            raise HTTPException(status_code=413, detail='Chat view is too large')
+    try:
+        return ChatViewStateForm.model_validate_json(bytes(body))
+    except ValueError:
+        raise HTTPException(status_code=422, detail='Invalid chat view')
+
+
+@router.post('/{id}/view')
+async def update_chat_view(
+    id: str,
+    user=Depends(get_verified_user),
+    form: ChatViewStateForm = Depends(bounded_chat_view),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.get_accessible_chat_by_id(id, user, db=db):
+        raise HTTPException(status_code=404, detail='Chat not found')
+    return await ChatViewStates.upsert(user.id, id, form.state.model_dump(exclude_unset=True), db)
+
+
 # Get Chat By Id
 
 
@@ -1347,9 +1465,7 @@ async def get_chat_by_id(
     if chat:
         data = await shared_chat_response(chat, user, db=db)
         data['chat']['share_mode'] = (
-            'continue'
-            if await Chats.get_accessible_chat_by_id(id, user, db=db, permission='write', chat=chat)
-            else None
+            'continue' if await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat) else None
         )
         data = overlay_response_streams(
             data,
@@ -1809,7 +1925,7 @@ async def fork_chat_by_id(
     }
 
     # The source chat's folder may no longer be writable by the caller.
-    folder_id = chat.folder_id if is_owner else None
+    folder_id = chat.folder_id
     if folder_id is not None and not await has_folder_write_access(user.id, folder_id, db=db):
         folder_id = None
 

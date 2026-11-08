@@ -114,7 +114,7 @@ export const SUPPORTED_FILE_EXTENSIONS = [
 ];
 
 export const DEFAULT_CAPABILITIES = {
-	file_context: true,
+	file_context: undefined as boolean | undefined,
 	vision: true,
 	file_upload: true,
 	web_search: true,

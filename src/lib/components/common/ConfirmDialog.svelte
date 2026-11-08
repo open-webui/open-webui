@@ -20,6 +20,8 @@
 
 	export let cancelLabel: string | undefined = undefined;
 	export let confirmLabel: string | undefined = undefined;
+	export let confirmFirst = false;
+	export let primaryAction: 'confirm' | 'cancel' = 'confirm';
 
 	export let onConfirm = () => {};
 
@@ -218,24 +220,20 @@
 				</slot>
 
 				<div class="mt-5 flex justify-between gap-1.5">
-					<button
-						class="flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white w-full"
-						on:click={() => {
-							cancelHandler();
-						}}
-						type="button"
-					>
-						{cancelLabel ?? $i18n.t('Cancel')}
-					</button>
-					<button
-						class="flex h-7 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white w-full"
-						on:click={() => {
-							confirmHandler();
-						}}
-						type="button"
-					>
-						{confirmLabel ?? $i18n.t('Confirm')}
-					</button>
+					{#each confirmFirst ? ['confirm', 'cancel'] : ['cancel', 'confirm'] as action (action)}
+						<button
+							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action ===
+							primaryAction
+								? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
+								: 'bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white'}"
+							on:click={action === 'confirm' ? confirmHandler : cancelHandler}
+							type="button"
+						>
+							{action === 'confirm'
+								? (confirmLabel ?? $i18n.t('Confirm'))
+								: (cancelLabel ?? $i18n.t('Cancel'))}
+						</button>
+					{/each}
 				</div>
 			</div>
 		</div>

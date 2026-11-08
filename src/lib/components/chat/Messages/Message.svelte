@@ -45,6 +45,7 @@
 	export let readOnly = false;
 	export let shareMode: 'continue' | null = null;
 	export let allowDelete = true;
+	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
@@ -72,6 +73,7 @@
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
+				{selectedModels}
 				{user}
 				{chatId}
 				{history}
@@ -114,6 +116,7 @@
 				{submitMessage}
 				{deleteMessage}
 				{allowDelete}
+				{allowToolApproval}
 				{continueResponse}
 				{regenerateResponse}
 				{addMessages}
@@ -143,6 +146,7 @@
 					{submitMessage}
 					{deleteMessage}
 					{allowDelete}
+					{allowToolApproval}
 					{continueResponse}
 					{regenerateResponse}
 					{mergeResponses}

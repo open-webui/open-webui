@@ -10,6 +10,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import AdminSettingField from './AdminSettingField.svelte';
@@ -54,12 +55,45 @@
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
 		ENABLE_TOOL_PERMISSIONS: false,
+		ENABLE_TOOL_CALL_LABELS: false,
+		ENABLE_TOOL_PERMISSIONS_AUTO: false,
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: '',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: 'gpt-6-luna',
+		TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: 0.5,
+		TOOL_PERMISSIONS_AUTO_ENGINE: '',
+		TOOL_PERMISSIONS_AUTO_PROMPT: '',
 		ENABLE_TOOL_SEARCH: false,
+		TOOL_SEARCH_ENGINE: 'bm25',
+		TOOL_SEARCH_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
+		TOOL_SEARCH_DECISIONS_API_KEY: '',
+		TOOL_SEARCH_DECISIONS_MODEL: 'gpt-6-luna',
+		TOOL_SEARCH_DECISIONS_THRESHOLD: 0.5,
+		TOOL_SEARCH_DECISIONS_PROMPT: '',
 		TOOL_SEARCH_DEFER_THRESHOLD: 400,
 		TOOL_SEARCH_ALWAYS_LOADED: [] as string[],
 		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true
 	};
 	let toolSearchAlwaysLoaded = '';
+	let defaultDecisionsPrompt = '';
+	let defaultPermissionsPrompt = '';
+	let toolSearchEmbeddingModel = '';
+	const readChatConfigMetadata = () => {
+		const {
+			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = '',
+			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT = '',
+			TOOL_SEARCH_EMBEDDING_MODEL = '',
+			...settings
+		} = chatConfig as typeof chatConfig & {
+			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT?: string;
+			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT?: string;
+			TOOL_SEARCH_EMBEDDING_MODEL?: string;
+		};
+		defaultDecisionsPrompt = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT;
+		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT;
+		toolSearchEmbeddingModel = TOOL_SEARCH_EMBEDDING_MODEL;
+		chatConfig = settings;
+	};
 	let showTaskParameters = false;
 	let visibility: Visibility = { ...($appConfig?.ui?.visibility ?? {}) };
 
@@ -95,6 +129,7 @@
 			return;
 		}
 		toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
+		readChatConfigMetadata();
 		appConfig.update((current) =>
 			current
 				? {
@@ -104,6 +139,8 @@
 							...current.features,
 							enable_context_compaction: chatConfig.ENABLE_CONTEXT_COMPACTION,
 							enable_tool_permissions: chatConfig.ENABLE_TOOL_PERMISSIONS,
+							enable_tool_permissions_auto:
+								chatConfig.ENABLE_TOOL_PERMISSIONS && chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO,
 							enable_title_generation: taskConfig.ENABLE_TITLE_GENERATION,
 							enable_follow_up_generation: taskConfig.ENABLE_FOLLOW_UP_GENERATION,
 							enable_tags_generation: taskConfig.ENABLE_TAGS_GENERATION,
@@ -154,6 +191,7 @@
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
 			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
+			readChatConfigMetadata();
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = await getModels(localStorage.token, null, false);
@@ -296,18 +334,6 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.chat.title')}>
 				<AdminSettingRow
-					label={$i18n.t('settings.admin.interface.toolPermissions.label')}
-					description={$i18n.t('settings.admin.interface.toolPermissions.description')}
-					let:labelId
-				>
-					<div slot="label" class="flex items-center gap-2">
-						<span>{$i18n.t('settings.admin.interface.toolPermissions.label')}</span>
-						<ExperimentalBadge />
-					</div>
-					<Switch bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS} ariaLabelledbyId={labelId} />
-				</AdminSettingRow>
-
-				<AdminSettingRow
 					label={$i18n.t('settings.admin.interface.contextCompaction.label')}
 					description={$i18n.t('settings.admin.interface.contextCompaction.description')}
 					let:labelId
@@ -409,6 +435,132 @@
 						</div>
 					</AdminSettingField>
 				{/if}
+			</AdminSettingSection>
+
+			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.tools.title')}>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolCallLabels.label')}
+					description={$i18n.t('settings.admin.interface.toolCallLabels.description')}
+					let:labelId
+				>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_CALL_LABELS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolPermissions.label')}
+					description={$i18n.t('settings.admin.interface.toolPermissions.description')}
+					let:labelId
+				>
+					<div slot="label" class="flex items-center gap-2">
+						<span>{$i18n.t('settings.admin.interface.toolPermissions.label')}</span>
+						<ExperimentalBadge />
+					</div>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
+				{#if chatConfig.ENABLE_TOOL_PERMISSIONS}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolPermissionsAuto.label')}
+						description={$i18n.t('settings.admin.interface.toolPermissionsAuto.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+					{#if chatConfig.ENABLE_TOOL_PERMISSIONS_AUTO}
+						<AdminSettingRow
+							label={$i18n.t('settings.admin.interface.toolPermissionsAutoEngine.label')}
+							let:labelId
+						>
+							<SettingsSelect
+								id={`${labelId}-control`}
+								bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_ENGINE}
+							>
+								<option value="">{$i18n.t('Default')}</option>
+								<option value="decisions">Decisions API</option>
+							</SettingsSelect>
+						</AdminSettingRow>
+						{#if chatConfig.TOOL_PERMISSIONS_AUTO_ENGINE === 'decisions'}
+							<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsUrl.label')}
+									description={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsUrl.description'
+									)}
+									forId="tool-permissions-decisions-url"
+								>
+									<input
+										id="tool-permissions-decisions-url"
+										type="url"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL}
+										required
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsKey.label')}
+									forId="tool-permissions-decisions-key"
+								>
+									<SensitiveInput
+										id="tool-permissions-decisions-key"
+										type="password"
+										variant="settings"
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY}
+										required={false}
+										screenReader={false}
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t('settings.admin.interface.toolPermissionsDecisionsModel.label')}
+									forId="tool-permissions-decisions-model"
+								>
+									<input
+										id="tool-permissions-decisions-model"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL}
+										required
+									/>
+								</AdminSettingField>
+								<AdminSettingField
+									label={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsThreshold.label'
+									)}
+									description={$i18n.t(
+										'settings.admin.interface.toolPermissionsDecisionsThreshold.description'
+									)}
+									forId="tool-permissions-decisions-threshold"
+								>
+									<input
+										id="tool-permissions-decisions-threshold"
+										type="number"
+										min="0"
+										max="1"
+										step="0.01"
+										class={inputClass}
+										bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD}
+										required
+									/>
+								</AdminSettingField>
+							</div>
+						{/if}
+						<AdminSettingField
+							label={$i18n.t('settings.admin.interface.toolPermissionsAutoPrompt.label')}
+							description={$i18n.t(
+								'settings.admin.interface.toolPermissionsAutoPrompt.description'
+							)}
+							forId="tool-permissions-auto-prompt"
+						>
+							<Textarea
+								id="tool-permissions-auto-prompt"
+								className={textareaClass}
+								bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_PROMPT}
+								placeholder={defaultPermissionsPrompt}
+							/>
+						</AdminSettingField>
+					{/if}
+				{/if}
 
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.interface.toolSearch.label')}
@@ -424,6 +576,103 @@
 
 				{#if chatConfig.ENABLE_TOOL_SEARCH}
 					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolSearchEngine.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchEngine.description')}
+						let:labelId
+					>
+						<SettingsSelect id={`${labelId}-control`} bind:value={chatConfig.TOOL_SEARCH_ENGINE}>
+							<option value="bm25">BM25</option>
+							<option value="embeddings"
+								>{$i18n.t('settings.admin.interface.toolSearchEmbeddings.label')}</option
+							>
+							<option value="decisions">Decisions API</option>
+						</SettingsSelect>
+					</AdminSettingRow>
+
+					{#if chatConfig.TOOL_SEARCH_ENGINE === 'embeddings'}
+						<p class="text-xs text-gray-500 dark:text-gray-400">
+							{$i18n.t('settings.admin.interface.toolSearchEmbeddings.description', {
+								model: toolSearchEmbeddingModel || $i18n.t('Not configured')
+							})}
+							<a class="underline" href="/admin/settings/documents">
+								{$i18n.t('settings.admin.interface.toolSearchEmbeddings.settings')}
+							</a>
+						</p>
+					{:else if chatConfig.TOOL_SEARCH_ENGINE === 'decisions'}
+						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolSearchDecisionsUrl.label')}
+								description={$i18n.t('settings.admin.interface.toolSearchDecisionsUrl.description')}
+								forId="tool-search-decisions-url"
+							>
+								<input
+									id="tool-search-decisions-url"
+									type="url"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_SEARCH_DECISIONS_API_BASE_URL}
+									required
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolSearchDecisionsKey.label')}
+								forId="tool-search-decisions-key"
+							>
+								<SensitiveInput
+									id="tool-search-decisions-key"
+									type="password"
+									variant="settings"
+									bind:value={chatConfig.TOOL_SEARCH_DECISIONS_API_KEY}
+									required={false}
+									screenReader={false}
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolSearchDecisionsModel.label')}
+								forId="tool-search-decisions-model"
+							>
+								<input
+									id="tool-search-decisions-model"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_SEARCH_DECISIONS_MODEL}
+									required
+								/>
+							</AdminSettingField>
+							<AdminSettingField
+								label={$i18n.t('settings.admin.interface.toolSearchDecisionsThreshold.label')}
+								description={$i18n.t(
+									'settings.admin.interface.toolSearchDecisionsThreshold.description'
+								)}
+								forId="tool-search-decisions-threshold"
+							>
+								<input
+									id="tool-search-decisions-threshold"
+									type="number"
+									min="0"
+									max="1"
+									step="0.01"
+									class={inputClass}
+									bind:value={chatConfig.TOOL_SEARCH_DECISIONS_THRESHOLD}
+									required
+								/>
+							</AdminSettingField>
+						</div>
+						<AdminSettingField
+							label={$i18n.t('settings.admin.interface.toolSearchDecisionsPrompt.label')}
+							description={$i18n.t(
+								'settings.admin.interface.toolSearchDecisionsPrompt.description'
+							)}
+							forId="tool-search-decisions-prompt"
+						>
+							<Textarea
+								id="tool-search-decisions-prompt"
+								className={textareaClass}
+								bind:value={chatConfig.TOOL_SEARCH_DECISIONS_PROMPT}
+								placeholder={defaultDecisionsPrompt}
+							/>
+						</AdminSettingField>
+					{/if}
+
+					<AdminSettingRow
 						label={$i18n.t('settings.admin.interface.toolSearchDeferBuiltinTools.label')}
 						description={$i18n.t(
 							'settings.admin.interface.toolSearchDeferBuiltinTools.description'
@@ -436,20 +685,22 @@
 						/>
 					</AdminSettingRow>
 
-					<AdminSettingField
+					<AdminSettingRow
 						label={$i18n.t('settings.admin.interface.toolSearchThreshold.label')}
 						description={$i18n.t('settings.admin.interface.toolSearchThreshold.description')}
-						forId="tool-search-threshold"
+						let:labelId
 					>
-						<input
-							id="tool-search-threshold"
-							type="number"
-							min="0"
-							step="1"
-							class={inputClass}
-							bind:value={chatConfig.TOOL_SEARCH_DEFER_THRESHOLD}
-						/>
-					</AdminSettingField>
+						<div class="w-24">
+							<input
+								id={`${labelId}-control`}
+								type="number"
+								min="0"
+								step="1"
+								class={inputClass}
+								bind:value={chatConfig.TOOL_SEARCH_DEFER_THRESHOLD}
+							/>
+						</div>
+					</AdminSettingRow>
 
 					<AdminSettingField
 						label={$i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.label')}

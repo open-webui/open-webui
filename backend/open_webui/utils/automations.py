@@ -46,6 +46,7 @@ from open_webui.utils.recurrence import (
     validate_rrule,
 )
 from open_webui.utils.task import prompt_template
+from open_webui.utils.tether import get_terminal_connections, get_terminal_client
 from open_webui.utils.terminals import get_terminal_server_url
 from starlette.datastructures import Headers
 
@@ -148,7 +149,7 @@ def _build_request(
         'path': '/api/v1/automations/internal',
         'query_string': b'',
         'headers': Headers({}).raw,
-        'client': ('127.0.0.1', 0),
+        'client': ('', 0),
         'server': ('127.0.0.1', 80),
         'scheme': 'http',
         'app': app,
@@ -206,10 +207,7 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
     import aiohttp
     from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 
-    connections = getattr(getattr(app, 'state', None), 'config', None)
-    if connections is None:
-        return
-    connections = getattr(connections, 'TERMINAL_SERVER_CONNECTIONS', None) or []
+    connections = await get_terminal_connections(user)
     connection = next((c for c in connections if c.get('id') == server_id), None)
     if connection is None:
         log.warning(f'Terminal server {server_id} not found for CWD set')
@@ -230,7 +228,7 @@ async def _set_terminal_cwd(app, server_id: str, user, cwd: str, chat_id: str) -
         headers['Authorization'] = f'Bearer {connection.get("key", "")}'
 
     try:
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
+        async with get_terminal_client(base_url, user.id, timeout=aiohttp.ClientTimeout(total=10)) as session:
             async with session.post(
                 target_url,
                 json={'path': cwd},

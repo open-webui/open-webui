@@ -380,12 +380,18 @@ export const userSignUp = async (
 };
 
 export const userSignOut = async () => {
+	const { clearChatViews } = await import('$lib/stores/chatViewStates');
+	clearChatViews();
+	const token = localStorage.getItem('token');
+	// Stop local access even if the hosted server cannot be reached.
+	await window.tether?.signedOut();
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/auths/signout`, {
 		method: 'POST',
 		headers: {
-			'Content-Type': 'application/json'
+			'Content-Type': 'application/json',
+			...(token ? { Authorization: `Bearer ${token}` } : {})
 		},
 		credentials: 'include'
 	})

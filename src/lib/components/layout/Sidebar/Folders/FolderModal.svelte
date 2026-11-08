@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher, onMount, tick } from 'svelte';
+	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
 
+	import Collapsible from '$lib/components/common/Collapsible.svelte';
+	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
@@ -12,8 +14,12 @@
 	import { toast } from 'svelte-sonner';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { user, config, models } from '$lib/stores';
+	import { user, config, models, settings } from '$lib/stores';
+	import { getModels } from '$lib/apis';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
+	import FileNav from '$lib/components/chat/FileNav.svelte';
+	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
+	import TerminalSelector from '$lib/components/workspace/Models/TerminalSelector.svelte';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -35,12 +41,59 @@
 	let data = {
 		description: '',
 		model_ids: [] as string[],
+		terminal_id: '',
+		working_directory: '',
 		system_prompt: '',
 		files: []
 	};
 
 	let loading = false;
 	let showAccessModal = false;
+	let showAdvanced = false;
+	let showDirectoryPicker = false;
+	let terminalModels = [];
+	let modelsLoading = false;
+	let modelRequest = 0;
+	let modelTimer: ReturnType<typeof setTimeout>;
+
+	const loadTerminalModels = (visible: boolean, terminalId: string, cwd: string) => {
+		const request = ++modelRequest;
+		clearTimeout(modelTimer);
+		terminalModels = [];
+		modelsLoading = visible && !!terminalId;
+		if (!modelsLoading) return;
+
+		modelTimer = setTimeout(async () => {
+			try {
+				const available = await getModels(
+					localStorage.token,
+					$config?.features?.enable_direct_integrations
+						? ($settings?.directConnections ?? null)
+						: null,
+					false,
+					false,
+					{ terminalId, cwd: cwd.trim() }
+				);
+				if (request === modelRequest) terminalModels = available;
+			} catch (error) {
+				if (request === modelRequest) toast.error(`${error}`);
+			} finally {
+				if (request === modelRequest) modelsLoading = false;
+			}
+		}, 250);
+	};
+
+	$: modelTerminalId = data.terminal_id;
+	$: modelDirectory = data.working_directory;
+	$: loadTerminalModels(show, modelTerminalId, modelDirectory);
+	$: folderModels = modelTerminalId
+		? terminalModels
+		: $models.filter((model) => !model.id.startsWith('agent:'));
+
+	onDestroy(() => {
+		clearTimeout(modelTimer);
+		modelRequest++;
+	});
 
 	const submitHandler = async () => {
 		loading = true;
@@ -68,6 +121,8 @@
 			data: {
 				description: data.description.trim(),
 				model_ids: data.model_ids,
+				terminal_id: data.terminal_id || null,
+				working_directory: data.terminal_id ? data.working_directory.trim() || null : null,
 				system_prompt: data.system_prompt,
 				files: data.files
 			},
@@ -95,7 +150,9 @@
 				files: [],
 				...folder.data,
 				description: folder.data?.description ?? '',
-				model_ids: folder.data?.model_ids ?? []
+				model_ids: folder.data?.model_ids ?? [],
+				terminal_id: folder.data?.terminal_id ?? '',
+				working_directory: folder.data?.working_directory ?? ''
 			};
 		}
 
@@ -114,7 +171,11 @@
 	$: if (show) {
 		init();
 	}
-	$: if (!show) showAccessModal = false;
+	$: if (!show) {
+		showAccessModal = false;
+		showAdvanced = false;
+		showDirectoryPicker = false;
+	}
 
 	$: if (!show && !edit) {
 		name = '';
@@ -124,6 +185,8 @@
 		data = {
 			description: '',
 			model_ids: [],
+			terminal_id: '',
+			working_directory: '',
 			system_prompt: '',
 			files: []
 		};
@@ -258,71 +321,145 @@
 
 					<hr class=" border-gray-50 dark:border-gray-850/30 my-2.5 w-full" />
 
-					<div class="my-1 flex items-center justify-between gap-4">
-						<label
-							for="model-selector-folder-default-button"
-							class="shrink-0 text-xs text-gray-500"
-						>
-							{$i18n.t('Default Model')}
-						</label>
-						<div class="flex min-w-0 max-w-[65%] items-center gap-2">
-							<div class="min-w-0">
-								<ModelSelector
-									id="folder-default"
-									placeholder={$i18n.t('Use default')}
-									items={$models.map((model) => ({
-										value: model.id,
-										label: model.name,
-										model
-									}))}
-									triggerClassName="text-xs"
-									placement="auto"
-									align="end"
-									selectionOnly
-									value={data.model_ids[0] ?? ''}
-									bind:values={data.model_ids}
-								/>
-							</div>
-							{#if data.model_ids.length}
-								<button
-									type="button"
-									aria-label={$i18n.t('Reset')}
-									class="shrink-0 py-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 px-0"
-									on:click={() => (data.model_ids = [])}
+					<Collapsible
+						title={$i18n.t('Advanced')}
+						bind:open={showAdvanced}
+						buttonClassName="w-full py-1 text-xs font-normal text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition"
+					>
+						<div slot="content" class="space-y-0.5 pt-1">
+							<TerminalSelector
+								bind:terminalId={data.terminal_id}
+								label={$i18n.t('Default terminal')}
+								description={$i18n.t(
+									'Select the terminal used by default for new chats in this folder.'
+								)}
+								onChange={() => {
+									data.working_directory = '';
+									data.model_ids = data.model_ids.filter((id) => !id.startsWith('agent:'));
+								}}
+							/>
+							{#if data.terminal_id}
+								<div
+									class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 px-1 py-1 sm:grid-cols-[8rem_minmax(0,1fr)]"
 								>
-									<XMark className="size-3" />
-								</button>
-							{/if}
-						</div>
-					</div>
-
-					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-						<div class="my-1">
-							<div class="mb-2 text-xs text-gray-500">{$i18n.t('System Prompt')}</div>
-							<div>
-								<Textarea
-									className=" text-sm w-full bg-transparent outline-hidden "
-									placeholder={$i18n.t(
-										'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-									)}
-									maxSize={200}
-									bind:value={data.system_prompt}
-								/>
-							</div>
-						</div>
-					{/if}
-
-					<div class="my-2">
-						<Knowledge bind:selectedItems={data.files}>
-							<div slot="label">
-								<div class="flex w-full justify-between">
-									<div class=" text-xs text-gray-500">
-										{$i18n.t('Knowledge')}
+									<label
+										for="folder-working-directory"
+										class="block text-xs font-normal text-gray-600 dark:text-gray-400"
+									>
+										<ModelSettingsLabel
+											label={$i18n.t('Working directory')}
+											description={$i18n.t(
+												'Path on the selected terminal. Applies to new chats only.'
+											)}
+										/>
+									</label>
+									<div class="flex min-w-0 items-center gap-2">
+										<input
+											id="folder-working-directory"
+											class="min-w-0 flex-1 bg-transparent text-xs font-normal text-gray-900 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-600"
+											bind:value={data.working_directory}
+											placeholder={$i18n.t('Use the terminal’s default directory')}
+										/>
+										<button
+											type="button"
+											aria-label={$i18n.t('Browse directories')}
+											title={$i18n.t('Browse directories')}
+											class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+											on:click={() => (showDirectoryPicker = true)}
+											><FolderOpen className="size-3.5" /></button
+										>
 									</div>
 								</div>
+							{/if}
+
+							<div
+								class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 sm:grid-cols-[8rem_minmax(0,1fr)]"
+							>
+								<label
+									for="model-selector-folder-default-button"
+									class="shrink-0 text-xs font-normal text-gray-600 dark:text-gray-400"
+								>
+									<ModelSettingsLabel
+										label={$i18n.t('Default Model')}
+										description={$i18n.t(
+											'Select the model used by default for new chats in this folder.'
+										)}
+									/>
+								</label>
+								<div class="flex min-w-0 items-center justify-between gap-2">
+									<div class="min-w-0">
+										<ModelSelector
+											id="folder-default"
+											placeholder={$i18n.t('Use default')}
+											disabled={modelsLoading}
+											items={folderModels.map((model) => ({
+												value: model.id,
+												label: model.name,
+												model
+											}))}
+											triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
+											placement="auto"
+											align="start"
+											selectionOnly
+											value={data.model_ids[0] ?? ''}
+											bind:values={data.model_ids}
+										/>
+									</div>
+									{#if modelsLoading}<Spinner className="size-3" />{/if}
+									{#if data.model_ids.length}
+										<button
+											type="button"
+											aria-label={$i18n.t('Reset')}
+											class="shrink-0 py-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 px-0"
+											on:click={() => (data.model_ids = [])}
+										>
+											<XMark className="size-3" />
+										</button>
+									{/if}
+								</div>
 							</div>
-						</Knowledge>
-					</div>
+
+							{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
+								<div
+									class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 px-1 py-1 sm:grid-cols-[8rem_minmax(0,1fr)]"
+								>
+									<label
+										for="folder-system-prompt"
+										class="block text-xs font-normal text-gray-600 dark:text-gray-400"
+									>
+										<ModelSettingsLabel
+											label={$i18n.t('System Prompt')}
+											description={$i18n.t(
+												'Set instructions that guide how the model behaves in this folder.'
+											)}
+										/>
+									</label>
+									<div>
+										<Textarea
+											id="folder-system-prompt"
+											ariaLabel={$i18n.t('System Prompt')}
+											className="w-full resize-none bg-transparent text-xs font-normal text-gray-900 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-600"
+											placeholder={$i18n.t(
+												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+											)}
+											maxSize={200}
+											bind:value={data.system_prompt}
+										/>
+									</div>
+								</div>
+							{/if}
+
+							<Knowledge bind:selectedItems={data.files}>
+								<ModelSettingsLabel
+									slot="label"
+									label={$i18n.t('Knowledge')}
+									description={$i18n.t(
+										'Attach knowledge bases, notes, or files for chats in this folder.'
+									)}
+								/>
+							</Knowledge>
+						</div>
+					</Collapsible>
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button
@@ -347,4 +484,32 @@
 
 {#if show && edit && folder && ($user?.role === 'admin' || folder.user_id === $user?.id)}
 	<FolderShareModal bind:show={showAccessModal} {folder} />
+{/if}
+
+{#if show && showDirectoryPicker && data.terminal_id}
+	<Modal bind:show={showDirectoryPicker} ariaLabel={$i18n.t('Choose working directory')} size="md">
+		<div class="px-2 py-4">
+			<div class="mb-3 flex items-center justify-between px-2 text-sm">
+				<span>{$i18n.t('Choose working directory')}</span>
+				<button
+					type="button"
+					aria-label={$i18n.t('Close')}
+					class="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => (showDirectoryPicker = false)}><XMark className="size-4" /></button
+				>
+			</div>
+			<div class="h-[60dvh] min-h-0">
+				<FileNav
+					terminalId={data.terminal_id}
+					initialDirectory={data.working_directory || null}
+					manageFileRequests={false}
+					showTerminalDock={false}
+					onSelectDirectory={(path) => {
+						data.working_directory = path;
+						showDirectoryPicker = false;
+					}}
+				/>
+			</div>
+		</div>
+	</Modal>
 {/if}

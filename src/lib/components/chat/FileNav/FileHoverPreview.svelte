@@ -14,6 +14,7 @@
 	export let terminalUrl: string;
 	export let terminalKey: string;
 	export let sessionId: string | undefined = undefined;
+	export let sideOffset = 12;
 
 	let loading = true;
 	let fileContent: string | null = null;
@@ -88,7 +89,7 @@
 		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 md:block dark:bg-gray-850 dark:text-white dark:ring-white/10"
 		side="top"
 		align="center"
-		sideOffset={12}
+		{sideOffset}
 		aria-label={$i18n.t('File preview')}
 	>
 		<div
@@ -105,7 +106,7 @@
 			{/if}
 		</div>
 		<div
-			class="h-60 max-h-[calc(100dvh-6rem)] overflow-hidden text-xs [&_.document-markdown]:!p-2 [&_.document-markdown_h1]:!text-sm [&_.document-markdown_h2]:!text-xs [&_.document-markdown_h3]:!text-xs [&_.document-markdown]:!text-xs [&_.cm-editor]:!text-[0.6875rem] [&_pre]:!text-[0.6875rem]"
+			class="h-60 max-h-[calc(100dvh-6rem)] overflow-hidden text-xs [&_.document-markdown]:!p-2 [&_.document-markdown_h1]:!text-sm [&_.document-markdown_h2]:!text-xs [&_.document-markdown_h3]:!text-xs [&_.document-markdown]:!text-[0.8125rem] [&_.cm-editor]:!text-[0.6875rem] [&_pre]:!text-[0.6875rem]"
 		>
 			{#if documentPreview && withinPreviewLimit}
 				<CommentFilePreview

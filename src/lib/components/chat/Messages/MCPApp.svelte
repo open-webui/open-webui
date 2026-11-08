@@ -29,6 +29,7 @@
 	let status = '';
 	let link = '';
 	let showConfirmation = false;
+	let confirmationTitle = '';
 	let confirmationText = '';
 	let confirmCall: ((accept: boolean) => void) | undefined;
 	let observer: ResizeObserver | undefined;
@@ -61,7 +62,7 @@
 		return response.json();
 	}
 
-	function confirmTool(name: string, args: object, signal: AbortSignal): Promise<boolean> {
+	function requestConfirmation(title: string, text: string, signal: AbortSignal): Promise<boolean> {
 		return new Promise((resolve) => {
 			if (confirmCall || closing || signal.aborted) return resolve(false);
 			const abort = () => finish(false);
@@ -72,7 +73,8 @@
 				resolve(accept);
 			};
 			signal.addEventListener('abort', abort, { once: true });
-			confirmationText = `${app.server_id}: ${name}\n${JSON.stringify(args, null, 2)}`;
+			confirmationTitle = title;
+			confirmationText = text;
 			confirmCall = finish;
 			showConfirmation = true;
 		});
@@ -86,6 +88,7 @@
 			{ name: 'Open WebUI', version: WEBUI_VERSION },
 			{
 				openLinks: {},
+				message: { text: {} },
 				serverTools: {},
 				serverResources: {},
 				sandbox: { csp: resource.ui.csp ?? {} }
@@ -109,13 +112,25 @@
 				extra.mcpReq.signal,
 				AbortSignal.timeout(120000)
 			]);
-			if (!(await confirmTool(name, args ?? {}, signal))) throw new Error('Tool call cancelled');
+			const text = `${app.server_id}: ${name}\n${JSON.stringify(args ?? {}, null, 2)}`;
+			if (!(await requestConfirmation($i18n.t('Tool call'), text, signal)))
+				throw new Error('Tool call cancelled');
 			return rpc('tools/call', { name, arguments: args ?? {} }, signal);
 		};
 		bridge.onreadresource = (params, extra) =>
 			rpc('resources/read', { uri: params.uri }, extra.mcpReq.signal);
 		bridge.onlistresources = (params, extra) =>
 			rpc('resources/list', params?.cursor ? { cursor: params.cursor } : {}, extra.mcpReq.signal);
+		bridge.onmessage = async ({ content }, extra) => {
+			const text = content
+				.flatMap((block) => (block.type === 'text' ? [block.text] : []))
+				.join('\n\n');
+			const signal = AbortSignal.any([lifetime.signal, extra.mcpReq.signal]);
+			if (!text || !(await requestConfirmation($i18n.t('Confirm Prompt from Embed'), text, signal)))
+				throw new Error('Message cancelled');
+			window.postMessage({ type: 'input:prompt:submit', text }, window.origin);
+			return {};
+		};
 		bridge.onopenlink = async ({ url }) => {
 			const parsed = new URL(url);
 			if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password)
@@ -225,7 +240,7 @@
 {#if showConfirmation}
 	<ConfirmDialog
 		bind:show={showConfirmation}
-		title={$i18n.t('Tool call')}
+		title={confirmationTitle}
 		on:confirm={() => confirmCall?.(true)}
 		on:cancel={() => confirmCall?.(false)}
 	>

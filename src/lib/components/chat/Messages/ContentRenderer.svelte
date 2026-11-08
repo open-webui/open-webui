@@ -98,6 +98,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let allowEmbeds = false;
+	export let allowToolApproval = false;
 
 	export let onSave = (e) => {};
 	export let onSourceClick = (e) => {};
@@ -298,6 +299,7 @@
 			{compactPreview}
 			{done}
 			{allowEmbeds}
+			{allowToolApproval}
 			{editCodeBlock}
 			{topPadding}
 			{sourceIds}
@@ -368,7 +370,7 @@
 		{/if}
 		{#if extracted.plainContent}
 			<div
-				class="whitespace-pre-wrap text-[0.9375rem]"
+				class="whitespace-pre-wrap text-[0.90625rem]"
 				use:commentSurface={{
 					resource_type: 'chat',
 					resource_id: chatId,

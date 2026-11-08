@@ -218,7 +218,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="m-auto font-normal text-xs text-gray-900 dark:text-white">
+					<div class="m-auto p-6 text-center font-normal text-xs text-gray-900 dark:text-white">
 						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
 					</div>
 				{/if}

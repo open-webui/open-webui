@@ -1,8 +1,11 @@
 <script lang="ts">
 	import type { TerminalContext } from '$lib/types';
 	import type { TerminalConnection } from '$lib/apis/terminal';
-	import type { GitStatus } from '$lib/apis/terminal/git';
+	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
+	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
+	import CloneRepository from './FileNav/CloneRepository.svelte';
+	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
 	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
@@ -15,10 +18,12 @@
 		settings,
 		showFileNavPath,
 		showFileNavDir,
+		selectedFolder,
 		selectedTerminalId
 	} from '$lib/stores';
 	import {
 		getCwd,
+		getTerminalFeatures,
 		getFileMatches,
 		listFiles,
 		readFile,
@@ -29,14 +34,12 @@
 		createDirectory,
 		deleteEntry,
 		moveEntry,
-		setCwd,
 		type FileEntry,
 		type TerminalContentMatch,
 		type TerminalFileMatch,
 		type TerminalFileRoot,
 		type TerminalCwd
 	} from '$lib/apis/terminal';
-	import { isCodeFile } from '$lib/utils/codeHighlight';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
 	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
@@ -54,11 +57,18 @@
 	import FileEntryRow from './FileNav/FileEntryRow.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import FileTypeIcon from './FileNav/FileTypeIcon.svelte';
+	import FileGridIcon from './FileNav/FileGridIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import TerminalDock from './TerminalDock.svelte';
 
 	// Directory and preview state belong to this tab, including its terminal connection.
 	let savedPath = '/';
+	// savedPath is only a placeholder until a directory has loaded.
+	let savedPathLoaded = false;
+	$: folderDirectory =
+		!onSelectDirectory && !chatId && $selectedFolder?.data?.terminal_id === effectiveTerminalId
+			? $selectedFolder.data.working_directory
+			: null;
 	let savedFileRoot: TerminalFileRoot | null = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
@@ -66,6 +76,44 @@
 	const i18n = getContext<Readable<I18n>>('i18n');
 	// Keep the error fallback discoverable by the i18n extractor.
 	// t('Unknown error')
+
+	export let initialView: any = null;
+	export let onViewChange: ((view: any) => void) | null = null;
+	export let onFileSaved: ((content: string) => void) | null = null;
+	let viewRestored = !initialView;
+	export const captureView = () =>
+		!viewRestored && initialView
+			? initialView
+			: {
+					directory: currentPath,
+					selectedFile,
+					expanded: [...expandedDirs],
+					preview: (commentPreviewRef ?? filePreviewRef)?.captureView(),
+					dirty: dirty || saving,
+					scrollTop: viewerRoot?.scrollTop ?? 0
+				};
+	const restoreView = async () => {
+		if (disposed || viewRestored || !initialView) return;
+		const view = initialView;
+		if (view.preview?.kind === 'xlsx' && selectedFile === view.selectedFile) {
+			await tick();
+			await commentPreviewRef?.restoreView(view.preview);
+		} else if (view.preview && selectedFile === view.selectedFile) {
+			diskChanged = view.preview.dirty && fileContent !== view.preview.baseText;
+			await tick();
+			await filePreviewRef?.restoreView(
+				view.preview.dirty || view.preview.baseText === fileContent
+					? view.preview
+					: { ...view.preview, text: fileContent ?? '', editor: undefined }
+			);
+		}
+		for (const path of view.expanded ?? []) {
+			if (disposed) return;
+			if (!expandedDirs.has(path)) await toggleExpand(path);
+		}
+		if (viewerRoot) viewerRoot.scrollTop = view.scrollTop ?? 0;
+		viewRestored = true;
+	};
 
 	export let overlay = false;
 	export let active = true;
@@ -76,10 +124,31 @@
 	export let terminalId: string | null = null;
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
+	export let onSelectDirectory: ((path: string) => void) | null = null;
+	let showCloneRepository = false;
+	let gitAvailable = false;
+	let cloneSupportVersion = 0;
+	async function checkCloneSupport(
+		terminal: { url: string; key: string } | null,
+		session: string | null,
+		enabled: boolean
+	) {
+		const version = ++cloneSupportVersion;
+		gitAvailable = false;
+		showCloneRepository = false;
+		if (!terminal || !enabled) return;
+		const features = await getTerminalFeatures(
+			{ baseUrl: terminal.url, key: terminal.key },
+			session
+		);
+		if (!disposed && version === cloneSupportVersion) gitAvailable = features.git === true;
+	}
+	$: void checkCloneSupport(selectedTerminal, chatId, !!onSelectDirectory);
 	export let manageFileRequests = true;
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
+	export let onFilesMoved: (() => void) | null = null;
 	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
 
 	export let chatId: string | null = null;
@@ -95,6 +164,8 @@
 	// Keep typing from invalidating the keyed selection and remounting the input.
 	let fileAskInput = '';
 	let usingFileAsk = false;
+	let selectingWithPointer = false;
+	let pendingSelection: Event | undefined;
 	let asking = false;
 	const positionFileAsk = (node: HTMLFormElement, anchor: Range | HTMLElement) => {
 		document.body.appendChild(node);
@@ -150,31 +221,31 @@
 	let loadGeneration = 0;
 	export let dirty = false;
 	let diskChanged = false;
+	let overwriteChoice: ((replace: boolean) => void) | null = null;
 	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
 		null;
 	let dirtyChoice: {
 		sending: boolean;
-		resolve: (choice: 'save' | 'discard' | 'cancel') => void;
+		resolve: (confirmed: boolean) => void;
 	} | null = null;
 	const protectBuffer = async (sending = false) => {
 		if (!dirty && !saving) return true;
 		if (saving || dirtyChoice) return false;
-		const choice = await new Promise<'save' | 'discard' | 'cancel'>((resolve) => {
+		const confirmed = await new Promise<boolean>((resolve) => {
 			dirtyChoice = { sending, resolve };
 		});
 		dirtyChoice = null;
-		if (choice === 'cancel') return false;
-		if (choice === 'save') {
+		if (!confirmed) return false;
+		if (sending) {
 			try {
-				await filePreviewRef.save();
+				await (commentPreviewRef ?? filePreviewRef).save();
 			} catch (error) {
 				toast.error(String(error));
 				return false;
 			}
 			if (dirty) return false;
-		}
-		if (choice === 'discard') {
-			filePreviewRef?.discard();
+		} else {
+			await (commentPreviewRef ?? filePreviewRef)?.discard();
 			dirty = false;
 		}
 		return true;
@@ -182,6 +253,7 @@
 	export const requestClose = () => protectBuffer();
 	export const hasUnsavedChanges = () => dirty || saving;
 	export const browseDirectory = (path: string) => loadDir(path);
+	export const refreshDirectory = () => !selectedFile && refreshBrowser();
 	export const revealPage = (page: number | null) => {
 		documentTargetPage = normalizeDocumentTargetPage(page);
 	};
@@ -194,11 +266,28 @@
 			file: openedFile
 		};
 	};
-	const captureSelection = () => {
-		if (!active || usingFileAsk) return;
+	const captureSelection = (event?: Event) => {
+		if (!active || usingFileAsk || dirtyChoice || asking) return;
+		const grid =
+			event instanceof CustomEvent && event.type === 'spreadsheetselection'
+				? (event.detail as { text: string; location: string; anchor: Range })
+				: null;
+		// Focused cells publish their own selection; the browser's text selection is unrelated.
+		if (
+			!grid &&
+			document.activeElement?.matches('[data-cell]') &&
+			viewerRoot?.contains(document.activeElement)
+		)
+			return;
+		if (selectingWithPointer) {
+			pendingSelection = event;
+			return;
+		}
+		fileAsk = null;
 		const selection = window.getSelection();
-		if (!onAskFile || !openedFile || !selection?.rangeCount || selection.isCollapsed) return;
-		const range = selection.getRangeAt(0);
+		if (!onAskFile || !openedFile || (!grid && (!selection?.rangeCount || selection.isCollapsed)))
+			return;
+		const range = grid?.anchor ?? selection!.getRangeAt(0);
 		if (!viewerRoot?.contains(range.startContainer) || !viewerRoot.contains(range.endContainer))
 			return;
 		if (
@@ -207,8 +296,8 @@
 			)
 		)
 			return;
-		const source = filePreviewRef?.getSelection();
-		const text = source?.text ?? selection.toString();
+		const source = grid ?? filePreviewRef?.getSelection();
+		const text = source?.text ?? selection!.toString();
 		if (!text.trim()) return;
 		if (new TextEncoder().encode(text).length > 16384) {
 			toast.error($i18n.t('Select less text (maximum 16 KiB).'));
@@ -254,12 +343,21 @@
 	// $i18n.t('File saved'); $i18n.t('Failed to save file');
 	const saveFile = async (content: string) => {
 		const target = saveConnection;
-		if (!target || !selectedFileWritable) throw new Error('File is not writable.');
+		if (
+			diskChanged &&
+			!(await new Promise<boolean>((resolve) => {
+				overwriteChoice = resolve;
+			}))
+		)
+			throw new Error('Save cancelled.');
+		const current = getTerminal();
+		if (!target || !current || current.url !== target.url || !selectedFileWritable)
+			throw new Error('File is not writable.');
 		const name = target.path.split('/').pop()!;
 		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
 		const result = await uploadToTerminal(
 			target.url,
-			target.key,
+			current.key,
 			dir,
 			new File([content], name, { type: 'text/plain' }),
 			target.chatId ?? undefined
@@ -270,6 +368,7 @@
 			diskChanged = false;
 		}
 		await tick();
+		onFileSaved?.(content);
 	};
 
 	// Sessions panel state
@@ -366,6 +465,7 @@
 	let showSearch = false;
 	let searchInput: HTMLInputElement;
 	const toggleSearch = async () => {
+		if (onSelectDirectory) return;
 		showSearch = !showSearch;
 		if (!showSearch) searchQuery = '';
 		await tick();
@@ -395,7 +495,9 @@
 		normalizePath(name).split('/').filter(Boolean).at(-1) ?? name.replace(/\/+$/, '');
 
 	const normalizeEntries = (items: FileEntry[]) =>
-		items.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
+		items
+			.filter((entry) => !onSelectDirectory || entry.type === 'directory')
+			.map((entry) => ({ ...entry, name: cleanEntryName(entry.name) }));
 
 	const asDirectoryPath = (path: string) => {
 		const normalized = normalizePath(path || '/');
@@ -560,6 +662,7 @@
 	let selectedFile: string | null = null;
 	let showGitDiff = false;
 	let gitFileKey = '';
+	$: treeGitStatuses = gitTreeStatus(gitStatus);
 	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
 		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
 		showGitDiff = false;
@@ -582,7 +685,75 @@
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileLoading = false;
 	let filePreviewRef: FilePreview;
+	let commentPreviewRef: CommentFilePreview;
 	let commentGeneration = 0;
+	let gitBaseContent: string | null = null;
+	let gitBaseGeneration = 0;
+	let gitBaseKey = '';
+	const loadGitBase = async (
+		connection: TerminalConnection | null,
+		session: string | null,
+		status: GitStatus | null,
+		file: GitFile | null,
+		path: string | null,
+		content: string | null,
+		loading: boolean,
+		_version: number
+	) => {
+		const generation = ++gitBaseGeneration;
+		const key = JSON.stringify([connection, session, path]);
+		if (key !== gitBaseKey) gitBaseContent = null;
+		gitBaseKey = key;
+		const root = status?.is_repo && status.root ? normalizePath(status.root) : null;
+		if (
+			!connection ||
+			root === null ||
+			!path ||
+			content === null ||
+			loading ||
+			file?.binary ||
+			!normalizePath(path).startsWith(`${root.replace(/\/$/, '')}/`)
+		) {
+			gitBaseContent = null;
+			return;
+		}
+		try {
+			let base = content;
+			if (file?.status === 'untracked' || file?.status === 'added') base = '';
+			else if (file) {
+				const [unstaged, staged] = await Promise.all([
+					file.unstaged
+						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+								file: file.path,
+								staged: 'false'
+							})
+						: null,
+					file.staged
+						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+								file: file.path,
+								staged: 'true'
+							})
+						: null
+				]);
+				if (unstaged) base = reverseGitDiff(base, unstaged.diff);
+				if (staged) base = reverseGitDiff(base, staged.diff);
+			}
+			if (generation === gitBaseGeneration) gitBaseContent = base;
+		} catch {
+			// A stale patch or unavailable Git service must not interfere with editing.
+			if (generation === gitBaseGeneration) gitBaseContent = null;
+		}
+	};
+	$: void loadGitBase(
+		gitConnection,
+		chatId,
+		gitStatus,
+		currentGitFile,
+		selectedFile,
+		fileContent,
+		fileLoading,
+		commentGeneration
+	);
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
 
@@ -595,7 +766,6 @@
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	// File preview toolbar state (bound from FilePreview)
-	let editing = false;
 	let showRaw = false;
 	let saving = false;
 
@@ -611,7 +781,6 @@
 	$: isJson = ['json', 'jsonc', 'jsonl', 'json5'].includes(getFileExt(selectedFile));
 	$: isSvg = getFileExt(selectedFile) === 'svg';
 	$: isNotebook = getFileExt(selectedFile) === 'ipynb';
-	$: isCode = isCodeFile(selectedFile);
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
@@ -675,6 +844,7 @@
 	let prevTerminalUrl = '';
 	let prevTerminalId = effectiveTerminalId;
 	let prevChatId = chatId;
+	let prevFolderDirectory: string | null = null;
 	let mounted = false;
 	let disposed = false;
 	$: {
@@ -685,6 +855,8 @@
 		const chatChanged = chatId !== prevChatId;
 		const oldChatId = prevChatId;
 		if (chatChanged) prevChatId = chatId;
+		const folderChanged = folderDirectory !== prevFolderDirectory;
+		prevFolderDirectory = folderDirectory;
 
 		const terminalChanged =
 			terminal && (terminal.url !== prevTerminalUrl || effectiveTerminalId !== prevTerminalId);
@@ -704,11 +876,10 @@
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
 				}
-				// Chat just got created (null → real ID): persist the current
-				// browsed path as the new session's cwd — don't re-fetch.
-				setCwd(terminal.url, terminal.key, savedPath, chatId);
-			} else if (terminalChanged || chatChanged) {
-				++loadGeneration;
+				// Keep the draft's browsed path; chat submission initializes the session cwd.
+			} else if (terminalChanged || chatChanged || folderChanged) {
+				const generation = ++loadGeneration;
+				savedPathLoaded = false;
 				openedFile = null;
 				if (terminalContext) terminalContext = { ...terminalContext, file: null };
 				// Terminal switched, new chat started, or switched between
@@ -718,7 +889,10 @@
 				entries = [];
 				resetTreeState();
 				(async () => {
-					savedPath = applyCwd(await getCwd(terminal.url, terminal.key, chatId ?? undefined));
+					const cwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					if (disposed || generation !== loadGeneration) return;
+					const serverPath = applyCwd(cwd);
+					savedPath = folderDirectory || serverPath;
 					loadDir(savedPath);
 				})();
 			}
@@ -1031,16 +1205,15 @@
 			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
 		}
 		currentPath = directory;
+		onViewChange?.(captureView());
 		savedPath = directory;
+		savedPathLoaded = true;
 		pushNavHistory(directory);
 
 		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
 		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
 			return;
 		loading = false;
-
-		// Set working directory on the terminal server (fire-and-forget)
-		if (!initialFile) setCwd(terminal.url, terminal.key, directory, chatId ?? undefined);
 
 		if (result === null) {
 			error =
@@ -1146,7 +1319,12 @@
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
-				? { showRaw, currentSlide, selectedExcelSheet, scroll: viewerRoot?.scrollTop ?? 0 }
+				? {
+						showRaw,
+						currentSlide,
+						selectedExcelSheet,
+						scroll: viewerRoot?.scrollTop ?? 0
+					}
 				: null;
 		const current = () =>
 			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
@@ -1271,16 +1449,15 @@
 					);
 					if (result) {
 						const arrayBuffer = await result.blob.arrayBuffer();
-						const XLSX = await import('xlsx');
-						const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+						const { readExcelWorkbook, excelToTable } = await import('$lib/utils/excelToTable');
+						const wb = await readExcelWorkbook(arrayBuffer);
 						next.excelWorkbook = wb;
 						next.excelSheetNames = wb.SheetNames;
 						if (next.excelSheetNames.length > 0) {
 							next.selectedExcelSheet = next.excelSheetNames[0];
-							const { excelToTable } = await import('$lib/utils/excelToTable');
 							const result = await excelToTable(wb.Sheets[next.selectedExcelSheet]);
 							const DOMPurify = (await import('dompurify')).default;
-							next.fileOfficeHtml = DOMPurify.sanitize(result.html);
+							next.fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 						}
 					}
 				} else if (ext === 'pptx') {
@@ -1425,6 +1602,8 @@
 		}
 	};
 
+	$: dragContext = JSON.stringify([selectedTerminal?.url, chatId ?? null]);
+
 	// Drag-and-drop upload
 	type UploadEntry = { path: string; file?: File };
 
@@ -1484,6 +1663,7 @@
 		if (rawMove) {
 			try {
 				const data = JSON.parse(rawMove);
+				if (data.context !== dragContext) return;
 				const paths = (data.paths || (data.path ? [data.path] : [])) as string[];
 				await handleMovePaths(paths, currentPath);
 			} catch {}
@@ -1678,12 +1858,22 @@
 	};
 
 	const handleMovePaths = async (sources: string[], destFolder: string) => {
+		const context = dragContext;
 		const movedSources: string[] = [];
-		for (const source of sources) {
+		const roots = [...new Set(sources.map((path) => normalizePath(path).replace(/\/$/, '')))];
+		for (const source of roots) {
+			if (context !== dragContext) break;
+			if (roots.some((parent) => parent !== source && source.startsWith(`${parent}/`))) continue;
+			if (
+				visibleEntries.find((entry) => entry.fullPath.replace(/\/$/, '') === source)?.writable ===
+				false
+			)
+				continue;
 			if (await moveOne(source, destFolder)) movedSources.push(source);
 		}
-		if (movedSources.length > 0) {
+		if (movedSources.length > 0 && context === dragContext) {
 			await refreshAfterMove(movedSources, destFolder);
+			onFilesMoved?.();
 		}
 	};
 
@@ -1717,6 +1907,211 @@
 	let selectedEntries: Set<string> = new Set();
 	let lastClickedIndex: number | null = null;
 	let selectionMode = false;
+
+	let selectingFiles = false;
+	let keepSelectionToolbar = false;
+	const selectFilesByDrag = (node: HTMLElement) => {
+		let start: PointerEvent | null = null;
+		let point: PointerEvent;
+		let origin = { x: 0, y: 0 };
+		let original = new Set<string>();
+		let directory = '';
+		let context = '';
+		let armed = false;
+		let timer: ReturnType<typeof setTimeout>;
+		let frame = 0;
+		let box: HTMLDivElement | null = null;
+		let suppressClick = false;
+		const finish = (cancelled = false) => {
+			if (!start) return;
+			if (cancelled && directory === currentPath && context === dragContext)
+				selectedEntries = original;
+			suppressClick = selectingFiles;
+			selectingFiles = false;
+			clearTimeout(timer);
+			cancelAnimationFrame(frame);
+			box?.remove();
+			box = null;
+			if (node.hasPointerCapture(start.pointerId)) node.releasePointerCapture(start.pointerId);
+			start = null;
+			document.removeEventListener('pointermove', move);
+			document.removeEventListener('pointerup', end);
+			document.removeEventListener('pointercancel', cancel);
+			document.removeEventListener('touchmove', preventScroll);
+			document.removeEventListener('keydown', keydown, true);
+			window.removeEventListener('blur', cancel);
+		};
+		const update = () => {
+			if (!start || !box) return;
+			if (
+				!active ||
+				selectedFile ||
+				isSearching ||
+				directory !== currentPath ||
+				context !== dragContext
+			) {
+				finish();
+				return;
+			}
+			const viewport = node.getBoundingClientRect();
+			if (point.clientX >= viewport.left && point.clientX <= viewport.right) {
+				node.scrollTop +=
+					point.clientY < viewport.top + 24 ? -8 : point.clientY > viewport.bottom - 24 ? 8 : 0;
+			}
+			const x =
+				Math.max(0, Math.min(node.clientWidth, point.clientX - viewport.left)) + node.scrollLeft;
+			const y =
+				Math.max(0, Math.min(node.clientHeight, point.clientY - viewport.top)) + node.scrollTop;
+			const left = Math.min(origin.x, x),
+				top = Math.min(origin.y, y);
+			const right = Math.max(origin.x, x),
+				bottom = Math.max(origin.y, y);
+			const screenLeft = Math.max(viewport.left, viewport.left + left - node.scrollLeft);
+			const screenTop = Math.max(viewport.top, viewport.top + top - node.scrollTop);
+			Object.assign(box.style, {
+				left: `${screenLeft}px`,
+				top: `${screenTop}px`,
+				width: `${Math.max(0, Math.min(viewport.right, viewport.left + right - node.scrollLeft) - screenLeft)}px`,
+				height: `${Math.max(0, Math.min(viewport.bottom, viewport.top + bottom - node.scrollTop) - screenTop)}px`
+			});
+			const next = new Set(start.shiftKey || start.metaKey || start.ctrlKey ? original : []);
+			for (const row of node.querySelectorAll<HTMLElement>('[data-file-row]')) {
+				const rect = row.getBoundingClientRect();
+				const rx = rect.left - viewport.left + node.scrollLeft;
+				const ry = rect.top - viewport.top + node.scrollTop;
+				if (rx >= right || rx + rect.width <= left || ry >= bottom || ry + rect.height <= top)
+					continue;
+				const path = row.dataset.fileRow!;
+				if ((start.metaKey || start.ctrlKey) && original.has(path)) next.delete(path);
+				else next.add(path);
+			}
+			if (
+				next.size !== selectedEntries.size ||
+				[...next].some((path) => !selectedEntries.has(path))
+			)
+				selectedEntries = next;
+			frame = requestAnimationFrame(update);
+		};
+		const move = (event: PointerEvent) => {
+			if (!start || event.pointerId !== start.pointerId) return;
+			point = event;
+			if (Math.hypot(event.clientX - start.clientX, event.clientY - start.clientY) < 5) return;
+			if (!armed) {
+				finish();
+				return;
+			}
+			if (box) return;
+			selectingFiles = true;
+			lastClickedIndex = null;
+			node.setPointerCapture(event.pointerId);
+			box = document.createElement('div');
+			box.className = 'pointer-events-none fixed z-50 border border-blue-500/70 bg-blue-500/10';
+			box.setAttribute('aria-hidden', 'true');
+			document.body.appendChild(box);
+			update();
+		};
+		const end = (event: PointerEvent) => {
+			if (event.pointerId !== start?.pointerId) return;
+			if (box) {
+				point = event;
+				cancelAnimationFrame(frame);
+				update();
+			}
+			finish();
+		};
+		const cancel = () => finish(true);
+		const keydown = (event: KeyboardEvent) => {
+			if (event.key !== 'Escape') return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			cancel();
+		};
+		const preventScroll = (event: TouchEvent) => {
+			if (event.touches.length > 1) cancel();
+			else if (armed) event.preventDefault();
+		};
+		const begin = (event: PointerEvent) => {
+			suppressClick = false;
+			if (start) {
+				cancel();
+				return;
+			}
+			if (
+				!event.isPrimary ||
+				event.button !== 0 ||
+				selectedFile ||
+				comparison ||
+				isSearching ||
+				loading ||
+				uploading ||
+				creatingFile ||
+				creatingFolder
+			)
+				return;
+			if (
+				!(event.target instanceof Element) ||
+				event.target.closest(
+					'button, input, textarea, a, [contenteditable="true"], [draggable="true"]'
+				)
+			)
+				return;
+			const rect = node.getBoundingClientRect();
+			if (event.clientX >= rect.left + node.clientWidth) return;
+			start = point = event;
+			origin = {
+				x: event.clientX - rect.left + node.scrollLeft,
+				y: event.clientY - rect.top + node.scrollTop
+			};
+			original = new Set(selectedEntries);
+			keepSelectionToolbar = original.size > 0;
+			directory = currentPath;
+			context = dragContext;
+			closeDirectoryMenu();
+			armed = event.pointerType !== 'touch';
+			if (armed) event.preventDefault();
+			else timer = setTimeout(() => (armed = true), 500);
+			document.addEventListener('pointermove', move);
+			document.addEventListener('pointerup', end);
+			document.addEventListener('pointercancel', cancel);
+			document.addEventListener('touchmove', preventScroll, { passive: false });
+			document.addEventListener('keydown', keydown, true);
+			window.addEventListener('blur', cancel);
+		};
+		const click = (event: MouseEvent) => {
+			if (!suppressClick) return;
+			suppressClick = false;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		};
+		const contextMenu = (event: MouseEvent) => {
+			if (start?.pointerType !== 'touch') return;
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		};
+		node.addEventListener('pointerdown', begin);
+		node.addEventListener('click', click, true);
+		node.addEventListener('contextmenu', contextMenu, true);
+		return {
+			destroy() {
+				finish();
+				node.removeEventListener('pointerdown', begin);
+				node.removeEventListener('click', click, true);
+				node.removeEventListener('contextmenu', contextMenu, true);
+			}
+		};
+	};
+
+	const dragAttachments = (event: DragEvent, path: string) => {
+		if (!effectiveTerminalId) return;
+		const paths = selectedEntries.has(path) ? selectedEntries : new Set([path]);
+		const attachments = visibleEntries
+			.filter((entry) => entry.type === 'file' && paths.has(entry.fullPath))
+			.map((entry) =>
+				filesystemFile({ ...entry, path: entry.fullPath }, effectiveTerminalId!, chatId ?? null)
+			);
+		if (attachments.length)
+			event.dataTransfer?.setData('application/x-terminal-file', JSON.stringify(attachments));
+	};
 
 	$: selectedCount = selectedEntries.size;
 	$: comparisonEntries = [...selectedEntries]
@@ -1859,6 +2254,7 @@
 
 	// Lifecycle
 	onMount(() => {
+		document.addEventListener('spreadsheetselection', captureSelection);
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';
 		const terminal = getTerminal();
@@ -1866,7 +2262,15 @@
 		let handledDisplayFile = false;
 
 		const unsubFileNav = showFileNavPath.subscribe(async (request) => {
-			if (!manageFileRequests || !active || !request || !selectedTerminal || comparison) return;
+			if (
+				onSelectDirectory ||
+				!manageFileRequests ||
+				!active ||
+				!request ||
+				!selectedTerminal ||
+				comparison
+			)
+				return;
 			handledDisplayFile = true;
 			showFileNavPath.set(null);
 			let filePath = typeof request === 'string' ? request : request.path;
@@ -1900,7 +2304,13 @@
 		});
 
 		const unsubFileNavDir = showFileNavDir.subscribe(async (filePath) => {
-			if (!filePath || !selectedTerminal || effectiveTerminalId !== $selectedTerminalId) return;
+			if (
+				onSelectDirectory ||
+				!filePath ||
+				!selectedTerminal ||
+				effectiveTerminalId !== $selectedTerminalId
+			)
+				return;
 			showFileNavDir.set(null);
 			filePath = normalizePath(filePath);
 			if (!isInsideFileRoot(filePath)) {
@@ -1934,7 +2344,7 @@
 				savedPath =
 					terminalContext && terminalContext.terminalId === effectiveTerminalId
 						? terminalContext.currentDirectory
-						: serverPath;
+						: folderDirectory || serverPath;
 				savedPath = clampToFileRoot(savedPath);
 				if (initialFile) {
 					const path = normalizePath(initialFile.path);
@@ -1949,8 +2359,11 @@
 						{ page: initialFile.page }
 					);
 				} else {
-					await loadDir(initialDirectory ?? savedPath, { restoreTree: true });
+					await loadDir(initialView?.directory ?? initialDirectory ?? savedPath, {
+						restoreTree: true
+					});
 				}
+				await restoreView();
 			})();
 		}
 
@@ -1984,6 +2397,7 @@
 		document.addEventListener('visibilitychange', onVisibilityChange);
 
 		return () => {
+			document.removeEventListener('spreadsheetselection', captureSelection);
 			unsubFileNav();
 			unsubFileNavDir();
 			window.removeEventListener('keydown', onKeyDown);
@@ -1994,15 +2408,32 @@
 	});
 
 	onDestroy(() => {
+		++gitBaseGeneration;
+		overwriteChoice?.(false);
 		disposed = true;
 		++loadGeneration;
-		dirtyChoice?.resolve('cancel');
+		dirtyChoice?.resolve(false);
 		clearMatchRequest();
 		if (fileImageUrl) URL.revokeObjectURL(fileImageUrl);
 		if (fileVideoUrl) URL.revokeObjectURL(fileVideoUrl);
 		if (fileAudioUrl) URL.revokeObjectURL(fileAudioUrl);
 	});
 </script>
+
+<ConfirmDialog
+	show={!!overwriteChoice}
+	title={$i18n.t('File changed on disk')}
+	message={$i18n.t('This file changed on disk. Replace it with your edits?')}
+	confirmLabel={$i18n.t('Replace')}
+	on:confirm={() => {
+		overwriteChoice?.(true);
+		overwriteChoice = null;
+	}}
+	on:cancel={() => {
+		overwriteChoice?.(false);
+		overwriteChoice = null;
+	}}
+/>
 
 <ConfirmDialog
 	bind:show={showDeleteConfirm}
@@ -2016,7 +2447,16 @@
 			deleteTarget = null;
 		}
 	}}
-/>
+>
+	<p class="mb-2 text-sm text-gray-700 dark:text-gray-300 [overflow-wrap:anywhere]">
+		{$i18n.t('Are you sure you want to delete "{{NAME}}"?', {
+			NAME: deleteTarget?.name ?? ''
+		})}
+	</p>
+	<p class="text-sm text-gray-500">
+		{$i18n.t('This action cannot be undone. Do you wish to continue?')}
+	</p>
+</ConfirmDialog>
 
 <svelte:document
 	on:selectionchange={captureSelection}
@@ -2030,13 +2470,29 @@
 		if (!active) return;
 		if (event.key === 'Escape' && fileAsk) {
 			fileAsk = null;
-			event.preventDefault();
 		} else handleKeydown(event);
 	}}
 	on:click={handleWindowClick}
 	on:pointerdown|capture={(event) => {
 		usingFileAsk = !!(event.target as Element)?.closest('[data-file-ask]');
+		selectingWithPointer =
+			event.button === 0 && !usingFileAsk && !!viewerRoot?.contains(event.target as Node);
+		pendingSelection = undefined;
 		if (fileAsk && !dirtyChoice && !usingFileAsk) fileAsk = null;
+	}}
+	on:pointerup={() => {
+		if (!selectingWithPointer) return;
+		selectingWithPointer = false;
+		captureSelection(pendingSelection);
+		pendingSelection = undefined;
+	}}
+	on:pointercancel={() => {
+		selectingWithPointer = false;
+		pendingSelection = undefined;
+	}}
+	on:blur={() => {
+		selectingWithPointer = false;
+		pendingSelection = undefined;
 	}}
 />
 
@@ -2111,6 +2567,7 @@
 		{/if}
 
 		<FileNavToolbar
+			{dragContext}
 			gitFile={currentGitFile}
 			gitDiffOpen={showGitDiff}
 			onToggleGitDiff={() => {
@@ -2122,7 +2579,7 @@
 			fileSize={openedFile?.size ?? pendingFile?.size}
 			{loading}
 			{showSearch}
-			onToggleSearch={toggleSearch}
+			onToggleSearch={onSelectDirectory ? null : toggleSearch}
 			writable={currentWritable}
 			canGoBack={!initialFile && canGoBack}
 			canGoForward={!initialFile && canGoForward}
@@ -2152,13 +2609,27 @@
 			onSort={toggleSort}
 			onToggleHidden={toggleHidden}
 		>
-			{#if (isMarkdown || isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null && !editing}
+			{#if isMarkdown && fileContent !== null}
+				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
+					<Tooltip content={$i18n.t(mode.label)}>
+						<button
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 aria-pressed:text-gray-900 dark:aria-pressed:text-white disabled:opacity-30"
+							aria-label={$i18n.t(mode.label)}
+							aria-pressed={showRaw === mode.raw}
+							on:click={() => {
+								showRaw = mode.raw;
+							}}
+						>
+							<Icon name={mode.icon} size={11} strokeWidth={1.4} />
+						</button>
+					</Tooltip>
+				{/each}
+			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
 						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
 						on:click={async () => {
 							if (!(await protectBuffer())) return;
-							if (editing) filePreviewRef?.cancelEdit();
 							showRaw = !showRaw;
 						}}
 						aria-label={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}
@@ -2196,6 +2667,24 @@
 				</button>
 			</Tooltip>
 
+			{#if getFileExt(selectedFile) === 'xlsx' && selectedTerminal}
+				<Tooltip content={$i18n.t('Save')}>
+					<button
+						type="button"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+						on:click={() => commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
+						disabled={saving || !dirty || !selectedFileWritable}
+						aria-label={$i18n.t('Save')}
+					>
+						{#if saving}
+							<Spinner className="size-3.5" />
+						{:else}
+							<Icon name="check" size={11} strokeWidth={1.7} />
+						{/if}
+					</button>
+				</Tooltip>
+			{/if}
+
 			{#if isTextFile}
 				{#if isHtml && showRaw}
 					<Tooltip content={$i18n.t('Save')}>
@@ -2215,25 +2704,7 @@
 					</Tooltip>
 				{:else if isHtml}
 					<!-- HTML preview mode: no edit/save buttons -->
-				{:else if isMarkdown && showRaw}
-					<Tooltip content={$i18n.t('Save')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-							on:click={() =>
-								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
-							disabled={saving || !selectedFileWritable}
-							aria-label={$i18n.t('Save')}
-						>
-							{#if saving}
-								<Spinner className="size-3.5" />
-							{:else}
-								<Icon name="check" size={11} strokeWidth={1.7} />
-							{/if}
-						</button>
-					</Tooltip>
 				{:else if isMarkdown}
-					<!-- Markdown preview mode: no edit/save buttons -->
-				{:else if isCode}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
@@ -2249,21 +2720,12 @@
 							{/if}
 						</button>
 					</Tooltip>
-				{:else if editing}
-					<Tooltip content={$i18n.t('Cancel')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-							on:click={() => filePreviewRef?.cancelEdit()}
-							aria-label={$i18n.t('Cancel')}
-						>
-							<Icon name="xmark" size={11} strokeWidth={1.7} />
-						</button>
-					</Tooltip>
+				{:else if showRaw || (!isCsv && !isJson && !isSvg && !isNotebook) || dirty}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
 							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
-								filePreviewRef?.saveEdit().catch((error) => toast.error(String(error)))}
+								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
 							aria-label={$i18n.t('Save')}
 						>
@@ -2272,17 +2734,6 @@
 							{:else}
 								<Icon name="check" size={11} strokeWidth={1.7} />
 							{/if}
-						</button>
-					</Tooltip>
-				{:else}
-					<Tooltip content={$i18n.t('Edit')}>
-						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
-							on:click={() => filePreviewRef?.startEdit()}
-							disabled={!selectedFileWritable}
-							aria-label={$i18n.t('Edit')}
-						>
-							<Icon name="pencil" size={11} strokeWidth={1.4} />
 						</button>
 					</Tooltip>
 				{/if}
@@ -2337,29 +2788,6 @@
 			</div>
 		{/if}
 
-		<!-- Bulk action bar -->
-		{#if selectedCount > 0 && !isSearching}
-			<BulkActionBar
-				count={selectedCount}
-				{canCompare}
-				onCompare={() => {
-					if (canCompare)
-						openComparison([
-							comparisonFile(comparisonEntries[0]),
-							comparisonFile(comparisonEntries[1])
-						]);
-				}}
-				canDelete={selectedEntriesWritable}
-				onDelete={() => {
-					deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
-					showDeleteConfirm = true;
-				}}
-				onDownload={bulkDownload}
-				onSelectAll={selectAll}
-				onClear={clearSelection}
-			/>
-		{/if}
-
 		{#if diskChanged}<div
 				role="status"
 				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
@@ -2372,19 +2800,35 @@
 				>
 				<button
 					class="underline"
-					on:click={() => filePreviewRef.save().catch((e) => toast.error(String(e)))}
+					on:click={() =>
+						(commentPreviewRef ?? filePreviewRef).save().catch((e) => toast.error(String(e)))}
 					>{$i18n.t('Save local changes')}</button
 				>
 			</div>{/if}
 		<!-- Content -->
 		<div
 			bind:this={viewerRoot}
+			use:selectFilesByDrag
+			class:pb-8={!selectedFile && !isSearching && selectedCount > 0}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
+			on:scroll|capture={() => {
+				fileAsk = null;
+			}}
 			on:click={(e) => {
 				closeDirectoryMenu();
-				if (!comparison && e.target === e.currentTarget && selectedCount > 0) clearSelection();
+				if (
+					!comparison &&
+					selectedCount > 0 &&
+					(e.target === e.currentTarget ||
+						(e.target instanceof Element && e.target.matches('[data-file-list]')))
+				)
+					clearSelection();
 			}}
 			on:contextmenu={(e) => {
+				if (selectingFiles) {
+					e.preventDefault();
+					return;
+				}
 				if (comparison || selectedFile || isSearching) return;
 				if ((e.target as HTMLElement)?.closest('[data-file-row]')) return;
 				e.preventDefault();
@@ -2408,6 +2852,14 @@
 					{#if supportsComments(selectedFile) && selectedTerminal}
 						{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 							<CommentFilePreview
+								bind:this={commentPreviewRef}
+								bind:dirty
+								bind:saving
+								readOnly={!selectedFileWritable}
+								onSaved={(preview) => {
+									diskChanged = false;
+									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
+								}}
 								path={selectedFile}
 								baseUrl={selectedTerminal.url}
 								apiKey={selectedTerminal.key}
@@ -2424,8 +2876,8 @@
 						{/key}
 					{:else}
 						<FilePreview
+							{gitBaseContent}
 							bind:this={filePreviewRef}
-							bind:editing
 							bind:showRaw
 							bind:saving
 							bind:dirty
@@ -2457,7 +2909,7 @@
 								const { excelToTable } = await import('$lib/utils/excelToTable');
 								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
 								const DOMPurify = (await import('dompurify')).default;
-								fileOfficeHtml = DOMPurify.sanitize(result.html);
+								fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 							}}
 							baseUrl={previewBaseUrl}
 							apiKey={selectedTerminal?.key ?? ''}
@@ -2469,13 +2921,15 @@
 			{:else}
 				{#if isSearching}
 					{#if matchLoading}
-						<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
+						<div class="flex h-full items-center justify-center">
+							<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+						</div>
 					{:else if matchError}
-						<div class="flex items-center justify-center py-12">
+						<div class="flex h-full items-center justify-center p-6 text-center">
 							<div class="text-xs text-gray-400 dark:text-gray-500">{matchError}</div>
 						</div>
 					{:else if !matchResults?.length}
-						<div class="flex items-center justify-center py-12">
+						<div class="flex h-full items-center justify-center p-6 text-center">
 							<div class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('No matches')}</div>
 						</div>
 					{:else}
@@ -2586,16 +3040,20 @@
 						{/if}
 					{/if}
 				{:else if uploading}
-					<div class="flex items-center justify-center gap-2 p-4 text-xs text-gray-500">
+					<div
+						class="flex h-full items-center justify-center gap-2 p-4 text-center text-xs text-gray-500"
+					>
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
 				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
-					<div class="flex justify-center pt-8"><Spinner className="size-4" /></div>
+					<div class="flex h-full items-center justify-center">
+						<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+					</div>
 				{:else if error}
-					<div class="p-4 text-xs">{error}</div>
+					<div class="flex h-full items-center justify-center p-4 text-center text-xs">{error}</div>
 				{:else if visibleEntries.length === 0 && !creatingFolder && !creatingFile}
-					<div class="flex items-center justify-center py-12">
+					<div class="flex h-full items-center justify-center p-6 text-center">
 						<div class="text-xs text-gray-400 dark:text-gray-500">
 							{$i18n.t('This folder is empty')}
 						</div>
@@ -2605,35 +3063,22 @@
 				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
+							data-file-list
 							class={viewMode === 'grid'
-								? 'grid grid-cols-[repeat(auto-fill,minmax(min(94px,calc((100%_-_0.5rem)/2)),1fr))] gap-2 p-2.5'
+								? 'grid grid-cols-[repeat(auto-fill,minmax(min(80px,100%),1fr))] gap-1 p-2'
 								: ''}
 						>
 							{#if creatingFolder}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last relative flex h-17 min-w-0 flex-col items-start self-start px-1.5 pt-4 pb-1.5'
+										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'grid'}
-										<svg
-											class="pointer-events-none absolute inset-0 h-full w-full text-black/10 dark:text-white/10"
-											viewBox="0 0 200 68"
-											preserveAspectRatio="none"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1"
-											aria-hidden="true"
-										>
-											<path
-												d="M1 19V8Q1 1 9 1H54Q58 1 61 4L65 7Q67 9 71 9H191Q199 9 199 15V19"
-												vector-effect="non-scaling-stroke"
-											/>
-											<path
-												d="M1 20Q1 13 9 13H191Q199 13 199 20V60Q199 67 191 67H9Q1 67 1 60Z"
-												vector-effect="non-scaling-stroke"
-											/>
-										</svg>
+										<FileGridIcon
+											entry={{ name: newFolderName, type: 'directory' }}
+											itemCount={0}
+										/>
 									{:else}
 										<FileTypeIcon name={newFolderName} type="directory" />
 									{/if}
@@ -2641,7 +3086,7 @@
 										bind:this={newFolderInput}
 										bind:value={newFolderName}
 										class={viewMode === 'grid'
-											? 'relative w-full min-w-0 bg-transparent py-0.5 text-xs text-gray-800 outline-hidden dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('Folder name')}
 										aria-label={$i18n.t('Folder name')}
@@ -2659,17 +3104,19 @@
 							{#if creatingFile}
 								<li
 									class={viewMode === 'grid'
-										? 'order-last flex h-[3.875rem] min-w-0 flex-col items-start self-start rounded-md border border-black/[0.06] bg-gray-50/40 p-1.5 dark:border-white/[0.06] dark:bg-gray-900'
+										? 'order-last flex h-24 min-w-0 flex-col items-center gap-0.5 rounded-xl px-1 py-2'
 										: 'flex h-7 items-center gap-1.5 pl-[26px] pr-2'}
 								>
 									{#if viewMode === 'list'}
 										<FileTypeIcon name={newFileName} type="file" />
+									{:else}
+										<FileGridIcon entry={{ name: newFileName, type: 'file' }} />
 									{/if}
 									<input
 										bind:this={newFileInput}
 										bind:value={newFileName}
 										class={viewMode === 'grid'
-											? 'relative w-full min-w-0 bg-transparent py-0.5 text-xs text-gray-800 outline-hidden dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('File name')}
 										aria-label={$i18n.t('File name')}
@@ -2686,7 +3133,9 @@
 							{/if}
 							{#each visibleEntries as entry (entry.fullPath)}
 								<FileEntryRow
+									{dragContext}
 									{entry}
+									gitFile={treeGitStatuses.get(gitTreePath(entry.fullPath)) ?? null}
 									{viewMode}
 									currentPath={entry.parentPath}
 									fullPath={entry.fullPath}
@@ -2701,6 +3150,7 @@
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
+									onDragStart={dragAttachments}
 									onOpen={(row) =>
 										openEntry({
 											...row,
@@ -2738,8 +3188,84 @@
 			{/if}
 		</div>
 
+		<!-- Float above the list footer without moving the rows. -->
+		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
+			<div class="relative z-10 h-0 shrink-0">
+				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-900">
+					<BulkActionBar
+						count={selectedCount}
+						{canCompare}
+						onCompare={() => {
+							if (canCompare)
+								openComparison([
+									comparisonFile(comparisonEntries[0]),
+									comparisonFile(comparisonEntries[1])
+								]);
+						}}
+						canDelete={selectedEntriesWritable}
+						onDelete={() => {
+							deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+							showDeleteConfirm = true;
+						}}
+						onDownload={bulkDownload}
+						onSelectAll={selectAll}
+						onClear={clearSelection}
+					/>
+				</div>
+			</div>
+		{/if}
+
+		{#if onSelectDirectory}
+			<div class="shrink-0 border-t border-gray-50 pt-3 dark:border-gray-850/30">
+				{#if gitAvailable && showCloneRepository && selectedTerminal}
+					{#key `${effectiveTerminalId}:${chatId}`}
+						<CloneRepository
+							terminal={selectedTerminal}
+							{chatId}
+							directory={currentPath}
+							disabled={loading || !!error || !savedPathLoaded || !currentWritable}
+							onCancel={() => (showCloneRepository = false)}
+							onCloned={async (path) => {
+								const selector = effectiveTerminalId,
+									session = chatId;
+								showCloneRepository = false;
+								await loadDir(path);
+								if (!disposed && selector === effectiveTerminalId && session === chatId)
+									onSelectDirectory?.(path);
+							}}
+						/>
+					{/key}
+				{:else}
+					<div class="flex items-center justify-end gap-2 px-2">
+						{#if gitAvailable}
+							<button
+								type="button"
+								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-850"
+								disabled={loading ||
+									!!error ||
+									!savedPathLoaded ||
+									!currentWritable ||
+									!!selectedFile}
+								on:click={() => (showCloneRepository = true)}
+							>
+								<Icon name="git-branch" size={14} />
+								{$i18n.t('Clone repository')}
+							</button>
+						{/if}
+						<button
+							type="button"
+							class="flex h-7 items-center rounded-lg bg-gray-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
+							on:click={() => onSelectDirectory?.(currentPath)}
+							>{$i18n.t('Use this directory')}</button
+						>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		<!-- Read-only session output -->
-		{#if showTerminalDock}
+		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
 				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
@@ -2926,17 +3452,18 @@
 		</form>
 	{/key}
 {/if}
+<!-- Retired save prompts: keep their translations.
+{$i18n.t('Save and send')}
+{$i18n.t('Save your changes before continuing?')}
+-->
 <ConfirmDialog
 	show={dirtyChoice !== null}
+	confirmFirst
+	primaryAction={dirtyChoice?.sending ? 'confirm' : 'cancel'}
 	title={$i18n.t('Unsaved changes')}
-	confirmLabel={dirtyChoice?.sending ? $i18n.t('Save and send') : $i18n.t('Save')}
-	on:confirm={() => dirtyChoice?.resolve('save')}
-	on:cancel={() => dirtyChoice?.resolve('cancel')}
->
-	<p class="text-sm text-gray-500">{$i18n.t('Save your changes before continuing?')}</p>
-	{#if dirtyChoice && !dirtyChoice.sending}<button
-			type="button"
-			class="mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-			on:click={() => dirtyChoice?.resolve('discard')}>{$i18n.t('Discard changes')}</button
-		>{/if}
-</ConfirmDialog>
+	message={dirtyChoice?.sending
+		? $i18n.t('Save your changes before sending?')
+		: $i18n.t('Discard unsaved changes and continue?')}
+	on:confirm={() => dirtyChoice?.resolve(true)}
+	on:cancel={() => dirtyChoice?.resolve(false)}
+/>

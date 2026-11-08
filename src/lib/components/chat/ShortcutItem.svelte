@@ -2,6 +2,7 @@
 	import { getContext, onMount } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import Tooltip from '../common/Tooltip.svelte';
+	import KeyPill from '../common/KeyPill.svelte';
 	import { formatChord, isConfigurableShortcut, keybindings, shortcuts } from '$lib/shortcuts';
 	import type { Shortcut } from '$lib/shortcuts';
 
@@ -33,7 +34,7 @@
 		}
 	});
 
-	function formatKey(key: string): string {
+	function formatKey(key: string, isMac: boolean, keyboardLayoutMap?: Map<string, string>): string {
 		// First, handle special modifier keys which are defined in lowercase
 		switch (key) {
 			case 'mod':
@@ -89,26 +90,24 @@
 		return keys.filter((key) => !(key.toLowerCase() === 'delete' && keys.includes('Backspace')));
 	}
 
-	function formatKeys(keys: string[]): string {
+	function formatKeys(
+		keys: string[],
+		isMac: boolean,
+		keyboardLayoutMap?: Map<string, string>
+	): string {
 		return visibleKeys(keys)
-			.map(formatKey)
+			.map((key) => formatKey(key, isMac, keyboardLayoutMap))
 			.join(isMac ? '' : ' + ');
 	}
 
-	function displayKeys(): string {
-		if (id && isConfigurableShortcut(id)) {
-			return formatChord($keybindings[id]) || $i18n.t('Unassigned');
-		}
-		return formatKeys(shortcut.keys);
-	}
+	$: displayKeys =
+		id && isConfigurableShortcut(id)
+			? formatChord($keybindings[id]) || $i18n.t('Unassigned')
+			: formatKeys(shortcut.keys, isMac, keyboardLayoutMap);
 </script>
 
 {#if keysOnly}
-	<span
-		class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
-	>
-		{displayKeys()}
-	</span>
+	<KeyPill text={displayKeys} className="max-w-[9.5rem] text-center" />
 {:else}
 	<div
 		class={compact
@@ -136,11 +135,7 @@
 			{/if}
 		</div>
 		{#if !compact}
-			<span
-				class="inline-flex min-h-[1.125rem] max-w-[9.5rem] shrink-0 items-center justify-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
-			>
-				{displayKeys()}
-			</span>
+			<KeyPill text={displayKeys} className="max-w-[9.5rem] text-center" />
 		{/if}
 	</div>
 {/if}

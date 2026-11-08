@@ -39,7 +39,8 @@ export function openTerminalSocket(
 	connection: TerminalConnection,
 	chatId: string | null,
 	path: string,
-	onOpen?: (socket: WebSocket) => void
+	onOpen?: (socket: WebSocket) => void,
+	resume?: { resume: true; cursor: number; flow_control?: true }
 ) {
 	const url = new URL(`${connection.baseUrl.replace(/\/$/, '')}${path}`, location.href);
 	url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -47,7 +48,12 @@ export function openTerminalSocket(
 	socket.binaryType = 'arraybuffer';
 	socket.onopen = () => {
 		socket.send(
-			JSON.stringify({ type: 'auth', token: connection.key.trim(), chat_id: chatId ?? '' })
+			JSON.stringify({
+				...resume,
+				type: 'auth',
+				token: connection.key.trim(),
+				chat_id: chatId ?? ''
+			})
 		);
 		onOpen?.(socket);
 	};

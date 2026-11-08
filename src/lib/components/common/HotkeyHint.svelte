@@ -1,4 +1,5 @@
 <script lang="ts">
+	import KeyPill from './KeyPill.svelte';
 	import { onMount } from 'svelte';
 	import { formatChord, isConfigurableShortcut, keybindings, shortcuts } from '$lib/shortcuts';
 	import type { Shortcut } from '$lib/shortcuts';
@@ -27,20 +28,14 @@
 		return key;
 	}
 
-	function displayKeys(): string {
-		const id = name as Shortcut;
-		if (isConfigurableShortcut(id)) {
-			return formatChord($keybindings[id]);
-		}
-		const keys = shortcuts[id]?.keys ?? [];
-		return keys.map(formatKey).join(isMac ? '' : '+');
-	}
+	$: id = name as Shortcut;
+	$: text = isConfigurableShortcut(id)
+		? formatChord($keybindings[id])
+		: (shortcuts[id]?.keys ?? []).map(formatKey).join(isMac ? '' : '+');
 </script>
 
-{#if mounted && isVisible}
-	<div
-		class="hidden md:flex items-center self-center text-xs text-gray-400 dark:text-gray-600 {className}"
-	>
-		<span>{displayKeys()}</span>
-	</div>
+{#if mounted && isVisible && text}
+	<span class="hidden md:inline-flex items-center self-center {className}">
+		<KeyPill {text} />
+	</span>
 {/if}

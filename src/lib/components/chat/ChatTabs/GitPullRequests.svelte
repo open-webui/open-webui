@@ -208,7 +208,7 @@
 				{error}
 			</p>{/if}
 		<div class="min-h-0 flex-1 overflow-y-auto">
-			{#if loading}<p class="p-3 text-gray-400">
+			{#if loading}<p class="flex h-full items-center justify-center p-3 text-center text-gray-400">
 					{$i18n.t('Loading...')}
 				</p>{:else}{#each prs.filter((pr) => `${pr.number} ${pr.title}`
 						.toLowerCase()
@@ -228,7 +228,9 @@
 								{pr.author?.login} · {pr.isDraft ? $i18n.t('Draft') : pr.state}
 							</div>
 						</div></button
-					>{/each}{#if !prs.length}<p class="p-3 text-gray-400">
+					>{/each}{#if !prs.length}<p
+						class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+					>
 						{$i18n.t('No pull requests')}
 					</p>{/if}{/if}
 		</div>
@@ -340,7 +342,11 @@
 					>{/each}
 			</div>
 			<div class="min-h-0 flex-1 overflow-auto">
-				{#if loading}<p class="p-3 text-gray-400">{$i18n.t('Loading...')}</p>
+				{#if loading}<p
+						class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+					>
+						{$i18n.t('Loading...')}
+					</p>
 				{:else if view === 'code'}<GitDiff code={diff} {mode} {hideWhitespace} />
 				{:else if view === 'summary'}<div
 						class="p-2 text-[0.6875rem] text-gray-600 dark:text-gray-400"
@@ -417,7 +423,7 @@
 								>{/if}
 						</div>
 					</div>
-				{:else if view === 'checks'}<div class="min-h-0">
+				{:else if view === 'checks'}<div class="h-full min-h-0">
 						{#each selected.statusCheckRollup ?? [] as check}<div
 								class="flex items-center justify-between gap-2 border-b border-gray-50/50 px-2.5 py-1.5 dark:border-white/2"
 							>
@@ -425,7 +431,9 @@
 									class="text-gray-400 text-[10px]"
 									>{check.conclusion || check.status || check.state}</span
 								>
-							</div>{/each}{#if !selected.statusCheckRollup?.length}<p class="text-gray-400">
+							</div>{/each}{#if !selected.statusCheckRollup?.length}<p
+								class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+							>
 								{$i18n.t('No checks')}
 							</p>{/if}
 					</div>
@@ -455,7 +463,9 @@
 						</div>
 					</div>{/if}
 			</div>
-		{:else}<div class="flex h-full items-center justify-center text-gray-400 dark:text-gray-600">
+		{:else}<div
+				class="flex flex-1 items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
+			>
 				{$i18n.t('Select a pull request')}
 			</div>{/if}
 	</div>

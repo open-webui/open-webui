@@ -20,7 +20,10 @@ export class AudioQueue {
 	id: string | null = null;
 	onStopped: OnStoppedCallback | null = null;
 
-	constructor(audioElement: HTMLAudioElement) {
+	constructor(
+		audioElement: HTMLAudioElement,
+		private isAutoPlaybackEnabled: () => boolean
+	) {
 		this.audio = audioElement;
 		this.audio.addEventListener('ended', this._onEnded);
 		document.addEventListener('pointerdown', this._onGesture, true);
@@ -59,7 +62,7 @@ export class AudioQueue {
 
 	/** Play silence inside the first user gesture so WebKit allows later programmatic playback. */
 	#unlock() {
-		if (this.current || !this.audio.paused) return;
+		if (this.current || !this.audio.paused || !this.isAutoPlaybackEnabled()) return;
 
 		this.audio.src = SILENT_WAV;
 		this.audio
@@ -123,4 +126,103 @@ export class AudioQueue {
 		this.queue = [];
 		this.current = null;
 	}
+}
+
+export const notificationSoundStyles = ['chime', 'soft', 'bell', 'tap'] as const;
+export type NotificationSoundStyle = (typeof notificationSoundStyles)[number];
+
+type NotificationTone = {
+	frequency: number;
+	duration: number;
+	volume: number;
+	delay?: number;
+	endFrequency?: number;
+};
+
+const notificationTones: Record<NotificationSoundStyle, NotificationTone[]> = {
+	chime: [
+		{ frequency: 659.25, duration: 0.36, volume: 0.08 },
+		{ frequency: 880, duration: 0.48, volume: 0.06, delay: 0.09 }
+	],
+	soft: [
+		{ frequency: 440, duration: 0.3, volume: 0.07 },
+		{ frequency: 660, duration: 0.24, volume: 0.025 }
+	],
+	bell: [
+		{ frequency: 1046.5, duration: 0.6, volume: 0.06 },
+		{ frequency: 2093, duration: 0.24, volume: 0.025 },
+		{ frequency: 2900, duration: 0.13, volume: 0.012 }
+	],
+	tap: [{ frequency: 200, endFrequency: 90, duration: 0.07, volume: 0.16 }]
+};
+
+let notificationContext: AudioContext | null = null;
+let notificationSoundEnabled = true;
+const notificationVoices = new Set<{ oscillator: OscillatorNode; gain: GainNode }>();
+
+function stopNotificationVoices() {
+	if (!notificationContext) return;
+	const now = notificationContext.currentTime;
+	for (const { oscillator, gain } of notificationVoices) {
+		gain.gain.cancelScheduledValues(now);
+		gain.gain.setValueAtTime(gain.gain.value, now);
+		gain.gain.linearRampToValueAtTime(0, now + 0.02);
+		oscillator.stop(now + 0.02);
+	}
+	notificationVoices.clear();
+}
+
+export function setNotificationSoundEnabled(enabled: boolean) {
+	notificationSoundEnabled = enabled;
+	if (!enabled) stopNotificationVoices();
+}
+
+// Unlock inside a user gesture so later background completions can make sound.
+export async function unlockNotificationAudio(): Promise<boolean> {
+	if (
+		!notificationSoundEnabled ||
+		typeof window === 'undefined' ||
+		navigator.userActivation?.hasBeenActive === false ||
+		!window.AudioContext
+	)
+		return false;
+	try {
+		notificationContext ??= new AudioContext();
+		if (notificationContext.state === 'suspended') await notificationContext.resume();
+		return notificationContext.state === 'running';
+	} catch {
+		return false;
+	}
+}
+
+export async function playNotificationSound(
+	style: NotificationSoundStyle = 'chime'
+): Promise<boolean> {
+	if (!(await unlockNotificationAudio()) || !notificationSoundEnabled || !notificationContext)
+		return false;
+	stopNotificationVoices();
+	const selected = notificationSoundStyles.includes(style) ? style : 'chime';
+	for (const tone of notificationTones[selected]) {
+		const oscillator = notificationContext.createOscillator();
+		const gain = notificationContext.createGain();
+		const start = notificationContext.currentTime + (tone.delay ?? 0);
+		oscillator.frequency.setValueAtTime(tone.frequency, start);
+		if (tone.endFrequency) {
+			oscillator.frequency.exponentialRampToValueAtTime(tone.endFrequency, start + tone.duration);
+		}
+		gain.gain.setValueAtTime(0, start);
+		gain.gain.linearRampToValueAtTime(tone.volume, start + (selected === 'soft' ? 0.03 : 0.005));
+		gain.gain.exponentialRampToValueAtTime(0.0001, start + tone.duration);
+		oscillator.connect(gain).connect(notificationContext.destination);
+		const voice = { oscillator, gain };
+		notificationVoices.add(voice);
+		oscillator.onended = () => {
+			oscillator.disconnect();
+			gain.disconnect();
+			notificationVoices.delete(voice);
+		};
+		oscillator.start(start);
+		oscillator.stop(start + tone.duration + 0.02);
+	}
+	return true;
 }

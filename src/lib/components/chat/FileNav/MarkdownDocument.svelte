@@ -13,6 +13,28 @@
 			}
 		]
 	});
+	/** Local document resources never become arbitrary network requests. */
+	export function resolveDocumentPath(documentPath: string, reference: string): string | null {
+		if (!reference || reference.startsWith('#') || reference.startsWith('//')) return null;
+		if (/^[a-z][a-z\d+.-]*:/i.test(reference) && !/^[a-z]:[\\/]/i.test(reference)) return null;
+		let path: string;
+		try {
+			path = decodeURIComponent(reference.split(/[?#]/)[0]).replace(/\\/g, '/');
+		} catch {
+			return null;
+		}
+		if (/[\x00-\x1f]/.test(path)) return null;
+		const base = documentPath.replace(/\\/g, '/');
+		if (!path.startsWith('/') && !/^[a-z]:\//i.test(path))
+			path = base.slice(0, base.lastIndexOf('/') + 1) + path;
+		const prefix = /^[a-z]:\//i.test(path) ? path.slice(0, 3) : '/';
+		const parts: string[] = [];
+		for (const part of path.slice(prefix.length).split('/')) {
+			if (part === '..') parts.pop();
+			else if (part && part !== '.') parts.push(part);
+		}
+		return prefix + parts.join('/');
+	}
 </script>
 
 <script lang="ts">
@@ -35,28 +57,6 @@
 	export let chatId: string | null = null;
 	export let resourceVersion = 0;
 	export let onLocalLink: (path: string) => void = () => {};
-	/** Local document resources never become arbitrary network requests. */
-	function resolveDocumentPath(documentPath: string, reference: string): string | null {
-		if (!reference || reference.startsWith('#') || reference.startsWith('//')) return null;
-		if (/^[a-z][a-z\d+.-]*:/i.test(reference) && !/^[a-z]:[\\/]/i.test(reference)) return null;
-		let path: string;
-		try {
-			path = decodeURIComponent(reference.split(/[?#]/)[0]).replace(/\\/g, '/');
-		} catch {
-			return null;
-		}
-		if (/[\x00-\x1f]/.test(path)) return null;
-		const base = documentPath.replace(/\\/g, '/');
-		if (!path.startsWith('/') && !/^[a-z]:\//i.test(path))
-			path = base.slice(0, base.lastIndexOf('/') + 1) + path;
-		const prefix = /^[a-z]:\//i.test(path) ? path.slice(0, 3) : '/';
-		const parts: string[] = [];
-		for (const part of path.slice(prefix.length).split('/')) {
-			if (part === '..') parts.pop();
-			else if (part && part !== '.') parts.push(part);
-		}
-		return prefix + parts.join('/');
-	}
 
 	let generation = 0;
 	let urls = new Map<string, Promise<string | null>>();
@@ -259,96 +259,3 @@
 		<MarkdownTokens {id} {tokens} editCodeBlock={false} />
 	</div>
 {/key}
-
-<style>
-	.document-markdown {
-		font-size: 0.75rem;
-		line-height: 1.5;
-		overflow-wrap: anywhere;
-	}
-	.document-markdown :global(h1),
-	.document-markdown :global(h2),
-	.document-markdown :global(h3),
-	.document-markdown :global(h4),
-	.document-markdown :global(h5),
-	.document-markdown :global(h6) {
-		margin: 1rem 0 0.375rem;
-		font-weight: 600;
-		line-height: 1.3;
-	}
-	.document-markdown :global(h1) {
-		font-size: 1.125rem;
-	}
-	.document-markdown :global(h2) {
-		font-size: 1rem;
-	}
-	.document-markdown :global(h3) {
-		font-size: 0.875rem;
-	}
-	.document-markdown :global(h4),
-	.document-markdown :global(h5),
-	.document-markdown :global(h6) {
-		font-size: 0.75rem;
-	}
-	.document-markdown :global(p),
-	.document-markdown :global(ul),
-	.document-markdown :global(ol) {
-		margin: 0.5rem 0;
-	}
-	.document-markdown :global(li) {
-		margin-block: 0.125rem;
-	}
-	.document-markdown :global(blockquote) {
-		font-size: 0.75rem;
-	}
-	.document-markdown :global(strong) {
-		font-weight: 600;
-	}
-	.document-markdown :global(hr) {
-		margin: 0.75rem 0;
-	}
-	.document-markdown :global(img) {
-		margin: 0.5rem 0;
-	}
-	.document-markdown :global(table) {
-		font-size: 0.75rem;
-		margin: 0.5rem 0;
-	}
-	.document-markdown :global(th),
-	.document-markdown :global(td) {
-		padding: 0.375rem 0.5rem !important;
-	}
-	.document-markdown :global(pre) {
-		margin: 0.5rem 0;
-		font-family: var(--font-mono);
-	}
-	.document-markdown :global(pre.hljs) {
-		padding: 0.5rem 0.75rem;
-	}
-	.document-markdown :global(pre code) {
-		font-size: 0.75rem;
-	}
-	.document-markdown :global(.codespan) {
-		font-size: 0.95em;
-	}
-	.document-markdown :global(input[type='checkbox']:disabled) {
-		cursor: default;
-	}
-	.document-markdown :global(.document-code-block) {
-		border-radius: 0.5rem;
-	}
-	.document-markdown :global(.document-code-block > .sticky) {
-		padding: 0.25rem 0.5rem;
-	}
-	.document-markdown :global(.document-code-block > .sticky button) {
-		height: 1.5rem;
-		padding-inline: 0.375rem;
-		font-size: 0.6875rem;
-	}
-	.document-markdown > :global(:first-child) {
-		margin-top: 0;
-	}
-	.document-markdown > :global(:last-child) {
-		margin-bottom: 0;
-	}
-</style>

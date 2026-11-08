@@ -1,4 +1,3 @@
-import difflib
 import json
 import logging
 import mimetypes
@@ -30,6 +29,7 @@ from open_webui.models.skills import (
 )
 from open_webui.utils.access_control import filter_allowed_access_grants, has_permission, validate_access_grants
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.misc import unified_text_diff
 from open_webui.utils.skill_files import (
     MAX_IMPORT_BYTES,
     file_bytes,
@@ -635,15 +635,7 @@ async def diff_skill_file(
     if any(f and f.get('encoding') for f in files):
         return {'binary': True}
     before, after = ((file or {}).get('content', '') for file in files)
-    diff = '\n'.join(
-        difflib.unified_diff(
-            before.splitlines(),
-            after.splitlines(),
-            fromfile=f'{from_id[:7]}/{path}',
-            tofile=f'{to_id[:7]}/{path}',
-            lineterm='',
-        )
-    )
+    diff = '\n'.join(unified_text_diff(before, after, f'{from_id[:7]}/{path}', f'{to_id[:7]}/{path}'))
     return {
         'binary': False,
         'diff': diff,

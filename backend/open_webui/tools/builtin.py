@@ -33,6 +33,7 @@ from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
     CreateImageForm,
     EditImageForm,
+    get_image_data_url,
     image_edits,
     image_generations,
 )
@@ -69,7 +70,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import upload_files_to_terminal
+from open_webui.utils.terminals import get_terminal_file, upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -461,7 +462,7 @@ async def edit_image(
     Supports targeted edits such as adding, removing, replacing, inpainting, extending, or compositing image content.
 
     :param prompt: A description of the transformation to apply to the provided images
-    :param image_urls: Source image URLs to modify or use as composition inputs
+    :param image_urls: Source image URLs or absolute file paths to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
     :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
@@ -472,9 +473,15 @@ async def edit_image(
     try:
         user = UserModel(**__user__) if __user__ else None
 
+        resolved_images = []
+        for url in image_urls:
+            if url.startswith('/') and not url.startswith('/api/v1/files/'):
+                data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
+                url = await asyncio.to_thread(get_image_data_url, data)
+            resolved_images.append(url)
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=image_urls, size=size),
+            form_data=EditImageForm(prompt=prompt, image=resolved_images, size=size),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
@@ -1750,6 +1757,24 @@ async def view_chat(
                 )
             current_id = msg.get('parentId') if msg else None
 
+        truncation = {}
+        max_chars = await Config.get('chats.view_max_chars')
+        if max_chars and sum(len(str(message['content'] or '')) for message in messages) > max_chars:
+            remaining_chars = max_chars
+            kept_messages = []
+            for message in messages:
+                if remaining_chars <= 0:
+                    break
+                content = str(message['content'] or '')[:remaining_chars]
+                kept_messages.append({**message, 'content': content})
+                remaining_chars -= len(content)
+            truncation = {
+                'truncated': True,
+                'total_messages': len(messages),
+                'returned_messages': len(kept_messages),
+            }
+            messages = kept_messages
+
         # Reverse to get chronological order
         messages.reverse()
 
@@ -1760,6 +1785,7 @@ async def view_chat(
                 'messages': messages,
                 'updated_at': chat.updated_at,
                 'created_at': chat.created_at,
+                **truncation,
             },
             ensure_ascii=False,
         )
@@ -2840,6 +2866,21 @@ async def grep_knowledge_files(
         return JSONCodec.dumps({'error': str(e)})
 
 
+def _numbered_lines_within_cap(all_lines: list[str], start: int, end: int) -> tuple[str, int]:
+    """Number lines start..end, stopping at the last whole line that fits VIEW_FILE_MAX_CHARS."""
+    numbered_lines = []
+    used_chars = 0
+    for line_index in range(start, end):
+        numbered_line = f'{line_index + 1}: {all_lines[line_index]}'
+        if used_chars + len(numbered_line) > VIEW_FILE_MAX_CHARS:
+            if numbered_lines:
+                return '\n'.join(numbered_lines), line_index
+            return numbered_line[:VIEW_FILE_MAX_CHARS], line_index + 1
+        numbered_lines.append(numbered_line)
+        used_chars += len(numbered_line) + 1
+    return '\n'.join(numbered_lines), end
+
+
 async def view_file(
     file_id: str,
     offset: int = 0,
@@ -2904,11 +2945,10 @@ async def view_file(
         if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line or 1)) - 1  # 1-indexed to 0-indexed
-            e = min(total_lines, int(end_line) if end_line else s + 100)
-            selected = all_lines[s:e]
-            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
-            is_truncated = e < total_lines
+            start_index = max(1, int(start_line or 1)) - 1  # 1-indexed to 0-indexed
+            end_index = min(total_lines, int(end_line) if end_line else start_index + 100)
+            sliced, end_index = _numbered_lines_within_cap(all_lines, start_index, end_index)
+            is_truncated = end_index < total_lines
             result = {
                 'id': file.id,
                 'filename': file.filename,
@@ -2916,11 +2956,11 @@ async def view_file(
                 'updated_at': file.updated_at,
                 'created_at': file.created_at,
                 'total_lines': total_lines,
-                'showing_lines': f'{s + 1}-{e}',
+                'showing_lines': f'{start_index + 1}-{end_index}',
             }
             if is_truncated:
                 result['truncated'] = True
-                result['next_start_line'] = e + 1
+                result['next_start_line'] = end_index + 1
             return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
@@ -3045,11 +3085,10 @@ async def view_knowledge_file(
         if start_line is not None or end_line is not None:
             all_lines = content.split('\n')
             total_lines = len(all_lines)
-            s = max(1, int(start_line or 1)) - 1
-            e = min(total_lines, int(end_line) if end_line else s + 100)
-            selected = all_lines[s:e]
-            sliced = '\n'.join(f'{s + i + 1}: {line}' for i, line in enumerate(selected))
-            is_truncated = e < total_lines
+            start_index = max(1, int(start_line or 1)) - 1
+            end_index = min(total_lines, int(end_line) if end_line else start_index + 100)
+            sliced, end_index = _numbered_lines_within_cap(all_lines, start_index, end_index)
+            is_truncated = end_index < total_lines
             result = {
                 'id': file.id,
                 'filename': file.filename,
@@ -3057,14 +3096,14 @@ async def view_knowledge_file(
                 'updated_at': file.updated_at,
                 'created_at': file.created_at,
                 'total_lines': total_lines,
-                'showing_lines': f'{s + 1}-{e}',
+                'showing_lines': f'{start_index + 1}-{end_index}',
             }
             if knowledge_info:
                 result['knowledge_id'] = knowledge_info['id']
                 result['knowledge_name'] = knowledge_info['name']
             if is_truncated:
                 result['truncated'] = True
-                result['next_start_line'] = e + 1
+                result['next_start_line'] = end_index + 1
             return JSONCodec.dumps(result, ensure_ascii=False)
 
         sliced = content[offset : offset + max_chars]
@@ -4026,22 +4065,34 @@ async def search_tools(
     query: str,
     count: int = 5,
     __metadata__: dict = None,
+    __request__: Request = None,
+    __user__: dict = None,
 ) -> str:
     """
-    Search the tools listed in <available_tools> and return their full definitions.
+    Discover available tools by capability and return their full definitions.
     Pass the exact tool name when you already know it.
-    Invoke a result with call_tool(tool_name, params), where params is a JSON-encoded object
-    matching the tool's parameters. Do not call deferred tools directly by name.
+    Invoke results with call_tool(calls=[{"tool_name": "exact_name", "params": "{}"}, ...]).
+    Each params value is a JSON-encoded object matching that tool's parameters.
+    Batch independent calls together. Do not call deferred tools directly by name.
 
     :param query: Keywords describing the capability you need (e.g. "jira create issue"), or an exact tool name
     :param count: Maximum number of results to return (default: 5, max: 20)
     :return: JSON with the definitions of the matching tools, which can then be invoked through call_tool
     """
-    from open_webui.utils.tool_search import search_deferred_tools
+    from open_webui.utils.tool_search import ToolSearchError, rank_deferred_tools
 
     tools = __metadata__['tools']
     candidates = {name: tools[name]['spec'] for name in __metadata__['deferred_tools']}
-    matches = search_deferred_tools(query, candidates, count)
+    try:
+        matches = await rank_deferred_tools(
+            query,
+            candidates,
+            count,
+            request=__request__,
+            user=UserModel(**__user__) if __user__ else None,
+        )
+    except ToolSearchError as error:
+        return JSONCodec.dumps({'error': str(error)})
     if not matches:
         return JSONCodec.dumps(
             {'tools': [], 'message': 'No matching tools found. Try different keywords or the exact tool name.'}
@@ -4221,12 +4272,12 @@ async def create_automation(
     The automation will use the current chat model.
 
     The rrule parameter must be a valid iCalendar RRULE string. Common examples:
-    - Every day at 9am: "DTSTART:20250101T090000\\nRRULE:FREQ=DAILY"
-    - Every Monday at 8am: "DTSTART:20250106T080000\\nRRULE:FREQ=WEEKLY;BYDAY=MO"
+    - Every day at 9am: "DTSTART:20250101T090000\nRRULE:FREQ=DAILY"
+    - Every Monday at 8am: "DTSTART:20250106T080000\nRRULE:FREQ=WEEKLY;BYDAY=MO"
     - Every hour: "RRULE:FREQ=HOURLY;INTERVAL=1"
     - Every 30 minutes: "RRULE:FREQ=MINUTELY;INTERVAL=30"
-    - Once at a specific time: "DTSTART:20250415T140000\\nRRULE:FREQ=DAILY;COUNT=1"
-    - First day of every month: "DTSTART:20250101T090000\\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1"
+    - Once at a specific time: "DTSTART:20250415T140000\nRRULE:FREQ=DAILY;COUNT=1"
+    - First day of every month: "DTSTART:20250101T090000\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1"
 
     The DTSTART time should reflect the desired execution time. Use COUNT=1 for one-time automations.
 
