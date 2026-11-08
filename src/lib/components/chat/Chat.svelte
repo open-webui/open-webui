@@ -3685,6 +3685,7 @@
 
 		if (done) {
 			message.done = true;
+			message.meta = { ...message.meta, response_ended_at: Date.now() / 1000 };
 			if ($contextCompactions[message.id] === 'in_progress') clearContextCompaction(message.id);
 			if (shared) return;
 			if (message.error) {
