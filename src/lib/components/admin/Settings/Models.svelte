@@ -292,7 +292,9 @@
 			selectedTag = '';
 		}
 
-		allModels = (await getModels(localStorage.token)).filter((model: any) => model.owned_by !== 'terminal');
+		allModels = (await getModels(localStorage.token)).filter(
+			(model: any) => model.owned_by !== 'terminal'
+		);
 
 		const providerModels = await getModels(localStorage.token, null, true);
 		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
