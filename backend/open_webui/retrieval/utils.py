@@ -53,7 +53,7 @@ from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
 from open_webui.utils.headers import get_json_bearer_headers, include_user_info_headers
-from open_webui.utils.misc import get_content_from_message, get_message_list
+from open_webui.utils.misc import get_content_from_message, get_message_list, strict_match_mime_type
 
 log = logging.getLogger(__name__)
 
@@ -76,6 +76,12 @@ class BM25Retriever(BaseRetriever):
 def is_youtube_url(url: str) -> bool:
     youtube_regex = r'^(https?://)?(www\.)?(youtube\.com|youtu\.be)/.+$'
     return re.match(youtube_regex, url) is not None
+
+
+async def is_media_content_type(content_type: str | None) -> bool:
+    content_type = content_type or ''
+    stt_supported = await Config.get('audio.stt.supported_content_types', [])
+    return content_type.startswith(('image/', 'video/')) or bool(strict_match_mime_type(stt_supported, content_type))
 
 
 def get_loader(request, url: str, config: dict):
