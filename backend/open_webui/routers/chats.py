@@ -65,6 +65,7 @@ CHAT_CONFIG_KEYS = {
     'CONTEXT_COMPACTION_RETENTION_PERCENTAGE': 'chat.context_compaction.retention_percentage',
     'CONTEXT_COMPACTION_PROMPT_TEMPLATE': 'chat.context_compaction.prompt_template',
     'ENABLE_TOOL_PERMISSIONS': 'chat.tool_permissions.enable',
+    'ENABLE_TOOL_CALL_LABELS': 'chat.tool_call_labels.enable',
     'ENABLE_TOOL_PERMISSIONS_AUTO': 'chat.tool_permissions.auto.enable',
     'TOOL_PERMISSIONS_DECISIONS_API_BASE_URL': 'chat.tool_permissions.decisions.api_base_url',
     'TOOL_PERMISSIONS_DECISIONS_API_KEY': 'chat.tool_permissions.decisions.api_key',
@@ -233,6 +234,7 @@ class ChatConfigForm(BaseModel):
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE: int | None = None
     CONTEXT_COMPACTION_PROMPT_TEMPLATE: str
     ENABLE_TOOL_PERMISSIONS: bool = False
+    ENABLE_TOOL_CALL_LABELS: bool = False
     ENABLE_TOOL_PERMISSIONS_AUTO: bool = False
     TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: str = 'https://api.openai.com/v1'
     TOOL_PERMISSIONS_DECISIONS_API_KEY: str = ''
@@ -918,7 +920,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
     current = await get_chat_config_values()
     for field in ChatConfigForm.model_fields:
         if (
-            field in {'TOOL_SEARCH_ENGINE', 'ENABLE_TOOL_PERMISSIONS_AUTO'}
+            field in {'TOOL_SEARCH_ENGINE', 'ENABLE_TOOL_PERMISSIONS_AUTO', 'ENABLE_TOOL_CALL_LABELS'}
             or field.startswith(('TOOL_SEARCH_DECISIONS_', 'TOOL_PERMISSIONS_DECISIONS_'))
         ) and (field not in form_data.model_fields_set):
             updates[field] = current.get(field, updates[field])

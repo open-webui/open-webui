@@ -20,6 +20,49 @@ INCOMPLETE_CALL_ERROR = (
 )
 
 
+def add_tool_call_labels(tools, language='English'):
+    """Extend request-local schemas with UI labels; leave cached tool definitions untouched."""
+    for name, tool in list(tools.items()):
+        spec = tool.get('spec') or {}
+        schema = spec.get('parameters') or {}
+        if (
+            tool.get('hidden')
+            or tool.get('display_labels')
+            or tool.get('tool_id') == 'builtin:call_tool'
+            or '__display__' in schema.get('properties', {})
+            or schema.get('type', 'object') != 'object'
+            or any(key in schema for key in ('$ref', 'oneOf', 'anyOf', 'allOf'))
+        ):
+            continue
+        labels = {
+            'type': 'object',
+            'description': (
+                f'Short UI labels in {language}. Describe the action and its subject, not technical tool names. '
+                'Use at most 8 words and 120 characters each, without a trailing period. '
+                'The completed label describes the action taken, not an unverified outcome.'
+            ),
+            'properties': {
+                'running': {'type': 'string', 'description': 'While running, e.g. "Searching for flights".'},
+                'completed': {'type': 'string', 'description': 'After success, e.g. "Searched for flights".'},
+            },
+            'required': ['running', 'completed'],
+            'additionalProperties': False,
+        }
+        tools[name] = {
+            **tool,
+            'display_labels': True,
+            'spec': {
+                **spec,
+                'parameters': {
+                    **schema,
+                    'type': 'object',
+                    'properties': {'__display__': labels, **schema.get('properties', {})},
+                    'required': ['__display__', *schema.get('required', [])],
+                },
+            },
+        }
+
+
 def set_tool_call_visibility(item, tools):
     """Copy trusted tool visibility metadata onto display output, without changing execution."""
     if item.get('type') == 'function_call' and tools.get(item.get('name'), {}).get('hidden') is True:
@@ -218,11 +261,20 @@ def tool_repetition_error(call, previous_calls):
     return None
 
 
-def prepare_tool_call(call, schema=None):
+def prepare_tool_call(call, schema=None, *, display_labels=False):
     """Normalize a call before approval; return an actionable error for the model."""
     raw = call.get('arguments', '{}')
     try:
-        arguments = normalize_arguments(raw, schema)
+        arguments = dict(parse_arguments(raw))
+        if display_labels and '__display__' in arguments:
+            labels = arguments.pop('__display__')
+            call.pop('display_labels', None)
+            if isinstance(labels, dict) and all(
+                isinstance(labels.get(key), str) and 0 < len(labels[key].strip()) <= 120
+                for key in ('running', 'completed')
+            ):
+                call['display_labels'] = {key: labels[key].strip() for key in ('running', 'completed')}
+        arguments = normalize_arguments(arguments, schema)
     except ValueError as exc:
         return f'Error: {exc} Correct the arguments before retrying.'
     normalized = json.dumps(arguments, ensure_ascii=False)

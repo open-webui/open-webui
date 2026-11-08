@@ -55,6 +55,7 @@
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
 		ENABLE_TOOL_PERMISSIONS: false,
+		ENABLE_TOOL_CALL_LABELS: false,
 		ENABLE_TOOL_PERMISSIONS_AUTO: false,
 		TOOL_PERMISSIONS_DECISIONS_API_BASE_URL: 'https://api.openai.com/v1',
 		TOOL_PERMISSIONS_DECISIONS_API_KEY: '',
@@ -436,6 +437,14 @@
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.tools.title')}>
+				<AdminSettingRow
+					label={$i18n.t('settings.admin.interface.toolCallLabels.label')}
+					description={$i18n.t('settings.admin.interface.toolCallLabels.description')}
+					let:labelId
+				>
+					<Switch bind:state={chatConfig.ENABLE_TOOL_CALL_LABELS} ariaLabelledbyId={labelId} />
+				</AdminSettingRow>
+
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.interface.toolPermissions.label')}
 					description={$i18n.t('settings.admin.interface.toolPermissions.description')}

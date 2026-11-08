@@ -11,6 +11,8 @@ export type OutputItem = {
 	id?: string;
 	call_id?: string;
 	name?: string;
+	display_label?: string;
+	display_labels?: { running?: string; completed?: string };
 	status?: string;
 	hidden?: boolean;
 	arguments?: unknown;
@@ -35,6 +37,8 @@ export type OutputDetailToken = {
 		type: string;
 		id?: string;
 		name?: string;
+		display_label?: string;
+		running_label?: string;
 		done?: string;
 		duration?: string;
 		arguments?: string;
@@ -240,6 +244,14 @@ function buildToolCallToken(item: OutputItem, toolOutputByCallId: Record<string,
 			type: 'tool_calls',
 			id: callId,
 			name,
+			running_label:
+				typeof item.display_labels?.running === 'string' ? item.display_labels.running : '',
+			display_label:
+				typeof item.display_labels?.completed === 'string'
+					? item.display_labels.completed
+					: typeof item.display_label === 'string'
+						? item.display_label
+						: '',
 			done: isDone ? 'true' : 'false',
 			status,
 			// ToolCallDisplay HTML-decodes these, like legacy <details> attributes.

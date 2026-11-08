@@ -26,6 +26,8 @@
 		attributes?: {
 			type?: string;
 			name?: string;
+			display_label?: string;
+			running_label?: string;
 			done?: string;
 			id?: string;
 			status?: string;
@@ -180,6 +182,26 @@
 	})();
 
 	$: prefixText = hasActiveDetails ? $i18n.t('Exploring') : $i18n.t('Explored');
+	$: toolLabels = tokens
+		.filter((token) => token.attributes?.type === 'tool_calls')
+		.map((token) =>
+			['pending', 'queued', 'requires_approval', 'incomplete'].includes(
+				token.attributes?.status ?? ''
+			)
+				? ''
+				: token.attributes?.done === 'true'
+					? token.attributes?.display_label
+					: token.attributes?.running_label
+		);
+	$: groupLabel =
+		!hasRejected &&
+		!hasError &&
+		pendingToolTokens.length === 0 &&
+		codeInterpreterCount === 0 &&
+		toolLabels.length &&
+		toolLabels.every(Boolean)
+			? toolLabels.join(' · ')
+			: '';
 </script>
 
 <div {id} class="w-full min-w-0">
@@ -228,11 +250,18 @@
 
 				<!-- Summary text -->
 				<div class="flex-1 line-clamp-1">
-					<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
-						>{prefixText}</span
-					>
-					{#if summaryText}
-						<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+					{#if groupLabel}
+						<span
+							class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
+						>
+					{:else}
+						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+							>{prefixText}</span
+						>
+						{#if summaryText}
+							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+						{/if}
 					{/if}
 				</div>
 

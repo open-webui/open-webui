@@ -3307,6 +3307,8 @@
 	"settings.admin.interface.tokenCap.label": "Token Cap",
 	"settings.admin.interface.tokenThreshold.description": "Older messages are summarized when estimated context exceeds this token limit.",
 	"settings.admin.interface.tokenThreshold.label": "Token Threshold",
+	"settings.admin.interface.toolCallLabels.label": "Tool Call Labels",
+	"settings.admin.interface.toolCallLabels.description": "Ask the model to include short labels for running and completed tool calls.",
 	"settings.admin.interface.toolPermissions.description": "Show tool permission choices in the chat input menu.",
 	"settings.chat.toolPermissionsAuto.description": "Run low-risk tools automatically. Ask before risky or unclear actions.",
 	"settings.admin.interface.toolPermissionsAuto.label": "Auto permissions",

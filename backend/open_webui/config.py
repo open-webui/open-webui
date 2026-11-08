@@ -2260,6 +2260,7 @@ CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
 
 ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
+ENABLE_TOOL_CALL_LABELS = os.getenv('ENABLE_TOOL_CALL_LABELS', 'False').lower() == 'true'
 ENABLE_TOOL_PERMISSIONS_AUTO = os.getenv('ENABLE_TOOL_PERMISSIONS_AUTO', 'False').lower() == 'true'
 TOOL_PERMISSIONS_DECISIONS_API_BASE_URL = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
 TOOL_PERMISSIONS_DECISIONS_API_KEY = os.getenv('TOOL_PERMISSIONS_DECISIONS_API_KEY', '')
@@ -3299,6 +3300,7 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
+    'chat.tool_call_labels.enable': ENABLE_TOOL_CALL_LABELS,
     'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,
     'chat.tool_permissions.decisions.api_base_url': TOOL_PERMISSIONS_DECISIONS_API_BASE_URL,
     'chat.tool_permissions.decisions.api_key': TOOL_PERMISSIONS_DECISIONS_API_KEY,

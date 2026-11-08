@@ -157,6 +157,7 @@ from open_webui.utils.tool_approval import complete_tool_call, pending_tool_call
 from open_webui.utils.tool_permissions import ToolApprovalRequired, requires_tool_approval
 from open_webui.utils.tool_calling import (
     INCOMPLETE_CALL_ERROR,
+    add_tool_call_labels,
     final_answer_payload,
     prepare_tool_call,
     recover_tool_calls,
@@ -2876,6 +2877,11 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data, metadata, tools_dict, inlet_filter_tools, extra_params=extra_params
                 )
 
+                if await Config.get('chat.tool_call_labels.enable'):
+                    add_tool_call_labels(
+                        tools_dict, (metadata.get('variables') or {}).get('{{USER_LANGUAGE}}') or 'English'
+                    )
+
                 # If the function calling is native, then call the tools function calling handler
                 form_data['tools'] = [
                     {'type': 'function', 'function': tool.get('spec', {})}
@@ -3142,7 +3148,9 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
     name = tool_call.get('name', '')
     tool = metadata.get('tools', {}).get(name)
     error = (
-        prepare_tool_call(tool_call, tool.get('spec', {}).get('parameters'))
+        prepare_tool_call(
+            tool_call, tool.get('spec', {}).get('parameters'), display_labels=tool.get('display_labels', False)
+        )
         if tool
         else f'Error: Tool "{name}" not found.'
     )
@@ -5849,7 +5857,11 @@ async def streaming_chat_response_handler(response, ctx):
                         )
                         tool = metadata.get('tools', {}).get(item['name'])
                         error = error or (
-                            prepare_tool_call(item, tool.get('spec', {}).get('parameters'))
+                            prepare_tool_call(
+                                item,
+                                tool.get('spec', {}).get('parameters'),
+                                display_labels=tool.get('display_labels', False),
+                            )
                             if tool
                             else f'Error: Tool "{item["name"]}" not found.'
                         )
