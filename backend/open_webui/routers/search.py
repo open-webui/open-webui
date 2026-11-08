@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.channels import ChannelMember, Channels
+from open_webui.models.chat_messages import ChatMessage
 from open_webui.models.chats import Chat, chat_message_list, chat_search_content_query
 from open_webui.models.config import Config
 from open_webui.models.folders import Folder, Folders
@@ -92,31 +93,32 @@ def message_match_sql(table: str, dialect: str, key: str):
     # Identifiers are internal constants; all user input remains bound parameters.
     if dialect == 'sqlite':
         sources = [f"json_each({table}.chat, '$.history.messages')", f"json_each({table}.chat, '$.messages')"]
-        return text(
-            '('
-            + ' OR '.join(
-                f"EXISTS (SELECT 1 FROM {source} AS m WHERE lower(CASE WHEN m.type = 'object' "
-                f"AND json_type(m.value, '$.content') = 'text' THEN m.value ->> 'content' END) "
-                f"LIKE :{key} ESCAPE '\\')"
-                for source in sources
-            )
-            + ')'
+        legacy_content = (
+            "CASE WHEN m.type = 'object' AND json_type(m.value, '$.content') = 'text' THEN m.value ->> 'content' END"
         )
-    sources = [
-        f"json_each(CASE WHEN json_typeof({table}.chat->'history'->'messages') = 'object' "
-        f"THEN {table}.chat->'history'->'messages' ELSE '{{}}'::json END)",
-        f"json_array_elements(CASE WHEN json_typeof({table}.chat->'messages') = 'array' "
-        f"THEN {table}.chat->'messages' ELSE '[]'::json END)",
-    ]
-    return text(
-        '('
-        + ' OR '.join(
-            f"EXISTS (SELECT 1 FROM {source} AS m WHERE json_typeof(m.value->'content') = 'string' "
-            f"AND lower(m.value->>'content') LIKE :{key} ESCAPE '\\')"
-            for source in sources
-        )
-        + ')'
+        row_content = "CASE WHEN json_type(m.content) = 'text' THEN json_extract(m.content, '$') END"
+    else:
+        sources = [
+            f"json_each(CASE WHEN json_typeof({table}.chat->'history'->'messages') = 'object' "
+            f"THEN {table}.chat->'history'->'messages' ELSE '{{}}'::json END)",
+            f"json_array_elements(CASE WHEN json_typeof({table}.chat->'messages') = 'array' "
+            f"THEN {table}.chat->'messages' ELSE '[]'::json END)",
+        ]
+        legacy_content = "CASE WHEN json_typeof(m.value->'content') = 'string' THEN m.value->>'content' END"
+        row_content = "CASE WHEN json_typeof(m.content) = 'string' THEN m.content #>> '{}' END"
+
+    legacy_match = ' OR '.join(
+        f"EXISTS (SELECT 1 FROM {source} AS m WHERE lower({legacy_content}) LIKE :{key} ESCAPE '\\')"
+        for source in sources
     )
+    if table == 'chat':
+        # shortcut: partial imports use their existing rows; reconcile them when writes become atomic.
+        return text(
+            'CASE WHEN EXISTS (SELECT 1 FROM chat_message WHERE chat_id = chat.id) '
+            'THEN EXISTS (SELECT 1 FROM chat_message AS m WHERE m.chat_id = chat.id '
+            f"AND lower({row_content}) LIKE :{key} ESCAPE '\\') ELSE ({legacy_match}) END"
+        )
+    return text(f'({legacy_match})')
 
 
 async def search_workspace(  # noqa: C901 — keep permission scoping and source dispatch together
@@ -394,14 +396,29 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         if ids:
             hydrated[source] = {row[0].id: row for row in (await db.execute(stmt.where(model.id.in_(ids)))).all()}
 
+    chat_messages = {}
+    if hydrated.get('chat'):
+        rows = await db.execute(
+            select(ChatMessage.chat_id, ChatMessage.id, ChatMessage.content)
+            .where(ChatMessage.chat_id.in_(hydrated['chat']))
+            .order_by(ChatMessage.created_at, ChatMessage.id)
+        )
+        for row in rows:
+            chat_messages.setdefault(row.chat_id, []).append(
+                {'id': row.id.removeprefix(f'{row.chat_id}-'), 'content': row.content}
+            )
+
     for match in matches:
         row = hydrated.get(match.source, {}).get(match.id)
         if row is None:
             continue  # Access may have been revoked between selecting IDs and hydrating.
         item = row[0]
         if match.source in ('chat', 'shared'):
-            content, message_id = chat_passage(item.chat or {}, query)
             snapshot = match.source == 'shared'
+            data = (
+                {'messages': chat_messages[item.id]} if not snapshot and item.id in chat_messages else item.chat or {}
+            )
+            content, message_id = chat_passage(data, query)
             folder = None if snapshot else folder_map.get(item.folder_id)
             context = (
                 'Shared snapshot'
