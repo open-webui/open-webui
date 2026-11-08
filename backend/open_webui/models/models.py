@@ -260,6 +260,13 @@ class ModelForm(BaseModel):
     access_grants: list[dict] | None = None
     is_active: bool = True
 
+    @field_validator('id', 'base_model_id')
+    @classmethod
+    def exclude_agent_models(cls, value: str | None) -> str | None:
+        if value and value.startswith('agent:'):
+            raise ValueError('Agent models cannot be saved or used as base models.')
+        return value
+
 
 class ModelsTable:
     async def _get_access_grants(self, model_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:

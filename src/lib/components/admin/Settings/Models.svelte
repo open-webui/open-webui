@@ -284,13 +284,15 @@
 			.split(',')
 			.filter((id) => id);
 
-		savedModels = await getAllModels(localStorage.token);
+		savedModels = (await getAllModels(localStorage.token)).filter(
+			(model) => !model.id.startsWith('agent:')
+		);
 		tags = [...new Set(savedModels.flatMap(modelTags))].sort();
 		if (selectedTag && !tags.includes(selectedTag)) {
 			selectedTag = '';
 		}
 
-		allModels = await getModels(localStorage.token);
+		allModels = await getModels(localStorage.token, null, false, false, { terminalId: null });
 
 		const providerModels = await getModels(localStorage.token, null, true);
 		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));

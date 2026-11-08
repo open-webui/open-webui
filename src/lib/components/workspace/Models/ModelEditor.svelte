@@ -354,6 +354,7 @@
 		return models
 			.filter(
 				(baseModel) =>
+					!baseModel.id.startsWith('agent:') &&
 					(!currentModelId ||
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
@@ -681,7 +682,9 @@
 			if (model.base_model_id) {
 				const base_model = $models
 					.filter(
-						(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
+						(m) =>
+							!m.id.startsWith('agent:') &&
+							((!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
