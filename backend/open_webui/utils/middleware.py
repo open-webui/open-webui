@@ -2999,7 +2999,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             )
         )
     if initial_output:
-        form_data['messages'].extend(convert_output_to_messages(initial_output, raw=True))
+        form_data['messages'].extend(
+            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
+        )
         metadata['initial_output'] = initial_output
 
     form_data = normalize_messages_for_model(form_data)
