@@ -15,6 +15,7 @@ class CustomBuildHook(BuildHookInterface):
         if npm is None:
             raise RuntimeError('NodeJS `npm` is required for building Open Webui but it was not found')
         stderr.write('### npm install\n')
+        os.environ.setdefault('ONNXRUNTIME_NODE_INSTALL_CUDA', 'skip')
         subprocess.run([npm, 'install', '--force'], check=True)  # noqa: S603
         stderr.write('\n### npm run build\n')
         node_options = os.environ.get('NODE_OPTIONS', '')
