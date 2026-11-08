@@ -2811,6 +2811,9 @@
 			use:selectFilesByDrag
 			class:pb-8={!selectedFile && !isSearching && selectedCount > 0}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
+			on:scroll|capture={() => {
+				fileAsk = null;
+			}}
 			on:click={(e) => {
 				closeDirectoryMenu();
 				if (
