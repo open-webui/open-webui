@@ -148,6 +148,7 @@
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
+	export let onFilesMoved: (() => void) | null = null;
 	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
 
 	export let chatId: string | null = null;
@@ -252,6 +253,7 @@
 	export const requestClose = () => protectBuffer();
 	export const hasUnsavedChanges = () => dirty || saving;
 	export const browseDirectory = (path: string) => loadDir(path);
+	export const refreshDirectory = () => !selectedFile && refreshBrowser();
 	export const revealPage = (page: number | null) => {
 		documentTargetPage = normalizeDocumentTargetPage(page);
 	};
@@ -1871,6 +1873,7 @@
 		}
 		if (movedSources.length > 0 && context === dragContext) {
 			await refreshAfterMove(movedSources, destFolder);
+			onFilesMoved?.();
 		}
 	};
 

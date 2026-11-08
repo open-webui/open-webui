@@ -153,7 +153,7 @@
 	const paneStyle = (rect: PanelRect, header = 0) =>
 		`position:absolute;left:${rect.left * 100}%;top:calc(100% * ${rect.top} + ${header}px * var(--app-text-scale, 1));width:${rect.width * 100}%;height:calc(100% * ${rect.height} - ${header}px * var(--app-text-scale, 1));`;
 	const focusGroup = (id: string, event?: Event) => {
-		// Tab activation reads the composer's directory before changing the active context.
+		// Tab clicks activate their own group.
 		if (event?.target instanceof Element && event.target.closest('[data-panel-tab]')) return;
 		const group = tabs.groups.find((group) => group.id === id);
 		if (group?.activeId && tabs.activeGroupId !== id) tabs = activateTab(tabs, group.activeId);
@@ -316,6 +316,7 @@
 			hasUnsavedChanges: () => boolean;
 			requestClose: () => Promise<boolean>;
 			browseDirectory?: (path: string) => unknown;
+			refreshDirectory?: () => unknown;
 			revealPage?: (page: number | null) => void;
 			captureView?: () => any;
 		}
@@ -430,13 +431,40 @@
 		tabs = activateTab(tabs, mainChatTabId);
 	};
 	const selectTab = (id: string) => {
-		const tab = tabs.tabs.find((tab) => tab.id === id);
-		if (tab?.kind === 'files') {
-			openFiles(tab.terminalId ?? null);
-			return;
-		}
 		tabs = activateTab(tabs, id);
 		showTabs.set(true);
+	};
+	const activateFilesOnDrag = (node: HTMLElement, tab: PanelTab) => {
+		if (tab.kind !== 'files') return;
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		const clear = () => {
+			clearTimeout(timer);
+			timer = undefined;
+		};
+		const over = (event: DragEvent) => {
+			if (!event.dataTransfer?.types.includes('application/x-terminal-file-move') || timer) return;
+			if (tabs.groups.some((group) => group.activeId === tab.id)) return;
+			timer = setTimeout(() => {
+				selectTab(tab.id);
+				clear();
+			}, 500);
+		};
+		const leave = (event: DragEvent) => {
+			if (!(event.relatedTarget instanceof Node && node.contains(event.relatedTarget))) clear();
+		};
+		node.addEventListener('dragover', over);
+		node.addEventListener('dragleave', leave);
+		node.addEventListener('drop', clear);
+		window.addEventListener('dragend', clear);
+		return {
+			destroy() {
+				clear();
+				node.removeEventListener('dragover', over);
+				node.removeEventListener('dragleave', leave);
+				node.removeEventListener('drop', clear);
+				window.removeEventListener('dragend', clear);
+			}
+		};
 	};
 	const openPanel = (tab: PanelTab, inSidePanel = false) => {
 		if (!viewReady || !viewEntry) return;
@@ -445,13 +473,22 @@
 		changeChatView(viewEntry, { ...viewEntry.state, panels: tabs });
 		showTabs.set(true);
 	};
-	const openFiles = (selector = $selectedTerminalId, directory?: string) => {
+	const openFiles = (selector = $selectedTerminalId, directory?: string, newTab = false) => {
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
 		directory ??=
 			terminalContext?.terminalId === selector
 				? terminalContext.currentDirectory || undefined
 				: undefined;
-		const id = selector ? `files:${selector}` : 'files';
+		const existing = newTab
+			? undefined
+			: (tabs.tabs.find(
+					(tab) =>
+						tab.id === tabs.activeId &&
+						tab.kind === 'files' &&
+						(tab.terminalId ?? null) === selector
+				) ??
+				tabs.tabs.find((tab) => tab.kind === 'files' && (tab.terminalId ?? null) === selector));
+		const id = existing?.id ?? uuidv4();
 		openPanel({
 			id,
 			kind: 'files',
@@ -1013,15 +1050,10 @@
 		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
 	];
 
-	$: showFilesMenuItem =
-		showFilesTab &&
-		!tabs.tabs.some(
-			(tab) => tab.id === ($selectedTerminalId ? `files:${$selectedTerminalId}` : 'files')
-		);
 	$: newTabViews = availableViews.filter(
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
-	$: canOpenNewTab = showFilesMenuItem || terminalFilesAvailable || newTabViews.length > 0;
+	$: canOpenNewTab = showFilesTab || terminalFilesAvailable || newTabViews.length > 0;
 
 	const quickSplit = () => {
 		if (tabs.tabs.length < 2) {
@@ -1747,7 +1779,21 @@
 								onViewChange={(view) => {
 									owner.drafts.set(tab.id, view);
 									if (tab.kind === 'files')
-										updateViewTab(owner, tab.id, { directory: view.directory });
+										updateViewTab(owner, tab.id, {
+											directory: view.directory,
+											label: view.directory?.split('/').filter(Boolean).pop() || $i18n.t('Files')
+										});
+								}}
+								onFilesMoved={() => {
+									if (owner !== viewEntry) return;
+									for (const other of tabs.tabs) {
+										if (
+											other.id !== tab.id &&
+											other.kind === 'files' &&
+											other.terminalId === tab.terminalId
+										)
+											void fileViews[other.id]?.refreshDirectory?.();
+									}
 								}}
 								gitStatus={fileGitStatuses[tab.terminalId] ?? null}
 								gitConnection={fileConnection}
@@ -1837,6 +1883,7 @@
 					<div
 						role="presentation"
 						data-panel-tab={tab.id}
+						use:activateFilesOnDrag={tab}
 						on:click={() => selectTab(tab.id)}
 						class="panel-tab flex cursor-pointer items-center gap-1.5 ps-2.5 pe-2 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {group.activeId ===
 						tab.id
@@ -1852,7 +1899,7 @@
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.kind === 'chat' ? title : (tab.path ?? tab.label)}
+							title={tab.kind === 'chat' ? title : (tab.directory ?? tab.path ?? tab.label)}
 							aria-label={tab.kind === 'chat' ? title : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 						>
@@ -1906,8 +1953,8 @@
 					>
 					<div slot="content">
 						<DropdownMenu className="min-w-56">
-							{#if showFilesMenuItem}
-								<button on:click={() => openFiles()}
+							{#if showFilesTab}
+								<button on:click={() => openFiles($selectedTerminalId, undefined, true)}
 									><Icon name="folder" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Files')}</span
 									><HotkeyHint name="openFiles" className="ms-auto" /></button
