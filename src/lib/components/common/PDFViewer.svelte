@@ -630,7 +630,7 @@
 				if (!res.ok) throw new Error(`HTTP ${res.status}`);
 				pdfData = await res.arrayBuffer();
 			}
-			pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
+			pdfDoc = await pdfjs.getDocument({ data: pdfData, wasmUrl: '/wasm/' }).promise;
 			if (token !== loadToken) return;
 			pageCount = pdfDoc.numPages;
 			if (onComments) {
