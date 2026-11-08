@@ -1340,9 +1340,12 @@
 		};
 		window.addEventListener('beforeunload', beforeUnloadHandler);
 
+		const sessionUserRequest = localStorage.token ? getSessionUser(localStorage.token) : null;
+		sessionUserRequest?.catch(() => {});
+
 		let backendConfig = null;
 		try {
-			backendConfig = await getBackendConfig();
+			backendConfig = await getBackendConfig(localStorage.token);
 			console.log('Backend config:', backendConfig);
 		} catch (error) {
 			if (error?.authRedirect) {
@@ -1380,20 +1383,15 @@
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
 
-				if (localStorage.token) {
+				if (sessionUserRequest) {
 					// Get Session User Info
-					const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
+					const sessionUser = await sessionUserRequest.catch((error) => {
 						toast.error(`${error}`);
 						return null;
 					});
 
 					if (sessionUser) {
 						await user.set(sessionUser);
-						try {
-							await config.set(await getBackendConfig());
-						} catch (error) {
-							console.error('Error refreshing backend config:', error);
-						}
 
 						// Keep user timezone in sync on every app load/refresh
 						const timezone = getUserTimezone();
