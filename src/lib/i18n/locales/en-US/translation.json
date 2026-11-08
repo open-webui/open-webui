@@ -3320,7 +3320,7 @@
 	"settings.admin.interface.toolPermissionsDecisionsThreshold.label": "Approval threshold",
 	"settings.admin.interface.toolPermissionsDecisionsThreshold.description": "Ask at or above this probability (0–1).",
 	"settings.admin.interface.toolPermissionsAutoEngine.label": "Engine",
-	"settings.admin.interface.toolPermissionsAutoPrompt.label": "Approval policy",
+	"settings.admin.interface.toolPermissionsAutoPrompt.label": "Approval policy prompt",
 	"settings.admin.interface.toolPermissionsAutoPrompt.description": "Instructions for deciding which tool calls need approval. Used by both engines. Leave empty to use the default policy.",
 	"settings.admin.interface.toolPermissions.label": "Tool Permissions",
 	"settings.admin.interface.toolSearch.description": "Leave large tool definitions out of the request and let the model look them up on demand. Reduces prompt size when many tools are enabled.",
