@@ -1429,8 +1429,8 @@ async def bounded_chat_view(request: Request):
 @router.post('/{id}/view')
 async def update_chat_view(
     id: str,
-    form: ChatViewStateForm = Depends(bounded_chat_view),
     user=Depends(get_verified_user),
+    form: ChatViewStateForm = Depends(bounded_chat_view),
     db: AsyncSession = Depends(get_async_session),
 ):
     if not await Chats.get_accessible_chat_by_id(id, user, db=db):
