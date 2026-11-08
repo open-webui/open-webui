@@ -8,7 +8,22 @@ from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserNameResponse, Users
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text, update
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    String,
+    Text,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
@@ -19,7 +34,7 @@ class MessageReaction(Base):
     __tablename__ = 'message_reaction'
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
-    message_id = Column(Text)
+    message_id = Column(Text, index=True)
     name = Column(Text)
     created_at = Column(BigInteger)
 
@@ -43,7 +58,7 @@ class Message(Base):
     channel_id = Column(Text, nullable=True)
 
     reply_to_id = Column(Text, nullable=True)
-    parent_id = Column(Text, nullable=True)
+    parent_id = Column(Text, nullable=True, index=True)
 
     # Pins
     is_pinned = Column(Boolean, nullable=False, default=False)
@@ -56,6 +71,8 @@ class Message(Base):
 
     created_at = Column(BigInteger)  # time_ns
     updated_at = Column(BigInteger)  # time_ns
+
+    __table_args__ = (Index('ix_message_channel_parent_created', 'channel_id', 'parent_id', 'created_at'),)
 
 
 class MessageModel(BaseModel):
