@@ -132,6 +132,8 @@ def stage_ask_user_tool_calls(
             None,
         )
         if existing_item:
+            if arguments != raw_arguments:
+                existing_item.setdefault('original_arguments', raw_arguments)
             existing_item.update(item)
         else:
             output.append(item)
