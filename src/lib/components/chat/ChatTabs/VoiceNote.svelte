@@ -243,8 +243,9 @@
 			);
 			if (!note?.path) throw new Error();
 			draft = undefined;
-			onclose();
+			// onsaved reads the target that onclose clears
 			onsaved(note.path);
+			onclose();
 		} catch {
 			error = $i18n.t('Could not save the voice note. Retry or download the recording.');
 		} finally {
