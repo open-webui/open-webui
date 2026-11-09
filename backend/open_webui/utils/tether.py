@@ -408,6 +408,7 @@ async def get_terminal_connections(user):
                 'enabled': True,
                 'owner_id': user_id,
                 'config': {
+                    'chat_uploads': 'filesystem',
                     'access_grants': [{'principal_type': 'user', 'principal_id': user_id, 'permission': 'read'}]
                 },
             }
