@@ -124,7 +124,9 @@
 				}
 			);
 	};
-	const changed = (data: CommentResource) => {
+	const changed = (event: { data?: { type?: string; data?: CommentResource } }) => {
+		if (event?.data?.type !== 'comments:changed' || !event.data.data) return;
+		const data = event.data.data;
 		if (
 			data.resource_type !== resource?.resource_type ||
 			data.resource_id !== resource?.resource_id
@@ -207,11 +209,11 @@
 	});
 	$: if ($socket !== connection) {
 		connection?.emit('comments:leave', { subscription_id: subscriptionId });
-		connection?.off('comments:changed', changed);
+		connection?.off('events', changed);
 		connection?.off('connect', reconnect);
 		connection?.off('comments:unavailable', unavailable);
 		connection = $socket;
-		connection?.on('comments:changed', changed);
+		connection?.on('events', changed);
 		connection?.on('connect', reconnect);
 		connection?.on('comments:unavailable', unavailable);
 		join();
@@ -220,7 +222,7 @@
 		alive = false;
 		clearTimeout(refreshTimer);
 		connection?.emit('comments:leave', { subscription_id: subscriptionId });
-		connection?.off('comments:changed', changed);
+		connection?.off('events', changed);
 		connection?.off('connect', reconnect);
 		connection?.off('comments:unavailable', unavailable);
 	});

@@ -161,14 +161,16 @@
 			for (const key of resourceKeys) void load(key);
 		}, 150);
 	};
-	const changed = (resource: CommentResource) => {
+	const changed = (event: { data?: { type?: string; data?: CommentResource } }) => {
+		if (event?.data?.type !== 'comments:changed' || !event.data.data) return;
+		const resource = event.data.data;
 		if (resourceKeys.includes(resourceQuery(resource))) refresh();
 	};
 	$: if (mounted && connection !== $socket) {
-		connection?.off('comments:changed', changed);
+		connection?.off('events', changed);
 		connection?.off('connect', refresh);
 		connection = $socket;
-		connection?.on('comments:changed', changed);
+		connection?.on('events', changed);
 		connection?.on('connect', refresh);
 	}
 	const restoreFocus = () => {
@@ -363,7 +365,7 @@
 			mounted = false;
 			clearTimeout(refreshTimer);
 			for (const request of requests.values()) request.abort();
-			connection?.off('comments:changed', changed);
+			connection?.off('events', changed);
 			connection?.off('connect', refresh);
 			document.removeEventListener('mousemove', move);
 			document.removeEventListener('mouseleave', leave);
