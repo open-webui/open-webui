@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.4] - 2026-11-09
+
+### Added
+
+- 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
+- 🌐 **Translation updates.** Translations for Azerbaijani, Basque, Bengali, Bosnian, Bulgarian, Cebuano, Croatian, Czech, Danish, Dutch, Estonian, Faroese, Filipino, Galician, Georgian, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kabyle, Korean, Latvian, Lithuanian, Malay, Norwegian Bokmål, Persian, Polish, Punjabi, Romanian, Russian, Serbian, Slovak, Spanish (Spain), Swedish, Tamil, Turkish, Turkmen, Ukrainian, Urdu, Uyghur and Vietnamese were enhanced and expanded.
+
+### Fixed
+
+- 🖥️ **Your devices list updates live.** A computer that connects through Tether after the page has loaded now appears under Your devices in the terminal menu right away, and the menu also picks up disconnects and device name changes, instead of needing a page reload.
+
+### Changed
+
+- 🔌 **Live update events renamed.** Real-time updates for notes, comments, the inbox, access changes, encrypted channels and channel app errors now arrive as typed messages on the main "events" socket channel, so custom clients that listened for the old event names such as "events:note" or "note:presence" need to listen there instead.
+
 ## [0.13.3] - 2026-11-08
 
 ### Added
