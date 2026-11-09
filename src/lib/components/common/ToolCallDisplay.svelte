@@ -161,7 +161,6 @@
 	$: displayLabel =
 		!needsInput &&
 		!isRejected &&
-		!isError &&
 		!['pending', 'queued', 'requires_approval', 'incomplete'].includes(attributes.status ?? '')
 			? isDone
 				? attributes.display_label

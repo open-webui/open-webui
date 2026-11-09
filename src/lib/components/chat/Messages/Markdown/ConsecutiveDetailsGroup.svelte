@@ -198,7 +198,6 @@
 		.map((token) => token.attributes?.name ?? 'tool');
 	$: groupLabel =
 		!hasRejected &&
-		!hasError &&
 		pendingToolTokens.length === 0 &&
 		codeInterpreterCount === 0 &&
 		toolLabels.some(Boolean)
