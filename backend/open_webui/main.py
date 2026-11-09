@@ -1687,7 +1687,17 @@ async def chat_completion(
                 if model.get('agent'):
                     from open_webui.utils.agents.runner import run as run_agent
 
-                    return await run_agent(request, form_data, user, metadata, model)
+                    response = await run_agent(request, form_data, user, metadata, model)
+                    if tasks and TASKS.TITLE_GENERATION in tasks:
+                        title_tasks = {TASKS.TITLE_GENERATION: tasks[TASKS.TITLE_GENERATION]}
+                        ctx = await build_chat_response_context(
+                            request, form_data, user, model, metadata, title_tasks, []
+                        )
+                        try:
+                            await background_tasks_handler(ctx)
+                        except Exception:
+                            log.exception('Error generating agent chat title')
+                    return response
                 # Saved chats load the message after approved tool calls run, so their results are kept
                 if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
                     ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
