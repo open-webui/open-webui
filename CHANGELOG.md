@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - 📂 **Open folder button.** Folders in the working directory menu of the message input now have an Open folder button that opens the folder in a new Files tab.
+- 📦 **Locked Docker dependencies.** The standard and slim Docker images now install every Python package except PyTorch from lock files pinned with hashes, so rebuilding the same version installs the same packages, and custom images that edit "backend/requirements.txt" must regenerate the locks with "backend/update-locks.sh" for the edit to take effect. [#33981](https://github.com/open-webui/open-webui/pull/33981), [#33979](https://github.com/open-webui/open-webui/issues/33979)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
 - 🌐 **Translation updates.** Translations for Azerbaijani, Basque, Bengali, Bosnian, Bulgarian, Cebuano, Croatian, Czech, Danish, Dutch, Estonian, Faroese, Filipino, Galician, Georgian, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kabyle, Korean, Latvian, Lithuanian, Malay, Norwegian Bokmål, Persian, Polish, Punjabi, Romanian, Russian, Serbian, Slovak, Spanish (Spain), Swedish, Tamil, Turkish, Turkmen, Ukrainian, Urdu, Uyghur and Vietnamese were enhanced and expanded.
 
@@ -17,13 +18,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 🏷️ **Coding agent chat titles.** Chats with a coding agent now get a generated title once the agent has replied, instead of keeping the default title. [#33971](https://github.com/open-webui/open-webui/pull/33971), [#33970](https://github.com/open-webui/open-webui/issues/33970)
 - 📁 **Terminal choice kept in folders.** In a new chat inside a folder with a default terminal, switching models no longer puts the terminal back to the folder default after you picked another terminal or turned it off.
+- 🧭 **Working folder stays put.** Browsing to another folder in a Files tab no longer changes the working folder shown in the working directory menu and used by a new chat, and opening Files again shows an existing Files tab where you left it instead of moving it to the working folder.
 - 🖥️ **Your devices list updates live.** A computer that connects through Tether after the page has loaded now appears under Your devices in the terminal menu right away, and the menu also picks up disconnects and device name changes, instead of needing a page reload.
 - 🗂️ **Local embedding model folders.** With the embedding model set to a folder on disk, saving Admin Settings > Documents no longer shows a "Model filesystem path detected" error and now also saves the embedding settings such as the batch size, which were skipped before. [#33978](https://github.com/open-webui/open-webui/pull/33978), [#33977](https://github.com/open-webui/open-webui/issues/33977)
 
 ### Changed
 
-- 🧭 **Working folder stays put.** Browsing to another folder in a Files tab no longer changes the working folder shown in the working directory menu and used by a new chat, and opening Files again shows an existing Files tab where you left it instead of moving it to the working folder.
-- 📦 **Locked Docker dependencies.** The standard and slim Docker images now install every Python package except PyTorch from lock files pinned with hashes, so rebuilding the same version installs the same packages, and custom images that edit "backend/requirements.txt" must regenerate the locks with "backend/update-locks.sh" for the edit to take effect. [#33981](https://github.com/open-webui/open-webui/pull/33981), [#33979](https://github.com/open-webui/open-webui/issues/33979)
 - 🔌 **Live update events renamed.** Real-time updates for notes, comments, the inbox, access changes, encrypted channels and channel app errors now arrive as typed messages on the main "events" socket channel, so custom clients that listened for the old event names such as "events:note" or "note:presence" need to listen there instead.
 
 ## [0.13.3] - 2026-11-08
