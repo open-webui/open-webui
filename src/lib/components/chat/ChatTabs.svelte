@@ -375,8 +375,8 @@
 			connection: selectedConnection,
 			chatId,
 			directory:
-				contextTab?.terminalId === selectedConnection.selector
-					? terminalContext?.currentDirectory
+				activeFileContext?.terminalId === selectedConnection.selector
+					? activeFileContext.currentDirectory
 					: undefined
 		};
 	};
@@ -438,16 +438,7 @@
 		activeTab?.kind === 'chat'
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
-	const syncTerminalContext = () => {
-		const context = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
-		if (context) terminalContext = context;
-		else if (terminalContext?.file) terminalContext = { ...terminalContext, file: null };
-	};
-	// Publish on tab selection, not unrelated updates to the tab's state.
-	$: {
-		activeTabId;
-		syncTerminalContext();
-	}
+	$: activeFileContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -505,10 +496,6 @@
 	};
 	const openFiles = (selector = $selectedTerminalId, directory?: string, newTab = false) => {
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
-		directory ??=
-			terminalContext?.terminalId === selector
-				? terminalContext.currentDirectory || undefined
-				: undefined;
 		const existing = newTab
 			? undefined
 			: (tabs.tabs.find(
@@ -518,6 +505,8 @@
 						(tab.terminalId ?? null) === selector
 				) ??
 				tabs.tabs.find((tab) => tab.kind === 'files' && (tab.terminalId ?? null) === selector));
+		if (!existing && terminalContext?.terminalId === selector)
+			directory ??= terminalContext.currentDirectory || undefined;
 		const id = existing?.id ?? uuidv4();
 		openPanel({
 			id,
@@ -563,7 +552,10 @@
 			terminalId: selectedConnection.selector,
 			connection: { ...selectedConnection },
 			untitled: true,
-			context: contextTab?.terminalId === selectedConnection.selector ? terminalContext : undefined
+			context:
+				activeFileContext?.terminalId === selectedConnection.selector
+					? activeFileContext
+					: undefined
 		});
 	};
 	const openFeature = (
@@ -1848,14 +1840,7 @@
 								{onAskFile}
 								overlay={dragged}
 								chatId={owner.chatId}
-								bind:terminalContext={
-									() => fileContexts[tab.id],
-									(context) => {
-										if (fileContexts[tab.id] === context) return;
-										fileContexts[tab.id] = context;
-										if (contextTab?.id === tab.id) syncTerminalContext();
-									}
-								}
+								bind:terminalContext={fileContexts[tab.id]}
 							/>
 						</div>
 						{#if tab.kind === 'files' && fileConnection}

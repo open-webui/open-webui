@@ -5867,7 +5867,7 @@
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
 					tabActions={loading ? undefined : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
-					bind:terminalContext
+					{terminalContext}
 					bind:history
 					bind:files
 					chatId={$chatId}
