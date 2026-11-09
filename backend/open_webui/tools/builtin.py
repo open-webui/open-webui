@@ -94,7 +94,7 @@ async def _has_write_access_to_note(note, user_id: str) -> bool:
 
 
 async def _emit_note_updated(request: Request, user: dict, note) -> None:
-    await sio.emit('events:note', note.model_dump(), to=f'note:{note.id}')
+    await sio.emit('events', {'data': {'type': 'note:updated', 'data': note.model_dump()}}, to=f'note:{note.id}')
     await publish_event(
         request,
         EVENTS.NOTE_UPDATED,

@@ -49,7 +49,9 @@
 		appReplies = {};
 	}
 
-	const receiveAppChannelReply = (event) => {
+	const receiveAppChannelReply = (message) => {
+		if (message?.data?.type !== 'channel:app' || !message.data.data) return;
+		const event = message.data.data;
 		if (event.reply?.type === 'ack') return;
 		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
 			return;
@@ -59,8 +61,8 @@
 
 	onMount(() => {
 		const appSocket = $socket;
-		appSocket?.on('events:app', receiveAppChannelReply);
-		return () => appSocket?.off('events:app', receiveAppChannelReply);
+		appSocket?.on('events', receiveAppChannelReply);
+		return () => appSocket?.off('events', receiveAppChannelReply);
 	});
 
 	const loadMoreMessages = async () => {

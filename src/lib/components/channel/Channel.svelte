@@ -51,10 +51,14 @@
 		if (!enabled || !connection || !channelId) return;
 		let alive = true;
 		let revision = 0;
-		const receive = (event: { channel: string; session: string | null }) => {
-			if (event.channel === channelId) {
+		const receive = (event: {
+			data?: { type?: string; data?: { channel: string; session: string | null } };
+		}) => {
+			if (event?.data?.type !== 'encryption:available') return;
+			const data = event.data.data;
+			if (data?.channel === channelId) {
 				revision++;
-				invitationSession = event.session;
+				invitationSession = data.session;
 			}
 		};
 		const clear = () => {
@@ -71,13 +75,13 @@
 				})
 				.catch(() => {});
 		};
-		connection.on('encryption:available', receive);
+		connection.on('events', receive);
 		connection.on('disconnect', clear);
 		connection.on('connect', query);
 		query();
 		stopInvitation = () => {
 			alive = false;
-			connection.off('encryption:available', receive);
+			connection.off('events', receive);
 			connection.off('disconnect', clear);
 			connection.off('connect', query);
 		};

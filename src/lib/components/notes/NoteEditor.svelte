@@ -438,10 +438,8 @@
 				note.access_grants = [];
 			}
 
-			$socket?.off('events:note', noteEventHandler);
-			$socket?.on('events:note', noteEventHandler);
-			$socket?.off('note:presence', presenceEventHandler);
-			$socket?.on('note:presence', presenceEventHandler);
+			$socket?.off('events', noteEventHandler);
+			$socket?.on('events', noteEventHandler);
 			$socket?.off('disconnect', clearPresence);
 			$socket?.on('disconnect', clearPresence);
 			$socket?.off('connect', joinNote);
@@ -1000,7 +998,15 @@ ${content}
 		inputElement?.insertContent(content);
 	};
 
-	const noteEventHandler = async (_note) => {
+	const noteEventHandler = async (event) => {
+		const { type, data } = event?.data ?? {};
+		if (!data) return;
+		if (type === 'note:presence') {
+			presenceEventHandler(data);
+			return;
+		}
+		if (type !== 'note:updated') return;
+		const _note = data;
 		if (_note.id !== id || !note) return;
 		if (_note.page) {
 			const remote = _note.page;
@@ -1053,8 +1059,7 @@ ${content}
 		loadGeneration++;
 		if (note?.id) $socket?.emit('note:leave', { note_id: note.id });
 		if (debounceTimeout) clearTimeout(debounceTimeout);
-		$socket?.off('events:note', noteEventHandler);
-		$socket?.off('note:presence', presenceEventHandler);
+		$socket?.off('events', noteEventHandler);
 		$socket?.off('disconnect', clearPresence);
 		$socket?.off('connect', joinNote);
 
