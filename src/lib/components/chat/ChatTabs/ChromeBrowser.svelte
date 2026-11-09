@@ -33,6 +33,7 @@
 	let socket: WebSocket | null = null;
 	let disposed = false;
 	let retry: ReturnType<typeof setTimeout>;
+	let resizeTimer: ReturnType<typeof setTimeout>;
 	let connectionTimeout: ReturnType<typeof setTimeout>;
 	let attempts = 0;
 	let hasConnected = false;
@@ -107,15 +108,20 @@
 			pendingNavigation = values.url as string;
 		}
 	};
+	const fitDisplay = () => {
+		const bounds = surface.getBoundingClientRect();
+		if (!bounds.width || !bounds.height) return;
+		const scale = Math.min(1, bounds.width / width, bounds.height / height);
+		displayWidth = width * scale;
+		displayHeight = height * scale;
+	};
 	const resize = () => {
 		if (!surface) return;
 		const bounds = surface.getBoundingClientRect();
 		if (!bounds.width || !bounds.height) return;
 		width = mobile ? 390 : Math.max(240, Math.round(bounds.width));
 		height = mobile ? 844 : Math.max(200, Math.round(bounds.height));
-		const scale = Math.min(1, bounds.width / width, bounds.height / height);
-		displayWidth = width * scale;
-		displayHeight = height * scale;
+		fitDisplay();
 		command('viewport', { width, height, mobile });
 	};
 	$: if (socket) command('visibility', { visible: active });
@@ -268,13 +274,18 @@
 			};
 		};
 		connect();
-		const observer = new ResizeObserver(resize);
+		const observer = new ResizeObserver(() => {
+			fitDisplay();
+			clearTimeout(resizeTimer);
+			resizeTimer = setTimeout(resize, 200);
+		});
 		observer.observe(surface);
 		return () => {
 			disposed = true;
 			onStatus('');
 			clearTimeout(retry);
 			clearTimeout(connectionTimeout);
+			clearTimeout(resizeTimer);
 			observer.disconnect();
 			stopVnc();
 			socket?.close();
