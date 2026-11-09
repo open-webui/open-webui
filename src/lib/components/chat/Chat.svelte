@@ -1154,9 +1154,7 @@
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
 			// Folder defaults are applied at chat initialization; keep subsequent terminal choices.
 			const terminalId =
-				!history.currentId && $selectedFolder
-					? null
-					: currentModels[0]?.info?.meta?.terminalId;
+				!history.currentId && $selectedFolder ? null : currentModels[0]?.info?.meta?.terminalId;
 			const defaults: Record<string, any> = {
 				selectedToolIds: [
 					...new Set(
