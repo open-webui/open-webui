@@ -86,14 +86,6 @@
 
 	const embeddingModelUpdateHandler = async () => {
 		if (updateEmbeddingModelLoading) return;
-		if (RAG_EMBEDDING_ENGINE === '' && RAG_EMBEDDING_MODEL.split('/').length - 1 > 1) {
-			toast.error(
-				$i18n.t(
-					'Model filesystem path detected. Model shortname is required for update, cannot continue.'
-				)
-			);
-			return;
-		}
 		if (RAG_EMBEDDING_ENGINE === 'ollama' && RAG_EMBEDDING_MODEL === '') {
 			toast.error(
 				$i18n.t(
