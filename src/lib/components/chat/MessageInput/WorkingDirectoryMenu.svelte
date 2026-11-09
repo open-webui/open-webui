@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { getCwd, setCwd, type TerminalConnection } from '$lib/apis/terminal';
 	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/terminal/recentFolders';
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, showFileNav } from '$lib/stores';
 	import type { TerminalContext } from '$lib/types';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -205,28 +205,56 @@
 					<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
 						{#each options as path}
 							{@const selected = !!directory && normalize(directory) === path}
-							<button
-								type="button"
-								role="menuitemradio"
-								aria-checked={selected}
-								disabled={saving || disabled}
-								title={path}
-								class="flex h-[1.6875rem] w-full items-center justify-between gap-2 rounded-xl px-2 text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {selected
-									? 'bg-gray-50/40 dark:bg-gray-800/40'
-									: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
-								on:click={() => selectDirectory(path)}
+							<div
+								class="group/directory relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							>
-								<div class="flex min-w-0 flex-1 items-center gap-2">
-									<Folder className="size-3.5 shrink-0" strokeWidth="2" />
-									<span class="truncate">{folderName(path)}</span>
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={selected}
+									disabled={saving || disabled}
+									title={path}
+									class="flex h-[1.6875rem] w-full items-center justify-between gap-2 rounded-xl pl-2 {selected
+										? 'pr-14'
+										: 'pr-8'} text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {selected
+										? 'bg-gray-50/40 dark:bg-gray-800/40'
+										: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+									on:click={() => selectDirectory(path)}
+								>
+									<div class="flex min-w-0 flex-1 items-center gap-2">
+										<Folder className="size-3.5 shrink-0" strokeWidth="2" />
+										<span class="truncate">{folderName(path)}</span>
+									</div>
+									{#if selected}
+										<Check
+											className="absolute right-2 size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+											strokeWidth="2"
+										/>
+									{/if}
+								</button>
+								<div
+									class="absolute inset-y-0 {selected
+										? 'right-6'
+										: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/directory:opacity-100 group-hover/directory:pointer-events-auto group-focus-within/directory:opacity-100 group-focus-within/directory:pointer-events-auto"
+								>
+									<Tooltip content={$i18n.t('Open folder')} placement="top">
+										<button
+											type="button"
+											aria-label={$i18n.t('Open folder')}
+											disabled={saving || disabled}
+											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
+											on:click|stopPropagation={() => {
+												show = false;
+												showFileNav.set({
+													terminalId: connection.selector,
+													directory: path,
+													chatId
+												});
+											}}><FolderOpen className="size-3.5" /></button
+										>
+									</Tooltip>
 								</div>
-								{#if selected}
-									<Check
-										className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
-										strokeWidth="2"
-									/>
-								{/if}
-							</button>
+							</div>
 						{/each}
 					</div>
 				{/if}

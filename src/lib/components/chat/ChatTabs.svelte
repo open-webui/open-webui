@@ -37,6 +37,7 @@
 		showArtifacts,
 		showEmbeds,
 		settings,
+		showFileNav,
 		showFileNavPath,
 		selectedTerminalId,
 		user,
@@ -1284,6 +1285,11 @@
 	}
 	$: if (viewReady && $showCallOverlay) openFeature('voice');
 	$: if (viewReady && $showTabs === 'voice') openFeature('voice');
+	$: if (viewReady && $showFileNav) {
+		const request = $showFileNav;
+		showFileNav.set(null);
+		if (request.chatId === chatId) openFiles(request.terminalId, request.directory, true);
+	}
 	$: if (viewReady && $showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
 		const request = $showFileNavPath;
 		showFileNavPath.set(null);
