@@ -94,6 +94,24 @@
 		);
 	};
 
+	const refreshTerminalServers = async () => {
+		const userId = $user?.id;
+		if (!userId || !localStorage.token) return;
+		const systemTerminals = await getTerminalServers(localStorage.token);
+		if ($user?.id !== userId || !$config?.features?.enable_tool_servers) return;
+		terminalServers.update((servers) => [
+			...(servers ?? []).filter((server) => !server.id),
+			...systemTerminals.map((terminal) => ({
+				id: terminal.id,
+				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
+				name: terminal.name,
+				key: localStorage.token,
+				contexts: terminal.contexts ?? {},
+				config: terminal.config ?? {}
+			}))
+		]);
+	};
+
 	const setToolServers = async () => {
 		if (!$config?.features?.enable_tool_servers) {
 			toolServers.set([]);
@@ -123,10 +141,8 @@
 				: []
 		).filter((s: any) => s.enabled || s.url === $selectedTerminalId);
 
-		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
-		const systemTerminals = await getTerminalServers(localStorage.token);
-		terminalServers.set([
-			...(enabledTerminals.length > 0
+		const directTerminals =
+			enabledTerminals.length > 0
 				? (
 						await getToolServersData(
 							enabledTerminals.map((t: any) => ({
@@ -154,17 +170,12 @@
 							key: enabledTerminals[i]?.key ?? '',
 							config: enabledTerminals[i]?.config ?? data?.config ?? {}
 						}))
-				: []),
-			// Store with proxy URL and session key for FileNav file browsing
-			...systemTerminals.map((t) => ({
-				id: t.id,
-				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
-				name: t.name,
-				key: localStorage.token,
-				contexts: t.contexts ?? {},
-				config: t.config ?? {}
-			}))
+				: [];
+		terminalServers.update((servers) => [
+			...directTerminals,
+			...(servers ?? []).filter((server) => server.id)
 		]);
+		await refreshTerminalServers();
 	};
 
 	const setBanners = async () => {
@@ -198,9 +209,21 @@
 
 	onMount(() => {
 		const socketInstance = $socket;
+		const changed = () => {
+			void refreshTerminalServers().catch((error) =>
+				console.error('Unable to refresh terminals', error)
+			);
+		};
+		const eventHandler = (event: { data?: { type?: string } }) => {
+			if (event?.data?.type === 'terminals:changed') changed();
+		};
 		socketInstance?.on('access:updated', refreshAccess);
+		socketInstance?.on('events', eventHandler);
+		socketInstance?.on('connect', changed);
 		return () => {
 			socketInstance?.off('access:updated', refreshAccess);
+			socketInstance?.off('events', eventHandler);
+			socketInstance?.off('connect', changed);
 		};
 	});
 
@@ -281,7 +304,6 @@
 
 		setToolServers().catch((e) => {
 			console.error('Failed to load tool servers:', e);
-			terminalServers.set([]);
 		});
 
 		const setupKeyboardShortcuts = () => {

@@ -23,11 +23,14 @@
 		clearTimeout(timer);
 		timer = setTimeout(refresh, 150);
 	};
+	const eventHandler = (event: { data?: { type?: string } }) => {
+		if (event?.data?.type === 'notifications:changed') changed();
+	};
 	$: if ($socket !== connection) {
-		connection?.off('notifications:changed', changed);
+		connection?.off('events', eventHandler);
 		connection?.off('connect', changed);
 		connection = $socket;
-		connection?.on('notifications:changed', changed);
+		connection?.on('events', eventHandler);
 		connection?.on('connect', changed);
 	}
 	export const close = () => {
@@ -84,7 +87,7 @@
 	onDestroy(() => {
 		alive = false;
 		clearTimeout(timer);
-		connection?.off('notifications:changed', changed);
+		connection?.off('events', eventHandler);
 		connection?.off('connect', changed);
 		setInboxCount(0);
 	});

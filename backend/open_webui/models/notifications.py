@@ -76,7 +76,7 @@ async def emit_changes(user_ids):
 
     for user_id in user_ids:
         try:
-            await sio.emit('notifications:changed', {}, room=f'user:{user_id}')
+            await sio.emit('events', {'data': {'type': 'notifications:changed'}}, room=f'user:{user_id}')
         except Exception:
             log.exception('Could not broadcast inbox change for %s', user_id)
 

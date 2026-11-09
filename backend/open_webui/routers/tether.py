@@ -16,6 +16,8 @@ router = APIRouter()
 
 @router.websocket('/connect')
 async def connect(ws: WebSocket):
+    from open_webui.socket.main import emit_to_users
+
     await ws.accept()
     connection = None
     watcher = None
@@ -76,6 +78,7 @@ async def connect(ws: WebSocket):
         presence_lock = asyncio.Lock()
         if hub.redis:
             await hub.redis.set(key, record, ex=60)
+        await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, [user.id])
 
         async def watch():
             while True:
@@ -133,6 +136,7 @@ async def connect(ws: WebSocket):
                         presence['services'] = services
                         presence['name'] = name.strip()
                         record = updated_record
+                    await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, [user.id])
                     continue
                 updated = decode_token(update.get('token', ''))
                 current = await get_verified_user_by_token(
@@ -165,6 +169,7 @@ async def connect(ws: WebSocket):
                         key,
                         record,
                     )
+            await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, [connection.presence['user']])
             for stream_id in list(connection.routes):
                 stream = hub.streams.get(stream_id)
                 if stream:
