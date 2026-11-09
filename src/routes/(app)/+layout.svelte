@@ -216,12 +216,11 @@
 		};
 		const eventHandler = (event: { data?: { type?: string } }) => {
 			if (event?.data?.type === 'terminals:changed') changed();
+			else if (event?.data?.type === 'access:updated') void refreshAccess();
 		};
-		socketInstance?.on('access:updated', refreshAccess);
 		socketInstance?.on('events', eventHandler);
 		socketInstance?.on('connect', changed);
 		return () => {
-			socketInstance?.off('access:updated', refreshAccess);
 			socketInstance?.off('events', eventHandler);
 			socketInstance?.off('connect', changed);
 		};
