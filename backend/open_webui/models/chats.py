@@ -138,8 +138,8 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
             )
             OR EXISTS (
                 SELECT 1
-                FROM json_each(CASE WHEN json_typeof(Chat.chat#>'{{history,messages}}') = 'object'
-                    THEN Chat.chat#>'{{history,messages}}' ELSE '{{}}'::json END) AS history_message
+                FROM json_each(CASE WHEN json_typeof(Chat.chat #> '{{history,messages}}') = 'object'
+                    THEN Chat.chat #> '{{history,messages}}' ELSE '{{}}'::json END) AS history_message
                 WHERE json_typeof(history_message.value->'content') = 'string'
                 AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
             )
@@ -2565,12 +2565,12 @@ class ChatTable:
                     SELECT c.id AS chat_id, c.user_id AS owner_id, m.message
                     FROM chat AS c CROSS JOIN LATERAL (
                         SELECT value AS message FROM json_each(
-                            CASE WHEN json_typeof(c.chat#>'{history,messages}') = 'object'
-                                THEN c.chat#>'{history,messages}' ELSE '{}'::json END
+                            CASE WHEN json_typeof(c.chat #> '{history,messages}') = 'object'
+                                THEN c.chat #> '{history,messages}' ELSE '{}'::json END
                         )
                         UNION ALL
                         SELECT value AS message FROM json_array_elements(
-                            CASE WHEN json_typeof(c.chat#>'{history,messages}') IS DISTINCT FROM 'object'
+                            CASE WHEN json_typeof(c.chat #> '{history,messages}') IS DISTINCT FROM 'object'
                                 AND json_typeof(c.chat->'messages') = 'array'
                                 THEN c.chat->'messages' ELSE '[]'::json END
                         )
@@ -2580,8 +2580,8 @@ class ChatTable:
                 role = "message->>'role'"
 
                 def author(path):
-                    return f"""CASE WHEN json_typeof(message#>'{path}') = 'string'
-                        AND trim(message#>>'{path}') <> '' THEN message#>>'{path}' END"""
+                    return f"""CASE WHEN json_typeof(message #> '{path}') = 'string'
+                        AND trim(message #>> '{path}') <> '' THEN message #>> '{path}' END"""
 
                 author_id = f"COALESCE({author('{user_id}')}, {author('{user,id}')}, NULLIF(trim(owner_id), ''))"
             else:
