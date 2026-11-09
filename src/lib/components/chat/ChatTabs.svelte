@@ -438,13 +438,16 @@
 		activeTab?.kind === 'chat'
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
-	const syncTerminalContext = (context: TerminalContext | null) => {
+	const syncTerminalContext = () => {
+		const context = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
 		if (context) terminalContext = context;
 		else if (terminalContext?.file) terminalContext = { ...terminalContext, file: null };
 	};
-	$: syncTerminalContext(
-		(contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null
-	);
+	// Publish on tab selection, not unrelated updates to the tab's state.
+	$: {
+		activeTabId;
+		syncTerminalContext();
+	}
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -1845,7 +1848,14 @@
 								{onAskFile}
 								overlay={dragged}
 								chatId={owner.chatId}
-								bind:terminalContext={fileContexts[tab.id]}
+								bind:terminalContext={
+									() => fileContexts[tab.id],
+									(context) => {
+										if (fileContexts[tab.id] === context) return;
+										fileContexts[tab.id] = context;
+										if (contextTab?.id === tab.id) syncTerminalContext();
+									}
+								}
 							/>
 						</div>
 						{#if tab.kind === 'files' && fileConnection}
