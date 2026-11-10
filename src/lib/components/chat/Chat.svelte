@@ -26,7 +26,7 @@
 	import equal from 'fast-deep-equal';
 
 	import {
-		chatId as globalChatId,
+		chatId as _chatId,
 		config,
 		type Model,
 		models,
@@ -37,23 +37,23 @@
 		banners,
 		user,
 		socket,
-		audioQueue as globalAudioQueue,
-		showTabs as globalShowTabs,
+		audioQueue as _audioQueue,
+		showTabs as _showTabs,
 		sideChatRequest,
-		showCallOverlay as globalShowCallOverlay,
-		temporaryChatEnabled as globalTemporaryChatEnabled,
+		showCallOverlay as _showCallOverlay,
+		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
-		chatTitle as globalChatTitle,
-		showArtifacts as globalShowArtifacts,
-		artifactContents as globalArtifactContents,
+		chatTitle as _chatTitle,
+		showArtifacts as _showArtifacts,
+		artifactContents as _artifactContents,
 		tools,
 		skills,
 		terminalSkills,
 		toolServers,
 		terminalServers,
 		functions,
-		selectedFolder as globalSelectedFolder,
-		showEmbeds as globalShowEmbeds,
+		selectedFolder as _selectedFolder,
+		showEmbeds as _showEmbeds,
 		selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
@@ -162,16 +162,16 @@
 	let mainChatHref = '/';
 	$: if ($chatId) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
-	const chatId = embedded ? writable('') : globalChatId;
-	const chatTitle = embedded ? writable('') : globalChatTitle;
-	const audioQueue = embedded ? writable<AudioQueue | null>(null) : globalAudioQueue;
-	const temporaryChatEnabled = embedded ? writable(false) : globalTemporaryChatEnabled;
-	const selectedFolder = embedded ? writable(null) : globalSelectedFolder;
-	const showTabs = embedded ? writable(get(globalShowTabs)) : globalShowTabs;
-	const showCallOverlay = embedded ? writable(false) : globalShowCallOverlay;
-	const showArtifacts = embedded ? writable(false) : globalShowArtifacts;
-	const showEmbeds = embedded ? writable(false) : globalShowEmbeds;
-	const artifactContents = embedded ? writable(null) : globalArtifactContents;
+	const chatId = embedded ? writable('') : _chatId;
+	const chatTitle = embedded ? writable('') : _chatTitle;
+	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
+	const temporaryChatEnabled = embedded ? writable(false) : _temporaryChatEnabled;
+	const selectedFolder = embedded ? writable(null) : _selectedFolder;
+	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
+	const showCallOverlay = embedded ? writable(false) : _showCallOverlay;
+	const showArtifacts = embedded ? writable(false) : _showArtifacts;
+	const showEmbeds = embedded ? writable(false) : _showEmbeds;
+	const artifactContents = embedded ? writable(null) : _artifactContents;
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
