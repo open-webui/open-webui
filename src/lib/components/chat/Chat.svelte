@@ -40,6 +40,7 @@
 		audioQueue as _audioQueue,
 		showTabs as _showTabs,
 		sideChatRequest,
+		openSideChatIds,
 		showCallOverlay as _showCallOverlay,
 		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
@@ -908,6 +909,7 @@
 
 	$: if (embedded && embeddedDraftKey && embeddedDraftKey !== currentDraftKey) {
 		noteChatDebug('embedded draft requested', { embeddedDraftKey });
+		if (currentDraftKey) sessionStorage.removeItem(getChatInputKey(currentDraftKey));
 		currentDraftKey = embeddedDraftKey;
 		initEmbeddedDraft();
 	}
@@ -1622,7 +1624,8 @@
 		) {
 			if (!cb) return;
 			if (event.chat_id !== $chatId) {
-				cb({ status: 'cancelled', answers: {} });
+				if (!embedded && !$openSideChatIds.has(event.chat_id))
+					cb({ status: 'cancelled', answers: {} });
 				return;
 			}
 			if (
@@ -2107,7 +2110,9 @@
 			selectedModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
 		});
 
-		const storageChatInput = sessionStorage.getItem(getChatInputKey(chatIdProp));
+		const storageChatInput = sessionStorage.getItem(
+			getChatInputKey(chatIdProp || embeddedDraftKey)
+		);
 
 		const init = async () => {
 			if (!chatIdProp) {
@@ -5224,7 +5229,7 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
-	const getDraftChatId = () => chatIdProp || $chatId || null;
+	const getDraftChatId = () => chatIdProp || $chatId || embeddedDraftKey || null;
 	const getChatInputKey = (chatId: string | null = null) =>
 		`chat-input${chatId ? `-${chatId}` : ''}`;
 
