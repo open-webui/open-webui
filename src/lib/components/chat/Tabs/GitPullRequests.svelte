@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { gitRequest } from '$lib/apis/terminal/git';
-	import type { TerminalConnection } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/terminal';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
 	import Dropdown from '../../common/Dropdown.svelte';
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
-	export let connection: TerminalConnection;
-	export let chatId: string | null;
+	export let target: TerminalTarget;
+
 	export let directory: string;
 	export let branch: string;
 	export let defaultBranch = 'main';
@@ -66,7 +66,7 @@
 		operation: string,
 		params: Record<string, string> = {},
 		payload?: Record<string, unknown>
-	) => gitRequest<T>(connection, chatId, directory, `pr/${operation}`, params, payload);
+	) => gitRequest<T>(target, directory, `pr/${operation}`, params, payload);
 	const load = async () => {
 		const version = ++generation;
 		loading = true;

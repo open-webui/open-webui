@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getCwd, setCwd, type TerminalConnection } from '$lib/apis/terminal';
+	import { getCwd, setCwd, type TerminalTarget } from '$lib/apis/terminal';
 	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/terminal/recentFolders';
 	import { selectedFolder, showFileNav } from '$lib/stores';
 	import type { TerminalContext } from '$lib/types';
@@ -18,7 +18,7 @@
 	import FileNav from '../FileNav.svelte';
 
 	const i18n = getContext<any>('i18n');
-	export let connection: TerminalConnection;
+	export let target: TerminalTarget;
 	export let chatId: string | null = null;
 	export let userId: string;
 	export let terminalContext: TerminalContext | null = null;
@@ -40,7 +40,7 @@
 	const folderName = (path: string) => path.replace(/\/+$/, '').split('/').pop() || '/';
 	const normalize = (path: string) => path.replace(/\/+$/, '') || '/';
 
-	$: if (terminalContext?.terminalId === connection.selector)
+	$: if (terminalContext?.terminalId === target.selector)
 		cwd = terminalContext.currentDirectory;
 	$: directory = cwd;
 	$: options = [...new Set([directory, ...recent].filter(Boolean).map(normalize))].filter((path) =>
@@ -55,12 +55,12 @@
 			await initialization;
 			if (disposed) return;
 			if (!home) {
-				const result = await getCwd(connection.baseUrl, connection.key, chatId ?? undefined);
+				const result = await getCwd(target);
 				if (disposed) return;
 				home = result?.home ?? '';
 			}
 			if (!home) throw new Error('Terminal home is unavailable');
-			const paths = await loadRecentFolders(connection, chatId, home, userId);
+			const paths = await loadRecentFolders(target, home, userId);
 			if (disposed || version !== historyVersion) return;
 			recent = paths;
 			historyError = '';
@@ -71,19 +71,19 @@
 	}
 
 	onMount(() => {
-		if (!chatId && terminalContext?.terminalId !== connection.selector) {
+		if (!chatId && terminalContext?.terminalId !== target.selector) {
 			terminalContext = {
-				terminalId: connection.selector,
+				terminalId: target.selector,
 				currentDirectory:
-					$selectedFolder?.data?.terminal_id === connection.selector
+					$selectedFolder?.data?.terminal_id === target.selector
 						? ($selectedFolder.data.working_directory ?? '')
 						: ''
 			};
 		}
 		const selectedContext =
-			terminalContext?.terminalId === connection.selector ? terminalContext : null;
+			terminalContext?.terminalId === target.selector ? terminalContext : null;
 		if (selectedContext) cwd = selectedContext.currentDirectory;
-		initialization = getCwd(connection.baseUrl, connection.key, chatId ?? undefined).then(
+		initialization = getCwd(target).then(
 			(result) => {
 				if (disposed) return;
 				home = result?.home ?? '';
@@ -100,7 +100,7 @@
 		saving = true;
 		// A draft has no terminal session yet; submission applies this choice after creating the chat.
 		const result = chatId
-			? await setCwd(connection.baseUrl, connection.key, path, chatId)
+			? await setCwd(target, path)
 			: { cwd: path || home };
 		if (disposed) return;
 		if (!result?.cwd) {
@@ -110,7 +110,7 @@
 		}
 		// An empty path resets the terminal to its default directory.
 		cwd = path ? result.cwd : '';
-		terminalContext = { terminalId: connection.selector, currentDirectory: cwd };
+		terminalContext = { terminalId: target.selector, currentDirectory: cwd };
 		try {
 			await onSelect(cwd);
 		} catch (error) {
@@ -129,7 +129,7 @@
 			try {
 				await initialization;
 				if (disposed) return;
-				await rememberRecentFolder(connection, chatId, home, userId, cwd);
+				await rememberRecentFolder(target, home, userId, cwd);
 				if (disposed) return;
 				historyError = '';
 			} catch {
@@ -253,7 +253,7 @@
 											on:click|stopPropagation={() => {
 												show = false;
 												showFileNav.set({
-													terminalId: connection.selector,
+													terminalId: target.selector,
 													directory: path,
 													chatId
 												});
@@ -299,7 +299,7 @@
 			</div>
 			<div class="h-[60dvh] min-h-0" aria-busy={saving}>
 				<FileNav
-					terminalId={connection.selector}
+					terminalId={target.selector}
 					{chatId}
 					initialDirectory={directory || null}
 					manageFileRequests={false}

@@ -2,7 +2,7 @@
 	import { getContext, onDestroy } from 'svelte';
 	import {
 		searchFiles,
-		type TerminalConnection,
+		type TerminalTarget,
 		type TerminalFileSearchResult
 	} from '$lib/apis/terminal';
 	import { settings } from '$lib/stores';
@@ -13,7 +13,7 @@
 	import { fileIconName } from '../FileNav/fileIcon';
 
 	const i18n = getContext<any>('i18n');
-	export let connection: TerminalConnection;
+	export let target: TerminalTarget;
 	export let chatId: string | null = null;
 	export let onclose: () => void;
 	export let onselect: (path: string) => void;
@@ -26,7 +26,7 @@
 	let timer: ReturnType<typeof setTimeout>;
 	let requestVersion = 0;
 
-	const queueSearch = (query: string, connection: TerminalConnection, chatId: string | null) => {
+	const queueSearch = (query: string, target: TerminalTarget, chatId: string | null) => {
 		clearTimeout(timer);
 		const version = ++requestVersion;
 		results = [];
@@ -37,14 +37,11 @@
 		timer = setTimeout(async () => {
 			const path = query.trim().replace(/\\/g, '/');
 			const slash = path.lastIndexOf('/');
-			const response = await searchFiles(
-				connection.baseUrl,
-				connection.key,
+			const response = await searchFiles(target,
 				path.slice(slash + 1),
 				slash < 0 ? '.' : path.slice(0, slash) || '/',
 				50,
 				'file',
-				chatId ?? undefined,
 				localStorage.getItem('fileNav:showHidden') === 'true'
 			).catch(() => null);
 			if (version !== requestVersion) return;
@@ -54,7 +51,7 @@
 		}, 200);
 	};
 
-	$: queueSearch(query, connection, chatId);
+	$: queueSearch(query, target, chatId);
 	onDestroy(() => {
 		clearTimeout(timer);
 		requestVersion++;

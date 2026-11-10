@@ -77,10 +77,10 @@
 		type PanelTab
 	} from './Tabs/tabs';
 	import {
-		resolveTerminalConnection,
+		resolveTerminalTarget,
 		terminalRequest,
 		TerminalRequestError,
-		type TerminalConnection
+		type TerminalTarget
 	} from '$lib/apis/terminal';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
@@ -305,6 +305,7 @@
 								...tab,
 								label: $i18n.t('Files'),
 								terminalId: selector,
+								target: undefined,
 								path: undefined,
 								directory: undefined
 							}
@@ -323,7 +324,7 @@
 		tabsChatId = undefined;
 		clearChatViews();
 	}
-	const captureConnections = (..._connections: unknown[]) => {
+	const captureTargets = (..._connections: unknown[]) => {
 		captureView();
 		// A returning component must read disk before restoring its cached draft.
 		for (const tab of tabs.tabs) {
@@ -331,21 +332,24 @@
 		}
 		dirtyFiles = { ...dirtyFiles };
 	};
-	$: if (mounted && viewReady) captureConnections($terminalServers, $settings, $config, $user);
-	const tabConnection = (tab: PanelTab) =>
-		tab.terminalId && terminalAccessible(tab.terminalId)
-			? resolveTerminalConnection(
-					tab.terminalId,
-					$terminalServers ?? [],
-					directTerminals,
-					localStorage.token ?? ''
-				)
-			: null;
+	$: if (mounted && viewReady) captureTargets($terminalServers, $settings, $config, $user);
+	const tabTarget = (tab: PanelTab) => {
+		if (!tab.terminalId || !terminalAccessible(tab.terminalId)) return null;
+		const target = resolveTerminalTarget(
+			tab.terminalId,
+			$terminalServers ?? [],
+			directTerminals,
+			localStorage.token ?? '',
+			tab.target?.context ?? { chatId, modelId: modelId ?? null }
+		);
+		if (target) tab.target = target;
+		return target;
+	};
 	const startSession = (owner: NonNullable<typeof viewEntry>, tab: PanelTab) => {
-		const connection = tabConnection(tab);
-		if (connection) {
+		const target = tabTarget(tab);
+		if (target) {
 			delete sessionFailures[tab.id];
-			void createViewSession(owner, tab.id, connection);
+			void createViewSession(owner, tab.id, target);
 		}
 	};
 
@@ -367,11 +371,11 @@
 	let hasOpenedTabs = false;
 	let commentTarget: { comment_id?: string } = {};
 	let closing = new Set<string>();
-	let selectedConnection: TerminalConnection | null = null;
+	let selectedTarget: TerminalTarget | null = null;
 	let showQuickOpen = false;
 	let voiceNote: VoiceNote;
 	let voiceNoteTarget: {
-		connection: TerminalConnection;
+		target: TerminalTarget;
 		chatId: string | null;
 		directory?: string;
 	} | null = null;
@@ -382,12 +386,12 @@
 			voiceNote?.finishRecording();
 			return;
 		}
-		if (!canVoiceNote || !selectedConnection || !$user) return;
+		if (!canVoiceNote || !selectedTarget || !$user) return;
 		voiceNoteTarget = {
-			connection: selectedConnection,
+			target: selectedTarget,
 			chatId,
 			directory:
-				activeFileContext?.terminalId === selectedConnection.selector
+				activeFileContext?.terminalId === selectedTarget.selector
 					? activeFileContext.currentDirectory
 					: undefined
 		};
@@ -503,6 +507,18 @@
 	const openPanel = (tab: PanelTab, inSidePanel = false) => {
 		if (!viewReady || !viewEntry) return;
 		hasOpenedTabs = true;
+		if (tab.terminalId) {
+			const target =
+				tab.target ??
+				resolveTerminalTarget(
+					tab.terminalId,
+					$terminalServers ?? [],
+					directTerminals,
+					localStorage.token,
+					{ chatId: chatId, modelId: modelId ?? null }
+				);
+			tab = { ...tab, target: target ?? undefined };
+		}
 		tabs = inSidePanel ? openTabInSidePanel(tabs, tab) : openTab(tabs, tab);
 		changeChatView(viewEntry, { ...viewEntry.state, panels: tabs });
 		showTabs.set(true);
@@ -557,17 +573,36 @@
 		openPageTab(request);
 	}
 
-	const openFiles = (selector = $selectedTerminalId, directory?: string, newTab = false) => {
+	const openFiles = (
+		selector = $selectedTerminalId,
+		directory?: string,
+		newTab = false,
+		sourceModelId = modelId
+	) => {
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
+		const target = resolveTerminalTarget(
+			selector,
+			$terminalServers ?? [],
+			directTerminals,
+			localStorage.token,
+			{ chatId: chatId, modelId: sourceModelId ?? null }
+		);
+		const pinnedModel = target?.context.modelId ?? null;
 		const existing = newTab
 			? undefined
 			: (tabs.tabs.find(
 					(tab) =>
 						tab.id === tabs.activeId &&
 						tab.kind === 'files' &&
-						(tab.terminalId ?? null) === selector
+						(tab.terminalId ?? null) === selector &&
+						(tab.target?.context.modelId ?? null) === pinnedModel
 				) ??
-				tabs.tabs.find((tab) => tab.kind === 'files' && (tab.terminalId ?? null) === selector));
+				tabs.tabs.find(
+					(tab) =>
+						tab.kind === 'files' &&
+						(tab.terminalId ?? null) === selector &&
+						(tab.target?.context.modelId ?? null) === pinnedModel
+				));
 		if (!existing && terminalContext?.terminalId === selector)
 			directory ??= terminalContext.currentDirectory || undefined;
 		const id = existing?.id ?? uuidv4();
@@ -576,6 +611,7 @@
 			kind: 'files',
 			label: $i18n.t('Files'),
 			terminalId: selector ?? undefined,
+			target: target ?? undefined,
 			path: directory
 		});
 		const view = fileViews[id];
@@ -586,37 +622,55 @@
 		)
 			void view.browseDirectory(directory);
 	};
-	const openFile = (path: string, selector: string, page?: number | null) => {
+	const openFile = (
+		path: string,
+		selector: string,
+		page?: number | null,
+		sourceModelId = modelId
+	) => {
 		if (!terminalAccessible(selector)) return;
+		const target = resolveTerminalTarget(
+			selector,
+			$terminalServers ?? [],
+			directTerminals,
+			localStorage.token,
+			{ chatId: chatId, modelId: sourceModelId ?? null }
+		);
+		const pinnedModel = target?.context.modelId ?? null;
 		path = path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 		const id =
 			tabs.tabs.find(
 				(tab) =>
-					tab.kind === 'file' && !tab.untitled && tab.terminalId === selector && tab.path === path
-			)?.id ?? fileTabId(selector, path);
+					tab.kind === 'file' &&
+					!tab.untitled &&
+					tab.terminalId === selector &&
+					(tab.target?.context.modelId ?? null) === pinnedModel &&
+					tab.path === path
+			)?.id ?? fileTabId(JSON.stringify([selector, pinnedModel]), path);
 		openPanel({
 			id,
 			kind: 'file',
 			label: path.split('/').pop() || path,
 			terminalId: selector,
+			target: target ?? undefined,
 			path,
 			page
 		});
 		if (page != null) fileViews[id]?.revealPage?.(page);
 	};
 	const newFile = () => {
-		if (!terminalFilesAvailable || !selectedConnection) return;
+		if (!terminalFilesAvailable || !selectedTarget) return;
 		let number = 1;
 		while (tabs.tabs.some((tab) => tab.untitled && tab.label === `Untitled-${number}`)) number++;
 		openPanel({
 			id: uuidv4(),
 			kind: 'file',
 			label: `Untitled-${number}`,
-			terminalId: selectedConnection.selector,
-			connection: { ...selectedConnection },
+			terminalId: selectedTarget.selector,
+			target: { ...selectedTarget },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedConnection.selector
+				activeFileContext?.terminalId === selectedTarget.selector
 					? activeFileContext
 					: undefined
 		});
@@ -823,7 +877,7 @@
 		dragged = false;
 	};
 	const newTerminal = () => {
-		if (!terminalEnabled || !selectedConnection) return;
+		if (!terminalEnabled || !selectedTarget) return;
 		let terminalNumber = 1;
 		while (
 			tabs.tabs.some((tab) => tab.kind === 'terminal' && tab.terminalNumber === terminalNumber)
@@ -836,19 +890,19 @@
 			kind: 'terminal',
 			label: `${$i18n.t('Terminal')} ${terminalNumber}`,
 			terminalNumber,
-			terminalId: selectedConnection.selector,
-			connection: { ...selectedConnection }
+			terminalId: selectedTarget.selector,
+			target: { ...selectedTarget }
 		});
 		if (viewEntry && viewReady) startSession(viewEntry, tabs.tabs.find((tab) => tab.id === id)!);
 	};
 	const openDesktop = () => {
-		if (!desktopEnabled || !selectedConnection) return;
+		if (!desktopEnabled || !selectedTarget) return;
 		openPanel({
-			id: JSON.stringify(['desktop', selectedConnection.selector]),
+			id: JSON.stringify(['desktop', selectedTarget.baseUrl, selectedTarget.context.modelId]),
 			kind: 'desktop',
 			label: $i18n.t('Desktop'),
-			terminalId: selectedConnection.selector,
-			connection: { ...selectedConnection }
+			terminalId: selectedTarget.selector,
+			target: { ...selectedTarget }
 		});
 	};
 	const openBrowser = (
@@ -863,27 +917,32 @@
 		const existing =
 			url &&
 			tabs.tabs.find(
-				(tab) => tab.kind === 'browser' && tab.terminalId === selector && tab.path === url
+				(tab) =>
+					tab.kind === 'browser' &&
+					tab.terminalId === selector &&
+					tab.path === url &&
+					(tab.target?.context.modelId ?? null) === (selectedTarget?.context.modelId ?? null)
 			);
 		if (existing) {
 			selectTab(existing.id);
 			return;
 		}
-		const connection = selector
-			? resolveTerminalConnection(
+		const target = selector
+			? resolveTerminalTarget(
 					selector,
 					$terminalServers ?? [],
 					directTerminals,
-					localStorage.token ?? ''
+					localStorage.token ?? '',
+					{ chatId: chatId, modelId: modelId ?? null }
 				)
 			: null;
-		if (!connection) return;
+		if (!target) return;
 		const terminal = ($terminalServers ?? []).find((item) => item.id === selector);
 		const proxyBase =
 			baseUrl ??
-			(connection && chatContextNeedsSavedChat(terminal) && chatId
-				? `${connection.baseUrl}/chats/${encodeURIComponent(chatId)}`
-				: connection?.baseUrl);
+			(target && chatContextNeedsSavedChat(terminal) && chatId
+				? `${target.baseUrl}/chats/${encodeURIComponent(chatId)}`
+				: target?.baseUrl);
 		const id = uuidv4();
 		openPanel({
 			id,
@@ -892,7 +951,7 @@
 			path: url,
 			terminalId: selector ?? undefined,
 			browserBaseUrl: proxyBase,
-			connection: connection ?? undefined
+			target: target ?? undefined
 		});
 		if (viewEntry && viewReady) startSession(viewEntry, tabs.tabs.find((tab) => tab.id === id)!);
 	};
@@ -907,12 +966,12 @@
 			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
 			if (tab.kind === 'page' && !(await pageViews[id]?.requestClose() ?? true)) return;
-			const connection =
+			const target =
 				tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')
-					? tabConnection(tab)
+					? tabTarget(tab)
 					: null;
 			if (
-				connection &&
+				target &&
 				tab.kind === 'terminal' &&
 				!(await new Promise<boolean>((resolve) => {
 					stopTerminalChoice = resolve;
@@ -942,11 +1001,10 @@
 				await tick();
 				if (owner === viewEntry) document.getElementById(domId(tabs.activeId))?.focus();
 			}
-			if (connection && tab.sessionId) {
+			if (target && tab.sessionId) {
 				try {
 					await terminalRequest(
-						connection,
-						owner.chatId,
+						target,
 						`${tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(tab.sessionId)}`,
 						{ method: 'DELETE' }
 					);
@@ -1085,16 +1143,12 @@
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
-	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
-	const chatContextAvailable = (terminal: any) => chatContext(terminal) !== false;
-	const chatContextNeedsSavedChat = (terminal: any) =>
-		chatContext(terminal)?.context_id === 'chat_id';
-	$: selectedSystemTerminal = ($terminalServers ?? []).find(
-		(t) => t.id && t.id === $selectedTerminalId
+	const chatContextNeedsSavedChat = (terminal: any) => terminal?.scope === 'chat';
+	$: selectedSystemTerminal = ($terminalServers ?? []).find((t) =>
+		(!!$selectedTerminalId && t.id === $selectedTerminalId)
 	);
 	$: selectedSystemTerminalAvailable =
 		selectedSystemTerminal &&
-		chatContextAvailable(selectedSystemTerminal) &&
 		!(chatContextNeedsSavedChat(selectedSystemTerminal) && !isSavedChatId(chatId));
 	$: terminalFilesAvailable = !!(
 		$config?.features?.enable_tool_servers &&
@@ -1201,7 +1255,7 @@
 				if (voiceNoteTarget || canVoiceNote) action = openVoiceNote;
 				break;
 			case Shortcut.QUICK_OPEN:
-				if (terminalFilesAvailable && selectedConnection)
+				if (terminalFilesAvailable && selectedTarget)
 					action = () => {
 						showQuickOpen = true;
 					};
@@ -1210,7 +1264,7 @@
 				if (showFilesTab) action = () => openFiles();
 				break;
 			case Shortcut.OPEN_DESKTOP:
-				if (desktopEnabled && selectedConnection) action = openDesktop;
+				if (desktopEnabled && selectedTarget) action = openDesktop;
 				break;
 			case Shortcut.NEW_CHAT_TAB:
 				if (canSideChat) action = () => openFeature('side');
@@ -1219,13 +1273,13 @@
 				if (showCommentsTab) action = () => openFeature('comments');
 				break;
 			case Shortcut.NEW_FILE:
-				if (terminalFilesAvailable && selectedConnection) action = newFile;
+				if (terminalFilesAvailable && selectedTarget) action = newFile;
 				break;
 			case Shortcut.NEW_TERMINAL:
-				if (terminalEnabled && selectedConnection) action = newTerminal;
+				if (terminalEnabled && selectedTarget) action = newTerminal;
 				break;
 			case Shortcut.NEW_BROWSER:
-				if (browserEnabled && selectedConnection) action = () => openBrowser();
+				if (browserEnabled && selectedTarget) action = () => openBrowser();
 				break;
 			case Shortcut.CLOSE_TAB:
 				if (panelVisible && tabs.activeId)
@@ -1261,10 +1315,9 @@
 		($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
 		if (!$config?.features?.enable_tool_servers) return false;
-		const system = ($terminalServers ?? []).find((terminal) => terminal.id === selector);
+		const system = ($terminalServers ?? []).find((terminal) => (!!selector && terminal.id === selector));
 		if (system)
 			return (
-				chatContextAvailable(system) &&
 				!(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId))
 			);
 		return !!(
@@ -1273,13 +1326,14 @@
 			directTerminals.some((terminal) => terminal.url === selector)
 		);
 	};
-	$: selectedConnection =
+	$: selectedTarget =
 		terminalFilesAvailable && mounted
-			? resolveTerminalConnection(
+			? resolveTerminalTarget(
 					$selectedTerminalId,
 					$terminalServers ?? [],
 					directTerminals,
-					localStorage.token ?? ''
+					localStorage.token ?? '',
+					{ chatId: chatId, modelId: modelId ?? null }
 				)
 			: null;
 	const checkTerminal = async () => {
@@ -1287,11 +1341,11 @@
 		terminalEnabled = false;
 		desktopEnabled = false;
 		browserEnabled = false;
-		if (!selectedConnection) return;
+		if (!selectedTarget) return;
 		try {
 			const result = await terminalRequest<{
 				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean };
-			}>(selectedConnection, chatId, '/api/config');
+			}>(selectedTarget, '/api/config');
 			if (version === featureVersion) {
 				terminalEnabled = result.features?.terminal !== false;
 				desktopEnabled = result.features?.desktop === true;
@@ -1302,7 +1356,7 @@
 		}
 	};
 	$: {
-		selectedConnection;
+		selectedTarget;
 		chatId;
 		void checkTerminal();
 	}
@@ -1407,7 +1461,7 @@
 	$: if (
 		$selectedTerminalId &&
 		$terminalServers !== null &&
-		!($terminalServers ?? []).some((t) => t.id && t.id === $selectedTerminalId) &&
+		!($terminalServers ?? []).some((t) => (!!$selectedTerminalId && t.id === $selectedTerminalId)) &&
 		!(
 			$config?.features?.enable_direct_integrations &&
 			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
@@ -1572,19 +1626,19 @@
 		onclose={() => {
 			voiceNoteTarget = null;
 		}}
-		onsaved={(path) => openFile(path, target.connection.selector)}
+		onsaved={(path) => openFile(path, target.target.selector)}
 	/>
 {/if}
 
-{#if showQuickOpen && terminalFilesAvailable && selectedConnection}
-	{#key `${selectedConnection.selector}:${chatId}`}
+{#if showQuickOpen && terminalFilesAvailable && selectedTarget}
+	{#key JSON.stringify([selectedTarget.baseUrl, selectedTarget.context.modelId, chatId])}
 		<QuickOpen
-			connection={selectedConnection}
+			target={selectedTarget}
 			{chatId}
 			onclose={() => {
 				showQuickOpen = false;
 			}}
-			onselect={(path) => openFile(path, selectedConnection!.selector)}
+			onselect={(path) => openFile(path, selectedTarget!.selector)}
 		/>
 	{/key}
 {/if}
@@ -1736,9 +1790,9 @@
 		{/each}
 		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.kind !== 'chat') as tab (`${viewEntry?.instanceId}:${tab.id}`)}
 			{@const owner = viewEntry!}
-			{@const connection =
+			{@const target =
 				mounted && $config && $user && $settings && $terminalServers !== null
-					? tabConnection(tab)
+					? tabTarget(tab)
 					: null}
 			{@const failure = sessionFailures[tab.id]}
 			<div
@@ -1754,7 +1808,7 @@
 				on:focusin={() => focusGroup(tabGroups[tab.id].id)}
 				on:pointerdown={() => focusGroup(tabGroups[tab.id].id)}
 			>
-				{#if tab.terminalId && !connection}
+				{#if tab.terminalId && !target}
 					<div
 						role="status"
 						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
@@ -1814,9 +1868,9 @@
 							onCountChange={setCommentCount}
 						/>
 					{/key}
-				{:else if tab.kind === 'desktop' && connection}
+				{:else if tab.kind === 'desktop' && target}
 					<Desktop
-						connection={connection!}
+						target={target!}
 						chatId={owner.chatId}
 						active={panelVisible && visibleTabIds.has(tab.id)}
 						overlay={dragged}
@@ -1866,8 +1920,7 @@
 							{#if tab.kind === 'terminal'}
 								<XTerminal
 									bind:this={terminalViews[tab.id]}
-									connection={connection!}
-									chatId={owner.chatId}
+									target={target!}
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
@@ -1879,8 +1932,7 @@
 							{:else}
 								<Browser
 									bind:this={browserViews[tab.id]}
-									{connection}
-									chatId={owner.chatId}
+									{target}
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
@@ -1894,14 +1946,13 @@
 							{/if}
 						{/key}
 					{/if}
-				{:else if tab.untitled && connection}
+				{:else if tab.untitled && target}
 					<UntitledFile
 						initialView={owner.drafts.get(tab.id)}
 						bind:this={fileViews[tab.id]}
 						bind:dirty={dirtyFiles[tab.id]}
 						label={tab.label}
-						connection={connection!}
-						chatId={owner.chatId}
+						target={target!}
 						initialDirectory={tab.context?.currentDirectory}
 						isOpen={(path) =>
 							tabs.tabs.some(
@@ -1923,17 +1974,12 @@
 						}}
 					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
-					{@const fileConnection = mounted
-						? resolveTerminalConnection(
-								tab.terminalId,
-								$terminalServers ?? [],
-								directTerminals,
-								localStorage.token ?? ''
-							)
-						: null}
+					{@const fileTarget = mounted ? tabTarget(tab) : null}
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
 							<FileNav
+								target={fileTarget}
+								modelId={fileTarget?.context.modelId ?? null}
 								onFileSaved={(content) => {
 									const draft = owner.drafts.get(tab.id);
 									if (draft?.preview) {
@@ -1964,7 +2010,7 @@
 									}
 								}}
 								gitStatus={fileGitStatuses[tab.terminalId] ?? null}
-								gitConnection={fileConnection}
+								gitTarget={fileTarget}
 								gitDiffMode={fileGitDiffModes[tab.terminalId] ?? 'unified'}
 								gitHideWhitespace={fileGitHideWhitespace[tab.terminalId] ?? false}
 								bind:this={fileViews[tab.id]}
@@ -1975,30 +2021,34 @@
 								active={panelVisible && visibleTabIds.has(tab.id)}
 								manageFileRequests={false}
 								showTerminalDock={tab.kind === 'files'}
-								onOpenFile={(path, page) => openFile(path, tab.terminalId!, page)}
-								onBrowseDirectory={(path) => openFiles(tab.terminalId, path)}
+								onOpenFile={(path, page) =>
+									openFile(path, tab.terminalId!, page, fileTarget?.context.modelId)}
+								onBrowseDirectory={(path) =>
+									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
 								{onAskFile}
 								overlay={dragged}
 								chatId={owner.chatId}
 								bind:terminalContext={fileContexts[tab.id]}
 							/>
 						</div>
-						{#if tab.kind === 'files' && fileConnection}
+						{#if tab.kind === 'files' && fileTarget}
 							<GitBar
 								bind:this={gitViews[tab.id]}
 								initialView={owner.transient[`git:${tab.id}`]}
 								bind:status={fileGitStatuses[tab.terminalId]}
 								bind:diffMode={fileGitDiffModes[tab.terminalId]}
 								bind:hideWhitespace={fileGitHideWhitespace[tab.terminalId]}
-								connection={fileConnection}
+								target={fileTarget}
 								chatId={owner.chatId}
 								directory={fileContexts[tab.id]?.currentDirectory ??
 									tab.directory ??
 									tab.path ??
 									'.'}
 								active={panelVisible && visibleTabIds.has(tab.id)}
-								onOpenFile={(path) => openFile(path, tab.terminalId!)}
-								onOpenDirectory={(path) => openFiles(tab.terminalId, path)}
+								onOpenFile={(path) =>
+									openFile(path, tab.terminalId!, null, fileTarget?.context.modelId)}
+								onOpenDirectory={(path) =>
+									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
 							/>
 						{/if}
 					</div>

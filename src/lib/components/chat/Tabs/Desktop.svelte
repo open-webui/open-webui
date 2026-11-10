@@ -5,11 +5,11 @@
 	import { toast } from 'svelte-sonner';
 	import type RFB from '@novnc/novnc';
 	import Icon from '../FileNav/Icon.svelte';
-	import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
+	import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
 	import { openTerminalSocket } from '$lib/apis/terminal/socket';
 
 	const i18n = getContext<any>('i18n');
-	export let connection: TerminalConnection;
+	export let target: TerminalTarget;
 	export let chatId: string | null = null;
 	export let active = true;
 	export let overlay = false;
@@ -67,8 +67,7 @@
 		status = $i18n.t('Connecting…');
 		try {
 			const info = await terminalRequest<{ transport?: string; audio?: boolean }>(
-				connection,
-				chatId,
+				target,
 				'/desktop'
 			);
 			if (version !== generation) return;
@@ -77,7 +76,7 @@
 			await tick();
 			if (version !== generation) return;
 			if (transport === 'frames') {
-				socket = openTerminalSocket(connection, chatId, '/desktop/stream');
+				socket = openTerminalSocket(target, '/desktop/stream');
 				let framePending = Promise.resolve();
 				socket.onmessage = async (event) => {
 					if (version !== generation) return;
@@ -98,7 +97,7 @@
 			} else {
 				const { default: RFB } = await import('@novnc/novnc');
 				if (version !== generation) return;
-				socket = openTerminalSocket(connection, chatId, '/desktop/stream', (channel) => {
+				socket = openTerminalSocket(target, '/desktop/stream', (channel) => {
 					if (version !== generation) return;
 					viewer = new RFB(surface, channel);
 					const cursor = viewer._cursor;
@@ -212,7 +211,7 @@
 		</div>
 	{/if}
 	{#if audioAvailable && active && !status && !error}
-		<DesktopAudio {connection} {chatId} {fullscreenEnabled} />
+		<DesktopAudio {target}  {fullscreenEnabled} />
 	{/if}
 	{#if fullscreenEnabled}
 		<button

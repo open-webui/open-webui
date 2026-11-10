@@ -1,6 +1,8 @@
 <script lang="ts">
+	export let modelId: string | null = null;
 	import { getContext, tick } from 'svelte';
-	import { resolveTerminalConnection, type TerminalConnection } from '$lib/apis/terminal';
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import UserTerminalsModal from '../UserTerminalsModal.svelte';
 	import { updateChatById } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import TerminalSystemInfoModal from '../TerminalSystemInfoModal.svelte';
@@ -36,23 +38,21 @@
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 
-	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
 		(t) =>
 			t.id &&
-			chatContext(t) !== false &&
 			!(
 				($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
-				chatContext(t)?.context_id === 'chat_id'
+				t.scope === 'chat'
 			)
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
 	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
 	$: systemSections = [
-		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
-		{ devices: true, terminals: systemTerminals.filter(isDevice) }
-	].filter((section) => section.terminals.length > 0);
+		{ devices: false, managed: true, terminals: systemTerminals.filter((t) => !isDevice(t)) },
+		{ devices: true, managed: false, terminals: systemTerminals.filter(isDevice) }
+	].filter((section) => !section.devices || section.terminals.length > 0);
 	$: directTerminals = (
 		$config?.features?.enable_direct_integrations &&
 		($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
@@ -132,14 +132,13 @@
 		show = false;
 	};
 
-	$: selectedSystemTerminal = systemTerminals.find((t) => t.id === $selectedTerminalId);
+	$: selectedSystemTerminal = systemTerminals.find((t) => (!!$selectedTerminalId && t.id === $selectedTerminalId));
 	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
-	$: folderConnection = resolveTerminalConnection(
+	$: folderTarget = resolveTerminalTarget(
 		$selectedTerminalId,
 		systemTerminals,
 		directTerminals,
-		''
-	);
+		'', { chatId: $activeChatId || null, modelId: modelId });
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
@@ -147,9 +146,10 @@
 		selectedSystemTerminal?.id ||
 		selectedDirectTerminal?.name ||
 		selectedDirectTerminal?.url?.replace(/^https?:\/\//, '') ||
-		$i18n.t('Terminal');
+		($selectedTerminalId ? $i18n.t('Unavailable terminal') : $i18n.t('Terminal'));
 	$: if (disabled && show) show = false;
 
+	let showTerminals = false;
 	async function saveSelection(id: string | null) {
 		if (isSavedChatId(chatId)) {
 			try {
@@ -164,32 +164,33 @@
 		}
 		return true;
 	}
-	let info: { connection: TerminalConnection; chatId: string | null; label: string } | null = null;
+	async function selectTerminal(id: string) {
+		if (await saveSelection(id)) selectedTerminalId.set(id);
+	}
+	let info: { target: TerminalTarget; label: string } | null = null;
 	const openInfo = async (selector: string, label: string) => {
 		if (
-			chatContext(systemTerminals.find((t) => t.id === selector))?.context_id === 'chat_id' &&
+			systemTerminals.find((t) => (!!selector && t.id === selector))?.scope === 'chat' &&
 			!isSavedChatId($activeChatId)
 		)
 			return;
-		const connection = resolveTerminalConnection(
+		const target = resolveTerminalTarget(
 			selector,
 			systemTerminals,
 			directTerminals,
-			localStorage.token ?? ''
-		);
-		if (!connection) return;
-		const chatId = $activeChatId;
+			localStorage.token ?? '', { chatId: $activeChatId || null, modelId: modelId });
+		if (!target) return;
 		show = false;
 		await tick();
-		info = { connection, chatId, label };
+		info = { target, label };
 	};
 	$: if (
 		!$config?.features?.enable_tool_servers ||
 		(info &&
-			(info.chatId !== $activeChatId ||
-				(info.connection.system
-					? !systemTerminals.some((t) => t.id === info?.connection.selector)
-					: !directTerminals.some((t) => t.url === info?.connection.selector))))
+			(info.target.context.chatId !== $activeChatId ||
+				(info.target.system
+					? !systemTerminals.some((t) => t.id === info?.target.selector)
+					: !directTerminals.some((t) => t.url === info?.target.selector))))
 	)
 		info = null;
 
@@ -287,7 +288,7 @@
 
 						{#each directTerminals as terminal}
 							<div
-								class="group/instance relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="group/terminal relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							>
 								<button
 									type="button"
@@ -328,7 +329,7 @@
 								<div
 									class="absolute inset-y-0 {$selectedTerminalId === terminal.url
 										? 'right-6'
-										: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/instance:opacity-100 group-hover/instance:pointer-events-auto group-focus-within/instance:opacity-100 group-focus-within/instance:pointer-events-auto"
+										: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/terminal:opacity-100 group-hover/terminal:pointer-events-auto group-focus-within/terminal:opacity-100 group-focus-within/terminal:pointer-events-auto"
 								>
 									<Tooltip content={$i18n.t('System info')} placement="top">
 										<button
@@ -355,9 +356,36 @@
 							<span
 								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 							>
-								{section.devices ? $i18n.t('Your devices') : $i18n.t('System')}
+								{section.devices
+									? $i18n.t('Your devices')
+									: section.managed
+										? $i18n.t('Terminals')
+										: $i18n.t('System')}
 							</span>
-							{#if !section.devices && $user?.role === 'admin'}
+							{#if section.managed}
+								<Tooltip content={$i18n.t('Manage terminals')} placement="top">
+									<button
+										type="button"
+										aria-label={$i18n.t('Manage terminals')}
+										class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
+										on:click|stopPropagation={() => {
+											show = false;
+											showTerminals = true;
+										}}
+									>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											viewBox="0 0 20 20"
+											fill="currentColor"
+											class="size-3.5"
+										>
+											<path
+												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
+											/>
+										</svg>
+									</button>
+								</Tooltip>
+							{:else if !section.devices && $user?.role === 'admin'}
 								<Tooltip content={$i18n.t('Add Terminal')} placement="top">
 									<button
 										type="button"
@@ -385,7 +413,7 @@
 
 						{#each section.terminals as terminal}
 							<div
-								class="group/instance relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="group/terminal relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 							>
 								<button
 									type="button"
@@ -425,11 +453,11 @@
 										</div>
 									{/if}
 								</button>
-								{#if chatContext(terminal)?.context_id !== 'chat_id' || isSavedChatId($activeChatId)}
+								{#if terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
 									<div
 										class="absolute inset-y-0 {$selectedTerminalId === terminal.id
 											? 'right-6'
-											: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/instance:opacity-100 group-hover/instance:pointer-events-auto group-focus-within/instance:opacity-100 group-focus-within/instance:pointer-events-auto"
+											: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/terminal:opacity-100 group-hover/terminal:pointer-events-auto group-focus-within/terminal:opacity-100 group-focus-within/terminal:pointer-events-auto"
 									>
 										<Tooltip content={$i18n.t('System info')} placement="top">
 											<button
@@ -446,6 +474,15 @@
 									</div>
 								{/if}
 							</div>
+						{:else}
+							<button
+								type="button"
+								class="flex w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] text-gray-500 rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								on:click={() => {
+									show = false;
+									showTerminals = true;
+								}}>{$i18n.t('New terminal')}</button
+							>
 						{/each}
 					{/each}
 				</DropdownMenu>
@@ -457,19 +494,18 @@
 {#if info}
 	{#key info}
 		<TerminalSystemInfoModal
-			connection={info.connection}
-			chatId={info.chatId}
+			target={info.target}
 			label={info.label}
 			onClose={() => (info = null)}
 		/>
 	{/key}
 {/if}
 
-{#if folderConnection && (chatContext(selectedSystemTerminal)?.context_id !== 'chat_id' || isSavedChatId(chatId))}
-	{#key `${$user?.id}:${folderConnection.selector}:${chatId ?? ''}`}
+{#if folderTarget && (selectedSystemTerminal?.scope !== 'chat' || isSavedChatId(chatId))}
+	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}
-			connection={folderConnection}
+			target={folderTarget}
 			{chatId}
 			userId={$user?.id ?? ''}
 			bind:terminalContext
@@ -481,4 +517,13 @@
 			{disabled}
 		/>
 	{/key}
+{/if}
+
+{#if showTerminals}
+	<UserTerminalsModal {modelId}
+		bind:show={showTerminals}
+		{chatId}
+		selected={$selectedTerminalId}
+		onSelect={selectTerminal}
+	/>
 {/if}

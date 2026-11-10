@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { writable } from 'svelte/store';
 import { getChatView, updateChatView } from '$lib/apis/chats/view';
-import { terminalRequest, type TerminalConnection } from '$lib/apis/terminal';
+import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
 import { createBrowserSession } from '$lib/apis/terminal/browser';
 import { isSavedChatId } from '$lib/utils/chatId';
 import {
@@ -186,7 +186,7 @@ export function updateViewTab(entry: Entry, id: string, values: Partial<PanelTab
 	);
 }
 
-export function createViewSession(entry: Entry, id: string, connection: TerminalConnection) {
+export function createViewSession(entry: Entry, id: string, target: TerminalTarget) {
 	const pending = entry.pending.get(id);
 	if (pending) return pending;
 	const tab = entry.state.panels.tabs.find((tab) => tab.id === id);
@@ -196,8 +196,8 @@ export function createViewSession(entry: Entry, id: string, connection: Terminal
 		try {
 			const session =
 				tab.kind === 'browser'
-					? await createBrowserSession(connection, entry.chatId, tab.path ?? '')
-					: await terminalRequest<{ id: string }>(connection, entry.chatId, '/api/terminals', {
+					? await createBrowserSession(target, tab.path ?? '')
+					: await terminalRequest<{ id: string }>(target, '/api/terminals', {
 							method: 'POST'
 						});
 			updateViewTab(entry, id, { sessionId: session.id });
@@ -225,6 +225,9 @@ export async function promoteChatView(
 		await bind();
 		entries.delete(key(entry.userId, entry.chatId || entry.instanceId));
 		entry.chatId = chatId;
+		for (const tab of entry.state.panels.tabs) {
+			if (tab.target) tab.target.context.chatId = chatId;
+		}
 		entry.persistent = isSavedChatId(chatId) && !temporary;
 		entries.set(key(entry.userId, chatId), entry);
 		entry.error = '';

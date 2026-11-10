@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import { getTerminalFeatures, type TerminalConnection } from '$lib/apis/terminal';
+	import { getTerminalFeatures, type TerminalTarget } from '$lib/apis/terminal';
 	import { watchTerminalFiles } from '$lib/apis/terminal/events';
 	import {
 		gitRequest,
@@ -21,7 +21,7 @@
 	import Tooltip from '../../common/Tooltip.svelte';
 	import GitPullRequests from './GitPullRequests.svelte';
 
-	export let connection: TerminalConnection | null = null;
+	export let target: TerminalTarget | null = null;
 	export let directory = '.';
 	export let chatId: string | null = null;
 	export let active = false;
@@ -184,13 +184,13 @@
 		operation: string,
 		params: Record<string, string> = {},
 		body?: Record<string, unknown>
-	) => gitRequest<T>(connection!, chatId, status?.root ?? directory, operation, params, body);
+	) => gitRequest<T>(target!, status?.root ?? directory, operation, params, body);
 	const refresh = (force = false): Promise<void> => {
-		if (!connection || !active || !gitEnabled || (!force && document.hidden))
+		if (!target || !active || !gitEnabled || (!force && document.hidden))
 			return Promise.resolve();
 		if (pending) return pending;
 		const current = generation;
-		const task = gitRequest<GitStatus>(connection, chatId, directory, 'status')
+		const task = gitRequest<GitStatus>(target, directory, 'status')
 			.then((next) => {
 				if (current !== generation) return;
 				detectionError = '';
@@ -266,8 +266,8 @@
 			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
-		if (enabled && connection) {
-			const features = await getTerminalFeatures(connection, chatId);
+		if (enabled && target) {
+			const features = await getTerminalFeatures(target);
 			if (version !== configuration || !mounted) return;
 			gitEnabled = features.git === true;
 			if (!gitEnabled) {
@@ -278,8 +278,7 @@
 			if (features.events !== true) return;
 			const current = generation;
 			stopWatching = watchTerminalFiles(
-				connection,
-				chatId,
+				target,
 				directory,
 				async () => {
 					// An event arriving during a status request must refresh after that request.
@@ -292,7 +291,7 @@
 			);
 		}
 	};
-	$: configure(JSON.stringify([connection, chatId, directory]), mounted && active);
+	$: configure(JSON.stringify([target, chatId, directory]), mounted && active);
 
 	const selectFile = async (file: GitFile, staged: boolean) => {
 		resetSelection();
@@ -372,8 +371,7 @@
 		error = '';
 		try {
 			const result = await gitAction<{ path?: string }>(
-				connection!,
-				chatId,
+				target!,
 				status?.root ?? directory,
 				action,
 				fields
@@ -808,12 +806,11 @@
 						</div>
 					</Dropdown>
 				</div>
-				{#if view === 'pull requests' && connection && status.root}
+				{#if view === 'pull requests' && target && status.root}
 					{#key status.root}<GitPullRequests
 							mode={diffMode}
 							{hideWhitespace}
-							{connection}
-							{chatId}
+							{target}
 							directory={status.root}
 							branch={status.branch}
 							defaultBranch={prCapabilities?.default_branch ?? 'main'}

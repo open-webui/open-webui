@@ -1,10 +1,11 @@
 <script lang="ts">
+	export let modelId: string | null = null;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
 	import { getSkillItems } from '$lib/apis/skills';
 	import {
 		listTerminalSkills,
-		resolveTerminalConnection,
+		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
 	import {
@@ -47,13 +48,12 @@
 	};
 
 	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
-		const connection = resolveTerminalConnection(
+		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
 			$settings?.terminalServers ?? [],
-			localStorage.token
-		);
-		const items = await listTerminalSkills(connection, $chatId || null).catch(() => []);
+			localStorage.token, { chatId: $chatId || null, modelId: modelId });
+		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		const q = query.trim().toLowerCase();
 		return q

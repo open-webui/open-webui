@@ -1,6 +1,9 @@
 <script lang="ts">
+	export let modelId: string | null = null;
+	export let target: TerminalTarget | null | undefined = undefined;
+	import { resolveTerminalTarget } from '$lib/apis/terminal';
 	import type { TerminalContext } from '$lib/types';
-	import type { TerminalConnection } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/terminal';
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
@@ -124,7 +127,7 @@
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
-	export let gitConnection: TerminalConnection | null = null;
+	export let gitTarget: TerminalTarget | null = null;
 	export let gitDiffMode: 'unified' | 'split' = 'unified';
 	export let gitHideWhitespace = false;
 	export let terminalId: string | null = null;
@@ -135,7 +138,7 @@
 	let gitAvailable = false;
 	let cloneSupportVersion = 0;
 	async function checkCloneSupport(
-		terminal: { url: string; key: string } | null,
+		terminal: TerminalTarget | null,
 		session: string | null,
 		enabled: boolean
 	) {
@@ -143,10 +146,7 @@
 		gitAvailable = false;
 		showCloneRepository = false;
 		if (!terminal || !enabled) return;
-		const features = await getTerminalFeatures(
-			{ baseUrl: terminal.url, key: terminal.key },
-			session
-		);
+		const features = await getTerminalFeatures(terminal);
 		if (!disposed && version === cloneSupportVersion) gitAvailable = features.git === true;
 	}
 	$: void checkCloneSupport(selectedTerminal, chatId, !!onSelectDirectory);
@@ -228,8 +228,7 @@
 	export let dirty = false;
 	let diskChanged = false;
 	let overwriteChoice: ((replace: boolean) => void) | null = null;
-	let saveConnection: { url: string; key: string; chatId: string | null; path: string } | null =
-		null;
+	let saveTarget: (TerminalTarget & { path: string }) | null = null;
 	let dirtyChoice: {
 		sending: boolean;
 		resolve: (confirmed: boolean) => void;
@@ -348,7 +347,7 @@
 	// Preserve translations for the former save notifications during extraction.
 	// $i18n.t('File saved'); $i18n.t('Failed to save file');
 	const saveFile = async (content: string) => {
-		const target = saveConnection;
+		const target = saveTarget;
 		if (
 			diskChanged &&
 			!(await new Promise<boolean>((resolve) => {
@@ -357,19 +356,24 @@
 		)
 			throw new Error('Save cancelled.');
 		const current = getTerminal();
-		if (!target || !current || current.url !== target.url || !selectedFileWritable)
+		if (
+			!target ||
+			!current ||
+			current.baseUrl !== target.baseUrl ||
+			current.context.modelId !== target.context.modelId ||
+			current.context.chatId !== target.context.chatId ||
+			!selectedFileWritable
+		)
 			throw new Error('File is not writable.');
 		const name = target.path.split('/').pop()!;
 		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
 		const result = await uploadToTerminal(
-			target.url,
-			current.key,
+			current,
 			dir,
-			new File([content], name, { type: 'text/plain' }),
-			target.chatId ?? undefined
+			new File([content], name, { type: 'text/plain' })
 		);
 		if (!result) throw new Error('Failed to save file. Your changes are still in the editor.');
-		if (saveConnection === target) {
+		if (saveTarget === target) {
 			fileContent = content;
 			diskChanged = false;
 		}
@@ -387,7 +391,7 @@
 	let pinnedComparison: ComparisonFile | null = null;
 	let comparison: {
 		files: [ComparisonFile, ComparisonFile];
-		terminal: { url: string; key: string };
+		terminal: TerminalTarget;
 		chatId: string | null;
 		opener: HTMLElement | null;
 	} | null = null;
@@ -698,7 +702,7 @@
 	let gitBaseGeneration = 0;
 	let gitBaseKey = '';
 	const loadGitBase = async (
-		connection: TerminalConnection | null,
+		target: TerminalTarget | null,
 		session: string | null,
 		status: GitStatus | null,
 		file: GitFile | null,
@@ -708,12 +712,12 @@
 		_version: number
 	) => {
 		const generation = ++gitBaseGeneration;
-		const key = JSON.stringify([connection, session, path]);
+		const key = JSON.stringify([target, session, path]);
 		if (key !== gitBaseKey) gitBaseContent = null;
 		gitBaseKey = key;
 		const root = status?.is_repo && status.root ? normalizePath(status.root) : null;
 		if (
-			!connection ||
+			!target ||
 			root === null ||
 			!path ||
 			content === null ||
@@ -730,13 +734,13 @@
 			else if (file) {
 				const [unstaged, staged] = await Promise.all([
 					file.unstaged
-						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+						? gitRequest<{ diff: string }>(target, root, 'diff', {
 								file: file.path,
 								staged: 'false'
 							})
 						: null,
 					file.staged
-						? gitRequest<{ diff: string }>(connection, session, root, 'diff', {
+						? gitRequest<{ diff: string }>(target, root, 'diff', {
 								file: file.path,
 								staged: 'true'
 							})
@@ -752,7 +756,7 @@
 		}
 	};
 	$: void loadGitBase(
-		gitConnection,
+		gitTarget,
 		chatId,
 		gitStatus,
 		currentGitFile,
@@ -809,53 +813,45 @@
 	let shiftKey = false;
 
 	// Terminal resolution
-	let selectedTerminal: { url: string; key: string } | null = null;
+	let selectedTerminal: TerminalTarget | null = null;
 	let terminalChatContextPending = false;
 	let terminalChatContextHidden = false;
 	let isPerChatTerminal = false;
-	$: previewBaseUrl =
-		selectedTerminal && isPerChatTerminal && chatId
-			? `${selectedTerminal.url}/chats/${encodeURIComponent(chatId)}`
-			: (selectedTerminal?.url ?? '');
 
-	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
 
-	const getTerminal = (): { url: string; key: string } | null => {
+	const getTerminal = (): TerminalTarget | null => {
 		const systemTerminal = effectiveTerminalId
 			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
-		const chatConfig = chatContext(systemTerminal);
-		isPerChatTerminal = !!systemTerminal && chatConfig?.context_id === 'chat_id';
+		isPerChatTerminal = !!systemTerminal && systemTerminal?.scope === 'chat';
 		terminalChatContextHidden =
-			!!systemTerminal &&
-			(chatConfig === false || (isPerChatTerminal && isTemporaryChatId(chatId)));
+			isPerChatTerminal && isTemporaryChatId(chatId);
 		terminalChatContextPending =
 			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
 
-		const settingsValue: any = $settings;
-		const userTerminal = (settingsValue?.terminalServers ?? []).find(
-			(s: any) => s.url === effectiveTerminalId
+		if (target !== undefined) return target;
+		return resolveTerminalTarget(
+			effectiveTerminalId ?? systemTerminal?.id ?? null,
+			$terminalServers ?? [],
+			($settings as any)?.terminalServers ?? [],
+			localStorage.token,
+			{ chatId: chatId, modelId: modelId }
 		);
-
-		const isSystem = !!systemTerminal;
-		const url = systemTerminal?.url ?? userTerminal?.url ?? '';
-		const key = isSystem ? localStorage.token : (userTerminal?.key ?? '');
-
-		return url ? { url, key } : null;
 	};
 
 	// Detect terminal or chat changes — the explicit store references ensure
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
 	let prevTerminalUrl = '';
+	let prevModelId: string | null | undefined;
 	let prevTerminalId = effectiveTerminalId;
 	let prevChatId = chatId;
 	let prevFolderDirectory: string | null = null;
 	let mounted = false;
 	let disposed = false;
 	$: {
-		(effectiveTerminalId, $terminalServers, $settings);
+		(effectiveTerminalId, target, modelId, $terminalServers, $settings);
 		const terminal = getTerminal();
 		selectedTerminal = terminal;
 
@@ -866,9 +862,13 @@
 		prevFolderDirectory = folderDirectory;
 
 		const terminalChanged =
-			terminal && (terminal.url !== prevTerminalUrl || effectiveTerminalId !== prevTerminalId);
+			terminal &&
+			(terminal.baseUrl !== prevTerminalUrl ||
+				terminal.context.modelId !== prevModelId ||
+				effectiveTerminalId !== prevTerminalId);
 		if (terminalChanged) {
-			prevTerminalUrl = terminal.url;
+			prevTerminalUrl = terminal.baseUrl;
+			prevModelId = terminal.context.modelId;
 			prevTerminalId = effectiveTerminalId;
 		}
 
@@ -896,7 +896,7 @@
 				entries = [];
 				resetTreeState();
 				(async () => {
-					const cwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+					const cwd = await getCwd(terminal);
 					if (disposed || generation !== loadGeneration) return;
 					const serverPath = applyCwd(cwd);
 					savedPath = folderDirectory || serverPath;
@@ -988,7 +988,7 @@
 
 	const queueFileSearch = (
 		query: string,
-		terminal: { url: string; key: string } | null,
+		terminal: TerminalTarget | null,
 		path: string,
 		hiddenVisible: boolean,
 		activeFile: string | null
@@ -1015,13 +1015,11 @@
 		matchController = controller;
 		matchTimer = setTimeout(async () => {
 			const data = await getFileMatches(
-				terminal.url,
-				terminal.key,
+				terminal,
 				query,
 				path,
 				hiddenVisible,
 				0,
-				chatId ?? undefined,
 				controller.signal
 			);
 			if (requestId !== matchRequestId) return;
@@ -1051,13 +1049,11 @@
 		const controller = new AbortController();
 		matchController = controller;
 		const data = await getFileMatches(
-			terminal.url,
-			terminal.key,
+			terminal,
 			searchText,
 			currentPath,
 			showHidden,
 			offset,
-			chatId ?? undefined,
 			controller.signal
 		);
 		if (requestId === matchRequestId) {
@@ -1201,7 +1197,7 @@
 		}
 
 		openedFile = null;
-		saveConnection = null;
+		saveTarget = null;
 		dirty = false;
 		loading = true;
 		error = null;
@@ -1218,7 +1214,7 @@
 		savedPathLoaded = true;
 		pushNavHistory(directory);
 
-		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
+		const result = await listFiles(terminal, directory);
 		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
 			return;
 		loading = false;
@@ -1241,7 +1237,7 @@
 		if (!terminal) return null;
 		const directory = asDirectoryPath(path);
 		loadingDirs = new Set(loadingDirs).add(directory);
-		const result = await listFiles(terminal.url, terminal.key, directory, chatId ?? undefined);
+		const result = await listFiles(terminal, directory);
 		const nextLoading = new Set(loadingDirs);
 		nextLoading.delete(directory);
 		loadingDirs = nextLoading;
@@ -1340,7 +1336,7 @@
 		if (terminalContext) terminalContext = { ...terminalContext, file: null };
 		dirty = false;
 		diskChanged = false;
-		saveConnection = { ...terminal, path: filePath, chatId: session };
+		saveTarget = { ...terminal, path: filePath };
 		pendingFile = filesystemFile(
 			{ path: filePath, name: entry.name, size: entry.size, modified: entry.modified },
 			selector,
@@ -1378,47 +1374,22 @@
 			fileContent: null
 		} as any;
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
+			const result = await downloadFileBlob(terminal, filePath);
 			if (result) next.fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
+			const result = await downloadFileBlob(terminal, filePath);
 			if (result) next.fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
+			const result = await downloadFileBlob(terminal, filePath);
 			if (result) next.fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
+			const result = await downloadFileBlob(terminal, filePath);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
 		} else if (
 			isSqlite(filePath) ||
 			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
 		) {
-			const result = await downloadFileBlob(
-				terminal.url,
-				terminal.key,
-				filePath,
-				chatId ?? undefined
-			);
+			const result = await downloadFileBlob(terminal, filePath);
 			if (result) {
 				const data = await result.blob.arrayBuffer();
 				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
@@ -1429,32 +1400,17 @@
 			const ext = getFileExt(filePath);
 			try {
 				if (ext === 'docx') {
-					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
-						filePath,
-						chatId ?? undefined
-					);
+					const preview = await downloadFilePreview(terminal, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(
-							terminal.url,
-							terminal.key,
-							filePath,
-							chatId ?? undefined
-						);
+						const result = await downloadFileBlob(terminal, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						next.fileDocxData = arrayBuffer;
 					}
 				} else if (ext === 'xlsx') {
-					const result = await downloadFileBlob(
-						terminal.url,
-						terminal.key,
-						filePath,
-						chatId ?? undefined
-					);
+					const result = await downloadFileBlob(terminal, filePath);
 					if (result) {
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const { readExcelWorkbook, excelToTable } = await import('$lib/utils/excelToTable');
@@ -1469,21 +1425,11 @@
 						}
 					}
 				} else if (ext === 'pptx') {
-					const preview = await downloadFilePreview(
-						terminal.url,
-						terminal.key,
-						filePath,
-						chatId ?? undefined
-					);
+					const preview = await downloadFilePreview(terminal, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(
-							terminal.url,
-							terminal.key,
-							filePath,
-							chatId ?? undefined
-						);
+						const result = await downloadFileBlob(terminal, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
@@ -1499,7 +1445,7 @@
 				});
 			}
 		} else {
-			next.fileContent = await readFile(terminal.url, terminal.key, filePath, chatId ?? undefined);
+			next.fileContent = await readFile(terminal, filePath);
 		}
 		if (!current()) {
 			[next.fileImageUrl, next.fileVideoUrl, next.fileAudioUrl]
@@ -1587,13 +1533,8 @@
 			// Directories end with '/', downloaded as a ZIP archive
 			const isDir = path.endsWith('/');
 			const result = isDir
-				? await archiveFromTerminal(
-						terminal.url,
-						terminal.key,
-						[path.replace(/\/$/, '')],
-						chatId ?? undefined
-					)
-				: await downloadFileBlob(terminal.url, terminal.key, path, chatId ?? undefined);
+				? await archiveFromTerminal(terminal, [path.replace(/\/$/, '')])
+				: await downloadFileBlob(terminal, path);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -1610,7 +1551,11 @@
 		}
 	};
 
-	$: dragContext = JSON.stringify([selectedTerminal?.url, chatId ?? null]);
+	$: dragContext = JSON.stringify([
+		selectedTerminal?.baseUrl,
+		selectedTerminal?.context.modelId,
+		chatId ?? null
+	]);
 
 	// Drag-and-drop upload
 	type UploadEntry = { path: string; file?: File };
@@ -1699,20 +1644,18 @@
 				const path = `${destination.replace(/\/$/, '')}/${entry.path}`;
 				const result = entry.file
 					? await uploadToTerminal(
-							terminal.url,
-							terminal.key,
+							terminal,
 							path.slice(0, path.lastIndexOf('/')) || '/',
-							entry.file,
-							sessionId
+							entry.file
 						)
-					: await createDirectory(terminal.url, terminal.key, path, sessionId);
+					: await createDirectory(terminal, path);
 				if (!result) throw new Error(entry.path);
 			}
 		} catch (error) {
 			toast.error(`${$i18n.t('Upload failed')}: ${error instanceof Error ? error.message : error}`);
 		} finally {
 			uploading = false;
-			if (selectedTerminal?.url === terminal.url && (chatId ?? undefined) === sessionId) {
+			if (selectedTerminal?.baseUrl === terminal.baseUrl && (chatId ?? undefined) === sessionId) {
 				invalidateTreeCache(destination);
 				if (currentPath === destination && !selectedFile) await refreshBrowser();
 			}
@@ -1751,12 +1694,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal) return;
 
-		const result = await createDirectory(
-			terminal.url,
-			terminal.key,
-			`${currentPath}${name}`,
-			chatId ?? undefined
-		);
+		const result = await createDirectory(terminal, `${currentPath}${name}`);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
@@ -1787,13 +1725,7 @@
 		if (!terminal || !currentWritable) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
-		const result = await uploadToTerminal(
-			terminal.url,
-			terminal.key,
-			currentPath,
-			emptyFile,
-			chatId ?? undefined
-		);
+		const result = await uploadToTerminal(terminal, currentPath, emptyFile);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
@@ -1806,7 +1738,7 @@
 		const terminal = selectedTerminal;
 		if (!terminal || !currentWritable) return;
 
-		const result = await deleteEntry(terminal.url, terminal.key, path, chatId ?? undefined);
+		const result = await deleteEntry(terminal, path);
 		toast[result ? 'success' : 'error'](
 			result
 				? $i18n.t('{{name}} deleted', { name })
@@ -1843,13 +1775,7 @@
 		const sourceDir = asDirectoryPath(cleanSource);
 		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return false;
 
-		const result = await moveEntry(
-			terminal.url,
-			terminal.key,
-			cleanSource,
-			destination,
-			chatId ?? undefined
-		);
+		const result = await moveEntry(terminal, cleanSource, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 			return false;
@@ -1895,13 +1821,7 @@
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(
-			terminal.url,
-			terminal.key,
-			oldPath,
-			destination,
-			chatId ?? undefined
-		);
+		const result = await moveEntry(terminal, oldPath, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -2177,12 +2097,7 @@
 		const paths = [...selectedEntries];
 		let ok = 0;
 		for (const p of paths) {
-			const result = await deleteEntry(
-				terminal.url,
-				terminal.key,
-				p.replace(/\/$/, ''),
-				chatId ?? undefined
-			);
+			const result = await deleteEntry(terminal, p.replace(/\/$/, ''));
 			if (result) ok++;
 		}
 		toast[ok > 0 ? 'success' : 'error'](
@@ -2210,12 +2125,7 @@
 		const toastId = toast.loading($i18n.t('Preparing download...'));
 		try {
 			// Archive everything into a single ZIP
-			const result = await archiveFromTerminal(
-				terminal.url,
-				terminal.key,
-				paths,
-				chatId ?? undefined
-			);
+			const result = await archiveFromTerminal(terminal, paths);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -2346,7 +2256,7 @@
 			loading = true;
 
 			void (async () => {
-				const serverCwd = await getCwd(terminal.url, terminal.key, chatId ?? undefined);
+				const serverCwd = await getCwd(terminal);
 				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
 				savedPath =
@@ -2508,9 +2418,7 @@
 	{#key comparison}
 		<FileComparisonModal
 			files={comparison.files}
-			baseUrl={comparison.terminal.url}
-			apiKey={comparison.terminal.key}
-			chatId={comparison.chatId}
+			target={comparison.terminal}
 			onClose={closeComparison}
 		/>
 	{/key}
@@ -2846,8 +2754,7 @@
 			{#if selectedFile !== null}
 				{#if showGitDiff}
 					<FileGitDiff
-						connection={gitConnection}
-						{chatId}
+						target={gitTarget}
 						root={gitStatus?.root ?? currentPath}
 						file={currentGitFile}
 						active={active && !fileLoading}
@@ -2858,7 +2765,7 @@
 				{/if}
 				<div class="h-full" class:hidden={showGitDiff}>
 					{#if supportsComments(selectedFile) && selectedTerminal}
-						{#key `${selectedTerminal.url}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+						{#key `${selectedTerminal.baseUrl}|${selectedTerminal.context.modelId}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 							<CommentFilePreview
 								bind:this={commentPreviewRef}
 								bind:dirty
@@ -2869,9 +2776,7 @@
 									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
 								}}
 								path={selectedFile}
-								baseUrl={selectedTerminal.url}
-								apiKey={selectedTerminal.key}
-								{chatId}
+								target={selectedTerminal}
 								targetPage={documentTargetPage}
 								initialSheet={selectedExcelSheet}
 								onReady={() => {
@@ -2919,8 +2824,7 @@
 								const DOMPurify = (await import('dompurify')).default;
 								fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 							}}
-							baseUrl={previewBaseUrl}
-							apiKey={selectedTerminal?.key ?? ''}
+							target={selectedTerminal}
 							overlay={overlay || isDraggingHandle}
 							onSave={saveFile}
 						/>
@@ -3152,8 +3056,7 @@
 									expanded={expandedDirs.has(entry.fullPath)}
 									loadingChildren={loadingDirs.has(entry.fullPath)}
 									folderContentsVersion={loadGeneration}
-									terminalUrl={selectedTerminal.url}
-									terminalKey={selectedTerminal.key}
+									target={selectedTerminal}
 									terminalSessionId={chatId ?? undefined}
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
@@ -3229,7 +3132,6 @@
 					{#key `${effectiveTerminalId}:${chatId}`}
 						<CloneRepository
 							terminal={selectedTerminal}
-							{chatId}
 							directory={currentPath}
 							disabled={loading || !!error || !savedPathLoaded || !currentWritable}
 							onCancel={() => (showCloneRepository = false)}
@@ -3289,8 +3191,9 @@
 					</div>
 				{/if}
 
-				{#key JSON.stringify([chatId, effectiveTerminalId])}
+				{#key JSON.stringify([chatId, effectiveTerminalId, modelId])}
 					<TerminalDock
+						{modelId}
 						terminalId={effectiveTerminalId}
 						{active}
 						bind:hasSessions

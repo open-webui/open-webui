@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { TerminalContext } from '$lib/types';
-import type { TerminalConnection } from '$lib/apis/terminal';
+import type { TerminalTarget } from '$lib/apis/terminal';
 
 export type PanelTabKind =
 	| 'chat'
@@ -32,7 +32,7 @@ export type PanelTab = {
 	directory?: string;
 	dirty?: boolean;
 	untitled?: boolean;
-	connection?: TerminalConnection;
+	target?: TerminalTarget;
 	browserBaseUrl?: string;
 	context?: TerminalContext | null;
 };

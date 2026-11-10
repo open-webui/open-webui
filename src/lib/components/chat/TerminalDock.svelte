@@ -1,11 +1,12 @@
 <script lang="ts">
+	export let modelId: string | null = null;
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
 	import { settings, terminalServers, selectedTerminalId } from '$lib/stores';
 	import {
-		resolveTerminalConnection,
+		resolveTerminalTarget,
 		terminalRequest,
-		type TerminalConnection,
+		type TerminalTarget,
 		type TerminalProcess,
 		type TerminalProcessOutput
 	} from '$lib/apis/terminal';
@@ -35,7 +36,7 @@
 		available: boolean;
 		finished: boolean;
 	};
-	let connection: TerminalConnection | null = null;
+	let target: TerminalTarget | null = null;
 	let tabs: Tab[] = [];
 	let activeId = '';
 	let error = '';
@@ -61,10 +62,9 @@
 		outputContext = id;
 		stopOutput?.();
 		stopOutput = undefined;
-		if (id && connection) {
+		if (id && target) {
 			stopOutput = readTerminalStream<TerminalProcessOutput>(
-				connection,
-				chatId,
+				target,
 				() =>
 					`/execute/${encodeURIComponent(id)}/status?offset=${tabs.find((tab) => tab.id === id)?.offset ?? 0}&tail=1000`,
 				writeOutput,
@@ -120,10 +120,10 @@
 	}
 
 	async function poll() {
-		if (!connection || streaming || !active || polling || disposed || document.hidden) return;
+		if (!target || streaming || !active || polling || disposed || document.hidden) return;
 		polling = true;
 		try {
-			const processes = await terminalRequest<TerminalProcess[]>(connection, chatId, '/execute', {
+			const processes = await terminalRequest<TerminalProcess[]>(target, '/execute', {
 				signal: controller.signal
 			});
 			if (disposed) return;
@@ -134,8 +134,7 @@
 				await tick();
 				if (!panes[tab.id]) return;
 				const result = await terminalRequest<TerminalProcessOutput>(
-					connection,
-					chatId,
+					target,
 					`/execute/${encodeURIComponent(tab.id)}/status?wait=0&offset=${tab.offset}&tail=1000`,
 					{ signal: controller.signal }
 				);
@@ -180,16 +179,14 @@
 	}
 
 	onMount(() => {
-		connection = resolveTerminalConnection(
+		target = resolveTerminalTarget(
 			terminalId ?? $selectedTerminalId,
 			$terminalServers ?? [],
 			($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [],
-			localStorage.getItem('token') ?? ''
-		);
-		if (connection) {
+			localStorage.getItem('token') ?? '', { chatId: chatId, modelId: modelId });
+		if (target) {
 			stopList = readTerminalStream<TerminalProcess[]>(
-				connection,
-				chatId,
+				target,
 				() => '/execute',
 				updateProcesses,
 				(message) => {
@@ -297,14 +294,13 @@
 				{error}
 			</div>{/if}
 		<div class="relative min-h-0 flex-1">
-			{#if connection}
+			{#if target}
 				{#each tabs as tab (tab.id)}
 					{#if tab.loaded || activeId === tab.id}
 						<div class="absolute inset-0" class:hidden={activeId !== tab.id}>
 							<XTerminal
 								bind:this={panes[tab.id]}
-								{connection}
-								{chatId}
+								{target}
 								{overlay}
 								readOnly
 								active={active && expanded && activeId === tab.id}

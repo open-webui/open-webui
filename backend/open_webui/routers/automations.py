@@ -21,6 +21,7 @@ from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.agents.discovery import get_models as get_agent_models
 from open_webui.utils.automations import (
     execute_automation,
     next_n_runs_ns,
@@ -207,14 +208,14 @@ async def get_automation_models(
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
+    automation = None
     if automation_id:
         automation = await Automations.get_by_id(automation_id, db=db)
         check_automation_access(automation, user)
-    from open_webui.utils.agents.discovery import get_models as get_agent_models
-
-    return await get_agent_models(
-        request, user, {'terminal_id': terminal_id, 'automation_id': automation_id or f'preview:{user.id}'}, cwd=cwd
-    )
+    metadata = {'terminal_id': terminal_id}
+    if automation:
+        metadata.update(model_id=automation.data.get('model_id'), automation_id=automation.id)
+    return await get_agent_models(request, user, metadata, cwd=cwd)
 
 
 # Create New Automation

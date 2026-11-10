@@ -8,12 +8,12 @@
 	import {
 		terminalRequest,
 		TerminalRequestError,
-		type TerminalConnection
+		type TerminalTarget
 	} from '$lib/apis/terminal';
 	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
 
-	export let connection: TerminalConnection;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget;
+
 	export let overlay = false;
 	export let active = true;
 	export let readOnly = false;
@@ -30,7 +30,6 @@
 	let destroyed = false;
 	export let sessionId = '';
 	export let onUnavailable: (message: string, status?: number) => void = () => {};
-	let sessionChatId = chatId;
 	let bindingChat: Promise<void> | null = null;
 	let finishConnection: (ready: boolean) => void;
 	const connectionReady = new Promise<boolean>((resolve) => (finishConnection = resolve));
@@ -45,20 +44,20 @@
 	let reconnecting = false;
 
 	export async function bindChat(id: string) {
-		if (readOnly || destroyed || sessionChatId === id) return;
-		if (sessionChatId) throw new Error('Terminal already belongs to another chat');
+		if (readOnly || destroyed || target.context.chatId === id) return;
+		if (target.context.chatId) throw new Error('Terminal already belongs to another chat');
 		if (!(await connectionReady) || !ws) throw new Error('Terminal is not connected');
 		if (!bindingChat) {
 			bindingChat = assignTerminalChat(ws, id)
 				.then(() => {
-					sessionChatId = id;
+					target.context.chatId = id;
 				})
 				.finally(() => {
 					bindingChat = null;
 				});
 		}
 		await bindingChat;
-		if (sessionChatId !== id) throw new Error('Terminal already belongs to another chat');
+		if (target.context.chatId !== id) throw new Error('Terminal already belongs to another chat');
 	}
 
 	function reportActivity(visible: boolean) {
@@ -114,14 +113,12 @@
 		try {
 			if (!sessionId) throw new Error('Session no longer available');
 			await terminalRequest(
-				connection,
-				sessionChatId,
+				target,
 				`/api/terminals/${encodeURIComponent(sessionId)}`
 			);
 			if (destroyed) return;
 			ws = openTerminalSocket(
-				connection,
-				sessionChatId,
+				target,
 				`/api/terminals/${encodeURIComponent(sessionId)}`,
 				() => {
 					if (destroyed) return;

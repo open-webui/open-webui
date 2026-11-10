@@ -8,7 +8,7 @@
 		uploadToTerminal,
 		joinTerminalPath,
 		type FileEntry,
-		type TerminalConnection
+		type TerminalTarget
 	} from '$lib/apis/terminal';
 	import FileCodeEditor from '../FileNav/FileCodeEditor.svelte';
 	import Icon from '../FileNav/Icon.svelte';
@@ -18,8 +18,8 @@
 
 	const i18n = getContext<any>('i18n');
 	export let label: string;
-	export let connection: TerminalConnection;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget;
+
 	export let initialDirectory: string | undefined = undefined;
 	export let dirty = false;
 	export let onSaved: (path: string) => void;
@@ -57,7 +57,7 @@
 	const browse = async (path: string) => {
 		loading = true;
 		error = '';
-		const listing = await listFiles(connection.baseUrl, connection.key, path, chatId ?? undefined);
+		const listing = await listFiles(target, path);
 		if (disposed) return;
 		loading = false;
 		writable = listing?.writable !== false && !!listing;
@@ -82,7 +82,7 @@
 		loading = true;
 		fileName = label;
 		replacePath = '';
-		const cwd = await getCwd(connection.baseUrl, connection.key, chatId ?? undefined);
+		const cwd = await getCwd(target);
 		if (disposed || !showSave) return false;
 		root = (cwd?.root?.path ?? '/').replace(/\/$/, '') || '/';
 		await browse(initialDirectory ?? cwd?.cwd ?? cwd?.home ?? root);
@@ -105,11 +105,8 @@
 		saving = true;
 		error = '';
 		try {
-			const listing = await listFiles(
-				connection.baseUrl,
-				connection.key,
-				directory,
-				chatId ?? undefined
+			const listing = await listFiles(target,
+				directory
 			);
 			if (!listing || listing.writable === false) throw new Error($i18n.t('File is not writable.'));
 			const existing = listing.entries.find((entry) => entry.name === name);
@@ -120,12 +117,9 @@
 				error = $i18n.t('A file with this name already exists. Replace it?');
 				return;
 			}
-			const result = await uploadToTerminal(
-				connection.baseUrl,
-				connection.key,
+			const result = await uploadToTerminal(target,
 				directory,
-				new File([value], name, { type: 'text/plain' }),
-				chatId ?? undefined
+				new File([value], name, { type: 'text/plain' })
 			);
 			if (!result)
 				throw new Error($i18n.t('Failed to save file. Your changes are still in the editor.'));

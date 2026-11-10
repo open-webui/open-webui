@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveTerminalTarget } from '$lib/apis/terminal';
 	import type { TerminalContext } from '$lib/types';
 	import {
 		estimateTokens,
@@ -1072,24 +1073,31 @@
 		fileItem.error = '';
 		files = files;
 		try {
-			const terminal = getFilesystemUploadTerminal(fileItem.terminal_id);
+			const server = getFilesystemUploadTerminal(fileItem.terminal_id);
+			const terminal = server
+				? resolveTerminalTarget(
+						fileItem.terminal_id,
+						$terminalServers ?? [],
+						($settings as any)?.terminalServers ?? [],
+						localStorage.token,
+						{ chatId: sessionId, modelId: selectedModels[0] ?? null }
+					)
+				: null;
 			if (!terminal) throw new Error('The attached file’s terminal is unavailable.');
 			if (fileItem.session_id && fileItem.session_id !== sessionId)
 				throw new Error('Attached files must belong to this chat.');
-			if (terminal.contexts?.chat?.context_id === 'chat_id' && !isSavedChatId(sessionId))
+			if (server.scope === 'chat' && !isSavedChatId(sessionId))
 				throw new Error('A saved chat is required for this terminal');
 
 			const cwd =
 				(terminalContext?.terminalId === fileItem.terminal_id
 					? terminalContext?.currentDirectory
-					: null) || (await getCwd(terminal.url, terminal.key, sessionId || undefined))?.cwd;
+					: null) || (await getCwd(terminal))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
 			const uploadedFile = await uploadNewFileToTerminal(
-				terminal.url,
-				terminal.key,
+				terminal,
 				cwd,
-				fileItem.file,
-				sessionId || undefined
+				fileItem.file
 			);
 			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
 
@@ -1171,7 +1179,7 @@
 			fileItem.file = file;
 			fileItem.terminal_id = $selectedTerminalId;
 			fileItem.session_id = chatId || null;
-			if (!chatId && filesystemUploadTerminal.contexts?.chat?.context_id === 'chat_id') {
+			if (!chatId && filesystemUploadTerminal.scope === 'chat') {
 				fileItem.status = 'pending';
 				files = files;
 				return;
@@ -1639,6 +1647,7 @@
 			{
 				char: '@',
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
@@ -1735,6 +1744,7 @@
 						.run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
@@ -1802,6 +1812,7 @@
 			{
 				char: '#',
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
@@ -1841,6 +1852,7 @@
 			{
 				char: '$',
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
@@ -1863,6 +1875,7 @@
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
@@ -2647,7 +2660,13 @@
 
 										<svelte:fragment slot="terminal">
 											{#if showTerminalSelector && terminalControlsInMenu}
-												<TerminalMenu inMenu {chatId} bind:terminalContext disabled={generating} />
+												<TerminalMenu
+													modelId={selectedModels[0] ?? null}
+													inMenu
+													{chatId}
+													bind:terminalContext
+													disabled={generating}
+												/>
 												<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
 											{/if}
 										</svelte:fragment>
@@ -2911,6 +2930,7 @@
 										{#if showTerminalSelector}
 											<div data-terminal-controls class="flex items-center gap-1.5 shrink-0">
 												<TerminalMenu
+													modelId={selectedModels[0] ?? null}
 													bind:show={showTerminalMenu}
 													{chatId}
 													bind:terminalContext

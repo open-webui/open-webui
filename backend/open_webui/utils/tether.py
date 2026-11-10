@@ -388,7 +388,7 @@ async def notify(user_id, notification_id, title, body, path):
             )
 
 
-async def get_terminal_connections(user):
+async def get_terminal_connections(user, include_templates=True):
     """Resolve personal targets alongside existing configured servers."""
     user_id = user['id'] if isinstance(user, dict) else user.id
     connections = list(await Config.get('terminal_server.connections', []) or [])
@@ -413,6 +413,11 @@ async def get_terminal_connections(user):
                 },
             }
         )
+    if include_templates:
+        from open_webui.utils.terminals import list_template_connections
+        managed = [c for c in connections if c.get('server_type') == 'orchestrator']
+        connections = [c for c in connections if c.get('server_type') != 'orchestrator']
+        connections.extend(await list_template_connections(user, managed))
     return connections
 
 

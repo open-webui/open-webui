@@ -155,9 +155,7 @@
 	const init = async () => {
 		initialized = false;
 		await tick();
-		terminalServers = (await getTerminalServers(localStorage.token)).filter(
-			(server) => server.contexts?.automation !== false
-		);
+		terminalServers = await getTerminalServers(localStorage.token);
 		if (!foldersLoaded && ($folders ?? []).length === 0) {
 			const res = await getFolders(localStorage.token).catch(() => null);
 			if (res) folders.set(res);

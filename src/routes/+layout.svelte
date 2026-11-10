@@ -90,7 +90,7 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import { getChannelById, getChannels } from '$lib/apis/channels';
 	import { shouldNotifyChannelMessage } from '$lib/utils/channelNotifications';
-	import { resolveTerminalConnection, terminalRequest } from '$lib/apis/terminal';
+	import { resolveTerminalTarget, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -685,13 +685,13 @@
 			} else if (type === 'request:terminal') {
 				try {
 					if (!$config?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
-					const connection = resolveTerminalConnection(
+					const target = resolveTerminalTarget(
 						data.terminal_id,
 						[],
 						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
-						localStorage.token
+						localStorage.token, { chatId: event.chat_id ?? null }
 					);
-					if (!connection) throw new Error('Terminal Not Found');
+					if (!target) throw new Error('Terminal Not Found');
 					let options = {};
 					if (data.file) {
 						const blob = await getFileBlobById(localStorage.token, data.file.id);
@@ -699,7 +699,7 @@
 						body.append('file', blob, data.file.name);
 						options = { method: 'POST', body };
 					}
-					const result = await terminalRequest(connection, event.chat_id, data.path, options);
+					const result = await terminalRequest(target, data.path, options);
 					cb?.({ data: result });
 				} catch (error) {
 					cb?.({ error: `${error}` });

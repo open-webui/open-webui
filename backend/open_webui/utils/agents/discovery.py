@@ -2,7 +2,7 @@
 
 from urllib.parse import quote, urlencode
 
-from open_webui.utils.terminals import get_terminal_json
+from open_webui.utils.terminals import MissingTerminalContext, get_terminal_json
 
 
 def model_controls(model):
@@ -36,14 +36,17 @@ async def get_models(request, user, metadata, *, provider=None, cwd=None):
     terminal_id = metadata.get('terminal_id')
     if not terminal_id:
         return []
-    if not cwd:
-        directory = await get_terminal_json(request, user, metadata, '/files/cwd')
-        cwd = (directory or {}).get('cwd')
-    params = {'provider': provider} if provider else {}
-    if cwd:
-        params['cwd'] = cwd
-    path = '/agents' + ('?' + urlencode(params) if params else '')
-    catalog = await get_terminal_json(request, user, metadata, path)
+    try:
+        if not cwd:
+            directory = await get_terminal_json(request, user, metadata, '/files/cwd')
+            cwd = (directory or {}).get('cwd')
+        params = {'provider': provider} if provider else {}
+        if cwd:
+            params['cwd'] = cwd
+        path = '/agents' + ('?' + urlencode(params) if params else '')
+        catalog = await get_terminal_json(request, user, metadata, path)
+    except MissingTerminalContext:
+        return []
     if not catalog or catalog.get('protocol_version') != 1:
         return []
     models = [

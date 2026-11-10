@@ -108,12 +108,9 @@
 		terminalServers.update((servers) => [
 			...(servers ?? []).filter((server) => !server.id),
 			...systemTerminals.map((terminal) => ({
-				id: terminal.id,
+				...terminal,
 				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
-				name: terminal.name,
-				key: localStorage.token,
-				contexts: terminal.contexts ?? {},
-				config: terminal.config ?? {}
+				key: localStorage.token
 			}))
 		]);
 	};

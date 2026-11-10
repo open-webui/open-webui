@@ -14,7 +14,7 @@
 	import {
 		getPortProxyUrl,
 		TerminalRequestError,
-		type TerminalConnection
+		type TerminalTarget
 	} from '$lib/apis/terminal';
 	import PortList from '../FileNav/PortList.svelte';
 	import { settings } from '$lib/stores';
@@ -23,8 +23,8 @@
 
 	const i18n = getContext<any>('i18n');
 	export let baseUrl = '';
-	export let connection: TerminalConnection | null = null;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget | null = null;
+
 	export let active = true;
 	export let initialUrl = '';
 	export let sessionId = '';
@@ -32,19 +32,18 @@
 	let ready: Promise<void> = Promise.resolve();
 	export async function bindChat(id: string) {
 		await ready;
-		if (sessionChatId === id) return;
-		if (sessionChatId || !session || !sessionConnection)
+		if (sessionTarget?.context.chatId === id) return;
+		if (sessionTarget?.context.chatId || !session || !sessionTarget)
 			throw new Error('Browser is not connected');
-		await updateBrowserSession(sessionConnection, sessionChatId, session.id, { chat_id: id });
-		sessionChatId = id;
+		await updateBrowserSession(sessionTarget, session.id, { chat_id: id });
+		sessionTarget.context.chatId = id;
 	}
 	export let overlay = false;
 	export let onNavigate: (url: string, label: string) => void = () => {};
 	export let onOpenBrowser: (url: string) => void = () => {};
 	export let onClose: (() => void) | null = null;
 	let session: BrowserSession | null = null;
-	let sessionChatId = chatId;
-	let sessionConnection = connection;
+	let sessionTarget = target;
 	let chrome: ChromeBrowser;
 	let switching = false;
 	let deviceMode: 'desktop' | 'mobile' = 'desktop';
@@ -53,24 +52,24 @@
 	let chromeBack = false;
 	let chromeForward = false;
 	let frameReady = false;
-	$: viewUrl = session && sessionConnection ? browserViewUrl(sessionConnection, session) : '';
-	$: if (session && sessionConnection) {
-		void updateBrowserSession(sessionConnection, sessionChatId, session.id, { active }).catch(
+	$: viewUrl = session && sessionTarget ? browserViewUrl(sessionTarget, session) : '';
+	$: if (session && sessionTarget) {
+		void updateBrowserSession(sessionTarget, session.id, { active }).catch(
 			() => {}
 		);
 	}
 
 	const persist = (url: string, title: string) => {
-		if (session && sessionConnection)
-			void updateBrowserSession(sessionConnection, sessionChatId, session.id, { url, title }).catch(
+		if (session && sessionTarget)
+			void updateBrowserSession(sessionTarget, session.id, { url, title }).catch(
 				() => {}
 			);
 	};
 	const switchMode = async (mode: 'proxy' | 'chrome', force = false) => {
-		if (!session || !sessionConnection || switching || (!force && session.mode === mode)) return;
+		if (!session || !sessionTarget || switching || (!force && session.mode === mode)) return;
 		switching = true;
 		try {
-			session = await updateBrowserSession(sessionConnection, sessionChatId, session.id, {
+			session = await updateBrowserSession(sessionTarget, session.id, {
 				mode,
 				url: currentUrl
 			});
@@ -79,7 +78,7 @@
 				history = [];
 				historyIndex = -1;
 				if (currentUrl)
-					frameUrl = browserFrameUrl(browserViewUrl(sessionConnection, session), currentUrl);
+					frameUrl = browserFrameUrl(browserViewUrl(sessionTarget, session), currentUrl);
 			}
 			error = '';
 			return true;
@@ -94,7 +93,7 @@
 		}
 	};
 	const fallbackToProxy = async (message: string) => {
-		if (!session || !sessionConnection || switching) return;
+		if (!session || !sessionTarget || switching) return;
 		// The server may already be in Chrome mode even if its startup request failed.
 		const switched = await switchMode('proxy', true);
 		connectionStatus = '';
@@ -143,8 +142,8 @@
 			? Number(url.port || (url.protocol === 'https:' ? 443 : 80))
 			: null;
 	const source = (url: URL) => {
-		if (session && sessionConnection)
-			return browserFrameUrl(browserViewUrl(sessionConnection, session), url.href);
+		if (session && sessionTarget)
+			return browserFrameUrl(browserViewUrl(sessionTarget, session), url.href);
 		const port = localPort(url);
 		if (port === null) return url.href;
 		if (!baseUrl) throw new Error($i18n.t('Select a terminal to open localhost URLs.'));
@@ -257,27 +256,27 @@
 	onMount(() => {
 		let disposed = false;
 		const release = () => {
-			if (session && sessionConnection)
-				void updateBrowserSession(sessionConnection, sessionChatId, session.id, {
+			if (session && sessionTarget)
+				void updateBrowserSession(sessionTarget, session.id, {
 					active: false
 				}).catch(() => {});
 		};
 		const heartbeat = setInterval(() => {
-			if (session && sessionConnection)
-				void updateBrowserSession(sessionConnection, sessionChatId, session.id, {}).catch(() => {});
+			if (session && sessionTarget)
+				void updateBrowserSession(sessionTarget, session.id, {}).catch(() => {});
 		}, 60_000);
 		window.addEventListener('message', receiveNavigation);
 		window.addEventListener('pagehide', release);
 		ready = (async () => {
 			try {
-				if (!sessionConnection || !sessionId) throw new Error('Session no longer available');
-				const restored = await getBrowserSession(sessionConnection, sessionChatId, sessionId);
+				if (!sessionTarget || !sessionId) throw new Error('Session no longer available');
+				const restored = await getBrowserSession(sessionTarget, sessionId);
 				if (disposed) return;
 				session = restored;
 				currentUrl = restored.url;
 				urlInput = restored.url;
 				if (restored.mode === 'proxy' && restored.url) {
-					frameUrl = browserFrameUrl(browserViewUrl(sessionConnection, restored), restored.url);
+					frameUrl = browserFrameUrl(browserViewUrl(sessionTarget, restored), restored.url);
 					remember(restored.url);
 				}
 				onNavigate(restored.url, restored.title || restored.url || 'Browser');
@@ -465,13 +464,11 @@
 						<Icon name="browser" size={18} strokeWidth={1.4} class="text-gray-400" />
 						{$i18n.t('Browser')}
 					</div>
-					{#if connection}
+					{#if target}
 						<div class="mt-3">
 							<PortList
-								baseUrl={connection.baseUrl}
+								{target}
 								previewBaseUrl={baseUrl}
-								apiKey={connection.key}
-								{chatId}
 								{active}
 								on:previewPort={(event) => navigate(`http://localhost:${event.detail}/`)}
 							/>

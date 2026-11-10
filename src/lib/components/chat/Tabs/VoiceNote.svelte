@@ -2,7 +2,7 @@
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { getCwd, uploadNewFileToTerminal, type TerminalConnection } from '$lib/apis/terminal';
+	import { getCwd, uploadNewFileToTerminal, type TerminalTarget } from '$lib/apis/terminal';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import Icon from '../FileNav/Icon.svelte';
 	type VoiceNoteDraft = {
@@ -36,8 +36,8 @@
 	};
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
-	export let connection: TerminalConnection;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget;
+
 	export let directory: string | undefined = undefined;
 	export let canTranscribe = false;
 	export let onclose: () => void;
@@ -104,7 +104,7 @@
 		initializing = true;
 		try {
 			if (!directory) {
-				const cwd = await getCwd(connection.baseUrl, connection.key, chatId ?? undefined);
+				const cwd = await getCwd(target);
 				if (!cwd) throw new Error($i18n.t('Could not load the recording folder.'));
 				directory = cwd.cwd ?? cwd.home ?? cwd.root?.path;
 				if (!directory) throw new Error($i18n.t('Could not load the recording folder.'));
@@ -222,24 +222,18 @@
 		player?.pause();
 		try {
 			if (!draft.audioPath) {
-				const result = await uploadNewFileToTerminal(
-					connection.baseUrl,
-					connection.key,
+				const result = await uploadNewFileToTerminal(target,
 					draft.directory,
 					new File([draft.audio], `${draft.name.trim()}.${voiceNoteExtension(draft.audio.type)}`, {
 						type: draft.audio.type
-					}),
-					chatId ?? undefined
+					})
 				);
 				if (!result?.path) throw new Error();
 				draft.audioPath = result.path;
 			}
-			const note = await uploadNewFileToTerminal(
-				connection.baseUrl,
-				connection.key,
+			const note = await uploadNewFileToTerminal(target,
 				draft.directory,
-				new File([voiceNoteMarkdown(draft)], `${draft.name.trim()}.md`, { type: 'text/markdown' }),
-				chatId ?? undefined
+				new File([voiceNoteMarkdown(draft)], `${draft.name.trim()}.md`, { type: 'text/markdown' })
 			);
 			if (!note?.path) throw new Error();
 			draft = undefined;

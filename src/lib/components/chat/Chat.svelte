@@ -109,7 +109,7 @@
 		updateChatParams,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { resolveTerminalConnection, setCwd, type FilesystemFile } from '$lib/apis/terminal';
+	import { resolveTerminalTarget, setCwd, type FilesystemFile } from '$lib/apis/terminal';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
@@ -1071,23 +1071,16 @@
 	const isTerminalAvailable = (tid: string): boolean => {
 		return (
 			$config?.features?.enable_tool_servers === true &&
-			(($terminalServers ?? []).some((t) => t.id && t.id === tid) ||
+			(($terminalServers ?? []).some((t) => (!!tid && t.id === tid)) ||
 				($settings?.terminalServers ?? []).some((s) => s.url === tid))
 		);
 	};
 
-	$: if (
-		$terminalServers !== null &&
-		$selectedTerminalId &&
-		!isTerminalAvailable($selectedTerminalId)
-	) {
-		selectedTerminalId.set(null);
-	}
 
 	$: if (
 		$temporaryChatEnabled &&
 		($terminalServers ?? []).some(
-			(t) => t.id && t.id === $selectedTerminalId && t.contexts?.chat?.context_id === 'chat_id'
+			(t) => (!!$selectedTerminalId && t.id === $selectedTerminalId) && t.scope === 'chat'
 		)
 	) {
 		selectedTerminalId.set(null);
@@ -1133,12 +1126,10 @@
 	}
 
 	const applyFolderTerminal = (folder: any) => {
-		if (!folder) return;
-		const terminalId = folder.data?.terminal_id || null;
+		const terminalId = folder?.data?.terminal_id;
+		if (!terminalId) return;
 		selectedTerminalId.set(terminalId);
-		terminalContext = terminalId
-			? { terminalId, currentDirectory: folder.data?.working_directory ?? '' }
-			: null;
+		terminalContext = { terminalId, currentDirectory: folder.data?.working_directory ?? '' };
 	};
 
 	let defaultsModelIds: string[] = [];
@@ -2835,7 +2826,7 @@
 			);
 		} else {
 			if ($selectedFolder) {
-				// Folder defaults are explicit; never inherit a previous chat's selection.
+				// A configured folder terminal overrides the previous selection.
 				applyFolderTerminal($selectedFolder);
 				if ($selectedFolder.data?.terminal_id) {
 					await refreshAgentModels();
@@ -4027,14 +4018,13 @@
 		if (initializedTerminalChatId === id) return;
 		if (!$config?.features?.enable_tool_servers || !context?.currentDirectory) return;
 		const userSettings: any = $settings;
-		const connection = resolveTerminalConnection(
+		const target = resolveTerminalTarget(
 			context.terminalId,
 			$terminalServers ?? [],
 			$config?.features?.enable_direct_integrations ? (userSettings?.terminalServers ?? []) : [],
-			localStorage.token
-		);
-		if (!connection) throw new Error($i18n.t('Terminal Not Found'));
-		const result = await setCwd(connection.baseUrl, connection.key, context.currentDirectory, id);
+			localStorage.token, { chatId: id, modelId: selectedModels[0] ?? null });
+		if (!target) throw new Error($i18n.t('Terminal Not Found'));
+		const result = await setCwd(target, context.currentDirectory);
 		if (!result?.cwd)
 			throw new Error(
 				$i18n.t('Working directory is unavailable. Check the terminal connection and path.')

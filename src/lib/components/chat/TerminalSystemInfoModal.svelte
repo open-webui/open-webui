@@ -2,7 +2,7 @@
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import {
 		terminalRequest,
-		type TerminalConnection,
+		type TerminalTarget,
 		type TerminalSystemInfo
 	} from '$lib/apis/terminal';
 	import Icon from './FileNav/Icon.svelte';
@@ -11,8 +11,8 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	export let connection: TerminalConnection;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget;
+
 	export let label: string;
 	export let onClose: () => void;
 	const i18n = getContext<any>('i18n');
@@ -32,7 +32,7 @@
 		controller = request;
 		loading = true;
 		try {
-			const next = await terminalRequest<TerminalSystemInfo>(connection, chatId, '/system/info', {
+			const next = await terminalRequest<TerminalSystemInfo>(target, '/system/info', {
 				signal: request.signal
 			});
 			if (request.signal.aborted || destroyed) return;

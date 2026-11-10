@@ -203,7 +203,7 @@
 		</ConsecutiveDetailsGroup>
 	{:else if displayItem.type === 'file'}
 		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
-			<ToolOutputFile item={displayItem.item} {chatId} />
+			<ToolOutputFile item={displayItem.item} {chatId} modelId={model?.id ?? null} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}
 		<ContextCompactionLabel summary={displayItem.summary} {compactPreview} />

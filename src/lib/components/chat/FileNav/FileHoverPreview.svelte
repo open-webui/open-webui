@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget;
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
 	import { readFile, downloadFileBlob, type FileEntry } from '$lib/apis/terminal';
@@ -11,8 +13,6 @@
 	const i18n: any = getContext('i18n');
 	export let entry: FileEntry;
 	export let path: string;
-	export let terminalUrl: string;
-	export let terminalKey: string;
 	export let sessionId: string | undefined = undefined;
 	export let sideOffset = 12;
 
@@ -44,13 +44,7 @@
 		const isSqlite = ['db', 'sqlite', 'sqlite3', 'db3'].includes(extension);
 		try {
 			if (isImage || isVideo || isAudio || isSqlite || isModel) {
-				const result = await downloadFileBlob(
-					terminalUrl,
-					terminalKey,
-					path,
-					sessionId,
-					controller.signal
-				);
+				const result = await downloadFileBlob(target, path, controller.signal);
 				if (!result || disposed) return;
 				if (isSqlite || isModel) {
 					const bytes = await result.blob.arrayBuffer();
@@ -65,7 +59,7 @@
 					else fileAudioUrl = url;
 				}
 			} else if (entry.size! <= 1024 * 1024) {
-				const text = await readFile(terminalUrl, terminalKey, path, sessionId);
+				const text = await readFile(target, path);
 				if (!disposed && text !== null && !text.startsWith('[Binary file:')) fileContent = text;
 			}
 		} catch {
@@ -109,12 +103,7 @@
 			class="h-60 max-h-[calc(100dvh-6rem)] overflow-hidden text-xs [&_.document-markdown]:!p-2 [&_.document-markdown_h1]:!text-sm [&_.document-markdown_h2]:!text-xs [&_.document-markdown_h3]:!text-xs [&_.document-markdown]:!text-[0.8125rem] [&_.cm-editor]:!text-[0.6875rem] [&_pre]:!text-[0.6875rem]"
 		>
 			{#if documentPreview && withinPreviewLimit}
-				<CommentFilePreview
-					{path}
-					baseUrl={terminalUrl}
-					apiKey={terminalKey}
-					chatId={sessionId ?? null}
-				/>
+				<CommentFilePreview {path} {target}  />
 			{:else if loading || fileContent !== null || fileImageUrl || fileVideoUrl || fileAudioUrl || fileSqliteData || fileModelData}
 				<FilePreview
 					selectedFile={path}
@@ -125,8 +114,7 @@
 					{fileAudioUrl}
 					{fileSqliteData}
 					{fileModelData}
-					baseUrl={terminalUrl}
-					apiKey={terminalKey}
+					{target}
 					chatId={sessionId ?? null}
 					readOnly={true}
 					allowScripts={false}

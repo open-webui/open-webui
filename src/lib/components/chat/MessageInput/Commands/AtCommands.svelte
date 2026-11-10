@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 
@@ -34,6 +35,7 @@
 	const i18n = getContext<any>('i18n');
 
 	export let query = '';
+	export let modelId: string | null = null;
 	export let onSelect: (e: any) => void = () => {};
 	export let fileUploadEnabled: boolean = true;
 
@@ -121,10 +123,7 @@
 		getKnowledgeFileItems(signal);
 	};
 
-	const getFilesystemItems = async (
-		terminal: { url: string; key: string } | null,
-		signal: AbortSignal
-	) => {
+	const getFilesystemItems = async (terminal: TerminalTarget | null, signal: AbortSignal) => {
 		if (!terminal) {
 			filesystemItems = [];
 			return;
@@ -133,13 +132,11 @@
 		const terminalId = $selectedTerminalId;
 		const sessionId = $activeChatId;
 		const res = await searchFiles(
-			terminal.url,
-			terminal.key,
+			terminal,
 			query,
 			'.',
 			20,
 			'any',
-			sessionId || undefined,
 			localStorage.getItem('fileNav:showHidden') === 'true',
 			signal
 		).catch(() => null);
@@ -153,31 +150,17 @@
 		}));
 	};
 
-	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
-
-	const getSelectedTerminal = (): { url: string; key: string } | null => {
-		if (!$selectedTerminalId) return null;
-
-		const systemTerminal = ($terminalServers ?? []).find(
-			(t) => t.id && t.id === $selectedTerminalId
+	const getSelectedTerminal = (): TerminalTarget | null => {
+		const target = resolveTerminalTarget(
+			$selectedTerminalId,
+			$terminalServers ?? [],
+			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
+			localStorage.token,
+			{ chatId: $activeChatId || null, modelId: modelId }
 		);
-		const systemChatContext = chatContext(systemTerminal);
-		if (systemTerminal) {
-			if (
-				systemChatContext === false ||
-				(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
-					systemChatContext?.context_id === 'chat_id')
-			) {
-				return null;
-			}
-
-			return { url: systemTerminal.url, key: localStorage.token };
-		}
-
-		const directTerminal = ($settings?.terminalServers ?? []).find(
-			(t: any) => t.url === $selectedTerminalId && t.enabled
-		);
-		return directTerminal?.url ? { url: directTerminal.url, key: directTerminal.key ?? '' } : null;
+		if (($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope === 'chat' && ($temporaryChatEnabled || isTemporaryChatId($activeChatId)))
+			return null;
+		return target;
 	};
 
 	$: folderItems = (($folders ?? []) as any[])
