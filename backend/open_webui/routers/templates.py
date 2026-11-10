@@ -59,6 +59,14 @@ async def management_connections(user=Depends(get_verified_user)):
     return result
 
 
+@router.get('/connections/{connection_id}/status')
+async def connection_status(connection_id: str, user=Depends(get_verified_user)):
+    connection = await get_connection(user, connection_id)
+    if not await has_connection_write_access(user, connection):
+        raise HTTPException(403, 'Creation is not allowed')
+    return await server_request(connection, 'api/v1/terminals/status')
+
+
 @router.post('', status_code=201)
 async def create_template(body: CreateForm, user=Depends(get_verified_user)):
     connection = await get_connection(user, body.connection_id)
@@ -136,8 +144,27 @@ async def current_instance(terminal_id: str, request: Request, chat_id: str | No
 
 @router.get('/{terminal_id}/instances')
 async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
+    from open_webui.models.chats import Chats
+    from open_webui.models.models import Models
+    from open_webui.models.users import Users
+
     connection, template = await template_connection(user, terminal_id, 'write')
-    return await server_request(connection, path(template['id'], '/instances'))
+    rows = await server_request(connection, path(template['id'], '/instances'))
+    for row in rows:
+        kind, _, value = (row.get('context_id') or '').partition(':')
+        row['context'] = {f'{kind}_id': value} if value else {}
+        if kind == 'chat':
+            chat = await Chats.get_chat_by_id(value)
+            owner = await Users.get_user_by_id(chat.user_id) if chat else None
+            row['label'] = chat.title if chat else None
+            row['user_name'] = owner.name if owner else None
+        elif kind == 'user':
+            owner = await Users.get_user_by_id(value)
+            row['label'] = owner.name if owner else None
+        elif kind == 'model':
+            model = await Models.get_model_by_id(value)
+            row['label'] = model.name if model else value
+    return rows
 
 
 async def instance_action(terminal_id, action, body, user):

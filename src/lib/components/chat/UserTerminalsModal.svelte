@@ -1,58 +1,140 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import Cloud from '$lib/components/icons/Cloud.svelte';
-	import Check from '$lib/components/icons/Check.svelte';
+	import AccessButton from '$lib/components/common/AccessButton.svelte';
+	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import UserSettingSection from '$lib/components/chat/Settings/UserSettingSection.svelte';
+	import UserSettingRow from '$lib/components/chat/Settings/UserSettingRow.svelte';
+	import UserSettingField from '$lib/components/chat/Settings/UserSettingField.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
-	import Plus from '$lib/components/icons/Plus.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
-	import Pencil from '$lib/components/icons/Pencil.svelte';
-	import Users from '$lib/components/icons/Users.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
-	import ArrowUturnLeft from '$lib/components/icons/ArrowUturnLeft.svelte';
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import { templatesApi, getTerminalServers } from '$lib/apis/terminal';
 	import { terminalServers } from '$lib/stores';
 
+	/** Edits one terminal, or creates one when `terminalId` is null. */
 	export let show = true;
-	export let chatId: string | null = null;
-	export let modelId: string | null = null;
-	export let selected: string | null = null;
-	export let onSelect: (id: string) => Promise<void>;
+	export let terminalId: string | null = null;
+	/** Connections the user may create terminals on. */
+	export let connections: { id: string; name: string }[] = [];
+	export let onCreate: (id: string) => Promise<void> = async () => {};
+
 	const i18n = getContext<any>('i18n');
-	let rows: any[] = [];
-	let connections: any[] = [];
-	let current: any = null;
-	let editing: any = selected ? null : { id: null };
-	let sharing: any = null;
-	let accessGrants: any[] = [];
-	let connectionId = '';
+	const path = (id: string) => `/${encodeURIComponent(id)}`;
+	const connectionOf = (id: string) => id.slice('template:'.length, id.lastIndexOf(':'));
+
+	// '' is no scope: one machine for everyone with access.
+	const scopes = [
+		{ value: '', label: 'None', hint: 'All chats share one machine.' },
+		{ value: 'user', label: 'User', hint: 'Each person gets their own machine.' },
+		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own machine.' },
+		{ value: 'model', label: 'Model', hint: 'Each model gets its own machine.' }
+	];
+	const defaultImages = ['latest', 'agents', 'cuda', 'slim', 'alpine', 'openshift'].map(
+		(tag) => `ghcr.io/open-webui/open-terminal:${tag}`
+	);
+
+	const inputClass =
+		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const actionButtonClass =
+		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+	const item =
+		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition';
+
+	let busy = false;
+	let loading = !!terminalId;
+	let error = '';
+	let connectionId = connections[0]?.id ?? '';
 	let name = '';
+	let scope = '';
 	let image = '';
-	let scope = 'none';
 	let cpu = '';
 	let memory = '';
-	let advanced = '{}';
+	let storage = '';
+	let network = '';
+	let env: { key: string; value: string }[] = [];
 	let showAdvanced = false;
-	let busy = false;
-	let error = '';
-	let confirmation: { title: string; message: string; run: () => Promise<void> } | null = null;
+	let status: any = null;
+	let machines: any[] = [];
+	let accessGrants: any[] = [];
+	let showAccess = false;
+	let confirmation: {
+		title: string;
+		message: string;
+		label: string;
+		run: () => Promise<void>;
+	} | null = null;
 	let showConfirm = false;
-	const button =
-		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white';
-	const input =
-		'w-full min-w-0 bg-transparent py-0.5 text-sm text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-700';
-	const select =
-		'min-w-0 bg-transparent pr-5 text-sm text-gray-900 outline-hidden dark:text-gray-100';
-	const path = (id: string) => `/${encodeURIComponent(id)}`;
-	const context = () => ({ chat_id: chatId, model_id: modelId });
+
+	$: serverId = terminalId ? connectionOf(terminalId) : connectionId;
+	$: loadStatus(serverId);
+	$: images = (status?.allowed_images ?? '')
+		.split(',')
+		.map((value: string) => value.trim())
+		.filter((value: string) => value && !value.includes('*'));
+	$: scopeLocked = !!terminalId && machines.length > 0;
+	$: cpuMessage = cpuError(cpu, status?.max_cpu);
+	$: memoryMessage = sizeError(memory, status?.max_memory);
+	$: storageMessage = sizeError(storage, status?.max_storage);
+	$: invalid = !!(cpuMessage || memoryMessage || storageMessage);
+	$: summary = [
+		image && image.split(':').pop(),
+		cpu && `${cpu} CPU`,
+		memory,
+		storage,
+		network,
+		env.some((row) => row.key.trim()) &&
+			$i18n.t('{{count}} variables', { count: env.filter((row) => row.key.trim()).length })
+	]
+		.filter(Boolean)
+		.join(' · ');
+
+	async function loadStatus(id: string) {
+		status = null;
+		if (!id) return;
+		status = await templatesApi(`/connections/${encodeURIComponent(id)}/status`).catch(() => null);
+	}
+
+	const units: Record<string, number> = {
+		'': 1,
+		k: 1e3,
+		m: 1e6,
+		g: 1e9,
+		t: 1e12,
+		ki: 2 ** 10,
+		mi: 2 ** 20,
+		gi: 2 ** 30,
+		ti: 2 ** 40
+	};
+	const bytes = (value: string) => {
+		const match = /^(\d+(?:\.\d+)?)\s*([kmgt]i?)?b?$/i.exec(value.trim());
+		return match ? Number(match[1]) * units[(match[2] ?? '').toLowerCase()] : null;
+	};
+	const limit = (max?: string | null) => (max ? $i18n.t('Up to {{max}}.', { max }) : '');
+	function cpuError(value: string, max?: string | null) {
+		if (!value.trim()) return '';
+		const amount = Number(value);
+		if (!Number.isFinite(amount) || amount <= 0) return $i18n.t('Enter a number, like 2.');
+		return max && amount > Number(max) ? $i18n.t('Maximum is {{max}}.', { max }) : '';
+	}
+	function sizeError(value: string, max?: string | null) {
+		if (!value.trim()) return '';
+		const amount = bytes(value);
+		if (amount === null) return $i18n.t('Enter a size, like 2Gi.');
+		const cap = max ? bytes(max) : null;
+		return cap !== null && amount > cap ? $i18n.t('Maximum is {{max}}.', { max }) : '';
+	}
 
 	async function run(work: () => Promise<void>) {
 		busy = true;
@@ -65,450 +147,506 @@
 			busy = false;
 		}
 	}
+
+	const refreshServers = async () =>
+		terminalServers.set(await getTerminalServers(localStorage.token));
+
+	async function loadMachines() {
+		if (terminalId) machines = await templatesApi(`${path(terminalId)}/instances`);
+	}
+
 	async function load() {
-		const [servers, allowed] = await Promise.all([
-			getTerminalServers(localStorage.token),
-			templatesApi('/connections')
+		if (!terminalId) return;
+		const [template, grants] = await Promise.all([
+			templatesApi(path(terminalId)),
+			templatesApi(`${path(terminalId)}/access`),
+			loadMachines()
 		]);
-		terminalServers.set(servers);
-		rows = servers.filter((row) => row.template_id);
-		connections = allowed;
-		if (!connections.some((c) => c.id === connectionId)) connectionId = connections[0]?.id ?? '';
-		current = null;
-		if (selected && rows.some((r) => r.id === selected)) {
-			const query = new URLSearchParams();
-			if (chatId) query.set('chat_id', chatId);
-			if (modelId) query.set('model_id', modelId);
-			try {
-				current = await templatesApi(`${path(selected)}/instance?${query}`);
-			} catch (e) {
-				current = { status: 'unavailable', detail: String(e) };
-			}
-		}
+		const data = template?.data ?? {};
+		name = data.name ?? '';
+		scope = data.scope ?? '';
+		image = data.image ?? '';
+		cpu = data.cpu_limit ?? '';
+		memory = data.memory_limit ?? '';
+		storage = data.storage ?? '';
+		network = data.network_profile ?? '';
+		env = Object.entries(data.env ?? {}).map(([key, value]) => ({ key, value: String(value) }));
+		accessGrants = grants;
 	}
-	async function edit(row: any = null) {
-		await run(async () => {
-			const data = row ? (await templatesApi(path(row.id))).data : {};
-			editing = row ?? { id: null };
-			sharing = null;
-			name = data.name ?? row?.name ?? '';
-			image = data.image ?? '';
-			scope = data.scope ?? 'none';
-			cpu = data.cpu_limit ?? '';
-			memory = data.memory_limit ?? '';
-			const { name: _name, image: _image, scope: _scope, cpu_limit, memory_limit, ...rest } = data;
-			advanced = JSON.stringify(rest, null, 2);
-			showAdvanced = false;
-		});
+
+	function payload() {
+		const variables = Object.fromEntries(
+			env.filter((row) => row.key.trim()).map((row) => [row.key.trim(), row.value])
+		);
+		return {
+			name: name.trim(),
+			scope: scope || null,
+			image: image.trim() || null,
+			cpu_limit: cpu.trim() || null,
+			memory_limit: memory.trim() || null,
+			storage: storage.trim() || null,
+			network_profile: network.trim() || null,
+			env: Object.keys(variables).length ? variables : null
+		};
 	}
+
 	async function save() {
+		if (invalid) return;
 		await run(async () => {
-			const extra = JSON.parse(advanced);
-			if (!extra || Array.isArray(extra) || typeof extra !== 'object')
-				throw new Error('Configuration must be an object');
-			const data = {
-				...extra,
-				name: name.trim(),
-				image: image.trim() || null,
-				scope: scope === 'none' ? null : scope,
-				cpu_limit: cpu || null,
-				memory_limit: memory || null
-			};
-			if (!data.name) throw new Error('Name is required');
-			if (editing.id) await templatesApi(path(editing.id), 'PATCH', data);
-			else {
+			const data = payload();
+			if (!data.name) throw new Error($i18n.t('Enter a name.'));
+			if (terminalId) {
+				await templatesApi(path(terminalId), 'PATCH', data);
+				await refreshServers();
+			} else {
 				const row = await templatesApi('', 'POST', {
 					id: uuidv4(),
 					connection_id: connectionId,
 					data
 				});
-				await load();
-				await onSelect(row.terminal_id);
-				selected = row.terminal_id;
+				await refreshServers();
+				await onCreate(row.terminal_id);
 			}
-			editing = null;
-			await load();
+			show = false;
 		});
 	}
-	async function share(row: any) {
-		await run(async () => {
-			accessGrants = await templatesApi(`${path(row.id)}/access`);
-			sharing = row;
-			editing = null;
-		});
+
+	async function saveAccess() {
+		if (!terminalId) return;
+		busy = true;
+		try {
+			await templatesApi(`${path(terminalId)}/access`, 'POST', { access_grants: accessGrants });
+			toast.success($i18n.t('Saved'));
+		} catch (e) {
+			toast.error(`${e}`);
+			accessGrants = await templatesApi(`${path(terminalId)}/access`).catch(() => accessGrants);
+		} finally {
+			busy = false;
+		}
 	}
-	async function saveShares() {
-		await run(async () => {
-			await templatesApi(`${path(sharing.id)}/access`, 'POST', { access_grants: accessGrants });
-			sharing = null;
-			await load();
-		});
-	}
-	async function removeTemplate(row: any) {
-		await run(async () => {
-			const instances = await templatesApi(`${path(row.id)}/instances`);
-			confirmation = {
-				title: `Delete ${row.name}?`,
-				message: `This deletes the terminal and ${instances.length} instances, including their files.`,
-				run: async () => {
-					await templatesApi(path(row.id), 'DELETE');
-					await load();
-				}
-			};
-			showConfirm = true;
-		});
-	}
-	function action(kind: 'restart' | 'reset' | 'delete') {
-		if (!selected) return;
-		const target = selected;
-		const pinned = context();
-		confirmation = {
-			title:
-				kind === 'delete'
-					? 'Delete this instance?'
-					: `${kind === 'restart' ? 'Restart' : 'Reset'} terminal?`,
-			message:
-				kind === 'restart'
-					? 'Running work stops. Files are kept.'
-					: 'Files and running work are removed for everyone using this instance.',
-			run: async () => {
-				await templatesApi(
-					`${path(target)}/${kind === 'delete' ? 'instance' : kind}`,
-					kind === 'delete' ? 'DELETE' : 'POST',
-					pinned
-				);
-				await load();
-			}
-		};
+
+	function confirm(title: string, message: string, label: string, work: () => Promise<void>) {
+		confirmation = { title, message, label, run: work };
 		showConfirm = true;
 	}
-	onMount(() => run(load));
+
+	function machineName(machine: any) {
+		const kind = (machine.context_id ?? '').split(':')[0];
+		if (kind === 'default') return name || $i18n.t('Terminal');
+		if (kind === 'chat') return machine.label ?? $i18n.t('Deleted chat');
+		if (kind === 'user') return machine.label ?? $i18n.t('Deleted user');
+		return machine.label ?? machine.context_id;
+	}
+
+	function machineAction(machine: any, action: 'restart' | 'delete') {
+		const title = machineName(machine);
+		const [heading, message, button] =
+			action === 'restart'
+				? [
+						$i18n.t('Restart {{name}}?', { name: title }),
+						$i18n.t('Running work stops. Files are kept.'),
+						$i18n.t('Restart')
+					]
+				: [
+						$i18n.t('Delete {{name}}?', { name: title }),
+						$i18n.t('The machine and its files are deleted.'),
+						$i18n.t('Delete')
+					];
+		confirm(heading, message, button, async () => {
+			await templatesApi(
+				`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
+				action === 'delete' ? 'DELETE' : 'POST',
+				machine.context ?? {}
+			);
+			await loadMachines();
+		});
+	}
+
+	function deleteTerminal() {
+		confirm(
+			$i18n.t('Delete {{name}}?', { name }),
+			machines.length
+				? $i18n.t('This deletes {{count}} machines and their files.', { count: machines.length })
+				: $i18n.t('This terminal is deleted.'),
+			$i18n.t('Delete'),
+			async () => {
+				await templatesApi(path(terminalId!), 'DELETE');
+				await refreshServers();
+				show = false;
+			}
+		);
+	}
+
+	onMount(() => {
+		if (terminalId) run(load).finally(() => (loading = false));
+	});
 </script>
 
 <Modal
 	bind:show
 	size="sm"
-	ariaLabel={$i18n.t(
-		editing
-			? editing.id
-				? 'Configure terminal'
-				: 'New terminal'
-			: sharing
-				? 'Share terminal'
-				: 'Terminals'
-	)}
+	ariaLabel={terminalId ? $i18n.t('Terminal settings') : $i18n.t('New terminal')}
 >
 	<div class="text-gray-900 dark:text-gray-100">
-		<div class="flex items-center justify-between gap-2 px-4 pb-1 pt-3 dark:text-gray-300">
-			<h2 class="min-w-0 self-center truncate text-sm font-medium">
-				{editing
-					? $i18n.t(editing.id ? 'Configure terminal' : 'New terminal')
-					: sharing
-						? `${$i18n.t('Share')} ${sharing.name}`
-						: $i18n.t('Terminals')}
+		<div class="flex items-center justify-between gap-2 px-5 pb-2 pt-4">
+			<h2 class="font-primary min-w-0 truncate text-sm font-medium">
+				{terminalId ? name || $i18n.t('Terminal settings') : $i18n.t('New terminal')}
 			</h2>
-			<button
-				type="button"
-				class="self-center shrink-0 rounded-lg px-0 py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-				on:click={() => (show = false)}
-				aria-label={$i18n.t('Close')}><XMark className="size-4" /></button
-			>
+			<div class="flex shrink-0 items-center gap-2">
+				{#if terminalId && !loading}
+					<AccessButton
+						disabled={busy}
+						label={accessGrants.length ? $i18n.t('Shared') : $i18n.t('Private')}
+						on:click={() => (showAccess = true)}
+					/>
+				{/if}
+				<button
+					type="button"
+					class="self-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					on:click={() => (show = false)}
+					aria-label={$i18n.t('Close')}><XMark className="size-4" /></button
+				>
+			</div>
 		</div>
-		<div
-			class="max-h-[min(36rem,75dvh)] overflow-y-auto pb-4 {editing || sharing ? 'px-5' : 'px-3'}"
-			aria-busy={busy}
-		>
-			{#if error}<p role="alert" class="mb-3 text-xs text-gray-700 dark:text-gray-300">
-					{error}
-				</p>{/if}
-			{#if editing}
-				<form class="space-y-2" on:submit|preventDefault={save}>
-					<div>
-						<label for="terminal-name" class="mb-0.5 block text-xs text-gray-500"
-							>{$i18n.t('Name')}</label
-						>
+
+		{#if loading}
+			<div class="flex justify-center py-10"><Spinner className="size-4" /></div>
+		{:else}
+			<form
+				class="max-h-[min(40rem,80dvh)] overflow-y-auto px-5 pb-4"
+				aria-busy={busy}
+				on:submit|preventDefault={save}
+			>
+				{#if error}<p role="alert" class="mb-2 text-xs text-gray-700 dark:text-gray-300">
+						{error}
+					</p>{/if}
+
+				<UserSettingSection first>
+					<UserSettingField label={$i18n.t('Name')} forId="terminal-name">
 						<input
 							id="terminal-name"
-							list="terminal-name-suggestions"
-							class={input}
+							class={inputClass}
 							bind:value={name}
-							placeholder={$i18n.t('My Terminal')}
+							placeholder={$i18n.t('My terminal')}
 							required
 						/>
-						<datalist id="terminal-name-suggestions">
-							{#each [$i18n.t('My Terminal'), $i18n.t('Development'), $i18n.t('Sandbox')] as value}
-								<option {value}></option>
+					</UserSettingField>
+
+					{#if !terminalId && connections.length > 1}
+						<UserSettingRow
+							label={$i18n.t('Server')}
+							description={$i18n.t('Choose the server that runs this terminal.')}
+						>
+							<SettingsSelect bind:value={connectionId} ariaLabel={$i18n.t('Server')}>
+								{#each connections as connection}
+									<option value={connection.id}>{connection.name}</option>
+								{/each}
+							</SettingsSelect>
+						</UserSettingRow>
+					{/if}
+
+					<UserSettingRow
+						label={$i18n.t('Separate machine per')}
+						description={scopeLocked
+							? $i18n.t('Delete all machines to change this.')
+							: $i18n.t(scopes.find((option) => option.value === scope)?.hint ?? '')}
+					>
+						<SettingsSelect
+							bind:value={scope}
+							ariaLabel={$i18n.t('Separate machine per')}
+							disabled={scopeLocked || busy}
+						>
+							{#each scopes as option}
+								<option value={option.value}>{$i18n.t(option.label)}</option>
 							{/each}
-						</datalist>
-					</div>
-					{#if !editing.id}
-						<div>
-							<label for="terminal-connection" class="mb-0.5 block text-xs text-gray-500"
-								>{$i18n.t('Connection')}</label
+						</SettingsSelect>
+					</UserSettingRow>
+				</UserSettingSection>
+
+				<div class="mt-1">
+					<button
+						type="button"
+						class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md py-1.5 text-start text-xs font-normal focus-visible:outline focus-visible:outline-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+						aria-expanded={showAdvanced}
+						on:click={() => (showAdvanced = !showAdvanced)}
+					>
+						<span class="text-gray-600 dark:text-gray-400"
+							><ModelSettingsLabel
+								label={$i18n.t('Advanced')}
+								description={$i18n.t(
+									'Image, resources, network, and environment variables. Unset values use the server defaults.'
+								)}
+							/></span
+						>
+						<span class="truncate text-gray-900 dark:text-gray-100">
+							{summary || $i18n.t('Default')}
+						</span>
+						<ChevronRight
+							className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+						/>
+					</button>
+
+					{#if showAdvanced}
+						<div class="mb-2 mt-1 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+							<UserSettingField
+								className="sm:col-span-2"
+								label={$i18n.t('Image')}
+								forId="terminal-image"
+								description={$i18n.t('Container image used to run the terminal.')}
 							>
-							<select
-								id="terminal-connection"
-								class="{select} w-full"
-								bind:value={connectionId}
-								required
-								disabled={busy}
+								<input
+									id="terminal-image"
+									list="terminal-image-options"
+									class={inputClass}
+									bind:value={image}
+									placeholder={$i18n.t('Server default')}
+								/>
+								<datalist id="terminal-image-options">
+									{#each images.length ? images : defaultImages as value}
+										<option {value}></option>
+									{/each}
+								</datalist>
+							</UserSettingField>
+
+							<UserSettingField
+								label={$i18n.t('CPU')}
+								forId="terminal-cpu"
+								description={cpuMessage ||
+									[$i18n.t('CPU limit, for example 1 or 0.5.'), limit(status?.max_cpu)].join(' ')}
 							>
-								{#each connections as c}<option value={c.id}>{c.name}</option>{/each}
-							</select>
-							<p class="mt-1 text-xs text-gray-500">
-								{$i18n.t('Choose the connection that will run this terminal.')}
-							</p>
+								<input
+									id="terminal-cpu"
+									list="terminal-cpu-options"
+									class={inputClass}
+									bind:value={cpu}
+									placeholder={$i18n.t('Server default')}
+									aria-invalid={!!cpuMessage}
+								/>
+								<datalist id="terminal-cpu-options">
+									{#each ['0.5', '1', '2', '4', '8'] as value}<option {value}></option>{/each}
+								</datalist>
+							</UserSettingField>
+
+							<UserSettingField
+								label={$i18n.t('Memory')}
+								forId="terminal-memory"
+								description={memoryMessage ||
+									[$i18n.t('Memory limit, for example 2Gi.'), limit(status?.max_memory)].join(' ')}
+							>
+								<input
+									id="terminal-memory"
+									list="terminal-memory-options"
+									class={inputClass}
+									bind:value={memory}
+									placeholder={$i18n.t('Server default')}
+									aria-invalid={!!memoryMessage}
+								/>
+								<datalist id="terminal-memory-options">
+									{#each ['512Mi', '1Gi', '2Gi', '4Gi', '8Gi', '16Gi'] as value}<option {value}
+										></option>{/each}
+								</datalist>
+							</UserSettingField>
+
+							<UserSettingField
+								label={$i18n.t('Storage')}
+								forId="terminal-storage"
+								description={storageMessage ||
+									[
+										$i18n.t('Disk space for files, for example 10Gi.'),
+										limit(status?.max_storage)
+									].join(' ')}
+							>
+								<input
+									id="terminal-storage"
+									list="terminal-storage-options"
+									class={inputClass}
+									bind:value={storage}
+									placeholder={$i18n.t('Server default')}
+									aria-invalid={!!storageMessage}
+								/>
+								<datalist id="terminal-storage-options">
+									{#each ['1Gi', '5Gi', '10Gi', '20Gi', '50Gi'] as value}<option {value}
+										></option>{/each}
+								</datalist>
+							</UserSettingField>
+
+							<UserSettingField
+								label={$i18n.t('Network')}
+								forId="terminal-network"
+								description={$i18n.t('Network profile that controls outside access.')}
+							>
+								<input
+									id="terminal-network"
+									list="terminal-network-options"
+									class={inputClass}
+									bind:value={network}
+									placeholder={$i18n.t('Server default')}
+								/>
+								<datalist id="terminal-network-options">
+									{#each status?.network_profiles ?? [] as value}<option {value}></option>{/each}
+								</datalist>
+							</UserSettingField>
+
+							<div class="sm:col-span-2">
+								<div class="flex items-center justify-between">
+									<span class="text-xs text-gray-600 dark:text-gray-400"
+										>{$i18n.t('Environment variables')}</span
+									>
+									<button
+										type="button"
+										aria-label={$i18n.t('Add variable')}
+										class="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+										on:click={() => (env = [...env, { key: '', value: '' }])}
+										><Plus className="size-3.5" /></button
+									>
+								</div>
+								{#each env as row, index}
+									<div class="mt-1 flex items-center gap-1.5">
+										<input
+											class="{inputClass} font-mono"
+											bind:value={row.key}
+											placeholder="KEY"
+											aria-label={$i18n.t('Variable name')}
+										/>
+										<input
+											class={inputClass}
+											bind:value={row.value}
+											placeholder={$i18n.t('value')}
+											aria-label={$i18n.t('Variable value')}
+										/>
+										<button
+											type="button"
+											aria-label={$i18n.t('Remove variable')}
+											class="shrink-0 text-gray-400 hover:text-gray-900 dark:hover:text-white"
+											on:click={() => (env = env.filter((_, i) => i !== index))}
+											><XMark className="size-3.5" /></button
+										>
+									</div>
+								{/each}
+								<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+									{$i18n.t('Set when the machine starts.')}
+								</p>
+							</div>
 						</div>
 					{/if}
-					<div>
-						<label for="terminal-scope" class="mb-0.5 block text-xs text-gray-500"
-							>{$i18n.t('Scope')}</label
-						>
-						<select id="terminal-scope" class="{select} w-full" bind:value={scope} disabled={busy}>
-							<option value="none">{$i18n.t('None')}</option>
-							<option value="user">{$i18n.t('User')}</option>
-							<option value="chat">{$i18n.t('Chat')}</option>
-							<option value="model">{$i18n.t('Model')}</option>
-						</select>
-						<p class="mt-1 text-xs text-gray-500">
-							{$i18n.t(
-								scope === 'none'
-									? 'Everyone with access shares this terminal.'
-									: scope === 'user'
-										? 'Each user gets their own terminal.'
-										: scope === 'chat'
-											? 'Each chat gets a terminal shared by its participants.'
-											: 'Each model gets a terminal shared across authorized users and chats.'
-							)}
-						</p>
-					</div>
-					<div>
-						<label for="terminal-image" class="mb-0.5 block text-xs text-gray-500"
-							>{$i18n.t('Image')}</label
-						>
-						<input
-							id="terminal-image"
-							list="terminal-image-suggestions"
-							class={input}
-							bind:value={image}
-							placeholder={$i18n.t('Server default')}
-						/>
-						<datalist id="terminal-image-suggestions">
-							{#each ['latest', 'agents', 'cuda', 'slim', 'alpine', 'openshift'] as tag}
-								<option value={`ghcr.io/open-webui/open-terminal:${tag}`}></option>
-							{/each}
-						</datalist>
-						<p class="mt-1 text-xs text-gray-500">
-							{$i18n.t('Container image used to run the terminal.')}
-						</p>
-					</div>
-					<div class="grid grid-cols-2 gap-2">
-						<div class="min-w-0">
-							<label for="terminal-cpu" class="mb-0.5 block text-xs text-gray-500">CPU</label>
-							<input
-								id="terminal-cpu"
-								list="terminal-cpu-suggestions"
-								class={input}
-								bind:value={cpu}
-								placeholder={$i18n.t('Server default')}
-							/>
-							<datalist id="terminal-cpu-suggestions">
-								{#each ['0.5', '1', '2', '4', '8'] as value}
-									<option {value}></option>
-								{/each}
-							</datalist>
-							<p class="mt-1 text-xs text-gray-500">
-								{$i18n.t('CPU limit, for example 1 or 0.5.')}
-							</p>
-						</div>
-						<div class="min-w-0">
-							<label for="terminal-memory" class="mb-0.5 block text-xs text-gray-500"
-								>{$i18n.t('Memory')}</label
-							>
-							<input
-								id="terminal-memory"
-								list="terminal-memory-suggestions"
-								class={input}
-								bind:value={memory}
-								placeholder={$i18n.t('Server default')}
-							/>
-							<datalist id="terminal-memory-suggestions">
-								{#each ['512Mi', '1Gi', '2Gi', '4Gi', '8Gi', '16Gi'] as value}
-									<option {value}></option>
-								{/each}
-							</datalist>
-							<p class="mt-1 text-xs text-gray-500">{$i18n.t('Memory limit, for example 2Gi.')}</p>
-						</div>
-					</div>
-					<Collapsible
-						title={$i18n.t('Advanced')}
-						bind:open={showAdvanced}
-						buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-						chevronClassName="size-3.5"
-						chevronStrokeWidth="2"
-					>
-						<div slot="content" class="mt-2">
-							<p class="mb-2 text-xs text-gray-500">
-								{$i18n.t('Environment variables, storage, networking, and security settings.')}
-							</p>
-							<textarea
-								class="w-full resize-y rounded-lg bg-gray-50/60 p-2.5 font-mono text-xs leading-relaxed outline-hidden focus:ring-1 focus:ring-gray-200 dark:bg-gray-850/50 dark:focus:ring-gray-700"
-								rows="7"
-								bind:value={advanced}
-								aria-label={$i18n.t('Template configuration')}
-								spellcheck="false"
-							/>
-						</div>
-					</Collapsible>
-					<div class="flex items-center justify-between pt-3">
-						<button
-							type="button"
-							class="px-1 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-							disabled={busy}
-							on:click={() => (editing = null)}>{$i18n.t('Cancel')}</button
-						>
-						<button
-							type="submit"
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-							disabled={busy || (!editing.id && !connectionId)}
-						>
-							{$i18n.t(editing.id ? 'Save' : 'Create')}
-							{#if busy}<Spinner className="size-3" />{/if}
-						</button>
-					</div>
-				</form>
-			{:else if sharing}
-				<p class="mb-3 pt-1 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-					{$i18n.t(
-						'Use allows commands and file access. Manage also allows configuration, sharing, and instance management.'
-					)}
-				</p>
-				<AccessControl
-					bind:accessGrants
-					accessRoles={['read']}
-					labels={{ read: $i18n.t('Use') }}
-					sharePublic={false}
-					shareOpen={false}
-					shareUsers={true}
-					allowGroups={true}
-					onChange={() => {}}
-				/>
-				<div class="mt-4 flex justify-end gap-1.5">
-					<button class={button} disabled={busy} on:click={() => (sharing = null)}
-						>{$i18n.t('Cancel')}</button
-					><button
-						class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-						disabled={busy}
-						on:click={saveShares}
-						>{#if busy}<Spinner className="size-3" />{/if}{$i18n.t('Save')}</button
-					>
 				</div>
-			{:else}
-				<div class="space-y-0.5">
-					{#each rows as row (row.id)}
-						{@const connection = connections.find(
-							(c) => c.id === row.id.slice('template:'.length, row.id.lastIndexOf(':'))
-						)}
-						<div
-							class="flex items-center gap-1 rounded-lg pr-1 hover:bg-gray-50/60 dark:hover:bg-gray-850/60"
-						>
-							<button
-								class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left disabled:opacity-50"
-								aria-pressed={row.id === selected}
-								disabled={busy}
-								on:click={() =>
-									run(async () => {
-										await onSelect(row.id);
-										selected = row.id;
-										await load();
-									})}
-							>
-								<Cloud
-									className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
-									strokeWidth="1.5"
-								/>
-								<span class="min-w-0 flex-1"
-									><span class="block truncate text-sm font-normal text-gray-800 dark:text-gray-100"
-										>{row.name}</span
-									><span class="flex flex-wrap items-center gap-1.5 text-xs text-gray-500"
-										>{$i18n.t('Scope')}: {$i18n.t(
-											row.scope ? row.scope[0].toUpperCase() + row.scope.slice(1) : 'None'
-										)}{#if row.id === selected && current}<span aria-hidden="true">·</span><span
-												class="flex items-center gap-1"
-												>{#if current.status === 'running'}<span
-														class="size-1 rounded-full bg-emerald-500"
-													/>{/if}{$i18n.t(
-													current.status === 'not_created'
-														? 'Not started'
-														: current.status[0].toUpperCase() + current.status.slice(1)
-												)}</span
-											>{/if}</span
-									></span
-								>
-								{#if row.id === selected}<Check
-										className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
-									/>{/if}
-							</button>
-							{#if connection}
-								<Dropdown align="end" closeOnSelect>
-									<button
-										class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
-										aria-label={$i18n.t('Actions for {{name}}', { name: row.name })}
-										disabled={busy}><EllipsisHorizontal className="size-4" /></button
-									>
-									<div slot="content">
-										<DropdownMenu className="min-w-[10.625rem]">
-											<button disabled={busy} on:click={() => edit(row)}
-												><Pencil />{$i18n.t('Configure')}</button
-											>
-											<button disabled={busy} on:click={() => share(row)}
-												><Users />{$i18n.t('Share')}</button
-											>
-											{#if row.id === selected && current && !['not_created', 'unavailable'].includes(current.status)}
-												<hr class="border-gray-50 dark:border-gray-850/30" />
-												<button disabled={busy} on:click={() => action('restart')}
-													><ArrowPath />{$i18n.t('Restart')}</button
-												>
-												<button disabled={busy} on:click={() => action('reset')}
-													><ArrowUturnLeft />{$i18n.t('Reset')}</button
-												>
-												<button disabled={busy} on:click={() => action('delete')}
-													><XMark />{$i18n.t('Delete instance')}</button
-												>
-											{/if}
-											<hr class="border-gray-50 dark:border-gray-850/30" />
-											<button disabled={busy} on:click={() => removeTemplate(row)}
-												><GarbageBin />{$i18n.t('Delete terminal')}</button
-											>
-										</DropdownMenu>
+
+				{#if terminalId}
+					<section class="mt-4 w-full">
+						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+							{$i18n.t('Machines')}
+							<span class="text-gray-400 dark:text-gray-600">{machines.length}</span>
+						</div>
+						<div class="flex flex-col gap-1 py-1">
+							{#each machines as machine (machine.id)}
+								{@const title = machineName(machine)}
+								<div class="flex w-full items-center gap-1.5">
+									<div class="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-300">
+										{title}{#if machine.user_name}<span class="text-gray-400 dark:text-gray-600">
+												· {machine.user_name}</span
+											>{/if}
 									</div>
-								</Dropdown>
-							{/if}
+									<span class="shrink-0 text-xs text-gray-500">
+										{machine.status === 'running' ? $i18n.t('Running') : $i18n.t('Stopped')}
+									</span>
+									<Dropdown align="end" closeOnSelect>
+										<button
+											type="button"
+											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+											aria-label={$i18n.t('More options for {{name}}', { name: title })}
+											disabled={busy}><EllipsisHorizontal className="size-3.5" /></button
+										>
+										<div slot="content">
+											<DropdownMenu className="min-w-40">
+												<button
+													type="button"
+													class={item}
+													on:click={() => machineAction(machine, 'restart')}
+													><ArrowPath className="size-3.5" />{$i18n.t('Restart')}</button
+												>
+												<button
+													type="button"
+													class={item}
+													on:click={() => machineAction(machine, 'delete')}
+													><GarbageBin className="size-3.5" />{$i18n.t('Delete machine')}</button
+												>
+											</DropdownMenu>
+										</div>
+									</Dropdown>
+								</div>
+							{:else}
+								<div class="text-xs text-gray-400 dark:text-gray-600">
+									{$i18n.t('No machines yet. One starts the first time the terminal is used.')}
+								</div>
+							{/each}
 						</div>
-					{:else}<div class="flex items-center justify-center gap-2 py-8 text-xs text-gray-500">
-							{#if busy}<Spinner className="size-3.5" />{$i18n.t('Loading...')}{:else}{$i18n.t(
-									'No terminals available'
-								)}{/if}
-						</div>{/each}
+					</section>
+				{/if}
+
+				<div class="flex items-center justify-between pt-4">
+					<div>
+						{#if terminalId}
+							<button
+								type="button"
+								class={actionButtonClass}
+								disabled={busy}
+								on:click={deleteTerminal}>{$i18n.t('Delete terminal')}</button
+							>
+						{/if}
+					</div>
+					<button
+						type="submit"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						disabled={busy || invalid || (!terminalId && !connectionId)}
+					>
+						{terminalId ? $i18n.t('Save') : $i18n.t('Create')}
+						{#if busy}<Spinner className="size-3" />{/if}
+					</button>
 				</div>
-				{#if current?.detail}<p class="mt-2 text-xs text-gray-500" role="status">
-						{current.detail}
-					</p>{/if}
-				{#if connections.length}<div class="mt-2 flex justify-end px-1">
-						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
-							disabled={busy}
-							on:click={() => edit()}><Plus className="size-3.5" />{$i18n.t('New terminal')}</button
-						>
-					</div>{/if}
-			{/if}
-		</div>
+			</form>
+		{/if}
 	</div>
 </Modal>
+
+{#if showAccess}
+	<Modal ariaLabel={`${$i18n.t('Access')}: ${name}`} size="sm" bind:show={showAccess}>
+		<div>
+			<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
+				<div class=" text-sm self-center">
+					{$i18n.t('Access')}: {name}
+				</div>
+				<button
+					aria-label={$i18n.t('Close')}
+					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					on:click={() => (showAccess = false)}
+				>
+					<XMark className={'size-4'} />
+				</button>
+			</div>
+
+			<div class="w-full px-5 pb-4 dark:text-white" inert={busy} aria-busy={busy}>
+				<AccessControl
+					bind:accessGrants
+					labels={{ private: $i18n.t('Restricted') }}
+					onChange={saveAccess}
+					accessRoles={['read']}
+					sharePublic={false}
+					shareOpen={false}
+				>
+					<p class="text-xs text-gray-500 dark:text-gray-400">
+						{$i18n.t('People with access can run commands and see every file on this terminal.')}
+					</p>
+				</AccessControl>
+			</div>
+		</div>
+	</Modal>
+{/if}
+
 <ConfirmDialog
 	bind:show={showConfirm}
 	title={confirmation?.title ?? ''}
 	message={confirmation?.message ?? ''}
+	confirmLabel={confirmation?.label}
 	onConfirm={() =>
 		run(async () => {
 			await confirmation?.run();
