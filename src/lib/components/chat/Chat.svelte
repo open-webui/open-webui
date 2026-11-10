@@ -1094,6 +1094,7 @@
 	let lastTerminalSkillSelector: string | null = null;
 
 	let appliedFolderDefaults: FolderDetails['data'] = null;
+	let loadedAgentEnvironment: { key: string; models: Model[] } | null = null;
 	$: setFolderModelConnections([
 		$config?.features?.enable_direct_connections,
 		$settings?.directConnections,
@@ -1101,11 +1102,26 @@
 		$terminalServers
 	]);
 
+	const getAgentEnvironment = () => {
+		const terminalId = $selectedTerminalId;
+		const directory = terminalContext?.currentDirectory;
+		return terminalId && directory ? JSON.stringify([
+			terminalId,
+			directory,
+			($terminalServers ?? []).find((server) => server.id === terminalId)?.scope === 'chat' ? $chatId : null,
+			$config,
+			$settings,
+			$terminalServers
+		]) : null;
+	};
+
 	const refreshAgentModels = async (
 		folder: FolderDetails | null = null,
 		signal = chatLoadController.signal
 	) => {
 		const terminalId = $selectedTerminalId;
+		const environment = folder ? null : getAgentEnvironment();
+		loadedAgentEnvironment = null;
 		const retained = folder ? getFolderAgentModels(folder) : null;
 		models.update((available) => [
 			...available.filter((model) => model.owned_by !== 'terminal' ||
@@ -1119,7 +1135,9 @@
 					? ($settings?.directConnections ?? null) : null;
 				const discovered = folder
 					? await loadFolderAgentModels(localStorage.token, folder, connections, !!retained)
-					: await getModels(localStorage.token, connections);
+					: await getModels(localStorage.token, connections, false, false, {
+						terminalId, chatId: $chatId, cwd: terminalContext?.currentDirectory ?? null
+					});
 				if (signal.aborted || terminalId !== $selectedTerminalId) return;
 				if (folder && ($selectedFolder?.id !== folder.id ||
 					$selectedTerminalId !== folder.data?.terminal_id ||
@@ -1130,6 +1148,7 @@
 					? [...$models.filter((model) => model.owned_by !== 'terminal'), ...discovered]
 					: discovered;
 				models.set(available);
+				loadedAgentEnvironment = environment ? { key: environment, models: available } : null;
 				// Folder refreshes update the catalog without overwriting a draft's model choice.
 				if (folder) return;
 				const remaining = selectedModels.filter(
@@ -3138,7 +3157,12 @@
 					? { terminalId: $selectedTerminalId, currentDirectory: chatContent.working_directory }
 					: null;
 				if (selectedModels[0]?.startsWith('agent:')) {
-					if ($selectedTerminalId) await refreshAgentModels(null, signal);
+					if ($selectedTerminalId) {
+						const environment = getAgentEnvironment();
+						if (!environment || environment !== loadedAgentEnvironment?.key || $models !== loadedAgentEnvironment?.models) {
+							await refreshAgentModels(null, signal);
+						}
+					}
 					else selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
 				}
 
