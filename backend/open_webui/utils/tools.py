@@ -798,6 +798,7 @@ async def get_builtin_tools(
         and getattr(request.state, 'internal', False) is not True
         and getattr(request.state, 'direct', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
+        and await has_user_permission('subagents')
     ):
         builtin_functions.extend([delegate_task, timer])
 

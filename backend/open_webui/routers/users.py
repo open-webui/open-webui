@@ -265,6 +265,7 @@ class FeaturesPermissions(BaseModel):
     image_generation: bool = True
     code_interpreter: bool = True
     memories: bool = True
+    subagents: bool = True
     automations: bool = False
     calendar: bool = True
     webhooks: bool = False
