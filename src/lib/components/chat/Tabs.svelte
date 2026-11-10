@@ -89,6 +89,11 @@
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
+	import WorkspaceIcon from '$lib/components/layout/Sidebar/icons/Workspace.svelte';
+	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
+	import CalendarIcon from '$lib/components/layout/Sidebar/icons/Calendar.svelte';
+	import ClockIcon from '$lib/components/layout/Sidebar/icons/Clock.svelte';
+	import CodeIcon from '$lib/components/layout/Sidebar/icons/Code.svelte';
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
@@ -446,6 +451,13 @@
 			comments: 'chat-bubble',
 			side: 'chat-lines'
 		})[kind];
+	const pageTabIcons = {
+		workspace: WorkspaceIcon,
+		notes: NotesIcon,
+		calendar: CalendarIcon,
+		automations: ClockIcon,
+		playground: CodeIcon
+	};
 	const domId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
 	$: activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
@@ -2123,6 +2135,11 @@
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
+							{:else if tab.kind === 'page' && pageTabIcons[tab.href?.split('/')[1]]}
+								<svelte:component
+									this={pageTabIcons[tab.href?.split('/')[1]]}
+									className="size-3.5 shrink-0"
+								/>
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
