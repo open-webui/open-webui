@@ -135,7 +135,7 @@
 		class="space-y-2 px-5 pb-4 text-gray-900 dark:text-gray-100"
 		on:submit|preventDefault={save}
 	>
-		{#if error}<p role="alert" class="text-sm text-red-500">{error}</p>{/if}
+		{#if error}<p role="alert" class="text-sm text-gray-700 dark:text-gray-300">{error}</p>{/if}
 		<div class="flex gap-2">
 			<div class="min-w-0 flex-1">
 				<label for="terminal-name" class="mb-0.5 block text-xs text-gray-500"

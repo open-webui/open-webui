@@ -229,7 +229,7 @@
 			>
 		</div>
 		<div class="max-h-[min(36rem,75dvh)] overflow-y-auto px-4 pb-4" aria-busy={busy}>
-			{#if error}<p role="alert" class="mb-3 text-xs text-red-500">{error}</p>{/if}
+			{#if error}<p role="alert" class="mb-3 text-xs text-gray-700 dark:text-gray-300">{error}</p>{/if}
 			{#if editing}
 				<form class="space-y-4 pt-1" on:submit|preventDefault={save}>
 					<div>
@@ -445,7 +445,7 @@
 												><button disabled={busy} on:click={() => action('reset')}
 													><ArrowPath />{$i18n.t('Reset')}</button
 												><button
-													class="text-red-500 dark:text-red-400"
+													class="text-gray-700 dark:text-gray-300"
 													disabled={busy}
 													on:click={() => action('delete')}
 													><Trash />{$i18n.t('Delete instance')}</button
@@ -453,7 +453,7 @@
 											{/if}
 											<hr class="border-gray-100/50 dark:border-white/[0.04]" />
 												<button
-													class="text-red-500 dark:text-red-400"
+													class="text-gray-700 dark:text-gray-300"
 													disabled={busy}
 													on:click={() => removeTemplate(row)}
 													><Trash />{$i18n.t('Delete terminal')}</button
