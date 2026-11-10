@@ -1543,6 +1543,11 @@
 				: active?.kind === 'side' ? (active.chatId ? `/c/${active.chatId}` : active.href) : null;
 		if (href) {
 			const url = new URL(href, location.origin);
+			if (active?.kind === 'chat' && !chatId) {
+				// delete() re-encodes the other parameters even when it removes nothing.
+				if ($temporaryChatEnabled) url.searchParams.set('temporary-chat', 'true');
+				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
+			}
 			if (url.origin === location.origin && url.href !== location.href) {
 				// Reflect selection without routing through SvelteKit and remounting the workspace.
 				window.history.replaceState(window.history.state, '', url);
