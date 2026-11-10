@@ -48,12 +48,17 @@
 		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own machine.' },
 		{ value: 'model', label: 'Model', hint: 'Each model gets its own machine.' }
 	];
+	// Open Terminal reads these at start-up; the dialog gives them their own fields.
+	const START_DIR = 'OPEN_TERMINAL_START_DIR';
+	const SETUP_SCRIPT = 'OPEN_TERMINAL_SETUP_SCRIPT';
 	const defaultImages = ['latest', 'agents', 'cuda', 'slim', 'alpine', 'openshift'].map(
 		(tag) => `ghcr.io/open-webui/open-terminal:${tag}`
 	);
 
 	const inputClass =
 		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+	const textareaClass =
+		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const actionButtonClass =
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 	const item =
@@ -71,6 +76,8 @@
 	let storage = '';
 	let network = '';
 	let env: { key: string; value: string }[] = [];
+	let startDir = '';
+	let setupScript = '';
 	let showAdvanced = false;
 	let status: any = null;
 	let machines: any[] = [];
@@ -96,6 +103,8 @@
 	$: storageMessage = sizeError(storage, status?.max_storage);
 	$: invalid = !!(cpuMessage || memoryMessage || storageMessage);
 	$: summary = [
+		startDir.trim(),
+		setupScript.trim() && $i18n.t('Setup script'),
 		image && image.split(':').pop(),
 		cpu && `${cpu} CPU`,
 		memory,
@@ -178,14 +187,21 @@
 		memory = data.memory_limit ?? '';
 		storage = data.storage ?? '';
 		network = data.network_profile ?? '';
-		env = Object.entries(data.env ?? {}).map(([key, value]) => ({ key, value: String(value) }));
+		const { [START_DIR]: start, [SETUP_SCRIPT]: script, ...variables } = data.env ?? {};
+		startDir = start ?? '';
+		setupScript = script ?? '';
+		env = Object.entries(variables).map(([key, value]) => ({ key, value: String(value) }));
 		accessGrants = grants;
 	}
 
 	function payload() {
-		const variables = Object.fromEntries(
-			env.filter((row) => row.key.trim()).map((row) => [row.key.trim(), row.value])
+		const variables: Record<string, string> = Object.fromEntries(
+			env
+				.filter((row) => row.key.trim() && ![START_DIR, SETUP_SCRIPT].includes(row.key.trim()))
+				.map((row) => [row.key.trim(), row.value])
 		);
+		if (startDir.trim()) variables[START_DIR] = startDir.trim();
+		if (setupScript.trim()) variables[SETUP_SCRIPT] = setupScript;
 		return {
 			name: name.trim(),
 			scope: scope || null,
@@ -409,6 +425,40 @@
 
 					{#if showAdvanced}
 						<div class="mb-2 mt-1 grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-2">
+							<UserSettingField
+								className="sm:col-span-2"
+								label={$i18n.t('Start directory')}
+								forId="terminal-start-dir"
+								description={$i18n.t(
+									'Where every chat, shell, and command starts. Must be inside the home folder.'
+								)}
+							>
+								<input
+									id="terminal-start-dir"
+									class="{inputClass} font-mono"
+									bind:value={startDir}
+									placeholder="~"
+								/>
+							</UserSettingField>
+
+							<UserSettingField
+								className="sm:col-span-2"
+								label={$i18n.t('Setup script')}
+								forId="terminal-setup-script"
+								description={$i18n.t(
+									'Runs in the start directory each time the machine starts, before it is ready. Only the home folder is kept between restarts, so make it safe to run again.'
+								)}
+							>
+								<textarea
+									id="terminal-setup-script"
+									class={textareaClass}
+									rows="4"
+									spellcheck="false"
+									bind:value={setupScript}
+									placeholder={'test -d app || git clone https://github.com/acme/app app\ncd app && npm install'}
+								></textarea>
+							</UserSettingField>
+
 							<UserSettingField
 								className="sm:col-span-2"
 								label={$i18n.t('Image')}

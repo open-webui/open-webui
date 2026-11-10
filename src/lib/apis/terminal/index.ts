@@ -100,6 +100,12 @@ export type TerminalSystemInfo = {
 				memory_bytes: number;
 		  }[]
 		| null;
+	/** Present when the terminal has a setup script. */
+	setup?: {
+		status: 'running' | 'ok' | 'failed';
+		exit_code?: number;
+		log_tail?: string;
+	};
 };
 
 export type TerminalFeatures = {
