@@ -450,6 +450,8 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
+	setContext('selectedTerminalId', selectedTerminalId);
+	setContext('terminalSkills', terminalSkills);
 	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setContext('contextCompactions', contextCompactions);
 	let compactionChatId = '';

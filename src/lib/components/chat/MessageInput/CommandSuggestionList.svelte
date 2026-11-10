@@ -5,9 +5,16 @@
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import type { Writable } from 'svelte/store';
+	import {
+		selectedTerminalId as _selectedTerminalId,
+		terminalSkills as _terminalSkills
+	} from '$lib/stores';
 
 	export let char = '';
 	export let query = '';
+	export let selectedTerminalId: Writable<string | null> = _selectedTerminalId;
+	export let terminalSkills: Writable<any[]> = _terminalSkills;
 	export let modelId: string | null | (() => string | null) = null;
 	$: selectedModelId = typeof modelId === 'function' ? modelId() : modelId;
 	export let command: (payload: {
@@ -113,6 +120,8 @@
 		<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if char === '/'}
 				<SlashCommands
+					{selectedTerminalId}
+					{terminalSkills}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -212,6 +221,7 @@
 				/>
 			{:else if char === '@'}
 				<AtCommands
+					{selectedTerminalId}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -253,6 +263,8 @@
 				/>
 			{:else if char === '$'}
 				<Skills
+					{selectedTerminalId}
+					{terminalSkills}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}

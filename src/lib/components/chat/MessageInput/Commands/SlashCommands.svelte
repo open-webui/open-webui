@@ -2,6 +2,7 @@
 	export let modelId: string | null = null;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
 	import {
@@ -9,15 +10,7 @@
 		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import {
-		user,
-		chatId,
-		selectedTerminalId,
-		settings,
-		terminalServers,
-		terminalSkills,
-		visibleControls
-	} from '$lib/stores';
+	import { user, chatId, settings, terminalServers, visibleControls } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
@@ -31,6 +24,8 @@
 	const i18n: any = getContext('i18n');
 
 	export let query = '';
+	export let selectedTerminalId: Writable<string | null>;
+	export let terminalSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 	export let canCompact = false;
 	export let canCompare = false;

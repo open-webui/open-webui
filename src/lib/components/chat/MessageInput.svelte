@@ -23,6 +23,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
 	import { pickAndDownloadFile } from '$lib/utils/onedrive-file-picker';
@@ -39,14 +40,12 @@
 		showCallOverlay,
 		tools,
 		skills,
-		terminalSkills,
 		toolServers,
 		terminalServers,
 		user as _user,
 		showTabs,
 		showSettings,
 		showFileNavDir,
-		selectedTerminalId,
 		TTSWorker,
 		temporaryChatEnabled,
 		sideChatRequest,
@@ -135,6 +134,8 @@
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
 	const i18n: any = getContext('i18n');
+	const selectedTerminalId = getContext<Writable<string | null>>('selectedTerminalId');
+	const terminalSkills = getContext<Writable<any[]>>('terminalSkills');
 
 	type AskUserPrompt = {
 		id?: string;
@@ -1649,6 +1650,7 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
+					selectedTerminalId,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -1746,6 +1748,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
+					selectedTerminalId,
+					terminalSkills,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
@@ -1854,6 +1858,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
+					selectedTerminalId,
+					terminalSkills,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
 					},
