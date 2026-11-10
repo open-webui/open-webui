@@ -1148,6 +1148,14 @@ async def chat_completion(
     form_data: dict,
     user=Depends(get_verified_user),
 ):
+    #This is the added code, Zane and Anthony. 
+    #it creates the context blocks needed for openwebui to keep and not be discarded
+    #start of added code---------------------
+    context_block = form_data.pop('context', {}) or {}
+    class_id = context_block.get('class_id')
+    assignment_id = context_block.get('assignment_id')
+    #end of added code-----------------------
+
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
