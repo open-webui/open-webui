@@ -157,10 +157,11 @@
 
 	async function load() {
 		if (!terminalId) return;
+		// The form fills from the terminal alone; machines and access load beside it.
 		const [template, grants] = await Promise.all([
 			templatesApi(path(terminalId)),
-			templatesApi(`${path(terminalId)}/access`),
-			loadMachines()
+			templatesApi(`${path(terminalId)}/access`).catch(() => []),
+			loadMachines().catch(() => (machines = []))
 		]);
 		const data = template?.data ?? {};
 		name = data.name ?? '';
