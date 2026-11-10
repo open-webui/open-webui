@@ -29,6 +29,10 @@
 	import { terminalServers, user } from '$lib/stores';
 	import TerminalSystemInfoModal from './TerminalSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
+	import Folder from '$lib/components/icons/Folder.svelte';
+	import Stop from '$lib/components/icons/Stop.svelte';
+	import Play from '$lib/components/icons/Play.svelte';
+	import TerminalFilesModal from './TerminalFilesModal.svelte';
 
 	/** Edits one terminal, or creates one when `terminalId` is null. */
 	export let show = true;
@@ -263,8 +267,9 @@
 	}
 
 	let info: { target: TerminalTarget; label: string } | null = null;
+	let files: { target: TerminalTarget; label: string } | null = null;
 	// Requests carry the viewer's identity, so another person's machine can't be reached this way.
-	// A stopped machine would start on request, so only running machines offer System info.
+	// Only running machines offer System info and files: Terminals won't start one for System info.
 	function machineTarget(machine: any) {
 		if (!terminalId || machine.status !== 'running') return null;
 		const context = machine.context ?? {};
@@ -275,28 +280,42 @@
 		});
 	}
 
-	function machineAction(machine: any, action: 'restart' | 'delete') {
-		const title = machineName(machine);
-		const [heading, message, button] =
-			action === 'restart'
-				? [
-						$i18n.t('Restart {{name}}?', { name: title }),
-						$i18n.t('Running work stops. Files are kept.'),
-						$i18n.t('Restart')
-					]
-				: [
-						$i18n.t('Delete {{name}}?', { name: title }),
-						$i18n.t('The machine and its files are deleted.'),
-						$i18n.t('Delete')
-					];
-		confirm(heading, message, button, async () => {
-			await templatesApi(
-				`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
-				action === 'delete' ? 'DELETE' : 'POST',
-				machine.context ?? {}
-			);
-			await loadMachines();
-		});
+	const machineCopy = {
+		restart: [
+			'Restart {{name}}?',
+			'Running work stops and the machine starts again. Files are kept.',
+			'Restart'
+		],
+		stop: [
+			'Stop {{name}}?',
+			'Running work stops. Files are kept, and the machine starts again when it is next used.',
+			'Stop'
+		],
+		delete: ['Delete {{name}}?', 'The machine and its files are deleted.', 'Delete']
+	};
+
+	const sendMachineAction = async (
+		machine: any,
+		action: 'restart' | 'stop' | 'start' | 'delete'
+	) => {
+		await templatesApi(
+			`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
+			action === 'delete' ? 'DELETE' : 'POST',
+			machine.context ?? {}
+		);
+		await loadMachines();
+	};
+
+	function machineAction(machine: any, action: 'restart' | 'stop' | 'start' | 'delete') {
+		// Starting changes nothing that is running, so it needs no confirmation.
+		if (action === 'start') return run(() => sendMachineAction(machine, action));
+		const [heading, message, button] = machineCopy[action];
+		confirm(
+			$i18n.t(heading, { name: machineName(machine) }),
+			$i18n.t(message),
+			$i18n.t(button),
+			() => sendMachineAction(machine, action)
+		);
 	}
 
 	function deleteTerminal() {
@@ -630,20 +649,42 @@
 										<div slot="content">
 											<DropdownMenu className="min-w-40">
 												{@const target = machineTarget(machine)}
-												{#if target}
+												{#if machine.status === 'running'}
+													{#if target}
+														<button
+															type="button"
+															class={item}
+															on:click={() => (info = { target, label: title })}
+															><Activity className="size-3.5" />{$i18n.t('System info')}</button
+														>
+														<button
+															type="button"
+															class={item}
+															on:click={() => (files = { target, label: title })}
+															><Folder className="size-3.5" />{$i18n.t('View files')}</button
+														>
+													{/if}
 													<button
 														type="button"
 														class={item}
-														on:click={() => (info = { target, label: title })}
-														><Activity className="size-3.5" />{$i18n.t('System info')}</button
+														on:click={() => machineAction(machine, 'restart')}
+														><ArrowPath className="size-3.5" />{$i18n.t('Restart')}</button
+													>
+													<button
+														type="button"
+														class={item}
+														on:click={() => machineAction(machine, 'stop')}
+														><Stop className="size-3.5" />{$i18n.t('Stop')}</button
+													>
+												{:else}
+													<button
+														type="button"
+														class={item}
+														on:click={() => machineAction(machine, 'start')}
+														><Play className="size-3.5" />{$i18n.t('Start')}</button
 													>
 												{/if}
-												<button
-													type="button"
-													class={item}
-													on:click={() => machineAction(machine, 'restart')}
-													><ArrowPath className="size-3.5" />{$i18n.t('Restart')}</button
-												>
+												<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 												<button
 													type="button"
 													class={item}
@@ -729,6 +770,12 @@
 			label={info.label}
 			onClose={() => (info = null)}
 		/>
+	{/key}
+{/if}
+
+{#if files}
+	{#key files}
+		<TerminalFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
 	{/key}
 {/if}
 

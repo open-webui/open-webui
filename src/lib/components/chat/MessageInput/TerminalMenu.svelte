@@ -6,6 +6,7 @@
 	import { updateChatById } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
 	import TerminalSystemInfoModal from '../TerminalSystemInfoModal.svelte';
+	import TerminalFilesModal from '../TerminalFilesModal.svelte';
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
 	import type { TerminalContext } from '$lib/types';
 
@@ -61,19 +62,50 @@
 	const canManage = (terminal: any, ids: Set<string>) =>
 		!!terminal.template_id && ids.has(connectionOf(terminal.id));
 
-	let restartTarget: { id: string; name: string } | null = null;
-	let showRestart = false;
-	const restart = async () => {
-		if (!restartTarget) return;
-		try {
-			await templatesApi(`/${encodeURIComponent(restartTarget.id)}/restart`, 'POST', {
-				chat_id: isSavedChatId($activeChatId) ? $activeChatId : null,
-				model_id: modelId
-			});
-			toast.success($i18n.t('Restarted'));
-		} catch (e) {
-			toast.error(e instanceof Error ? e.message : String(e));
-		}
+	// Lifecycle actions act on this chat's machine of a terminal the user manages.
+	const machineContext = () => ({
+		chat_id: isSavedChatId($activeChatId) ? $activeChatId : null,
+		model_id: modelId
+	});
+	const machineStatus = async (id: string) => {
+		const query = new URLSearchParams();
+		const context = machineContext();
+		if (context.chat_id) query.set('chat_id', context.chat_id);
+		if (context.model_id) query.set('model_id', context.model_id);
+		return (await templatesApi(`/${encodeURIComponent(id)}/instance?${query}`))?.status ?? null;
+	};
+	const lifecycleCopy = {
+		restart: {
+			title: 'Restart {{name}}?',
+			message: 'Running work stops and the machine starts again. Files are kept.',
+			label: 'Restart',
+			pending: 'Restarting {{name}}…',
+			done: '{{name}} restarted'
+		},
+		stop: {
+			title: 'Stop {{name}}?',
+			message:
+				'Running work stops. Files are kept, and the machine starts again when it is next used.',
+			label: 'Stop',
+			pending: 'Stopping {{name}}…',
+			done: '{{name}} stopped'
+		},
+		start: { pending: 'Starting {{name}}…', done: '{{name}} started' }
+	};
+	let pending: { id: string; name: string; action: 'restart' | 'stop' } | null = null;
+	let showConfirm = false;
+	const runLifecycle = (id: string, name: string, action: 'restart' | 'stop' | 'start') => {
+		const copy = lifecycleCopy[action];
+		toast.promise(templatesApi(`/${encodeURIComponent(id)}/${action}`, 'POST', machineContext()), {
+			loading: $i18n.t(copy.pending, { name }),
+			success: () => $i18n.t(copy.done, { name }),
+			error: (e) => (e instanceof Error ? e.message : String(e))
+		});
+	};
+	const confirmLifecycle = (id: string, name: string, action: 'restart' | 'stop') => {
+		pending = { id, name, action };
+		show = false;
+		showConfirm = true;
 	};
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
@@ -211,6 +243,20 @@
 		if (await saveSelection(id)) selectedTerminalId.set(id);
 	}
 	let info: { target: TerminalTarget; label: string } | null = null;
+	let files: { target: TerminalTarget; label: string } | null = null;
+	const openFiles = async (selector: string, label: string) => {
+		const target = resolveTerminalTarget(
+			selector,
+			systemTerminals,
+			directTerminals,
+			localStorage.token ?? '',
+			{ chatId: $activeChatId || null, modelId: modelId }
+		);
+		if (!target) return;
+		show = false;
+		await tick();
+		files = { target, label };
+	};
 	const openInfo = async (selector: string, label: string) => {
 		if (
 			systemTerminals.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
@@ -350,7 +396,11 @@
 										? 'right-6'
 										: 'right-1'} {moreClass}"
 								>
-									<TerminalItemMenu {label} onInfo={() => openInfo(terminal.url, label)} />
+									<TerminalItemMenu
+										{label}
+										onInfo={() => openInfo(terminal.url, label)}
+										onFiles={() => openFiles(terminal.url, label)}
+									/>
 								</div>
 							</div>
 						{/each}
@@ -399,6 +449,8 @@
 
 						{#each section.terminals as terminal}
 							{@const label = terminal.name || $i18n.t('Terminal')}
+							{@const owned = canManage(terminal, manageable)}
+							{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
 							<div class="group/terminal relative rounded-xl">
 								<button
 									type="button"
@@ -430,19 +482,13 @@
 								>
 									<TerminalItemMenu
 										{label}
-										onRestart={canManage(terminal, manageable)
-											? () => {
-													restartTarget = { id: terminal.id, name: label };
-													show = false;
-													showRestart = true;
-												}
-											: null}
-										onInfo={terminal.scope !== 'chat' || isSavedChatId($activeChatId)
-											? () => openInfo(terminal.id, label)
-											: null}
-										onSettings={canManage(terminal, manageable)
-											? () => openTerminalDialog(terminal.id)
-											: null}
+										loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
+										onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
+										onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
+										onStart={() => runLifecycle(terminal.id, label, 'start')}
+										onInfo={reachable ? () => openInfo(terminal.id, label) : null}
+										onFiles={reachable ? () => openFiles(terminal.id, label) : null}
+										onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
 									/>
 								</div>
 							</div>
@@ -491,10 +537,16 @@
 	/>
 {/if}
 
+{#if files}
+	{#key files}
+		<TerminalFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
+	{/key}
+{/if}
+
 <ConfirmDialog
-	bind:show={showRestart}
-	title={$i18n.t('Restart {{name}}?', { name: restartTarget?.name ?? '' })}
-	message={$i18n.t('Running work stops. Files are kept.')}
-	confirmLabel={$i18n.t('Restart')}
-	onConfirm={restart}
+	bind:show={showConfirm}
+	title={pending ? $i18n.t(lifecycleCopy[pending.action].title, { name: pending.name }) : ''}
+	message={pending ? $i18n.t(lifecycleCopy[pending.action].message) : ''}
+	confirmLabel={pending ? $i18n.t(lifecycleCopy[pending.action].label) : undefined}
+	onConfirm={() => pending && runLifecycle(pending.id, pending.name, pending.action)}
 />

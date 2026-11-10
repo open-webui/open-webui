@@ -181,6 +181,16 @@ async def restart(terminal_id: str, body: InstanceForm, user=Depends(get_verifie
     return await instance_action(terminal_id, 'restart', body, user)
 
 
+@router.post('/{terminal_id}/stop')
+async def stop(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(terminal_id, 'stop', body, user)
+
+
+@router.post('/{terminal_id}/start')
+async def start(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(terminal_id, 'start', body, user)
+
+
 @router.post('/{terminal_id}/reset')
 async def reset(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
     return await instance_action(terminal_id, 'reset', body, user)
