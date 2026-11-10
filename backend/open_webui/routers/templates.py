@@ -114,7 +114,7 @@ async def delete_template(terminal_id: str, user=Depends(get_verified_user)):
 async def get_shares(terminal_id: str, user=Depends(get_verified_user)):
     await template_connection(user, terminal_id, 'write')
     return [grant for grant in await AccessGrants.get_grants_by_resource('terminal', terminal_id)
-            if grant.get('permission') == 'read']
+            if grant.permission == 'read']
 
 
 @router.post('/{terminal_id}/access')

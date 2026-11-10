@@ -20,8 +20,15 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ModelSettingsLabel from '$lib/components/workspace/Models/ModelSettingsLabel.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
-	import { templatesApi, getTerminalServers } from '$lib/apis/terminal';
-	import { terminalServers } from '$lib/stores';
+	import {
+		templatesApi,
+		getTerminalServers,
+		resolveTerminalTarget,
+		type TerminalTarget
+	} from '$lib/apis/terminal';
+	import { terminalServers, user } from '$lib/stores';
+	import TerminalSystemInfoModal from './TerminalSystemInfoModal.svelte';
+	import Activity from '$lib/components/icons/Activity.svelte';
 
 	/** Edits one terminal, or creates one when `terminalId` is null. */
 	export let show = true;
@@ -237,6 +244,19 @@
 		if (kind === 'chat') return machine.label ?? $i18n.t('Deleted chat');
 		if (kind === 'user') return machine.label ?? $i18n.t('Deleted user');
 		return machine.label ?? machine.context_id;
+	}
+
+	let info: { target: TerminalTarget; label: string } | null = null;
+	// Requests carry the viewer's identity, so another person's machine can't be reached this way.
+	// A stopped machine would start on request, so only running machines offer System info.
+	function machineTarget(machine: any) {
+		if (!terminalId || machine.status !== 'running') return null;
+		const context = machine.context ?? {};
+		if (context.user_id && context.user_id !== $user?.id) return null;
+		return resolveTerminalTarget(terminalId, $terminalServers ?? [], [], localStorage.token ?? '', {
+			chatId: context.chat_id ?? null,
+			modelId: context.model_id ?? null
+		});
 	}
 
 	function machineAction(machine: any, action: 'restart' | 'delete') {
@@ -559,6 +579,15 @@
 										>
 										<div slot="content">
 											<DropdownMenu className="min-w-40">
+												{@const target = machineTarget(machine)}
+												{#if target}
+													<button
+														type="button"
+														class={item}
+														on:click={() => (info = { target, label: title })}
+														><Activity className="size-3.5" />{$i18n.t('System info')}</button
+													>
+												{/if}
 												<button
 													type="button"
 													class={item}
@@ -641,6 +670,16 @@
 			</div>
 		</div>
 	</Modal>
+{/if}
+
+{#if info}
+	{#key info}
+		<TerminalSystemInfoModal
+			target={info.target}
+			label={info.label}
+			onClose={() => (info = null)}
+		/>
+	{/key}
 {/if}
 
 <ConfirmDialog
