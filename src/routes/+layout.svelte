@@ -47,11 +47,13 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
+	import { clearFolderStates, updateFolderChatLists, beginFolderOpening } from '$lib/stores/folderStates';
 	import { getFileBlobById, getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
+	beforeNavigate(() => beginFolderOpening());
 
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 
@@ -843,6 +845,7 @@
 					});
 				}
 			} else if (type === 'chat:title') {
+				updateFolderChatLists({ id: event.chat_id, title: data });
 				await refreshChatList(localStorage.token);
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));
@@ -1310,6 +1313,7 @@
 		let queueUserId = $user?.id;
 		const unsubscribeQueueUser = user.subscribe(async (value) => {
 			if (queueUserId !== value?.id) {
+				clearFolderStates();
 				channelRequestQueues.set({});
 				queueUserId = value?.id;
 			}

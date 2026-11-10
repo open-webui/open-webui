@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { getContext, onMount } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
-	import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
+	import {
+		folderStates,
+		folderChatPageKey,
+		loadFolderDetails,
+		loadFolderChatPage,
+		type FolderDetails,
+	} from '$lib/stores/folderStates';
 	import { models } from '$lib/stores';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -17,9 +23,11 @@
 	export let isWritable = false;
 	export let onEdit = () => {};
 
-	let details: { data?: { model_ids?: string[]; files?: unknown[] } } | null = null;
+	let details: FolderDetails | null = null;
 	let total: number | null = null;
 	let loading = true;
+	$: details = $folderStates[folder.id]?.details ?? null;
+	$: total = $folderStates[folder.id]?.chatPages[folderChatPageKey()]?.total ?? null;
 
 	$: modelNames = (details?.data?.model_ids ?? []).map(
 		(id) => $models.find((model) => model.id === id)?.name ?? id
@@ -27,12 +35,10 @@
 	$: files = details?.data?.files ?? [];
 
 	onMount(async () => {
-		const [loadedFolder, chats] = await Promise.all([
-			getFolderById(localStorage.token, folder.id).catch(() => null),
-			getSharedFolderChats(localStorage.token, folder.id, { page: 1 }).catch(() => null)
+		await Promise.all([
+			loadFolderDetails(localStorage.token, folder.id).catch(() => null),
+			loadFolderChatPage(localStorage.token, folder.id).catch(() => null)
 		]);
-		details = loadedFolder;
-		total = chats?.total ?? null;
 		loading = false;
 	});
 </script>
@@ -57,7 +63,7 @@
 			</div>
 			<div class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
 				<ChatBubble className="size-3.5 shrink-0" />
-				{#if loading}
+				{#if loading && total === null}
 					<Spinner className="size-3" />
 				{:else if total !== null}
 					<span>{total.toLocaleString()} {$i18n.t(total === 1 ? 'Chat' : 'Chats')}</span>

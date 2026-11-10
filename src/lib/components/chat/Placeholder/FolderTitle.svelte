@@ -10,10 +10,15 @@
 	import { toast } from 'svelte-sonner';
 
 	import { selectedFolder } from '$lib/stores';
+	import {
+		loadFolderDetails,
+		updateFolderDetails,
+		removeFolderState,
+		type FolderDetails,
+	} from '$lib/stores/folderStates';
 
 	import {
 		deleteFolderById,
-		getFolderById,
 		updateFolderById,
 		createNewFolder
 	} from '$lib/apis/folders';
@@ -29,7 +34,7 @@
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 
-	export let folder = null;
+	export let folder: FolderDetails | null = null;
 	export let readOnly: boolean = false;
 
 	export let onUpdate: Function = (folderId) => {};
@@ -41,48 +46,53 @@
 	let deleteFolderContents = true;
 
 	const updateHandler = async ({ name, meta, data }) => {
+		const targetFolder = folder;
+		if (!targetFolder) return;
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
 			return;
 		}
 
-		const currentName = folder.name;
+		const currentName = targetFolder.name;
 
-		folder.name = name;
+		targetFolder.name = name;
 
-		const res = await updateFolderById(localStorage.token, folder.id, {
+		const res = await updateFolderById(localStorage.token, targetFolder.id, {
 			name,
 			...(meta ? { meta } : {}),
 			...(data ? { data } : {})
 		}).catch((error) => {
 			toast.error(`${error}`);
 
-			folder.name = currentName;
+			targetFolder.name = currentName;
 			return null;
 		});
 
 		if (res) {
-			folder.name = name;
+			updateFolderDetails(targetFolder.id, res);
+			targetFolder.name = name;
 			if (data) {
-				folder.data = data;
+				targetFolder.data = data;
 			}
 
 			toast.success($i18n.t('Folder updated successfully'));
 
-			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+			const _folder = await loadFolderDetails(localStorage.token, targetFolder.id, true).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 
-			const updatedFolder = { ...folder, ..._folder };
-			await selectedFolder.set(updatedFolder);
+			const updatedFolder = { ...targetFolder, ..._folder };
+			if ($selectedFolder?.id === targetFolder.id) selectedFolder.set(updatedFolder);
 			onUpdate(updatedFolder);
 		}
 	};
 
 	const updateIconHandler = async (iconName) => {
-		const res = await updateFolderById(localStorage.token, folder.id, {
+		const targetFolder = folder;
+		if (!targetFolder) return;
+		const res = await updateFolderById(localStorage.token, targetFolder.id, {
 			meta: {
 				icon: iconName ?? ''
 			}
@@ -92,23 +102,26 @@
 		});
 
 		if (res) {
-			folder.meta = { ...folder.meta, icon: iconName ?? '' };
+			updateFolderDetails(targetFolder.id, res);
+			targetFolder.meta = { ...targetFolder.meta, icon: iconName ?? '' };
 
 			toast.success($i18n.t('Folder updated successfully'));
 
-			const _folder = await getFolderById(localStorage.token, folder.id).catch((error) => {
+			const _folder = await loadFolderDetails(localStorage.token, targetFolder.id, true).catch((error) => {
 				toast.error(`${error}`);
 				return null;
 			});
 
-			const updatedFolder = { ...folder, ..._folder };
-			await selectedFolder.set(updatedFolder);
+			const updatedFolder = { ...targetFolder, ..._folder };
+			if ($selectedFolder?.id === targetFolder.id) selectedFolder.set(updatedFolder);
 			onUpdate(updatedFolder);
 		}
 	};
 
 	const deleteHandler = async () => {
-		const res = await deleteFolderById(localStorage.token, folder.id, deleteFolderContents).catch(
+		const targetFolder = folder;
+		if (!targetFolder) return;
+		const res = await deleteFolderById(localStorage.token, targetFolder.id, deleteFolderContents).catch(
 			(error) => {
 				toast.error(`${error}`);
 				return null;
@@ -116,8 +129,9 @@
 		);
 
 		if (res) {
+			removeFolderState(targetFolder.id);
 			toast.success($i18n.t('Folder deleted successfully'));
-			onDelete(folder);
+			onDelete(targetFolder);
 		}
 	};
 

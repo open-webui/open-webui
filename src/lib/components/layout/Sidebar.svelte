@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import equal from 'fast-deep-equal';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 
@@ -40,6 +41,13 @@
 		setChatActive,
 		setChatReadAt
 	} from '$lib/stores/chatList';
+	import {
+		folderStates,
+		markFolderChatsDirty,
+		updateFolderChatLists,
+		updateFolderDetails,
+		removeFolderState,
+	} from '$lib/stores/folderStates';
 	import { onMount, getContext, setContext, tick, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
 
@@ -191,6 +199,7 @@
 						id
 					);
 					if (!result) throw new Error('Chat action failed');
+					updateFolderChatLists({ id }, undefined, true);
 					succeeded.add(id);
 				} catch (error) {
 					console.error(`Failed to ${action} chat:`, error);
@@ -256,13 +265,12 @@
 	let showSharedFolders = false;
 	let showChatsMenu = false;
 
-	let folders = {};
+	let folders: Record<string, any> = {};
 	type SelectedSidebarFolder = { id: string } | null;
 	let folderRegistry: Record<
 		string,
 		{
-			setFolderItems?: () => unknown;
-			upsertChat?: (chat: Record<string, unknown>) => unknown;
+			setFolderItems?: (append?: boolean, refresh?: boolean) => unknown;
 			setChatActive?: (chatId: string, active: boolean, pendingApproval: boolean) => boolean;
 			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
 			setAllChatsRead?: () => unknown;
@@ -273,12 +281,28 @@
 
 	let sharedFolders: any[] = [];
 
+	let retainedFolderId: string | null = null;
+	$: if ($selectedFolder?.id) {
+		const id = $selectedFolder.id;
+		const details = $folderStates[id]?.details;
+		if (details) {
+			retainedFolderId = id;
+			const display = { name: details.name, meta: details.meta, write_access: details.write_access, access_grants: details.access_grants };
+			const current = { name: $selectedFolder.name, meta: $selectedFolder.meta, write_access: $selectedFolder.write_access, access_grants: $selectedFolder.access_grants };
+			if (!equal(display, current)) selectedFolder.set({ ...$selectedFolder, ...display });
+		} else if (!$folderStates[id] && retainedFolderId === id) {
+			selectedFolder.set(null);
+			if ($page.url.pathname.startsWith('/folders/')) void goto('/');
+		}
+	} else retainedFolderId = null;
+
+
 	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
 		if (!folder?.id) {
 			return;
 		}
 
-		folderRegistry[folder.id]?.setFolderItems?.();
+		folderRegistry[folder.id]?.setFolderItems?.(false, false);
 	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
@@ -540,6 +564,7 @@
 	};
 
 	const refreshChatRows = async () => {
+		markFolderChatsDirty();
 		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 		if (result.accepted) {
 			await initFolders();
@@ -873,10 +898,6 @@
 			}
 
 			if (folderId) {
-				if (chat) {
-					return folderRegistry[folderId]?.upsertChat?.(chat);
-				}
-
 				return folderRegistry[folderId]?.setFolderItems?.();
 			}
 
@@ -925,6 +946,7 @@
 		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
+			updateFolderChatLists({ id: event.chat_id, active: event.data.data?.active ?? false, pending_approval: event.data.data?.pending_approval ?? false });
 			const eventData = event.data.data ?? {};
 			const active = eventData.active ?? false;
 			const pendingApproval = eventData.pending_approval ?? false;
@@ -941,6 +963,7 @@
 				await refreshChatRows();
 			}
 		} else if (event.data?.type === 'chat:list') {
+			if (typeof event.data.data?.last_read_at === 'number') updateFolderChatLists({ id: event.chat_id, last_read_at: event.data.data.last_read_at });
 			const eventData = event.data.data ?? {};
 			const folderUnreadCounts = eventData.folder_unread_counts;
 			if (folderUnreadCounts) {
@@ -1628,6 +1651,7 @@
 									);
 
 									if (res) {
+										updateFolderDetails(id, res);
 										await initFolders();
 									}
 								}
@@ -1639,6 +1663,11 @@
 								{shiftKey}
 								onFolderUnreadCounts={applyFolderUnreadCounts}
 								onDelete={(folderId) => {
+									for (const childId of Object.keys(folders)) {
+										let parentId = childId;
+										while (parentId && parentId !== folderId) parentId = folders[parentId]?.parent_id;
+										if (parentId) removeFolderState(childId);
+									}
 									let id = $selectedFolder?.id;
 									while (id && id !== folderId) id = folders[id]?.parent_id;
 									if (id) selectedFolder.set(null);
@@ -1711,6 +1740,7 @@
 										folderRegistry[chat.folder_id]?.setFolderItems();
 
 										if (res) {
+											updateFolderChatLists(res, null);
 											chat = res;
 										}
 									}
@@ -1812,6 +1842,7 @@
 														});
 
 														if (res) {
+															updateFolderChatLists(res, null);
 															chat = res;
 														}
 													}

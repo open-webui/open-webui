@@ -10,6 +10,7 @@
 	import type { Writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { updateFolderChatLists } from '$lib/stores/folderStates';
 
 	import {
 		archiveChatById,
@@ -134,9 +135,11 @@
 
 	const unarchiveHandler = async (id: string) => {
 		const index = chatList?.findIndex((chat) => chat.id === id) ?? -1;
-		await archiveChatById(localStorage.token, id).catch((error) => {
+		const restored = await archiveChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (!restored) return;
+		updateFolderChatLists(restored, restored.folder_id);
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
@@ -152,9 +155,11 @@
 		if (!selectedChatId) return;
 
 		const id = selectedChatId;
-		await deleteChatById(localStorage.token, id).catch((error) => {
+		const deleted = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 		});
+		if (!deleted) return;
+		updateFolderChatLists({ id }, undefined, true);
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;

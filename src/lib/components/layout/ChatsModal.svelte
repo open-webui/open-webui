@@ -10,6 +10,7 @@
 	dayjs.extend(calendar);
 
 	import { deleteChatById } from '$lib/apis/chats';
+	import { updateFolderChatLists } from '$lib/stores/folderStates';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { copyToClipboard, formatNumber } from '$lib/utils';
 
@@ -78,6 +79,7 @@
 		});
 
 		if (res) {
+			updateFolderChatLists({ id: chatId }, undefined, true);
 			chatList = chatList?.filter((c) => c.id !== chatId) ?? null;
 			onDelete(chatId);
 		}

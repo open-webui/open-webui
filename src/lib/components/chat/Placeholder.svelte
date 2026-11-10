@@ -145,10 +145,10 @@
 					onUpdate={async () => {
 						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 					}}
-					onDelete={async () => {
+					onDelete={async (deletedFolder: { id: string }) => {
 						await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
 
-						selectedFolder.set(null);
+						if ($selectedFolder?.id === deletedFolder.id) selectedFolder.set(null);
 					}}
 				/>
 			{:else}

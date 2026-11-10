@@ -49,6 +49,7 @@
 		user
 	} from '$lib/stores';
 	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
+	import { updateFolderChatLists } from '$lib/stores/folderStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -263,6 +264,7 @@
 				return null;
 			});
 			if (!res) return;
+			updateFolderChatLists({ id, title });
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
@@ -342,6 +344,7 @@
 		});
 
 		if (res) {
+			updateFolderChatLists({ id }, undefined, true);
 			if ($chatId === id) {
 				await goto('/');
 
@@ -363,6 +366,7 @@
 
 		try {
 			await archiveChatById(localStorage.token, id);
+			updateFolderChatLists({ id }, undefined, true);
 
 			if ($chatId === id) {
 				await goto('/');
@@ -389,6 +393,7 @@
 			);
 
 			if (res) {
+				updateFolderChatLists(res, folderId);
 				await refreshAfterChange(folderId);
 
 				toast.success($i18n.t('Chat moved successfully'));

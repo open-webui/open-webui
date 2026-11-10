@@ -6,49 +6,51 @@
 
 	import Chat from '$lib/components/chat/Chat.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getFolderById } from '$lib/apis/folders';
+	import {
+		getFolderState,
+		loadFolderDetails,
+		beginFolderOpening,
+		isCurrentFolderOpening,
+		isCancelledFolderRequest,
+	} from '$lib/stores/folderStates';
 	import { selectedFolder } from '$lib/stores';
 
 	let ready = false;
 	let loadedFolderId = '';
 
-	const init = async (folderId) => {
+	const init = async (folderId: string) => {
 		if (!folderId) {
 			await goto('/');
 			return;
 		}
 
-		// The sidebar click handler already fetches the folder and sets
-		// `selectedFolder` before navigating here; refetching would duplicate
-		// the request and re-trigger the sidebar's folder refresh.
-		if ($selectedFolder?.id !== folderId) {
-			const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-				toast.error(`${error}`);
-				return null;
+		const generation = beginFolderOpening();
+		const loaded = getFolderState(folderId).details;
+		if (!loaded && $selectedFolder?.id !== folderId) ready = false;
+		try {
+			const folder = loaded ?? await loadFolderDetails(localStorage.token, folderId);
+			if (!isCurrentFolderOpening(generation) || folderId !== loadedFolderId) return;
+			if ($selectedFolder?.id !== folderId) selectedFolder.set(folder);
+			if (loaded) void loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
+				if (!isCancelledFolderRequest(error)) console.error(error);
 			});
-
-			if (folderId !== loadedFolderId) {
-				return;
-			}
-
-			if (!folder) {
-				await goto('/');
-				return;
-			}
-
-			await selectedFolder.set(folder);
+		} catch (error) {
+			if (!isCurrentFolderOpening(generation) || isCancelledFolderRequest(error)) return;
+			toast.error(`${error}`);
+			await goto('/');
+			return;
 		}
 
 		ready = true;
 	};
 
 	$: if ($page.params.folderId !== loadedFolderId) {
-		loadedFolderId = $page.params.folderId;
+		loadedFolderId = $page.params.folderId ?? '';
 		init(loadedFolderId);
 	}
 
 	onDestroy(() => {
-		selectedFolder.set(null);
+		if ($selectedFolder?.id === loadedFolderId) selectedFolder.set(null);
 	});
 </script>
 

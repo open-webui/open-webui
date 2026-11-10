@@ -6,7 +6,14 @@
 	import ChatList from './ChatList.svelte';
 	import FolderKnowledge from './FolderKnowledge.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { getSharedFolderChats } from '$lib/apis/folders';
+	import {
+		folderStates,
+		folderChatPageKey,
+		loadFolderChatPage,
+		updateFolderChatLists,
+		isCancelledFolderRequest,
+	} from '$lib/stores/folderStates';
+	import { registerFolderRefreshHandler } from '$lib/stores/chatList';
 
 	type FolderPlaceholderFolder = {
 		id?: string;
@@ -63,18 +70,8 @@
 	};
 
 	const updateChatActive = (chatId: string, active: boolean) => {
-		if (!chats) {
-			return false;
-		}
-
-		let found = false;
-		chats = chats.map((chat) => {
-			if (chat.id !== chatId) {
-				return chat;
-			}
-			found = true;
-			return { ...chat, active };
-		});
+		const found = chats?.some((chat) => chat.id === chatId) ?? false;
+		updateFolderChatLists({ id: chatId, active });
 		return found;
 	};
 
@@ -95,37 +92,24 @@
 		});
 	};
 
-	const setChatList = async (clear = false) => {
+	let requestGeneration = 0;
+	let loadError = '';
+	$: retainedPage = folder?.id ? $folderStates[folder.id]?.chatPages[folderChatPageKey({ page, sortBy: orderBy, sortDir: direction })] : null;
+	$: chats = retainedPage?.chats ?? null;
+	$: totalChats = retainedPage?.total ?? 0;
+
+	const setChatList = async () => {
 		const folderId = folder?.id;
-		if (clear) {
-			chats = null;
-		}
-
-		if (folderId) {
-			// Always use the shared folder endpoint so owners also see
-			// chats created by users who have write access to this folder.
-			chatListLoading = true;
-			const res = await getSharedFolderChats(localStorage.token, folderId, {
-				page,
-				sortBy: orderBy,
-				sortDir: direction
-			}).catch((error) => {
-				console.error(error);
-				return null;
-			});
-
-			if (res && res.chats) {
-				chats = res.chats;
-				totalChats = res.total ?? res.chats.length;
-			} else {
-				chats = [];
-				totalChats = 0;
-			}
-			chatListLoading = false;
-		} else {
-			chats = [];
-			totalChats = 0;
-			chatListLoading = false;
+		const generation = ++requestGeneration;
+		if (!folderId) return;
+		chatListLoading = true;
+		loadError = '';
+		try {
+			await loadFolderChatPage(localStorage.token, folderId, { page, sortBy: orderBy, sortDir: direction }, true);
+		} catch (error) {
+			if (generation === requestGeneration && !isCancelledFolderRequest(error)) loadError = String(error);
+		} finally {
+			if (generation === requestGeneration) chatListLoading = false;
 		}
 	};
 
@@ -144,11 +128,16 @@
 	};
 
 	onMount(() => {
+		const unregister = registerFolderRefreshHandler((id) => {
+			if (id === undefined || id === folder?.id) return setChatList();
+		});
 		const socketInstance = $socket;
 		socketInstance?.on('events', chatEventHandler);
 		socketInstance?.on('connect', refreshChatListSoon);
 
 		return () => {
+			unregister();
+			requestGeneration++;
 			socketInstance?.off('events', chatEventHandler);
 			socketInstance?.off('connect', refreshChatListSoon);
 		};
@@ -157,13 +146,12 @@
 	$: if (folder?.id && folder.id !== currentFolderId) {
 		currentFolderId = folder.id;
 		page = 1;
-		setChatList(true);
+		setChatList();
 	}
 
 	$: if (!folder?.id && currentFolderId !== null) {
 		currentFolderId = null;
-		chats = [];
-		totalChats = 0;
+		requestGeneration++;
 	}
 </script>
 
@@ -213,6 +201,8 @@
 					onPageChange={setPage}
 					onSort={setSortKey}
 				/>
+			{:else if loadError}
+				<div class="py-10" role="alert">{loadError}</div>
 			{:else}
 				<div class="py-10">
 					<Spinner />

@@ -19,21 +19,24 @@
 	import { toast } from 'svelte-sonner';
 
 	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+	import {
+		folderStates, getFolderState, folderChatPageKey, loadFolderChatPage,
+		loadFolderDetails, setFolderSidebarPage, updateFolderChatLists, markFolderRead,
+		updateFolderDetails, removeFolderState, beginFolderOpening, isCurrentFolderOpening,
+		isCancelledFolderRequest
+	} from '$lib/stores/folderStates';
 
 	import {
 		deleteFolderById,
 		updateFolderIsExpandedById,
 		updateFolderById,
 		updateFolderParentIdById,
-		getFolderById,
 		createNewFolder,
-		getSharedFolderChats,
 		markFolderChatsReadById
 	} from '$lib/apis/folders';
 	import {
 		getChatById,
 		getChatsByFolderId,
-		getChatListByFolderId,
 		updateChatFolderIdById,
 		importChats
 	} from '$lib/apis/chats';
@@ -148,7 +151,7 @@
 		}
 
 		if (typeof data?.last_read_at === 'number') {
-			folderRegistry[folderId]?.setChatReadAt?.(data.chat_id, data.last_read_at);
+			updateFolderChatLists({ id: data.chat_id, last_read_at: data.last_read_at });
 		}
 	};
 
@@ -169,15 +172,7 @@
 			}
 		}
 
-		if (chats) {
-			chats = sortFolderChats(
-				chats.map((chat) =>
-					!chat.user_id || chat.user_id === $user?.id
-						? { ...chat, last_read_at: chat.updated_at }
-						: chat
-				)
-			);
-		}
+		for (const id of res.folder_ids ?? [folderId]) markFolderRead(id, $user?.id);
 	};
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
@@ -256,6 +251,7 @@
 								);
 
 								if (res) {
+									updateFolderDetails(id, res);
 									dispatch('update');
 								}
 							} else if (type === 'chat') {
@@ -296,6 +292,7 @@
 										return null;
 									});
 
+									if (res) updateFolderChatLists(res, folderId);
 									onItemMove({
 										originFolderId: chat.folder_id,
 										targetFolderId: folderId,
@@ -375,59 +372,15 @@
 		open = folders[folderId].is_expanded;
 		folderRegistry[folderId] = {
 			setFolderItems,
-			upsertChat: (chat) => {
-				if (chat.folder_id && chat.folder_id !== folderId) {
-					return;
-				}
-
-				pendingUpsertChats = mergeFolderChats(pendingUpsertChats, [chat]);
-				if (open || chats) {
-					chats = mergeFolderChats(chats ?? [], [chat]);
-				}
+			setChatActive: /** @param {string} id */ (id) => {
+				const found = chats?.some((chat) => chat.id === id) ?? false;
+				return found;
 			},
-			setChatActive: (chatId, active, pendingApproval = false) => {
-				if (chats) {
-					let found = false;
-					chats = sortFolderChats(
-						chats.map((chat) => {
-							if (chat.id !== chatId) {
-								return chat;
-							}
-							found = true;
-							return { ...chat, active, pending_approval: pendingApproval };
-						})
-					);
-					return found;
-				}
-				return false;
+			setChatReadAt: /** @param {string} id */ (id) => {
+				const found = chats?.some((chat) => chat.id === id) ?? false;
+				return found;
 			},
-			setChatReadAt: (chatId, lastReadAt) => {
-				if (chats) {
-					let found = false;
-					chats = sortFolderChats(
-						chats.map((chat) => {
-							if (chat.id !== chatId) {
-								return chat;
-							}
-							found = true;
-							return { ...chat, last_read_at: lastReadAt };
-						})
-					);
-					return found;
-				}
-				return false;
-			},
-			setAllChatsRead: () => {
-				if (chats) {
-					chats = sortFolderChats(
-						chats.map((chat) =>
-							!chat.user_id || chat.user_id === $user?.id
-								? { ...chat, last_read_at: chat.updated_at }
-								: chat
-						)
-					);
-				}
-			}
+			setAllChatsRead: () => markFolderRead(folderId, $user?.id)
 		};
 		if (folderElement) {
 			folderElement.addEventListener('dragover', onDragOver);
@@ -478,6 +431,7 @@
 		);
 
 		if (res) {
+			removeFolderState(folderId);
 			toast.success($i18n.t('Folder deleted successfully'));
 			onDelete(folderId);
 		}
@@ -506,6 +460,7 @@
 		});
 
 		if (res) {
+			updateFolderDetails(folderId, res);
 			folders[folderId].name = name;
 			if (data) {
 				folders[folderId].data = data;
@@ -515,7 +470,7 @@
 			toast.success($i18n.t('Folder updated successfully'));
 
 			if ($selectedFolder?.id === folderId) {
-				const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
+				const folder = await loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
 					toast.error(`${error}`);
 					return null;
 				});
@@ -546,104 +501,70 @@
 		}, 500);
 	};
 
-	const SIDEBAR_CHATS_PAGE_SIZE = 10;
-	/** @type {any[] | null} */
+	/** @type {import('$lib/stores/folderStates').FolderChat[] | null} */
 	let chats = null;
 	let chatsPage = 1;
 	let hasMoreChats = false;
 	let chatsLoading = false;
 	let queuedReload = false;
-	let pendingUpsertChats = [];
+	let wasOpen = false;
 
-	export const setFolderItems = async (append = false) => {
-		if (open && chatsLoading) {
-			if (!append) {
-				queuedReload = true;
-			}
+	$: {
+		const retained = $folderStates[folderId];
+		chatsPage = retained?.sidebarPage ?? 1;
+		const pages = Array.from({ length: chatsPage }, (_, index) =>
+			retained?.chatPages[folderChatPageKey({ page: index + 1 })]
+		);
+		chats = pages.some(Boolean) ? mergeFolderChats([], pages.flatMap((page) => page?.chats ?? [])) : null;
+		hasMoreChats = pages.at(-1)?.has_more ?? false;
+	}
+
+	export const setFolderItems = async (append = false, refresh = true) => {
+		if (!open) return;
+		if (chatsLoading) {
+			if (refresh) queuedReload = true;
 			return;
 		}
-
-		if (open) {
-			chatsLoading = true;
-		}
-
-		await tick();
-		if (open) {
-			if (!append) {
-				pendingUpsertChats = [];
+		chatsLoading = true;
+		try {
+			const nextPage = append ? chatsPage + 1 : chatsPage;
+			await Promise.all(Array.from({ length: append ? 1 : nextPage }, (_, index) =>
+				loadFolderChatPage(localStorage.token, folderId, { page: append ? nextPage : index + 1 }, !append && refresh)
+			));
+			if (append) setFolderSidebarPage(folderId, nextPage);
+		} catch (error) {
+			if (!isCancelledFolderRequest(error)) toast.error(`${error}`);
+		} finally {
+			chatsLoading = false;
+			if (queuedReload) {
+				queuedReload = false;
+				void setFolderItems();
 			}
-			// Always use getSharedFolderChats so owners also see chats
-			// created by users who have write access to this folder.
-			const nextPage = append ? chatsPage + 1 : 1;
-			try {
-				const res = await getSharedFolderChats(localStorage.token, folderId, {
-					page: nextPage
-				});
-				const nextChats = res?.chats ?? [];
-				const merged = append ? mergeFolderChats(chats ?? [], nextChats) : nextChats;
-				chats = mergeFolderChats(merged, pendingUpsertChats);
-				pendingUpsertChats = pendingUpsertChats.filter(
-					(pendingChat) => !nextChats.some((chat) => chat.id === pendingChat.id)
-				);
-				chatsPage = nextPage;
-				hasMoreChats = res?.has_more ?? nextChats.length === SIDEBAR_CHATS_PAGE_SIZE;
-			} catch (error) {
-				// Fallback to regular API
-				const fallback = await getChatListByFolderId(localStorage.token, folderId, nextPage).catch(
-					(error) => {
-						toast.error(`${error}`);
-						return [];
-					}
-				);
-				const fallbackChats = fallback ?? [];
-				const merged = append ? mergeFolderChats(chats ?? [], fallbackChats) : fallbackChats;
-				chats = mergeFolderChats(merged, pendingUpsertChats);
-				pendingUpsertChats = pendingUpsertChats.filter(
-					(pendingChat) => !fallbackChats.some((chat) => chat.id === pendingChat.id)
-				);
-				chatsPage = nextPage;
-				hasMoreChats = (fallback?.length ?? 0) === SIDEBAR_CHATS_PAGE_SIZE;
-			} finally {
-				chatsLoading = false;
-				if (queuedReload) {
-					queuedReload = false;
-					setFolderItems();
-				}
-			}
-		} else if (!open) {
-			chats = null;
-			chatsPage = 1;
-			hasMoreChats = false;
-			queuedReload = false;
 		}
 	};
 
-	$: if (open && chats === null && !chatsLoading) {
-		setFolderItems();
+	$: if (open !== wasOpen) {
+		wasOpen = open;
+		if (open) void setFolderItems(false, false);
 	}
 
 	const openFolderHandler = async () => {
-		const folder = await getFolderById(localStorage.token, folderId).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (folder) {
-			await selectedFolder.set({ ...folders[folderId], ...folder });
-		}
-
-		if (appLayout?.initNewChat) await appLayout.initNewChat(true, true);
-		else await goto(`/folders/${folderId}`);
-
-		if ($mobile) {
-			showSidebar.set(!$showSidebar);
+		const generation = beginFolderOpening();
+		const loaded = getFolderState(folderId).details;
+		try {
+			const folder = loaded ?? await loadFolderDetails(localStorage.token, folderId);
+			if (!isCurrentFolderOpening(generation)) return;
+			selectedFolder.set({ ...folders[folderId], ...folder });
+			if (loaded) void loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
+				if (!isCancelledFolderRequest(error)) console.error(error);
+			});
+			if (appLayout?.initNewChat) await appLayout.initNewChat(true, true);
+			else await goto(`/folders/${folderId}`);
+			if (isCurrentFolderOpening(generation) && $mobile) showSidebar.set(false);
+		} catch (error) {
+			if (isCurrentFolderOpening(generation) && !isCancelledFolderRequest(error)) toast.error(`${error}`);
 		}
 	};
-	$: if (!open && chats !== null) {
-		chats = null;
-		chatsPage = 1;
-		hasMoreChats = false;
-	}
 
 	const renameHandler = async () => {
 		console.log('Edit');

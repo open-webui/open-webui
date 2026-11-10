@@ -9,6 +9,7 @@ import { type Writable, derived, get, writable } from 'svelte/store';
 import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
+import type { FolderDetails } from './folderStates';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue, NotificationSoundStyle } from '$lib/utils/audio';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
@@ -77,7 +78,7 @@ export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);
 
-export const selectedFolder = writable(null);
+export const selectedFolder = writable<FolderDetails | null>(null);
 
 export const models: Writable<Model[]> = writable([]);
 

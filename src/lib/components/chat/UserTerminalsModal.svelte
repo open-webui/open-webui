@@ -4,20 +4,19 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
-	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
-	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import Users from '$lib/components/icons/Users.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
-	import Trash from '$lib/components/icons/Trash.svelte';
+	import ArrowUturnLeft from '$lib/components/icons/ArrowUturnLeft.svelte';
+	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import { templatesApi, getTerminalServers } from '$lib/apis/terminal';
 	import { terminalServers } from '$lib/stores';
@@ -31,7 +30,7 @@
 	let rows: any[] = [];
 	let connections: any[] = [];
 	let current: any = null;
-	let editing: any = null;
+	let editing: any = selected ? null : { id: null };
 	let sharing: any = null;
 	let accessGrants: any[] = [];
 	let connectionId = '';
@@ -49,7 +48,9 @@
 	const button =
 		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white';
 	const input =
-		'w-full min-w-0 bg-transparent py-1 text-sm outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-600';
+		'w-full min-w-0 bg-transparent py-0.5 text-sm text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-700';
+	const select =
+		'min-w-0 bg-transparent pr-5 text-sm text-gray-900 outline-hidden dark:text-gray-100';
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
 	const context = () => ({ chat_id: chatId, model_id: modelId });
 
@@ -198,159 +199,182 @@
 	)}
 >
 	<div class="text-gray-900 dark:text-gray-100">
-		<div class="flex items-center justify-between gap-2 px-4 pt-3 pb-2">
-			<div class="flex min-w-0 items-center gap-1.5">
-				{#if editing || sharing}
-					<button
-						type="button"
-						class="-ml-1 flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-gray-200"
-						aria-label={$i18n.t('Back')}
-						disabled={busy}
-						on:click={() => {
-							editing = null;
-							sharing = null;
-							error = '';
-						}}><ChevronLeft className="size-3.5" strokeWidth="2" /></button
-					>
-				{/if}
-				<h2 class="truncate text-sm font-medium">
-					{editing
-						? $i18n.t(editing.id ? 'Configure terminal' : 'New terminal')
-						: sharing
-							? `${$i18n.t('Share')} ${sharing.name}`
-							: $i18n.t('Terminals')}
-				</h2>
-			</div>
+		<div class="flex items-center justify-between gap-2 px-4 pb-1 pt-3 dark:text-gray-300">
+			<h2 class="min-w-0 self-center truncate text-sm font-medium">
+				{editing
+					? $i18n.t(editing.id ? 'Configure terminal' : 'New terminal')
+					: sharing
+						? `${$i18n.t('Share')} ${sharing.name}`
+						: $i18n.t('Terminals')}
+			</h2>
 			<button
 				type="button"
-				class="shrink-0 rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+				class="self-center shrink-0 rounded-lg px-0 py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 				on:click={() => (show = false)}
 				aria-label={$i18n.t('Close')}><XMark className="size-4" /></button
 			>
 		</div>
-		<div class="max-h-[min(36rem,75dvh)] overflow-y-auto px-4 pb-4" aria-busy={busy}>
-			{#if error}<p role="alert" class="mb-3 text-xs text-gray-700 dark:text-gray-300">{error}</p>{/if}
+		<div
+			class="max-h-[min(36rem,75dvh)] overflow-y-auto pb-4 {editing || sharing ? 'px-5' : 'px-3'}"
+			aria-busy={busy}
+		>
+			{#if error}<p role="alert" class="mb-3 text-xs text-gray-700 dark:text-gray-300">
+					{error}
+				</p>{/if}
 			{#if editing}
-				<form class="space-y-4 pt-1" on:submit|preventDefault={save}>
+				<form class="space-y-2" on:submit|preventDefault={save}>
 					<div>
-						<label for="terminal-name" class="block text-xs text-gray-500 dark:text-gray-400"
+						<label for="terminal-name" class="mb-0.5 block text-xs text-gray-500"
 							>{$i18n.t('Name')}</label
 						>
 						<input
 							id="terminal-name"
+							list="terminal-name-suggestions"
 							class={input}
 							bind:value={name}
-							placeholder={$i18n.t('Terminal name')}
+							placeholder={$i18n.t('My Terminal')}
 							required
 						/>
+						<datalist id="terminal-name-suggestions">
+							{#each [$i18n.t('My Terminal'), $i18n.t('Development'), $i18n.t('Sandbox')] as value}
+								<option {value}></option>
+							{/each}
+						</datalist>
 					</div>
-					<div class="space-y-3 border-t border-gray-100/50 pt-3 dark:border-white/[0.04]">
-						{#if !editing.id}
-							<div class="flex items-center justify-between gap-3">
-								<label for="terminal-connection" class="text-xs">{$i18n.t('Connection')}</label>
-								<SettingsSelect
-									id="terminal-connection"
-									bind:value={connectionId}
-									className="max-w-[65%]"
-									required
-									disabled={busy}
-									>{#each connections as c}<option value={c.id}>{c.name}</option
-										>{/each}</SettingsSelect
-								>
-							</div>
-						{/if}
+					{#if !editing.id}
 						<div>
-							<div class="flex items-center justify-between gap-3">
-								<label for="terminal-scope" class="text-xs">{$i18n.t('Scope')}</label>
-								<SettingsSelect id="terminal-scope" bind:value={scope} disabled={busy}
-									><option value="none">{$i18n.t('None')}</option><option value="user"
-										>{$i18n.t('User')}</option
-									><option value="chat">{$i18n.t('Chat')}</option><option value="model"
-										>{$i18n.t('Model')}</option
-									></SettingsSelect
-								>
-							</div>
-							<p class="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-								{$i18n.t(
-									scope === 'none'
-										? 'Everyone with access shares this terminal.'
-										: scope === 'user'
-											? 'Each user gets their own terminal.'
-											: scope === 'chat'
-												? 'Each chat gets a terminal shared by its participants.'
-												: 'Each model gets a terminal shared across authorized users and chats.'
-								)}
+							<label for="terminal-connection" class="mb-0.5 block text-xs text-gray-500"
+								>{$i18n.t('Connection')}</label
+							>
+							<select
+								id="terminal-connection"
+								class="{select} w-full"
+								bind:value={connectionId}
+								required
+								disabled={busy}
+							>
+								{#each connections as c}<option value={c.id}>{c.name}</option>{/each}
+							</select>
+							<p class="mt-1 text-xs text-gray-500">
+								{$i18n.t('Choose the connection that will run this terminal.')}
 							</p>
 						</div>
+					{/if}
+					<div>
+						<label for="terminal-scope" class="mb-0.5 block text-xs text-gray-500"
+							>{$i18n.t('Scope')}</label
+						>
+						<select id="terminal-scope" class="{select} w-full" bind:value={scope} disabled={busy}>
+							<option value="none">{$i18n.t('None')}</option>
+							<option value="user">{$i18n.t('User')}</option>
+							<option value="chat">{$i18n.t('Chat')}</option>
+							<option value="model">{$i18n.t('Model')}</option>
+						</select>
+						<p class="mt-1 text-xs text-gray-500">
+							{$i18n.t(
+								scope === 'none'
+									? 'Everyone with access shares this terminal.'
+									: scope === 'user'
+										? 'Each user gets their own terminal.'
+										: scope === 'chat'
+											? 'Each chat gets a terminal shared by its participants.'
+											: 'Each model gets a terminal shared across authorized users and chats.'
+							)}
+						</p>
 					</div>
-					<div class="space-y-3 border-t border-gray-100/50 pt-3 dark:border-white/[0.04]">
-						<div>
-							<label for="terminal-image" class="block text-xs text-gray-500 dark:text-gray-400"
-								>{$i18n.t('Image')}</label
-							><input
-								id="terminal-image"
+					<div>
+						<label for="terminal-image" class="mb-0.5 block text-xs text-gray-500"
+							>{$i18n.t('Image')}</label
+						>
+						<input
+							id="terminal-image"
+							list="terminal-image-suggestions"
+							class={input}
+							bind:value={image}
+							placeholder={$i18n.t('Server default')}
+						/>
+						<datalist id="terminal-image-suggestions">
+							{#each ['latest', 'agents', 'cuda', 'slim', 'alpine', 'openshift'] as tag}
+								<option value={`ghcr.io/open-webui/open-terminal:${tag}`}></option>
+							{/each}
+						</datalist>
+						<p class="mt-1 text-xs text-gray-500">
+							{$i18n.t('Container image used to run the terminal.')}
+						</p>
+					</div>
+					<div class="grid grid-cols-2 gap-2">
+						<div class="min-w-0">
+							<label for="terminal-cpu" class="mb-0.5 block text-xs text-gray-500">CPU</label>
+							<input
+								id="terminal-cpu"
+								list="terminal-cpu-suggestions"
 								class={input}
-								bind:value={image}
+								bind:value={cpu}
 								placeholder={$i18n.t('Server default')}
 							/>
+							<datalist id="terminal-cpu-suggestions">
+								{#each ['0.5', '1', '2', '4', '8'] as value}
+									<option {value}></option>
+								{/each}
+							</datalist>
+							<p class="mt-1 text-xs text-gray-500">
+								{$i18n.t('CPU limit, for example 1 or 0.5.')}
+							</p>
 						</div>
-						<div class="grid grid-cols-2 gap-4">
-							<div>
-								<label for="terminal-cpu" class="block text-xs text-gray-500 dark:text-gray-400"
-									>CPU</label
-								><input
-									id="terminal-cpu"
-									class={input}
-									bind:value={cpu}
-									placeholder={$i18n.t('Server default')}
-								/>
-							</div>
-							<div>
-								<label for="terminal-memory" class="block text-xs text-gray-500 dark:text-gray-400"
-									>{$i18n.t('Memory')}</label
-								><input
-									id="terminal-memory"
-									class={input}
-									bind:value={memory}
-									placeholder={$i18n.t('Server default')}
-								/>
-							</div>
+						<div class="min-w-0">
+							<label for="terminal-memory" class="mb-0.5 block text-xs text-gray-500"
+								>{$i18n.t('Memory')}</label
+							>
+							<input
+								id="terminal-memory"
+								list="terminal-memory-suggestions"
+								class={input}
+								bind:value={memory}
+								placeholder={$i18n.t('Server default')}
+							/>
+							<datalist id="terminal-memory-suggestions">
+								{#each ['512Mi', '1Gi', '2Gi', '4Gi', '8Gi', '16Gi'] as value}
+									<option {value}></option>
+								{/each}
+							</datalist>
+							<p class="mt-1 text-xs text-gray-500">{$i18n.t('Memory limit, for example 2Gi.')}</p>
 						</div>
 					</div>
-					<div class="border-t border-gray-100/50 pt-2 dark:border-white/[0.04]">
-						<Collapsible
-							title={$i18n.t('Advanced configuration')}
-							bind:open={showAdvanced}
-							buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-							chevronClassName="size-3.5"
-							chevronStrokeWidth="2"
-						>
-							<div slot="content" class="pt-2">
-								<p class="mb-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-									{$i18n.t('Environment variables, storage, networking, and security settings.')}
-								</p>
-								<textarea
-									class="w-full resize-y rounded-lg bg-gray-50/60 p-2.5 font-mono text-xs leading-relaxed outline-hidden focus:ring-1 focus:ring-gray-200 dark:bg-gray-850/50 dark:focus:ring-gray-700"
-									rows="7"
-									bind:value={advanced}
-									aria-label={$i18n.t('Template configuration')}
-									spellcheck="false"
-								/>
-							</div>
-						</Collapsible>
-					</div>
-					<div class="flex justify-end gap-1.5 pt-1">
-						<button type="button" class={button} disabled={busy} on:click={() => (editing = null)}
-							>{$i18n.t('Cancel')}</button
+					<Collapsible
+						title={$i18n.t('Advanced')}
+						bind:open={showAdvanced}
+						buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+						chevronClassName="size-3.5"
+						chevronStrokeWidth="2"
+					>
+						<div slot="content" class="mt-2">
+							<p class="mb-2 text-xs text-gray-500">
+								{$i18n.t('Environment variables, storage, networking, and security settings.')}
+							</p>
+							<textarea
+								class="w-full resize-y rounded-lg bg-gray-50/60 p-2.5 font-mono text-xs leading-relaxed outline-hidden focus:ring-1 focus:ring-gray-200 dark:bg-gray-850/50 dark:focus:ring-gray-700"
+								rows="7"
+								bind:value={advanced}
+								aria-label={$i18n.t('Template configuration')}
+								spellcheck="false"
+							/>
+						</div>
+					</Collapsible>
+					<div class="flex items-center justify-between pt-3">
+						<button
+							type="button"
+							class="px-1 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+							disabled={busy}
+							on:click={() => (editing = null)}>{$i18n.t('Cancel')}</button
 						>
 						<button
 							type="submit"
 							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
 							disabled={busy || (!editing.id && !connectionId)}
-							>{#if busy}<Spinner className="size-3" />{/if}{$i18n.t(
-								editing.id ? 'Save' : 'Create'
-							)}</button
 						>
+							{$i18n.t(editing.id ? 'Save' : 'Create')}
+							{#if busy}<Spinner className="size-3" />{/if}
+						</button>
 					</div>
 				</form>
 			{:else if sharing}
@@ -380,16 +404,16 @@
 					>
 				</div>
 			{:else}
-				<div class="-mx-2 space-y-0.5">
+				<div class="space-y-0.5">
 					{#each rows as row (row.id)}
-						{@const connection = connections.find((c) => c.id === row.id.slice('template:'.length, row.id.lastIndexOf(':')))}
+						{@const connection = connections.find(
+							(c) => c.id === row.id.slice('template:'.length, row.id.lastIndexOf(':'))
+						)}
 						<div
-							class="flex items-center gap-1 rounded-xl pr-1 transition {row.id === selected
-								? 'bg-gray-50/60 dark:bg-gray-850/50'
-								: 'hover:bg-gray-50/40 dark:hover:bg-gray-850/30'}"
+							class="flex items-center gap-1 rounded-lg pr-1 hover:bg-gray-50/60 dark:hover:bg-gray-850/60"
 						>
 							<button
-								class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 py-2 text-left disabled:opacity-50"
+								class="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left disabled:opacity-50"
 								aria-pressed={row.id === selected}
 								disabled={busy}
 								on:click={() =>
@@ -400,13 +424,14 @@
 									})}
 							>
 								<Cloud
-									className="size-4 shrink-0 text-gray-400 dark:text-gray-500"
+									className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
 									strokeWidth="1.5"
 								/>
 								<span class="min-w-0 flex-1"
-									><span class="block truncate text-[0.8125rem]">{row.name}</span><span
-										class="mt-0.5 flex items-center gap-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400"
-										>{$i18n.t(
+									><span class="block truncate text-sm font-normal text-gray-800 dark:text-gray-100"
+										>{row.name}</span
+									><span class="flex flex-wrap items-center gap-1.5 text-xs text-gray-500"
+										>{$i18n.t('Scope')}: {$i18n.t(
 											row.scope ? row.scope[0].toUpperCase() + row.scope.slice(1) : 'None'
 										)}{#if row.id === selected && current}<span aria-hidden="true">·</span><span
 												class="flex items-center gap-1"
@@ -421,43 +446,40 @@
 									></span
 								>
 								{#if row.id === selected}<Check
-										className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400"
+										className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
 									/>{/if}
 							</button>
 							{#if connection}
 								<Dropdown align="end" closeOnSelect>
 									<button
-										class="flex size-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100/60 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-gray-800/60 dark:hover:text-gray-200"
+										class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
 										aria-label={$i18n.t('Actions for {{name}}', { name: row.name })}
 										disabled={busy}><EllipsisHorizontal className="size-4" /></button
 									>
 									<div slot="content">
-										<DropdownMenu className="w-48">
+										<DropdownMenu className="min-w-[10.625rem]">
 											<button disabled={busy} on:click={() => edit(row)}
 												><Pencil />{$i18n.t('Configure')}</button
-												><button disabled={busy} on:click={() => share(row)}
-													><Users />{$i18n.t('Share')}</button
-												>
+											>
+											<button disabled={busy} on:click={() => share(row)}
+												><Users />{$i18n.t('Share')}</button
+											>
 											{#if row.id === selected && current && !['not_created', 'unavailable'].includes(current.status)}
-												<hr class="border-gray-100/50 dark:border-white/[0.04]" />
+												<hr class="border-gray-50 dark:border-gray-850/30" />
 												<button disabled={busy} on:click={() => action('restart')}
 													><ArrowPath />{$i18n.t('Restart')}</button
-												><button disabled={busy} on:click={() => action('reset')}
-													><ArrowPath />{$i18n.t('Reset')}</button
-												><button
-													class="text-gray-700 dark:text-gray-300"
-													disabled={busy}
-													on:click={() => action('delete')}
-													><Trash />{$i18n.t('Delete instance')}</button
+												>
+												<button disabled={busy} on:click={() => action('reset')}
+													><ArrowUturnLeft />{$i18n.t('Reset')}</button
+												>
+												<button disabled={busy} on:click={() => action('delete')}
+													><XMark />{$i18n.t('Delete instance')}</button
 												>
 											{/if}
-											<hr class="border-gray-100/50 dark:border-white/[0.04]" />
-												<button
-													class="text-gray-700 dark:text-gray-300"
-													disabled={busy}
-													on:click={() => removeTemplate(row)}
-													><Trash />{$i18n.t('Delete terminal')}</button
-												>
+											<hr class="border-gray-50 dark:border-gray-850/30" />
+											<button disabled={busy} on:click={() => removeTemplate(row)}
+												><GarbageBin />{$i18n.t('Delete terminal')}</button
+											>
 										</DropdownMenu>
 									</div>
 								</Dropdown>
@@ -472,11 +494,11 @@
 				{#if current?.detail}<p class="mt-2 text-xs text-gray-500" role="status">
 						{current.detail}
 					</p>{/if}
-				{#if connections.length}<div
-						class="mt-2 border-t border-gray-100/50 pt-2 dark:border-white/[0.04]"
-					>
-						<button class={`${button} -ml-2`} disabled={busy} on:click={() => edit()}
-							><Plus className="size-3.5" />{$i18n.t('New terminal')}</button
+				{#if connections.length}<div class="mt-2 flex justify-end px-1">
+						<button
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+							disabled={busy}
+							on:click={() => edit()}><Plus className="size-3.5" />{$i18n.t('New terminal')}</button
 						>
 					</div>{/if}
 			{/if}

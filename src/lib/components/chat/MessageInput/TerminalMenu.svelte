@@ -1,7 +1,7 @@
 <script lang="ts">
 	export let modelId: string | null = null;
 	import { getContext, tick } from 'svelte';
-	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import UserTerminalsModal from '../UserTerminalsModal.svelte';
 	import { updateChatById } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
@@ -27,6 +27,8 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Server from '$lib/components/icons/Server.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 
@@ -38,20 +40,18 @@
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 
+	let connections = Promise.resolve([]);
+	$: if (show) connections = templatesApi('/connections').catch(() => []);
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
 		(t) =>
-			t.id &&
-			!(
-				($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
-				t.scope === 'chat'
-			)
+			t.id && !(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
 	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
 	$: systemSections = [
-		{ devices: false, managed: true, terminals: systemTerminals.filter((t) => !isDevice(t)) },
-		{ devices: true, managed: false, terminals: systemTerminals.filter(isDevice) }
+		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
+		{ devices: true, terminals: systemTerminals.filter(isDevice) }
 	].filter((section) => !section.devices || section.terminals.length > 0);
 	$: directTerminals = (
 		$config?.features?.enable_direct_integrations &&
@@ -132,13 +132,17 @@
 		show = false;
 	};
 
-	$: selectedSystemTerminal = systemTerminals.find((t) => (!!$selectedTerminalId && t.id === $selectedTerminalId));
+	$: selectedSystemTerminal = systemTerminals.find(
+		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
+	);
 	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
 	$: folderTarget = resolveTerminalTarget(
 		$selectedTerminalId,
 		systemTerminals,
 		directTerminals,
-		'', { chatId: $activeChatId || null, modelId: modelId });
+		'',
+		{ chatId: $activeChatId || null, modelId: modelId }
+	);
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
@@ -150,6 +154,7 @@
 	$: if (disabled && show) show = false;
 
 	let showTerminals = false;
+	let managedTerminalId: string | null = null;
 	async function saveSelection(id: string | null) {
 		if (isSavedChatId(chatId)) {
 			try {
@@ -170,7 +175,7 @@
 	let info: { target: TerminalTarget; label: string } | null = null;
 	const openInfo = async (selector: string, label: string) => {
 		if (
-			systemTerminals.find((t) => (!!selector && t.id === selector))?.scope === 'chat' &&
+			systemTerminals.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
 			!isSavedChatId($activeChatId)
 		)
 			return;
@@ -178,7 +183,9 @@
 			selector,
 			systemTerminals,
 			directTerminals,
-			localStorage.token ?? '', { chatId: $activeChatId || null, modelId: modelId });
+			localStorage.token ?? '',
+			{ chatId: $activeChatId || null, modelId: modelId }
+		);
 		if (!target) return;
 		show = false;
 		await tick();
@@ -356,56 +363,20 @@
 							<span
 								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 							>
-								{section.devices
-									? $i18n.t('Your devices')
-									: section.managed
-										? $i18n.t('Terminals')
-										: $i18n.t('System')}
+								{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
 							</span>
-							{#if section.managed}
-								<Tooltip content={$i18n.t('Manage terminals')} placement="top">
+							{#if !section.devices && $user?.role === 'admin'}
+								<Tooltip content={$i18n.t('Settings')} placement="top">
 									<button
 										type="button"
-										aria-label={$i18n.t('Manage terminals')}
-										class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
-										on:click|stopPropagation={() => {
-											show = false;
-											showTerminals = true;
-										}}
-									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-3.5"
-										>
-											<path
-												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-											/>
-										</svg>
-									</button>
-								</Tooltip>
-							{:else if !section.devices && $user?.role === 'admin'}
-								<Tooltip content={$i18n.t('Add Terminal')} placement="top">
-									<button
-										type="button"
-										aria-label={$i18n.t('Add Terminal')}
+										aria-label={$i18n.t('Settings')}
 										class="p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition"
 										on:click|stopPropagation={() => {
 											show = false;
 											showSettings.set('admin:integrations');
 										}}
 									>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											viewBox="0 0 20 20"
-											fill="currentColor"
-											class="size-3.5"
-										>
-											<path
-												d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z"
-											/>
-										</svg>
+										<Cog6 className="size-3.5" />
 									</button>
 								</Tooltip>
 							{/if}
@@ -421,8 +392,12 @@
 									aria-checked={$selectedTerminalId === terminal.id}
 									class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 {$selectedTerminalId ===
 									terminal.id
-										? 'pr-14'
-										: 'pr-8'} text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
+										? terminal.template_id
+											? 'pr-20'
+											: 'pr-14'
+										: terminal.template_id
+											? 'pr-14'
+											: 'pr-8'} text-[0.8125rem] font-normal cursor-pointer rounded-xl {$selectedTerminalId ===
 									terminal.id
 										? 'bg-gray-50/40 dark:bg-gray-800/40'
 										: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
@@ -453,37 +428,61 @@
 										</div>
 									{/if}
 								</button>
-								{#if terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+								{#if terminal.template_id || terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
 									<div
 										class="absolute inset-y-0 {$selectedTerminalId === terminal.id
 											? 'right-6'
 											: 'right-1'} flex items-center opacity-0 pointer-events-none transition-opacity group-hover/terminal:opacity-100 group-hover/terminal:pointer-events-auto group-focus-within/terminal:opacity-100 group-focus-within/terminal:pointer-events-auto"
 									>
-										<Tooltip content={$i18n.t('System info')} placement="top">
-											<button
-												type="button"
-												aria-label={$i18n.t('System info for {{name}}', {
-													name: terminal.name || terminal.id
-												})}
-												class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2"
-												on:click|stopPropagation={() =>
-													openInfo(terminal.id, terminal.name || terminal.id)}
-												><Activity className="size-3.5" /></button
-											>
-										</Tooltip>
+										{#if terminal.template_id}
+											<Tooltip content={$i18n.t('Manage')} placement="top">
+												<button
+													type="button"
+													aria-label={$i18n.t('Manage {{name}}', {
+														name: terminal.name || terminal.id
+													})}
+													class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2"
+													on:click|stopPropagation={() => {
+														managedTerminalId = terminal.id;
+														show = false;
+														showTerminals = true;
+													}}><Cog6 className="size-3.5" /></button
+												>
+											</Tooltip>
+										{/if}
+										{#if terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+											<Tooltip content={$i18n.t('System info')} placement="top">
+												<button
+													type="button"
+													aria-label={$i18n.t('System info for {{name}}', {
+														name: terminal.name || terminal.id
+													})}
+													class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2"
+													on:click|stopPropagation={() =>
+														openInfo(terminal.id, terminal.name || terminal.id)}
+													><Activity className="size-3.5" /></button
+												>
+											</Tooltip>
+										{/if}
 									</div>
 								{/if}
 							</div>
-						{:else}
-							<button
-								type="button"
-								class="flex w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] text-gray-500 rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-								on:click={() => {
-									show = false;
-									showTerminals = true;
-								}}>{$i18n.t('New terminal')}</button
-							>
 						{/each}
+						{#if !section.devices}
+							{#await connections then allowed}
+								{#if allowed.length}
+									<button
+										type="button"
+										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] text-gray-500 hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+										on:click={() => {
+											managedTerminalId = null;
+											show = false;
+											showTerminals = true;
+										}}><Plus className="size-3.5" />{$i18n.t('New Terminal')}</button
+									>
+								{/if}
+							{/await}
+						{/if}
 					{/each}
 				</DropdownMenu>
 			</div>
@@ -520,10 +519,11 @@
 {/if}
 
 {#if showTerminals}
-	<UserTerminalsModal {modelId}
+	<UserTerminalsModal
+		{modelId}
 		bind:show={showTerminals}
 		{chatId}
-		selected={$selectedTerminalId}
+		selected={managedTerminalId}
 		onSelect={selectTerminal}
 	/>
 {/if}

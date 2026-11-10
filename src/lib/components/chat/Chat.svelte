@@ -61,6 +61,11 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
+	import {
+		getFolderAgentModels, loadFolderAgentModels, setFolderModelConnections,
+		isCancelledFolderRequest, updateFolderChatLists,
+		type FolderDetails
+	} from '$lib/stores/folderStates';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -166,7 +171,7 @@
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
 	const temporaryChatEnabled = embedded ? writable(false) : _temporaryChatEnabled;
-	const selectedFolder = embedded ? writable(null) : _selectedFolder;
+	const selectedFolder = embedded ? writable<FolderDetails | null>(null) : _selectedFolder;
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
 	const showCallOverlay = embedded ? writable(false) : _showCallOverlay;
 	const showArtifacts = embedded ? writable(false) : _showArtifacts;
@@ -1087,42 +1092,70 @@
 	}
 
 	let lastTerminalSkillSelector: string | null = null;
-	let agentDiscovery = 0;
-	const refreshAgentModels = async () => {
-		const generation = ++agentDiscovery;
-		models.update((available) =>
-			available.filter(
-				(model) => model.owned_by !== 'terminal' || model.agent.terminal_id === $selectedTerminalId
-			)
-		);
-		try {
-			const available = await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			);
-			if (generation === agentDiscovery) {
+
+	let appliedFolderDefaults: FolderDetails['data'] = null;
+	$: setFolderModelConnections([
+		$config?.features?.enable_direct_connections,
+		$settings?.directConnections,
+		(($settings as any)?.terminalServers ?? []).map(({ enabled, ...server }: Record<string, unknown>) => server),
+		$terminalServers
+	]);
+
+	const refreshAgentModels = async (
+		folder: FolderDetails | null = null,
+		signal = chatLoadController.signal
+	) => {
+		const terminalId = $selectedTerminalId;
+		const retained = folder ? getFolderAgentModels(folder) : null;
+		models.update((available) => [
+			...available.filter((model) => model.owned_by !== 'terminal' ||
+				(!folder && model.agent.terminal_id === $selectedTerminalId)),
+			...(retained ?? [])
+		]);
+
+		const refresh = async () => {
+			try {
+				const connections = $config?.features?.enable_direct_connections
+					? ($settings?.directConnections ?? null) : null;
+				const discovered = folder
+					? await loadFolderAgentModels(localStorage.token, folder, connections, !!retained)
+					: await getModels(localStorage.token, connections);
+				if (signal.aborted || terminalId !== $selectedTerminalId) return;
+				if (folder && ($selectedFolder?.id !== folder.id ||
+					$selectedTerminalId !== folder.data?.terminal_id ||
+					terminalContext?.currentDirectory !== (folder.data?.working_directory ?? '') ||
+					!getFolderAgentModels(folder))) return;
+
+				const available = folder
+					? [...$models.filter((model) => model.owned_by !== 'terminal'), ...discovered]
+					: discovered;
 				models.set(available);
+				// Folder refreshes update the catalog without overwriting a draft's model choice.
+				if (folder) return;
 				const remaining = selectedModels.filter(
-					(id) =>
-						!id.startsWith('agent:') ||
+					(id) => !id.startsWith('agent:') ||
 						(chat?.chat?.models?.includes(id) && decodeURIComponent(id.split(':')[1]) === $selectedTerminalId) ||
 						available.some((model: Model) => model.id === id)
 				);
-				selectedModels =
-					remaining.length || equal(remaining, selectedModels)
-						? remaining
-						: normalizeSelectedModels(remaining);
+				selectedModels = remaining.length || equal(remaining, selectedModels)
+					? remaining : normalizeSelectedModels(remaining);
+			} catch (error) {
+				if (!isCancelledFolderRequest(error)) console.error('Agent model discovery failed', error);
 			}
-		} catch (error) {
-			console.error('Agent model discovery failed', error);
-		}
+		};
+		if (retained) void refresh();
+		else await refresh();
 	};
+
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
 		if (terminalContext?.terminalId !== $selectedTerminalId) terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
 		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
-		void refreshAgentModels();
+		// Folder initialization already requests this exact environment.
+		if (!((loading || !history.currentId) && $selectedFolder?.data?.terminal_id === $selectedTerminalId)) {
+			void refreshAgentModels();
+		}
 	}
 
 	const applyFolderTerminal = (folder: any) => {
@@ -1756,6 +1789,7 @@
 					// Update message favorite status
 					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
+					updateFolderChatLists({ id: event.chat_id, title: data });
 					chatTitle.set(data);
 					if (embedded && $chatId) {
 						await onEmbeddedChatTitle?.($chatId, data);
@@ -2038,18 +2072,14 @@
 
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
-			// Folder defaults apply to new chats only.
-			if (!history.currentId && folder) {
-				applyFolderTerminal(folder);
-				if (folder.data?.terminal_id) {
-					await refreshAgentModels();
-					if (history.currentId || $selectedFolder?.id !== folder.id) return;
-				}
-				const folderModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
-				if (!equal(selectedModels, folderModels)) {
-					selectedModels = folderModels;
-				}
-			}
+			// Navigation applies defaults in initNewChat; only explicit settings edits reach here.
+			if (loading || history.currentId || !folder || mainChatHref !== `/folders/${folder.id}` ||
+				equal(appliedFolderDefaults, folder.data)) return;
+			appliedFolderDefaults = folder.data;
+			applyFolderTerminal(folder);
+			if (folder.data?.terminal_id) await refreshAgentModels(folder);
+			if (history.currentId || $selectedFolder?.id !== folder.id || appliedFolderDefaults !== folder.data) return;
+			selectedModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
 		});
 
 		const storageChatInput = sessionStorage.getItem(
@@ -2084,7 +2114,6 @@
 		return () => {
 			try {
 				cancelBrowserInteractions();
-				agentDiscovery++;
 				clearTimeout(saveControlsTimer);
 				saveControls();
 				if (chatIdProp && !$temporaryChatEnabled) {
@@ -2722,13 +2751,16 @@
 	};
 
 	const initNewChat = async (preserveTabs = false, keepDraft = false) => {
+		const destinationFolder = $selectedFolder ? structuredClone($selectedFolder) as FolderDetails : null;
+		const retainedDraft = keepDraft && !$chatId && !history.currentId ? JSON.stringify(getChatInputDraft()) : null;
 		const searchParams = initialPage || preserveTabs ? new URLSearchParams() : $page.url.searchParams;
+		const previousHref = mainChatHref;
 		mainChatHref = '/';
 		if (!initialPage && !preserveTabs && $page.url.pathname === '/') {
 			mainChatHref += $page.url.search + $page.url.hash;
 		}
-		if ($selectedFolder?.id) mainChatHref = `/folders/${$selectedFolder.id}`;
-		if (keepDraft && !$chatId && !history.currentId) {
+		if (destinationFolder?.id) mainChatHref = `/folders/${destinationFolder.id}`;
+		if (keepDraft && !$chatId && !history.currentId && previousHref === mainChatHref) {
 			terminalTabs?.focusMainChat();
 			return;
 		}
@@ -2740,6 +2772,7 @@
 		)
 			showTabs.set(false);
 		const signal = startChatLoad();
+		appliedFolderDefaults = destinationFolder?.data;
 		modelDefaults = null;
 		clearTimeout(saveControlsTimer);
 		await saveControls();
@@ -2825,13 +2858,14 @@
 				(modelId) => modelId.startsWith('agent:') || $models.map((m) => m.id).includes(modelId)
 			);
 		} else {
-			if ($selectedFolder) {
+			if (destinationFolder) {
 				// A configured folder terminal overrides the previous selection.
-				applyFolderTerminal($selectedFolder);
-				if ($selectedFolder.data?.terminal_id) {
-					await refreshAgentModels();
+				applyFolderTerminal(destinationFolder);
+				if (destinationFolder.data?.terminal_id) {
+					await refreshAgentModels(destinationFolder, signal);
+					if (signal.aborted) return;
 				}
-				selectedModels = normalizeSelectedModels($selectedFolder.data?.model_ids ?? []);
+				selectedModels = normalizeSelectedModels(destinationFolder.data?.model_ids ?? []);
 			} else {
 				if (sessionStorage.selectedModels) {
 					// Set from session storage (temporary selection)
@@ -2888,7 +2922,7 @@
 		autoScroll = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
-		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem('chat-input')))
+		const chatInputPrompt = (await restoreChatInput(retainedDraft ?? sessionStorage.getItem('chat-input')))
 			? prompt
 			: null;
 		const previousChatId = $chatId;
@@ -2916,7 +2950,7 @@
 		};
 
 		// Apply folder defaults after restoring the draft and model defaults.
-		applyFolderTerminal($selectedFolder);
+		applyFolderTerminal(destinationFolder);
 
 		chatFiles = [];
 		params = {};
@@ -2970,8 +3004,10 @@
 			}
 		}
 
+		if (signal.aborted) return;
 		loading = false;
 		await tick();
+		if (signal.aborted) return;
 		// Mounting the editor clears prompt, so apply the saved text afterward.
 		if (chatInputPrompt !== null) messageInput?.setText(chatInputPrompt);
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
@@ -3098,9 +3134,11 @@
 					? { terminalId: $selectedTerminalId, currentDirectory: chatContent.working_directory }
 					: null;
 				if (selectedModels[0]?.startsWith('agent:')) {
-					if ($selectedTerminalId) await refreshAgentModels();
+					if ($selectedTerminalId) await refreshAgentModels(null, signal);
 					else selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
 				}
+
+				if (signal.aborted) return;
 
 				// An empty model list is not evidence that the chat's models are gone.
 				if ($models.length > 0) {
@@ -5083,6 +5121,7 @@
 			if (!createdChat?.id) throw new Error($i18n.t('Failed to create chat'));
 			if (history !== _history || $chatId !== _chatId) return '';
 			chat = createdChat;
+			if (selectedFolderId) updateFolderChatLists(createdChat, selectedFolderId);
 			_chatId = chat.id;
 			await chatId.set(_chatId);
 
@@ -5101,7 +5140,7 @@
 				await refreshFolderChatLists(selectedFolderId, chat);
 			}
 
-			selectedFolder.set(null);
+			if ($chatId === _chatId && $selectedFolder?.id === selectedFolderId) selectedFolder.set(null);
 		} else {
 			_chatId = isTemporaryChatId(_chatId) ? _chatId : createTemporaryChatId($socket?.id);
 			await chatId.set(_chatId);
@@ -5224,6 +5263,7 @@
 			);
 
 			if (res) {
+				updateFolderChatLists(res, folderId);
 				await refreshChatList(localStorage.token, { refreshPinned: true });
 				await refreshFolderChatLists();
 
@@ -5237,6 +5277,7 @@
 	const archiveChatHandler = async (id: string) => {
 		try {
 			const res = await archiveChatById(localStorage.token, id);
+			updateFolderChatLists({ id }, undefined, true);
 			initNewChat();
 			await goto('/');
 			await refreshChatList(localStorage.token, { refreshPinned: true });
@@ -5273,6 +5314,7 @@
 		try {
 			const res = await deleteChatById(localStorage.token, id);
 			if (res) {
+				updateFolderChatLists({ id }, undefined, true);
 				initNewChat();
 				await goto('/');
 				await refreshChatList(localStorage.token, { refreshPinned: true });

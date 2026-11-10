@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { updateFolderChatLists } from '$lib/stores/folderStates';
 	import { getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -119,6 +120,7 @@
 			}
 		);
 		if (!res) return;
+		updateFolderChatLists({ id: chat.id, title: newTitle });
 
 		if (chat.id === $chatId) {
 			_chatTitle.set(newTitle);

@@ -78,14 +78,17 @@ export const getFolderById = async (token: string, id: string) => {
 		}
 	})
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw Object.assign(new Error(body.detail ?? res.statusText), { status: res.status });
+			}
 			return res.json();
 		})
 		.then((json) => {
 			return json;
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = err;
 			console.error(err);
 			return null;
 		});
@@ -333,7 +336,7 @@ export const getSharedFolderChats = async (
 	folderId: string,
 	params: {
 		page?: number | null;
-		sortBy?: 'title' | 'updated_at';
+		sortBy?: 'title' | 'updated_at' | 'unread_updated_at';
 		sortDir?: 'asc' | 'desc';
 	} = {}
 ) => {
@@ -363,11 +366,14 @@ export const getSharedFolderChats = async (
 		}
 	)
 		.then(async (res) => {
-			if (!res.ok) throw await res.json();
+			if (!res.ok) {
+				const body = await res.json().catch(() => ({}));
+				throw Object.assign(new Error(body.detail ?? res.statusText), { status: res.status });
+			}
 			return res.json();
 		})
 		.catch((err) => {
-			error = err.detail;
+			error = err;
 			return null;
 		});
 
