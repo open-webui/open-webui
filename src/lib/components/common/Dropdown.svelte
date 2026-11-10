@@ -210,11 +210,17 @@
 		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
 		const maxLeft = contentWidth ? viewportRight - contentWidth - pad : preferredLeft;
 
-		contentEl.style.top = `${Math.max(
+		const top = Math.max(
 			viewport.top + pad,
 			Math.min(preferredTop, viewportBottom - pad - constrainedHeight)
-		)}px`;
-		contentEl.style.bottom = 'auto';
+		);
+		if (openAbove) {
+			contentEl.style.bottom = `${window.innerHeight - top - constrainedHeight}px`;
+			contentEl.style.top = 'auto';
+		} else {
+			contentEl.style.top = `${top}px`;
+			contentEl.style.bottom = 'auto';
+		}
 		contentEl.style.left = `${Math.max(viewport.left + pad, Math.min(preferredLeft, maxLeft))}px`;
 		contentEl.style.right = 'auto';
 		resolvedMaxHeight =
