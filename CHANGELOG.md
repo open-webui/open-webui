@@ -5,26 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.13.4] - 2026-11-09
+## [0.13.4] - 2026-11-10
 
 ### Added
 
+- 📑 **Pages open as tabs.** Chats, notes, channels, the workspace, automations, the calendar, the playground and the home page now open as tabs beside the current chat when you click or drag them from the sidebar, and starting a new chat, also from a sidebar folder, keeps the open tabs.
+- 💾 **Chats remember their terminal.** Each chat now saves its terminal and working folder and switches back to them when you reopen it, while chats from earlier versions open without a terminal unless their model has a default terminal or they are coding agent chats.
 - 📂 **Open folder button.** Folders in the working directory menu of the message input now have an Open folder button that opens the folder in a new Files tab.
 - 📦 **Locked Docker dependencies.** The standard and slim Docker images now install every Python package except PyTorch from lock files pinned with hashes, so rebuilding the same version installs the same packages, and custom images that edit "backend/requirements.txt" must regenerate the locks with "backend/update-locks.sh" for the edit to take effect. [#33981](https://github.com/open-webui/open-webui/pull/33981), [#33979](https://github.com/open-webui/open-webui/issues/33979)
 - 🔄 **General improvements.** Various improvements were implemented across the application to enhance performance, stability, and security.
-- 🌐 **Translation updates.** Translations for Azerbaijani, Basque, Bengali, Bosnian, Bulgarian, Cebuano, Croatian, Czech, Danish, Dutch, Estonian, Faroese, Filipino, Galician, Georgian, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Japanese, Kabyle, Korean, Latvian, Lithuanian, Malay, Norwegian Bokmål, Persian, Polish, Punjabi, Romanian, Russian, Serbian, Slovak, Spanish (Spain), Swedish, Tamil, Turkish, Turkmen, Ukrainian, Urdu, Uyghur and Vietnamese were enhanced and expanded.
+- 🌐 **Translation updates.** Translations for Azerbaijani, Basque, Bengali, Bosnian, Bulgarian, Cebuano, Croatian, Czech, Danish, Dutch, Estonian, Faroese, Filipino, Galician, Georgian, German, Greek, Hebrew, Hindi, Hungarian, Indonesian, Irish, Japanese, Kabyle, Korean, Latvian, Lithuanian, Malay, Norwegian Bokmål, Persian, Polish, Punjabi, Romanian, Russian, Serbian, Slovak, Spanish (Spain), Swedish, Tamil, Thai, Tibetan, Turkish, Turkmen, Ukrainian, Urdu, Uyghur and Vietnamese were enhanced and expanded.
 
 ### Fixed
 
 - 🏷️ **Coding agent chat titles.** Chats with a coding agent now get a generated title once the agent has replied, instead of keeping the default title. [#33971](https://github.com/open-webui/open-webui/pull/33971), [#33970](https://github.com/open-webui/open-webui/issues/33970)
-- 📁 **Terminal choice kept in folders.** In a new chat inside a folder with a default terminal, switching models no longer puts the terminal back to the folder default after you picked another terminal or turned it off.
+- 🔁 **Agent model switches keep sessions.** Switching a coding agent chat to another model of the same agent now resumes the agent's existing session and working folder instead of starting a new session.
+- 📁 **Terminal choice kept in folders.** In a new chat inside a folder with a default terminal, a terminal you pick or turn off now stays that way when the model changes, instead of going back to the folder default. [#33973](https://github.com/open-webui/open-webui/issues/33973)
 - 🧭 **Working folder stays put.** Browsing to another folder in a Files tab no longer changes the working folder shown in the working directory menu and used by a new chat, and opening Files again shows an existing Files tab where you left it instead of moving it to the working folder.
+- 🤝 **Shared chat changes saved.** Someone replying in a chat shared with Allow replies can now change its model, terminal and working folder, and the choice is saved to the chat instead of being dropped when it is reopened.
 - 🖥️ **Your devices list updates live.** A computer that connects through Tether after the page has loaded now appears under Your devices in the terminal menu right away, and the menu also picks up disconnects and device name changes, instead of needing a page reload.
+- 🖱️ **Smooth Browser tab resizing.** Dragging the divider of the side panel no longer makes the Browser tab flicker and resize the page in slow motion. [#33989](https://github.com/open-webui/open-webui/pull/33989), [#33988](https://github.com/open-webui/open-webui/issues/33988)
+- 📝 **Notes with footnotes.** Notes containing footnote references such as "[^1]" now open and show their content instead of failing with an error. [#33987](https://github.com/open-webui/open-webui/pull/33987), [#33986](https://github.com/open-webui/open-webui/issues/33986)
 - 🗂️ **Local embedding model folders.** With the embedding model set to a folder on disk, saving Admin Settings > Documents no longer shows a "Model filesystem path detected" error and now also saves the embedding settings such as the batch size, which were skipped before. [#33978](https://github.com/open-webui/open-webui/pull/33978), [#33977](https://github.com/open-webui/open-webui/issues/33977)
 
 ### Changed
 
+- 📎 **Tether uploads on your computer.** With a computer connected through Tether selected as the chat's terminal, attached files are now saved into the working folder on that computer, like the Filesystem option of Chat Uploads, instead of being processed as regular chat uploads.
 - 🔌 **Live update events renamed.** Real-time updates for notes, comments, the inbox, access changes, encrypted channels and channel app errors now arrive as typed messages on the main "events" socket channel, so custom clients that listened for the old event names such as "events:note" or "note:presence" need to listen there instead.
+- 📡 **Chat write access field.** Chat responses from the API now carry the saved sharing mode in "share_mode" and report whether you can reply in a new "write_access" field, so custom clients that read "share_mode" for that need to switch.
 
 ## [0.13.3] - 2026-11-08
 
