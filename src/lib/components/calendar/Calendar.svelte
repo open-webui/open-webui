@@ -266,7 +266,7 @@
 <CreateCalendarModal bind:show={showCreateCalendarModal} on:created={handleCalendarCreated} />
 
 <div
-	class="flex flex-col w-full h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar &&
+	class="@container flex flex-col w-full h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar &&
 	!pageTab
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} max-w-full"
@@ -388,7 +388,7 @@
 
 		<div class="flex flex-1 min-h-0">
 			<!-- Sidebar -->
-			<div class="hidden md:flex flex-col w-56 shrink-0 pr-1.5 pl-3 overflow-y-auto">
+			<div class="hidden @3xl:flex flex-col w-56 shrink-0 pr-1.5 pl-3 overflow-y-auto">
 				<CalendarSidebar
 					{calendars}
 					{visibleCalendarIds}
