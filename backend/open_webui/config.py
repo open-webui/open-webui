@@ -1363,7 +1363,9 @@ IMAGE_GENERATION_ENGINE = os.getenv('IMAGE_GENERATION_ENGINE', 'openai')
 IMAGE_GENERATION_MODEL = os.getenv('IMAGE_GENERATION_MODEL', '')
 
 # Regex pattern for models that support IMAGE_SIZE = "auto".
-IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv('IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN', '^gpt-image')
+IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN = os.getenv(
+    'IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN', '^(gpt-image|MiniMax-H3-Image)'
+)
 
 # Regex pattern for models that return URLs instead of base64 data.
 IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN = os.getenv('IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN', '^gpt-image')
