@@ -3,10 +3,10 @@
 import copy
 
 from open_webui.models.chats import Chats
-from open_webui.utils.auth import decode_token
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.terminals import get_terminal_json, upload_files_to_terminal
 
+from .session import get_session
 from .output import Output
 from .transport import TerminalTransport
 from . import acp, codex, claude_code, pi
@@ -31,27 +31,21 @@ async def run(request, form_data, user, metadata, model):
     agent = model['agent']
     if agent['provider'] not in PROVIDERS:
         raise ValueError('Unsupported terminal agent')
+    chat = await Chats.get_accessible_chat_by_id(metadata['chat_id'], user, permission='write')
+    if chat is None:
+        raise ValueError('Chat reply access denied')
+    parent = (metadata.get('user_message') or {}).get('parentId')
+    previous = await get_session(chat, parent) if parent else None
+    if previous and any(previous.get(key) != agent[key] for key in ('terminal_id', 'provider')):
+        previous = None
     metadata['terminal_id'] = agent['terminal_id']
     transport = await TerminalTransport.resolve(request, user, metadata)
     output = Output(metadata, user, transport.raise_if_failed, form_data)
-    output.state = {**agent}
-    previous = None
-    parent = (metadata.get('user_message') or {}).get('parentId')
-    if parent:
-        previous_message = await Chats.get_message_by_id_and_message_id(metadata['chat_id'], parent)
-        token = ((previous_message or {}).get('meta') or {}).get('agent')
-        previous = decode_token(token) if isinstance(token, str) else None
-        if previous and not (
-            previous.get('purpose') == 'terminal-agent'
-            and previous.get('user') == user.id
-            and previous.get('chat') == metadata['chat_id']
-            and all(previous.get(k) == v for k, v in agent.items())
-        ):
-            previous = None
-        if previous and any(
-            child != metadata.get('user_message_id') for child in (previous_message or {}).get('childrenIds', [])
-        ):
-            raise ValueError('Agent history cannot be branched in place. Start a new chat instead.')
+    output.state = {
+        **{key: previous[key] for key in ('session_id', 'model_config') if previous and key in previous},
+        **agent,
+        'terminal_user_id': (previous or {}).get('terminal_user_id') or (previous or {}).get('user') or user.id,
+    }
     # Browsing files must not move an existing agent conversation's workspace.
     cwd = (previous or {}).get('cwd') or metadata.get('initial_terminal_cwd')
     if not cwd:
