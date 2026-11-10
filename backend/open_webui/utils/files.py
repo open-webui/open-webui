@@ -24,6 +24,7 @@ from open_webui.models.files import Files
 from open_webui.retrieval.web.utils import get_ssrf_safe_session, validate_url
 from open_webui.routers.files import upload_file_handler
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.routers.images import (
     get_image_data,
     upload_image,
@@ -196,6 +197,47 @@ async def get_audio_url_from_base64(request, base64_audio_string, metadata, user
             )
         return audio_url
     return None
+
+
+async def upload_tool_file(request, data: bytes, filename: str, content_type: str, metadata, user) -> dict:
+    """Store binary tool output (e.g. an MCP embedded resource) as a chat file.
+
+    Returns a message file item the chat UI renders as a downloadable attachment.
+    """
+    metadata = metadata or {}
+    file = UploadFile(
+        file=io.BytesIO(data),
+        filename=filename,
+        headers={
+            'content-type': content_type,
+        },
+    )
+    file_item = await upload_file_handler(
+        request,
+        file=file,
+        metadata=metadata,
+        process=False,
+        user=user,
+    )
+
+    chat_id = metadata.get('chat_id')
+    message_id = metadata.get('message_id')
+    if chat_id and message_id and is_saved_chat_id(chat_id):
+        await Chats.insert_chat_files(
+            chat_id=chat_id,
+            message_id=message_id,
+            file_ids=[file_item.id],
+            user_id=user.id,
+        )
+
+    return {
+        'type': 'file',
+        'id': file_item.id,
+        'url': request.app.url_path_for('get_file_content_by_id', id=file_item.id),
+        'name': (file_item.meta or {}).get('name') or file_item.filename,
+        'size': len(data),
+        'content_type': content_type,
+    }
 
 
 async def get_file_url_from_base64(request, base64_file_string, metadata, user):

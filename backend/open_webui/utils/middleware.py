@@ -95,6 +95,7 @@ from open_webui.utils.files import (
     get_file_url_from_base64,
     get_image_base64_from_url,
     get_image_url_from_base64,
+    upload_tool_file,
 )
 from open_webui.utils.filter import (
     FilterContext,
@@ -888,10 +889,33 @@ async def process_tool_result(
                                     }
                                 )
                             else:
+                                # Non-image binary resources (CSV, PDF, ...) are stored as chat files so the
+                                # user can download them; the model only sees a short note.
                                 resource_uri = resource.get('uri', 'resource')
-                                tool_response.append(
-                                    f'[Resource: {resource_uri}] (binary data, mimeType: {resource_mime_type})'
-                                )
+                                filename = os.path.basename(resource_uri.split('://', 1)[-1]) or 'resource'
+                                try:
+                                    file_item = await upload_tool_file(
+                                        request,
+                                        base64.b64decode(resource_blob),
+                                        filename,
+                                        resource_mime_type,
+                                        {
+                                            'chat_id': metadata.get('chat_id', None),
+                                            'message_id': metadata.get('message_id', None),
+                                            'session_id': metadata.get('session_id', None),
+                                        },
+                                        user,
+                                    )
+                                    tool_result_files.append(file_item)
+                                    tool_response.append(
+                                        f'[Attached file: {file_item["name"]} ({resource_mime_type}, '
+                                        f'{file_item["size"]} bytes) is shown to the user as a downloadable attachment]'
+                                    )
+                                except Exception:
+                                    log.exception('Could not store MCP resource %s as a file', resource_uri)
+                                    tool_response.append(
+                                        f'[Resource: {resource_uri}] (binary data, mimeType: {resource_mime_type})'
+                                    )
                         elif resource.get('uri'):
                             tool_response.append(resource.get('uri'))
             tool_result = tool_response[0] if len(tool_response) == 1 else tool_response
