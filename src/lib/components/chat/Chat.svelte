@@ -2107,9 +2107,7 @@
 			selectedModels = normalizeSelectedModels(folder.data?.model_ids ?? []);
 		});
 
-		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
-		);
+		const storageChatInput = sessionStorage.getItem(getChatInputKey(chatIdProp));
 
 		const init = async () => {
 			if (!chatIdProp) {
@@ -2947,7 +2945,7 @@
 		autoScroll = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
-		const chatInputPrompt = (await restoreChatInput(retainedDraft ?? sessionStorage.getItem('chat-input')))
+		const chatInputPrompt = (await restoreChatInput(retainedDraft ?? sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
 		const previousChatId = $chatId;
@@ -3289,7 +3287,7 @@
 					}
 					if (signal.aborted) return;
 					const restored = await restoreChatInput(
-						sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+						sessionStorage.getItem(getChatInputKey(chatIdProp))
 					);
 					if (signal.aborted) return;
 					await setDefaults(restored);
@@ -5227,6 +5225,8 @@
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 	const getDraftChatId = () => chatIdProp || $chatId || null;
+	const getChatInputKey = (chatId: string | null = null) =>
+		`chat-input${chatId ? `-${chatId}` : ''}`;
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -5251,7 +5251,7 @@
 		}
 
 		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
-			const key = `chat-input${chatId ? `-${chatId}` : ''}`;
+			const key = getChatInputKey(chatId);
 			const write = () => sessionStorage.setItem(key, JSON.stringify(draft));
 			if (debounce) {
 				saveDraftTimeout = setTimeout(write, 500);
@@ -5259,7 +5259,7 @@
 				write();
 			}
 		} else {
-			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+			sessionStorage.removeItem(getChatInputKey(chatId));
 		}
 	};
 
@@ -5281,7 +5281,7 @@
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
-		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+		await sessionStorage.removeItem(getChatInputKey(chatId));
 	};
 
 	const moveChatHandler = async (chatId, folderId) => {
