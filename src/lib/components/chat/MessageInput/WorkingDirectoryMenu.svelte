@@ -24,6 +24,7 @@
 	export let terminalContext: TerminalContext | null = null;
 	export let disabled = false;
 	export let inMenu = false;
+	export let onSelect: (path: string) => Promise<void> = async () => {};
 
 	let show = false;
 	let showPicker = false;
@@ -110,6 +111,12 @@
 		// An empty path resets the terminal to its default directory.
 		cwd = path ? result.cwd : '';
 		terminalContext = { terminalId: connection.selector, currentDirectory: cwd };
+		try {
+			await onSelect(cwd);
+		} catch (error) {
+			toast.error(String(error));
+		}
+		if (disposed) return;
 		if (cwd) {
 			recent = [
 				normalize(cwd),

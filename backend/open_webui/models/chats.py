@@ -349,6 +349,10 @@ class ChatResponse(BaseModel):
         return value if isinstance(value, dict) else {}
 
 
+class ChatAccessResponse(ChatResponse):
+    write_access: bool
+
+
 class ChatTitleIdResponse(BaseModel):
     id: str
     title: str

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { resolveTerminalConnection, type TerminalConnection } from '$lib/apis/terminal';
+	import { updateChatById } from '$lib/apis/chats';
+	import { toast } from 'svelte-sonner';
 	import TerminalSystemInfoModal from '../TerminalSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
@@ -89,6 +91,7 @@
 
 	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
+		if (!(await saveSelection(newId))) return;
 		selectedTerminalId.set(newId);
 
 		// Enable the selected direct terminal, disable all others
@@ -110,6 +113,7 @@
 
 	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
 		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
+		if (!(await saveSelection(newId))) return;
 		selectedTerminalId.set(newId);
 
 		// Disable all direct terminals when switching to a system terminal
@@ -146,6 +150,20 @@
 		$i18n.t('Terminal');
 	$: if (disabled && show) show = false;
 
+	async function saveSelection(id: string | null) {
+		if (isSavedChatId(chatId)) {
+			try {
+				await updateChatById(localStorage.token, chatId!, {
+					terminal_id: id,
+					working_directory: ''
+				});
+			} catch (e) {
+				toast.error(String(e));
+				return false;
+			}
+		}
+		return true;
+	}
 	let info: { connection: TerminalConnection; chatId: string | null; label: string } | null = null;
 	const openInfo = async (selector: string, label: string) => {
 		if (
@@ -455,6 +473,11 @@
 			{chatId}
 			userId={$user?.id ?? ''}
 			bind:terminalContext
+			onSelect={async (path) => {
+				if (isSavedChatId(chatId)) {
+					await updateChatById(localStorage.token, chatId!, { working_directory: path });
+				}
+			}}
 			{disabled}
 		/>
 	{/key}

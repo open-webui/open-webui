@@ -43,7 +43,7 @@
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
@@ -91,7 +91,7 @@
 				{deleteMessage}
 				{allowDelete}
 				{readOnly}
-				{shareMode}
+				{writeAccess}
 				{compactPreview}
 				{editCodeBlock}
 				{topPadding}
@@ -127,7 +127,7 @@
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
-				{shareMode}
+				{writeAccess}
 			/>
 		{:else}
 			{#key messageId}
@@ -159,7 +159,7 @@
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}
-					{shareMode}
+					{writeAccess}
 				/>
 			{/key}
 		{/if}

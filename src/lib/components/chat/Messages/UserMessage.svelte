@@ -51,7 +51,7 @@
 
 	export let isFirstMessage: boolean;
 	export let readOnly: boolean;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
@@ -591,7 +591,7 @@
 							</div>
 						{/if}
 					{/if}
-					{#if !compactPreview && (!readOnly || shareMode === 'continue') && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))}
+					{#if !compactPreview && (!readOnly || writeAccess) && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.edit ?? true))}
 						<Tooltip content={$i18n.t('Edit')} placement="bottom">
 							<button
 								class="{($settings?.highContrastMode ?? false)

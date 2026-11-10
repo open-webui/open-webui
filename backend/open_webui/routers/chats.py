@@ -25,6 +25,7 @@ from open_webui.models.chats import (
     ChatForm,
     ChatHistoryStats,
     ChatImportForm,
+    ChatAccessResponse,
     ChatResponse,
     Chats,
     ChatsImportForm,
@@ -1287,7 +1288,7 @@ async def get_shared_session_user_chat_list(
 # Get Shared Chat By Id
 
 
-@router.get('/share/{share_id}', response_model=ChatResponse | None)
+@router.get('/share/{share_id}', response_model=ChatAccessResponse | None)
 async def get_shared_chat_by_id(
     share_id: str, user=Depends(get_optional_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
@@ -1308,7 +1309,8 @@ async def get_shared_chat_by_id(
             )
             if chat:
                 data = await shared_chat_response(chat, user, db=db)
-                data['chat']['share_mode'] = 'continue' if live else None
+                data['write_access'] = live
+                data['chat']['share_mode'] = shared.chat.get('share_mode')
                 return data
 
         raise HTTPException(
@@ -1322,9 +1324,7 @@ async def get_shared_chat_by_id(
         chat = await Chats.get_chat_by_id(share_id, db=db)
         if chat:
             data = await shared_chat_response(chat, user, db=db)
-            data['chat']['share_mode'] = (
-                'continue' if await Chats.has_chat_access(chat.id, user, db=db, permission='write', chat=chat) else None
-            )
+            data['write_access'] = await Chats.has_chat_access(chat.id, user, db=db, permission='write', chat=chat)
             return data
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -1453,7 +1453,7 @@ async def update_chat_view(
 # Get Chat By Id
 
 
-@router.get('/{id}', response_model=ChatResponse | None)
+@router.get('/{id}', response_model=ChatAccessResponse | None)
 async def get_chat_by_id(
     id: str,
     request: Request,
@@ -1467,19 +1467,11 @@ async def get_chat_by_id(
     )
 
     if chat:
-        data = await shared_chat_response(chat, user, db=db)
-        data['chat']['share_mode'] = (
-            'continue' if await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat) else None
-        )
-        if data['chat']['share_mode'] == 'continue':
-            from open_webui.utils.agents.session import get_session, model_id
+        from open_webui.utils.agents.session import ensure_chat_selections
 
-            state = await get_session(chat)
-            if state:
-                data['chat'].setdefault('models', [model_id(state)])
-                data['chat'].setdefault('terminal_id', state['terminal_id'])
-                if data['chat']['terminal_id'] == state['terminal_id']:
-                    data['chat'].setdefault('working_directory', state['cwd'])
+        chat = await ensure_chat_selections(chat)
+        data = await shared_chat_response(chat, user, db=db)
+        data['write_access'] = await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat)
         data = overlay_response_streams(
             data,
             await get_response_streams_by_chat_id(request.app.state.redis, id),
@@ -1493,7 +1485,7 @@ async def get_chat_by_id(
 # Update Chat By Id
 
 
-@router.post('/{id}', response_model=ChatResponse | None)
+@router.post('/{id}', response_model=ChatAccessResponse | None)
 async def update_chat_by_id(
     request: Request,
     id: str,
@@ -1503,18 +1495,20 @@ async def update_chat_by_id(
 ):
     chat = await Chats.get_chat_by_id(id, db=db)
     if chat and chat.user_id != user.id:
-        folder = await Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id, db=db) if chat.folder_id else None
-        if (
-            not folder
-            or set(form_data.chat) != {'title'}
-            or form_data.variables is not None
-            or form_data.folder_id is not None
-        ):
+        if form_data.variables is not None or form_data.folder_id is not None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-        title = form_data.chat['title']
-        if not isinstance(title, str) or not title.strip():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Invalid title'))
-        form_data.chat['title'] = title.strip()
+        if not (
+            bool(form_data.chat)
+            and set(form_data.chat) <= {'models', 'terminal_id', 'working_directory'}
+            and await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat)
+        ):
+            folder = await Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id, db=db) if chat.folder_id else None
+            if not folder or set(form_data.chat) != {'title'}:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+            title = form_data.chat['title']
+            if not isinstance(title, str) or not title.strip():
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Invalid title'))
+            form_data.chat['title'] = title.strip()
     if chat:
         set_message_authors(form_data.chat, user)
         touch = 'history' in form_data.chat or 'messages' in form_data.chat
@@ -1537,9 +1531,9 @@ async def update_chat_by_id(
             subject_id=id,
             data={'title': chat.title},
         )
-        if chat.user_id != user.id:
-            return await shared_chat_response(chat, user, db=db)
-        return ChatResponse.model_validate(chat, from_attributes=True)
+        data = await shared_chat_response(chat, user, db=db)
+        data['write_access'] = await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat)
+        return data
     else:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

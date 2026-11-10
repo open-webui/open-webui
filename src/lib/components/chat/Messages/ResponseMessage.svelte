@@ -187,7 +187,7 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
@@ -897,7 +897,7 @@
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={(!readOnly && (!message.user_id || message.user_id === $user?.id)) ||
-										(shareMode === 'continue' && message.user_id === $user?.id)}
+										(writeAccess && message.user_id === $user?.id)}
 									preview={!readOnly}
 									{compactPreview}
 									editCodeBlock={!readOnly && editCodeBlock}
@@ -1345,7 +1345,7 @@
 									</Tooltip>
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (writeAccess && message.user_id === $user?.id)}
 									{#if !readOnly && !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
@@ -1469,7 +1469,7 @@
 									{/if}
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || shareMode === 'continue'}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || writeAccess}
 									{#if canBranch && ($user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true))}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
@@ -1619,7 +1619,7 @@
 									{/if}
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (writeAccess && message.user_id === $user?.id)}
 									{#each (!readOnly && model?.actions) || [] as action}
 										<Tooltip
 											content={resolveLocalizedFunction(

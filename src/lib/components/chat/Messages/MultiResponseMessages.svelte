@@ -33,7 +33,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
@@ -314,7 +314,7 @@
 									{compactPreview}
 									{topPadding}
 									{onInsertToNote}
-									{shareMode}
+									{writeAccess}
 								/>
 							{/if}
 						{/key}
@@ -381,7 +381,7 @@
 										{editCodeBlock}
 										{topPadding}
 										{onInsertToNote}
-										{shareMode}
+										{writeAccess}
 									/>
 								{/if}
 							{/key}

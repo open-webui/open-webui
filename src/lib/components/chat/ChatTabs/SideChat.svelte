@@ -334,7 +334,7 @@
 				const saved = await getChatById(localStorage.token, id);
 				if (disposed || !sideChatAllowed) return;
 				isShared = saved.user_id !== $user?.id;
-				readOnly = isShared && saved.chat.share_mode !== 'continue';
+				readOnly = isShared && !saved.write_access;
 				if (!loaded) {
 					selectedModels = [saved.chat.models?.[0] ?? modelId];
 					params = { ...saved.chat.params };
@@ -633,7 +633,7 @@
 				atSelectedModel={undefined}
 				readOnly
 				forkHandler={null}
-				shareMode={null}
+				writeAccess={false}
 				sendMessage={() => {}}
 				continueResponse={() => {}}
 				regenerateResponse={() => {}}

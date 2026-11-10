@@ -45,7 +45,7 @@
 	export let forkHandler: Function | null = null;
 
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
@@ -568,7 +568,7 @@
 									{editCodeBlock}
 									{topPadding}
 									{onInsertToNote}
-									{shareMode}
+									{writeAccess}
 								/>
 							{/each}
 						</ul>

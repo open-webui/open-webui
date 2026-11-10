@@ -1376,7 +1376,7 @@
 
 	const emitTyping = (typing: boolean) => {
 		if (!$socket?.connected || !joinedChatId) return;
-		if (typing && (joinedChatId !== $chatId || (isShared && chat?.chat?.share_mode !== 'continue')))
+		if (typing && (joinedChatId !== $chatId || (isShared && !chat?.write_access)))
 			return;
 		if (typing ? Date.now() - lastTypingEmit < 2000 : !lastTypingEmit) return;
 		lastTypingEmit = typing ? Date.now() : 0;
@@ -1587,7 +1587,7 @@
 				if (
 					!sender?.id ||
 					sender.id === $user?.id ||
-					(isShared && chat?.chat?.share_mode !== 'continue')
+					(isShared && !chat?.write_access)
 				)
 					return;
 				if (event.data.data?.typing) {
@@ -3056,11 +3056,7 @@
 					if (signal.aborted) return;
 					terminalServers.set(servers);
 				}
-				const terminalId = 'terminal_id' in chatContent
-					? chatContent.terminal_id
-					: selectedModels[0]?.startsWith('agent:')
-						? decodeURIComponent(selectedModels[0].split(':')[1])
-						: null;
+				const terminalId = chatContent.terminal_id;
 				selectedTerminalId.set(terminalId && isTerminalAvailable(terminalId) ? terminalId : null);
 				terminalContext = $selectedTerminalId && typeof chatContent.working_directory === 'string'
 					? { terminalId: $selectedTerminalId, currentDirectory: chatContent.working_directory }
@@ -5035,6 +5031,9 @@
 					id: _chatId,
 					title: $i18n.t('New Chat'),
 					models: selectedModels,
+					terminal_id: $selectedTerminalId,
+					working_directory:
+						context?.terminalId === $selectedTerminalId ? context.currentDirectory : '',
 					system: $settings.system ?? undefined,
 					params: params,
 					history: _history,
@@ -5100,15 +5099,16 @@
 	};
 
 	const saveControls = async (models: string[] | null = null) => {
-		if (isShared) return;
+		if (isShared && !chat?.write_access) return;
 		if (!$chatId || $temporaryChatEnabled || chat?.id !== $chatId) return;
 		// Model choices are passed explicitly; automatic fallbacks must not be saved.
 		if (!models?.length || !models.every(Boolean)) models = null;
+		if (isShared && !models) return;
 		if (!models && equal(chatFiles, chat.chat?.files ?? [])) return;
 		const id = $chatId;
 
 		const res = await updateChatById(localStorage.token, id, {
-			files: chatFiles,
+			...(!isShared ? { files: chatFiles } : {}),
 			...(models ? { models } : {})
 		}).catch((err) => {
 			console.error('[controls autosave]', err);
@@ -5537,6 +5537,11 @@
 											id: uuidv4(),
 											title: title.length > 50 ? `${title.slice(0, 50)}...` : title,
 											models: selectedModels,
+											terminal_id: $selectedTerminalId,
+											working_directory:
+												terminalContext?.terminalId === $selectedTerminalId
+													? terminalContext.currentDirectory
+													: '',
 											params: params,
 											history: history,
 											messages: messages,
@@ -5585,7 +5590,7 @@
 										chatId={$chatId}
 										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
 										readOnly={isShared}
-										shareMode={chat?.chat?.share_mode ?? null}
+										writeAccess={!!chat?.write_access}
 										bind:history
 										bind:autoScroll
 										bind:prompt
@@ -5614,7 +5619,7 @@
 								</div>
 							</div>
 
-							{#if isShared && chat?.chat?.share_mode !== 'continue'}
+							{#if isShared && !chat?.write_access}
 								{#if canClone}
 									<div
 										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
