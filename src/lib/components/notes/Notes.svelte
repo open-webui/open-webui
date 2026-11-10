@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
@@ -18,7 +21,6 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	import { goto } from '$app/navigation';
 	import {
 		WEBUI_NAME,
 		config,
@@ -374,23 +376,20 @@
 			}
 		};
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="notes" onUpdated={init} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Notes')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Notes') + ' / ' + $WEBUI_NAME} />
 
 <FilesOverlay show={dragged} />
 
 <div id="notes-container" class="w-full min-h-full h-full">
-	{#if loaded}
+	{#if loaded && items !== null && total !== null}
 		<input
 			id="notes-import-input"
 			bind:this={notesImportInputElement}

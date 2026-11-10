@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
-	import { goto } from '$app/navigation';
 
 	import { user } from '$lib/stores';
 	import { imageGenerations, imageEdits } from '$lib/apis/images';

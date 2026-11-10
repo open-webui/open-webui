@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminalContext } from '$lib/types';
+	import type { AppLayoutContext, TerminalContext } from '$lib/types';
 	import type { GitStatus } from '$lib/apis/terminal/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
@@ -22,6 +22,11 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 	import { beforeNavigate } from '$app/navigation';
+	import { WEBUI_NAME } from '$lib/stores';
+	import { pageTabKey } from './Tabs/tabs';
+	import Page from './Tabs/Page.svelte';
+	let pageViews: Record<string, Page> = {};
+	let pendingPageTab: { href: string; label: string } | null = null;
 	import {
 		artifactContents,
 		config,
@@ -70,7 +75,7 @@
 		setSplitTabs,
 		fileTabId,
 		type PanelTab
-	} from './ChatTabs/tabs';
+	} from './Tabs/tabs';
 	import {
 		resolveTerminalConnection,
 		terminalRequest,
@@ -85,19 +90,19 @@
 	import Icon from './FileNav/Icon.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import { fileIconName } from './FileNav/fileIcon';
-	import UntitledFile from './ChatTabs/UntitledFile.svelte';
-	import QuickOpen from './ChatTabs/QuickOpen.svelte';
-	import VoiceNote from './ChatTabs/VoiceNote.svelte';
-	import Browser from './ChatTabs/Browser.svelte';
-	import Desktop from './ChatTabs/Desktop.svelte';
+	import UntitledFile from './Tabs/UntitledFile.svelte';
+	import QuickOpen from './Tabs/QuickOpen.svelte';
+	import VoiceNote from './Tabs/VoiceNote.svelte';
+	import Browser from './Tabs/Browser.svelte';
+	import Desktop from './Tabs/Desktop.svelte';
 	import XTerminal from './XTerminal.svelte';
 	import CallPanel from './MessageInput/CallPanel.svelte';
 	import Drawer from '../common/Drawer.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
-	import GitBar from './ChatTabs/GitBar.svelte';
+	import GitBar from './Tabs/GitBar.svelte';
 	import Artifacts from './Artifacts.svelte';
-	import Embeds from './ChatTabs/Embeds.svelte';
-	import SideChat from './ChatTabs/SideChat.svelte';
+	import Embeds from './Tabs/Embeds.svelte';
+	import SideChat from './Tabs/SideChat.svelte';
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
@@ -109,8 +114,9 @@
 	import { isSavedChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext<any>('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
-	export let history;
+	export let history: any = { messages: {}, currentId: null };
 
 	export let chatId: string | null = null;
 	export let chatLoading = false;
@@ -118,17 +124,17 @@
 	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
 
-	export let bridge: import('$lib/utils/realtime').RealtimeCall;
+	export let bridge: import('$lib/utils/realtime').RealtimeCall | undefined = undefined;
 	export let callMode = 'current';
-	export let eventTarget: EventTarget;
-	export let submitPrompt: Function;
+	export let eventTarget = new EventTarget();
+	export let submitPrompt: Function = () => {};
 	export let onAskFile:
 		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
 		| null = null;
-	export let stopResponse: Function;
-	export let showMessage: Function;
-	export let files: any[];
-	export let modelId;
+	export let stopResponse: Function = () => {};
+	export let showMessage: Function = () => {};
+	export let files: any[] = [];
+	export let modelId: string | null = null;
 	export let systemPrompt = '';
 	export let canSideChat = false;
 
@@ -142,6 +148,7 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
+	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
@@ -197,11 +204,14 @@
 		};
 		changeChatView(owner, { ...owner.state, panels, selectedTerminalId: $selectedTerminalId });
 	}
-	export function prepareChatSwitch() {
+	let preserveChatView = false;
+	export function prepareChatSwitch(preserve = false) {
 		stopTerminalChoice?.(false);
 		stopTerminalChoice = null;
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
+		preserveChatView = preserve && viewReady;
+		if (preserveChatView) return;
 		viewReady = false;
 		tabs = emptyTabs();
 		++switchVersion;
@@ -233,6 +243,7 @@
 			.then(() => {
 				tabsChatId = id;
 				viewEntry = owner;
+				preserveChatView = false;
 				viewError = '';
 			})
 			.finally(() => {
@@ -421,6 +432,7 @@
 	const tabIcon = (kind: PanelTab['kind']) =>
 		({
 			chat: 'chat-lines',
+			page: 'page',
 			files: 'folder',
 			file: 'page',
 			terminal: 'terminal',
@@ -495,6 +507,56 @@
 		changeChatView(viewEntry, { ...viewEntry.state, panels: tabs });
 		showTabs.set(true);
 	};
+	const createPageTab = (request: { href: string; label: string }): PanelTab => {
+		const url = new URL(request.href, location.origin);
+		const chat = url.pathname === '/' || url.pathname.startsWith('/c/');
+		return {
+			id: `${chat ? 'side' : 'page'}:${uuidv4()}`,
+			kind: chat ? 'side' : 'page',
+			href: url.pathname + url.search + url.hash,
+			chatId: url.pathname.startsWith('/c/') ? decodeURIComponent(url.pathname.slice(3)) : undefined,
+			initialPrompt: chat ? url.searchParams.get('q') ?? '' : undefined,
+			label: request.label || $i18n.t(chat ? 'Chat' : 'Loading...')
+		};
+	};
+	const findPageTab = (url: URL) => tabs.tabs.find((tab) =>
+		(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
+		(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
+		(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
+	);
+	export const openPageTab = (request: { href: string; label: string }) => {
+		const url = new URL(request.href, location.origin);
+		if (url.origin !== location.origin || !pageTabKey(url)) return;
+		if (!viewReady) {
+			pendingPageTab = request;
+			return;
+		}
+		if ((url.pathname === '/' && !url.search) || request.href === mainChatHref) {
+			focusMainChat();
+			return;
+		}
+		const existing = findPageTab(url);
+		if (existing) {
+			selectTab(existing.id);
+			if (existing.href !== request.href && url.pathname !== '/workspace')
+				void navigatePageTab(existing.id, request.href);
+		} else openPanel(createPageTab(request));
+	};
+	const navigatePageTab = async (id: string, href: string) => {
+		if (!(await pageViews[id]?.requestClose() ?? true)) return;
+		const url = new URL(href, location.origin);
+		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
+			openPageTab({ href, label: '' });
+		} else if (viewEntry) updateViewTab(viewEntry, id, { href });
+		await tick();
+	};
+
+	$: if (viewReady && pendingPageTab) {
+		const request = pendingPageTab;
+		pendingPageTab = null;
+		openPageTab(request);
+	}
+
 	const openFiles = (selector = $selectedTerminalId, directory?: string, newTab = false) => {
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
 		const existing = newTab
@@ -605,7 +667,11 @@
 	): SplitDrop | null => {
 		const internal =
 			!!draggedTabId || event.dataTransfer?.types.includes('application/x-chat-panel-tab');
-		if ((!internal && !canDropChat(event)) || !(event.target instanceof Element)) return null;
+		if (
+			(!internal && !canDropChat(event) &&
+				!event.dataTransfer?.types.includes('application/x-open-webui-page')) ||
+			!(event.target instanceof Element)
+		) return null;
 		if (!internal && event.target.closest('[data-composer-id]')) return null;
 		const group = event.target.closest<HTMLElement>('[data-panel-group]');
 		const panel = event.target.closest('#controls-container');
@@ -660,9 +726,9 @@
 		chatDropPreview = chatDropBounds(event);
 		if (chatDropPreview || event.dataTransfer?.types.includes('Files')) event.preventDefault();
 		if (chatDropPreview)
-			event.dataTransfer!.dropEffect = event.dataTransfer!.types.includes(
-				'application/x-chat-panel-tab'
-			)
+			event.dataTransfer!.dropEffect =
+				event.dataTransfer!.effectAllowed === 'move' ||
+				event.dataTransfer!.types.includes('application/x-chat-panel-tab')
 				? 'move'
 				: 'copy';
 	};
@@ -677,8 +743,22 @@
 		if (!bounds || pendingTabDrop) return;
 		const internalId = event.dataTransfer?.getData('application/x-chat-panel-tab');
 		let savedId = '';
+		let droppedPage: PanelTab | null = null;
 		if (internalId) {
 			if (!tabs.tabs.some((tab) => tab.id === internalId)) return;
+		} else if (event.dataTransfer?.types.includes('application/x-open-webui-page')) {
+			try {
+				const item = JSON.parse(event.dataTransfer.getData('application/x-open-webui-page'));
+				if (typeof item.href !== 'string') return;
+				const url = new URL(item.href, location.origin);
+				if (url.origin !== location.origin || !pageTabKey(url)) return;
+				droppedPage = createPageTab({
+					href: url.pathname + url.search + url.hash,
+					label: typeof item.label === 'string' ? item.label : ''
+				});
+			} catch {
+				return;
+			}
 		} else {
 			try {
 				const item = JSON.parse(event.dataTransfer!.getData('text/plain'));
@@ -691,15 +771,19 @@
 		event.preventDefault();
 		const applyDrop = () => {
 			const groupId = bounds.groupId;
-			if (savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
+			if (!droppedPage && savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
 			const existing =
 				internalId ||
-				(savedId === chatId ? mainChatTabId : tabs.tabs.find((tab) => tab.chatId === savedId)?.id);
+				(droppedPage
+					? findPageTab(new URL(droppedPage.href!, location.origin))?.id
+					: savedId === chatId
+						? mainChatTabId
+						: tabs.tabs.find((tab) => tab.chatId === savedId)?.id);
 			let id = existing;
 			if (!id) {
 				focusGroup(groupId);
-				id = uuidv4();
-				tabs = openTab(tabs, { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId });
+				id = droppedPage?.id ?? uuidv4();
+				tabs = openTab(tabs, droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId });
 			}
 			tabs = bounds.edge
 				? splitTab(tabs, id, groupId, bounds.edge)
@@ -821,6 +905,7 @@
 			await owner.pending.get(id);
 			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
+			if (tab.kind === 'page' && !(await pageViews[id]?.requestClose() ?? true)) return;
 			const connection =
 				tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')
 					? tabConnection(tab)
@@ -1073,7 +1158,7 @@
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
-		{ kind: 'voice', label: $i18n.t('Voice'), available: $showCallOverlay },
+		{ kind: 'voice', label: $i18n.t('Voice'), available: !!bridge && $showCallOverlay },
 		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
 	];
 
@@ -1222,11 +1307,12 @@
 	}
 
 	$: if (mounted && !chatLoading && $user?.id && chatId !== tabsChatId) {
-		if (viewEntry && !viewEntry.chatId && chatId && viewReady) {
+		if (viewEntry && viewReady && (preserveChatView || (!viewEntry.chatId && chatId))) {
 			tabsChatId = chatId;
-			void bindTerminalChat(chatId).catch((error) => {
-				viewError = String(error);
-			});
+			if (chatId)
+				void bindTerminalChat(chatId).catch((error) => {
+					viewError = String(error);
+				});
 		} else void restoreChatView(chatId);
 	}
 	$: if (
@@ -1335,6 +1421,7 @@
 	};
 
 	onMount(() => {
+		if (appLayout) appLayout.openPageTab = openPageTab;
 		const unregisterCapture = registerChatViewCapture(captureView);
 		const unsubscribeViews = chatViewChanges.subscribe(() => {
 			if (viewEntry && viewReady) {
@@ -1364,6 +1451,7 @@
 		init();
 
 		return () => {
+			if (appLayout?.openPageTab === openPageTab) delete appLayout.openPageTab;
 			unregisterCapture();
 			unsubscribeViews();
 			document.removeEventListener('keydown', handleWorkspaceShortcut, true);
@@ -1393,6 +1481,21 @@
 			.map((group) => group.activeId)
 	);
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
+	$: if (mounted && viewReady && !chatLoading) {
+		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+		const href = active?.kind === 'page'
+			? active.href
+			: active?.kind === 'chat'
+				? mainChatHref
+				: active?.kind === 'side' ? (active.chatId ? `/c/${active.chatId}` : active.href) : null;
+		if (href) {
+			const url = new URL(href, location.origin);
+			if (url.origin === location.origin && url.href !== location.href) {
+				// Reflect selection without routing through SvelteKit and remounting the workspace.
+				window.history.replaceState(window.history.state, '', url);
+			}
+		}
+	}
 	$: mainChatGroupId =
 		displayTabs.groups.find((group) => group.tabIds.includes(mainChatTabId))?.id ?? '';
 	$: mainChatStyle =
@@ -1400,6 +1503,7 @@
 			? paneStyle(positions.groups[mainChatGroupId], 36)
 			: '';
 </script>
+
 
 <ConfirmDialog
 	show={!!stopTerminalChoice}
@@ -1416,9 +1520,26 @@
 	}}
 />
 
+<svelte:head>
+	<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
+	<title>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
+		? `${activeTab.label} / ${$WEBUI_NAME}`
+		: $settings.showChatTitleInTab !== false && chatId && title
+			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
+			: $WEBUI_NAME}</title>
+</svelte:head>
+
 <svelte:window
 	bind:innerWidth={viewportWidth}
-	on:dragend={clearChatDropPreview}
+	on:dragstart|capture={(event) => {
+		if (event.target instanceof Element && event.target.closest('#sidebar')) dragged = true;
+	}}
+	on:dragend|capture={() => {
+		dragged = false;
+		clearChatDropPreview();
+	}}
 	on:drop|capture={clearChatDropPreview}
 	on:blur={clearChatDropPreview}
 />
@@ -1639,7 +1760,18 @@
 					>
 						{$i18n.t('Terminal connection unavailable')}
 					</div>
-				{:else if tab.kind === 'voice'}
+				{:else if tab.kind === 'page' && tab.href}
+					<Page
+						bind:this={pageViews[tab.id]}
+						href={tab.href}
+						active={visibleTabIds.has(tab.id)}
+						onNavigate={(href) => navigatePageTab(tab.id, href)}
+						onTitleChange={(label) => {
+							if (label && tabs.tabs.find((item) => item.id === tab.id)?.label !== label)
+								updateViewTab(owner, tab.id, { label });
+						}}
+					/>
+				{:else if tab.kind === 'voice' && bridge}
 					<CallPanel
 						{bridge}
 						bind:callMode
@@ -1657,6 +1789,7 @@
 					<Artifacts overlay={dragged} />
 				{:else if tab.kind === 'side'}
 					<SideChat
+						standalone={!!tab.href}
 						bind:this={sideViews[tab.id]}
 						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
@@ -1665,10 +1798,10 @@
 								chatId: chat.id,
 								...(chat.title ? { label: chat.title } : {})
 							})}
-						parentChatId={owner.chatId ?? ''}
-						parentFolderId={folderId}
+						parentChatId={tab.href ? '' : owner.chatId ?? ''}
+						parentFolderId={tab.href ? null : folderId}
 						{history}
-						{modelId}
+						modelId={tab.href ? new URL(tab.href, location.origin).searchParams.get('models') ?? new URL(tab.href, location.origin).searchParams.get('model') ?? modelId : modelId}
 						{systemPrompt}
 						initialPrompt={tab.initialPrompt ?? ''}
 					/>

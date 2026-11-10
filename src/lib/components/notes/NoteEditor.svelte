@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext, onTabLeave } from '$lib/utils/page';
+	const { goto, url: pageUrl } = getPageContext();
+
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
 	import {
@@ -28,8 +31,7 @@
 	import { toast } from 'svelte-sonner';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
 
-	import { goto, onNavigate, replaceState } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { onNavigate } from '$app/navigation';
 
 	import dayjs from '$lib/dayjs';
 	import calendar from 'dayjs/plugin/calendar';
@@ -97,11 +99,13 @@
 	import ChatBubbleOval from '../icons/ChatBubbleOval.svelte';
 
 	export let id: null | string = null;
+	let noteRoot: HTMLDivElement;
+	let noteContent: HTMLDivElement;
 
 	let editor = null;
 	let revealedSearch = '';
-	$: if (editor && note?.id === id && $page.url.searchParams.get('search')) {
-		const query = $page.url.searchParams.get('search')!.trim().toLowerCase();
+	$: if (editor && note?.id === id && $pageUrl.searchParams.get('search')) {
+		const query = $pageUrl.searchParams.get('search')!.trim().toLowerCase();
 		const key = `${id}:${activePageId}:${query}`;
 		if (query && revealedSearch !== key) {
 			revealedSearch = key;
@@ -173,16 +177,16 @@
 	};
 	$: if (
 		note?.id === id &&
-		$page.url.searchParams.get('page') &&
-		$page.url.searchParams.get('page') !== activePageId
+		$pageUrl.searchParams.get('page') &&
+		$pageUrl.searchParams.get('page') !== activePageId
 	) {
-		activatePage($page.url.searchParams.get('page'));
+		activatePage($pageUrl.searchParams.get('page'));
 	}
 
 	function activatePage(requested: string) {
 		const target = note?.data?.pages?.find((p) => p.id === requested);
 		if (!target || target.id === activePageId) return;
-		const body = document.getElementById('note-content-container');
+		const body = noteContent;
 		if (body && activePageId) pageScroll[activePageId] = body.scrollTop;
 		cursorTarget = null;
 		activePageId = target.id;
@@ -191,10 +195,10 @@
 		revealedSearch = '';
 		localStorage.setItem(`note-page:${$user?.id}:${id}`, target.id);
 		tick().then(() => {
-			const container = document.getElementById('note-content-container');
+			const container = noteContent;
 			if (container) container.scrollTop = pageScroll[target.id] ?? 0;
-			document
-				.getElementById(`note-page-tab-${target.id}`)
+			noteRoot
+				?.querySelector(`[id="note-page-tab-${target.id}"]`)
 				?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 		});
 	}
@@ -211,7 +215,7 @@
 
 	async function selectPage(pageId: string) {
 		if (pageBusy || pageId === activePageId) return;
-		const url = new URL($page.url);
+		const url = new URL($pageUrl);
 		url.searchParams.set('page', pageId);
 		try {
 			pageBusy = true;
@@ -251,7 +255,7 @@
 					? activePageId
 					: saved.data.pages[Math.min(activeIndex, saved.data.pages.length - 1)].id);
 			activatePage(target);
-			const url = new URL($page.url);
+			const url = new URL($pageUrl);
 			url.searchParams.set('page', target);
 			// The old page was flushed above; the new editor is still initializing.
 			await goto(url.pathname + url.search, {
@@ -311,9 +315,9 @@
 		note.data.pages_revision = revision;
 		if (!note.data.pages.some((p) => p.id === activePageId)) {
 			activatePage(note.data.pages[Math.max(0, Math.min(oldIndex, note.data.pages.length - 1))].id);
-			const url = new URL($page.url);
+			const url = new URL($pageUrl);
 			url.searchParams.set('page', activePageId);
-			replaceState(url, $page.state);
+			void goto(url, { replaceState: true, noScroll: true, keepFocus: true });
 		}
 	}
 
@@ -344,9 +348,9 @@
 	$: commentsEnabled = !!($config?.features?.enable_comments && $user && note?.id);
 	let currentNoteComments: CommentsRequest | null = null;
 	let linkedComment = '';
-	$: if (commentsEnabled && note?.id === $page.params.id && $page.url.href !== linkedComment) {
-		linkedComment = $page.url.href;
-		const comment_id = $page.url.searchParams.get('comment');
+	$: if (commentsEnabled && note?.id === id && $pageUrl.href !== linkedComment) {
+		linkedComment = $pageUrl.href;
+		const comment_id = $pageUrl.searchParams.get('comment');
 		if (comment_id)
 			currentNoteComments = { resource_type: 'note', resource_id: note.id, comment_id };
 	}
@@ -426,7 +430,7 @@
 			savedCommentHashes = Object.fromEntries(
 				res.data.pages.map((p: NotePage) => [p.id, contentHash(noteCommentText(p.content))])
 			);
-			const requested = $page.url.searchParams.get('page');
+			const requested = $pageUrl.searchParams.get('page');
 			const remembered = localStorage.getItem(`note-page:${$user?.id}:${id}`);
 			activePageId = '';
 			activatePage(
@@ -480,7 +484,7 @@
 		}, 200);
 	};
 
-	onNavigate(async () => {
+	const flushBeforeLeave = async () => {
 		if (!note || !inputElement || loading || pageBusy) return;
 		try {
 			await flushActivePage();
@@ -488,7 +492,9 @@
 			toast.error(String(error));
 			throw error;
 		}
-	});
+	};
+	onNavigate(flushBeforeLeave);
+	onTabLeave(flushBeforeLeave);
 
 	$: if (id) {
 		init();
@@ -1071,18 +1077,17 @@ ${content}
 			// dropzoneElement?.removeEventListener('dragleave', onDragLeave);
 		}
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{note?.title
-			? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} / ${$WEBUI_NAME}`
-			: `${$WEBUI_NAME}`}
-	</title>
-</svelte:head>
+<PageTitle
+	title={note?.title
+		? `${note?.title.length > 30 ? `${note?.title.slice(0, 30)}...` : note?.title} / ${$WEBUI_NAME}`
+		: `${$WEBUI_NAME}`}
+/>
 
 {#if note && activePage}
 	<AccessControlModal
@@ -1128,7 +1133,7 @@ ${content}
 	</div>
 </DeleteConfirmDialog>
 
-<div class="w-full h-full flex">
+<div bind:this={noteRoot} class="w-full h-full flex">
 	<div class="h-full flex flex-col min-w-0 flex-1 relative">
 		<div class="relative flex-1 w-full h-full flex justify-center pt-1.5 md:pt-2" id="note-editor">
 			{#if loading}
@@ -1570,6 +1575,7 @@ ${content}
 						<div
 							class="min-w-0 flex-1 h-full overflow-auto px-3 relative flex flex-col"
 							id="note-content-container"
+							bind:this={noteContent}
 							role="tabpanel"
 							aria-label={activePage?.id === 'main' && activePage.inherit_note_title !== false
 								? note.title || $i18n.t('Untitled')

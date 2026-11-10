@@ -1,0 +1,124 @@
+<script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
+	import { toast } from 'svelte-sonner';
+
+	import { baseModels, config, models, settings } from '$lib/stores';
+	import { COMMUNITY_ORIGINS, WEBUI_BASE_URL } from '$lib/constants';
+
+	import { onMount, tick, getContext } from 'svelte';
+	import { createNewModel, getModelById } from '$lib/apis/models';
+	import { getModels } from '$lib/apis';
+
+	import ModelEditor from '$lib/components/workspace/Models/ModelEditor.svelte';
+
+	const i18n = getContext<any>('i18n');
+
+	const onSubmit = async (modelInfo) => {
+		if ($baseModels.find((m) => m.id === modelInfo.id)) {
+			toast.error(
+				$i18n.t(
+					"Error: A model with the ID '{{modelId}}' already exists. Please select a different ID to proceed.",
+					{ modelId: modelInfo.id }
+				)
+			);
+			return false;
+		}
+
+		if (modelInfo.id === '') {
+			toast.error($i18n.t('Error: Model ID cannot be empty. Please enter a valid ID to proceed.'));
+			return false;
+		}
+
+		if (modelInfo) {
+			const res = await createNewModel(localStorage.token, {
+				...modelInfo,
+				meta: {
+					...modelInfo.meta,
+					// LICENSE covers this Open WebUI fallback logo.
+					// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+					// https://docs.openwebui.com/license.
+					profile_image_url:
+						modelInfo.meta.profile_image_url ?? `${WEBUI_BASE_URL}/static/favicon.png`,
+					suggestion_prompts: modelInfo.meta.suggestion_prompts
+						? modelInfo.meta.suggestion_prompts.filter((prompt) => prompt.content !== '')
+						: null
+				},
+				params: { ...modelInfo.params }
+			}).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+
+			if (res) {
+				try {
+					await models.set(
+						await getModels(
+							localStorage.token,
+							$config?.features?.enable_direct_connections
+								? ($settings?.directConnections ?? null)
+								: null
+						)
+					);
+					toast.success($i18n.t('Model created successfully!'));
+					await goto('/workspace/models');
+				} catch (error: any) {
+					toast.error(`${error?.message ?? error}`);
+				}
+				return res;
+			}
+		}
+		return false;
+	};
+
+	let model = null;
+
+	onMount(() => {
+		const handleMessageEvent = async (event: MessageEvent) => {
+			if (!COMMUNITY_ORIGINS.includes(event.origin)) {
+				return;
+			}
+
+			try {
+				let data = JSON.parse(event.data);
+
+				if (data?.info) {
+					data = data.info;
+				}
+
+				model = data;
+			} catch (e) {
+				console.error('Failed to parse message data:', e);
+			}
+		};
+		window.addEventListener('message', handleMessageEvent);
+
+		if (window.opener ?? false) {
+			window.opener.postMessage('loaded', '*');
+		}
+
+		if (sessionStorage.model) {
+			model = JSON.parse(sessionStorage.model);
+			sessionStorage.removeItem('model');
+		}
+
+		return () => {
+			window.removeEventListener('message', handleMessageEvent);
+		};
+	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
+	import { WEBUI_NAME } from '$lib/stores';
+</script>
+
+<PageTitle title={$i18n.t('Create Model') + ' / ' + $WEBUI_NAME} />
+
+{#key model}
+	<ModelEditor
+		{model}
+		{onSubmit}
+		onBack={async () => {
+			await goto('/workspace/models');
+		}}
+	/>
+{/key}

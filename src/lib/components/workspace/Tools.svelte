@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { WorkspaceContext } from '$lib/types';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -16,17 +20,10 @@
 
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const { workspaceActions, workspaceCounts } = getContext<WorkspaceContext>('workspace');
 
-	import {
-		WEBUI_NAME,
-		config,
-		tools as _tools,
-		user,
-		workspaceActions,
-		workspaceCounts
-	} from '$lib/stores';
+	import { WEBUI_NAME, config, tools as _tools, user } from '$lib/stores';
 
-	import { goto } from '$app/navigation';
 	import {
 		createNewTool,
 		loadToolByUrl,
@@ -340,18 +337,15 @@
 	onDestroy(() => {
 		clearTimeout(searchDebounceTimer);
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="tools" onUpdated={init} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Tools')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Tools') + ' / ' + $WEBUI_NAME} />
 
 <h1 class="sr-only">{$i18n.t('Tools')}</h1>
 

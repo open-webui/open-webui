@@ -147,7 +147,7 @@
 				showSidebar.set(false);
 			}
 		}}
-		draggable="false"
+		draggable="true"
 	>
 		<div class="flex min-w-0 flex-1 items-center gap-1">
 			{#if channel?.type === 'dm'}

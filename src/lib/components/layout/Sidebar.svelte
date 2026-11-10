@@ -4,6 +4,8 @@
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import { page } from '$app/stores';
 	import {
 		user,
@@ -42,6 +44,7 @@
 	import { writable } from 'svelte/store';
 
 	const i18n: any = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	// Preserve the former app sidebar label for i18n extraction.
 	// t('App navigation')
 
@@ -959,7 +962,56 @@
 		}
 	};
 
-	const newChatHandler = async () => {
+	const openSidebarPage = (href: string, label = '') => {
+		const url = new URL(href, location.origin);
+		if (!appLayout?.openPageTab || url.origin !== location.origin || !pageTabKey(url)) return false;
+		appLayout.openPageTab({ href: url.pathname + url.search + url.hash, label });
+		closeMobileSidebar();
+		return true;
+	};
+	const sidebarLinkClickHandler = (event: MouseEvent) => {
+		if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+			return;
+		const link = (event.target as Element)?.closest<HTMLAnchorElement>('#sidebar a[href]');
+		if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+		if (link.closest('#sidebar-chat-item')?.querySelector('[role="checkbox"]')) return;
+		if (link.pathname === '/' && !link.search) return;
+		if (openSidebarPage(link.href, link.getAttribute('aria-label') || link.textContent?.trim())) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		}
+	};
+
+	const sidebarPageDragHandler = (event: DragEvent) => {
+		if (!(event.target instanceof Element) || !event.dataTransfer) return;
+		const link =
+			event.target.closest<HTMLAnchorElement>('#sidebar a[href]') ??
+			(event.target.closest('#sidebar')
+				? event.target.querySelector<HTMLAnchorElement>('a[href]')
+				: null);
+		if (!link) return;
+		const url = new URL(link.href);
+		if (
+			url.origin !== location.origin ||
+			!pageTabKey(url) ||
+			url.pathname.startsWith('/c/') ||
+			(url.pathname === '/' && !url.search)
+		)
+			return;
+		const item = {
+			type: 'page',
+			href: url.pathname + url.search + url.hash,
+			label: link.getAttribute('aria-label') || link.textContent?.trim() || ''
+		};
+		event.dataTransfer.setData('application/x-open-webui-page', JSON.stringify(item));
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+		event.dataTransfer.setData('text/plain', JSON.stringify(item));
+		event.dataTransfer.effectAllowed = 'copyMove';
+	};
+
+	const newChatHandler = async (event?: MouseEvent) => {
+		if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+		event?.preventDefault();
 		selectedChatId = null;
 		selectedFolder.set(null);
 		closeMobileSidebar();
@@ -969,6 +1021,8 @@
 		} else {
 			await temporaryChatEnabled.set(false);
 		}
+		if (appLayout?.initNewChat) await appLayout.initNewChat(true);
+		else await goto('/');
 	};
 
 	const itemClickHandler = async () => {
@@ -1025,7 +1079,7 @@
 			await initChannels();
 			showCreateChannel = false;
 			showChannels = true;
-			goto(`/channels/${res.id}`);
+			if (!openSidebarPage(`/channels/${res.id}`, res.name)) goto(`/channels/${res.id}`);
 		}
 	}}
 />
@@ -1039,6 +1093,8 @@
 />
 
 <svelte:window
+	on:click|capture={sidebarLinkClickHandler}
+	on:dragstart|capture={sidebarPageDragHandler}
 	bind:innerWidth={viewportWidth}
 	on:pointermove={(e) => {
 		if (!isResizing) return;
@@ -1092,7 +1148,6 @@
 		id="sidebar-new-chat-button"
 		class="hidden"
 		on:click={() => {
-			goto('/');
 			newChatHandler();
 		}}
 	/>
@@ -1156,7 +1211,6 @@
 									e.stopImmediatePropagation();
 									e.preventDefault();
 
-									goto('/');
 									newChatHandler();
 								}}
 								aria-label={$i18n.t('New Chat')}
@@ -1206,7 +1260,7 @@
 											goto(meta.href);
 											itemClickHandler();
 										}}
-										draggable="false"
+										draggable="true"
 										aria-label={$i18n.t(meta.label)}
 									>
 										<div
@@ -1458,7 +1512,7 @@
 												: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
 											href={meta.href}
 											on:click={itemClickHandler}
-											draggable="false"
+											draggable="true"
 											aria-label={$i18n.t(meta.label)}
 										>
 											<div class="self-center flex size-4 shrink-0 items-center justify-center">
@@ -1507,7 +1561,7 @@
 							onAdd={async () => {
 								const note = await createNoteHandler('New Note');
 								if (note) {
-									goto(`/notes/${note.id}`);
+									if (!openSidebarPage(`/notes/${note.id}`, note.title)) goto(`/notes/${note.id}`);
 								}
 							}}
 							onAddLabel={$i18n.t('New Note')}

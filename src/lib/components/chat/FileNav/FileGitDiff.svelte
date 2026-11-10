@@ -2,7 +2,7 @@
 	import { getContext, onDestroy } from 'svelte';
 	import type { TerminalConnection } from '$lib/apis/terminal';
 	import { gitRequest, type GitFile } from '$lib/apis/terminal/git';
-	import GitDiff from '../ChatTabs/GitDiff.svelte';
+	import GitDiff from '../Tabs/GitDiff.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 
 	export let connection: TerminalConnection | null;

@@ -76,7 +76,7 @@
 						showSidebar.set(false);
 					}
 				}}
-				draggable="false"
+				draggable="true"
 			>
 				<div class="self-center">
 					<NotesIcon className="size-3.5" strokeWidth="1.5" />

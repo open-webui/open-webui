@@ -100,14 +100,6 @@ export type WorkspaceAction = {
 	visible?: boolean;
 };
 
-export const workspaceCounts: Writable<Record<WorkspaceSection, number | null>> = writable({
-	models: null,
-	knowledge: null,
-	prompts: null,
-	skills: null,
-	tools: null
-});
-export const workspaceActions: Writable<WorkspaceAction[]> = writable([]);
 export const adminUserCount: Writable<number | null> = writable(null);
 export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);

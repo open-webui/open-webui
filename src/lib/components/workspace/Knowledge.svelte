@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { WorkspaceContext } from '$lib/types';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -15,15 +19,15 @@
 	import type { i18n as i18nType } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const { workspaceActions, workspaceCounts } = getContext<WorkspaceContext>('workspace');
 
-	import { WEBUI_NAME, user, workspaceActions, workspaceCounts } from '$lib/stores';
+	import { WEBUI_NAME, user } from '$lib/stores';
 	import {
 		deleteKnowledgeById,
 		searchKnowledgeBases,
 		exportKnowledgeById
 	} from '$lib/apis/knowledge';
 
-	import { goto } from '$app/navigation';
 	import { capitalizeFirstLetter } from '$lib/utils';
 
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -302,23 +306,20 @@
 			showCreateModal = true;
 		}
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="knowledge" onUpdated={init} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Knowledge')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Knowledge') + ' / ' + $WEBUI_NAME} />
 
 <h1 class="sr-only">{$i18n.t('Knowledge')}</h1>
 
 <Comments modal bind:view={comments} resourceType="knowledge">
-	{#if loaded}
+	{#if loaded && items !== null && total !== null}
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			on:confirm={() => {

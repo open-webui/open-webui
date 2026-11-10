@@ -46,6 +46,7 @@
 	} from '$lib/utils';
 
 	export let initialPrompt = '';
+	export let standalone = false;
 	export let initialView: any = null;
 	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
@@ -60,11 +61,11 @@
 	const originalChatId = parentChatId;
 	$: sideChatAllowed =
 		$user?.role === 'admin' ||
-		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
+		($user?.role === 'user' && (standalone || ($user.permissions?.chat?.side_chat ?? false)));
 	// Snapshot the active branch once; later parent edits and streaming stay in the parent.
 	const context = (() => {
 		if (initialView?.context) return initialView.context;
-		if (chatId) return [];
+		if (chatId || standalone) return [];
 		const branch: any[] = [];
 		let current = history?.currentId;
 		const seen = new Set<string>();

@@ -20,3 +20,15 @@ export type TerminalContext = {
 	currentDirectory: string;
 	file?: import('$lib/apis/terminal').FilesystemFile | null;
 };
+
+export type AppLayoutContext = {
+	openPageTab?: (tab: { href: string; label: string }) => void;
+	initNewChat?: (preserveTabs?: boolean, keepDraft?: boolean) => Promise<void>;
+};
+
+export type WorkspaceContext = {
+	workspaceActions: import('svelte/store').Writable<import('$lib/stores').WorkspaceAction[]>;
+	workspaceCounts: import('svelte/store').Writable<
+		Record<import('$lib/stores').WorkspaceSection, number | null>
+	>;
+};

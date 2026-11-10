@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, setContext } from 'svelte';
+	import type { AppLayoutContext } from '$lib/types';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -45,6 +46,8 @@
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import Chat from '$lib/components/chat/Chat.svelte';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
@@ -54,8 +57,11 @@
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
 	const i18n = getContext('i18n');
+	setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
+	$: routeHasTabs = ['/(app)', '/(app)/c/[id]'].includes($page.route.id ?? '');
+	$: usePageTabs = !routeHasTabs && !!pageTabKey($page.url);
 
 	let version;
 	let handledSettingsUrl = '';
@@ -516,7 +522,9 @@
 				{#if loaded}
 					<main class="contents">
 						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
-						<slot />
+						{#if usePageTabs}
+							<Chat initialPage={$page.url.pathname + $page.url.search + $page.url.hash} />
+						{:else}<slot />{/if}
 					</main>
 				{:else}
 					<div

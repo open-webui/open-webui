@@ -1,9 +1,11 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto, url: pageUrl } = getPageContext();
+
 	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import dayjs from 'dayjs';
@@ -54,8 +56,8 @@
 	onDestroy(() => {
 		alive = false;
 	});
-	$: if (($page.url.searchParams.get('run') ?? '') !== linkedRunId) {
-		linkedRunId = $page.url.searchParams.get('run') ?? '';
+	$: if (($pageUrl.searchParams.get('run') ?? '') !== linkedRunId) {
+		linkedRunId = $pageUrl.searchParams.get('run') ?? '';
 		void revealRun(linkedRunId);
 	}
 	async function revealRun(id: string) {
@@ -243,14 +245,13 @@
 			}
 		});
 	}
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>{automation.name || $i18n.t('Automation')} / {$WEBUI_NAME}</title>
-</svelte:head>
+<PageTitle title={(automation.name || $i18n.t('Automation')) + ' / ' + $WEBUI_NAME} />
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}

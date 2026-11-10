@@ -67,7 +67,8 @@
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
+		const element = listElement?.closest<HTMLElement>('[id="messages-container"]');
+		if (!element) return;
 		element.scrollTop = element.scrollTop + 100;
 
 		messagesLoading = true;
@@ -77,11 +78,12 @@
 		await tick();
 		messagesLoading = false;
 	};
+	let listElement: HTMLDivElement;
 </script>
 
 {#if messages}
 	{@const messageList = messages.slice().reverse()}
-	<div>
+	<div bind:this={listElement}>
 		{#if !top}
 			<Loader
 				on:visible={(e) => {

@@ -6,6 +6,8 @@
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+	/** @type {import('$lib/types').AppLayoutContext | undefined} */
+	const appLayout = getContext('appLayout');
 	const dispatch = createEventDispatcher();
 
 	import DOMPurify from 'dompurify';
@@ -630,7 +632,8 @@
 			await selectedFolder.set({ ...folders[folderId], ...folder });
 		}
 
-		await goto(`/folders/${folderId}`);
+		if (appLayout?.initNewChat) await appLayout.initNewChat(true, true);
+		else await goto(`/folders/${folderId}`);
 
 		if ($mobile) {
 			showSidebar.set(!$showSidebar);

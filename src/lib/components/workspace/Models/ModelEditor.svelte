@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext, onTabLeave } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -6,7 +9,7 @@
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
-	import { beforeNavigate, goto } from '$app/navigation';
+	import { beforeNavigate } from '$app/navigation';
 	import { getModels } from '$lib/apis';
 	import ModelHistory from './ModelHistory.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -119,6 +122,14 @@
 		afterDiscard = action;
 		showDiscard = true;
 	};
+	let cancelDiscard: (() => void) | null = null;
+	onTabLeave(() => {
+		if (readOnly || !dirty) return true;
+		return new Promise<boolean>((resolve) => {
+			cancelDiscard = () => resolve(false);
+			discardThen(() => resolve(true));
+		});
+	});
 	beforeNavigate(({ cancel, to, willUnload }) => {
 		if (readOnly || !dirty || allowNavigation) return;
 		cancel();
@@ -862,6 +873,11 @@
 		/>
 		<ConfirmDialog
 			bind:show={showDiscard}
+			on:cancel={() => {
+				cancelDiscard?.();
+				cancelDiscard = null;
+				afterDiscard = null;
+			}}
 			title={$i18n.t('Discard unsaved changes?')}
 			message={$i18n.t('Your unsaved changes will be lost.')}
 			on:confirm={() => {

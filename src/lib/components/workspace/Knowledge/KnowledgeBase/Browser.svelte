@@ -1,6 +1,9 @@
 <script lang="ts">
+	import { getPageContext, onTabLeave } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import { getContext, onDestroy } from 'svelte';
-	import { beforeNavigate, goto } from '$app/navigation';
+	import { beforeNavigate } from '$app/navigation';
 	import { mobile } from '$lib/stores';
 	import Files from './Files.svelte';
 	import FileViewer from './FileViewer.svelte';
@@ -79,6 +82,15 @@
 			state = newViewerState();
 		}
 	};
+	let cancelDiscard: (() => void) | null = null;
+	onTabLeave(() => {
+		if (saving) return false;
+		if (!dirty) return true;
+		return new Promise<boolean>((resolve) => {
+			cancelDiscard = () => resolve(false);
+			guard(() => resolve(true));
+		});
+	});
 	beforeNavigate((navigation) => {
 		if (allowNavigation || (!dirty && !saving)) return;
 		navigation.cancel();
@@ -100,7 +112,11 @@
 		state = { ...state, editing: false, draft: state.indexed || '' };
 		action?.();
 	}}
-	on:cancel={() => (pendingAction = null)}
+	on:cancel={() => {
+		cancelDiscard?.();
+		cancelDiscard = null;
+		pendingAction = null;
+	}}
 />
 <div
 	class="flex h-full min-h-0 overflow-hidden rounded-2xl border border-gray-100/80 bg-gray-50/60 dark:border-white/[0.04] dark:bg-white/[0.03]"
