@@ -998,7 +998,8 @@
 		const link = (event.target as Element)?.closest<HTMLAnchorElement>('#sidebar a[href]');
 		if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
 		if (link.closest('#sidebar-chat-item')?.querySelector('[role="checkbox"]')) return;
-		if (link.pathname.startsWith('/c/') || (link.pathname === '/' && !link.search)) return;
+		if (link.pathname.startsWith('/c/') && link.pathname !== `/c/${$chatId}`) return;
+		if (link.pathname === '/' && !link.search) return;
 		if (openSidebarPage(link.href, link.getAttribute('aria-label') || link.textContent?.trim())) {
 			event.preventDefault();
 			event.stopImmediatePropagation();
