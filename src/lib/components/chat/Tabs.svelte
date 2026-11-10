@@ -266,12 +266,11 @@
 		try {
 			await loadChatView(owner);
 			if (version !== switchVersion) return;
-			if (!owner.transient.initialized && !owner.state.panels.tabs.length)
-				owner.state.selectedTerminalId = $selectedTerminalId;
+			// The chat restores its terminal and directory together; layouts must not override them.
+			owner.state.selectedTerminalId = $selectedTerminalId;
 			owner.state.panels = setMainChatTab(owner.state.panels, true, title);
 			owner.transient.initialized = true;
 			tabs = owner.state.panels;
-			selectedTerminalId.set(owner.state.selectedTerminalId);
 			dirtyFiles = {};
 			fileContexts = {};
 			fileGitStatuses = {};

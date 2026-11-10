@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let modelId: string | null = null;
-	import { getContext, tick } from 'svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import UserTerminalsModal from '../UserTerminalsModal.svelte';
 	import { updateChatById } from '$lib/apis/chats';
@@ -49,6 +49,8 @@
 	export let disabled = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
+	let disposed = false;
+	onDestroy(() => (disposed = true));
 
 	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
@@ -226,9 +228,11 @@
 		showTerminals = true;
 	};
 	async function saveSelection(id: string | null) {
-		if (isSavedChatId(chatId)) {
+		const ownerChatId = chatId;
+		const ownerActiveChatId = $activeChatId;
+		if (isSavedChatId(ownerChatId)) {
 			try {
-				await updateChatById(localStorage.token, chatId!, {
+				await updateChatById(localStorage.token, ownerChatId!, {
 					terminal_id: id,
 					working_directory: ''
 				});
@@ -237,7 +241,7 @@
 				return false;
 			}
 		}
-		return true;
+		return !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId;
 	}
 	async function selectTerminal(id: string) {
 		if (await saveSelection(id)) selectedTerminalId.set(id);

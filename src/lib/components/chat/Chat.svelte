@@ -1172,6 +1172,7 @@
 	const setDefaults = async (preserveSelections = false) => {
 		const modelIds = atSelectedModel ? [atSelectedModel.id] : [...selectedModels];
 		const id = $chatId;
+		const signal = chatLoadController.signal;
 		while (settingDefaults) await settingDefaults;
 		let resolveDefaults = () => {};
 		settingDefaults = new Promise<void>((resolve) => (resolveDefaults = resolve));
@@ -1182,6 +1183,7 @@
 			if (!$skills) skills.set(await getSkills(localStorage.token));
 			if ($tools === null || $functions === null || $skills === null) return;
 			if (
+				signal.aborted ||
 				id !== $chatId ||
 				!equal(modelIds, atSelectedModel ? [atSelectedModel.id] : selectedModels)
 			)
@@ -1198,9 +1200,11 @@
 			const defaultFeature = (feature: 'web_search' | 'image_generation' | 'code_interpreter') =>
 				featureAvailable(feature) &&
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
-			// Folder defaults are applied at chat initialization; keep subsequent terminal choices.
+			// Loading a saved chat must preserve its terminal, including an explicit deselection.
 			const terminalId =
-				!history.currentId && $selectedFolder ? null : currentModels[0]?.info?.meta?.terminalId;
+				(loading && $chatId) || (!history.currentId && $selectedFolder)
+					? null
+					: currentModels[0]?.info?.meta?.terminalId;
 			const defaults: Record<string, any> = {
 				selectedToolIds: [
 					...new Set(
@@ -4545,6 +4549,10 @@
 			(file: any) => file.type === 'filesystem'
 		);
 		const requestTerminalId = filesystemAttachment?.terminal_id ?? $selectedTerminalId;
+		const requestTerminalCwd =
+			terminalContext && terminalContext.terminalId === requestTerminalId
+				? terminalContext.currentDirectory
+				: undefined;
 
 		const chatMessageFiles = _messages
 			.filter((message) => message.files)
@@ -4716,10 +4724,7 @@
 				),
 				skill_ids: skillIds.length > 0 ? skillIds : undefined,
 				terminal_id: terminalEnabled && requestTerminalId ? requestTerminalId : null,
-				terminal_cwd:
-					!_chatId && terminalContext?.terminalId === requestTerminalId
-						? terminalContext.currentDirectory
-						: undefined,
+				terminal_cwd: !_chatId ? requestTerminalCwd : undefined,
 				tool_servers: $config?.features?.enable_tool_servers
 					? [
 							...($toolServers ?? []).filter(
