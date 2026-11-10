@@ -23,6 +23,7 @@ export type PanelTab = {
 	initialPrompt?: string;
 	chatId?: string;
 	sideChatNumber?: number;
+	sideChat?: boolean;
 	terminalId?: string;
 	terminalNumber?: number;
 	path?: string;

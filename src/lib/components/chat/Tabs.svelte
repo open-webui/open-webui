@@ -640,6 +640,7 @@
 					kind,
 					label: `${view.label} ${sideChatNumber}`,
 					sideChatNumber,
+					sideChat: true,
 					initialPrompt
 				},
 				inSidePanel
@@ -1798,7 +1799,7 @@
 								chatId: chat.id,
 								...(chat.title ? { label: chat.title } : {})
 							})}
-						parentChatId={tab.href ? '' : owner.chatId ?? ''}
+						parentChatId={tab.sideChat ? owner.chatId ?? '' : ''}
 						parentFolderId={tab.href ? null : folderId}
 						{history}
 						modelId={tab.href ? new URL(tab.href, location.origin).searchParams.get('models') ?? new URL(tab.href, location.origin).searchParams.get('model') ?? modelId : modelId}

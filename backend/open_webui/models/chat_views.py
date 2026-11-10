@@ -22,6 +22,7 @@ class PanelTab(ViewModel):
     terminalNumber: int | None = None
     chatId: str | None = None
     sideChatNumber: int | None = None
+    sideChat: bool | None = None
     path: str | None = None
     page: int | None = None
     sessionId: str | None = None
