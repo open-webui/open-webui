@@ -269,7 +269,6 @@
 			// The chat restores its terminal and directory together; layouts must not override them.
 			owner.state.selectedTerminalId = $selectedTerminalId;
 			owner.state.panels = setMainChatTab(owner.state.panels, true, title);
-			owner.transient.initialized = true;
 			tabs = owner.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};
