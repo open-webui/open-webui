@@ -1471,6 +1471,15 @@ async def get_chat_by_id(
         data['chat']['share_mode'] = (
             'continue' if await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat) else None
         )
+        if data['chat']['share_mode'] == 'continue':
+            from open_webui.utils.agents.session import get_session, model_id
+
+            state = await get_session(chat)
+            if state:
+                data['chat'].setdefault('models', [model_id(state)])
+                data['chat'].setdefault('terminal_id', state['terminal_id'])
+                if data['chat']['terminal_id'] == state['terminal_id']:
+                    data['chat'].setdefault('working_directory', state['cwd'])
         data = overlay_response_streams(
             data,
             await get_response_streams_by_chat_id(request.app.state.redis, id),

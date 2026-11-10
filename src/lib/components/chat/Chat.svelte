@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getTerminalServers } from '$lib/apis/terminal';
 	import { resolveToolApprovalMode } from '$lib/utils/toolPermissions';
 	import type { TerminalContext } from '$lib/types';
 	import {
@@ -1091,7 +1092,10 @@
 			if (generation === agentDiscovery) {
 				models.set(available);
 				const remaining = selectedModels.filter(
-					(id) => !id.startsWith('agent:') || available.some((model) => model.id === id)
+					(id) =>
+						!id.startsWith('agent:') ||
+						(chat?.chat?.models?.includes(id) && decodeURIComponent(id.split(':')[1]) === $selectedTerminalId) ||
+						available.some((model: Model) => model.id === id)
 				);
 				selectedModels =
 					remaining.length || equal(remaining, selectedModels)
@@ -3047,14 +3051,23 @@
 					(chatContent?.models ?? undefined) !== undefined
 						? chatContent.models
 						: [chatContent.models ?? ''];
+				if ($terminalServers === null) {
+					const servers = await getTerminalServers(localStorage.token);
+					if (signal.aborted) return;
+					terminalServers.set(servers);
+				}
+				const terminalId = 'terminal_id' in chatContent
+					? chatContent.terminal_id
+					: selectedModels[0]?.startsWith('agent:')
+						? decodeURIComponent(selectedModels[0].split(':')[1])
+						: null;
+				selectedTerminalId.set(terminalId && isTerminalAvailable(terminalId) ? terminalId : null);
+				terminalContext = $selectedTerminalId && typeof chatContent.working_directory === 'string'
+					? { terminalId: $selectedTerminalId, currentDirectory: chatContent.working_directory }
+					: null;
 				if (selectedModels[0]?.startsWith('agent:')) {
-					const terminalId = decodeURIComponent(selectedModels[0].split(':')[1]);
-					if (isTerminalAvailable(terminalId)) {
-						selectedTerminalId.set(terminalId);
-						await refreshAgentModels();
-					} else if ($terminalServers !== null) {
-						selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
-					}
+					if ($selectedTerminalId) await refreshAgentModels();
+					else selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
 				}
 
 				// An empty model list is not evidence that the chat's models are gone.
