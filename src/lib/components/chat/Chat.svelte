@@ -574,6 +574,7 @@
 	let chatFiles = [];
 	export let files: any[] = [];
 	let terminalContext: TerminalContext | null = null;
+	let activeFileContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
 		const attachments = [structuredClone(file)];
@@ -5826,6 +5827,7 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
+										{activeFileContext}
 										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
@@ -5934,6 +5936,7 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
+										{activeFileContext}
 										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
@@ -6008,6 +6011,7 @@
 									{terminalSkills}
 									chatId={$chatId}
 									bind:terminalContext
+									{activeFileContext}
 									callActive={!!(bridge?.connected || bridge?.connecting)}
 									callEnabled={!isShared}
 									bind:selectedModelIdx
@@ -6080,6 +6084,7 @@
 					tabActions={loading ? undefined : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}
+					bind:activeFileContext
 					bind:history
 					bind:files
 					chatId={$chatId}

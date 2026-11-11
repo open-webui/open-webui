@@ -58,6 +58,7 @@
 	export let prompt = '';
 	export let files = [];
 	export let terminalContext: TerminalContext | null = null;
+	export let activeFileContext: TerminalContext | null = null;
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 	export let terminalSkills: Writable<any[]>;
 	export let messageInput = null;
@@ -266,6 +267,7 @@
 						{terminalSkills}
 						{chatId}
 						bind:terminalContext
+						{activeFileContext}
 						{callActive}
 						{callEnabled}
 						bind:this={messageInput}

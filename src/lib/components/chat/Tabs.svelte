@@ -122,6 +122,7 @@
 	export let chatLoading = false;
 	export let folderId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
+	export let activeFileContext: TerminalContext | null = null;
 	export let chatUser = null;
 
 	export let bridge: import('$lib/utils/realtime').RealtimeCall | undefined = undefined;
