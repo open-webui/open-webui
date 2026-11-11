@@ -417,6 +417,10 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         }
         if TERMINAL_PROXY_HEADERS:
+            overridden_names = {name.lower() for name in TERMINAL_PROXY_HEADERS}
+            filtered_headers = {
+                key: value for key, value in filtered_headers.items() if key.lower() not in overridden_names
+            }
             filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         port_match = re.match(r'^proxy/(\d+)/', safe_path)
