@@ -49,7 +49,7 @@
 		artifactContents as _artifactContents,
 		tools,
 		skills,
-		terminalSkills,
+		terminalSkills as _terminalSkills,
 		toolServers,
 		terminalServers,
 		functions,
@@ -179,10 +179,8 @@
 	const showArtifacts = embedded ? writable(false) : _showArtifacts;
 	const showEmbeds = embedded ? writable(false) : _showEmbeds;
 	const artifactContents = embedded ? writable(null) : _artifactContents;
-	// A side chat uses the main chat's terminal and never changes it.
-	const selectedTerminalId = side
-		? { subscribe: _selectedTerminalId.subscribe, set: () => {} }
-		: _selectedTerminalId;
+	const selectedTerminalId = side ? writable(get(_selectedTerminalId)) : _selectedTerminalId;
+	const terminalSkills = side ? writable<any[]>([]) : _terminalSkills;
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
@@ -210,6 +208,8 @@
 				models: string[];
 				params: Record<string, any>;
 				variables: Record<string, any>;
+				terminal_id: string | null;
+				working_directory: string;
 		  }) => any | Promise<any>)
 		| null = null;
 	export let onSelectEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
@@ -481,6 +481,8 @@
 	let generationController = null;
 	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setContext('contextCompactions', contextCompactions);
+	setContext('selectedTerminalId', selectedTerminalId);
+	setContext('terminalSkills', terminalSkills);
 	let compactionChatId = '';
 	$: if (compactionChatId !== $chatId) {
 		contextCompactions.set({});
@@ -1233,7 +1235,7 @@
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
 		if (terminalContext?.terminalId !== $selectedTerminalId) terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
-		if (!side) terminalSkills.set([]);
+		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
 		// Folder initialization already requests this exact environment.
 		if (!((loading || !history.currentId) && $selectedFolder?.data?.terminal_id === $selectedTerminalId)) {
@@ -1468,7 +1470,11 @@
 		if (type === 'terminal:display_file') {
 			if (!data?.path) return;
 			if ($settings?.terminalFileDisplay === 'inline') return;
-			displayFileHandler(data.path, { showTabs, showFileNavPath }, { page: data?.page });
+			displayFileHandler(
+				data.path,
+				{ showTabs, showFileNavPath },
+				{ page: data?.page, terminalId: $selectedTerminalId }
+			);
 		} else if (type === 'terminal:write_file' || type === 'terminal:replace_file_content') {
 			if (!data?.path) return;
 			showFileNavDir.set(data.path);
@@ -4197,7 +4203,12 @@
 				const createdChat = await onCreateEmbeddedChat({
 					models: selectedModels,
 					params,
-					variables: chatVariables
+					variables: chatVariables,
+					terminal_id: $selectedTerminalId,
+					working_directory:
+						terminalContext?.terminalId === $selectedTerminalId
+							? terminalContext.currentDirectory
+							: ''
 				});
 				if (!createdChat?.id) {
 					toast.error($i18n.t('Failed to create chat'));
@@ -5839,7 +5850,6 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
-										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5960,7 +5970,6 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
-										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}

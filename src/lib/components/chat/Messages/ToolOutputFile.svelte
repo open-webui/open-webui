@@ -10,7 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import {
 		settings,
-		selectedTerminalId,
+		selectedTerminalId as _selectedTerminalId,
 		showTabs,
 		showFileNavPath,
 		terminalServers
@@ -27,6 +27,8 @@
 	export let modelId: string | null = null;
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const selectedTerminalId =
+		getContext<typeof _selectedTerminalId | undefined>('selectedTerminalId') ?? _selectedTerminalId;
 
 	let expanded = true;
 	let loading = false;
@@ -228,7 +230,7 @@
 	function openInFiles() {
 		if (unavailable || !path) return;
 		showTabs.set(true);
-		showFileNavPath.set(targetPage ? { path, page: targetPage } : path);
+		showFileNavPath.set({ path, page: targetPage, terminalId: selector });
 	}
 
 	async function downloadFile() {

@@ -20,7 +20,7 @@
 	>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { skills, terminalSkills } from '$lib/stores';
+	import { skills, terminalSkills as _terminalSkills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
@@ -32,6 +32,9 @@
 	import MentionToken from './MarkdownInlineTokens/MentionToken.svelte';
 	import NoteLinkToken from './MarkdownInlineTokens/NoteLinkToken.svelte';
 	import SourceToken from './SourceToken.svelte';
+
+	const terminalSkills =
+		getContext<typeof _terminalSkills | undefined>('terminalSkills') ?? _terminalSkills;
 
 	export let id: string;
 	export let done = true;

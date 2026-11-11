@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
-	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
+	import { showCallOverlay, skills, terminalSkills as _terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -134,6 +134,8 @@
 	import { createEventDispatcher } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const terminalSkills =
+		getContext<typeof _terminalSkills | undefined>('terminalSkills') ?? _terminalSkills;
 	const componentContext = getAllContexts();
 	const eventDispatch = createEventDispatcher();
 

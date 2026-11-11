@@ -187,7 +187,9 @@ export const showFileNav = writable<{
 	directory: string;
 	chatId: string | null;
 } | null>(null);
-export type FileNavOpenRequest = string | { path: string; page?: number | null };
+export type FileNavOpenRequest =
+	| string
+	| { path: string; page?: number | null; terminalId?: string | null };
 export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);

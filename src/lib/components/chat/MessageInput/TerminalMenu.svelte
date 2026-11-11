@@ -12,7 +12,6 @@
 	import type { TerminalContext } from '$lib/types';
 
 	import {
-		chatId as activeChatId,
 		config,
 		settings,
 		showSettings,
@@ -65,7 +64,7 @@
 
 	// Lifecycle actions act on this chat's machine of a terminal the user manages.
 	const machineContext = () => ({
-		chat_id: isSavedChatId($activeChatId) ? $activeChatId : null,
+		chat_id: isSavedChatId(chatId) ? chatId : null,
 		model_id: modelId
 	});
 	const machineStatus = async (id: string) => {
@@ -110,8 +109,7 @@
 	};
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
-		(t) =>
-			t.id && !(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
+		(t) => t.id && !(($temporaryChatEnabled || isTemporaryChatId(chatId)) && t.scope === 'chat')
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
 	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
@@ -140,7 +138,7 @@
 		systemTerminals,
 		directTerminals,
 		'',
-		{ chatId: $activeChatId || null, modelId: modelId }
+		{ chatId: chatId || null, modelId: modelId }
 	);
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
@@ -167,7 +165,7 @@
 			systemTerminals,
 			directTerminals,
 			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
+			{ chatId: chatId || null, modelId: modelId }
 		);
 		if (!target) return;
 		show = false;
@@ -177,7 +175,7 @@
 	const openInfo = async (selector: string, label: string) => {
 		if (
 			systemTerminals.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
-			!isSavedChatId($activeChatId)
+			!isSavedChatId(chatId)
 		)
 			return;
 		const target = resolveTerminalTarget(
@@ -185,7 +183,7 @@
 			systemTerminals,
 			directTerminals,
 			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
+			{ chatId: chatId || null, modelId: modelId }
 		);
 		if (!target) return;
 		show = false;
@@ -195,8 +193,8 @@
 	$: if (
 		!$config?.features?.enable_tool_servers ||
 		(info &&
-			// A new chat has no ID: the store holds '' and the target holds null.
-			((info.target.context.chatId ?? '') !== ($activeChatId || '') ||
+			// A new chat has no ID: the prop holds '' and the target holds null.
+			((info.target.context.chatId ?? '') !== (chatId || '') ||
 				(info.target.system
 					? !systemTerminals.some((t) => t.id === info?.target.selector)
 					: !directTerminals.some((t) => t.url === info?.target.selector))))
@@ -367,7 +365,7 @@
 						{#each section.terminals as terminal}
 							{@const label = terminal.name || $i18n.t('Terminal')}
 							{@const owned = canManage(terminal, manageable)}
-							{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+							{@const reachable = terminal.scope !== 'chat' || isSavedChatId(chatId)}
 							<div class="group/terminal relative rounded-xl">
 								<button
 									type="button"

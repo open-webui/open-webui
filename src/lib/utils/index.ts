@@ -2489,12 +2489,14 @@ export const displayFileHandler = (
 		showTabs: Pick<Writable<boolean>, 'set'>;
 		showFileNavPath: Writable<FileNavOpenRequest | null>;
 	},
-	options: { page?: unknown } = {}
+	options: { page?: unknown; terminalId?: string | null } = {}
 ) => {
 	if (path) {
 		stores.showTabs.set(true);
 		const page = normalizeDocumentTargetPage(options.page);
-		stores.showFileNavPath.set(page ? { path, page } : path);
+		stores.showFileNavPath.set(
+			page || options.terminalId ? { path, page, terminalId: options.terminalId } : path
+		);
 	}
 };
 

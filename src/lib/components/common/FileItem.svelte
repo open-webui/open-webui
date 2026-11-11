@@ -62,7 +62,7 @@
 				item?.type === 'filesystem' ? (item.path ?? item.url ?? item.id) : null;
 
 			if (filesystemPath) {
-				showFileNavPath.set(filesystemPath);
+				showFileNavPath.set({ path: filesystemPath, terminalId: item.terminal_id });
 			} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
 				showModal = !showModal;
 			} else {

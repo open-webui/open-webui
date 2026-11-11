@@ -100,6 +100,8 @@
 		models: string[];
 		params: Record<string, any>;
 		variables: Record<string, any>;
+		terminal_id: string | null;
+		working_directory: string;
 	}) => {
 		const created = await createNewChat(
 			localStorage.token,
@@ -110,6 +112,8 @@
 					branchPointMessageId: context.at(-1)?.id ?? null
 				}),
 				models: chat.models,
+				terminal_id: chat.terminal_id,
+				working_directory: chat.working_directory,
 				params: chat.params,
 				history: convertMessagesToHistory(context),
 				messages: context,

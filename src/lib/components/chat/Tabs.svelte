@@ -35,6 +35,7 @@
 		terminalServers,
 		showTabs,
 		sideChatRequest,
+		openSideChatIds,
 		showOverview,
 		showSidebar,
 		mobile,
@@ -1495,14 +1496,20 @@
 	$: if (viewReady && $showFileNav) {
 		const request = $showFileNav;
 		showFileNav.set(null);
-		if (request.chatId === chatId) openFiles(request.terminalId, request.directory, true);
+		if (request.chatId === chatId || $openSideChatIds.has(request.chatId))
+			openFiles(request.terminalId, request.directory, true);
 	}
-	$: if (viewReady && $showFileNavPath && terminalFilesAvailable && $selectedTerminalId) {
+	$: if (
+		viewReady &&
+		$showFileNavPath &&
+		((typeof $showFileNavPath === 'object' && $showFileNavPath.terminalId) ||
+			(terminalFilesAvailable && $selectedTerminalId))
+	) {
 		const request = $showFileNavPath;
 		showFileNavPath.set(null);
 		openFile(
 			typeof request === 'string' ? request : request.path,
-			$selectedTerminalId,
+			(typeof request === 'string' ? null : request.terminalId) ?? $selectedTerminalId,
 			typeof request === 'string' ? null : request.page
 		);
 	}
