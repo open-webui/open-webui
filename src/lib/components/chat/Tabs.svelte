@@ -89,6 +89,13 @@
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
+	import HomeIcon from '$lib/components/icons/Home.svelte';
+	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
+	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
+	import WorkspaceIcon from '$lib/components/layout/Sidebar/icons/Workspace.svelte';
+	import ClockIcon from '$lib/components/layout/Sidebar/icons/Clock.svelte';
+	import CalendarIcon from '$lib/components/layout/Sidebar/icons/Calendar.svelte';
+	import CodeIcon from '$lib/components/layout/Sidebar/icons/Code.svelte';
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
@@ -435,6 +442,15 @@
 		};
 		update(target);
 		return { update, destroy: () => node.remove() };
+	};
+	const pageIcons: Record<string, typeof NotesIcon> = {
+		notes: NotesIcon,
+		workspace: WorkspaceIcon,
+		automations: ClockIcon,
+		calendar: CalendarIcon,
+		playground: CodeIcon,
+		home: HomeIcon,
+		channels: HashtagIcon
 	};
 	const tabIcon = (kind: PanelTab['kind']) =>
 		({
@@ -2108,6 +2124,8 @@
 				}}
 			>
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
+					{@const PageIcon =
+						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
 					<div
 						role="presentation"
 						data-panel-tab={tab.id}
@@ -2138,6 +2156,8 @@
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
+							{:else if PageIcon}
+								<svelte:component this={PageIcon} className="size-3.5 shrink-0" />
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
