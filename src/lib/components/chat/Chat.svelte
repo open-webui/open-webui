@@ -6004,6 +6004,8 @@
 						{:else}
 							<div class="flex items-center h-full">
 								<Placeholder
+									{selectedTerminalId}
+									{terminalSkills}
 									chatId={$chatId}
 									bind:terminalContext
 									callActive={!!(bridge?.connected || bridge?.connecting)}
