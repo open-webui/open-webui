@@ -1636,10 +1636,8 @@ async def search_users(
     __user__: dict = None,
 ) -> str:
     """
-    Search the user directory by name or email, independently of the current chat.
-    Copy a result's mention token into your reply to address that person. Only users
-    who already have read access to the chat are notified when your reply finishes.
-    Searching does not notify users or grant access.
+    Search users by name or email, including to resolve @mentions. To mention a user,
+    copy their exact mention token into your reply. Only users with chat access are notified.
 
     :param query: Name or email to search for
     :param count: Maximum results to return (default: 5, maximum: 20)
