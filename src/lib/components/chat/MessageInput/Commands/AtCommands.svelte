@@ -2,12 +2,12 @@
 	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import type { Writable } from 'svelte/store';
 
 	import {
 		chatId as activeChatId,
 		folders,
 		models,
-		selectedTerminalId,
 		settings,
 		terminalServers,
 		temporaryChatEnabled,
@@ -35,6 +35,7 @@
 	const i18n = getContext<any>('i18n');
 
 	export let query = '';
+	export let selectedTerminalId: Writable<string | null>;
 	export let modelId: string | null = null;
 	export let onSelect: (e: any) => void = () => {};
 	export let fileUploadEnabled: boolean = true;

@@ -40,6 +40,7 @@
 		audioQueue as _audioQueue,
 		showTabs as _showTabs,
 		sideChatRequest,
+		openSideChatIds,
 		showCallOverlay as _showCallOverlay,
 		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
@@ -54,7 +55,7 @@
 		functions,
 		selectedFolder as _selectedFolder,
 		showEmbeds as _showEmbeds,
-		selectedTerminalId,
+		selectedTerminalId as _selectedTerminalId,
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
@@ -167,6 +168,7 @@
 	let mainChatHref = '/';
 	$: if ($chatId) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
+	export let side = false;
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
@@ -177,9 +179,24 @@
 	const showArtifacts = embedded ? writable(false) : _showArtifacts;
 	const showEmbeds = embedded ? writable(false) : _showEmbeds;
 	const artifactContents = embedded ? writable(null) : _artifactContents;
+	// A side chat uses the main chat's terminal and never changes it.
+	const selectedTerminalId = side
+		? { subscribe: _selectedTerminalId.subscribe, set: () => {} }
+		: _selectedTerminalId;
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
+	export let embeddedDraft: {
+		selectedModels: string[];
+		params: Record<string, any>;
+		history: typeof history;
+		chatFiles: any[];
+		temporary: boolean;
+		prompt: string;
+		files: any[];
+	} | null = null;
+	export let initialPrompt = '';
+	export let parentChatId = '';
 	export let suggestedPrompts = [];
 	export let selectedText = '';
 	export let notePageId = '';
@@ -188,7 +205,13 @@
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
 	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
-	export let onCreateEmbeddedChat: (() => any | Promise<any>) | null = null;
+	export let onCreateEmbeddedChat:
+		| ((chat: {
+				models: string[];
+				params: Record<string, any>;
+				variables: Record<string, any>;
+		  }) => any | Promise<any>)
+		| null = null;
 	export let onSelectEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
 	export let onDeleteEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
 	export let onEmbeddedChatTitle: ((chatId: string, title: string) => void | Promise<void>) | null =
@@ -201,6 +224,12 @@
 	let audioElement: HTMLAudioElement;
 	$: chatContainerId = embedded ? `note-chat-container-${instanceId}` : 'chat-container';
 	$: messageInputDropzoneId = embedded ? `note-chat-input-dropzone-${instanceId}` : 'chat-pane';
+	$: dropzoneId = side ? chatContainerId : messageInputDropzoneId;
+	const onTemporaryChange = side
+		? (value: boolean) => {
+				if (!processing) temporaryChatEnabled.set(value);
+			}
+		: null;
 
 	const eventTarget = new EventTarget();
 
@@ -450,6 +479,8 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
+	setContext('selectedTerminalId', selectedTerminalId);
+	setContext('terminalSkills', terminalSkills);
 	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setContext('contextCompactions', contextCompactions);
 	let compactionChatId = '';
@@ -485,7 +516,7 @@
 				}
 			]);
 			if (copy) {
-				await goto(`/c/${copy.id}`);
+				if (!embedded) await goto(`/c/${copy.id}`);
 				await refreshChatList(localStorage.token);
 			}
 		} catch (error) {
@@ -520,6 +551,10 @@
 		messages: {},
 		currentId: null
 	};
+	// A side chat hides its parent's context up to here.
+	let branchPointMessageId: string | null = null;
+	$: contextOnly = !!branchPointMessageId && history.currentId === branchPointMessageId;
+	$: inputHistory = contextOnly ? { messages: {}, currentId: null } : history;
 
 	let taskIds = null;
 	let liveStatus = '';
@@ -537,9 +572,9 @@
 	}
 
 	// Chat Input
-	let prompt = '';
+	export let prompt = '';
 	let chatFiles = [];
-	let files: any[] = [];
+	export let files: any[] = [];
 	let terminalContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
@@ -610,6 +645,7 @@
 			}
 			const messages = [...Object.values(history?.messages ?? {})].reverse() as any[];
 			for (const message of messages) {
+				if (message.id === branchPointMessageId) break;
 				if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 				const output = (Array.isArray(message?.output) ? message.output : []) as any[];
 				const resultCallIds = new Set(
@@ -657,6 +693,7 @@
 			? createMessagesList(chatHistory, chatHistory.currentId)
 			: Object.values(chatHistory.messages);
 		for (const message of [...messages].reverse()) {
+			if (message.id === branchPointMessageId) break;
 			if ((message.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id) continue;
 			const pending = getPendingAskUserFromMessage(message);
 			if (pending) return pending;
@@ -906,6 +943,7 @@
 
 	$: if (embedded && embeddedDraftKey && embeddedDraftKey !== currentDraftKey) {
 		noteChatDebug('embedded draft requested', { embeddedDraftKey });
+		if (currentDraftKey) sessionStorage.removeItem(getChatInputKey(currentDraftKey));
 		currentDraftKey = embeddedDraftKey;
 		initEmbeddedDraft();
 	}
@@ -947,6 +985,7 @@
 		messageInput?.setText('');
 
 		files = [];
+		if (embeddedDraft) ({ prompt, files } = embeddedDraft);
 		selectedToolIds = [];
 		selectedSkillIds = [];
 		selectedFilterIds = [];
@@ -999,11 +1038,24 @@
 		messageInput?.setText('');
 		await chatId.set('');
 		await chatTitle.set('');
+		if (embeddedDraft) {
+			({ selectedModels, params, history, chatFiles, prompt, files } = embeddedDraft);
+			branchPointMessageId = history.currentId;
+			await temporaryChatEnabled.set(embeddedDraft.temporary);
+		}
 
 		await setDefaults();
 		loading = false;
 		await tick();
+		if (embeddedDraft) {
+			({ prompt, files } = embeddedDraft);
+			messageInput?.setText(prompt);
+		}
 		messageInput?.focus({ preventScroll: true });
+		if (initialPrompt) {
+			await tick();
+			submitHandler(initialPrompt);
+		}
 	};
 
 	const onSelect = async (e) => {
@@ -1027,6 +1079,7 @@
 	const saveSessionSelectedModels = () => {
 		const selectedModelsString = JSON.stringify(selectedModels);
 		if (
+			side ||
 			selectedModels.length === 0 ||
 			(selectedModels.length === 1 && selectedModels[0] === '') ||
 			sessionStorage.selectedModels === selectedModelsString
@@ -1038,6 +1091,10 @@
 	};
 
 	const continueOAuthRedirect = async () => {
+		if (side) {
+			pendingOAuthTools = [];
+			return;
+		}
 		if (pendingOAuthTools.length === 0) {
 			sessionStorage.removeItem('oauthRedirectInProgressToolId');
 			return;
@@ -1119,6 +1176,7 @@
 		folder: FolderDetails | null = null,
 		signal = chatLoadController.signal
 	) => {
+		if (side) return;
 		const terminalId = $selectedTerminalId;
 		const environment = folder ? null : getAgentEnvironment();
 		loadedAgentEnvironment = null;
@@ -1169,7 +1227,7 @@
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
 		if (terminalContext?.terminalId !== $selectedTerminalId) terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
-		terminalSkills.set([]);
+		if (!side) terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
 		// Folder initialization already requests this exact environment.
 		if (!((loading || !history.currentId) && $selectedFolder?.data?.terminal_id === $selectedTerminalId)) {
@@ -1572,6 +1630,7 @@
 			});
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+	$: if (side && $chatId) openSideChatIds.update((ids) => new Set([...ids, $chatId]));
 
 	const chatEventHandler = async (event, cb) => {
 		if (isTemporaryChatId(event.chat_id) && event.chat_id !== $chatId) return;
@@ -1598,7 +1657,7 @@
 		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
 		// The first event can identify a new chat before the HTTP response arrives.
-		if (!$chatId && event.chat_id && history.messages[event.message_id]) {
+		if (!side && !$chatId && event.chat_id && history.messages[event.message_id]) {
 			chatId.set(event.chat_id);
 		}
 		const interactionType = event?.data?.type;
@@ -1620,7 +1679,8 @@
 		) {
 			if (!cb) return;
 			if (event.chat_id !== $chatId) {
-				cb({ status: 'cancelled', answers: {} });
+				if (!embedded && !$openSideChatIds.has(event.chat_id))
+					cb({ status: 'cancelled', answers: {} });
 				return;
 			}
 			if (
@@ -2052,7 +2112,7 @@
 		loading = true;
 		console.log('mounted');
 		if (!embedded && appLayout) appLayout.initNewChat = initNewChat;
-		window.addEventListener('message', onMessageHandler);
+		if (!side) window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
 		$socket?.on('disconnect', clearTyping);
@@ -2106,7 +2166,7 @@
 		});
 
 		const storageChatInput = sessionStorage.getItem(
-			`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`
+			getChatInputKey(chatIdProp || embeddedDraftKey)
 		);
 
 		const init = async () => {
@@ -2154,6 +2214,15 @@
 				if (joinedChatId && $socket?.connected)
 					$socket.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 				joinedChatId = '';
+				if (side && $chatId) {
+					if ($temporaryChatEnabled)
+						stopTasksByChatId(localStorage.token, $chatId).catch(console.error);
+					openSideChatIds.update((ids) => {
+						const next = new Set(ids);
+						next.delete($chatId);
+						return next;
+					});
+				}
 				chatId.set('');
 				chatTitle.set('');
 
@@ -2945,7 +3014,7 @@
 		autoScroll = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
-		const chatInputPrompt = (await restoreChatInput(retainedDraft ?? sessionStorage.getItem('chat-input')))
+		const chatInputPrompt = (await restoreChatInput(retainedDraft ?? sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
 		const previousChatId = $chatId;
@@ -3103,6 +3172,7 @@
 
 		const id = $chatId;
 		const loadedChat = await getChatById(localStorage.token, id, signal).catch(async (error) => {
+			if (side && !signal.aborted) toast.error(`${error}`);
 			console.error('[note-chat] getChatById failed', {
 				chatIdProp,
 				activeChatId: $chatId,
@@ -3153,7 +3223,7 @@
 				}
 				const terminalId = chatContent.terminal_id;
 				selectedTerminalId.set(terminalId && isTerminalAvailable(terminalId) ? terminalId : null);
-				terminalContext = $selectedTerminalId && typeof chatContent.working_directory === 'string'
+				terminalContext = $selectedTerminalId && $selectedTerminalId === terminalId && typeof chatContent.working_directory === 'string'
 					? { terminalId: $selectedTerminalId, currentDirectory: chatContent.working_directory }
 					: null;
 				if (selectedModels[0]?.startsWith('agent:')) {
@@ -3204,6 +3274,8 @@
 				sanitizeHistory(history);
 
 				chatTitle.set(chatContent.title);
+				branchPointMessageId = parentChatId ? (chatContent.branchPointMessageId ?? null) : null;
+				if (side) await onEmbeddedChatTitle?.(id, chatContent.title);
 
 				params = structuredClone(chatContent?.params ?? {});
 				delete params.note_id;
@@ -3287,7 +3359,7 @@
 					}
 					if (signal.aborted) return;
 					const restored = await restoreChatInput(
-						sessionStorage.getItem(`chat-input${chatIdProp ? `-${chatIdProp}` : ''}`)
+						sessionStorage.getItem(getChatInputKey(chatIdProp))
 					);
 					if (signal.aborted) return;
 					await setDefaults(restored);
@@ -3295,6 +3367,10 @@
 					loading = false;
 					await tick();
 					if (signal.aborted) return;
+					if (embeddedDraft) {
+						({ prompt, files } = embeddedDraft);
+						messageInput?.setText(prompt);
+					}
 					messageInput?.focus({ preventScroll: true });
 				}
 				return true;
@@ -4111,8 +4187,12 @@
 				: null;
 		// Empty embedded drafts create their backing chat only when the first message is sent.
 		if (!_chatId) {
-			if (embedded && onCreateEmbeddedChat) {
-				const createdChat = await onCreateEmbeddedChat();
+			if (embedded && onCreateEmbeddedChat && !$temporaryChatEnabled) {
+				const createdChat = await onCreateEmbeddedChat({
+					models: selectedModels,
+					params,
+					variables: chatVariables
+				});
 				if (!createdChat?.id) {
 					toast.error($i18n.t('Failed to create chat'));
 					return null;
@@ -4792,7 +4872,8 @@
 					...(!$temporaryChatEnabled &&
 					(!_chatId ||
 						((userMessage?.parentId ?? null) === null &&
-							createMessagesList(_history, responseMessageId).length === 2))
+							createMessagesList(_history, responseMessageId).length === 2) ||
+						(branchPointMessageId && userMessage?.parentId === branchPointMessageId))
 						? {
 								title_generation: $settings?.title?.auto ?? true,
 								tags_generation: $settings?.autoTags ?? true
@@ -5224,7 +5305,9 @@
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
-	const getDraftChatId = () => chatIdProp || $chatId || null;
+	const getDraftChatId = () => chatIdProp || $chatId || embeddedDraftKey || null;
+	const getChatInputKey = (chatId: string | null = null) =>
+		`chat-input${chatId ? `-${chatId}` : ''}`;
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -5249,7 +5332,7 @@
 		}
 
 		if (draft.prompt !== null && draft.prompt.length < MAX_DRAFT_LENGTH) {
-			const key = `chat-input${chatId ? `-${chatId}` : ''}`;
+			const key = getChatInputKey(chatId);
 			const write = () => sessionStorage.setItem(key, JSON.stringify(draft));
 			if (debounce) {
 				saveDraftTimeout = setTimeout(write, 500);
@@ -5257,7 +5340,7 @@
 				write();
 			}
 		} else {
-			sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+			sessionStorage.removeItem(getChatInputKey(chatId));
 		}
 	};
 
@@ -5269,6 +5352,7 @@
 		},
 		draft = getChatInputDraft()
 	) => {
+		if (side) return;
 		await tick();
 		saveSessionSelectedModels();
 		await saveDraft(draft, null, false);
@@ -5279,7 +5363,7 @@
 		if (saveDraftTimeout) {
 			clearTimeout(saveDraftTimeout);
 		}
-		await sessionStorage.removeItem(`chat-input${chatId ? `-${chatId}` : ''}`);
+		await sessionStorage.removeItem(getChatInputKey(chatId));
 	};
 
 	const moveChatHandler = async (chatId, folderId) => {
@@ -5559,7 +5643,7 @@
 					</div>
 				{:else}
 					<FilesOverlay show={dragged} />
-					{#if embedded}
+					{#if embedded && !side}
 						<div
 							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
 						>
@@ -5586,7 +5670,7 @@
 									</button>
 								</Tooltip>{/if}
 						</div>
-					{:else}
+					{:else if !embedded}
 						<Navbar
 							tabbed={fullWidthTabs}
 							bind:tabTitleEditor
@@ -5663,7 +5747,7 @@
 					{/if}
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
-						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || createMessagesList(history, history.currentId).length > 0}
+						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id={messagesContainerId}
@@ -5682,6 +5766,7 @@
 								<div class=" h-full w-full flex flex-col">
 									<Messages
 										{messagesContainerId}
+										{branchPointMessageId}
 										temporary={$temporaryChatEnabled}
 										bind:this={messagesRef}
 										chatId={$chatId}
@@ -5739,13 +5824,15 @@
 										{messagesContainerId}
 										{inputId}
 										temporary={$temporaryChatEnabled}
+										{onTemporaryChange}
 										bind:terminalContext
+										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										callEnabled={!isShared}
 										bind:this={messageInput}
-										{history}
+										history={inputHistory}
 										{taskIds}
 										bind:selectedModels
 										onModelSelect={saveControls}
@@ -5766,7 +5853,7 @@
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
-										dropzoneId={messageInputDropzoneId}
+										{dropzoneId}
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}
@@ -5843,13 +5930,15 @@
 										{messagesContainerId}
 										{inputId}
 										temporary={$temporaryChatEnabled}
+										{onTemporaryChange}
 										bind:terminalContext
+										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
 										callEnabled={!isShared}
 										bind:this={messageInput}
-										{history}
+										history={inputHistory}
 										{taskIds}
 										bind:selectedModels
 										onModelSelect={saveControls}
@@ -5870,7 +5959,7 @@
 										bind:atSelectedModel
 										bind:showCommands
 										bind:dragged
-										dropzoneId={messageInputDropzoneId}
+										{dropzoneId}
 										chatId={$chatId}
 										{contextUsage}
 										{contextCompactionEnabled}

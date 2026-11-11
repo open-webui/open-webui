@@ -47,6 +47,7 @@
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
@@ -1346,7 +1347,7 @@
 								{/if}
 
 								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (writeAccess && message.user_id === $user?.id)}
-									{#if !readOnly && !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+									{#if !readOnly && !$temporaryChatEnabled && !isTemporaryChatId(chatId) && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}

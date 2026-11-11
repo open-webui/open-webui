@@ -410,7 +410,9 @@
 				) {
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
-					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
+					[...document.querySelectorAll('#messages-container .regenerate-response-button')]
+						?.at(-1)
+						?.click();
 				}
 			});
 		};

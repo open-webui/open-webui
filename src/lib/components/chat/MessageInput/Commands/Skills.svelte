@@ -2,25 +2,22 @@
 	export let modelId: string | null = null;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
+	import type { Writable } from 'svelte/store';
 	import { getSkillItems } from '$lib/apis/skills';
 	import {
 		listTerminalSkills,
 		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import {
-		chatId,
-		selectedTerminalId,
-		settings,
-		terminalServers,
-		terminalSkills
-	} from '$lib/stores';
+	import { chatId, settings, terminalServers } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let query = '';
+	export let selectedTerminalId: Writable<string | null>;
+	export let terminalSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
