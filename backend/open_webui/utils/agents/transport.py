@@ -51,7 +51,8 @@ class TerminalTransport:
             ) as response:
                 data = await response.json()
                 if response.status >= 400:
-                    raise ValueError(data.get('detail', 'Agent environment request failed'))
+                    detail = data.get('detail')
+                    raise ValueError(detail if isinstance(detail, str) else 'Agent environment request failed')
                 return data
 
     async def start(self, provider, options):
