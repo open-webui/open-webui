@@ -198,7 +198,7 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
             await client.request('session/set_model', {'sessionId': session_id, 'modelId': options['model']})
         else:
             raise ValueError('Agent did not advertise model selection for this session')
-        await output.flush(force=True)
+        await output.flush(force=True, persist=True)
         if images and not capabilities.get('promptCapabilities', {}).get('image'):
             raise ValueError('This agent does not support image prompts')
         content = []

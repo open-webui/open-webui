@@ -122,7 +122,7 @@ async def run(transport, output, prompt, images, options):
         output.state['session_id'] = state['sessionId']
         if options.get('resume') and state['sessionId'] != options['resume']:
             raise ValueError('Pi resumed a different conversation')
-        await output.flush(force=True)
+        await output.flush(force=True, persist=True)
         content = []
         for image in images:
             prefix, data = image.split(',', 1)
