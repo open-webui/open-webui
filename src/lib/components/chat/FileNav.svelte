@@ -85,6 +85,8 @@
 	export let onFileSaved: ((content: string) => void) | null = null;
 	let viewRestored = !initialView;
 	export const captureView = () => {
+		// Tabs captures again on teardown, after the editor is gone; keep the earlier draft.
+		if (disposed) return null;
 		const view =
 			!viewRestored && initialView
 				? initialView
