@@ -139,6 +139,7 @@
 								<Model
 									{model}
 									onEdit={(model) => editModelHandler(model, index)}
+									onClone={addModelHandler}
 									on:delete={(e) => {
 										deleteModelHandler(index);
 									}}
