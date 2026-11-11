@@ -216,6 +216,7 @@
 	export let onDeleteEmbeddedChat: ((chatId: string) => void | Promise<void>) | null = null;
 	export let onEmbeddedChatTitle: ((chatId: string, title: string) => void | Promise<void>) | null =
 		null;
+	export let onShowArtifacts: (() => void) | null = null;
 
 	let loading = true;
 	const instanceId = uuidv4();
@@ -481,6 +482,7 @@
 	let generationController = null;
 	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setContext('contextCompactions', contextCompactions);
+	if (side) setContext('showArtifacts', showArtifacts);
 	let compactionChatId = '';
 	$: if (compactionChatId !== $chatId) {
 		contextCompactions.set({});
@@ -557,6 +559,12 @@
 	let taskIds = null;
 	let liveStatus = '';
 	export let streaming = false;
+	export let artifacts: Array<{ type: string; content: string }> = [];
+	$: artifacts = $artifactContents ?? [];
+	$: if (side && $showArtifacts) {
+		showArtifacts.set(false);
+		onShowArtifacts?.();
+	}
 
 	$: streaming =
 		!loading &&

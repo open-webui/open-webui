@@ -6,6 +6,7 @@
 	let fileGitHideWhitespace: Record<string, boolean> = {};
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { writable } from 'svelte/store';
 	import {
 		chatViewEntry,
 		loadChatView,
@@ -28,6 +29,7 @@
 	let pageViews: Record<string, Page> = {};
 	let pendingPageTab: { href: string; label: string } | null = null;
 	import {
+		artifactCode,
 		artifactContents,
 		config,
 		embed,
@@ -183,6 +185,19 @@
 	let gitViews: Record<string, GitBar> = {};
 	let sideViews: Record<string, SideChat> = {};
 	let sideChatStreaming: Record<string, boolean> = {};
+	let sideArtifacts: Record<string, Array<{ type: string; content: string }>> = {};
+	let artifactsSideTabId = '';
+	const sideArtifactContents = writable<Array<{ type: string; content: string }>>([]);
+	$: sideArtifactContents.set(sideArtifacts[artifactsSideTabId] ?? []);
+	$: if (artifactsSideTabId && !tabs.tabs.some((tab) => tab.id === artifactsSideTabId))
+		artifactsSideTabId = '';
+	const switchArtifactsTo = async (sideTabId: string) => {
+		const code = $artifactCode;
+		artifactsSideTabId = sideTabId;
+		// the remounted pane clears the block the Preview button picked
+		await tick();
+		artifactCode.set(code);
+	};
 	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
 	let viewReady = false;
 	let viewError = '';
@@ -523,7 +538,7 @@
 			}
 		};
 	};
-	const openPanel = (tab: PanelTab, inSidePanel = false) => {
+	const openPanel = (tab: PanelTab, inSidePanel = false, besideId?: string) => {
 		if (!viewReady || !viewEntry) return;
 		hasOpenedTabs = true;
 		if (tab.terminalId) {
@@ -538,7 +553,7 @@
 				);
 			tab = { ...tab, target: target ?? undefined };
 		}
-		tabs = inSidePanel ? openTabInSidePanel(tabs, tab) : openTab(tabs, tab);
+		tabs = inSidePanel ? openTabInSidePanel(tabs, tab, besideId) : openTab(tabs, tab);
 		changeChatView(viewEntry, { ...viewEntry.state, panels: tabs });
 		showTabs.set(true);
 	};
@@ -720,6 +735,7 @@
 			);
 			return;
 		}
+		if (kind === 'artifacts') switchArtifactsTo('');
 		openPanel({ id: kind, kind, label: view.label }, inSidePanel);
 	};
 
@@ -1866,12 +1882,27 @@
 				{:else if tab.kind === 'preview'}
 					<Embeds overlay={dragged} />
 				{:else if tab.kind === 'artifacts'}
-					<Artifacts overlay={dragged} />
+					{#key artifactsSideTabId}
+						<Artifacts
+							overlay={dragged}
+							artifactContents={artifactsSideTabId ? sideArtifactContents : artifactContents}
+						/>
+					{/key}
 				{:else if tab.kind === 'side'}
 					<SideChat
 						standalone={!!tab.href}
 						bind:this={sideViews[tab.id]}
 						bind:streaming={sideChatStreaming[tab.id]}
+						bind:artifacts={sideArtifacts[tab.id]}
+						onShowArtifacts={() => {
+							if (!$visibleControls['chat.artifacts']) return;
+							switchArtifactsTo(tab.id);
+							openPanel(
+								{ id: 'artifacts', kind: 'artifacts', label: $i18n.t('Artifacts') },
+								true,
+								tab.id
+							);
+						}}
 						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
 						onChatUpdate={(chat) =>

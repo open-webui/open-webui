@@ -12,12 +12,13 @@
 		chatId as currentChatId,
 		mobile,
 		settings,
-		showArtifacts,
+		showArtifacts as _showArtifacts,
 		showTabs,
 		showEmbeds
 	} from '$lib/stores';
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	const i18n = getContext('i18n');
+	const showArtifacts = getContext('showArtifacts') ?? _showArtifacts;
 
 	import Markdown from './Markdown.svelte';
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';

@@ -13,6 +13,8 @@
 	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
 	export let streaming = false;
+	export let artifacts: Array<{ type: string; content: string }> = [];
+	export let onShowArtifacts: () => void = () => {};
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
 	export let parentFolderId: string | null = null;
@@ -137,8 +139,10 @@
 		initialPrompt={restored ? '' : initialPrompt}
 		bind:prompt={draft}
 		bind:streaming
+		bind:artifacts
 		bind:files
 		onCreateEmbeddedChat={createChat}
+		{onShowArtifacts}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}
 	/>

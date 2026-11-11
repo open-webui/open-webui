@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
+	import type { Readable } from 'svelte/store';
 	const i18n: any = getContext('i18n');
 
 	import {
@@ -9,7 +10,7 @@
 		config,
 		settings,
 		showArtifacts,
-		artifactContents
+		artifactContents as _artifactContents
 	} from '$lib/stores';
 	import { copyToClipboard, createMessagesList } from '$lib/utils';
 	import { injectCsp } from '$lib/utils/csp';
@@ -20,6 +21,8 @@
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 
 	export let overlay = false;
+	export let artifactContents: Readable<Array<{ type: string; content: string }> | null> =
+		_artifactContents;
 
 	let contents: Array<{ type: string; content: string }> = [];
 	let selectedContentIdx = 0;
