@@ -274,6 +274,7 @@
 		if (!terminalId || machine.status !== 'running') return null;
 		const context = machine.context ?? {};
 		if (context.user_id && context.user_id !== $user?.id) return null;
+		if (context.chat_id && !machine.write_access) return null;
 		return resolveTerminalTarget(terminalId, $terminalServers ?? [], [], localStorage.token ?? '', {
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null

@@ -158,6 +158,7 @@ async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
             owner = await Users.get_user_by_id(chat.user_id) if chat else None
             row['label'] = chat.title if chat else None
             row['user_name'] = owner.name if owner else None
+            row['write_access'] = await Chats.has_chat_access(value, user, permission='write', chat=chat)
         elif kind == 'user':
             owner = await Users.get_user_by_id(value)
             row['label'] = owner.name if owner else None
