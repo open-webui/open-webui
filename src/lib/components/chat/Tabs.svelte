@@ -2073,6 +2073,7 @@
 							{:else}
 								<Browser
 									bind:this={browserViews[tab.id]}
+									baseUrl={tab.browserBaseUrl ?? ''}
 									{target}
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
