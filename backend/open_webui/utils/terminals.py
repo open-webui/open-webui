@@ -262,6 +262,10 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
         chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
         if chat is None:
             raise HTTPException(403, 'Chat access denied')
+        if chat.meta.get('internal') is True and chat.meta.get('type') == 'subagent':
+            # A sub-agent shares the machine and files of its parent chat.
+            metadata['chat_id'] = chat.meta.get('parent_chat_id')
+            return await find_terminal_connection(user, terminal_id, metadata, request=request)
         from open_webui.utils.agents.session import get_session, model_id
         shared_session = await get_session(chat)
         if shared_session and shared_session['terminal_id'] != terminal_id:
