@@ -20,8 +20,11 @@ INCOMPLETE_CALL_ERROR = (
 )
 
 
-def add_tool_call_metadata(tools, *, labels=False, approval=False, language='English'):
-    """Extend request-local schemas; markers identify metadata owned by the application."""
+def add_tool_call_metadata(tools, *, labels=False, approval=(), language='English'):
+    """Extend request-local schemas; markers identify metadata owned by the application.
+
+    approval names the tools whose calls the model reviews under the Auto approval policy.
+    """
     for name, tool in list(tools.items()):
         spec = tool.get('spec') or {}
         schema = spec.get('parameters') or {}
@@ -50,7 +53,7 @@ def add_tool_call_metadata(tools, *, labels=False, approval=False, language='Eng
             }
             markers['display_labels'] = True
         if (
-            approval
+            name in approval
             and not tool.get('approval_review')
             and '__approval__' not in properties
             and tool.get('tool_id') != 'builtin:search_tools'

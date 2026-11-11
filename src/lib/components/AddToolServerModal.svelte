@@ -17,8 +17,10 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tags from './common/Tags.svelte';
 	import { getToolServerData } from '$lib/apis';
+	import { config } from '$lib/stores';
 	import { slugify } from '$lib/utils';
 	import {
+		discoverToolServerTools,
 		verifyToolServerConnection,
 		registerOAuthClient,
 		initiateOAuthRedirect
@@ -38,6 +40,8 @@
 
 	export let direct = false;
 	export let connection: any = null;
+	// Set when the admin returns from OAuth started by Discover tools.
+	export let discoverOnOpen = false;
 
 	let inputElement = null;
 
@@ -56,6 +60,15 @@
 
 	let functionNameFilterList = '';
 	let accessGrants = [];
+
+	// Discovered tools replace the manual filter list while discoverTools is on; both are kept.
+	type ToolConfig = { enabled: boolean; permission: 'default' | 'full' | 'ask' | 'auto' };
+	let discoverTools = false;
+	let defaultToolEnabled = true;
+	let toolsConfig: Record<string, ToolConfig> = {};
+	let discoveredTools: { name: string; description: string }[] = [];
+	let discovering = false;
+	let toolSearch = '';
 
 	let id = '';
 	let name = '';
@@ -338,6 +351,111 @@
 		saveAs(blob, `tool-server-${id || name || 'export'}.json`);
 	};
 
+	const buildConnection = () => ({
+		type,
+		url,
+
+		spec_type,
+		spec,
+		path,
+
+		auth_type,
+		...(!direct && ['', 'openapi'].includes(type) ? { forward_cookies: forwardCookies } : {}),
+		headers: headers ? JSON.parse(headers) : undefined,
+
+		key,
+		config: {
+			enable: enable,
+			function_name_filter_list: functionNameFilterList,
+			discover_tools: discoverTools,
+			default_tool_enabled: defaultToolEnabled,
+			tools: toolsConfig,
+			access_grants: accessGrants
+		},
+		info: {
+			id: id,
+			name: name,
+			description: description,
+			...(type === 'mcp' && oauthAuthTypes.includes(auth_type)
+				? {
+						...(oauthScope ? { oauth_scope: oauthScope } : {}),
+						oauth_resource_parameter: oauthResourceParameter
+					}
+				: {}),
+			...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
+			...(auth_type === 'oauth_2.1_static'
+				? {
+						oauth_client_id: oauthClientId,
+						oauth_client_secret: oauthClientSecret,
+						oauth_server_url: oauthServerUrl
+					}
+				: {})
+		}
+	});
+
+	const discoverToolsHandler = async () => {
+		if (url === '') {
+			toast.error($i18n.t('Please enter a valid URL'));
+			return;
+		}
+
+		let connection;
+		try {
+			connection = buildConnection();
+		} catch {
+			toast.error($i18n.t('Headers must be a valid JSON object'));
+			return;
+		}
+
+		discovering = true;
+		const res = await discoverToolServerTools(localStorage.token, connection).catch((err) => {
+			if (err === 'OAuth authorization required') {
+				toast.error($i18n.t('Authorize OAuth for this connection, then discover tools again.'), {
+					action: {
+						label: $i18n.t('Authorize OAuth'),
+						onClick: () => {
+							// The OAuth callback lands on /; the layout reopens this modal from this key.
+							if (edit && id) sessionStorage.setItem('oauthDiscoverToolServerId', id);
+							authorizeOAuthHandler();
+						}
+					}
+				});
+			} else {
+				toast.error(`${err || $i18n.t('Failed to discover tools')}`);
+			}
+			return null;
+		});
+		discovering = false;
+		if (!res) return;
+
+		// Tools the server no longer returns are dropped; new tools start at the connection default.
+		discoveredTools = res.tools;
+		toolsConfig = Object.fromEntries(
+			res.tools.map(({ name }) => [
+				name,
+				toolsConfig[name] ?? { enabled: defaultToolEnabled, permission: 'default' }
+			])
+		);
+		discoverTools = true;
+	};
+
+	// Reassign once: a per-row mutation compiles to an invalidation that references the
+	// {#each} variable `tool`, which throws in script scope after the first row.
+	const setAllTools = (key: keyof ToolConfig, value: any) => {
+		toolsConfig = {
+			...toolsConfig,
+			...Object.fromEntries(
+				filteredTools.map(({ name }) => [name, { ...toolsConfig[name], [key]: value }])
+			)
+		};
+	};
+
+	$: filteredTools = discoveredTools.filter(({ name }) =>
+		name.toLowerCase().includes(toolSearch.trim().toLowerCase())
+	);
+	$: toolPermissionsEnabled = $config?.features?.enable_tool_permissions ?? false;
+	$: toolPermissionsAutoEnabled = $config?.features?.enable_tool_permissions_auto ?? false;
+
 	const submitHandler = async () => {
 		loading = true;
 		ensureConnectionId();
@@ -390,46 +508,7 @@
 			}
 		}
 
-		const connection = {
-			type,
-			url,
-
-			spec_type,
-			spec,
-			path,
-
-			auth_type,
-			...(!direct && ['', 'openapi'].includes(type) ? { forward_cookies: forwardCookies } : {}),
-			headers: headers ? JSON.parse(headers) : undefined,
-
-			key,
-			config: {
-				enable: enable,
-				function_name_filter_list: functionNameFilterList,
-				access_grants: accessGrants
-			},
-			info: {
-				id: id,
-				name: name,
-				description: description,
-				...(type === 'mcp' && oauthAuthTypes.includes(auth_type)
-					? {
-							...(oauthScope ? { oauth_scope: oauthScope } : {}),
-							oauth_resource_parameter: oauthResourceParameter
-						}
-					: {}),
-				...(oauthClientInfo ? { oauth_client_info: oauthClientInfo } : {}),
-				...(auth_type === 'oauth_2.1_static'
-					? {
-							oauth_client_id: oauthClientId,
-							oauth_client_secret: oauthClientSecret,
-							oauth_server_url: oauthServerUrl
-						}
-					: {})
-			}
-		};
-
-		await onSubmit(connection);
+		await onSubmit(buildConnection());
 
 		loading = false;
 		show = false;
@@ -459,6 +538,11 @@
 
 		enable = true;
 		functionNameFilterList = '';
+		discoverTools = false;
+		defaultToolEnabled = true;
+		toolsConfig = {};
+		discoveredTools = [];
+		toolSearch = '';
 		accessGrants = [];
 		headers = '';
 		showAdvanced = false;
@@ -491,12 +575,21 @@
 
 			enable = connection.config?.enable ?? true;
 			functionNameFilterList = connection.config?.function_name_filter_list ?? '';
+			discoverTools = connection.config?.discover_tools ?? false;
+			defaultToolEnabled = connection.config?.default_tool_enabled ?? true;
+			toolsConfig = connection.config?.tools ?? {};
+			discoveredTools = Object.keys(toolsConfig).map((name) => ({ name, description: '' }));
+			toolSearch = '';
 			accessGrants = connection.config?.access_grants ?? [];
 
 			if (connection.info?.id) {
 				await tick();
 				id = connection.info.id;
 			}
+
+			// Show the saved tools at once, then refresh them from the server.
+			if ((discoverTools || discoverOnOpen) && !direct) discoverToolsHandler();
+			discoverOnOpen = false;
 		}
 	};
 
@@ -1057,19 +1150,170 @@
 							<hr class=" border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full mt-2">
-								<label for="function-name-filter-list" class={`mb-1 text-xs text-gray-500`}
-									>{$i18n.t('Function Name Filter List')}</label
-								>
+								{#if discoverTools}
+									<div class="flex items-center justify-between gap-2 mb-1">
+										<label for="tool-search" class="text-xs text-gray-500">{$i18n.t('Tools')}</label
+										>
+										<div class="flex items-center gap-1.5 text-xs text-gray-500">
+											<label for="default-tool-enabled">{$i18n.t('New tools')}</label>
+											<select
+												id="default-tool-enabled"
+												class={`text-xs ${selectClass}`}
+												bind:value={defaultToolEnabled}
+											>
+												<option value={true}>{$i18n.t('Allowed')}</option>
+												<option value={false}>{$i18n.t('Denied')}</option>
+											</select>
+										</div>
+									</div>
 
-								<div class="flex-1">
 									<input
-										id="function-name-filter-list"
-										class={`w-full text-sm ${inputClass}`}
-										type="text"
-										bind:value={functionNameFilterList}
-										placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
+										id="tool-search"
+										class={`w-full text-sm mb-1.5 ${inputClass}`}
+										type="search"
+										bind:value={toolSearch}
+										placeholder={$i18n.t('Search tools')}
 										autocomplete="off"
 									/>
+
+									<div
+										class="max-h-64 overflow-y-auto rounded-lg border border-gray-100 dark:border-gray-800"
+									>
+										<table class="w-full text-xs">
+											<thead class="sticky top-0 bg-white dark:bg-gray-900 text-gray-500">
+												<tr>
+													<th class="text-left font-normal px-2 py-1.5">{$i18n.t('Tool')}</th>
+													<th class="font-normal px-2 py-1.5 w-0">
+														<select
+															class={`text-xs ${selectClass}`}
+															aria-label={$i18n.t('Set availability for all listed tools')}
+															value=""
+															on:change={(e) => {
+																setAllTools('enabled', e.currentTarget.value === 'true');
+																e.currentTarget.value = '';
+															}}
+														>
+															<option value="" disabled hidden>{$i18n.t('Available')}</option>
+															<option value="true">{$i18n.t('Allow all')}</option>
+															<option value="false">{$i18n.t('Deny all')}</option>
+														</select>
+													</th>
+													{#if toolPermissionsEnabled}
+														<th class="font-normal px-2 py-1.5 w-0">
+															<select
+																class={`text-xs ${selectClass}`}
+																aria-label={$i18n.t('Set permission for all listed tools')}
+																value=""
+																on:change={(e) => {
+																	setAllTools('permission', e.currentTarget.value);
+																	e.currentTarget.value = '';
+																}}
+															>
+																<option value="" disabled hidden>{$i18n.t('Permission')}</option>
+																<option value="default">{$i18n.t('Default')}</option>
+																<option value="ask">{$i18n.t('Always ask')}</option>
+																<option value="full">{$i18n.t('Always allow')}</option>
+																{#if toolPermissionsAutoEnabled}
+																	<option value="auto">{$i18n.t('Auto')}</option>
+																{/if}
+															</select>
+														</th>
+													{/if}
+												</tr>
+											</thead>
+											<tbody>
+												{#each filteredTools as tool (tool.name)}
+													<tr class="border-t border-gray-100 dark:border-gray-800">
+														<td class="px-2 py-1.5">
+															<div class="font-mono break-all">{tool.name}</div>
+															{#if tool.description}
+																<Tooltip content={tool.description} placement="top-start">
+																	<div class="text-gray-500 line-clamp-1">{tool.description}</div>
+																</Tooltip>
+															{/if}
+														</td>
+														<td class="px-2 py-1.5">
+															<div class="flex justify-center">
+																<Switch
+																	ariaLabel={$i18n.t('Allow {{name}}', { name: tool.name })}
+																	bind:state={toolsConfig[tool.name].enabled}
+																/>
+															</div>
+														</td>
+														{#if toolPermissionsEnabled}
+															<td class="px-2 py-1.5">
+																<select
+																	class={`text-xs ${selectClass}`}
+																	aria-label={$i18n.t('Permission for {{name}}', {
+																		name: tool.name
+																	})}
+																	bind:value={toolsConfig[tool.name].permission}
+																>
+																	<option value="default">{$i18n.t('Default')}</option>
+																	<option value="ask">{$i18n.t('Always ask')}</option>
+																	<option value="full">{$i18n.t('Always allow')}</option>
+																	<!-- A saved Auto acts as Always ask while Auto is off. -->
+																	{#if toolPermissionsAutoEnabled || toolsConfig[tool.name].permission === 'auto'}
+																		<option value="auto"
+																			>{toolPermissionsAutoEnabled
+																				? $i18n.t('Auto')
+																				: $i18n.t('Auto (off, asks)')}</option
+																		>
+																	{/if}
+																</select>
+															</td>
+														{/if}
+													</tr>
+												{:else}
+													<tr>
+														<td colspan="3" class="px-2 py-3 text-center text-gray-500">
+															{discovering
+																? $i18n.t('Discovering tools…')
+																: $i18n.t('No tools found')}
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</div>
+								{:else}
+									<label for="function-name-filter-list" class={`mb-1 text-xs text-gray-500`}
+										>{$i18n.t('Function Name Filter List')}</label
+									>
+
+									<div class="flex-1">
+										<input
+											id="function-name-filter-list"
+											class={`w-full text-sm ${inputClass}`}
+											type="text"
+											bind:value={functionNameFilterList}
+											placeholder={$i18n.t('Enter function name filter list (e.g. func1, !func2)')}
+											autocomplete="off"
+										/>
+									</div>
+								{/if}
+
+								<div class="flex items-center gap-3 mt-1.5 text-xs">
+									<button
+										class="flex items-center gap-1 underline text-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200 disabled:opacity-50 transition"
+										type="button"
+										disabled={discovering}
+										on:click={discoverToolsHandler}
+									>
+										{$i18n.t('Discover tools')}
+										{#if discovering}
+											<Spinner className="size-3" />
+										{/if}
+									</button>
+									{#if discoverTools}
+										<button
+											class="underline text-gray-700 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-200 transition"
+											type="button"
+											on:click={() => (discoverTools = false)}
+										>
+											{$i18n.t('Use manual filter list')}
+										</button>
+									{/if}
 								</div>
 							</div>
 						{/if}

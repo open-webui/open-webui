@@ -645,7 +645,9 @@
 			if (isTemporaryChatId($chatId)) {
 				if (browserApprovalMode !== 'full') return;
 				for (const interaction of browserInteractions) {
-					if (interaction.data?.tool_call) resolveBrowserInteraction(interaction, true);
+					// Admin-required approvals stay with the user even under Full access.
+					if (interaction.data?.tool_call && !interaction.data.tool_call.forced_approval)
+						resolveBrowserInteraction(interaction, true);
 				}
 				return;
 			}
@@ -664,6 +666,7 @@
 					return (
 						item?.type === 'function_call' &&
 						item?.name !== 'ask_user' &&
+						!item?.forced_approval &&
 						(item?.status === 'pending' || item?.status === 'requires_approval') &&
 						callId &&
 						!resultCallIds.has(callId)

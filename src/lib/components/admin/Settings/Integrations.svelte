@@ -133,7 +133,20 @@
 		saveTerminalServers();
 	};
 
+	// Reopen the connection whose Discover tools started an OAuth flow, then forget it.
+	let oauthDiscoverId = '';
+
 	onMount(async () => {
+		oauthDiscoverId = sessionStorage.getItem('oauthDiscoverToolServerId') ?? '';
+		if (oauthDiscoverId) {
+			sessionStorage.removeItem('oauthDiscoverToolServerId');
+			// The admin resumes here, so chat must not auto-select this tool later.
+			for (const key of ['pendingOAuthToolId', 'oauthRedirectInProgressToolId']) {
+				if (sessionStorage.getItem(key) === `server:mcp:${oauthDiscoverId}`) {
+					sessionStorage.removeItem(key);
+				}
+			}
+		}
 		connectionsConfig = await getConnectionsConfig(localStorage.token);
 		const res = await getToolServerConnections(localStorage.token);
 		servers = res.TOOL_SERVER_CONNECTIONS as ToolServerConnection[];
@@ -215,6 +228,7 @@
 							{#each servers ?? [] as server, idx}
 								<Connection
 									bind:connection={server}
+									discoverOnOpen={server?.type === 'mcp' && server?.info?.id === oauthDiscoverId}
 									onSubmit={() => {
 										updateHandler();
 									}}

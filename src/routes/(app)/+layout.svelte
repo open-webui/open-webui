@@ -285,6 +285,11 @@
 			return;
 		}
 
+		// Back from OAuth started by Discover tools: resume in the admin Integrations tab.
+		if ($user?.role === 'admin' && sessionStorage.getItem('oauthDiscoverToolServerId')) {
+			showSettings.set('admin:integrations');
+		}
+
 		clearChatInputStorage();
 		try {
 			await Promise.all([

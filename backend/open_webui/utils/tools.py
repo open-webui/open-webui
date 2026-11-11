@@ -138,6 +138,32 @@ from pydantic.fields import FieldInfo
 log = logging.getLogger(__name__)
 
 
+def _discovered_tool_config(connection: dict, name: str) -> dict | None:
+    """Per-tool admin config, or None when the connection uses the manual filter list."""
+    config = connection.get('config') or {}
+    if not config.get('discover_tools'):
+        return None
+    tool = (config.get('tools') or {}).get(name)
+    return tool if isinstance(tool, dict) else {}
+
+
+def is_tool_enabled(connection: dict, name: str) -> bool:
+    """Whether a tool server exposes this tool: discovered-tool toggles, else the manual filter list."""
+    tool = _discovered_tool_config(connection, name)
+    if tool is not None:
+        return tool.get('enabled', (connection.get('config') or {}).get('default_tool_enabled', True)) is True
+    filter_list = (connection.get('config') or {}).get('function_name_filter_list', '')
+    if isinstance(filter_list, str):
+        filter_list = filter_list.split(',')
+    return is_string_allowed(name, filter_list)
+
+
+def get_tool_permission(connection: dict, name: str) -> str | None:
+    """Admin approval override for one tool; None follows the chat's tool permission mode."""
+    permission = (_discovered_tool_config(connection, name) or {}).get('permission')
+    return permission if permission in ('full', 'ask', 'auto') else None
+
+
 async def build_tool_server_headers(
     connection: dict,
     request,
@@ -249,18 +275,15 @@ async def connect_mcp_server(
             headers=headers if headers else None,
             auth=auth,
         )
-        function_name_filter_list = (mcp_server_connection.get('config') or {}).get('function_name_filter_list', '')
-        if isinstance(function_name_filter_list, str):
-            function_name_filter_list = function_name_filter_list.split(',')
-
-        tool_specs = await client.list_tool_specs()
-        if function_name_filter_list:
-            tool_specs = [spec for spec in tool_specs if is_string_allowed(spec['name'], function_name_filter_list)]
-            client.tool_definitions = {
-                name: tool
-                for name, tool in client.tool_definitions.items()
-                if is_string_allowed(name, function_name_filter_list)
-            }
+        tool_specs = [
+            spec for spec in await client.list_tool_specs() if is_tool_enabled(mcp_server_connection, spec['name'])
+        ]
+        client.tool_definitions = {
+            name: tool for name, tool in client.tool_definitions.items() if is_tool_enabled(mcp_server_connection, name)
+        }
+        client.tool_permissions = {
+            spec['name']: get_tool_permission(mcp_server_connection, spec['name']) for spec in tool_specs
+        }
         return client, tool_specs
     except BaseException:
         await client.disconnect()
@@ -518,19 +541,11 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         continue
 
                     specs = tool_server_data.get('specs', [])
-                    function_name_filter_list = tool_server_connection.get('config', {}).get(
-                        'function_name_filter_list', ''
-                    )
-
-                    if isinstance(function_name_filter_list, str):
-                        function_name_filter_list = function_name_filter_list.split(',')
 
                     for spec in specs:
                         function_name = spec['name']
-                        if function_name_filter_list:
-                            if not is_string_allowed(function_name, function_name_filter_list):
-                                # Skip this function
-                                continue
+                        if not is_tool_enabled(tool_server_connection, function_name):
+                            continue
 
                         metadata = extra_params.get('__metadata__', {})
 
@@ -566,6 +581,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                             'spec': clean_openai_tool_schema(spec),
                             # Misc info
                             'type': 'external',
+                            'permission': get_tool_permission(tool_server_connection, spec['name']),
                         }
 
                         # Handle function name collisions
@@ -1550,7 +1566,10 @@ async def get_terminal_tools(
         return {}
 
     from open_webui.utils.terminals import find_terminal_connection, terminal_headers
-    connection = await find_terminal_connection(user, terminal_id, extra_params.get('__metadata__', {}), request=request)
+
+    connection = await find_terminal_connection(
+        user, terminal_id, extra_params.get('__metadata__', {}), request=request
+    )
     if connection is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' not found")
     if not connection.get('enabled', True):
@@ -1565,7 +1584,12 @@ async def get_terminal_tools(
         url = get_terminal_server_url(connection)
         discovery_headers = {**bearer_auth_header(connection['key']), **terminal_headers(connection)}
         openapi = await get_tool_server_data(url + '/openapi.json', discovery_headers)
-        server_data = {'id': terminal_id, 'url': url, 'openapi': openapi, 'specs': convert_openapi_to_tool_payload(openapi)}
+        server_data = {
+            'id': terminal_id,
+            'url': url,
+            'openapi': openapi,
+            'specs': convert_openapi_to_tool_payload(openapi),
+        }
     elif connection.get('owner_id') == user.id:
         url = connection['url']
         openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id})
@@ -1637,8 +1661,9 @@ async def get_terminal_tools(
             async def tool_function(**kwargs):
                 call_headers = dict(hdrs)
                 if connection.get('template_id'):
-                    current = await find_terminal_connection(user, terminal_id,
-                        {**metadata, 'scope': connection.get('scope')}, request=request)
+                    current = await find_terminal_connection(
+                        user, terminal_id, {**metadata, 'scope': connection.get('scope')}, request=request
+                    )
                     if current is None:
                         raise HTTPException(403, 'Terminal access revoked')
                     call_headers.update(terminal_headers(current))

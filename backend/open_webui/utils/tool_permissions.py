@@ -87,6 +87,19 @@ async def resolve_tool_approval_mode(value=None, *, is_channel_chat=False):
     return value or ('auto' if auto_enabled else 'full')
 
 
+async def get_tool_approval_mode(metadata, tool=None):
+    """Admin per-tool permissions override the chat mode, except in channels or while the feature is off."""
+    mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
+    permission = (tool or {}).get('permission')
+    if permission not in {'full', 'ask', 'auto'} or str(metadata.get('chat_id') or '').startswith('channel:'):
+        return mode
+    config = await Config.get_many('chat.tool_permissions.enable', 'chat.tool_permissions.auto.enable')
+    if not config['chat.tool_permissions.enable']:
+        return mode
+    # A saved Auto permission must never become Full access.
+    return 'ask' if permission == 'auto' and not config['chat.tool_permissions.auto.enable'] else permission
+
+
 def tool_permission_fingerprint(call, tool, params, metadata):
     return hashlib.sha256(
         JSONCodec.dumps(
@@ -114,9 +127,12 @@ def approval_required_from_call(call, tool):
 
 
 async def requires_tool_approval(form_data, metadata, call, tool, params):
-    mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
+    mode = await get_tool_approval_mode(metadata, tool)
     if mode == 'full' or (call.get('name') == 'ask_user' and tool.get('type') == 'builtin'):
         return False
+    if tool.get('permission') in {'ask', 'auto'}:
+        # Admin-required approval: the client must not auto-approve it when the chat switches to Full access.
+        call['forced_approval'] = True
     fingerprint = tool_permission_fingerprint(call, tool, params, metadata)
     previous_fingerprint = call.get('approval_fingerprint')
     if call.get('approved') is True and (

@@ -16,8 +16,9 @@
 
 	export let connection = null;
 	export let direct = false;
+	export let discoverOnOpen = false;
 
-	let showConfigModal = false;
+	let showConfigModal = discoverOnOpen;
 </script>
 
 <AddToolServerModal
@@ -25,6 +26,7 @@
 	{direct}
 	bind:show={showConfigModal}
 	{connection}
+	{discoverOnOpen}
 	onDelete={() => {
 		onDelete();
 		showConfigModal = false;

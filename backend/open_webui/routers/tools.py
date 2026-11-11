@@ -41,7 +41,6 @@ from open_webui.utils.access_control import (
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.mcp.apps import app_csp, ui_resource_uri, verify_app_binding
 from open_webui.utils.mcp.client import tool_visible_to
-from open_webui.utils.misc import is_string_allowed
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
     get_tool_module_from_cache,
@@ -51,7 +50,7 @@ from open_webui.utils.plugin import (
     resolve_valves_schema_options,
     set_tool_module_in_cache,
 )
-from open_webui.utils.tools import connect_mcp_server, get_tool_servers
+from open_webui.utils.tools import connect_mcp_server, get_tool_servers, is_tool_enabled
 from open_webui.utils.tools import get_tool_specs as get_local_tool_specs
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -130,10 +129,6 @@ async def get_tools(
         server_id = f'server:{server.get("id")}'
         server_connections[server_id] = connection
 
-        function_name_filter_list = (connection.get('config') or {}).get('function_name_filter_list', '')
-        if isinstance(function_name_filter_list, str):
-            function_name_filter_list = function_name_filter_list.split(',')
-
         tools.append(
             ToolUserResponse(
                 **{
@@ -143,11 +138,7 @@ async def get_tools(
                     'meta': {
                         'description': server.get('openapi', {}).get('info', {}).get('description', ''),
                     },
-                    'specs': [
-                        spec
-                        for spec in server.get('specs', [])
-                        if not function_name_filter_list or is_string_allowed(spec['name'], function_name_filter_list)
-                    ],
+                    'specs': [spec for spec in server.get('specs', []) if is_tool_enabled(connection, spec['name'])],
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
                 }

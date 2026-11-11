@@ -81,6 +81,7 @@ class MCPClient:
         self.server_name = server_name
         self.instructions: Optional[str] = None
         self.tool_definitions: dict[str, dict] = {}
+        self.tool_permissions: dict[str, str | None] = {}
 
     async def elicit(self, context, params):
         try:

@@ -347,6 +347,22 @@ export const verifyToolServerConnection = async (token: string, connection: obje
 	return res;
 };
 
+export const discoverToolServerTools = async (
+	token: string,
+	connection: object
+): Promise<{ tools: { name: string; description: string }[] }> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/tool_servers/tools`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(connection)
+	});
+	if (!res.ok) throw (await res.json().catch(() => null))?.detail ?? res.statusText;
+	return res.json();
+};
+
 type RegisterOAuthClientForm = {
 	url: string;
 	client_id: string;

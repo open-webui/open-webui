@@ -13,6 +13,7 @@ from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
@@ -26,6 +27,8 @@ from open_webui.utils.oauth import (
     resolve_oauth_client_info,
 )
 from open_webui.utils.tools import (
+    build_tool_server_headers,
+    convert_openapi_to_tool_payload,
     get_tool_server_data,
     get_tool_server_url,
     set_terminal_servers,
@@ -550,6 +553,61 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
             status_code=400,
             detail=f'Failed to connect to the tool server',
         )
+
+
+async def mcp_rejects_credentials(url: str, headers: dict) -> bool:
+    """The MCP SDK reports every HTTP failure as one internal error; ask the server for its status directly."""
+    try:
+        async with aiohttp.ClientSession(
+            trust_env=True, timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+        ) as session:
+            async with session.post(
+                url,
+                headers={**headers, 'Accept': 'application/json, text/event-stream'},
+                json={'jsonrpc': '2.0', 'id': 1, 'method': 'ping'},
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as response:
+                return response.status in (401, 403)
+    except Exception:
+        return False
+
+
+@router.post('/tool_servers/tools')
+async def discover_tool_server_tools(request: Request, form_data: ToolServerConnection, user=Depends(get_admin_user)):
+    """List every tool the server offers, before filtering, with the connection's current credentials."""
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(status_code=403, detail='Tool servers are disabled')
+
+    connection = form_data.model_dump()
+    # OAuth 2.1 uses the admin's own token for this connection when authorized; otherwise no Authorization.
+    headers, _ = await build_tool_server_headers(
+        connection, request, user, server_id=(form_data.info or {}).get('id', '')
+    )
+    try:
+        if form_data.type == 'mcp':
+            client = MCPClient()
+            try:
+                await client.connect(form_data.url, headers=headers or None)
+                specs = await client.list_tool_specs()
+            finally:
+                await client.disconnect()
+        else:
+            openapi = (
+                JSONCodec.loads(connection.get('spec') or '')
+                if connection.get('spec_type') == 'json'
+                else await get_tool_server_data(get_tool_server_url(form_data.url, form_data.path), headers=headers)
+            )
+            specs = convert_openapi_to_tool_payload(openapi)
+    except Exception as e:
+        log.debug('Failed to list tools from the tool server: %s', e)
+        # Probe only after a failure: servers that list tools without auth never need the OAuth flow.
+        if form_data.type == 'mcp' and await mcp_rejects_credentials(form_data.url, headers):
+            if form_data.auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+                raise HTTPException(status_code=401, detail='OAuth authorization required')
+            raise HTTPException(status_code=401, detail='The tool server rejected the credentials')
+        raise HTTPException(status_code=400, detail='Failed to list tools from the tool server')
+
+    return {'tools': [{'name': spec['name'], 'description': spec.get('description') or ''} for spec in specs]}
 
 
 # Code Interpreter Config

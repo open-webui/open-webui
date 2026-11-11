@@ -156,6 +156,7 @@ from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
     ToolApprovalRequired,
+    get_tool_approval_mode,
     get_tool_permissions_auto_config,
     requires_tool_approval,
     set_tool_approval_prompt,
@@ -2735,6 +2736,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'type': 'mcp',
                                 'client': client,
                                 'direct': False,
+                                'permission': client.tool_permissions.get(tool_spec['name']),
                             }
                     except Exception:
                         log.exception("Failed to connect to MCP server '%s'", server_id)
@@ -2904,10 +2906,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     'chat.tool_permissions.auto.engine',
                 )
                 approval = (
-                    metadata.get('params', {}).get('tool_approval_mode') == 'auto'
-                    and settings.get('chat.tool_permissions.enable')
+                    {
+                        name
+                        for name, tool in tools_dict.items()
+                        if await get_tool_approval_mode(metadata, tool) == 'auto'
+                    }
+                    if settings.get('chat.tool_permissions.enable')
                     and settings.get('chat.tool_permissions.auto.enable')
                     and settings.get('chat.tool_permissions.auto.engine', '') == ''
+                    else set()
                 )
                 add_tool_call_metadata(
                     tools_dict,
@@ -3232,7 +3239,14 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
             or await event_caller(
                 {
                     'type': 'confirmation',
-                    'data': {'tool_call': {'id': tool_call.get('call_id'), 'name': name, 'arguments': params}},
+                    'data': {
+                        'tool_call': {
+                            'id': tool_call.get('call_id'),
+                            'name': name,
+                            'arguments': params,
+                            'forced_approval': tool_call.get('forced_approval', False),
+                        }
+                    },
                 }
             )
             is not True
@@ -3329,6 +3343,14 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
             )
     normalize_messages_for_model(form_data)
 
+    tool_modes = {
+        name: await get_tool_approval_mode(metadata, tool) for name, tool in metadata.get('tools', {}).items()
+    }
+    chat_mode = await get_tool_approval_mode(metadata)
+
+    def runs_unapproved(entry):
+        return tool_modes.get(entry.get('name'), chat_mode) in {'full', 'auto'}
+
     while True:
         async with Chats.edit_message_output(chat_id, message_id) as saved:
             if not saved:
@@ -3341,11 +3363,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                 (
                     entry
                     for entry in pending
-                    if entry.get('name') != 'ask_user'
-                    and (
-                        entry.get('approved') is True
-                        or metadata.get('params', {}).get('tool_approval_mode') in {'full', 'auto'}
-                    )
+                    if entry.get('name') != 'ask_user' and (entry.get('approved') is True or runs_unapproved(entry))
                 ),
                 None,
             )
@@ -3458,9 +3476,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
         if not pending:
             message['output'] = output
             return False
-        if metadata.get('params', {}).get('tool_approval_mode') not in {'full', 'auto'} and not any(
-            entry.get('approved') is True for entry in pending
-        ):
+        if not any(entry.get('approved') is True or runs_unapproved(entry) for entry in pending):
             return True
 
 
@@ -5911,6 +5927,9 @@ async def streaming_chat_response_handler(response, ctx):
                             status='failed' if error else item.get('status', 'in_progress'),
                         )
                         tool = metadata.get('tools', {}).get(item['name'])
+                        if tool and tool.get('permission') in {'ask', 'auto'}:
+                            # Batch pauses skip requires_tool_approval; the client must still see it is admin-required.
+                            item['forced_approval'] = True
                         error = error or (
                             prepare_tool_call(
                                 item,
@@ -5974,7 +5993,12 @@ async def streaming_chat_response_handler(response, ctx):
                             if item.get('name') == 'ask_user' and item.get('status') == 'pending':
                                 item['status'] = 'in_progress'
 
-                    tool_approval_mode = metadata.get('params', {}).get('tool_approval_mode', 'full')
+                    # One shared mode keeps the batch path; mixed per-tool modes run one by one like Auto.
+                    tool_approval_modes = {
+                        await get_tool_approval_mode(metadata, metadata.get('tools', {}).get(call.get('name')))
+                        for call in response_tool_calls
+                    } or {await get_tool_approval_mode(metadata)}
+                    tool_approval_mode = tool_approval_modes.pop() if len(tool_approval_modes) == 1 else 'auto'
                     if (
                         response_tool_calls
                         and tool_approval_mode == 'ask'
