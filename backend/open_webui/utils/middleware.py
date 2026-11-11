@@ -45,7 +45,7 @@ from open_webui.env import (
     GLOBAL_LOG_LEVEL,
     RAG_SYSTEM_CONTEXT,
 )
-from open_webui.events import EVENTS, publish_event
+from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -245,7 +245,8 @@ async def publish_chat_finished_event(
 
     content = content or get_output_text(output)
     webui_url = await Config.get('webui.url')
-    await publish_event(
+    model = (getattr(request.app.state, 'MODELS', {}) or {}).get(metadata.get('model_id'), {})
+    event = build_event(
         request,
         EVENTS.CHAT_FINISHED,
         actor=user,
@@ -256,12 +257,25 @@ async def publish_chat_finished_event(
             'chat_id': chat_id,
             'message_id': metadata.get('message_id'),
             'model_id': metadata.get('model_id'),
+            'model_name': model.get('name'),
             'title': title,
             'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
             'message': content,
         },
         message=title or 'Chat finished',
     )
+    try:
+        from open_webui.internal.db import get_async_db_context
+        from open_webui.models.notifications import emit_changes
+        from open_webui.utils.inbox import consume_event
+
+        async with get_async_db_context() as db:
+            recipients = await consume_event(event, db=db)
+            await db.commit()
+        await emit_changes(recipients)
+    except Exception:
+        log.exception('Chat mention notification failed for %s', chat_id)
+    await publish_event(request, event)
     event_emitter = await get_event_emitter(metadata, update_db=False)
     if event_emitter:
         folder_id = metadata.get('folder_id') or await Chats.get_chat_folder_id(chat_id, metadata.get('user_id'))

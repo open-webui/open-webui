@@ -1630,6 +1630,42 @@ async def replace_note_content(
 # Chats tools
 
 
+async def search_users(
+    query: str,
+    count: int = 5,
+    __user__: dict = None,
+) -> str:
+    """
+    Search the user directory by name or email, independently of the current chat.
+    Copy a result's mention token into your reply to address that person. Only users
+    who already have read access to the chat are notified when your reply finishes.
+    Searching does not notify users or grant access.
+
+    :param query: Name or email to search for
+    :param count: Maximum results to return (default: 5, maximum: 20)
+    :return: JSON list of users with id, name, email, and mention token
+    """
+    if not __user__ or __user__.get('role') not in {'user', 'admin'}:
+        return JSONCodec.dumps({'error': 'Verified user context required'})
+
+    try:
+        result = await Users.get_users(
+            filter={'query': query, 'roles': ['user', 'admin']},
+            sort={'order_by': 'name', 'direction': 'asc'},
+            limit=max(1, min(count, 20)),
+        )
+        return JSONCodec.dumps(
+            [
+                {'id': user.id, 'name': user.name, 'email': user.email, 'mention': f'<@U:{user.id}>'}
+                for user in result['users']
+            ],
+            ensure_ascii=False,
+        )
+    except Exception:
+        log.exception('search_users failed')
+        return JSONCodec.dumps({'error': 'Could not search users'})
+
+
 async def search_chats(
     query: str,
     count: int = 5,

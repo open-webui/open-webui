@@ -55,6 +55,10 @@ class ReminderData(NotificationData):
     start_at: int
 
 
+class ChatMentionData(NotificationData):
+    model_name: str
+
+
 class SystemData(NotificationData):
     message: str = Field(min_length=1, max_length=2000)
 
@@ -64,6 +68,7 @@ DATA_TYPES = {
     'comment.replied': NotificationData,
     'comment.mentioned': NotificationData,
     'channel.mentioned': NotificationData,
+    'chat.mentioned': ChatMentionData,
     'channel.replied': NotificationData,
     'calendar.alert': ReminderData,
     'automation.run_failed': NotificationData,
