@@ -6,7 +6,6 @@
 	import { fly } from 'svelte/transition';
 
 	import {
-		chatId,
 		config,
 		settings,
 		terminalServers,
@@ -45,6 +44,7 @@
 	const i18n = getContext('i18n') as any;
 	export let selectedTerminalId: Readable<string | null>;
 	export let terminalSkills: Writable<any[]>;
+	export let chatId: string | null = null;
 
 	type IntegrationItem = {
 		id: string;
@@ -214,7 +214,7 @@
 			$selectedTerminalId,
 			$terminalServers ?? [],
 			$settings?.terminalServers ?? [],
-			localStorage.token, { chatId: $chatId || null, modelId: selectedModels[0] ?? null });
+			localStorage.token, { chatId: chatId || null, modelId: selectedModels[0] ?? null });
 		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		return items;

@@ -1647,6 +1647,7 @@
 				char: '@',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
+					chatId: () => chatId,
 					i18n,
 					selectedTerminalId,
 					terminalSkills,
@@ -1746,6 +1747,7 @@
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
+					chatId: () => chatId,
 					i18n,
 					selectedTerminalId,
 					terminalSkills,
@@ -1858,6 +1860,7 @@
 				char: '$',
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
+					chatId: () => chatId,
 					i18n,
 					selectedTerminalId,
 					terminalSkills,
@@ -2596,6 +2599,7 @@
 										bind:show={showInputMenu}
 										bind:tab={inputMenuTab}
 										closeOnOutsideClick={inputMenuCloseOnOutsideClick}
+										{chatId}
 										bind:files
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(
@@ -2687,6 +2691,7 @@
 												<IntegrationsMenu
 													{selectedTerminalId}
 													{terminalSkills}
+													{chatId}
 													bind:show={showInputMenu}
 													bind:tab={inputMenuTab}
 													selectedModels={selectedModelIds}

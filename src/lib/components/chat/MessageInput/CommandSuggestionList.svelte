@@ -11,6 +11,8 @@
 	export let query = '';
 	export let selectedTerminalId: Readable<string | null>;
 	export let terminalSkills: Writable<any[]>;
+	export let chatId: string | null | (() => string | null) = null;
+	$: resolvedChatId = typeof chatId === 'function' ? chatId() : chatId;
 	export let modelId: string | null | (() => string | null) = null;
 	$: selectedModelId = typeof modelId === 'function' ? modelId() : modelId;
 	export let command: (payload: {
@@ -118,6 +120,7 @@
 				<SlashCommands
 					{selectedTerminalId}
 					{terminalSkills}
+					chatId={resolvedChatId}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -218,6 +221,7 @@
 			{:else if char === '@'}
 				<AtCommands
 					{selectedTerminalId}
+					chatId={resolvedChatId}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -261,6 +265,7 @@
 				<Skills
 					{selectedTerminalId}
 					{terminalSkills}
+					chatId={resolvedChatId}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}

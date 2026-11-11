@@ -5,7 +5,6 @@
 	import type { Readable } from 'svelte/store';
 
 	import {
-		chatId as activeChatId,
 		folders,
 		models,
 		settings,
@@ -36,6 +35,7 @@
 
 	export let query = '';
 	export let selectedTerminalId: Readable<string | null>;
+	export let chatId: string | null = null;
 	export let modelId: string | null = null;
 	export let onSelect: (e: any) => void = () => {};
 	export let fileUploadEnabled: boolean = true;
@@ -131,7 +131,7 @@
 		}
 
 		const terminalId = $selectedTerminalId;
-		const sessionId = $activeChatId;
+		const sessionId = chatId;
 		const res = await searchFiles(
 			terminal,
 			query,
@@ -143,7 +143,7 @@
 		).catch(() => null);
 
 		if (signal.aborted) return;
-		if (terminalId !== $selectedTerminalId || sessionId !== $activeChatId) return;
+		if (terminalId !== $selectedTerminalId || sessionId !== chatId) return;
 		filesystemItems = (res?.results ?? []).map((item: any) => ({
 			...filesystemFile(item, terminalId!, sessionId || null),
 			filesystem_type: item.type,
@@ -157,9 +157,9 @@
 			$terminalServers ?? [],
 			($settings as any)?.terminalServers ?? [],
 			localStorage.token,
-			{ chatId: $activeChatId || null, modelId: modelId }
+			{ chatId: chatId || null, modelId: modelId }
 		);
-		if (($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope === 'chat' && ($temporaryChatEnabled || isTemporaryChatId($activeChatId)))
+		if (($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope === 'chat' && ($temporaryChatEnabled || isTemporaryChatId(chatId)))
 			return null;
 		return target;
 	};

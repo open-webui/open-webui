@@ -9,7 +9,7 @@
 		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import { chatId, settings, terminalServers } from '$lib/stores';
+	import { settings, terminalServers } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 
@@ -17,6 +17,7 @@
 
 	export let query = '';
 	export let selectedTerminalId: Readable<string | null>;
+	export let chatId: string | null = null;
 	export let terminalSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 
@@ -49,7 +50,7 @@
 			$selectedTerminalId,
 			$terminalServers ?? [],
 			$settings?.terminalServers ?? [],
-			localStorage.token, { chatId: $chatId || null, modelId: modelId });
+			localStorage.token, { chatId: chatId || null, modelId: modelId });
 		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		const q = query.trim().toLowerCase();

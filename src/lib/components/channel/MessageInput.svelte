@@ -12,6 +12,7 @@
 		baseModels,
 		channelRequestQueues,
 		channels,
+		chatId,
 		models,
 		config,
 		mobile,
@@ -770,6 +771,7 @@
 						.run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					chatId: () => $chatId,
 					selectedTerminalId,
 					terminalSkills,
 					i18n,
