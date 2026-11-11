@@ -1636,7 +1636,16 @@
 			});
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
-	$: if (side && $chatId) openSideChatIds.update((ids) => new Set([...ids, $chatId]));
+	let openSideChatId: string = '';
+	$: if (embedded && $chatId !== openSideChatId) {
+		openSideChatIds.update((ids) => {
+			const next = new Set(ids);
+			next.delete(openSideChatId);
+			if ($chatId) next.add($chatId);
+			return next;
+		});
+		openSideChatId = $chatId;
+	}
 
 	const chatEventHandler = async (event, cb) => {
 		if (isTemporaryChatId(event.chat_id) && event.chat_id !== $chatId) return;
@@ -2220,7 +2229,7 @@
 				if (joinedChatId && $socket?.connected)
 					$socket.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 				joinedChatId = '';
-				if (side && $chatId) {
+				if (embedded && $chatId) {
 					if ($temporaryChatEnabled)
 						stopTasksByChatId(localStorage.token, $chatId).catch(console.error);
 					openSideChatIds.update((ids) => {
