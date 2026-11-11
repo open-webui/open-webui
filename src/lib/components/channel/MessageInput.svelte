@@ -16,6 +16,8 @@
 		config,
 		mobile,
 		settings,
+		selectedTerminalId,
+		terminalSkills,
 		socket,
 		user
 	} from '$lib/stores';
@@ -768,6 +770,8 @@
 						.run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					selectedTerminalId,
+					terminalSkills,
 					i18n,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -811,6 +815,8 @@
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					selectedTerminalId,
+					terminalSkills,
 					i18n,
 					onSelect: (e) => {
 						inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`)?.focus();

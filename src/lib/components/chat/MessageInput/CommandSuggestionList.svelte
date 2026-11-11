@@ -5,16 +5,12 @@
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
-	import type { Writable } from 'svelte/store';
-	import {
-		selectedTerminalId as _selectedTerminalId,
-		terminalSkills as _terminalSkills
-	} from '$lib/stores';
+	import type { Readable, Writable } from 'svelte/store';
 
 	export let char = '';
 	export let query = '';
-	export let selectedTerminalId: Writable<string | null> = _selectedTerminalId;
-	export let terminalSkills: Writable<any[]> = _terminalSkills;
+	export let selectedTerminalId: Readable<string | null>;
+	export let terminalSkills: Writable<any[]>;
 	export let modelId: string | null | (() => string | null) = null;
 	$: selectedModelId = typeof modelId === 'function' ? modelId() : modelId;
 	export let command: (payload: {

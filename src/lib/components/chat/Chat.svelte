@@ -479,8 +479,6 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
-	setContext('selectedTerminalId', selectedTerminalId);
-	setContext('terminalSkills', terminalSkills);
 	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setContext('contextCompactions', contextCompactions);
 	let compactionChatId = '';
@@ -5821,6 +5819,8 @@
 									class=" pb-2 {dragged ? 'z-0' : 'z-10'}"
 								>
 									<MessageInput
+										{selectedTerminalId}
+										{terminalSkills}
 										{messagesContainerId}
 										{inputId}
 										temporary={$temporaryChatEnabled}
@@ -5927,6 +5927,8 @@
 								{/if}
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
+										{selectedTerminalId}
+										{terminalSkills}
 										{messagesContainerId}
 										{inputId}
 										temporary={$temporaryChatEnabled}

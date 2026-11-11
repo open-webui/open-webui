@@ -2,7 +2,7 @@
 	import { resolveLocalizedResource, resolveLocalizedFunction } from '$lib/utils/localizedContent';
 	import { functions as localizedFunctions } from '$lib/stores';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
-	import type { Writable } from 'svelte/store';
+	import type { Readable, Writable } from 'svelte/store';
 	import { fly } from 'svelte/transition';
 
 	import {
@@ -43,8 +43,8 @@
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 
 	const i18n = getContext('i18n') as any;
-	const selectedTerminalId = getContext<Writable<string | null>>('selectedTerminalId');
-	const terminalSkills = getContext<Writable<any[]>>('terminalSkills');
+	export let selectedTerminalId: Readable<string | null>;
+	export let terminalSkills: Writable<any[]>;
 
 	type IntegrationItem = {
 		id: string;

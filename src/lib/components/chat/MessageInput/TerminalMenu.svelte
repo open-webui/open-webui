@@ -36,7 +36,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 
 	const i18n = getContext<any>('i18n');
-	const selectedTerminalId = getContext<Writable<string | null>>('selectedTerminalId');
+	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 
 	const rowClass =
 		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40';

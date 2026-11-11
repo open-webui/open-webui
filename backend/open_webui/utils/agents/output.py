@@ -6,7 +6,6 @@ import json
 import time
 from uuid import uuid4
 
-from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import clear_response_stream, save_response_stream
@@ -56,12 +55,13 @@ class Output:
         )
         self.last_flush = time.monotonic()
         if not (persist or done) and time.monotonic() - self.last_save >= 1:
-            chat_id, message_id = self.metadata['chat_id'], self.metadata['message_id']
-            if not await ChatMessages.get_message_by_id(f'{chat_id}-{message_id}'):
-                raise ValueError('Agent chat message no longer exists')
-            data = sanitize_data_for_db({'content': self.content, 'output': self.items})
-            await save_response_stream(self.redis, self.metadata.get('task_id'), chat_id, message_id, data['output'])
-            await ChatMessages.upsert_message(message_id, chat_id, self.user.id, data)
+            await save_response_stream(
+                self.redis,
+                self.metadata.get('task_id'),
+                self.metadata['chat_id'],
+                self.metadata['message_id'],
+                sanitize_data_for_db(self.items),
+            )
             self.last_save = time.monotonic()
 
     async def save(self, done=False):

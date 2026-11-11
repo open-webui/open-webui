@@ -8,7 +8,7 @@
 	import Collapsible from '../common/Collapsible.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 
-	const terminalSkills = getContext<Writable<any[]>>('terminalSkills');
+	export let terminalSkills: Writable<any[]>;
 
 	export let show = false;
 	export let selectedSkillIds = [];

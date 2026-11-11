@@ -2,7 +2,7 @@
 	export let modelId: string | null = null;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
-	import type { Writable } from 'svelte/store';
+	import type { Readable, Writable } from 'svelte/store';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
 	import {
@@ -24,7 +24,7 @@
 	const i18n: any = getContext('i18n');
 
 	export let query = '';
-	export let selectedTerminalId: Writable<string | null>;
+	export let selectedTerminalId: Readable<string | null>;
 	export let terminalSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 	export let canCompact = false;

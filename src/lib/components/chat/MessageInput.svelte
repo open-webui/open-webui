@@ -134,8 +134,8 @@
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 
 	const i18n: any = getContext('i18n');
-	const selectedTerminalId = getContext<Writable<string | null>>('selectedTerminalId');
-	const terminalSkills = getContext<Writable<any[]>>('terminalSkills');
+	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
+	export let terminalSkills: Writable<any[]>;
 
 	type AskUserPrompt = {
 		id?: string;
@@ -1651,6 +1651,7 @@
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
 					selectedTerminalId,
+					terminalSkills,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -1818,6 +1819,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
+					selectedTerminalId,
+					terminalSkills,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -1883,6 +1886,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
+					selectedTerminalId,
+					terminalSkills,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
 					},
@@ -1961,7 +1966,7 @@
 	onConnect={(id) =>
 		oauthRedirectHandler({ id, serverId: id.split(':').at(-1), authType: 'mcp' }, chatInputDraft)}
 />
-<SkillsModal bind:show={showSkills} {selectedSkillIds} />
+<SkillsModal bind:show={showSkills} {selectedSkillIds} {terminalSkills} />
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -2667,6 +2672,7 @@
 										<svelte:fragment slot="terminal">
 											{#if showTerminalSelector && terminalControlsInMenu}
 												<TerminalMenu
+													{selectedTerminalId}
 													modelId={selectedModels[0] ?? null}
 													inMenu
 													{chatId}
@@ -2681,6 +2687,8 @@
 										<svelte:fragment slot="integrations">
 											{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 												<IntegrationsMenu
+													{selectedTerminalId}
+													{terminalSkills}
 													bind:show={showInputMenu}
 													bind:tab={inputMenuTab}
 													selectedModels={selectedModelIds}
@@ -2936,6 +2944,7 @@
 										{#if showTerminalSelector}
 											<div data-terminal-controls class="flex items-center gap-1.5 shrink-0">
 												<TerminalMenu
+													{selectedTerminalId}
 													modelId={selectedModels[0] ?? null}
 													bind:show={showTerminalMenu}
 													{chatId}
