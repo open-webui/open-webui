@@ -97,7 +97,28 @@
 	let skillRequestId = 0;
 
 	$: toolIds = Object.keys(tools ?? {});
+	$: toolGroups = [
+		[
+			$i18n.t('Workspace'),
+			toolIds.filter((id) => !id.startsWith('server:') && !id.startsWith('direct_server:'))
+		],
+		[$i18n.t('Tool Servers'), toolIds.filter((id) => id.startsWith('server:'))],
+		[
+			$i18n.t('settings.personal.tools.sections.externalToolServers.title'),
+			toolIds.filter((id) => id.startsWith('direct_server:'))
+		]
+	].filter(([, ids]) => ids.length > 0);
 	$: skillIds = Object.keys(skills ?? {});
+	$: skillGroups = [
+		[$i18n.t('Workspace'), skillIds.filter((id) => skills?.[id]?.source !== 'terminal')],
+		[
+			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.name ||
+				($settings?.terminalServers ?? []).find((server) => server.url === $selectedTerminalId)
+					?.name ||
+				$i18n.t('Terminal'),
+			skillIds.filter((id) => skills?.[id]?.source === 'terminal')
+		]
+	].filter(([, ids]) => ids.length > 0);
 
 	$: if (show && toolQuery !== searchedToolQuery) {
 		scheduleToolSearch();
@@ -277,9 +298,6 @@
 			selectedSkillIds = selectedSkillIds.filter((id) => id !== skillId);
 		}
 	};
-
-	const skillSourceLabel = (skill: IntegrationItem | undefined) =>
-		skill?.source === 'terminal' ? $i18n.t('Terminal') : '';
 
 	onDestroy(() => {
 		clearTimeout(toolSearchDebounceTimer);
@@ -547,110 +565,117 @@
 				<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No tools found')}</div>
 			{:else}
 				<div class="flex flex-col gap-0.5">
-					{#each toolIds as toolId}
-						<div
-							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
-							role="presentation"
-							on:click={async (e) => {
-								await toggleTool(toolId, e);
-							}}
-						>
-							{#if !(tools?.[toolId]?.authenticated ?? true)}
-								<!-- make it slighly darker and not clickable -->
-								<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
-							{/if}
-							<button
-								type="button"
-								class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
-								role={(tools?.[toolId]?.authenticated ?? true) ? 'menuitemcheckbox' : 'menuitem'}
-								aria-checked={(tools?.[toolId]?.authenticated ?? true)
-									? selectedToolIds.includes(toolId)
-									: undefined}
-							>
-								<div class="flex flex-1 gap-2 items-center">
-									<Tooltip
-										content={resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
-										placement="top"
-									>
-										<div class="shrink-0">
-											<Wrench />
-										</div>
-									</Tooltip>
-									<Tooltip
-										content={resolveLocalizedResource(
-											tools?.[toolId],
-											$i18n.language,
-											'description'
-										)}
-										placement="top-start"
-									>
-										<div class=" truncate">
-											{resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
-										</div>
-									</Tooltip>
-								</div>
-							</button>
-
-							{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
-								<div class="shrink-0">
-									<Tooltip content={$i18n.t('Disconnect OAuth')}>
-										<button
-											aria-label={$i18n.t('Disconnect OAuth')}
-											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-											type="button"
-											on:click={async (e) => {
-												e.stopPropagation();
-												e.preventDefault();
-
-												const parts = toolId.split(':');
-												const serverId = parts.at(-1) ?? toolId;
-												const provider = `mcp:${serverId}`;
-
-												try {
-													await deleteOAuthSession(localStorage.token, provider);
-													toast.success($i18n.t('OAuth session disconnected'));
-
-													// Refresh tools to update authenticated state
-													_tools.set(await getTools(localStorage.token));
-													selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
-													await init();
-												} catch (err) {
-													toast.error(err ?? $i18n.t('Failed to disconnect'));
-												}
-											}}
-										>
-											<LinkSlash className="size-3.5" />
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
-
-							{#if tools?.[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
-								<div class=" shrink-0">
-									<Tooltip content={$i18n.t('Valves')}>
-										<button
-											aria-label={$i18n.t('Valves')}
-											class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
-											type="button"
-											on:click={(e) => {
-												e.stopPropagation();
-												e.preventDefault();
-												onShowValves({
-													type: 'tool',
-													id: toolId
-												});
-											}}
-										>
-											<Knobs />
-										</button>
-									</Tooltip>
-								</div>
-							{/if}
-
-							<div class=" shrink-0" inert>
-								<Switch state={selectedToolIds.includes(toolId)} />
+					{#each toolGroups as [label, ids]}
+						{#if toolGroups.length > 1}
+							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+								{label}
 							</div>
-						</div>
+						{/if}
+						{#each ids as toolId}
+							<div
+								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+								role="presentation"
+								on:click={async (e) => {
+									await toggleTool(toolId, e);
+								}}
+							>
+								{#if !(tools?.[toolId]?.authenticated ?? true)}
+									<!-- make it slighly darker and not clickable -->
+									<div class="absolute inset-0 opacity-50 rounded-xl cursor-pointer z-10"></div>
+								{/if}
+								<button
+									type="button"
+									class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+									role={(tools?.[toolId]?.authenticated ?? true) ? 'menuitemcheckbox' : 'menuitem'}
+									aria-checked={(tools?.[toolId]?.authenticated ?? true)
+										? selectedToolIds.includes(toolId)
+										: undefined}
+								>
+									<div class="flex flex-1 gap-2 items-center">
+										<Tooltip
+											content={resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
+											placement="top"
+										>
+											<div class="shrink-0">
+												<Wrench />
+											</div>
+										</Tooltip>
+										<Tooltip
+											content={resolveLocalizedResource(
+												tools?.[toolId],
+												$i18n.language,
+												'description'
+											)}
+											placement="top-start"
+										>
+											<div class=" truncate">
+												{resolveLocalizedResource(tools?.[toolId], $i18n.language, 'name')}
+											</div>
+										</Tooltip>
+									</div>
+								</button>
+
+								{#if tools?.[toolId]?.authenticated === true && toolId.startsWith('server:mcp:')}
+									<div class="shrink-0">
+										<Tooltip content={$i18n.t('Disconnect OAuth')}>
+											<button
+												aria-label={$i18n.t('Disconnect OAuth')}
+												class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+												type="button"
+												on:click={async (e) => {
+													e.stopPropagation();
+													e.preventDefault();
+
+													const parts = toolId.split(':');
+													const serverId = parts.at(-1) ?? toolId;
+													const provider = `mcp:${serverId}`;
+
+													try {
+														await deleteOAuthSession(localStorage.token, provider);
+														toast.success($i18n.t('OAuth session disconnected'));
+
+														// Refresh tools to update authenticated state
+														_tools.set(await getTools(localStorage.token));
+														selectedToolIds = selectedToolIds.filter((id) => id !== toolId);
+														await init();
+													} catch (err) {
+														toast.error(err ?? $i18n.t('Failed to disconnect'));
+													}
+												}}
+											>
+												<LinkSlash className="size-3.5" />
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
+
+								{#if tools?.[toolId]?.has_user_valves && ($user?.role === 'admin' || ($user?.permissions?.chat?.valves ?? true))}
+									<div class=" shrink-0">
+										<Tooltip content={$i18n.t('Valves')}>
+											<button
+												aria-label={$i18n.t('Valves')}
+												class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+												type="button"
+												on:click={(e) => {
+													e.stopPropagation();
+													e.preventDefault();
+													onShowValves({
+														type: 'tool',
+														id: toolId
+													});
+												}}
+											>
+												<Knobs />
+											</button>
+										</Tooltip>
+									</div>
+								{/if}
+
+								<div class=" shrink-0" inert>
+									<Switch state={selectedToolIds.includes(toolId)} />
+								</div>
+							</div>
+						{/each}
 					{/each}
 				</div>
 			{/if}
@@ -683,49 +708,51 @@
 				<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No skills found')}</div>
 			{:else}
 				<div class="flex flex-col gap-0.5">
-					{#each skillIds as skillId}
-						<button
-							class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-							role="menuitemcheckbox"
-							aria-checked={selectedSkillIds.includes(skillId)}
-							on:click={async () => {
-								await toggleSkill(skillId);
-							}}
-						>
-							<div class="flex-1 truncate">
-								<div class="flex flex-1 gap-2 items-center">
-									<Tooltip
-										content={resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
-										placement="top"
-									>
-										<div class="shrink-0">
-											<Cube className="size-3.5" strokeWidth="1.75" />
-										</div>
-									</Tooltip>
-									<Tooltip
-										content={resolveLocalizedResource(
-											skills?.[skillId],
-											$i18n.language,
-											'description'
-										)}
-										placement="top-start"
-									>
-										<div class=" truncate">
-											{resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
-										</div>
-									</Tooltip>
-									{#if skillSourceLabel(skills?.[skillId])}
-										<div class="shrink-0 text-[0.6875rem] text-gray-500 dark:text-gray-400">
-											{skillSourceLabel(skills?.[skillId])}
-										</div>
-									{/if}
+					{#each skillGroups as [label, ids]}
+						{#if skillGroups.length > 1 || skills?.[ids[0]]?.source === 'terminal'}
+							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+								{label}
+							</div>
+						{/if}
+						{#each ids as skillId}
+							<button
+								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								role="menuitemcheckbox"
+								aria-checked={selectedSkillIds.includes(skillId)}
+								on:click={async () => {
+									await toggleSkill(skillId);
+								}}
+							>
+								<div class="flex-1 truncate">
+									<div class="flex flex-1 gap-2 items-center">
+										<Tooltip
+											content={resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
+											placement="top"
+										>
+											<div class="shrink-0">
+												<Cube className="size-3.5" strokeWidth="1.75" />
+											</div>
+										</Tooltip>
+										<Tooltip
+											content={resolveLocalizedResource(
+												skills?.[skillId],
+												$i18n.language,
+												'description'
+											)}
+											placement="top-start"
+										>
+											<div class=" truncate">
+												{resolveLocalizedResource(skills?.[skillId], $i18n.language, 'name')}
+											</div>
+										</Tooltip>
+									</div>
 								</div>
-							</div>
 
-							<div class=" shrink-0" inert>
-								<Switch state={selectedSkillIds.includes(skillId)} />
-							</div>
-						</button>
+								<div class=" shrink-0" inert>
+									<Switch state={selectedSkillIds.includes(skillId)} />
+								</div>
+							</button>
+						{/each}
 					{/each}
 				</div>
 			{/if}
