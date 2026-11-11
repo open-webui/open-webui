@@ -63,21 +63,24 @@ export function repairVisualizationScript(source: string) {
 	});
 	if (fixedCssValue) tree = javascriptLanguage.parser.parse(script);
 	let firstError = Infinity;
-	const braces: number[] = [];
+	const closers: number[] = [];
 	tree.iterate({
 		enter(node) {
 			if (node.type.isError) firstError = Math.min(firstError, node.from);
-			if (node.name === '}') braces.push(node.from);
+			if (['}', ')', ']'].includes(node.name)) closers.push(node.from);
 		}
 	});
 	if (firstError === Infinity) return script;
 
-	// Try one stray closing brace near the first error; never touch strings or comments.
-	for (const position of braces
+	// Try one nearby stray delimiter, or one missing delimiter at the end.
+	const candidates = closers
 		.filter((position) => position <= firstError)
 		.slice(-8)
-		.reverse()) {
-		const candidate = script.slice(0, position) + script.slice(position + 1);
+		.reverse()
+		.map((position) => script.slice(0, position) + script.slice(position + 1));
+	if (firstError >= script.trimEnd().length)
+		candidates.unshift(...['}', ')', ']'].map((closing) => script + '\n' + closing));
+	for (const candidate of candidates) {
 		let valid = true;
 		javascriptLanguage.parser.parse(candidate).iterate({
 			enter(node) {
@@ -90,8 +93,10 @@ export function repairVisualizationScript(source: string) {
 }
 
 export function repairVisualizationHtml(html: string) {
-	return html.replace(
-		/(<script\b(?:[^>"']|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/script\s*>)/gi,
-		(_, opening, script, closing) => opening + repairVisualizationScript(script) + closing
-	);
+	return html
+		.replace(/^\s*```(?:html)?[ \t]*\r?\n([\s\S]*?)\r?\n```\s*$/i, '$1')
+		.replace(
+			/(<script\b(?:[^>"']|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/script\s*>)/gi,
+			(_, opening, script, closing) => opening + repairVisualizationScript(script) + closing
+		);
 }
