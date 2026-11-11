@@ -1,5 +1,7 @@
 """Read native conversation state from signed, server-persisted chat messages."""
 
+import hashlib
+import re
 from urllib.parse import quote
 
 from open_webui.models.chats import ChatModel, Chats
@@ -7,7 +9,11 @@ from open_webui.utils.auth import decode_token
 
 
 def model_id(state):
-    return f'agent:{quote(state["terminal_id"], safe="")}:{state["provider"]}:{quote(state["model"], safe="")}'
+    model = re.sub(r'[^a-zA-Z0-9_-]+', '-', state['model']).strip('-')
+    if model != state['model']:
+        # Keeps CLI model names apart that only differ in the replaced characters.
+        model = f'{model}-{hashlib.sha256(state["model"].encode()).hexdigest()[:8]}'
+    return f'agent:{quote(state["terminal_id"], safe="")}:{state["provider"]}:{model}'
 
 
 async def ensure_chat_selections(chat):
