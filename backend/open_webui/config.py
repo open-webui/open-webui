@@ -1577,7 +1577,8 @@ WHISPER_MULTILINGUAL = os.getenv('WHISPER_MULTILINGUAL', 'False').lower() == 'tr
 
 WHISPER_LANGUAGE = os.getenv('WHISPER_LANGUAGE', '').lower() or None
 
-# Add Deepgram configuration
+# Deepgram configuration
+DEEPGRAM_API_URL = os.getenv('DEEPGRAM_API_URL', 'https://api.deepgram.com/v1/listen')
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY', '')
 
 # ElevenLabs configuration
@@ -3201,6 +3202,7 @@ DEFAULT_CONFIG = {
     'images.edit.comfyui.workflow': IMAGES_EDIT_COMFYUI_WORKFLOW,
     'images.edit.comfyui.nodes': IMAGES_EDIT_COMFYUI_WORKFLOW_NODES,
     'audio.stt.whisper_model': WHISPER_MODEL,
+    'audio.stt.deepgram.api_url': DEEPGRAM_API_URL,
     'audio.stt.deepgram.api_key': DEEPGRAM_API_KEY,
     'audio.stt.openai.api_base_url': AUDIO_STT_OPENAI_API_BASE_URL,
     'audio.stt.openai.api_key': AUDIO_STT_OPENAI_API_KEY,

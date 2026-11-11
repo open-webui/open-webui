@@ -79,6 +79,7 @@
 	let STT_AZURE_LOCALES = '';
 	let STT_AZURE_BASE_URL = '';
 	let STT_AZURE_MAX_SPEAKERS = '';
+	let STT_DEEPGRAM_API_URL = '';
 	let STT_DEEPGRAM_API_KEY = '';
 	let STT_MISTRAL_API_KEY = '';
 	let STT_MISTRAL_API_BASE_URL = '';
@@ -205,6 +206,7 @@
 				MODEL: STT_MODEL,
 				SUPPORTED_CONTENT_TYPES: STT_SUPPORTED_CONTENT_TYPES.split(','),
 				WHISPER_MODEL: STT_WHISPER_MODEL,
+				DEEPGRAM_API_URL: STT_DEEPGRAM_API_URL,
 				DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
 				AZURE_API_KEY: STT_AZURE_API_KEY,
 				AZURE_REGION: STT_AZURE_REGION,
@@ -274,6 +276,7 @@
 			STT_AZURE_LOCALES = res.stt.AZURE_LOCALES;
 			STT_AZURE_BASE_URL = res.stt.AZURE_BASE_URL;
 			STT_AZURE_MAX_SPEAKERS = res.stt.AZURE_MAX_SPEAKERS;
+			STT_DEEPGRAM_API_URL = res.stt.DEEPGRAM_API_URL;
 			STT_DEEPGRAM_API_KEY = res.stt.DEEPGRAM_API_KEY;
 			STT_MISTRAL_API_KEY = res.stt.MISTRAL_API_KEY;
 			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
@@ -507,6 +510,21 @@
 					</datalist>
 				</AdminSettingField>
 			{:else if STT_ENGINE === 'deepgram'}
+				<AdminSettingField
+					label={$i18n.t('settings.admin.audio.sttDeepgramApiUrl.label')}
+					description={$i18n.t('settings.admin.audio.sttDeepgramApiUrl.description')}
+					forId="stt-deepgram-api-url"
+				>
+					<input
+						id="stt-deepgram-api-url"
+						type="url"
+						class={inputClass}
+						placeholder="https://api.deepgram.com/v1/listen"
+						bind:value={STT_DEEPGRAM_API_URL}
+						required
+					/>
+				</AdminSettingField>
+
 				<AdminSettingField label={$i18n.t('settings.admin.audio.sttDeepgramApiKey.label')}>
 					<SensitiveInput
 						variant="settings"

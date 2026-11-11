@@ -2815,6 +2815,8 @@
 	"settings.admin.audio.sttAzureBaseUrl.label": "Endpoint URL",
 	"settings.admin.audio.sttAzureRegion.label": "Azure Region",
 	"settings.admin.audio.sttDeepgramApiKey.label": "API Key",
+	"settings.admin.audio.sttDeepgramApiUrl.description": "Full transcription endpoint URL.",
+	"settings.admin.audio.sttDeepgramApiUrl.label": "API URL",
 	"settings.admin.audio.sttMistralApiBaseUrl.label": "API Base URL",
 	"settings.admin.audio.sttMistralApiKey.label": "API Key",
 	"settings.admin.audio.sttModel.description": "Leave model field empty to use the default model.",
