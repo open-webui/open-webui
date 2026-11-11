@@ -5758,7 +5758,7 @@
 					{/if}
 					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
-						{#if ($settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
+						{#if (!side && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id={messagesContainerId}
@@ -5915,7 +5915,20 @@
 							{/if}
 						{:else if embedded}
 							<div class="flex h-full min-h-0 flex-col justify-end">
-								{#if suggestedPrompts.length > 0}
+								{#if side}
+									<div class="flex flex-1 items-center justify-center px-6">
+										<div class="max-w-56 text-center">
+											<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
+												{$temporaryChatEnabled ? $i18n.t('Temporary chat') : $i18n.t('New Chat')}
+											</p>
+											<p class="mt-1.5 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
+												{$temporaryChatEnabled
+													? $i18n.t('Messages disappear when you close this tab.')
+													: $i18n.t('Messages are saved to your chats.')}
+											</p>
+										</div>
+									</div>
+								{:else if suggestedPrompts.length > 0}
 									<div class="flex flex-1 items-end px-5 pb-8">
 										<div class="w-full">
 											<div class="mb-2 text-[0.75rem] text-gray-300 dark:text-gray-700">
