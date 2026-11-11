@@ -129,8 +129,8 @@
 			creating = editing = false;
 			comment = '';
 			onChange();
+			await load();
 			if (selected && action !== 'create') await select(selected);
-			else await load();
 		} catch (reason) {
 			error = String(reason instanceof Error ? reason.message : reason);
 		} finally {
