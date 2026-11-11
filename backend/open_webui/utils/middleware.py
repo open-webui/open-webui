@@ -2774,7 +2774,15 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         # so system terminals work even when no other tools are selected)
         terminal_capability = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('terminal', True)
         terminal_connection_ids = {connection.get('id') for connection in await get_terminal_connections(user)}
-        if terminal_id and terminal_capability and terminal_id in terminal_connection_ids:
+        # A collaborator may use the owner's pick, which a chat scope runs on the owner's access
+        uses_owners_template = bool(
+            chat
+            and chat.user_id != user.id
+            and terminal_id
+            and terminal_id.startswith('template:')
+            and chat.chat.get('terminal_id') == terminal_id
+        )
+        if terminal_id and terminal_capability and (terminal_id in terminal_connection_ids or uses_owners_template):
             try:
                 terminal_result = await get_terminal_tools(
                     request,
