@@ -155,7 +155,7 @@
 		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
-			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
+			($settings as any)?.terminalServers ?? [],
 			localStorage.token,
 			{ chatId: $activeChatId || null, modelId: modelId }
 		);

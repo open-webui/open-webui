@@ -1,6 +1,6 @@
 import { get, type Writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
-import { settings, terminalServers } from '$lib/stores';
+import { selectedTerminalId as _selectedTerminalId, settings, terminalServers } from '$lib/stores';
 import { getToolServersData } from '$lib/apis';
 import { updateChatById } from '$lib/apis/chats';
 import { isSavedChatId } from '$lib/utils/chatId';
@@ -53,6 +53,9 @@ export const selectTerminal = (
 		updateChatById(localStorage.token, chatId!, { terminal_id: id, working_directory: '' }).catch(
 			(error) => toast.error(String(error))
 		);
+
+	// A side chat's pick must not switch the main chat's personal terminal.
+	if (selectedTerminalId !== _selectedTerminalId) return;
 
 	// Direct terminals live in settings, outside the Settings type; only the selected one stays enabled.
 	const current = get(settings) as Settings & { terminalServers?: DirectTerminal[] };

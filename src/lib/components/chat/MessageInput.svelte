@@ -1062,7 +1062,7 @@
 
 		return (
 			(settingsValue?.terminalServers ?? []).find(
-				(t: any) => t.url === selectedId && t.enabled && t.config?.chat_uploads === 'filesystem'
+				(t: any) => t.url === selectedId && t.config?.chat_uploads === 'filesystem'
 			) ?? null
 		);
 	};

@@ -22,7 +22,7 @@
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { getModels } from '$lib/apis';
+	import { getModels, getToolServersData } from '$lib/apis';
 	import equal from 'fast-deep-equal';
 
 	import {
@@ -1155,6 +1155,33 @@
 	) {
 		selectedTerminalId.set(null);
 	}
+
+	// The page loads only the switched-on personal terminal; this chat may have picked another.
+	const loadDirectTerminal = async (terminalId: string | null, servers: any[] | null) => {
+		const terminal =
+			$config?.features?.enable_direct_integrations &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+				? (($settings as any)?.terminalServers ?? []).find((server) => server.url === terminalId)
+				: null;
+		const isLoaded = (list: any[] | null) =>
+			(list ?? []).some((server) => !server.id && server.url === terminalId);
+		if (!terminal || servers === null || isLoaded(servers)) return;
+		const [data] = await getToolServersData([
+			{
+				url: terminal.url,
+				auth_type: terminal.auth_type ?? 'bearer',
+				key: terminal.key ?? '',
+				path: terminal.path ?? '/openapi.json',
+				config: { enable: true }
+			}
+		]);
+		if (!data || data.error || isLoaded($terminalServers)) return;
+		terminalServers.update((list) => [
+			{ ...data, key: terminal.key ?? '', config: terminal.config ?? data?.config ?? {} },
+			...(list ?? [])
+		]);
+	};
+	$: loadDirectTerminal($selectedTerminalId, $terminalServers);
 
 	let lastTerminalSkillSelector: string | null = null;
 
@@ -4670,6 +4697,7 @@
 			(file: any) => file.type === 'filesystem'
 		);
 		const requestTerminalId = filesystemAttachment?.terminal_id ?? $selectedTerminalId;
+		await loadDirectTerminal(requestTerminalId, $terminalServers);
 		const requestTerminalCwd =
 			terminalContext && terminalContext.terminalId === requestTerminalId
 				? terminalContext.currentDirectory
@@ -4854,10 +4882,7 @@
 							// Direct terminal servers — always included when enabled (not routed through selectedToolIds)
 							...(terminalEnabled
 								? ($terminalServers ?? [])
-										.filter(
-											(server) =>
-												!server.id && (!filesystemAttachment || server.url === requestTerminalId)
-										)
+										.filter((server) => !server.id && server.url === requestTerminalId)
 										.map((server) => ({ ...server, is_terminal: true }))
 								: [])
 						]

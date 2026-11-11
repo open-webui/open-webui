@@ -100,7 +100,7 @@
 		return resolveTerminalTarget(
 			selector,
 			$terminalServers ?? [],
-			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
+			($settings as any)?.terminalServers ?? [],
 			localStorage.token,
 			{ chatId: chatId, modelId: item?.model_id ?? modelId }
 		);
