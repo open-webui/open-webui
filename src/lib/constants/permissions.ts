@@ -72,6 +72,7 @@ export const DEFAULT_PERMISSIONS = {
 		image_generation: true,
 		code_interpreter: true,
 		memories: true,
+		subagents: true,
 		automations: false,
 		calendar: true,
 		webhooks: false
