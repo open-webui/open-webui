@@ -265,6 +265,12 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
+	// Message shortcuts act on the side or note chat in use, otherwise on the main chat.
+	const focusedChat = () =>
+		document.activeElement?.closest('[id^="note-chat-container-"]') ??
+		document.getElementById('messages-container') ??
+		document;
+
 	const navigateChat = async (direction: -1 | 1) => {
 		if (!$chats?.length) return;
 
@@ -330,11 +336,11 @@
 				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+					[...focusedChat().getElementsByClassName('copy-code-button')]?.at(-1)?.click();
 				} else if (shortcut === Shortcut.COPY_LAST_RESPONSE) {
 					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+					[...focusedChat().getElementsByClassName('copy-response-button')]?.at(-1)?.click();
 				} else if (shortcut === Shortcut.TOGGLE_SIDEBAR) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
@@ -387,7 +393,7 @@
 					event.preventDefault();
 					document.getElementById('generate-message-pair-button')?.click();
 				} else if (shortcut === Shortcut.ALLOW_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-allow-button')]
+					const button = [...focusedChat().getElementsByClassName('tool-call-allow-button')]
 						.reverse()
 						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
 					if (button) {
@@ -396,7 +402,7 @@
 						button.click();
 					}
 				} else if (shortcut === Shortcut.DENY_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-deny-button')]
+					const button = [...focusedChat().getElementsByClassName('tool-call-deny-button')]
 						.reverse()
 						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
 					if (button) {
