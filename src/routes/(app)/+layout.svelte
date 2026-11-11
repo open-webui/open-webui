@@ -174,11 +174,11 @@
 							config: enabledTerminals[i]?.config ?? data?.config ?? {}
 						}))
 				: [];
+		await refreshTerminalServers();
 		terminalServers.update((servers) => [
 			...directTerminals,
 			...(servers ?? []).filter((server) => server.id)
 		]);
-		await refreshTerminalServers();
 	};
 
 	const setBanners = async () => {
