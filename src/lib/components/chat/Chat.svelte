@@ -575,12 +575,19 @@
 	export let files: any[] = [];
 	let terminalContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
-		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
+		if (!($settings?.insertFollowUpPrompt ?? false) && selectedModels.includes(''))
+			throw new Error($i18n.t('Model not selected'));
 		const attachments = [structuredClone(file)];
 		if (fullWidthTabs) {
 			terminalTabs?.focusMainChat();
 			await tick();
 			if (!$showCallOverlay) messageInput?.focus({ preventScroll: true });
+		}
+		if ($settings?.insertFollowUpPrompt ?? false) {
+			if (!files.find((f) => f.type === 'filesystem' && (f.path ?? f.url ?? f.id) === file.path))
+				files = [...files, ...attachments];
+			messageInput?.setText(instruction);
+			return;
 		}
 		const last = history.currentId ? history.messages[history.currentId] : null;
 		if (last?.role === 'assistant' && !last.done) {
