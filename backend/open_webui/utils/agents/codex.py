@@ -80,7 +80,7 @@ async def run(transport, output, prompt, images, options):
         result = await client.request('thread/resume' if options.get('resume') else 'thread/start', params)
         thread_id = result['thread']['id']
         output.state['session_id'] = thread_id
-        await output.flush(force=True)
+        await output.flush(force=True, persist=True)
         turn_options = {}
         chat_params = options.get('params') or {}
         chat_params = {**chat_params, **(chat_params.get('custom_params') or {})}

@@ -6,9 +6,14 @@ import json
 import time
 from uuid import uuid4
 
+from redis.asyncio import Redis
+
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
+from open_webui.tasks import clear_response_stream, save_response_stream
 from open_webui.utils.auth import create_token
+from open_webui.utils.redis import get_redis_client
 from open_webui.utils.tool_permissions import requires_tool_approval
 
 
@@ -26,19 +31,16 @@ class Output:
         self.emitter = None
         self.last_flush = 0
         self.last_save = 0
-        self.save_task = None
+        self.redis: Redis | None = get_redis_client(async_mode=True)
         self.lock = asyncio.Lock()
 
     async def flush(self, done=False, force=False, persist=False):
-        if self.save_task and self.save_task.done():
-            self.save_task.result()
         if not force and not done and time.monotonic() - self.last_flush < 0.05:
             return
         if persist or done:
             # Approval cards must exist in the DB before users can answer them.
-            if self.save_task:
-                await asyncio.shield(self.save_task)
             await self.save(done=done)
+            await clear_response_stream(self.redis, self.metadata.get('task_id'))
         if self.emitter is None:
             self.emitter = await get_event_emitter(self.metadata, update_db=False)
         await self.emitter(
@@ -54,8 +56,14 @@ class Output:
         )
         self.last_flush = time.monotonic()
         if not (persist or done) and time.monotonic() - self.last_save >= 1:
-            if self.save_task is None or self.save_task.done():
-                self.save_task = asyncio.create_task(self.save())
+            chat_id, message_id = self.metadata['chat_id'], self.metadata['message_id']
+            if not await ChatMessages.get_message_by_id(f'{chat_id}-{message_id}'):
+                raise ValueError('Agent chat message no longer exists')
+            await save_response_stream(self.redis, self.metadata.get('task_id'), chat_id, message_id, self.items)
+            await ChatMessages.upsert_message(
+                message_id, chat_id, self.user.id, {'content': self.content, 'output': self.items}
+            )
+            self.last_save = time.monotonic()
 
     async def save(self, done=False):
         async with self.lock:
@@ -156,6 +164,7 @@ class Output:
         ):
             resolution = {'action': 'approve'}
         self.items.append(item)
+        pending = resolution is None
         if resolution is None:
             await self.flush(force=True, persist=True)
         deadline = time.monotonic() + timeout if timeout is not None else None
@@ -184,6 +193,6 @@ class Output:
                         'status': 'completed',
                     }
                 )
-                await self.flush(force=True, persist=True)
+                await self.flush(force=True, persist=pending)
                 return resolution
             await asyncio.sleep(0.5)

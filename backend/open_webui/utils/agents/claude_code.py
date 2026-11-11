@@ -42,7 +42,7 @@ async def run(transport, output, prompt, images, options):
             kind = message.get('type')
             if kind == 'system' and message.get('subtype') == 'init':
                 output.state['session_id'] = message['session_id']
-                await output.flush(force=True)
+                await output.flush(force=True, persist=True)
             elif kind == 'control_request':
                 request = message['request']
                 if request.get('subtype') != 'can_use_tool':
