@@ -73,7 +73,12 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import { filesystemFile, getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import {
+		filesystemFile,
+		getCwd,
+		templatesApi,
+		uploadNewFileToTerminal
+	} from '$lib/apis/terminal';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -930,10 +935,20 @@
 	$: hasDirectToolServerAccess =
 		$config?.features?.enable_direct_integrations &&
 		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
+	let canCreateTerminal: boolean = false;
+	$: if (
+		terminalSelectionEnabled &&
+		$config?.features?.enable_tool_servers &&
+		!($terminalServers ?? []).some((t) => t.id)
+	)
+		templatesApi('/connections')
+			.then((rows) => (canCreateTerminal = rows.length > 0))
+			.catch(() => (canCreateTerminal = false));
 	$: showTerminalSelector =
 		terminalSelectionEnabled &&
 		$config?.features?.enable_tool_servers &&
 		(($terminalServers ?? []).some((t) => t.id) ||
+			canCreateTerminal ||
 			(hasDirectToolServerAccess &&
 				(($terminalServers ?? []).some((t) => !t.id) ||
 					($settings?.terminalServers ?? []).some((s) => s.url))));
