@@ -881,6 +881,7 @@
 			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
+					saveTarget = { ...terminal, path: openedFile.path };
 					publishFile();
 				}
 				// Keep the draft's browsed path; chat submission initializes the session cwd.
