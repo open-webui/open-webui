@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse
 from open_webui.config import (
     CACHE_DIR,
     DEFAULT_REALTIME_TTS_PROMPT_TEMPLATE,
+    DEEPGRAM_API_URL,
     ELEVENLABS_API_BASE_URL,
     WHISPER_COMPUTE_TYPE,
     WHISPER_LANGUAGE,
@@ -121,6 +122,7 @@ STT_CONFIG_KEYS = {
     'SUPPORTED_CONTENT_TYPES': 'audio.stt.supported_content_types',
     'ALLOWED_EXTENSIONS': 'audio.stt.allowed_extensions',
     'WHISPER_MODEL': 'audio.stt.whisper_model',
+    'DEEPGRAM_API_URL': 'audio.stt.deepgram.api_url',
     'DEEPGRAM_API_KEY': 'audio.stt.deepgram.api_key',
     'AZURE_API_KEY': 'audio.stt.azure.api_key',
     'AZURE_REGION': 'audio.stt.azure.region',
@@ -283,6 +285,7 @@ class STTConfigForm(BaseModel):
     SUPPORTED_CONTENT_TYPES: list[str] = []
     ALLOWED_EXTENSIONS: list[str] = []
     WHISPER_MODEL: str
+    DEEPGRAM_API_URL: str = DEEPGRAM_API_URL
     DEEPGRAM_API_KEY: str
     AZURE_API_KEY: str
     AZURE_REGION: str
@@ -980,6 +983,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
     async with aiofiles.open(file_path, 'rb') as f:
         audio_bytes = await f.read()
 
+    api_url = await Config.get('audio.stt.deepgram.api_url')
     api_key = await Config.get('audio.stt.deepgram.api_key')
     stt_model = await Config.get('audio.stt.model')
 
@@ -994,7 +998,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
                 query['language'] = lang
 
             r = await session.post(
-                'https://api.deepgram.com/v1/listen',
+                api_url,
                 headers={'Authorization': f'Token {api_key}', 'Content-Type': content_type},
                 params=query,
                 data=audio_bytes,
