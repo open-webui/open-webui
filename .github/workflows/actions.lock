@@ -22,7 +22,6 @@ workflows:
         - 'actions/setup-node@v5.0.0'
     '.github/workflows/issue-label.yaml':
         - 'actions/github-script@v7.1.0'
-    '.github/workflows/regression.yaml': []
     '.github/workflows/release-pypi.yml':
         - 'actions/checkout@v5.1.0'
         - 'actions/setup-node@v5.0.0'
