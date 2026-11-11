@@ -5,6 +5,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import ToolOutputFile from './ToolOutputFile.svelte';
+	import VisualizationToolCall from './VisualizationToolCall.svelte';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 	import { settings } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -132,6 +133,20 @@
 				{displayItem.text}
 			</div>
 		{/if}
+	{:else if displayItem.type === 'visualization'}
+		<VisualizationToolCall
+			call={displayItem.call}
+			result={displayItem.result}
+			{chatId}
+			{messageId}
+			messageDone={done}
+			{allowEmbeds}
+			{compactPreview}
+			resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
+			resolving={resolvingCallId === (displayItem.call.call_id ?? displayItem.call.id)}
+			onResolve={(approved) =>
+				resolveToolCall(displayItem.call.call_id ?? displayItem.call.id ?? '', approved)}
+		/>
 	{:else if displayItem.type === 'image'}
 		<Image src={displayItem.src} alt={$i18n.t('Generated Image')} />
 	{:else if displayItem.type === 'detail_group'}

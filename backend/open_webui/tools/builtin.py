@@ -63,6 +63,7 @@ from open_webui.routers.memories import (
 )
 from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.socket.main import close_changed_note_documents, sio
+from open_webui.tools.visualizations import render_visualization  # noqa: F401 — re-exported
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.chat_id import is_saved_chat_id

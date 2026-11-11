@@ -79,6 +79,7 @@ from open_webui.tools.builtin import (
     read_memory_path,
     replace_memory_content,
     replace_note_content,
+    render_visualization,
     search_calendar_events,
     search_channel_messages,
     search_channels,
@@ -719,6 +720,9 @@ async def get_builtin_tools(
             'spec': spec,
             'type': 'builtin',
         }
+
+    if is_builtin_tool_enabled('visualizations', False):
+        builtin_functions.append(render_visualization)
 
     # Time utilities - available for date calculations
     if is_builtin_tool_enabled('time'):

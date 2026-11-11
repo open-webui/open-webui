@@ -166,7 +166,7 @@ from open_webui.utils.tool_calling import (
     final_answer_payload,
     prepare_tool_call,
     recover_tool_calls,
-    set_tool_call_visibility,
+    set_tool_call_metadata,
     split_tool_calls,
     tool_repetition_error,
 )
@@ -4704,7 +4704,7 @@ async def streaming_chat_response_handler(response, ctx):
 
             def full_output():
                 for item in output:
-                    set_tool_call_visibility(item, metadata.get('tools', {}))
+                    set_tool_call_metadata(item, metadata.get('tools', {}))
                 if is_message_continuation():
                     return [
                         *prior_output[:-1],
@@ -4924,7 +4924,7 @@ async def streaming_chat_response_handler(response, ctx):
                             response_data.get('item') or {},
                             *((response_data.get('response') or {}).get('output') or []),
                         ]:
-                            set_tool_call_visibility(item, metadata.get('tools', {}))
+                            set_tool_call_metadata(item, metadata.get('tools', {}))
                         if response_data.get('type', '').endswith('.delta'):
                             await queue_pending_delta_data(
                                 response_data,
@@ -5258,6 +5258,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                 if item.get('type') == 'function_call'
                                             }
 
+                                            tool_name_changed = False
                                             for tc in response_tool_calls:
                                                 call_id = tc.get('id') or output_id('fc')
                                                 tc['id'] = call_id
@@ -5266,6 +5267,7 @@ async def streaming_chat_response_handler(response, ctx):
                                                     output_index, item = output_by_call_id[call_id]
                                                     if func.get('name', item.get('name', '')) != item.get('name'):
                                                         stream_size = 0
+                                                        tool_name_changed = True
                                                     item['name'] = func.get('name', item.get('name', ''))
                                                     item['arguments'] = func.get('arguments', item.get('arguments', ''))
                                                     item['status'] = 'in_progress'
@@ -5316,6 +5318,17 @@ async def streaming_chat_response_handler(response, ctx):
                                                             'delta': delta_arguments,
                                                         }
                                                     )
+
+                                            if tool_name_changed:
+                                                # A late tool name can select a native renderer. Flush deltas
+                                                # before the full snapshot so arguments are not appended twice.
+                                                await flush_pending_delta_data()
+                                                await event_emitter(
+                                                    {
+                                                        'type': 'chat:completion',
+                                                        'data': {'output': full_output(), 'flush': True},
+                                                    }
+                                                )
 
                                             data = None
                                             delta_type = 'tool_call'
