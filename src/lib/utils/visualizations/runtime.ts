@@ -138,6 +138,8 @@ export function visualizationRuntime(safeCut: (source: string) => number) {
 		).join('');
 		const fragment = win.DOMPurify.sanitize(head + doc.body.innerHTML, {
 			RETURN_DOM_FRAGMENT: true,
+			// This opaque frame runs authored scripts; keep IDs such as "reset" usable by them.
+			SANITIZE_DOM: false,
 			FORCE_BODY: true, // Retain leading styles and script placeholders in the fragment.
 			USE_PROFILES: { html: true, svg: true, svgFilters: true },
 			ADD_TAGS: ['style'],

@@ -1,3 +1,4 @@
+import { javascriptLanguage } from '@codemirror/lang-javascript';
 import { base } from '$app/paths';
 import { injectCsp } from '$lib/utils/csp';
 import { findSafeCut } from './safeCut';
@@ -37,4 +38,60 @@ export function getVisualizationVendor(name: 'purifier' | 'chartjs') {
 		sources.set(file, promise);
 	}
 	return sources.get(file)!;
+}
+
+export function repairVisualizationScript(source: string) {
+	// Models sometimes put Markdown fences inside a script element.
+	let script = source.replace(/^\s*```(?:javascript|js)?[ \t]*\r?\n([\s\S]*?)\r?\n```\s*$/i, '$1');
+	let tree = javascriptLanguage.parser.parse(script);
+	let fixedCssValue = false;
+	tree.iterate({
+		enter(node) {
+			if (!node.type.isError || node.node.parent?.name !== 'Property' || script[node.from] !== ')')
+				return;
+			const value = tree.resolveInner(node.from, -1);
+			if (
+				value.name !== 'String' ||
+				!/^(['"])var\(--[\w-]+\1$/.test(script.slice(value.from, value.to))
+			)
+				return;
+			// color: 'var(--muted') -> color: 'var(--muted)'
+			script =
+				script.slice(0, node.from - 1) + ')' + script[node.from - 1] + script.slice(node.from + 1);
+			fixedCssValue = true;
+		}
+	});
+	if (fixedCssValue) tree = javascriptLanguage.parser.parse(script);
+	let firstError = Infinity;
+	const braces: number[] = [];
+	tree.iterate({
+		enter(node) {
+			if (node.type.isError) firstError = Math.min(firstError, node.from);
+			if (node.name === '}') braces.push(node.from);
+		}
+	});
+	if (firstError === Infinity) return script;
+
+	// Try one stray closing brace near the first error; never touch strings or comments.
+	for (const position of braces
+		.filter((position) => position <= firstError)
+		.slice(-8)
+		.reverse()) {
+		const candidate = script.slice(0, position) + script.slice(position + 1);
+		let valid = true;
+		javascriptLanguage.parser.parse(candidate).iterate({
+			enter(node) {
+				if (node.type.isError) valid = false;
+			}
+		});
+		if (valid) return candidate;
+	}
+	return script;
+}
+
+export function repairVisualizationHtml(html: string) {
+	return html.replace(
+		/(<script\b(?:[^>"']|"[^"]*"|'[^']*')*>)([\s\S]*?)(<\/script\s*>)/gi,
+		(_, opening, script, closing) => opening + repairVisualizationScript(script) + closing
+	);
 }

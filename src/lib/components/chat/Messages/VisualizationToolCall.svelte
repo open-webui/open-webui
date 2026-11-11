@@ -10,7 +10,11 @@
 		parseVisualizationArguments,
 		type VisualizationArguments
 	} from '$lib/utils/visualizations/arguments';
-	import { getVisualizationVendor, visualizationDocument } from '$lib/utils/visualizations/frame';
+	import {
+		getVisualizationVendor,
+		visualizationDocument,
+		repairVisualizationHtml
+	} from '$lib/utils/visualizations/frame';
 
 	export let call: OutputItem;
 	export let result: OutputItem | undefined = undefined;
@@ -130,7 +134,7 @@
 			if (generation !== current || submittedKey !== key) return;
 			channel.postMessage({
 				type: 'finalize',
-				html: args.html,
+				html: repairVisualizationHtml(args.html),
 				chartSource,
 				executeScripts: execute
 			});
