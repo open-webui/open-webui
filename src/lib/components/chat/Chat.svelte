@@ -5636,9 +5636,11 @@
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
 			>
 				{#if loading}
-					<div class="flex items-center justify-center h-full w-full">
-						<Spinner className="size-5" />
-					</div>
+					{#if !fullWidthTabs}
+						<div class="flex items-center justify-center h-full w-full">
+							<Spinner className="size-5" />
+						</div>
+					{/if}
 				{:else}
 					<FilesOverlay show={dragged} />
 					{#if embedded && !side}
