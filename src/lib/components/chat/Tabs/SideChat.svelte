@@ -12,6 +12,7 @@
 	export let initialView: any = null;
 	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
+	export let streaming = false;
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
 	export let parentFolderId: string | null = null;
@@ -135,6 +136,7 @@
 		embeddedDraft={restored || !chatId ? embeddedDraft : null}
 		initialPrompt={restored ? '' : initialPrompt}
 		bind:prompt={draft}
+		bind:streaming
 		bind:files
 		onCreateEmbeddedChat={createChat}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}

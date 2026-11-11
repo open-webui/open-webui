@@ -556,6 +556,14 @@
 
 	let taskIds = null;
 	let liveStatus = '';
+	export let streaming = false;
+
+	$: streaming =
+		!loading &&
+		(generating ||
+			Object.values(history.messages).some(
+				(message) => message.role === 'assistant' && message.done === false
+			));
 
 	$: if (loading || !history.currentId) {
 		liveStatus = '';
@@ -5197,6 +5205,9 @@
 			}
 		} catch (e) {
 			console.error(e);
+		} finally {
+			generating = false;
+			generationController = null;
 		}
 	};
 
@@ -6073,6 +6084,7 @@
 				<Tabs
 					{mainChatHref}
 					chatLoading={loading}
+					chatStreaming={streaming}
 					bind:fullWidth={fullWidthTabs}
 					bind:mainChatActive
 					bind:mainChatStyle

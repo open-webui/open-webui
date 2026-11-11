@@ -120,6 +120,7 @@
 
 	export let chatId: string | null = null;
 	export let chatLoading = false;
+	export let chatStreaming = false;
 	export let folderId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 	export let chatUser = null;
@@ -174,6 +175,7 @@
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
 	let sideViews: Record<string, SideChat> = {};
+	let sideChatStreaming: Record<string, boolean> = {};
 	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
 	let viewReady = false;
 	let viewError = '';
@@ -214,6 +216,7 @@
 		if (preserveChatView) return;
 		viewReady = false;
 		tabs = emptyTabs();
+		sideChatStreaming = {};
 		++switchVersion;
 		tabsChatId = undefined;
 	}
@@ -260,6 +263,7 @@
 		viewReady = false;
 		tabs = emptyTabs();
 		viewError = '';
+		sideChatStreaming = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
 		viewEntry = owner;
@@ -319,6 +323,7 @@
 		viewReady = false;
 		viewEntry = null;
 		tabs = emptyTabs();
+		sideChatStreaming = {};
 		tabsChatId = undefined;
 		clearChatViews();
 	}
@@ -994,6 +999,7 @@
 				tabs = owner.state.panels;
 				delete dirtyFiles[id];
 				delete fileContexts[id];
+				delete sideChatStreaming[id];
 				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
 					showTabs.set(false);
 				await tick();
@@ -1849,6 +1855,7 @@
 					<SideChat
 						standalone={!!tab.href}
 						bind:this={sideViews[tab.id]}
+						bind:streaming={sideChatStreaming[tab.id]}
 						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
 						onChatUpdate={(chat) =>
@@ -2124,7 +2131,10 @@
 							aria-label={tab.kind === 'chat' ? title : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 						>
-							{#if tab.kind === 'file'}
+							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
+								<Spinner className="size-3.5" />
+								<span class="sr-only">{$i18n.t('Generating...')}</span>
+							{:else if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
