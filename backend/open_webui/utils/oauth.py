@@ -165,6 +165,9 @@ async def get_system_oauth_token(request, user):
 
 OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
+# Some authorization servers send header values over aiohttp's 8190-byte default (#34078)
+OAUTH_MAX_FIELD_SIZE = 64 * 1024
+
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
     'ENABLE_OAUTH': ('oauth.enable', ENABLE_OAUTH),
@@ -438,7 +441,7 @@ async def get_protected_resource_metadata(server_url: str) -> ProtectedResourceM
     resource = None
     scopes = []
     try:
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session:
             async with session.post(
                 server_url,
                 json={'jsonrpc': '2.0', 'method': 'initialize', 'params': {}, 'id': 1},
@@ -538,7 +541,7 @@ async def get_discovery_urls(server_url) -> list[str]:
 async def _get_oauth_server_metadata(
     server_url: str, resource_metadata: ProtectedResourceMetadata
 ) -> tuple[OAuthMetadata, str | None]:
-    async with aiohttp.ClientSession(trust_env=True) as session:
+    async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session:
         for url in resource_metadata.get_discovery_urls(server_url):
             async with session.get(url, ssl=AIOHTTP_CLIENT_SESSION_SSL) as response:
                 if response.status != 200:
@@ -626,7 +629,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
         )
 
         # Perform dynamic client registration and return client info
-        async with aiohttp.ClientSession(trust_env=True) as session:
+        async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session:
             async with session.post(
                 registration_url, json=registration_data, ssl=AIOHTTP_CLIENT_SESSION_SSL
             ) as oauth_client_registration_response:
@@ -1005,7 +1008,7 @@ class OAuthClientManager:
             return True
 
         try:
-            async with aiohttp.ClientSession(trust_env=True) as session:
+            async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session:
                 async with session.get(
                     authorization_url,
                     allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
@@ -1214,7 +1217,7 @@ class OAuthClientManager:
                 refresh_data['scope'] = client.client_kwargs['scope']
 
             # Make refresh request
-            async with aiohttp.ClientSession(trust_env=True) as session_http:
+            async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session_http:
                 async with session_http.post(
                     token_endpoint,
                     data=refresh_data,

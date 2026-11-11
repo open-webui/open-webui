@@ -15,6 +15,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
+    OAUTH_MAX_FIELD_SIZE,
     OAuthClientInformationFull,
     apply_connection_oauth_options,
     decrypt_data,
@@ -439,6 +440,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                     async with aiohttp.ClientSession(
                         trust_env=True,
                         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                        max_field_size=OAUTH_MAX_FIELD_SIZE,
                     ) as session:
                         async with session.get(
                             discovery_url, ssl=AIOHTTP_CLIENT_SESSION_SSL
