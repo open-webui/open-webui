@@ -2391,12 +2391,6 @@ class ChatTable:
                     )
 
             elif dialect_name == 'postgresql':
-                # Safety filter: JSON field must not contain \u0000
-                stmt = stmt.filter(text("Chat.chat::text NOT LIKE '%\\\\u0000%'"))
-
-                # Safety filter: title must not contain actual null bytes
-                stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
-
                 if 'none' in tag_ids:
                     stmt = stmt.filter(
                         text("""

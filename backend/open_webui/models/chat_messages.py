@@ -9,6 +9,7 @@ from typing import Any, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from open_webui.internal.db import Base, get_async_db_context
+from open_webui.utils.misc import sanitize_data_for_db
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.session_records import has_pending_tool_approval, normalize_tool_output, recorded_timestamp
 from pydantic import BaseModel, ConfigDict
@@ -306,6 +307,7 @@ class ChatMessageTable:
         db: Optional[AsyncSession] = None,
     ) -> Optional[ChatMessageModel]:
         """Insert or update a chat message."""
+        data = sanitize_data_for_db(data)
         async with nullcontext(db) if db is not None else get_async_db_context() as session:
             now = int(time.time())
             # Use composite ID: {chat_id}-{message_id}
@@ -333,6 +335,7 @@ class ChatMessageTable:
 
         if not messages:
             return
+        messages = sanitize_data_for_db(messages)
         async with get_async_db_context(db) as db:
             insert = sqlite_insert if db.bind.dialect.name == 'sqlite' else pg_insert
             rows = [
