@@ -1089,6 +1089,15 @@ class ChatTable:
             if isinstance(message, dict)
         }
 
+        # A client's copy can be out of date: a second tab, a phone, a retried save. Above, its version of a message
+        # replaces the saved one wholesale, parentId included, which re-attaches an already saved message under
+        # another reply - the chat then shows, and sends, the older turn at the end. A saved message keeps the parent
+        # it already has; only a message the server has never seen takes its parent from the client.
+        for message_id, message in merged.items():
+            saved = existing.get(message_id)
+            if isinstance(saved, dict) and saved.get('parentId') != message.get('parentId'):
+                message['parentId'] = saved.get('parentId')
+
         for message_id, message in merged.items():
             parent_id = message.get('parentId')
             if parent_id in merged:
@@ -1099,6 +1108,18 @@ class ChatTable:
             current_id = (existing_history or {}).get('currentId')
             if current_id not in merged:
                 current_id = None
+        else:
+            # Same rule for the branch the chat opens on: an incoming currentId that is an ancestor of the saved one
+            # is an out-of-date client, and taking it would move the chat back a turn.
+            saved_current = (existing_history or {}).get('currentId')
+            seen = set()
+            walk = saved_current
+            while walk in merged and walk not in seen:
+                seen.add(walk)
+                walk = merged[walk].get('parentId')
+                if walk == current_id:
+                    current_id = saved_current
+                    break
 
         return {**(existing_history or {}), **(incoming_history or {}), 'messages': merged, 'currentId': current_id}
 
