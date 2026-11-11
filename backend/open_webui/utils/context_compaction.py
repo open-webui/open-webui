@@ -445,10 +445,20 @@ async def _generate_summary(
     compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
-            if message.get('tool_calls'):
+            # Saved replies keep their tool calls as output items.
+            tool_calls = message.get('tool_calls') or [
+                {
+                    'id': item.get('call_id'),
+                    'type': 'function',
+                    'function': {'name': item.get('name'), 'arguments': item.get('arguments')},
+                }
+                for item in message.get('output') or []
+                if item.get('type') == 'function_call'
+            ]
+            if tool_calls:
                 messages[idx] = {
                     **message,
-                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}',
+                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(tool_calls)}',
                 }
 
     async def render_prompt(template: str) -> str:
