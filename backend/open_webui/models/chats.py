@@ -883,6 +883,7 @@ class ChatTable:
                         ):
                             updated['history']['messages'][mid] = message
                     updated['history'] = self.merge_history(updated['history'], {})
+                    self._repair_chat_current_id(updated)
 
                 updated = self._clean_null_bytes(updated)
                 chat_item.chat = updated
