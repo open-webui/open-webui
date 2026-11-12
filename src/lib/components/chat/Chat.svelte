@@ -166,11 +166,12 @@
 	export let initialPage = '';
 	let mainChatHref = '/';
 	$: if (isTemporaryChatId($chatId)) {
-		// read once: the URL stays on the folder the chat was started in
+		// get() so folder changes while a new chat starts do not re-run this
 		const selectedFolderId = get(selectedFolder)?.id;
-		mainChatHref =
-			(selectedFolderId ? `/folders/${selectedFolderId}` : '/') + '?temporary-chat=true';
-	} else if ($chatId) mainChatHref = `/c/${$chatId}`;
+		mainChatHref = `${selectedFolderId ? `/folders/${selectedFolderId}` : '/'}?temporary-chat=true`;
+	} else if ($chatId) {
+		mainChatHref = `/c/${$chatId}`;
+	}
 	export let embedded = false;
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
