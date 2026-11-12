@@ -452,8 +452,8 @@ async def _generate_summary(
         for idx, message in enumerate(messages):
             tool_calls = message.get('tool_calls') or [
                 tool_call
-                for converted in convert_output_to_messages(message.get('output'))
-                for tool_call in converted.get('tool_calls') or []
+                for output_message in convert_output_to_messages(message.get('output'))
+                for tool_call in output_message.get('tool_calls') or []
             ]
             if tool_calls:
                 messages[idx] = {
