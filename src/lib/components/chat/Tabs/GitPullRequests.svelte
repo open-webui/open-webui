@@ -9,6 +9,7 @@
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
+	import { primaryButton, disabledButton, secondaryButton } from './gitPanel';
 	export let target: TerminalTarget;
 
 	export let directory: string;
@@ -71,13 +72,6 @@
 	let pendingAction = '';
 	let listGeneration = 0;
 	let generation = 0;
-
-	const primaryButton =
-		'bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-white/90';
-	const disabledButton =
-		'bg-gray-100 dark:bg-white/6 text-gray-400 dark:text-gray-600 cursor-default';
-	const secondaryButton =
-		'bg-gray-100 dark:bg-white/6 text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-white/10 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:hover:bg-gray-100 dark:disabled:hover:bg-white/6';
 
 	$: states = [
 		{ value: 'open', label: $i18n.t('Open') },

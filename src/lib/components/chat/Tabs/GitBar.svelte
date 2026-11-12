@@ -21,6 +21,8 @@
 	import Tooltip from '../../common/Tooltip.svelte';
 	import GitPullRequests from './GitPullRequests.svelte';
 	import GitListDivider from './GitListDivider.svelte';
+	import GitIssues from './GitIssues.svelte';
+	import { countLabel, relativeTime } from './gitPanel';
 
 	export let target: TerminalTarget | null = null;
 	export let directory = '.';
@@ -35,9 +37,11 @@
 	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
-	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
-	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
+	let view: 'changes' | 'history' | 'pull requests' | 'issues' = initialView?.view ?? 'changes';
+	let prCapabilities: { available: boolean; default_branch?: string; issues?: boolean } | null =
+		null;
 	let openPullRequests: number | null = null;
+	let openIssues: number | null = null;
 	let prRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
@@ -169,16 +173,6 @@
 		syncComplete = false;
 	};
 
-	const relativeTime = (date: string) => {
-		const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
-		return seconds < 60
-			? 'now'
-			: seconds < 3600
-				? `${Math.floor(seconds / 60)}m`
-				: seconds < 86400
-					? `${Math.floor(seconds / 3600)}h`
-					: `${Math.floor(seconds / 86400)}d`;
-	};
 	const request = <T,>(
 		operation: string,
 		params: Record<string, string> = {},
@@ -196,15 +190,15 @@
 				status = next.is_repo ? next : null;
 				if (next.root && next.root !== prRoot) {
 					prRoot = next.root;
-					void request<{ available: boolean; default_branch?: string }>('pr/capabilities')
+					void request<NonNullable<typeof prCapabilities>>('pr/capabilities')
 						.then((data) => {
 							if (current !== generation) return;
 							prCapabilities = data;
-							openPullRequests = null;
-							if (data.available) void loadPullRequestCount();
+							openPullRequests = openIssues = null;
+							if (data.available) void loadOpenCounts();
 						})
 						.catch(() => {
-							if (current === generation) prCapabilities = openPullRequests = null;
+							if (current === generation) prCapabilities = openPullRequests = openIssues = null;
 						});
 				}
 				if (
@@ -228,14 +222,22 @@
 		pending = task;
 		return task;
 	};
-	const loadPullRequestCount = async () => {
-		const current = generation;
+	const openCount = async (operation: string) => {
 		try {
-			const data = await request<{ items: unknown[] }>('pr/list', { state: 'open' });
-			if (current === generation) openPullRequests = data.items.length;
+			return (await request<{ items: unknown[] }>(operation, { state: 'open' })).items.length;
 		} catch {
-			if (current === generation) openPullRequests = null;
+			return null;
 		}
+	};
+	const loadOpenCounts = async () => {
+		const current = generation;
+		const [pullRequests, issues] = await Promise.all([
+			openCount('pr/list'),
+			prCapabilities?.issues ? openCount('issue/list') : null
+		]);
+		if (current !== generation) return;
+		openPullRequests = pullRequests;
+		openIssues = issues;
 	};
 	const resetSelection = () => {
 		++diffGeneration;
@@ -271,7 +273,7 @@
 			summary = restoring?.summary ?? '';
 			description = restoring?.description ?? '';
 			commits = [];
-			prCapabilities = openPullRequests = null;
+			prCapabilities = openPullRequests = openIssues = null;
 			prRoot = '';
 			view = restoring?.view ?? 'changes';
 			resetSelection();
@@ -738,7 +740,7 @@
 				<div
 					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 				>
-					{#each ['changes', 'history', ...(prCapabilities?.available ? ['pull requests'] : [])] as section}<button
+					{#each ['changes', 'history', ...(prCapabilities?.available ? [...(prCapabilities.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
 								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
@@ -753,11 +755,15 @@
 									? 'Changes'
 									: section === 'history'
 										? 'History'
-										: 'Pull requests'
+										: section === 'issues'
+											? 'Issues'
+											: 'Pull requests'
 							)}{#if section === 'changes' && status.files.length}<span
 									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
 								>{:else if section === 'pull requests' && openPullRequests}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
+									class="ml-1 text-gray-400 dark:text-gray-500">{countLabel(openPullRequests)}</span
+								>{:else if section === 'issues' && openIssues}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{countLabel(openIssues)}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -834,6 +840,15 @@
 								onChange={() => {
 									void refresh(true);
 								}}
+							/>{/key}
+					{:else if view === 'issues' && target && status.root}
+						{#key status.root}<GitIssues
+								listWidth={effectiveListWidth}
+								{maxListWidth}
+								onResizeList={(width) => (listWidth = width)}
+								{target}
+								directory={status.root}
+								onCount={(count) => (openIssues = count)}
 							/>{/key}
 					{:else}
 						<div
