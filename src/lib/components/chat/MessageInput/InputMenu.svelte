@@ -154,7 +154,7 @@
 	bind:show
 	{closeOnOutsideClick}
 	visualViewportAware
-	maxHeight="18rem"
+	maxHeight={hasInternalList ? '18rem' : 'min(32rem, calc(100dvh - 2rem))'}
 	contentClass="flex flex-col overflow-hidden!"
 	onOpenChange={(state) => {
 		if (state === false) {
