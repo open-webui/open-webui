@@ -17,6 +17,7 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
+from multidict import CIMultiDict
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
@@ -411,13 +412,14 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
-        filtered_headers = {
-            key: value
+        # Case-insensitive and multi-valued, like the upstream headers: admin headers replace the
+        # terminal's whatever their case, and repeated headers such as Set-Cookie all survive.
+        filtered_headers = CIMultiDict(
+            (key, value)
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
-        }
-        if TERMINAL_PROXY_HEADERS:
-            filtered_headers.update(TERMINAL_PROXY_HEADERS)
+        )
+        filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         port_match = re.match(r'^proxy/(\d+)/', safe_path)
         port_prefix = None
@@ -428,9 +430,6 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
                 remote_origin = f'http://localhost:{port_match[1]}'
                 destination = urlsplit(urljoin(f'{remote_origin}/{safe_path[len(port_match[0]) :]}', location))
                 if destination.netloc == urlsplit(remote_origin).netloc:
-                    filtered_headers = {
-                        key: value for key, value in filtered_headers.items() if key.lower() != 'location'
-                    }
                     filtered_headers['Location'] = (
                         port_prefix
                         + destination.path.lstrip('/')
