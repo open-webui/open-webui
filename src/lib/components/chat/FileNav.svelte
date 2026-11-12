@@ -86,7 +86,7 @@
 	let viewRestored = !initialView;
 	let capturedView: any = null;
 	export const captureView = () => {
-		// Tabs and a late save capture again after the editor is gone; give back the last full view.
+		// Captured again after teardown, when the editor is gone.
 		if (disposed) return capturedView;
 		const view =
 			!viewRestored && initialView
