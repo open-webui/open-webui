@@ -958,14 +958,14 @@
 	};
 
 	const positionDirectoryMenu = (node: HTMLElement, point: { x: number; y: number }) => {
-		const update = ({ x, y }: { x: number; y: number }) => {
-			computePosition({ getBoundingClientRect: () => new DOMRect(x, y) }, node, {
+		const update = (point: { x: number; y: number }) => {
+			computePosition({ getBoundingClientRect: () => new DOMRect(point.x, point.y) }, node, {
 				strategy: 'fixed',
 				placement: 'bottom-start',
 				middleware: [flip(), shift({ padding: 8 })]
-			}).then((position) => {
-				node.style.left = `${position.x}px`;
-				node.style.top = `${position.y}px`;
+			}).then(({ x, y }) => {
+				node.style.left = `${x}px`;
+				node.style.top = `${y}px`;
 			});
 		};
 		update(point);
