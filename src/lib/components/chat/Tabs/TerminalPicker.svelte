@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	export type PickableTerminal = { id: string; label: string; device: boolean };
+	export type TerminalOption = { id: string; label: string; device: boolean };
 </script>
 
 <script lang="ts">
@@ -10,19 +10,20 @@
 	import Server from '$lib/components/icons/Server.svelte';
 
 	const i18n = getContext<any>('i18n');
-	export let terminals: PickableTerminal[];
+	export let terminals: TerminalOption[];
 	export let onclose: () => void;
 	export let onselect: (id: string) => void;
 
 	let query = '';
 	let selectedIndex = 0;
 
-	$: matches = terminals.filter((terminal) =>
+	$: filteredTerminals = terminals.filter((terminal) =>
 		terminal.label.toLowerCase().includes(query.trim().toLowerCase())
 	);
-	$: if (selectedIndex >= matches.length) selectedIndex = Math.max(0, matches.length - 1);
+	$: if (selectedIndex >= filteredTerminals.length)
+		selectedIndex = Math.max(0, filteredTerminals.length - 1);
 
-	const select = (terminal: PickableTerminal) => {
+	const select = (terminal: TerminalOption) => {
 		onselect(terminal.id);
 		onclose();
 	};
@@ -34,15 +35,15 @@
 			event.stopPropagation();
 			selectedIndex = Math.max(
 				0,
-				Math.min(matches.length - 1, selectedIndex + (event.key === 'ArrowDown' ? 1 : -1))
+				Math.min(filteredTerminals.length - 1, selectedIndex + (event.key === 'ArrowDown' ? 1 : -1))
 			);
 			document
 				.getElementById(`terminal-picker-option-${selectedIndex}`)
 				?.scrollIntoView({ block: 'nearest' });
-		} else if (event.key === 'Enter' && matches[selectedIndex]) {
+		} else if (event.key === 'Enter' && filteredTerminals[selectedIndex]) {
 			event.preventDefault();
 			event.stopPropagation();
-			select(matches[selectedIndex]);
+			select(filteredTerminals[selectedIndex]);
 		}
 	};
 </script>
@@ -59,9 +60,11 @@
 			role="combobox"
 			aria-label={$i18n.t('Select a terminal')}
 			aria-autocomplete="list"
-			aria-expanded={matches.length > 0}
+			aria-expanded={filteredTerminals.length > 0}
 			aria-controls="terminal-picker-options"
-			aria-activedescendant={matches.length ? `terminal-picker-option-${selectedIndex}` : undefined}
+			aria-activedescendant={filteredTerminals.length
+				? `terminal-picker-option-${selectedIndex}`
+				: undefined}
 			autocomplete="off"
 			spellcheck="false"
 			placeholder={$i18n.t('Select a terminal')}
@@ -78,7 +81,7 @@
 		aria-label={$i18n.t('Terminals')}
 		class="max-h-[min(20rem,60dvh)] overflow-y-auto px-1 pb-1"
 	>
-		{#each matches as terminal, index (terminal.id)}
+		{#each filteredTerminals as terminal, index (terminal.id)}
 			<button
 				type="button"
 				role="option"
@@ -103,7 +106,7 @@
 			</button>
 		{/each}
 	</div>
-	{#if !matches.length}
+	{#if !filteredTerminals.length}
 		<div role="status" class="px-3 pb-3 pt-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
 			{$i18n.t('No terminals found')}
 		</div>

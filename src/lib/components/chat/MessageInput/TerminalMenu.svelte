@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let modelId: string | null = null;
-	import { getContext, onDestroy, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import UserTerminalsModal from '../UserTerminalsModal.svelte';
@@ -20,7 +20,7 @@
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
-	import { selectChatTerminal } from '$lib/utils/terminalSelection';
+	import { selectTerminal } from '$lib/utils/terminal';
 	import { isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -50,8 +50,6 @@
 	export let disabled = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
-	let disposed = false;
-	onDestroy(() => (disposed = true));
 
 	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
@@ -128,20 +126,10 @@
 			: []
 	).filter((s) => s.url);
 
-	const choose = async (id: string) => {
-		const ownerChatId = chatId;
-		const ownerActiveChatId = $activeChatId;
-		const next = $selectedTerminalId === id ? null : id;
+	const toggleTerminal = (id: string) => {
 		show = false;
-		await selectChatTerminal(
-			next,
-			ownerChatId,
-			selectedTerminalId,
-			() => !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId
-		);
+		selectTerminal(selectedTerminalId, $selectedTerminalId === id ? null : id, chatId);
 	};
-	const selectDirect = (terminal: (typeof directTerminals)[0]) => choose(terminal.url);
-	const selectSystem = (terminal: (typeof systemTerminals)[0]) => choose(terminal.id);
 
 	$: selectedSystemTerminal = systemTerminals.find(
 		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
@@ -170,16 +158,6 @@
 		managedTerminalId = id;
 		show = false;
 		showTerminals = true;
-	};
-	const selectTerminal = async (id: string) => {
-		const ownerChatId = chatId;
-		const ownerActiveChatId = $activeChatId;
-		await selectChatTerminal(
-			id,
-			ownerChatId,
-			selectedTerminalId,
-			() => !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId
-		);
 	};
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
@@ -318,7 +296,7 @@
 									class="{rowClass} {$selectedTerminalId === terminal.url
 										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
 										: 'pr-8'}"
-									on:click={() => selectDirect(terminal)}
+									on:click={() => toggleTerminal(terminal.url)}
 								>
 									<div class="flex flex-1 gap-2 items-center truncate">
 										<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
@@ -398,7 +376,7 @@
 									class="{rowClass} {$selectedTerminalId === terminal.id
 										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
 										: 'pr-8'}"
-									on:click={() => selectSystem(terminal)}
+									on:click={() => toggleTerminal(terminal.id)}
 								>
 									<div class="flex flex-1 gap-2 items-center truncate">
 										{#if section.devices}
@@ -472,7 +450,7 @@
 		bind:show={showTerminals}
 		terminalId={managedTerminalId}
 		connections={writable}
-		onCreate={selectTerminal}
+		onCreate={async (id) => selectTerminal(selectedTerminalId, id, chatId)}
 	/>
 {/if}
 
