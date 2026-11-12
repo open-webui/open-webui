@@ -989,6 +989,9 @@
 		loading = true;
 		terminalTabs?.prepareChatSwitch();
 		const signal = startChatLoad();
+		clearTimeout(saveIntegrationsTimer);
+		saveIntegrations(true);
+		integrationsSnapshot = null;
 		modelDefaults = null;
 		cancelBrowserInteractions();
 		bridge?.end();
@@ -2146,6 +2149,7 @@
 		console.log('mounted');
 		if (!embedded && appLayout) appLayout.initNewChat = initNewChat;
 		if (!side) window.addEventListener('message', onMessageHandler);
+		window.addEventListener('pagehide', flushIntegrationsOnHide);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
 		$socket?.on('disconnect', clearTyping);
@@ -2227,6 +2231,8 @@
 				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
 				saveControls();
+				clearTimeout(saveIntegrationsTimer);
+				saveIntegrations(true);
 				if (chatIdProp && !$temporaryChatEnabled) {
 					updateLastReadAt(chatIdProp);
 				}
@@ -2254,6 +2260,7 @@
 				chatTitle.set('');
 
 				window.removeEventListener('message', onMessageHandler);
+				window.removeEventListener('pagehide', flushIntegrationsOnHide);
 				$socket?.off('events', chatEventHandler);
 				$socket?.off('connect', handleSocketConnect);
 				$socket?.off('disconnect', clearTyping);
@@ -3392,7 +3399,17 @@
 					);
 					const chatInputPrompt = restored ? prompt : null;
 					if (signal.aborted) return;
-					await setDefaults(restored);
+					// The chat record is the source of truth for the integration selection. A local draft
+					// keeps the unsent text and files, but may hold a stale selection from this tab.
+					const restoredFromChat =
+						!$temporaryChatEnabled &&
+						chat?.user_id === $user?.id &&
+						applyChatIntegrations(chat?.chat?.integrations);
+					await setDefaults(restored || restoredFromChat);
+					if (restoredFromChat) {
+						dropUnavailableIntegrations();
+						integrationsSnapshot = getChatIntegrations();
+					}
 					if (signal.aborted) return;
 					loading = false;
 					await tick();
@@ -5257,6 +5274,7 @@
 						context?.terminalId === $selectedTerminalId ? context.currentDirectory : '',
 					system: $settings.system ?? undefined,
 					params: params,
+					integrations: getChatIntegrations(),
 					history: _history,
 					messages: createMessagesList(_history, _history.currentId),
 					tags: [],
@@ -5307,8 +5325,10 @@
 					models: selectedModels,
 					history: history,
 					messages: createMessagesList(history, history.currentId),
-					files: chatFiles
+					files: chatFiles,
+					...(loading ? {} : { integrations: getChatIntegrations() })
 				});
+				integrationsSnapshot = null;
 			}
 		}
 	};
@@ -5339,6 +5359,117 @@
 		// Refresh the dedupe baseline so a later revert still saves.
 		if (res && $chatId === id) chat = res;
 	};
+
+	// Per-chat integration selection (tools/MCP, skills, filters, feature toggles) stored in the
+	// chat record so it follows the chat across devices and browser sessions.
+	const getChatIntegrations = () => ({
+		tool_ids: [...new Set([...selectedToolIds, ...pendingOAuthTools.map((tool) => tool.id)])],
+		skill_ids: [...selectedSkillIds],
+		filter_ids: [...selectedFilterIds],
+		web_search: !!webSearchEnabled,
+		image_generation: !!imageGenerationEnabled,
+		code_interpreter: !!codeInterpreterEnabled
+	});
+
+	const applyChatIntegrations = (saved: Record<string, unknown> | null | undefined) => {
+		if (!saved || typeof saved !== 'object') return false;
+		const ids = (value: unknown) =>
+			Array.isArray(value) ? value.filter((id) => typeof id === 'string') : [];
+		selectedToolIds = ids(saved.tool_ids);
+		selectedSkillIds = ids(saved.skill_ids);
+		selectedFilterIds = ids(saved.filter_ids);
+		webSearchEnabled = !!saved.web_search;
+		imageGenerationEnabled = !!saved.image_generation;
+		codeInterpreterEnabled = !!saved.code_interpreter;
+		return true;
+	};
+
+	// Saved tools or skills that were deleted or are no longer accessible are skipped silently.
+	const dropUnavailableIntegrations = () => {
+		if (Array.isArray($tools)) {
+			selectedToolIds = selectedToolIds.filter(
+				(id) =>
+					($tools as { id: string }[]).some((tool) => tool.id === id) ||
+					pendingOAuthTools.some((tool) => tool.id === id)
+			);
+		}
+		if (Array.isArray($skills)) {
+			selectedSkillIds = selectedSkillIds.filter((id) =>
+				($skills as { id: string }[]).some((skill) => skill.id === id)
+			);
+		}
+	};
+
+	let saveIntegrationsTimer;
+	// What the server record held when the chat was opened or last saved. Restored selections that
+	// were skipped (deleted tool, pending OAuth) are only rewritten after the user changes something.
+	let integrationsSnapshot: ReturnType<typeof getChatIntegrations> | null = null;
+	// Returns the selection to write, or null when nothing needs saving.
+	const pendingIntegrations = (force = false) => {
+		if (isShared || $temporaryChatEnabled || (loading && !force)) return null;
+		if (!$chatId || isTemporaryChatId($chatId) || chat?.id !== $chatId) return null;
+		if (settingDefaults && !force) return null;
+		const saved = integrationsSnapshot ?? chat.chat?.integrations;
+		const current = getChatIntegrations();
+		if (saved ? equal(saved, current) : !integrationsChanged()) return null;
+		return current;
+	};
+
+	const saveIntegrations = async (force = false) => {
+		const current = pendingIntegrations(force);
+		if (!current) return;
+		const id = $chatId;
+		const res = await updateChatById(localStorage.token, id, { integrations: current }).catch(
+			(err) => {
+				console.error('[integrations autosave]', err);
+				return null;
+			}
+		);
+		if (res && $chatId === id) {
+			chat = res;
+			integrationsSnapshot = current;
+		}
+	};
+
+	// A tab closed within the debounce window would lose the change; keepalive lets the request finish.
+	const flushIntegrationsOnHide = () => {
+		clearTimeout(saveIntegrationsTimer);
+		const current = pendingIntegrations();
+		if (!current) return;
+		fetch(`${WEBUI_API_BASE_URL}/chats/${$chatId}`, {
+			method: 'POST',
+			keepalive: true,
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${localStorage.token}`
+			},
+			body: JSON.stringify({ chat: { integrations: current } })
+		}).catch(() => {});
+	};
+
+	// A chat without a saved selection only persists one once it differs from the model defaults.
+	const integrationsChanged = () => {
+		if (!modelDefaults) return false;
+		const current = getChatIntegrations();
+		return !(
+			equal(current.tool_ids, modelDefaults.selectedToolIds) &&
+			equal(current.skill_ids, modelDefaults.selectedSkillIds) &&
+			equal(current.filter_ids, modelDefaults.selectedFilterIds) &&
+			current.web_search === modelDefaults.webSearchEnabled &&
+			current.image_generation === modelDefaults.imageGenerationEnabled &&
+			current.code_interpreter === modelDefaults.codeInterpreterEnabled
+		);
+	};
+
+	$: if (
+		!loading &&
+		!$temporaryChatEnabled &&
+		$chatId &&
+		(selectedToolIds, selectedSkillIds, selectedFilterIds, webSearchEnabled, imageGenerationEnabled, codeInterpreterEnabled, true)
+	) {
+		clearTimeout(saveIntegrationsTimer);
+		saveIntegrationsTimer = setTimeout(() => saveIntegrations(), 400);
+	}
 
 	const MAX_DRAFT_LENGTH = 5000;
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
