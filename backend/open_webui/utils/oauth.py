@@ -165,9 +165,6 @@ async def get_system_oauth_token(request, user):
 
 OAUTH_RESOURCE_PARAMETER_MODES = {'auto', 'include', 'omit'}
 
-# Some authorization servers send header values over aiohttp's 8190-byte default (#34078)
-OAUTH_MAX_FIELD_SIZE = 64 * 1024
-
 OAUTH_RUNTIME_CONFIG = {
     'DEFAULT_USER_ROLE': ('ui.default_user_role', DEFAULT_USER_ROLE),
     'ENABLE_OAUTH': ('oauth.enable', ENABLE_OAUTH),
@@ -249,6 +246,9 @@ async def get_oauth_runtime_config() -> SimpleNamespace:
 # Matches the value recommended by Authlib's compliance_fix documentation.
 DEFAULT_TOKEN_EXPIRY_SECONDS = 3600
 NON_EXPIRING_TOKEN_EXPIRES_AT = 253402300799  # 9999-12-31 23:59:59 UTC
+
+# Some OAuth servers send single headers larger than aiohttp's default limit (#34078)
+OAUTH_MAX_FIELD_SIZE = 64 * 1024
 
 
 def _normalize_token_expiry(token: dict) -> dict:
@@ -1008,7 +1008,7 @@ class OAuthClientManager:
             return True
 
         try:
-            async with aiohttp.ClientSession(trust_env=True, max_field_size=OAUTH_MAX_FIELD_SIZE) as session:
+            async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(
                     authorization_url,
                     allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
