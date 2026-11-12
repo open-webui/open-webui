@@ -445,7 +445,6 @@ async def _generate_summary(
     compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
-            # Saved replies keep their tool calls as output items.
             tool_calls = message.get('tool_calls') or [
                 {
                     'id': item.get('call_id'),
