@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
@@ -58,7 +59,7 @@
 		initialized = true;
 	}
 	$: if (!show) initialized = false;
-	async function verify() {
+	async function verify(announce = false) {
 		busy = true;
 		error = '';
 		try {
@@ -69,6 +70,7 @@
 			if (direct && type === 'orchestrator')
 				throw new Error('Add Terminals as an administrator-managed connection.');
 			serverType = type;
+			if (announce) toast.success($i18n.t('Server connection verified'));
 			return true;
 		} catch (e) {
 			error = e instanceof Error ? e.message : String(e);
@@ -184,7 +186,7 @@
 					type="button"
 					class="rounded-lg p-1 transition hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-850"
 					disabled={busy || !url}
-					on:click={verify}
+					on:click={() => verify(true)}
 					aria-label={$i18n.t('Verify Connection')}
 					>{#if busy}<Spinner className="size-4" />{:else}<ArrowPath
 							className="size-4"
