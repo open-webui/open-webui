@@ -3686,6 +3686,9 @@
 				return;
 			}
 
+			// Side and note chats create their chat the way a sent message does.
+			if (embedded && (await getChatId(history)) === null) return;
+
 			const messages = createMessagesList(history, history.currentId);
 			const parentMessage = messages.length !== 0 ? messages.at(-1) : null;
 

@@ -385,7 +385,17 @@
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
-					document.getElementById('generate-message-pair-button')?.click();
+					const composerId =
+						document.activeElement
+							?.closest('[data-composer-id]')
+							?.getAttribute('data-composer-id') ?? 'chat-input';
+					document
+						.getElementById(
+							composerId === 'chat-input'
+								? 'generate-message-pair-button'
+								: `${composerId}-generate-message-pair-button`
+						)
+						?.click();
 				} else if (shortcut === Shortcut.ALLOW_TOOL_CALL) {
 					const button = [...document.getElementsByClassName('tool-call-allow-button')]
 						.reverse()
