@@ -5936,7 +5936,6 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
-										{activeFileContext}
 										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}

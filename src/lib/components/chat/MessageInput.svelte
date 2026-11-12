@@ -1091,10 +1091,14 @@
 			if (server.scope === 'chat' && !isSavedChatId(sessionId))
 				throw new Error('A saved chat is required for this terminal');
 
-			const uploadContext = [activeFileContext, terminalContext].find(
-				(context) => context?.terminalId === fileItem.terminal_id
-			);
-			const cwd = uploadContext?.currentDirectory || (await getCwd(terminal))?.cwd;
+			const cwd =
+				(activeFileContext?.terminalId === fileItem.terminal_id
+					? activeFileContext.currentDirectory
+					: null) ||
+				(terminalContext?.terminalId === fileItem.terminal_id
+					? terminalContext?.currentDirectory
+					: null) ||
+				(await getCwd(terminal))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
 			const uploadedFile = await uploadNewFileToTerminal(
 				terminal,
