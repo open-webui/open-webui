@@ -522,10 +522,10 @@
 			delete modelInfo.meta.i18n;
 		}
 
-		if (terminalId !== (defaultMeta.terminalId ?? '')) {
+		if (terminalId || defaultMeta.terminalId) {
 			modelInfo.meta.terminalId = terminalId;
 		} else {
-			if (modelInfo.meta.terminalId !== undefined) {
+			if (modelInfo.meta.terminalId) {
 				delete modelInfo.meta.terminalId;
 			}
 		}
