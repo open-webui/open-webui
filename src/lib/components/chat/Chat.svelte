@@ -16,7 +16,7 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
-	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
+	import { goto, beforeNavigate, afterNavigate, onNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
@@ -2731,10 +2731,12 @@
 		}
 		stopAudio();
 	});
-	beforeNavigate(({ from, to }) => {
-		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;
+	beforeNavigate(() => {
 		bridge?.end();
 		pendingUrlActions = null;
+	});
+	onNavigate(({ from, to }) => {
+		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;
 	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
