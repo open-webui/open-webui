@@ -1834,10 +1834,6 @@ def get_user_chat_session_id(user_id: str, chat_id: str) -> str | None:
     return None
 
 
-def is_chat_open_in_session(session_id: str, chat_id: str) -> bool:
-    return chat_id in ((SESSION_POOL.get(session_id) or {}).get('chat_ids') or [])
-
-
 async def get_event_call(request_info):
     from open_webui.utils.chat import get_temporary_chat
 
@@ -1854,17 +1850,14 @@ async def get_event_call(request_info):
                 if 'session_id' in (event_data.get('data') or {}):
                     event_data = {**event_data, 'data': {**event_data['data'], 'session_id': session_id}}
 
-        is_parent_chat_call = request_info.get('internal') is True and 'session_id' not in (
-            event_data.get('data') or {}
-        )
-        if is_parent_chat_call:
+        if request_info.get('internal') is True and 'session_id' not in (event_data.get('data') or {}):
             # The page only answers for its open chat.
-            meta = (await Chats.get_chat_metas_by_chat_ids([chat_id], include_archived=True))[0]
-            chat_id, message_id = meta['parent_chat_id'], meta['parent_message_id']
-            if not is_chat_open_in_session(session_id, chat_id):
-                next_session_id = await asyncio.to_thread(get_user_chat_session_id, request_info['user_id'], chat_id)
-                if next_session_id is not None:
-                    session_id = request_info['session_id'] = next_session_id
+            metas = await Chats.get_chat_metas_by_chat_ids([chat_id], include_archived=True)
+            if not metas:
+                return {'error': 'Client session disconnected.'}
+            chat_id, message_id = metas[0]['parent_chat_id'], metas[0]['parent_message_id']
+            if chat_id not in ((SESSION_POOL.get(session_id) or {}).get('chat_ids') or []):
+                session_id = await asyncio.to_thread(get_user_chat_session_id, request_info['user_id'], chat_id)
 
         # session_id is client-supplied; only the requesting user's own live session may be targeted.
         session = SESSION_POOL.get(session_id)
@@ -1917,7 +1910,6 @@ async def get_event_call(request_info):
                         while (
                             not call_task.done()
                             and get_user_id_from_session_pool(session_id) == request_info['user_id']
-                            and (not is_parent_chat_call or is_chat_open_in_session(session_id, chat_id))
                         ):
                             await asyncio.wait({call_task}, timeout=1)
                         if call_task.done():
