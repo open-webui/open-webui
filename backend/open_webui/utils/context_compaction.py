@@ -67,6 +67,8 @@ async def compact_messages_for_request(
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold):
         return [*system_messages, *messages], previous_summary, []
 
+    # A tool loop's messages carry the turn's summary only in the system message.
+    previous_summary = previous_summary or metadata.get('context_summary')
     boundary = _find_compaction_boundary(messages, config['retention_percentage'])
     compacted_messages = messages[:boundary]
     recent_messages = messages[boundary:]
