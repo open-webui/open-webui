@@ -136,7 +136,7 @@
 		<div class="flex h-full min-w-0 flex-1 flex-col">
 			<nav class="px-1.5 drag-region select-none">
 				<div class="flex items-center gap-0.5 md:gap-1">
-					{#if $mobile}
+					{#if $mobile && !pageTab}
 						<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">
 							<Tooltip
 								content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}

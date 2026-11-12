@@ -275,7 +275,7 @@
 		<!-- Top Navbar — spans above sidebar and calendar -->
 		<nav class="px-1.5 pb-2 md:px-3 drag-region select-none shrink-0">
 			<div class="flex items-center gap-0.5 md:gap-1">
-				{#if $mobile}
+				{#if $mobile && !pageTab}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">
 						<Tooltip
 							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
