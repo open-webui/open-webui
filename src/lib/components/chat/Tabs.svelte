@@ -626,8 +626,13 @@
 		} else openPanel(createPageTab(request));
 	};
 	const navigatePageTab = async (id: string, href: string) => {
-		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		const url = new URL(href, location.origin);
+		if (url.pathname === '/' && !url.search) {
+			await closeTab(id);
+			focusMainChat();
+			return;
+		}
+		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
 			openPageTab({ href, label: '' });
 		} else if (viewEntry) updateViewTab(viewEntry, id, { href });
