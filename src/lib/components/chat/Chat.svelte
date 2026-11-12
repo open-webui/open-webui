@@ -3290,7 +3290,10 @@
 				sanitizeHistory(history);
 
 				chatTitle.set(chatContent.title);
-				branchPointMessageId = parentChatId ? (chatContent.branchPointMessageId ?? null) : null;
+				branchPointMessageId =
+					chatContent.originalChatId === parentChatId
+						? (chatContent.branchPointMessageId ?? null)
+						: null;
 				if (side) await onEmbeddedChatTitle?.(id, chatContent.title);
 
 				params = structuredClone(chatContent?.params ?? {});
@@ -4147,6 +4150,9 @@
 			if (result?.id) {
 				if (!embedded) {
 					await goto(`/c/${result.id}`);
+					await refreshChatList(localStorage.token, { refreshPinned: true });
+				} else if (side) {
+					await onSelectEmbeddedChat?.(result.id);
 					await refreshChatList(localStorage.token, { refreshPinned: true });
 				}
 				toast.success($i18n.t('Chat forked'), { id: toastId });
