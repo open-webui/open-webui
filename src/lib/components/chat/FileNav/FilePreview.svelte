@@ -82,7 +82,6 @@
 	export let targetPage: number | null = null;
 	export let excelSheetNames: string[] = [];
 	export let selectedExcelSheet = '';
-	export let excelTooLargeRange = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 
 	export let overlay = false;
@@ -362,7 +361,6 @@
 			html={fileOfficeHtml}
 			sheetNames={excelSheetNames}
 			selectedSheet={selectedExcelSheet}
-			tooLargeRange={excelTooLargeRange}
 			{onSheetChange}
 		/>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}

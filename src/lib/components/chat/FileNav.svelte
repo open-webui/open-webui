@@ -774,7 +774,6 @@
 	let currentSlide = 0;
 	let excelSheetNames: string[] = [];
 	let selectedExcelSheet = '';
-	let excelTooLargeRange = '';
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	// File preview toolbar state (bound from FilePreview)
@@ -1175,7 +1174,6 @@
 		currentSlide = 0;
 		excelSheetNames = [];
 		selectedExcelSheet = '';
-		excelTooLargeRange = '';
 		excelWorkbook = null;
 	};
 
@@ -1372,7 +1370,6 @@
 			excelWorkbook: null,
 			excelSheetNames: [],
 			selectedExcelSheet: '',
-			excelTooLargeRange: '',
 			currentSlide: 0,
 			fileContent: null
 		} as any;
@@ -1425,7 +1422,6 @@
 							const result = await excelToTable(wb.Sheets[next.selectedExcelSheet]);
 							const DOMPurify = (await import('dompurify')).default;
 							next.fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
-							next.excelTooLargeRange = result.tooLargeRange;
 						}
 					}
 				} else if (ext === 'pptx') {
@@ -1469,7 +1465,6 @@
 		excelWorkbook = next.excelWorkbook;
 		excelSheetNames = next.excelSheetNames;
 		selectedExcelSheet = next.selectedExcelSheet;
-		excelTooLargeRange = next.excelTooLargeRange;
 		currentSlide = next.currentSlide;
 		fileContent = next.fileContent;
 		fileLoading = false;
@@ -2820,7 +2815,6 @@
 							targetPage={documentTargetPage}
 							{excelSheetNames}
 							{selectedExcelSheet}
-							{excelTooLargeRange}
 							searchTarget={fileSearchTarget}
 							onSheetChange={async (sheet) => {
 								if (!excelWorkbook) return;
@@ -2829,7 +2823,6 @@
 								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
 								const DOMPurify = (await import('dompurify')).default;
 								fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
-								excelTooLargeRange = result.tooLargeRange;
 							}}
 							target={selectedTerminal}
 							overlay={overlay || isDraggingHandle}

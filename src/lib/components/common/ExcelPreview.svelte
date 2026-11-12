@@ -17,7 +17,6 @@
 	export let html: string;
 	export let sheetNames: string[] = [];
 	export let selectedSheet = '';
-	export let tooLargeRange = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 	export let editor: ExcelWorkbookEditor | null = null;
 	export let onDirtyChange: (dirty: boolean) => void = () => {};
@@ -89,6 +88,7 @@
 	let resizing: { col: number; x: number; width: number } | null = null;
 	let pendingLink = '';
 	let usedRange = '';
+	let tooLarge = false;
 	let lastUsedRow = 0,
 		lastUsedCol = 0;
 	const widths = new Map<string, Map<number, number>>();
@@ -100,7 +100,6 @@
 			)
 		: [];
 	$: if (query) matchIndex = -1;
-	$: shownRange = tooLargeRange || usedRange;
 
 	$: (editor, saving, notifyChange());
 	export const captureEdit = () =>
@@ -131,7 +130,6 @@
 		if (version !== renderVersion || sheet !== selectedSheet) return;
 		restoreAddress = focus?.address ?? '';
 		html = result.html;
-		tooLargeRange = result.tooLargeRange;
 	}
 	function applyEdits(edits: CellEdit[]) {
 		if (!editor || saving) return false;
@@ -663,6 +661,7 @@
 				Math.max(0, (previousCols ?? 0) - cols[cols.length - 1])
 			);
 			usedRange = table?.dataset.usedRange ?? '';
+			tooLarge = table?.dataset.tooLarge === 'true';
 			lastUsedRow = Number(table?.dataset.lastRow ?? 0);
 			lastUsedCol = Number(table?.dataset.lastCol ?? 0);
 			anchor = null;
@@ -775,12 +774,11 @@
 		</div>
 	{/if}
 	<div bind:this={viewport} use:grid={html} class="excel-viewport">
-		{#if tooLargeRange}
+		{@html html}
+		{#if tooLarge}
 			<p class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500">
 				{t('This sheet is too large to preview. Download it to view all cells.')}
 			</p>
-		{:else}
-			{@html html}
 		{/if}
 	</div>
 	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
@@ -803,7 +801,7 @@
 			role="status"
 			title={status}
 			aria-live="polite"
-			>{status || (shownRange ? `${t('Used range')}: ${shownRange}` : t('Empty sheet'))}</span
+			>{status || (usedRange ? `${t('Used range')}: ${usedRange}` : t('Empty sheet'))}</span
 		>
 		<div class="flex shrink-0 items-center gap-0.5 text-gray-500 dark:text-gray-400">
 			{#if editor}
