@@ -564,6 +564,8 @@
 			Object.values(history.messages).some(
 				(message) => message.role === 'assistant' && message.done === false
 			));
+	export let temporary: boolean = false;
+	$: temporary = $temporaryChatEnabled;
 
 	$: if (loading || !history.currentId) {
 		liveStatus = '';
