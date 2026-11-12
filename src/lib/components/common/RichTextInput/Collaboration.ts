@@ -34,6 +34,8 @@ const generateUserColor = () => {
 	return USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)];
 };
 
+const openDocuments = new Map<string, number>();
+
 export type EditorContentGetter = () => {
 	md: string;
 	html: string;
@@ -89,6 +91,7 @@ export class SocketIOCollaborationProvider {
 		private readonly user: SessionUser,
 		private readonly initialContent: unknown = null
 	) {
+		openDocuments.set(documentId, (openDocuments.get(documentId) ?? 0) + 1);
 		this.setupEventListeners();
 	}
 
@@ -439,7 +442,11 @@ export class SocketIOCollaborationProvider {
 			this.sendContentSnapshot();
 		}
 
-		if (this.isConnected) {
+		const remaining = (openDocuments.get(this.documentId) ?? 1) - 1;
+		if (remaining > 0) openDocuments.set(this.documentId, remaining);
+		else openDocuments.delete(this.documentId);
+
+		if (this.isConnected && remaining === 0) {
 			this.socket.emit('ydoc:document:leave', {
 				document_id: this.documentId,
 				user_id: this.user?.id
