@@ -1144,7 +1144,7 @@
 			}
 		};
 	};
-	const navigateTabs = (event: KeyboardEvent) => {
+	const navigateTabs = async (event: KeyboardEvent) => {
 		if (!(event.target instanceof HTMLElement) || event.target.getAttribute('role') !== 'tab')
 			return;
 		const group = tabs.groups.find((group) => group.id === tabs.activeGroupId)!;
@@ -1153,6 +1153,8 @@
 			event.preventDefault();
 			const tabIndex = tabGroups[tabs.activeId].tabIds.indexOf(tabs.activeId);
 			tabs = moveTab(tabs, tabs.activeId, tabIndex + (event.key === 'ArrowLeft' ? -1 : 1));
+			await tick();
+			document.getElementById(domId(tabs.activeId))?.focus();
 			return;
 		}
 		let next = index;
