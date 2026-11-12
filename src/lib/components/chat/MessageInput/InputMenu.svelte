@@ -31,6 +31,7 @@
 
 	const i18n: any = getContext('i18n');
 
+	export let chatId: string = '';
 	export let files = [];
 
 	export let selectedModels: string[] = [];
@@ -762,7 +763,7 @@
 						</div>
 					</button>
 
-					<Chats {onSelect} />
+					<Chats {chatId} {onSelect} />
 				</div>
 			{:else if tab === 'microsoft_onedrive'}
 				<div in:fly={{ x: 20, duration: 150 }}>
