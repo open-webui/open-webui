@@ -10,7 +10,12 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import (
+    convert_output_to_messages,
+    get_content_from_message,
+    get_last_user_message,
+    get_message_list,
+)
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
     prompt_template,
@@ -447,10 +452,14 @@ async def _generate_summary(
     compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
-            if message.get('tool_calls'):
+            # Saved replies keep their tool calls as output items.
+            tool_calls = message.get('tool_calls') or [
+                call for m in convert_output_to_messages(message.get('output')) for call in m.get('tool_calls', [])
+            ]
+            if tool_calls:
                 messages[idx] = {
                     **message,
-                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}',
+                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(tool_calls)}',
                 }
 
     async def render_prompt(template: str) -> str:
