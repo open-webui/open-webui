@@ -20,7 +20,7 @@
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
-	import { getToolServersData } from '$lib/apis';
+	import { selectChatTerminal } from '$lib/utils/terminalSelection';
 	import { isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -128,77 +128,20 @@
 			: []
 	).filter((s) => s.url);
 
-	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
-		// Preserve system terminals (those with an `id`) — only refresh direct ones
-		const existingSystemTerminals = ($terminalServers ?? []).filter((t) => t.id);
-
-		const activeTerminals = servers.filter((s) => s.enabled);
-		if (activeTerminals.length > 0) {
-			let data = await getToolServersData(
-				activeTerminals.map((t) => ({
-					url: t.url,
-					auth_type: t.auth_type ?? 'bearer',
-					key: t.key ?? '',
-					path: t.path ?? '/openapi.json',
-					config: { enable: true }
-				}))
-			);
-			data = data.filter((d) => d && !d.error);
-			terminalServers.set([
-				...data.map((d, i) => ({
-					...d,
-					key: activeTerminals[i]?.key ?? '',
-					config: activeTerminals[i]?.config ?? d?.config ?? {}
-				})),
-				...existingSystemTerminals
-			]);
-		} else {
-			terminalServers.set(existingSystemTerminals);
-		}
-	};
-
-	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
-		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
-		if (!(await saveSelection(newId))) return;
-		selectedTerminalId.set(newId);
-
-		// Enable the selected direct terminal, disable all others
-		const updatedServers = ($settings?.terminalServers ?? []).map((s) => ({
-			...s,
-			enabled: newId !== null && s.url === terminal.url
-		}));
-
-		settings.set({
-			...$settings,
-			terminalServers: updatedServers
-		});
-
+	const choose = async (id: string) => {
+		const ownerChatId = chatId;
+		const ownerActiveChatId = $activeChatId;
+		const next = $selectedTerminalId === id ? null : id;
 		show = false;
-
-		// Refresh the store so Chat.svelte can inject it as a tool
-		await refreshTerminalServersStore(updatedServers);
+		await selectChatTerminal(
+			next,
+			ownerChatId,
+			selectedTerminalId,
+			() => !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId
+		);
 	};
-
-	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
-		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
-		if (!(await saveSelection(newId))) return;
-		selectedTerminalId.set(newId);
-
-		// Disable all direct terminals when switching to a system terminal
-		if ($settings?.terminalServers?.some((s) => s.enabled)) {
-			const updatedServers = ($settings.terminalServers ?? []).map((s) => ({
-				...s,
-				enabled: false
-			}));
-			settings.set({
-				...$settings,
-				terminalServers: updatedServers
-			});
-			await refreshTerminalServersStore(updatedServers);
-		}
-
-		show = false;
-	};
+	const selectDirect = (terminal: (typeof directTerminals)[0]) => choose(terminal.url);
+	const selectSystem = (terminal: (typeof systemTerminals)[0]) => choose(terminal.id);
 
 	$: selectedSystemTerminal = systemTerminals.find(
 		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
@@ -228,25 +171,16 @@
 		show = false;
 		showTerminals = true;
 	};
-	async function saveSelection(id: string | null) {
+	const selectTerminal = async (id: string) => {
 		const ownerChatId = chatId;
 		const ownerActiveChatId = $activeChatId;
-		if (isSavedChatId(ownerChatId)) {
-			try {
-				await updateChatById(localStorage.token, ownerChatId!, {
-					terminal_id: id,
-					working_directory: ''
-				});
-			} catch (e) {
-				toast.error(String(e));
-				return false;
-			}
-		}
-		return !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId;
-	}
-	async function selectTerminal(id: string) {
-		if (await saveSelection(id)) selectedTerminalId.set(id);
-	}
+		await selectChatTerminal(
+			id,
+			ownerChatId,
+			selectedTerminalId,
+			() => !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId
+		);
+	};
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
 	const openFiles = async (selector: string, label: string) => {

@@ -99,6 +99,8 @@
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
+	import TerminalPicker, { type PickableTerminal } from './Tabs/TerminalPicker.svelte';
+	import { selectChatTerminal } from '$lib/utils/terminalSelection';
 	import VoiceNote from './Tabs/VoiceNote.svelte';
 	import Browser from './Tabs/Browser.svelte';
 	import Desktop from './Tabs/Desktop.svelte';
@@ -396,6 +398,10 @@
 			voiceNote?.finishRecording();
 			return;
 		}
+		if (!$user) return;
+		withTerminal(startVoiceNote);
+	};
+	const startVoiceNote = () => {
 		if (!canVoiceNote || !selectedTarget || !$user) return;
 		voiceNoteTarget = {
 			target: selectedTarget,
@@ -411,6 +417,7 @@
 	let desktopEnabled = false;
 	let browserEnabled = false;
 	let featureVersion = 0;
+	let featureCheck: Promise<void> = Promise.resolve();
 	let releasePanel: (target: HTMLElement) => void = () => {};
 	const preservePanel = (target: HTMLElement) => ({ destroy: () => releasePanel(target) });
 
@@ -1240,7 +1247,11 @@
 	$: newTabViews = availableViews.filter(
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
-	$: canOpenNewTab = showFilesTab || terminalFilesAvailable || newTabViews.length > 0;
+	$: canOpenNewTab = showFilesTab || terminalFilesAvailable || anyTerminal || newTabViews.length > 0;
+	const menuFiles = () => {
+		if (showFilesTab) openFiles($selectedTerminalId, undefined, true);
+		else withTerminal(() => openFiles($selectedTerminalId, undefined, true));
+	};
 
 	const quickSplit = () => {
 		if (tabs.tabs.length < 2) {
@@ -1272,19 +1283,23 @@
 		let action: (() => void) | undefined;
 		switch (shortcut) {
 			case Shortcut.VOICE_NOTE:
-				if (voiceNoteTarget || canVoiceNote) action = openVoiceNote;
+				if (voiceNoteTarget || canVoiceNote || (anyTerminal && !selectedTarget))
+					action = openVoiceNote;
 				break;
 			case Shortcut.QUICK_OPEN:
-				if (terminalFilesAvailable && selectedTarget)
-					action = () => {
-						showQuickOpen = true;
-					};
+				if (selectedTarget || anyTerminal)
+					action = () =>
+						withTerminal(() => {
+							showQuickOpen = true;
+						});
 				break;
 			case Shortcut.OPEN_FILES:
 				if (showFilesTab) action = () => openFiles();
+				else if (anyTerminal) action = () => withTerminal(() => openFiles());
 				break;
 			case Shortcut.OPEN_DESKTOP:
-				if (desktopEnabled && selectedTarget) action = openDesktop;
+				if (desktopEnabled || (!selectedTarget && anyTerminal))
+					action = () => withTerminal(openDesktop, 'desktop');
 				break;
 			case Shortcut.NEW_CHAT_TAB:
 				if (canSideChat) action = () => openFeature('side');
@@ -1293,13 +1308,15 @@
 				if (showCommentsTab) action = () => openFeature('comments');
 				break;
 			case Shortcut.NEW_FILE:
-				if (terminalFilesAvailable && selectedTarget) action = newFile;
+				if (selectedTarget || anyTerminal) action = () => withTerminal(newFile);
 				break;
 			case Shortcut.NEW_TERMINAL:
-				if (terminalEnabled && selectedTarget) action = newTerminal;
+				if (terminalEnabled || (!selectedTarget && anyTerminal))
+					action = () => withTerminal(newTerminal, 'terminal');
 				break;
 			case Shortcut.NEW_BROWSER:
-				if (browserEnabled && selectedTarget) action = () => openBrowser();
+				if (browserEnabled || (!selectedTarget && anyTerminal))
+					action = () => withTerminal(() => openBrowser(), 'browser');
 				break;
 			case Shortcut.CLOSE_TAB:
 				if (panelVisible && tabs.activeId)
@@ -1356,6 +1373,78 @@
 					{ chatId: chatId, modelId: modelId ?? null }
 				)
 			: null;
+	// Every terminal this chat could use, so terminal tabs stay offered before one is selected.
+	const listTerminals = (..._deps: unknown[]): PickableTerminal[] => {
+		if (!$config?.features?.enable_tool_servers) return [];
+		const direct = directTerminals
+			.filter((terminal) => terminal.url && terminalAccessible(terminal.url))
+			.map((terminal) => ({
+				id: terminal.url,
+				label: (terminal as { name?: string }).name || terminal.url.replace(/^https?:\/\//, ''),
+				device: false
+			}));
+		const system = ($terminalServers ?? [])
+			.filter((terminal) => terminal.id && terminalAccessible(terminal.id))
+			.map((terminal) => ({
+				id: terminal.id,
+				label: terminal.name || $i18n.t('Terminal'),
+				device: terminal.id.startsWith('tether:')
+			}));
+		return [...direct, ...system];
+	};
+	$: pickableTerminals = listTerminals(
+		$config,
+		$user,
+		$terminalServers,
+		directTerminals,
+		chatId,
+		$i18n
+	);
+	$: anyTerminal = pickableTerminals.length > 0;
+
+	type TerminalFeature = 'terminal' | 'browser' | 'desktop';
+	const featureEnabled = (feature?: TerminalFeature) =>
+		feature === 'terminal'
+			? terminalEnabled
+			: feature === 'browser'
+				? browserEnabled
+				: feature === 'desktop'
+					? desktopEnabled
+					: true;
+	const featureLabels: Record<TerminalFeature, string> = {
+		terminal: 'Terminal',
+		browser: 'Browser',
+		desktop: 'Desktop'
+	};
+	let terminalPick: { action: () => void; feature?: TerminalFeature } | null = null;
+	// Run a terminal action, first asking which terminal to use when none is selected.
+	const withTerminal = (action: () => void, feature?: TerminalFeature) => {
+		if (selectedTarget) {
+			if (featureEnabled(feature)) action();
+			return;
+		}
+		if (anyTerminal) terminalPick = { action, feature };
+	};
+	const pickTerminal = async (id: string) => {
+		const pick = terminalPick;
+		terminalPick = null;
+		if (!pick) return;
+		const owner = chatId;
+		const current = () => mounted && chatId === owner;
+		if (!(await selectChatTerminal(id, owner, selectedTerminalId, current))) return;
+		await tick();
+		await featureCheck;
+		if (!current() || $selectedTerminalId !== id || !selectedTarget) return;
+		if (!featureEnabled(pick.feature)) {
+			toast.error(
+				$i18n.t('{{feature}} is not available on this terminal', {
+					feature: $i18n.t(featureLabels[pick.feature!])
+				})
+			);
+			return;
+		}
+		pick.action();
+	};
 	const checkTerminal = async () => {
 		const version = ++featureVersion;
 		terminalEnabled = false;
@@ -1378,7 +1467,7 @@
 	$: {
 		selectedTarget;
 		chatId;
-		void checkTerminal();
+		featureCheck = checkTerminal();
 	}
 
 	$: if (mounted && !chatLoading && $user?.id && chatId !== tabsChatId) {
@@ -1666,6 +1755,16 @@
 			onselect={(path) => openFile(path, selectedTarget!.selector)}
 		/>
 	{/key}
+{/if}
+
+{#if terminalPick}
+	<TerminalPicker
+		terminals={pickableTerminals}
+		onclose={() => {
+			terminalPick = null;
+		}}
+		onselect={pickTerminal}
+	/>
 {/if}
 
 <Modal
@@ -2204,34 +2303,37 @@
 					>
 					<div slot="content">
 						<DropdownMenu className="min-w-56">
-							{#if showFilesTab}
-								<button on:click={() => openFiles($selectedTerminalId, undefined, true)}
+							{#if showFilesTab || anyTerminal}
+								<button on:click={menuFiles}
 									><Icon name="folder" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Files')}</span
 									><HotkeyHint name="openFiles" className="ms-auto" /></button
 								>
 							{/if}
-							{#if terminalFilesAvailable}<button on:click={newFile}
+							{#if selectedTarget || anyTerminal}<button on:click={() => withTerminal(newFile)}
 									><Icon name="page" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('New File')}</span
 									><HotkeyHint name="newFile" className="ms-auto" /></button
 								>{/if}
-							{#if terminalEnabled}<button on:click={newTerminal}
+							{#if terminalEnabled || (!selectedTarget && anyTerminal)}<button
+									on:click={() => withTerminal(newTerminal, 'terminal')}
 									><Icon name="terminal" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('New Terminal')}</span
 									><HotkeyHint name="newTerminal" className="ms-auto" /></button
 								>{/if}
-							{#if browserEnabled}<button on:click={() => openBrowser()}
+							{#if browserEnabled || (!selectedTarget && anyTerminal)}<button
+									on:click={() => withTerminal(() => openBrowser(), 'browser')}
 									><Icon name="browser" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Browser')}</span
 									><HotkeyHint name="newBrowser" className="ms-auto" /></button
 								>{/if}
-							{#if desktopEnabled}<button on:click={openDesktop}
+							{#if desktopEnabled || (!selectedTarget && anyTerminal)}<button
+									on:click={() => withTerminal(openDesktop, 'desktop')}
 									><Icon name="monitor" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Desktop')}</span
 									><HotkeyHint name="openDesktop" className="ms-auto" /></button
 								>{/if}
-							{#if canVoiceNote}
+							{#if canVoiceNote || (!selectedTarget && anyTerminal && $user)}
 								<button on:click={openVoiceNote}>
 									<Icon name="microphone" size={14} />
 									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
