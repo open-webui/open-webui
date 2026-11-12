@@ -453,7 +453,7 @@ async def _generate_summary(
                     'function': {'name': item.get('name'), 'arguments': item.get('arguments')},
                 }
                 for item in message.get('output') or []
-                if item.get('type') == 'function_call'
+                if item.get('type') == 'function_call' and item.get('status') in {'completed', 'failed', 'rejected'}
             ]
             if tool_calls:
                 messages[idx] = {
