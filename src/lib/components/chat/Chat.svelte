@@ -1997,7 +1997,7 @@
 	const onMessageHandler = async (event: {
 		origin: string;
 		source: unknown;
-		data: { type: string; text?: string; toolId?: string; error?: string | null };
+		data: { type: string; text?: string; toolId?: string; error?: string | null; chat?: string };
 	}) => {
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
@@ -2016,6 +2016,19 @@
 
 		// Prompt types from an untrusted cross-origin source are silently dropped.
 		if (promptTypes.includes(type) && !isTrusted) {
+			return;
+		}
+
+		// A prompt goes to the chat that shows its embed, any other to the main chat.
+		let owner = event.data?.chat ?? 'main';
+		if (isOwnEmbed) {
+			const embed = [...document.querySelectorAll('iframe')].find(
+				(iframe) => iframe.contentWindow === event.source
+			);
+			owner = embed?.closest('[data-chat]')?.getAttribute('data-chat') ?? 'main';
+		}
+		const thisChat = embedded ? instanceId : 'main';
+		if (owner !== thisChat) {
 			return;
 		}
 
@@ -2135,7 +2148,7 @@
 		loading = true;
 		console.log('mounted');
 		if (!embedded && appLayout) appLayout.initNewChat = initNewChat;
-		if (!side) window.addEventListener('message', onMessageHandler);
+		window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
 		$socket?.on('disconnect', clearTyping);
