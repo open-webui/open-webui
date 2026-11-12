@@ -37,6 +37,7 @@
 	export let hideWhitespace = false;
 	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
 	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
+	let openPullRequests: number | null = null;
 	let prRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
@@ -197,10 +198,13 @@
 					prRoot = next.root;
 					void request<{ available: boolean; default_branch?: string }>('pr/capabilities')
 						.then((data) => {
-							if (current === generation) prCapabilities = data;
+							if (current !== generation) return;
+							prCapabilities = data;
+							openPullRequests = null;
+							if (data.available) void loadPullRequestCount();
 						})
 						.catch(() => {
-							if (current === generation) prCapabilities = null;
+							if (current === generation) prCapabilities = openPullRequests = null;
 						});
 				}
 				if (
@@ -223,6 +227,15 @@
 			});
 		pending = task;
 		return task;
+	};
+	const loadPullRequestCount = async () => {
+		const current = generation;
+		try {
+			const data = await request<{ items: unknown[] }>('pr/list', { state: 'open' });
+			if (current === generation) openPullRequests = data.items.length;
+		} catch {
+			if (current === generation) openPullRequests = null;
+		}
 	};
 	const resetSelection = () => {
 		++diffGeneration;
@@ -258,7 +271,7 @@
 			summary = restoring?.summary ?? '';
 			description = restoring?.description ?? '';
 			commits = [];
-			prCapabilities = null;
+			prCapabilities = openPullRequests = null;
 			prRoot = '';
 			view = restoring?.view ?? 'changes';
 			resetSelection();
@@ -743,6 +756,8 @@
 										: 'Pull requests'
 							)}{#if section === 'changes' && status.files.length}<span
 									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
+								>{:else if section === 'pull requests' && openPullRequests}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -815,6 +830,7 @@
 								directory={status.root}
 								branch={status.branch}
 								defaultBranch={prCapabilities?.default_branch ?? 'main'}
+								onCount={(count) => (openPullRequests = count)}
 								onChange={() => {
 									void refresh(true);
 								}}

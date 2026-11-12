@@ -20,6 +20,7 @@
 	export let maxListWidth = 240;
 	export let onResizeList: (width: number) => void = () => {};
 	export let onChange: () => void = () => {};
+	export let onCount: (count: number) => void = () => {};
 	type PullRequest = {
 		number: number;
 		title: string;
@@ -150,7 +151,9 @@
 		listError = '';
 		try {
 			const data = await request<{ items: PullRequest[] }>('list', { state });
-			if (version === listGeneration) prs = data.items;
+			if (version !== listGeneration) return;
+			prs = data.items;
+			if (state !== 'closed') onCount(prs.filter((pr) => pr.state === 'OPEN').length);
 		} catch (reason) {
 			if (version === listGeneration)
 				listError = String(reason instanceof Error ? reason.message : reason);
@@ -208,6 +211,10 @@
 			comment = '';
 			onChange();
 			void load();
+			if (state === 'closed')
+				void request<{ items: PullRequest[] }>('list', { state: 'open' })
+					.then((data) => onCount(data.items.length))
+					.catch(() => {});
 			if (selected && action !== 'create') await select(selected, view);
 		} catch (reason) {
 			error = String(reason instanceof Error ? reason.message : reason);
