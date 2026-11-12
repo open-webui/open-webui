@@ -1119,7 +1119,7 @@
 		return clampToFileRoot(path);
 	};
 
-	const buildBreadcrumbs = (path: string) => {
+	const buildBreadcrumbs = (path: string, homeLabel: string) => {
 		if (fileRoot) {
 			const directory = clampToFileRoot(path);
 			const relative = directory === fileRoot.path ? '' : directory.slice(fileRoot.path.length);
@@ -1130,7 +1130,7 @@
 					acc.push({ label: part, path: asDirectoryPath(joinPath(prev.path, part)) });
 					return acc;
 				},
-				[{ label: fileRoot.label, path: fileRoot.path }]
+				[{ label: fileRoot.label === 'Home' ? homeLabel : fileRoot.label, path: fileRoot.path }]
 			);
 		}
 
@@ -2490,7 +2490,7 @@
 				showGitDiff = !showGitDiff;
 				fileAsk = null;
 			}}
-			breadcrumbs={buildBreadcrumbs(currentPath)}
+			breadcrumbs={buildBreadcrumbs(currentPath, $i18n.t('Home directory'))}
 			{selectedFile}
 			fileSize={openedFile?.size ?? pendingFile?.size}
 			{loading}

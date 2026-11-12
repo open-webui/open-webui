@@ -4719,5 +4719,10 @@
 	"YouTube": "YouTube",
 	"YouTube video player": "Відеопрогравач YouTube",
 	"Zoom in": "Збільшити",
-	"Zoom out": "Зменшити"
+	"Zoom out": "Зменшити",
+	"Archive selected chats": "Архівувати вибрані чати",
+	"Delete selected chats": "Видалити вибрані чати",
+	"Response order": "Порядок відповідей",
+	"Saved order": "Порядок збереження",
+	"Home directory": "Домашній каталог"
 }
