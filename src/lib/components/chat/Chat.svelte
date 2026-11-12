@@ -612,6 +612,16 @@
 		}
 	};
 
+	// Adds text to the composer for the user to review, keeping any draft already there.
+	const draftPrompt = async (text: string) => {
+		if (fullWidthTabs) {
+			terminalTabs?.focusMainChat();
+			await tick();
+		}
+		messageInput?.setText(prompt.trim() ? `${prompt.trimEnd()}\n\n${text}` : text);
+		messageInput?.focus({ preventScroll: true });
+	};
+
 	let params = {};
 	let chatVariables = {};
 	let showChatVariablesModal = false;
@@ -6142,6 +6152,7 @@
 					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}
+					onDraftPrompt={draftPrompt}
 					{stopResponse}
 					{bridge}
 					bind:callMode

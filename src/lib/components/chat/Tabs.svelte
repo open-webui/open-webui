@@ -141,6 +141,7 @@
 	export let onAskFile:
 		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
 		| null = null;
+	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let stopResponse: Function = () => {};
 	export let showMessage: Function = () => {};
 	export let files: any[] = [];
@@ -2189,6 +2190,7 @@
 									openFile(path, tab.terminalId!, null, fileTarget?.context.modelId)}
 								onOpenDirectory={(path) =>
 									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
+								{onDraftPrompt}
 							/>
 						{/if}
 					</div>

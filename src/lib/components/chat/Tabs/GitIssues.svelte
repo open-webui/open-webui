@@ -7,7 +7,15 @@
 	import Dropdown from '../../common/Dropdown.svelte';
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
-	import { primaryButton, disabledButton, secondaryButton, relativeTime } from './gitPanel';
+	import Markdown from '../Messages/Markdown.svelte';
+	import { copyToClipboard } from '$lib/utils';
+	import {
+		primaryButton,
+		disabledButton,
+		secondaryButton,
+		relativeTime,
+		issuePrompt
+	} from './gitPanel';
 	export let target: TerminalTarget;
 
 	export let directory: string;
@@ -15,6 +23,8 @@
 	export let maxListWidth = 240;
 	export let onResizeList: (width: number) => void = () => {};
 	export let onCount: (count: number) => void = () => {};
+	// Drafts text into the chat composer; the chat actions are hidden without it.
+	export let onDraft: ((text: string) => void) | null = null;
 	type Issue = {
 		number: number;
 		title: string;
@@ -67,6 +77,23 @@
 					: $i18n.t('Closed');
 	const people = (list?: { login?: string; name?: string }[]) =>
 		list?.map((person) => person.login || person.name).join(', ') || $i18n.t('None');
+
+	const copy = async (text: string) => {
+		if (!(await copyToClipboard(text))) error = $i18n.t('Could not copy to clipboard');
+	};
+	const commentPrompt = (issue: Issue, item: NonNullable<Issue['comments']>[number]) =>
+		[
+			$i18n.t('Comment from @{{author}} on issue #{{number}} ({{title}}):', {
+				author: item.author?.login ?? 'unknown',
+				number: issue.number,
+				title: issue.title
+			}),
+			item.body
+				.trim()
+				.split('\n')
+				.map((line) => `> ${line}`)
+				.join('\n')
+		].join('\n\n');
 
 	const request = <T,>(
 		operation: string,
@@ -255,6 +282,11 @@
 						? `#${selected.number} · ${selected.title}`
 						: $i18n.t('New issue')}</span
 				>
+				{#if onDraft && selected && !creating && !editing && !loading}<button
+						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+						on:click={() => selected && onDraft?.(issuePrompt($i18n.t, selected))}
+						><Icon name="chat-plus" size={11} />{$i18n.t('Work on this')}</button
+					>{/if}
 				{#if selected && !creating && !editing}<Dropdown side="top" align="end" closeOnSelect
 						><button
 							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -281,6 +313,9 @@
 									>{/if}
 								<a href={selected.url} target="_blank" rel="noopener noreferrer"
 									><Icon name="external-link" size={13} />{$i18n.t('Open in GitHub')}</a
+								>
+								<button on:click={() => selected && copy(selected.url)}
+									><Icon name="copy" size={13} />{$i18n.t('Copy link')}</button
 								>
 							</DropdownMenu>
 						</div></Dropdown
@@ -367,32 +402,51 @@
 						>
 							{$i18n.t('Description')}
 						</div>
-						<div
-							class="whitespace-pre-wrap break-words text-xs leading-5 {selected.body
-								? 'text-gray-800 dark:text-gray-200'
-								: 'text-gray-400 dark:text-gray-600'}"
-						>
-							{selected.body || $i18n.t('No description')}
-						</div>
+						{#if selected.body?.trim()}<div
+								class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+							>
+								<Markdown
+									id={`issue-${selected.number}-body`}
+									content={selected.body}
+									allowHtml={false}
+									allowEmbeds={false}
+									editCodeBlock={false}
+								/>
+							</div>{:else}<div class="text-xs text-gray-400 dark:text-gray-600">
+								{$i18n.t('No description')}
+							</div>{/if}
 					</div>
 					{#if selected.comments?.length}<div
 							class="px-2.5 pt-2 pb-1 border-t border-gray-100/50 dark:border-white/2 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
 						>
 							{$i18n.t('Comments')}
 						</div>
-						{#each selected.comments as item}<div
-								class="px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
+						{#each selected.comments as item, index}<div
+								class="group px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
 							>
-								<div class="truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
-									{item.author?.login ?? $i18n.t('Unknown')}{item.createdAt
-										? ` · ${relativeTime(item.createdAt)}`
-										: ''}
+								<div class="flex min-w-0 items-center gap-1.5 h-5">
+									<span
+										class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+										>{item.author?.login ?? $i18n.t('Unknown')}{item.createdAt
+											? ` · ${relativeTime(item.createdAt)}`
+											: ''}</span
+									>{#if onDraft && item.body?.trim()}<button
+											class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+											on:click={() => selected && onDraft?.(commentPrompt(selected, item))}
+											><Icon name="chat-plus" size={11} />{$i18n.t('Add to chat')}</button
+										>{/if}
 								</div>
-								<p
-									class="mt-0.5 whitespace-pre-wrap break-words text-xs text-gray-800 dark:text-gray-200"
+								<div
+									class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
 								>
-									{item.body}
-								</p>
+									<Markdown
+										id={`issue-${selected.number}-comment-${index}`}
+										content={item.body}
+										allowHtml={false}
+										allowEmbeds={false}
+										editCodeBlock={false}
+									/>
+								</div>
 							</div>{/each}{/if}
 				</div>
 				<form

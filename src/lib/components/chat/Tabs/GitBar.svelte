@@ -29,6 +29,7 @@
 	export let chatId: string | null = null;
 	export let active = false;
 	export let onOpenFile: (path: string) => void = () => {};
+	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
@@ -837,6 +838,7 @@
 								branch={status.branch}
 								defaultBranch={prCapabilities?.default_branch ?? 'main'}
 								onCount={(count) => (openPullRequests = count)}
+								onDraft={onDraftPrompt}
 								onChange={() => {
 									void refresh(true);
 								}}
@@ -849,6 +851,7 @@
 								{target}
 								directory={status.root}
 								onCount={(count) => (openIssues = count)}
+								onDraft={onDraftPrompt}
 							/>{/key}
 					{:else}
 						<div

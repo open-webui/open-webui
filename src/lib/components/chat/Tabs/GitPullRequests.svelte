@@ -9,7 +9,25 @@
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
-	import { primaryButton, disabledButton, secondaryButton } from './gitPanel';
+	import Markdown from '../Messages/Markdown.svelte';
+	import { copyToClipboard } from '$lib/utils';
+	import {
+		primaryButton,
+		disabledButton,
+		secondaryButton,
+		relativeTime,
+		checkName,
+		checkLink,
+		checkResult,
+		checkOutcome,
+		outcomeTone,
+		checksSummary,
+		checkPrompt,
+		notePrompt,
+		feedbackPrompt,
+		conflictPrompt,
+		type Check
+	} from './gitPanel';
 	export let target: TerminalTarget;
 
 	export let directory: string;
@@ -22,6 +40,8 @@
 	export let onResizeList: (width: number) => void = () => {};
 	export let onChange: () => void = () => {};
 	export let onCount: (count: number) => void = () => {};
+	// Drafts text into the chat composer; the chat actions are hidden without it.
+	export let onDraft: ((text: string) => void) | null = null;
 	type PullRequest = {
 		number: number;
 		title: string;
@@ -39,13 +59,8 @@
 		author?: { login: string };
 		comments?: { id: string; body: string; author?: { login: string } }[];
 		reviews?: { id: string; body: string; state: string; author?: { login: string } }[];
-		statusCheckRollup?: {
-			name?: string;
-			context?: string;
-			status?: string;
-			conclusion?: string;
-			state?: string;
-		}[];
+		statusCheckRollup?: Check[];
+		updatedAt?: string;
 	};
 	const i18n = getContext<any>('i18n');
 	let prs: PullRequest[] = [];
@@ -76,6 +91,7 @@
 	$: states = [
 		{ value: 'open', label: $i18n.t('Open') },
 		{ value: 'closed', label: $i18n.t('Closed') },
+		{ value: 'merged', label: $i18n.t('Merged') },
 		{ value: 'all', label: $i18n.t('All') }
 	];
 	$: tabs = [
@@ -100,6 +116,12 @@
 		`${pr.number} ${pr.title}`.toLowerCase().includes(search.toLowerCase())
 	);
 	$: showingDetail = !!selected || creating || editing;
+	$: failingChecks = (selected?.statusCheckRollup ?? []).filter(
+		(check) => checkOutcome(check) === 'fail'
+	);
+	$: feedback = [...(selected?.comments ?? []), ...(selected?.reviews ?? [])].filter((item) =>
+		item.body?.trim()
+	);
 
 	const label = (value = '') =>
 		({
@@ -116,23 +138,26 @@
 		})[value] ?? value.toLowerCase().replaceAll('_', ' ');
 	const people = (list?: { login?: string; name?: string }[]) =>
 		list?.map((person) => person.login || person.name).join(', ') || $i18n.t('None');
-	const checkResult = (check: NonNullable<PullRequest['statusCheckRollup']>[number]) =>
-		(check.conclusion || check.status || check.state || '').toUpperCase();
-	const checkTone = (result: string) =>
-		result === 'SUCCESS'
-			? 'bg-green-500 dark:bg-green-400'
-			: [
-						'FAILURE',
-						'ERROR',
-						'CANCELLED',
-						'TIMED_OUT',
-						'ACTION_REQUIRED',
-						'STARTUP_FAILURE'
-				  ].includes(result)
-				? 'bg-red-500 dark:bg-red-400'
-				: ['NEUTRAL', 'SKIPPED', 'STALE'].includes(result)
-					? 'bg-gray-300 dark:bg-gray-600'
-					: 'bg-yellow-500 dark:bg-yellow-400';
+
+	const rowDetails = (pr: PullRequest) =>
+		[
+			`#${pr.number}`,
+			pr.author?.login,
+			pr.isDraft ? $i18n.t('Draft') : pr.state !== 'OPEN' ? label(pr.state) : '',
+			pr.state === 'OPEN' && pr.mergeable === 'CONFLICTING' ? $i18n.t('Conflicts') : '',
+			pr.state === 'OPEN' && ['APPROVED', 'CHANGES_REQUESTED'].includes(pr.reviewDecision ?? '')
+				? label(pr.reviewDecision)
+				: '',
+			pr.updatedAt ? relativeTime(pr.updatedAt) : ''
+		]
+			.filter(Boolean)
+			.join(' · ');
+	const checksTitle = (summary: NonNullable<ReturnType<typeof checksSummary>>) =>
+		$i18n.t('Checks: {{failed}} failing, {{pending}} pending, {{passed}} passing', summary);
+	const copy = async (text: string) => {
+		if (!(await copyToClipboard(text))) error = $i18n.t('Could not copy to clipboard');
+	};
+	const sendToChat = (text: string) => onDraft?.(text);
 
 	const request = <T,>(
 		operation: string,
@@ -307,19 +332,22 @@
 				{listError}
 			</div>{/if}
 		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
-			{#each filtered as pr (pr.number)}<button
+			{#each filtered as pr (pr.number)}{@const checks =
+					pr.state === 'OPEN' ? checksSummary(pr.statusCheckRollup) : null}<button
 					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
 					pr.number
 						? 'bg-gray-100/40 dark:bg-gray-800/25'
 						: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
 					on:click={() => select(pr)}
-					><span class="w-full truncate text-xs text-gray-800 dark:text-gray-200">{pr.title}</span
+					><span class="flex w-full min-w-0 items-center gap-1.5"
+						><span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200"
+							>{pr.title}</span
+						>{#if checks}<span
+								class="w-1.5 h-1.5 rounded-full shrink-0 {outcomeTone[checks.outcome]}"
+								title={checksTitle(checks)}
+							></span>{/if}</span
 					><span class="w-full truncate text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
-						>#{pr.number}{pr.author?.login ? ` · ${pr.author.login}` : ''}{pr.isDraft
-							? ` · ${$i18n.t('Draft')}`
-							: pr.state !== 'OPEN'
-								? ` · ${label(pr.state)}`
-								: ''}</span
+						>{rowDetails(pr)}</span
 					></button
 				>{/each}
 			{#if !filtered.length}<div
@@ -348,6 +376,12 @@
 						? `#${selected.number} · ${selected.title}`
 						: $i18n.t('New pull request')}</span
 				>
+				{#if onDraft && selected?.state === 'OPEN' && !creating && !editing && (failingChecks.length || feedback.length)}<button
+						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+						on:click={() =>
+							selected && sendToChat(feedbackPrompt($i18n.t, selected, failingChecks, feedback))}
+						><Icon name="chat-plus" size={11} />{$i18n.t('Address feedback')}</button
+					>{/if}
 				{#if selected && !creating && !editing}<Dropdown side="top" align="end" closeOnSelect
 						><button
 							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -382,6 +416,12 @@
 									>{/if}
 								<a href={selected.url} target="_blank" rel="noopener noreferrer"
 									><Icon name="external-link" size={13} />{$i18n.t('Open in GitHub')}</a
+								>
+								<button on:click={() => selected && copy(selected.url)}
+									><Icon name="copy" size={13} />{$i18n.t('Copy link')}</button
+								>
+								<button on:click={() => selected && copy(selected.headRefName)}
+									><Icon name="copy" size={13} />{$i18n.t('Copy branch name')}</button
 								>
 							</DropdownMenu>
 						</div></Dropdown
@@ -531,13 +571,19 @@
 					>
 						{$i18n.t('Description')}
 					</div>
-					<div
-						class="whitespace-pre-wrap break-words text-xs leading-5 {selected.body
-							? 'text-gray-800 dark:text-gray-200'
-							: 'text-gray-400 dark:text-gray-600'}"
-					>
-						{selected.body || $i18n.t('No description')}
-					</div>
+					{#if selected.body?.trim()}<div
+							class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+						>
+							<Markdown
+								id={`pr-${selected.number}-body`}
+								content={selected.body}
+								allowHtml={false}
+								allowEmbeds={false}
+								editCodeBlock={false}
+							/>
+						</div>{:else}<div class="text-xs text-gray-400 dark:text-gray-600">
+							{$i18n.t('No description')}
+						</div>{/if}
 				</div>
 				{#if selected.state === 'OPEN'}<div
 						class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
@@ -550,31 +596,36 @@
 								on:click={() => mutate('ready')}>{$i18n.t('Mark ready')}</button
 							>{:else}
 							{@const blocked = busy || selected.mergeable === 'CONFLICTING'}
-							<button
-								class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {blocked
-									? disabledButton
-									: primaryButton}"
-								disabled={blocked}
-								on:click={() => confirm('merge')}>{mergeLabel}</button
-							>
-							<Dropdown side="top" align="end" closeOnSelect>
-								<button
-									class="flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors duration-75 {secondaryButton}"
-									aria-label={$i18n.t('Merge method')}><Icon name="chevron-up" size={10} /></button
+							{#if onDraft && selected.mergeable === 'CONFLICTING'}<button
+									class="flex flex-1 items-center justify-center gap-1.5 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {primaryButton}"
+									on:click={() => selected && sendToChat(conflictPrompt($i18n.t, selected))}
+									><Icon name="chat-plus" size={11} />{$i18n.t('Resolve conflicts in chat')}</button
+								>{:else}<button
+									class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {blocked
+										? disabledButton
+										: primaryButton}"
+									disabled={blocked}
+									on:click={() => confirm('merge')}>{mergeLabel}</button
 								>
-								<div slot="content">
-									<DropdownMenu className="w-48">
-										{#each mergeMethods as method}<button
-												on:click={() => (mergeMethod = method.value)}
-												><span class="flex-1 text-left">{method.label}</span
-												>{#if mergeMethod === method.value}<Icon
-														name="check"
-														size={11}
-													/>{/if}</button
-											>{/each}
-									</DropdownMenu>
-								</div>
-							</Dropdown>
+								<Dropdown side="top" align="end" closeOnSelect>
+									<button
+										class="flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors duration-75 {secondaryButton}"
+										aria-label={$i18n.t('Merge method')}
+										><Icon name="chevron-up" size={10} /></button
+									>
+									<div slot="content">
+										<DropdownMenu className="w-48">
+											{#each mergeMethods as method}<button
+													on:click={() => (mergeMethod = method.value)}
+													><span class="flex-1 text-left">{method.label}</span
+													>{#if mergeMethod === method.value}<Icon
+															name="check"
+															size={11}
+														/>{/if}</button
+												>{/each}
+										</DropdownMenu>
+									</div>
+								</Dropdown>{/if}
 						{/if}
 					</div>
 				{:else if selected.state === 'CLOSED'}<div
@@ -588,15 +639,28 @@
 					</div>{/if}
 			{:else if view === 'checks'}<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 					{#each selected.statusCheckRollup ?? [] as check}
-						{@const result = checkResult(check)}
+						{@const outcome = checkOutcome(check)}
+						{@const link = checkLink(check)}
 						<div
-							class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-50/50 dark:border-white/2"
+							class="group flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-50/50 dark:border-white/2"
 						>
-							<span class="w-1.5 h-1.5 rounded-full shrink-0 {checkTone(result)}"></span><span
-								class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200"
-								>{check.name ?? check.context}</span
-							><span class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
-								>{result.toLowerCase().replaceAll('_', ' ')}</span
+							<span class="w-1.5 h-1.5 rounded-full shrink-0 {outcomeTone[outcome]}"
+							></span>{#if link}<a
+									class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200 hover:underline"
+									href={link}
+									target="_blank"
+									rel="noopener noreferrer">{checkName(check)}</a
+								>{:else}<span
+									class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200"
+									>{checkName(check)}</span
+								>{/if}
+							{#if onDraft && outcome === 'fail' && selected.state === 'OPEN'}<button
+									class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+									on:click={() => selected && sendToChat(checkPrompt($i18n.t, selected, check))}
+									><Icon name="chat-plus" size={11} />{$i18n.t('Fix')}</button
+								>{/if}<span
+								class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+								>{checkResult(check)}</span
 							>
 						</div>
 					{/each}
@@ -612,19 +676,32 @@
 					...(selected.reviews ?? [])
 				]}
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
-					{#each activity as item}<div
-							class="px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
+					{#each activity as item, index}<div
+							class="group px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
 						>
-							<div class="truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
-								{item.author?.login ?? $i18n.t('Unknown')}{item.state
-									? ` · ${label(item.state)}`
-									: ''}
+							<div class="flex min-w-0 items-center gap-1.5 h-5">
+								<span
+									class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+									>{item.author?.login ?? $i18n.t('Unknown')}{item.state
+										? ` · ${label(item.state)}`
+										: ''}</span
+								>{#if onDraft && item.body?.trim()}<button
+										class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+										on:click={() => selected && sendToChat(notePrompt($i18n.t, selected, item))}
+										><Icon name="chat-plus" size={11} />{$i18n.t('Add to chat')}</button
+									>{/if}
 							</div>
-							{#if item.body}<p
-									class="mt-0.5 whitespace-pre-wrap break-words text-xs text-gray-800 dark:text-gray-200"
+							{#if item.body?.trim()}<div
+									class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
 								>
-									{item.body}
-								</p>{/if}
+									<Markdown
+										id={`pr-${selected.number}-activity-${index}`}
+										content={item.body}
+										allowHtml={false}
+										allowEmbeds={false}
+										editCodeBlock={false}
+									/>
+								</div>{/if}
 						</div>{/each}
 					{#if !activity.length}<div
 							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
