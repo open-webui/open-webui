@@ -3442,6 +3442,8 @@
 	"settings.admin.interface.visibility.selectedTools.label": "Selected Tools",
 	"settings.admin.interface.visibility.selectedWebSearch.label": "Selected Web Search",
 	"settings.admin.interface.visibility.title": "Visible controls",
+	"settings.admin.interface.visualizationPrompt.description": "Tool description sent to the model for the Visualizations built-in tool. Controls when and how it draws. Leave empty to use the default.",
+	"settings.admin.interface.visualizationPrompt.label": "Visualization Prompt",
 	"settings.admin.interface.voiceModePrompt.description": "Apply voice-specific instructions while voice mode is active.",
 	"settings.admin.interface.voiceModePrompt.label": "Voice Mode Prompt",
 	"settings.admin.interface.webSearchQueryGeneration.description": "Rewrite user requests into web-search queries.",

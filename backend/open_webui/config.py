@@ -2286,6 +2286,8 @@ CONTEXT_COMPACTION_RETENTION_PERCENTAGE = min(
 
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
+VISUALIZATION_PROMPT_TEMPLATE = os.getenv('VISUALIZATION_PROMPT_TEMPLATE', '')
+
 ENABLE_TOOL_SEARCH = os.getenv('ENABLE_TOOL_SEARCH', 'False').lower() == 'true'
 TOOL_SEARCH_ENGINE = os.getenv('TOOL_SEARCH_ENGINE', 'bm25')
 TOOL_SEARCH_DECISIONS_API_BASE_URL = os.getenv('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
@@ -3305,6 +3307,7 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.token_cap': CONTEXT_COMPACTION_TOKEN_CAP,
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
+    'chat.visualizations.prompt_template': VISUALIZATION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
     'chat.tool_call_labels.enable': ENABLE_TOOL_CALL_LABELS,
     'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,

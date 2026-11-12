@@ -221,9 +221,9 @@
 		{#if !expanded}
 			<button
 				on:click={() => select(activeId)}
-				class="flex h-full min-w-0 flex-1 items-center gap-1.5 px-2 text-left hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex h-full min-w-0 flex-1 items-center gap-1.5 pl-3 pr-2 text-left hover:text-gray-900 dark:hover:text-gray-100"
 			>
-				<Icon name="terminal" size={13} />
+				<Icon name="terminal" size={12} class="text-gray-400 dark:text-gray-600" />
 				<span>{$i18n.t('Sessions')}</span>
 				{#if running}<span class="tabular-nums text-gray-400">{running}</span>{/if}
 			</button>
@@ -278,7 +278,7 @@
 			aria-label={expanded ? $i18n.t('Collapse sessions') : $i18n.t('Expand sessions')}
 		>
 			<span class="flex h-7 w-7 items-center justify-center">
-				<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={12} />
+				<Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} />
 			</span>
 		</button>
 	</div>

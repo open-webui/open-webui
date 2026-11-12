@@ -109,6 +109,7 @@ from open_webui.tools.builtin import (
     update_skill_files,
     write_note,
 )
+from open_webui.tools.visualizations import DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
 from open_webui.utils.access_control import has_access, has_connection_access, has_permission
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.headers import (
@@ -666,6 +667,7 @@ async def get_builtin_tools(
         'ui.enable_user_webhooks',
         'subagents.enable',
         'subagents.background_enabled',
+        'chat.visualizations.prompt_template',
     )
 
     async def has_user_permission(feature_key: str) -> bool:
@@ -955,6 +957,9 @@ async def get_builtin_tools(
         )
 
         spec = get_builtin_tool_spec(func)
+        if func.__name__ == 'render_visualization':
+            prompt = config.get('chat.visualizations.prompt_template') or ''
+            spec['description'] = prompt if prompt.strip() else DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
         if func.__name__ == 'delegate_task':
             from open_webui.utils.subagents import get_subagent_models
 
