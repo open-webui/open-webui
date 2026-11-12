@@ -854,8 +854,16 @@
 					}
 				}
 			}),
+			showTabs.subscribe((value) => {
+				if ($mobile && value) {
+					showSidebar.set(false);
+				}
+			}),
 			showSidebar.subscribe(async (value) => {
 				localStorage.sidebar = value;
+				if ($mobile && value) {
+					showTabs.set(false);
+				}
 
 				// nav element is not available on the first render
 				const navElement = document.getElementsByTagName('nav')[0];
