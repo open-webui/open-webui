@@ -10,7 +10,12 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import (
+    convert_output_to_messages,
+    get_content_from_message,
+    get_last_user_message,
+    get_message_list,
+)
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
     prompt_template,
@@ -446,13 +451,9 @@ async def _generate_summary(
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
             tool_calls = message.get('tool_calls') or [
-                {
-                    'id': item.get('call_id'),
-                    'type': 'function',
-                    'function': {'name': item.get('name'), 'arguments': item.get('arguments')},
-                }
-                for item in message.get('output') or []
-                if item.get('type') == 'function_call' and item.get('status') in {'completed', 'failed', 'rejected'}
+                tool_call
+                for converted in convert_output_to_messages(message.get('output'))
+                for tool_call in converted.get('tool_calls') or []
             ]
             if tool_calls:
                 messages[idx] = {
