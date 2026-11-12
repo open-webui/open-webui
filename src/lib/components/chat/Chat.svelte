@@ -3368,12 +3368,15 @@
 					const restored = await restoreChatInput(
 						sessionStorage.getItem(getChatInputKey(chatIdProp))
 					);
+					const chatInputPrompt = restored ? prompt : null;
 					if (signal.aborted) return;
 					await setDefaults(restored);
 					if (signal.aborted) return;
 					loading = false;
 					await tick();
 					if (signal.aborted) return;
+					// Mounting the editor clears prompt, so apply the saved text afterward.
+					if (chatInputPrompt !== null) messageInput?.setText(chatInputPrompt);
 					if (embeddedDraft) {
 						({ prompt, files } = embeddedDraft);
 						messageInput?.setText(prompt);
