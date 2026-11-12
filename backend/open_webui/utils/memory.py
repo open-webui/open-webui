@@ -373,8 +373,7 @@ async def recall_memory_sections(
     return sections
 
 
-async def render_memory_context(sections: dict[str, list[str]], earlier_lists: str = '') -> str:
-    """Render recalled memories by section within the char limits, leaving out ones already in earlier_lists."""
+async def render_memory_context(sections: dict[str, list[str]], earlier_context: str = '') -> str:
     if not any(sections.values()):
         return ''
 
@@ -405,7 +404,7 @@ async def render_memory_context(sections: dict[str, list[str]], earlier_lists: s
             used[group] += len('\n- ')
             shown = memory[: max(0, limits[group] - used[group])]
             used[group] += len(memory)
-            if shown.strip() and f'\n- {shown}\n' not in earlier_lists:
+            if shown.strip() and f'\n- {shown}\n' not in earlier_context:
                 lines.append(f'- {shown}')
         if lines:
             parts[group].append(f'[{title}]\n' + '\n'.join(lines))

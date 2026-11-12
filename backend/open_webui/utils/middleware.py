@@ -3068,7 +3068,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     kept_output = []
     for call, result in zip(initial_output[::2], initial_output[1::2]):
         is_list = call['name'] in ('list_available_skills', 'list_attached_knowledge')
-        if is_list and get_tool_results(form_data['messages'], call['name'])[-1:] == [result['output'][0]['text']]:
+        text = result['output'][0]['text']
+        earlier_copies = get_tool_results(form_data['messages'], call['name'])
+        if is_list and earlier_copies and earlier_copies[-1] == text:
             continue
         kept_output.extend([call, result])
     initial_output = [*await preload_memory(memory_sections, form_data['messages']), *kept_output]
@@ -3083,8 +3085,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
 async def preload_memory(sections: dict[str, list[str]], messages: list[dict]) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
-    earlier_lists = '\n'.join(get_tool_results(messages, 'recall_memories'))
-    result = await render_memory_context(sections, earlier_lists)
+    if not any(sections.values()):
+        return []
+    earlier_context = '\n'.join(get_tool_results(messages, 'recall_memories'))
+    result = await render_memory_context(sections, earlier_context)
     return hidden_tool_result('recall_memories', result) if result else []
 
 
