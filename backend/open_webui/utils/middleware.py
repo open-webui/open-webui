@@ -104,7 +104,12 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
-from open_webui.utils.memory import add_memory_context, recall_memories, review_memory_after_turn
+from open_webui.utils.memory import (
+    add_memory_context,
+    recall_memory_sections,
+    render_memory_context,
+    review_memory_after_turn,
+)
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -120,6 +125,7 @@ from open_webui.utils.misc import (
     get_reasoning_details,
     get_response_error_detail,
     get_system_message,
+    get_tool_results,
     is_raster_image_content_type,
     merge_system_messages,
     prepend_to_first_user_message_content,
@@ -2355,6 +2361,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     initial_output = []
+    memory_sections = {}
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
     if features:
@@ -2383,7 +2390,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             ):
                 if use_builtin_tools:
                     if not metadata.get('assistant_message_id'):
-                        initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
+                        memory_sections = await recall_memory_sections(request, form_data['messages'], user, model)
                 else:
                     form_data = await add_memory_context(request, form_data, user, model)
 
@@ -3011,11 +3018,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 metadata.get('tools', {}).get('view_skill'),
             )
         )
-    if initial_output:
-        form_data['messages'].extend(
-            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
-        )
-        metadata['initial_output'] = initial_output
 
     form_data = normalize_messages_for_model(form_data)
 
@@ -3061,12 +3063,28 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
 
     metadata['context_summary'] = context_summary
+
+    # Checked after compaction, which can drop the only copy the model had.
+    kept_output = []
+    for call, result in zip(initial_output[::2], initial_output[1::2]):
+        is_list = call['name'] in ('list_available_skills', 'list_attached_knowledge')
+        if is_list and get_tool_results(form_data['messages'], call['name'])[-1:] == [result['output'][0]['text']]:
+            continue
+        kept_output.extend([call, result])
+    initial_output = [*await preload_memory(memory_sections, form_data['messages']), *kept_output]
+    if initial_output:
+        form_data['messages'].extend(
+            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
+        )
+        metadata['initial_output'] = initial_output
+
     return form_data, metadata, events, False
 
 
-async def preload_memory(request, messages: list[dict], user, model: dict) -> list[dict]:
+async def preload_memory(sections: dict[str, list[str]], messages: list[dict]) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
-    result = await recall_memories(request, messages, user, model)
+    earlier_lists = '\n'.join(get_tool_results(messages, 'recall_memories'))
+    result = await render_memory_context(sections, earlier_lists)
     return hidden_tool_result('recall_memories', result) if result else []
 
 

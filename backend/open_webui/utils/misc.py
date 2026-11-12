@@ -289,6 +289,21 @@ def get_paired_tool_call_ids(messages: list[dict]) -> list[set[str]]:
     return paired_ids_by_message
 
 
+def get_tool_results(messages: list[dict], name: str) -> list[str]:
+    """What the named tool returned in these messages, oldest first."""
+    call_ids = {
+        tool_call.get('id')
+        for message in messages
+        for tool_call in message.get('tool_calls') or []
+        if (tool_call.get('function') or {}).get('name') == name
+    }
+    return [
+        get_content_from_message(message) or ''
+        for message in messages
+        if message.get('role') == 'tool' and message.get('tool_call_id') in call_ids
+    ]
+
+
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     """Drop unpaired tool_use / tool_result from a reconstructed conversation.
 
