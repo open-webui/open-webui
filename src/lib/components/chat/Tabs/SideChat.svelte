@@ -16,6 +16,9 @@
 	export let streaming = false;
 	export let artifacts: Writable<{ type: string; content: string }[]> = writable([]);
 	export let onOpenArtifacts: (code?: string) => void = () => {};
+	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	export let onClose: () => void = () => {};
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
 	export let parentFolderId: string | null = null;
@@ -140,10 +143,13 @@
 		initialPrompt={restored ? '' : initialPrompt}
 		bind:prompt={draft}
 		bind:streaming
+		bind:embeddedTabTitleEditor={tabTitleEditor}
+		bind:embeddedTabActions={tabActions}
 		bind:files
 		{artifacts}
 		{onOpenArtifacts}
 		onCreateEmbeddedChat={createChat}
+		onCloseEmbedded={onClose}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}
 	/>

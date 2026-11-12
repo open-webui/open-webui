@@ -565,6 +565,10 @@
 	let taskIds = null;
 	let liveStatus = '';
 	export let streaming = false;
+	export let embeddedTabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	export let embeddedTabActions: import('svelte').Snippet | undefined = undefined;
+	$: embeddedTabTitleEditor = loading ? undefined : tabTitleEditor;
+	$: embeddedTabActions = loading ? undefined : tabActions;
 
 	$: streaming =
 		!loading &&
@@ -5413,8 +5417,12 @@
 		try {
 			const res = await archiveChatById(localStorage.token, id);
 			updateFolderChatLists({ id }, undefined, true);
-			initNewChat();
-			await goto('/');
+			if (side) {
+				onCloseEmbedded?.();
+			} else {
+				initNewChat();
+				await goto('/');
+			}
 			await refreshChatList(localStorage.token, { refreshPinned: true });
 			await refreshFolderChatLists();
 			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
@@ -5450,8 +5458,12 @@
 			const res = await deleteChatById(localStorage.token, id);
 			if (res) {
 				updateFolderChatLists({ id }, undefined, true);
-				initNewChat();
-				await goto('/');
+				if (side) {
+					onCloseEmbedded?.();
+				} else {
+					initNewChat();
+					await goto('/');
+				}
 				await refreshChatList(localStorage.token, { refreshPinned: true });
 				await refreshFolderChatLists();
 				allTags.set(await getAllTags(localStorage.token));
@@ -5695,9 +5707,11 @@
 									</button>
 								</Tooltip>{/if}
 						</div>
-					{:else if !embedded}
+					{:else}
 						<Navbar
-							tabbed={fullWidthTabs}
+							tabbed={fullWidthTabs || side}
+							{side}
+							temporary={$temporaryChatEnabled}
 							bind:tabTitleEditor
 							bind:tabActions
 							bind:tabBarActions
@@ -5727,6 +5741,12 @@
 							{archiveChatHandler}
 							{deleteChatHandler}
 							{moveChatHandler}
+							onRename={(id, newTitle) => {
+								if ($chatId === id) {
+									chatTitle.set(newTitle);
+									onEmbeddedChatTitle?.(id, newTitle);
+								}
+							}}
 							onSaveTempChat={async () => {
 								try {
 									if (!history?.currentId || !Object.keys(history.messages).length) {
@@ -5762,7 +5782,11 @@
 										chatId.set(savedChat.id);
 										await refreshChatList(localStorage.token);
 
-										await goto(`/c/${savedChat.id}`);
+										if (side) {
+											await onSelectEmbeddedChat?.(savedChat.id);
+										} else {
+											await goto(`/c/${savedChat.id}`);
+										}
 										toast.success($i18n.t('Conversation saved successfully'));
 									}
 								} catch (error) {

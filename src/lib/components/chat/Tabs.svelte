@@ -193,6 +193,8 @@
 	// The code block each artifacts tab was last asked to show.
 	let artifactSelections: Record<string, { code: string }> = {};
 	let pendingArtifacts: { code?: string } | null = null;
+	let sideTabTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
+	let sideTabActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
 	let viewReady = false;
 	let viewError = '';
@@ -235,6 +237,8 @@
 		tabs = emptyTabs();
 		sideChatStreaming = {};
 		pendingArtifacts = null;
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		++switchVersion;
 		tabsChatId = undefined;
 	}
@@ -282,6 +286,8 @@
 		tabs = emptyTabs();
 		viewError = '';
 		sideChatStreaming = {};
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
 		viewEntry = owner;
@@ -342,6 +348,8 @@
 		viewEntry = null;
 		tabs = emptyTabs();
 		sideChatStreaming = {};
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		tabsChatId = undefined;
 		clearChatViews();
 	}
@@ -1064,6 +1072,8 @@
 					delete sideArtifacts[id];
 					delete artifactSelections[`artifacts:${id}`];
 				}
+				delete sideTabTitleEditors[id];
+				delete sideTabActions[id];
 				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
 					showTabs.set(false);
 				await tick();
@@ -1986,6 +1996,9 @@
 						bind:streaming={sideChatStreaming[tab.id]}
 						artifacts={sideArtifactsFor(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
+						bind:tabTitleEditor={sideTabTitleEditors[tab.id]}
+						bind:tabActions={sideTabActions[tab.id]}
+						onClose={() => closeTab(tab.id)}
 						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
 						onChatUpdate={(chat) =>
@@ -2240,6 +2253,7 @@
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
 					{@const PageIcon =
 						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
+					{@const titleEditor = tab.kind === 'chat' ? tabTitleEditor : sideTabTitleEditors[tab.id]}
 					<div
 						role="presentation"
 						data-panel-tab={tab.id}
@@ -2275,7 +2289,7 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind !== 'chat' || !tabTitleEditor}
+							{#if !titleEditor}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
 									>{tab.kind === 'chat' ? title : tabLabel(tab)}</span
 								>
@@ -2291,7 +2305,7 @@
 						{#if tab.kind === 'chat'}
 							{@render tabTitleEditor?.()}
 							{@render tabActions?.()}
-						{:else}<button
+						{:else}{@render titleEditor?.()}{@render sideTabActions[tab.id]?.()}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[

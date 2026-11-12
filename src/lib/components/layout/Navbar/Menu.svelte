@@ -13,7 +13,6 @@
 		showTabs,
 		showOverview,
 		mobile,
-		temporaryChatEnabled,
 		theme,
 		user,
 		settings,
@@ -44,6 +43,8 @@
 
 	export let shareEnabled: boolean = false;
 	export let readOnly: boolean = false;
+	export let side: boolean = false;
+	export let temporary: boolean = false;
 
 	export let shareHandler: Function;
 	export let renameHandler: Function;
@@ -290,7 +291,7 @@
 		if (chat.id) {
 			let chatObj = null;
 
-			if ((chat?.id ?? '').startsWith('local') || $temporaryChatEnabled) {
+			if ((chat?.id ?? '').startsWith('local') || temporary) {
 				chatObj = chat;
 			} else {
 				chatObj = await getChatById(localStorage.token, chat.id);
@@ -395,7 +396,7 @@
 				</button>
 			{/if}
 
-			{#if Object.keys(chat?.chat?.history?.messages ?? {}).length > 0}
+			{#if !side && Object.keys(chat?.chat?.history?.messages ?? {}).length > 0}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -428,7 +429,7 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
-			{#if !readOnly && !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
+			{#if !readOnly && !temporary && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -442,7 +443,7 @@
 				</button>
 			{/if}
 
-			{#if chat?.id && !$temporaryChatEnabled}
+			{#if !side && chat?.id && !temporary}
 				<CommentButton
 					onComment={() => showTabs.set('comments')}
 					menu
@@ -496,7 +497,7 @@
 				</DropdownSub>
 			{/if}
 
-			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !$temporaryChatEnabled && chat?.id}
+			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !temporary && chat?.id}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -529,7 +530,7 @@
 				</button>
 			{/if}
 
-			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
+			{#if !readOnly && !temporary && chat?.id}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 				{#if $folders.length > 0}
