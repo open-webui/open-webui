@@ -4719,5 +4719,15 @@
 	"YouTube": "YouTube",
 	"YouTube video player": "Видеоплеер YouTube",
 	"Zoom in": "Увеличить",
-	"Zoom out": "Уменьшить"
+	"Zoom out": "Уменьшить",
+	"Interactive scripts are disabled.": "Интерактивные скрипты отключены.",
+	"Drawing preview…": "Отрисовка предпросмотра…",
+	"Preparing visualization…": "Подготовка визуализации…",
+	"Visualization incomplete.": "Визуализация не завершена.",
+	"Visualization arguments are incomplete or invalid.": "Параметры визуализации неполны или недопустимы.",
+	"Visualization stopped after navigation.": "Визуализация остановлена после перехода.",
+	"Visualization could not start.": "Не удалось запустить визуализацию.",
+	"Visualization": "Визуализация",
+	"settings.admin.models.builtinTools.visualizations.label": "Визуализации",
+	"settings.admin.models.builtinTools.visualizations.description": "Позволяет моделям создавать интерактивные визуализации."
 }
