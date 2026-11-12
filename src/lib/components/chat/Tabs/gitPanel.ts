@@ -18,10 +18,6 @@ export const relativeTime = (date: string) => {
 				: `${Math.floor(seconds / 86400)}d`;
 };
 
-// Pull request and issue lists return at most this many items.
-export const LIST_LIMIT = 50;
-export const countLabel = (count: number) => (count >= LIST_LIMIT ? `${LIST_LIMIT}+` : `${count}`);
-
 // Checks come from `pr/checks` (bucket, state, link) and from `pr/view` / `pr/list`
 // (check runs: conclusion, status, detailsUrl; status contexts: context, state, targetUrl).
 export type Check = {

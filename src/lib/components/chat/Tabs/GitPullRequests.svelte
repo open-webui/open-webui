@@ -39,7 +39,7 @@
 	export let maxListWidth = 240;
 	export let onResizeList: (width: number) => void = () => {};
 	export let onChange: () => void = () => {};
-	export let onCount: (count: number) => void = () => {};
+
 	// Drafts text into the chat composer; the chat actions are hidden without it.
 	export let onDraft: ((text: string) => void) | null = null;
 	type PullRequest = {
@@ -170,9 +170,7 @@
 		listError = '';
 		try {
 			const data = await request<{ items: PullRequest[] }>('list', { state });
-			if (version !== listGeneration) return;
-			prs = data.items;
-			if (state !== 'closed') onCount(prs.filter((pr) => pr.state === 'OPEN').length);
+			if (version === listGeneration) prs = data.items;
 		} catch (reason) {
 			if (version === listGeneration)
 				listError = String(reason instanceof Error ? reason.message : reason);
@@ -230,10 +228,6 @@
 			comment = '';
 			onChange();
 			void load();
-			if (state === 'closed')
-				void request<{ items: PullRequest[] }>('list', { state: 'open' })
-					.then((data) => onCount(data.items.length))
-					.catch(() => {});
 			if (selected && action !== 'create') await select(selected, view);
 		} catch (reason) {
 			error = String(reason instanceof Error ? reason.message : reason);

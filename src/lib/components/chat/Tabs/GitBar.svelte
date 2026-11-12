@@ -22,7 +22,7 @@
 	import GitPullRequests from './GitPullRequests.svelte';
 	import GitListDivider from './GitListDivider.svelte';
 	import GitIssues from './GitIssues.svelte';
-	import { countLabel, relativeTime } from './gitPanel';
+	import { relativeTime } from './gitPanel';
 
 	export let target: TerminalTarget | null = null;
 	export let directory = '.';
@@ -39,11 +39,16 @@
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
 	let view: 'changes' | 'history' | 'pull requests' | 'issues' = initialView?.view ?? 'changes';
-	let prCapabilities: { available: boolean; default_branch?: string; issues?: boolean } | null =
-		null;
-	let openPullRequests: number | null = null;
-	let openIssues: number | null = null;
-	let prRoot = '';
+	let github: {
+		available: boolean;
+		default_branch?: string;
+		issues?: boolean;
+		open_pull_requests?: number | null;
+		open_issues?: number | null;
+	} | null = null;
+	$: openPullRequests = github?.open_pull_requests ?? null;
+	$: openIssues = github?.issues ? (github.open_issues ?? null) : null;
+	let githubRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
 	let diff = '';
@@ -189,18 +194,10 @@
 				detectionError = '';
 				if (status?.root && status.root !== next.root) resetSelection();
 				status = next.is_repo ? next : null;
-				if (next.root && next.root !== prRoot) {
-					prRoot = next.root;
-					void request<NonNullable<typeof prCapabilities>>('pr/capabilities')
-						.then((data) => {
-							if (current !== generation) return;
-							prCapabilities = data;
-							openPullRequests = openIssues = null;
-							if (data.available) void loadOpenCounts();
-						})
-						.catch(() => {
-							if (current === generation) prCapabilities = openPullRequests = openIssues = null;
-						});
+				if (next.root && next.root !== githubRoot) {
+					githubRoot = next.root;
+					github = null;
+					void loadGitHub();
 				}
 				if (
 					selected &&
@@ -223,22 +220,17 @@
 		pending = task;
 		return task;
 	};
-	const openCount = async (operation: string) => {
-		try {
-			return (await request<{ items: unknown[] }>(operation, { state: 'open' })).items.length;
-		} catch {
-			return null;
-		}
-	};
-	const loadOpenCounts = async () => {
+	// What `gh` reports for this repo: availability, default branch, issues, and open counts.
+	// A refresh after a change keeps the last known values if it fails.
+	const loadGitHub = async (refreshing = false) => {
 		const current = generation;
-		const [pullRequests, issues] = await Promise.all([
-			openCount('pr/list'),
-			prCapabilities?.issues ? openCount('issue/list') : null
-		]);
-		if (current !== generation) return;
-		openPullRequests = pullRequests;
-		openIssues = issues;
+		const root = githubRoot;
+		try {
+			const data = await request<NonNullable<typeof github>>('pr/capabilities');
+			if (current === generation && root === githubRoot) github = data;
+		} catch {
+			if (!refreshing && current === generation && root === githubRoot) github = null;
+		}
 	};
 	const resetSelection = () => {
 		++diffGeneration;
@@ -274,8 +266,8 @@
 			summary = restoring?.summary ?? '';
 			description = restoring?.description ?? '';
 			commits = [];
-			prCapabilities = openPullRequests = openIssues = null;
-			prRoot = '';
+			github = null;
+			githubRoot = '';
 			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
@@ -741,7 +733,7 @@
 				<div
 					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 				>
-					{#each ['changes', 'history', ...(prCapabilities?.available ? [...(prCapabilities.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
+					{#each ['changes', 'history', ...(github?.available ? [...(github.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
 								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
@@ -762,9 +754,9 @@
 							)}{#if section === 'changes' && status.files.length}<span
 									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
 								>{:else if section === 'pull requests' && openPullRequests}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{countLabel(openPullRequests)}</span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
 								>{:else if section === 'issues' && openIssues}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{countLabel(openIssues)}</span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openIssues}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -836,11 +828,11 @@
 								{target}
 								directory={status.root}
 								branch={status.branch}
-								defaultBranch={prCapabilities?.default_branch ?? 'main'}
-								onCount={(count) => (openPullRequests = count)}
+								defaultBranch={github?.default_branch ?? 'main'}
 								onDraft={onDraftPrompt}
 								onChange={() => {
 									void refresh(true);
+									void loadGitHub(true);
 								}}
 							/>{/key}
 					{:else if view === 'issues' && target && status.root}
@@ -850,8 +842,8 @@
 								onResizeList={(width) => (listWidth = width)}
 								{target}
 								directory={status.root}
-								onCount={(count) => (openIssues = count)}
 								onDraft={onDraftPrompt}
+								onChange={() => void loadGitHub(true)}
 							/>{/key}
 					{:else}
 						<div
