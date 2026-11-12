@@ -115,14 +115,17 @@
 
 	const chatEventHandler = (event: {
 		chat_id?: string;
-		data?: { type?: string; data?: { active?: boolean } };
+		data?: { type?: string; data?: { active?: boolean; last_read_at?: number } };
 	}) => {
 		if (event.data?.type === 'chat:active' && event.chat_id) {
 			const active = event.data.data?.active ?? false;
 			if (!updateChatActive(event.chat_id, active) && active) {
 				refreshChatListSoon(true);
 			}
-		} else if (event.data?.type === 'chat:list') {
+		} else if (
+			event.data?.type === 'chat:list' &&
+			typeof event.data.data?.last_read_at !== 'number'
+		) {
 			refreshChatListSoon(true);
 		}
 	};
