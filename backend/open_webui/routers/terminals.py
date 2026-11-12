@@ -198,6 +198,8 @@ async def relay_to_browser(ws, upstream):
             await ws.send_bytes(msg.data)
         else:
             return
+    code = upstream.close_code or 1011
+    await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
 
 
 async def watch_access(server_id, sid, browser_token, request):
