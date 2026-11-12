@@ -19,7 +19,6 @@
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	import ShareChatModal from '../chat/ShareChatModal.svelte';
@@ -206,7 +205,7 @@
 							await temporaryChatEnabled.set(!$temporaryChatEnabled);
 						}
 
-						if ($page.url.pathname !== '/' && !$page.url.pathname.startsWith('/folders/')) {
+						if (location.pathname !== '/' && !location.pathname.startsWith('/folders/')) {
 							await goto('/');
 						}
 
