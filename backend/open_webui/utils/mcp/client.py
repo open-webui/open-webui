@@ -77,7 +77,7 @@ class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
         self.client: Optional[Client] = None
         self.session_task: Optional[asyncio.Task] = None
-        self.connect_args: Optional[tuple] = None
+        self.connect_args: Optional[tuple[str, Optional[dict], Optional[httpx2.Auth]]] = None
         self.event_caller = event_caller
         self.server_name = server_name
         self.instructions: Optional[str] = None
