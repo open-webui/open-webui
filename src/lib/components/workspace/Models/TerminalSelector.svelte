@@ -5,6 +5,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
 	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import { config, settings, user } from '$lib/stores';
 
 	const i18n = getContext<any>('i18n');
 
@@ -12,15 +13,35 @@
 	export let label = '';
 	export let description = '';
 	export let onChange: () => void = () => {};
+	export let includeDirect: boolean = false;
 
 	let terminals: TerminalServer[] = [];
 
 	onMount(async () => {
 		terminals = await getTerminalServers(localStorage.token);
 	});
+
+	$: directTerminals = (
+		includeDirect &&
+		$config?.features?.enable_tool_servers &&
+		$config?.features?.enable_direct_integrations &&
+		($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
+			? (($settings as any)?.terminalServers ?? [])
+			: []
+	).filter((terminal: any) => terminal.url);
+	$: terminalItems = [
+		...terminals.map((terminal) => ({
+			value: terminal.id,
+			label: terminal.name || terminal.id
+		})),
+		...directTerminals.map((terminal: any) => ({
+			value: terminal.url,
+			label: terminal.name || terminal.url.replace(/^https?:\/\//, '')
+		}))
+	];
 </script>
 
-{#if terminals.length > 0 || terminalId}
+{#if terminalItems.length > 0 || terminalId}
 	<div
 		class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs font-normal text-gray-600 dark:text-gray-400 sm:grid-cols-[8rem_minmax(0,1fr)]"
 	>
@@ -33,13 +54,10 @@
 			bind:value={terminalId}
 			items={[
 				{ value: '', label: $i18n.t('None') },
-				...(terminalId && !terminals.some((terminal) => terminal.id === terminalId)
+				...(terminalId && !terminalItems.some((item) => item.value === terminalId)
 					? [{ value: terminalId, label: $i18n.t('Unavailable') }]
 					: []),
-				...terminals.map((terminal) => ({
-					value: terminal.id,
-					label: terminal.name || terminal.id
-				}))
+				...terminalItems
 			]}
 			triggerClass="flex w-fit max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 text-left text-xs font-normal text-gray-900 dark:text-gray-100"
 			onChange={() => onChange()}

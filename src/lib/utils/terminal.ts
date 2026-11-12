@@ -32,13 +32,13 @@ const refreshDirectTerminals = async (servers: DirectTerminal[]) => {
 			config: { enable: true }
 		}))
 	);
-	terminalServers.set([
+	terminalServers.update((terminals) => [
 		...data.flatMap((item, i) =>
 			item && !item.error
 				? [{ ...item, key: enabled[i].key ?? '', config: enabled[i].config ?? item.config ?? {} }]
 				: []
 		),
-		...systemTerminals
+		...(terminals ?? []).filter((terminal) => terminal.id)
 	]);
 };
 

@@ -327,6 +327,7 @@
 						<div slot="content" class="space-y-0.5 pt-1">
 							<TerminalSelector
 								bind:terminalId={data.terminal_id}
+								includeDirect
 								label={$i18n.t('Default terminal')}
 								description={$i18n.t(
 									'Select the terminal used by default for new chats in this folder.'

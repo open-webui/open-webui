@@ -91,6 +91,7 @@
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { selectTerminal } from '$lib/utils/terminal';
 	import { resumeTemporaryChat } from '$lib/apis';
 	import {
 		applyResponseStreamEvent,
@@ -1244,7 +1245,15 @@
 	const applyFolderTerminal = (folder: any) => {
 		const terminalId = folder?.data?.terminal_id;
 		if (!terminalId) return;
-		selectedTerminalId.set(terminalId);
+		const isDirect =
+			$config?.features?.enable_tool_servers &&
+			$config?.features?.enable_direct_integrations &&
+			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true)) &&
+			(($settings as any)?.terminalServers ?? []).some((server: any) => server.url === terminalId);
+		const isLoaded = ($terminalServers ?? []).some((server) => server.url === terminalId);
+		// A direct terminal has to be switched on and loaded before the chat can use it.
+		if (isDirect && !isLoaded) selectTerminal(selectedTerminalId, terminalId, null);
+		else selectedTerminalId.set(terminalId);
 		terminalContext = { terminalId, currentDirectory: folder.data?.working_directory ?? '' };
 	};
 
