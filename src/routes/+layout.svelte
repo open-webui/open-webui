@@ -971,7 +971,7 @@
 								body: content,
 								icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
 							},
-							`/channels/${event.channel_id}`
+							`/channels/${event.channel_id}${data?.parent_id ? `?thread=${data.parent_id}` : ''}`
 						);
 					}
 				}
