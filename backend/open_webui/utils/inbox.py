@@ -102,6 +102,7 @@ async def resource_queries(user, db):
         'calendar.enable',
         'automations.enable',
         'user.permissions',
+        db=db,
     )
     admin = user.role == 'admin'
 
@@ -209,7 +210,7 @@ async def visible_clause(user, db):
     from open_webui.models.config import Config
 
     queries = await resource_queries(user, db=db)
-    comments_enabled = await Config.get('comments.enable')
+    comments_enabled = await Config.get('comments.enable', db=db)
     models = source_models()
     resources = or_(
         *[
