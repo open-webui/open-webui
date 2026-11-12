@@ -4,9 +4,11 @@
 	import type { TerminalTarget } from '$lib/apis/terminal';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
+	import GitListDivider from './GitListDivider.svelte';
 	import Dropdown from '../../common/Dropdown.svelte';
 	import DropdownMenu from '../../common/DropdownMenu.svelte';
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
+	import Tooltip from '../../common/Tooltip.svelte';
 	export let target: TerminalTarget;
 
 	export let directory: string;
@@ -14,6 +16,9 @@
 	export let defaultBranch = 'main';
 	export let mode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
+	export let listWidth = 240;
+	export let maxListWidth = 240;
+	export let onResizeList: (width: number) => void = () => {};
 	export let onChange: () => void = () => {};
 	type PullRequest = {
 		number: number;
@@ -47,8 +52,10 @@
 	let search = '';
 	let view: 'summary' | 'code' | 'checks' | 'activity' = 'summary';
 	let diff = '';
+	let listLoading = false;
 	let loading = false;
 	let busy = false;
+	let listError = '';
 	let error = '';
 	let editing = false;
 	let creating = false;
@@ -61,23 +68,94 @@
 	let mergeMethod = 'squash';
 	let confirmation = false;
 	let pendingAction = '';
+	let listGeneration = 0;
 	let generation = 0;
+
+	const primaryButton =
+		'bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-white/90';
+	const disabledButton =
+		'bg-gray-100 dark:bg-white/6 text-gray-400 dark:text-gray-600 cursor-default';
+	const secondaryButton =
+		'bg-gray-100 dark:bg-white/6 text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-white/10 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:hover:bg-gray-100 dark:disabled:hover:bg-white/6';
+
+	$: states = [
+		{ value: 'open', label: $i18n.t('Open') },
+		{ value: 'closed', label: $i18n.t('Closed') },
+		{ value: 'all', label: $i18n.t('All') }
+	];
+	$: tabs = [
+		{ value: 'summary', label: $i18n.t('Summary') },
+		{ value: 'code', label: $i18n.t('Code') },
+		{ value: 'checks', label: $i18n.t('Checks') },
+		{ value: 'activity', label: $i18n.t('Activity') }
+	] as { value: typeof view; label: string }[];
+	$: mergeMethods = [
+		{ value: 'squash', label: $i18n.t('Squash and merge') },
+		{ value: 'merge', label: $i18n.t('Create a merge commit') },
+		{ value: 'rebase', label: $i18n.t('Rebase and merge') }
+	];
+	$: mergeLabel = mergeMethods.find((method) => method.value === mergeMethod)?.label ?? '';
+	$: actionLabels = {
+		merge: mergeLabel,
+		close: $i18n.t('Close pull request'),
+		approve: $i18n.t('Approve'),
+		'request-changes': $i18n.t('Request changes')
+	} as Record<string, string>;
+	$: filtered = prs.filter((pr) =>
+		`${pr.number} ${pr.title}`.toLowerCase().includes(search.toLowerCase())
+	);
+	$: showingDetail = !!selected || creating || editing;
+
+	const label = (value = '') =>
+		({
+			OPEN: $i18n.t('Open'),
+			CLOSED: $i18n.t('Closed'),
+			MERGED: $i18n.t('Merged'),
+			APPROVED: $i18n.t('Approved'),
+			CHANGES_REQUESTED: $i18n.t('Changes requested'),
+			REVIEW_REQUIRED: $i18n.t('Review required'),
+			COMMENTED: $i18n.t('Commented'),
+			DISMISSED: $i18n.t('Dismissed'),
+			MERGEABLE: $i18n.t('No conflicts'),
+			CONFLICTING: $i18n.t('Conflicts')
+		})[value] ?? value.toLowerCase().replaceAll('_', ' ');
+	const people = (list?: { login?: string; name?: string }[]) =>
+		list?.map((person) => person.login || person.name).join(', ') || $i18n.t('None');
+	const checkResult = (check: NonNullable<PullRequest['statusCheckRollup']>[number]) =>
+		(check.conclusion || check.status || check.state || '').toUpperCase();
+	const checkTone = (result: string) =>
+		result === 'SUCCESS'
+			? 'bg-green-500 dark:bg-green-400'
+			: [
+						'FAILURE',
+						'ERROR',
+						'CANCELLED',
+						'TIMED_OUT',
+						'ACTION_REQUIRED',
+						'STARTUP_FAILURE'
+				  ].includes(result)
+				? 'bg-red-500 dark:bg-red-400'
+				: ['NEUTRAL', 'SKIPPED', 'STALE'].includes(result)
+					? 'bg-gray-300 dark:bg-gray-600'
+					: 'bg-yellow-500 dark:bg-yellow-400';
+
 	const request = <T,>(
 		operation: string,
 		params: Record<string, string> = {},
 		payload?: Record<string, unknown>
 	) => gitRequest<T>(target, directory, `pr/${operation}`, params, payload);
 	const load = async () => {
-		const version = ++generation;
-		loading = true;
-		error = '';
+		const version = ++listGeneration;
+		listLoading = true;
+		listError = '';
 		try {
 			const data = await request<{ items: PullRequest[] }>('list', { state });
-			if (version === generation) prs = data.items;
+			if (version === listGeneration) prs = data.items;
 		} catch (reason) {
-			if (version === generation) error = String(reason instanceof Error ? reason.message : reason);
+			if (version === listGeneration)
+				listError = String(reason instanceof Error ? reason.message : reason);
 		} finally {
-			if (version === generation) loading = false;
+			if (version === listGeneration) listLoading = false;
 		}
 	};
 	const select = async (pr: PullRequest, tab: typeof view = 'summary') => {
@@ -129,8 +207,8 @@
 			creating = editing = false;
 			comment = '';
 			onChange();
-			if (selected && action !== 'create') await select(selected);
-			else await load();
+			void load();
+			if (selected && action !== 'create') await select(selected, view);
 		} catch (reason) {
 			error = String(reason instanceof Error ? reason.message : reason);
 		} finally {
@@ -141,330 +219,453 @@
 		pendingAction = action;
 		confirmation = true;
 	};
+	const startCreate = () => {
+		++generation;
+		loading = false;
+		error = '';
+		selected = null;
+		editing = false;
+		creating = true;
+		title = body = '';
+		head = branch;
+		base = defaultBranch;
+		draft = false;
+	};
+	const cancelForm = () => {
+		if (editing) editing = false;
+		else back();
+	};
 	const back = () => {
 		++generation;
 		selected = null;
 		creating = editing = false;
 		diff = '';
+		error = '';
 		loading = false;
-		void load();
 	};
 	onMount(() => {
 		void load();
 	});
 	onDestroy(() => {
 		++generation;
+		++listGeneration;
 	});
 </script>
 
-<div class="git-pr flex min-h-0 flex-1 text-[0.6875rem]">
+<div class="flex min-h-0 min-w-0 flex-1 text-[0.6875rem]">
 	<div
-		class="pr-list flex min-h-0 min-w-0 flex-1 flex-col"
-		class:has-selection={!!selected || creating || editing}
-	>
-		<div class="border-b border-gray-100/50 p-2 dark:border-white/2">
-			<div class="flex min-w-0 items-center gap-1">
-				{#each ['open', 'closed', 'all'] as option}<button
-						class="h-6 rounded-md px-2 text-[0.6875rem] font-normal transition-colors duration-75 {state ===
-						option
-							? 'bg-gray-200/50 text-gray-900 dark:bg-white/8 dark:text-white'
-							: 'text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
-						on:click={() => {
-							state = option;
-							void load();
-						}}>{$i18n.t(option[0].toUpperCase() + option.slice(1))}</button
-					>{/each}
-			</div>
-			<div class="mt-1.5 flex min-w-0 items-center gap-1.5">
-				<div
-					class="flex h-6 min-w-0 flex-1 items-center gap-1.5 rounded-md border border-gray-200 px-1.5 dark:border-white/8"
-				>
-					<Icon name="search" size={11} class="shrink-0 text-gray-300 dark:text-gray-600" /><input
-						class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-700 outline-none placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-600"
-						aria-label={$i18n.t('Search pull requests')}
-						placeholder={$i18n.t('Search pull requests')}
-						bind:value={search}
-					/>
-				</div>
-				<button
-					class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/6 dark:hover:text-gray-300"
-					aria-label={$i18n.t('New pull request')}
-					on:click={() => {
-						++generation;
-						loading = false;
-						selected = null;
-						editing = false;
-						creating = true;
-						title = body = '';
-						head = branch;
-					}}><Icon name="plus" size={13} /></button
-				>
-			</div>
-		</div>
-		{#if error && !selected && !creating && !editing}<p
-				role="alert"
-				class="px-2 py-1 text-gray-500 dark:text-gray-400 break-words"
-			>
-				{error}
-			</p>{/if}
-		<div class="min-h-0 flex-1 overflow-y-auto">
-			{#if loading}<p class="flex h-full items-center justify-center p-3 text-center text-gray-400">
-					{$i18n.t('Loading...')}
-				</p>{:else}{#each prs.filter((pr) => `${pr.number} ${pr.title}`
-						.toLowerCase()
-						.includes(search.toLowerCase())) as pr}<button
-						class="flex min-w-0 items-center gap-1.5 w-full px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 {selected?.number ===
-						pr.number
-							? 'bg-gray-100/40 dark:bg-gray-800/25'
-							: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
-						on:click={() => select(pr)}
-						><Icon name="git-diff" size={12} class="shrink-0 text-gray-400 dark:text-gray-600" />
-						<div class="min-w-0 flex-1">
-							<div class="truncate text-xs text-gray-800 dark:text-gray-200">
-								#{pr.number}
-								{pr.title}
-							</div>
-							<div class="mt-0.5 text-[10px] text-gray-400">
-								{pr.author?.login} · {pr.isDraft ? $i18n.t('Draft') : pr.state}
-							</div>
-						</div></button
-					>{/each}{#if !prs.length}<p
-						class="flex h-full items-center justify-center p-3 text-center text-gray-400"
-					>
-						{$i18n.t('No pull requests')}
-					</p>{/if}{/if}
-		</div>
-	</div>
-	<div
-		class="pr-detail min-w-0 flex-1 flex-col overflow-hidden"
-		class:has-selection={!!selected || creating || editing}
+		class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex @min-[560px]:flex-[0_0_var(--git-list-width)] {showingDetail
+			? 'hidden'
+			: 'flex'}"
+		style:--git-list-width={`${listWidth}px`}
 	>
 		<div
-			class="flex items-center gap-2 px-2 h-7 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-gray-500 dark:text-gray-400"
+			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 		>
-			{#if selected || creating || editing}<button
-					class="pr-back"
+			<Icon name="search" size={12} class="shrink-0 text-gray-300 dark:text-gray-600" /><input
+				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+				aria-label={$i18n.t('Search pull requests')}
+				placeholder={$i18n.t('Search pull requests')}
+				bind:value={search}
+			/>
+			<Dropdown align="end" closeOnSelect>
+				<button
+					class="flex shrink-0 items-center gap-1 h-6 px-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+					aria-label={$i18n.t('Filter pull requests')}
+					><span class="text-[0.6875rem]"
+						>{states.find((option) => option.value === state)?.label}</span
+					><Icon name="chevron-down" size={9} /></button
+				>
+				<div slot="content">
+					<DropdownMenu className="w-32">
+						{#each states as option}<button
+								on:click={() => {
+									if (state === option.value) return;
+									state = option.value;
+									prs = [];
+									void load();
+								}}
+								><span class="flex-1 text-left">{option.label}</span
+								>{#if state === option.value}<Icon name="check" size={11} />{/if}</button
+							>{/each}
+					</DropdownMenu>
+				</div>
+			</Dropdown>
+			<Tooltip content={$i18n.t('New pull request')}>
+				<button
+					class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+					aria-label={$i18n.t('New pull request')}
+					on:click={startCreate}><Icon name="plus" size={12} /></button
+				>
+			</Tooltip>
+		</div>
+		{#if listError}<div
+				role="alert"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+			>
+				{listError}
+			</div>{/if}
+		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
+			{#each filtered as pr (pr.number)}<button
+					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
+					pr.number
+						? 'bg-gray-100/40 dark:bg-gray-800/25'
+						: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
+					on:click={() => select(pr)}
+					><span class="w-full truncate text-xs text-gray-800 dark:text-gray-200">{pr.title}</span
+					><span class="w-full truncate text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+						>#{pr.number}{pr.author?.login ? ` · ${pr.author.login}` : ''}{pr.isDraft
+							? ` · ${$i18n.t('Draft')}`
+							: pr.state !== 'OPEN'
+								? ` · ${label(pr.state)}`
+								: ''}</span
+					></button
+				>{/each}
+			{#if !filtered.length}<div
+					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+				>
+					{$i18n.t(listLoading ? 'Loading...' : 'No pull requests')}
+				</div>{/if}
+		</div>
+	</div>
+	<GitListDivider width={listWidth} max={maxListWidth} onResize={onResizeList} />
+	<div
+		class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex {showingDetail
+			? 'flex'
+			: 'hidden'}"
+	>
+		{#if showingDetail}
+			<div
+				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+			>
+				<button
+					class="@min-[560px]:hidden"
 					aria-label={$i18n.t('Back to pull requests')}
 					on:click={back}><Icon name="chevron-left" size={12} /></button
-				>{/if}
-			{#if selected}<span class="truncate flex-1">#{selected.number} {selected.title}</span
-				><Dropdown side="top" align="end" closeOnSelect
-					><button aria-label={$i18n.t('Pull request actions')}
-						><Icon name="three-dots" size={14} /></button
-					>
-					<div slot="content">
-						<DropdownMenu className="w-44">
-							<button disabled={busy} on:click={() => mutate('checkout')}
-								>{$i18n.t('Checkout')}</button
-							>
-							<button
-								disabled={busy}
-								on:click={() => {
-									editing = true;
-									title = selected!.title;
-									body = selected!.body;
-								}}>{$i18n.t('Edit')}</button
-							>
-							{#if selected.state === 'OPEN'}<button
+				><span class="min-w-0 flex-1 truncate"
+					>{selected && !creating
+						? `#${selected.number} · ${selected.title}`
+						: $i18n.t('New pull request')}</span
+				>
+				{#if selected && !creating && !editing}<Dropdown side="top" align="end" closeOnSelect
+						><button
+							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							aria-label={$i18n.t('Pull request actions')}
+							><Icon name="three-dots" size={12} /></button
+						>
+						<div slot="content">
+							<DropdownMenu className="w-44">
+								<button disabled={busy} on:click={() => mutate('checkout')}
+									><Icon name="git-branch" size={13} />{$i18n.t('Checkout')}</button
+								>
+								<button
 									disabled={busy}
-									on:click={() => mutate('update-branch')}>{$i18n.t('Update branch')}</button
-								>{#if selected.isDraft}<button disabled={busy} on:click={() => mutate('ready')}
-										>{$i18n.t('Mark ready')}</button
-									>{/if}<button disabled={busy} on:click={() => confirm('close')}
-									>{$i18n.t('Close pull request')}</button
-								>{:else if selected.state === 'CLOSED'}<button
-									disabled={busy}
-									on:click={() => mutate('reopen')}>{$i18n.t('Reopen')}</button
-								>{/if}
-							<a href={selected.url} target="_blank" rel="noopener noreferrer"
-								>{$i18n.t('Open in GitHub')}</a
-							>
-						</DropdownMenu>
-					</div></Dropdown
-				>{/if}
-		</div>
-		{#if error}<p role="alert" class="px-3 py-1 text-gray-500 dark:text-gray-400 break-words">
+									on:click={() => {
+										editing = true;
+										title = selected?.title ?? '';
+										body = selected?.body ?? '';
+									}}><Icon name="pencil" size={13} />{$i18n.t('Edit')}</button
+								>
+								{#if selected.state === 'OPEN'}<button
+										disabled={busy}
+										on:click={() => mutate('update-branch')}
+										><Icon name="refresh" size={13} />{$i18n.t('Update branch')}</button
+									>{#if selected.isDraft}<button disabled={busy} on:click={() => mutate('ready')}
+											><Icon name="check" size={13} />{$i18n.t('Mark ready')}</button
+										>{/if}<button disabled={busy} on:click={() => confirm('close')}
+										><Icon name="xmark" size={13} />{$i18n.t('Close pull request')}</button
+									>{:else if selected.state === 'CLOSED'}<button
+										disabled={busy}
+										on:click={() => mutate('reopen')}
+										><Icon name="undo" size={13} />{$i18n.t('Reopen')}</button
+									>{/if}
+								<a href={selected.url} target="_blank" rel="noopener noreferrer"
+									><Icon name="external-link" size={13} />{$i18n.t('Open in GitHub')}</a
+								>
+							</DropdownMenu>
+						</div></Dropdown
+					>{/if}
+			</div>
+		{/if}
+		{#if error && showingDetail}<div
+				role="alert"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+			>
 				{error}
-			</p>{/if}
+			</div>{/if}
 		{#if creating || editing}
 			<form
-				class="min-h-0 overflow-y-auto px-3 py-2 space-y-2"
+				class="flex min-h-0 flex-1 flex-col"
 				on:submit|preventDefault={() => mutate(editing ? 'edit' : 'create')}
 			>
-				<input
-					class="w-full rounded-lg border border-gray-200 dark:border-white/8 bg-transparent px-2 py-1.5 text-[0.6875rem] outline-none"
-					aria-label={$i18n.t('Pull request title')}
-					placeholder={$i18n.t('Title')}
-					bind:value={title}
-					required
-				/>
-				<textarea
-					class="w-full rounded-lg border border-gray-200 dark:border-white/8 bg-transparent px-2 py-1.5 text-[0.6875rem] outline-none"
-					aria-label={$i18n.t('Pull request description')}
-					placeholder={$i18n.t('Description')}
-					rows="3"
-					bind:value={body}
-				></textarea>
-				{#if creating}<div class="flex gap-2">
-						<input
-							class="min-w-0 w-1/2 rounded bg-gray-50 dark:bg-white/5 p-1.5 text-xs"
-							aria-label={$i18n.t('Base branch')}
-							placeholder={$i18n.t('Base branch')}
-							bind:value={base}
-							required
-						/><input
-							class="min-w-0 w-1/2 rounded bg-gray-50 dark:bg-white/5 p-1.5 text-xs"
-							aria-label={$i18n.t('Head branch')}
-							placeholder={$i18n.t('Head branch')}
-							bind:value={head}
-							required
-						/>
-					</div>
-					<label class="flex gap-2 items-center"
-						><input type="checkbox" bind:checked={draft} />{$i18n.t('Draft')}</label
-					>{/if}
-				<button
-					class="rounded bg-gray-100 dark:bg-white/10 px-2 py-1 disabled:opacity-40"
-					disabled={busy || !title.trim()}
-					>{$i18n.t(editing ? 'Save' : 'Create pull request')}</button
+				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2">
+					<input
+						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+						aria-label={$i18n.t('Pull request title')}
+						placeholder={$i18n.t('Title')}
+						bind:value={title}
+						required
+					/>
+					<textarea
+						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100/50 dark:border-white/2"
+						aria-label={$i18n.t('Pull request description')}
+						placeholder={$i18n.t('Description')}
+						rows="6"
+						bind:value={body}
+					></textarea>
+					{#if creating}<div
+							class="flex min-w-0 items-center gap-1.5 h-7 px-1 border-t border-gray-100/50 dark:border-white/2 text-gray-400 dark:text-gray-600"
+						>
+							<Icon name="git-branch" size={12} class="shrink-0" /><input
+								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+								aria-label={$i18n.t('Base branch')}
+								placeholder={$i18n.t('Base branch')}
+								bind:value={base}
+								required
+							/><span class="shrink-0 font-mono text-[0.625rem]">←</span><input
+								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+								aria-label={$i18n.t('Head branch')}
+								placeholder={$i18n.t('Head branch')}
+								bind:value={head}
+								required
+							/>
+						</div>{/if}
+				</div>
+				<div
+					class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
 				>
+					{#if creating}<button
+							type="button"
+							class="flex shrink-0 items-center gap-1.5 h-6 px-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+							role="checkbox"
+							aria-checked={draft}
+							on:click={() => (draft = !draft)}
+							><span
+								class="flex items-center justify-center w-3 h-3 rounded border shrink-0 border-gray-300 dark:border-gray-600 {draft
+									? 'bg-gray-800 dark:bg-white'
+									: ''}"
+								>{#if draft}<Icon
+										name="check"
+										size={7}
+										class="text-white dark:text-black"
+									/>{/if}</span
+							>{$i18n.t('Draft')}</button
+						>{/if}
+					<div class="flex-1"></div>
+					<button
+						type="button"
+						class="h-6 px-2.5 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {secondaryButton}"
+						on:click={cancelForm}>{$i18n.t('Cancel')}</button
+					>
+					<button
+						class="h-6 px-2.5 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {!busy &&
+						title.trim()
+							? primaryButton
+							: disabledButton}"
+						disabled={busy || !title.trim()}
+						>{$i18n.t(editing ? 'Save' : 'Create pull request')}</button
+					>
+				</div>
 			</form>
 		{:else if selected}
 			<div
-				class="flex gap-1 px-2 h-7 items-center shrink-0 border-b border-gray-100/50 dark:border-white/2"
+				class="flex items-center gap-0.5 px-1 h-7 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 			>
-				{#each ['summary', 'code', 'checks', 'activity'] as tab}<button
-						class="h-5 rounded px-1.5 text-[0.625rem] font-normal {view === tab
-							? 'bg-gray-200/50 text-gray-900 dark:bg-white/8 dark:text-white'
-							: 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}"
-						on:click={() => select(selected!, tab as typeof view)}
-						>{$i18n.t(tab[0].toUpperCase() + tab.slice(1))}</button
+				{#each tabs as tab}<button
+						class="px-2 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
+						tab.value
+							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
+							: 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}"
+						on:click={() => selected && select(selected, tab.value)}>{tab.label}</button
 					>{/each}
 			</div>
-			<div class="min-h-0 flex-1 overflow-auto">
-				{#if loading}<p
-						class="flex h-full items-center justify-center p-3 text-center text-gray-400"
-					>
-						{$i18n.t('Loading...')}
-					</p>
-				{:else if view === 'code'}<GitDiff code={diff} {mode} {hideWhitespace} />
-				{:else if view === 'summary'}<div
-						class="p-2 text-[0.6875rem] text-gray-600 dark:text-gray-400"
-					>
-						<div class="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-1">
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Author')}</span><span
-								class="truncate">{selected.author?.login ?? 'unknown'}</span
-							>
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Status')}</span><span
-								class="truncate"
-								>{selected.isDraft ? $i18n.t('Draft') : selected.state}{selected.reviewDecision
-									? ` · ${selected.reviewDecision}`
-									: ''}</span
-							>
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Reviewers')}</span><span
-								class="truncate"
-								>{selected.reviewRequests
-									?.map((person) => person.login || person.name)
-									.join(', ') || $i18n.t('none')}</span
-							>
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Assignees')}</span><span
-								class="truncate"
-								>{selected.assignees?.map((person) => person.login || person.name).join(', ') ||
-									$i18n.t('none')}</span
-							>
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Labels')}</span><span
-								class="truncate"
-								>{selected.labels?.map((label) => label.name).join(', ') || $i18n.t('none')}</span
-							>
-							<span class="text-gray-400 dark:text-gray-600">{$i18n.t('Merge')}</span><span
-								class="truncate">{selected.mergeable ?? 'unknown'}</span
-							>
-						</div>
-						<div class="mt-2 border-t border-gray-100/50 pt-2 dark:border-white/2">
-							<div class="mb-1 text-[0.625rem] uppercase text-gray-300 dark:text-gray-600">
-								{$i18n.t('Description')}
-							</div>
-							<div
-								class="max-h-28 overflow-auto whitespace-pre-wrap text-xs leading-5 text-gray-800 dark:text-gray-200"
-							>
-								{selected.body || $i18n.t('No description')}
-							</div>
-						</div>
-						<div
-							class="mt-2 flex flex-wrap gap-1 border-t border-gray-100/50 pt-2 dark:border-white/2"
+			{#if loading}<div
+					class="flex flex-1 items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+				>
+					{$i18n.t('Loading...')}
+				</div>
+			{:else if view === 'code'}<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden">
+					{#if diff}<GitDiff code={diff} {mode} {hideWhitespace} />{:else}<div
+							class="flex h-full items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
 						>
-							{#if selected.state === 'OPEN'}<button
-									class="pr-action"
-									disabled={busy}
-									on:click={() => mutate('update-branch')}>{$i18n.t('Update')}</button
-								>
-								{#if selected.isDraft}<button
-										class="pr-action"
-										disabled={busy}
-										on:click={() => mutate('ready')}>{$i18n.t('Ready')}</button
-									>{/if}
-								{#each ['squash', 'merge', 'rebase'] as method}<button
-										class="pr-action"
-										disabled={busy || selected.isDraft || selected.mergeable === 'CONFLICTING'}
-										on:click={() => {
-											mergeMethod = method;
-											confirm('merge');
-										}}>{$i18n.t(method[0].toUpperCase() + method.slice(1))}</button
-									>{/each}
+							{$i18n.t('No text changes')}
+						</div>{/if}
+				</div>
+			{:else if view === 'summary'}
+				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2.5 py-2">
+					<dl class="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-1">
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Author')}</dt>
+						<dd class="truncate text-gray-700 dark:text-gray-300">
+							{selected.author?.login ?? $i18n.t('Unknown')}
+						</dd>
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Branch')}</dt>
+						<dd class="truncate font-mono text-[0.625rem] text-gray-700 dark:text-gray-300">
+							{selected.baseRefName} ← {selected.headRefName}
+						</dd>
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Status')}</dt>
+						<dd class="truncate text-gray-700 dark:text-gray-300">
+							{selected.isDraft ? $i18n.t('Draft') : label(selected.state)}{selected.reviewDecision
+								? ` · ${label(selected.reviewDecision)}`
+								: ''}
+						</dd>
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Reviewers')}</dt>
+						<dd class="truncate text-gray-700 dark:text-gray-300">
+							{people(selected.reviewRequests)}
+						</dd>
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Assignees')}</dt>
+						<dd class="truncate text-gray-700 dark:text-gray-300">{people(selected.assignees)}</dd>
+						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Labels')}</dt>
+						<dd class="truncate text-gray-700 dark:text-gray-300">
+							{selected.labels?.map((item) => item.name).join(', ') || $i18n.t('None')}
+						</dd>
+						{#if selected.state === 'OPEN'}<dt class="text-gray-400 dark:text-gray-600">
+								{$i18n.t('Merge')}
+							</dt>
+							<dd class="truncate text-gray-700 dark:text-gray-300">
+								{selected.mergeable ? label(selected.mergeable) : $i18n.t('Unknown')}
+							</dd>{/if}
+					</dl>
+					<div
+						class="mt-3 pb-1 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
+					>
+						{$i18n.t('Description')}
+					</div>
+					<div
+						class="whitespace-pre-wrap break-words text-xs leading-5 {selected.body
+							? 'text-gray-800 dark:text-gray-200'
+							: 'text-gray-400 dark:text-gray-600'}"
+					>
+						{selected.body || $i18n.t('No description')}
+					</div>
+				</div>
+				{#if selected.state === 'OPEN'}<div
+						class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+					>
+						{#if selected.isDraft}<button
+								class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {busy
+									? disabledButton
+									: primaryButton}"
+								disabled={busy}
+								on:click={() => mutate('ready')}>{$i18n.t('Mark ready')}</button
+							>{:else}
+							{@const blocked = busy || selected.mergeable === 'CONFLICTING'}
+							<button
+								class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {blocked
+									? disabledButton
+									: primaryButton}"
+								disabled={blocked}
+								on:click={() => confirm('merge')}>{mergeLabel}</button
+							>
+							<Dropdown side="top" align="end" closeOnSelect>
 								<button
-									class="pr-action text-gray-500 dark:text-gray-400"
-									disabled={busy}
-									on:click={() => confirm('close')}>{$i18n.t('Close')}</button
+									class="flex items-center justify-center w-6 h-6 rounded-lg shrink-0 transition-colors duration-75 {secondaryButton}"
+									aria-label={$i18n.t('Merge method')}><Icon name="chevron-up" size={10} /></button
 								>
-							{:else if selected.state === 'CLOSED'}<button
-									class="pr-action"
-									disabled={busy}
-									on:click={() => mutate('reopen')}>{$i18n.t('Reopen')}</button
-								>{/if}
-						</div>
+								<div slot="content">
+									<DropdownMenu className="w-48">
+										{#each mergeMethods as method}<button
+												on:click={() => (mergeMethod = method.value)}
+												><span class="flex-1 text-left">{method.label}</span
+												>{#if mergeMethod === method.value}<Icon
+														name="check"
+														size={11}
+													/>{/if}</button
+											>{/each}
+									</DropdownMenu>
+								</div>
+							</Dropdown>
+						{/if}
 					</div>
-				{:else if view === 'checks'}<div class="h-full min-h-0">
-						{#each selected.statusCheckRollup ?? [] as check}<div
-								class="flex items-center justify-between gap-2 border-b border-gray-50/50 px-2.5 py-1.5 dark:border-white/2"
-							>
-								<span class="truncate">{check.name ?? check.context}</span><span
-									class="text-gray-400 text-[10px]"
-									>{check.conclusion || check.status || check.state}</span
-								>
-							</div>{/each}{#if !selected.statusCheckRollup?.length}<p
-								class="flex h-full items-center justify-center p-3 text-center text-gray-400"
-							>
-								{$i18n.t('No checks')}
-							</p>{/if}
-					</div>
-				{:else}<div class="p-2 space-y-2">
-						{#each [...(selected.comments ?? []), ...(selected.reviews ?? [])] as item}<div>
-								<p class="text-[10px] text-gray-400">
-									{item.author?.login}{'state' in item ? ` · ${item.state}` : ''}
-								</p>
-								<p class="whitespace-pre-wrap break-words">{item.body}</p>
-							</div>{/each}<textarea
-							class="w-full rounded-lg border border-gray-200 dark:border-white/8 bg-transparent px-2 py-1.5 text-[0.6875rem] outline-none"
-							aria-label={$i18n.t('Comment')}
-							placeholder={$i18n.t('Comment')}
-							rows="2"
-							bind:value={comment}
-						></textarea>
-						<div class="flex flex-wrap gap-2">
-							<button disabled={busy || !comment.trim()} on:click={() => mutate('comment')}
-								>{$i18n.t('Comment')}</button
-							>{#if selected.state === 'OPEN'}<button
-									disabled={busy}
-									on:click={() => confirm('approve')}>{$i18n.t('Approve')}</button
-								><button
-									disabled={busy || !comment.trim()}
-									on:click={() => confirm('request-changes')}>{$i18n.t('Request changes')}</button
-								>{/if}
-						</div>
+				{:else if selected.state === 'CLOSED'}<div
+						class="flex items-center px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+					>
+						<button
+							class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {secondaryButton}"
+							disabled={busy}
+							on:click={() => mutate('reopen')}>{$i18n.t('Reopen')}</button
+						>
 					</div>{/if}
-			</div>
+			{:else if view === 'checks'}<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
+					{#each selected.statusCheckRollup ?? [] as check}
+						{@const result = checkResult(check)}
+						<div
+							class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-50/50 dark:border-white/2"
+						>
+							<span class="w-1.5 h-1.5 rounded-full shrink-0 {checkTone(result)}"></span><span
+								class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200"
+								>{check.name ?? check.context}</span
+							><span class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+								>{result.toLowerCase().replaceAll('_', ' ')}</span
+							>
+						</div>
+					{/each}
+					{#if !selected.statusCheckRollup?.length}<div
+							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+						>
+							{$i18n.t('No checks')}
+						</div>{/if}
+				</div>
+			{:else}
+				{@const activity = [
+					...(selected.comments ?? []).map((item) => ({ ...item, state: '' })),
+					...(selected.reviews ?? [])
+				]}
+				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
+					{#each activity as item}<div
+							class="px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
+						>
+							<div class="truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+								{item.author?.login ?? $i18n.t('Unknown')}{item.state
+									? ` · ${label(item.state)}`
+									: ''}
+							</div>
+							{#if item.body}<p
+									class="mt-0.5 whitespace-pre-wrap break-words text-xs text-gray-800 dark:text-gray-200"
+								>
+									{item.body}
+								</p>{/if}
+						</div>{/each}
+					{#if !activity.length}<div
+							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+						>
+							{$i18n.t('No activity')}
+						</div>{/if}
+				</div>
+				<form
+					class="border-t border-gray-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+					on:submit|preventDefault={() => mutate('comment')}
+				>
+					<textarea
+						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none"
+						aria-label={$i18n.t('Comment')}
+						placeholder={$i18n.t('Leave a comment')}
+						rows="2"
+						bind:value={comment}
+					></textarea>
+					<div class="flex items-center gap-1 mt-1">
+						{#if selected.state === 'OPEN'}<button
+								type="button"
+								class="h-6 px-2.5 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {secondaryButton}"
+								disabled={busy}
+								on:click={() => confirm('approve')}>{$i18n.t('Approve')}</button
+							><button
+								type="button"
+								class="h-6 px-2.5 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {secondaryButton}"
+								disabled={busy || !comment.trim()}
+								on:click={() => confirm('request-changes')}>{$i18n.t('Request changes')}</button
+							>{/if}
+						<button
+							class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {!busy &&
+							comment.trim()
+								? primaryButton
+								: disabledButton}"
+							disabled={busy || !comment.trim()}>{$i18n.t('Comment')}</button
+						>
+					</div>
+				</form>
+			{/if}
 		{:else}<div
-				class="flex flex-1 items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
+				class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 			>
 				{$i18n.t('Select a pull request')}
 			</div>{/if}
@@ -473,46 +674,7 @@
 
 <ConfirmDialog
 	bind:show={confirmation}
-	title={$i18n.t('Confirm pull request action')}
-	message={`${pendingAction} #${selected?.number}: ${selected?.title ?? ''}`}
+	title={actionLabels[pendingAction] ?? $i18n.t('Confirm pull request action')}
+	message={selected ? `#${selected.number} · ${selected.title}` : ''}
 	on:confirm={() => mutate(pendingAction)}
 />
-
-<style>
-	.pr-list.has-selection,
-	.pr-detail {
-		display: none;
-	}
-	.pr-detail.has-selection {
-		display: flex;
-	}
-	.pr-action {
-		height: 1.5rem;
-		border-radius: 0.375rem;
-		padding: 0 0.5rem;
-		font-size: 0.625rem;
-	}
-	.pr-action:hover {
-		background: #80808010;
-	}
-	@container (min-width: 560px) {
-		.pr-list,
-		.pr-list.has-selection {
-			display: flex;
-			flex: 0 0 240px;
-			border-inline-end: 1px solid #8080800c;
-		}
-		.pr-detail {
-			display: flex;
-		}
-		.pr-back {
-			display: none;
-		}
-	}
-	@container (min-width: 800px) {
-		.pr-list,
-		.pr-list.has-selection {
-			flex-basis: 288px;
-		}
-	}
-</style>
