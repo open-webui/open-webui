@@ -35,6 +35,7 @@
 		terminalServers,
 		showTabs,
 		sideChatRequest,
+		hiddenChatIds,
 		showOverview,
 		showSidebar,
 		mobile,
@@ -1635,6 +1636,7 @@
 			unsubscribeVisibility();
 			isDestroyed = true;
 			mounted = false;
+			hiddenChatIds.set(new Set());
 			if (!largeScreen) {
 				showTabs.set(false);
 			}
@@ -1658,6 +1660,16 @@
 			.map((group) => group.activeId)
 	);
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
+	$: hiddenChatIds.set(
+		new Set(
+			[
+				((fullWidth && !mainChatActive) || (!largeScreen && !!$showTabs)) && chatId,
+				...tabs.tabs
+					.filter((tab) => tab.kind === 'side' && !(panelVisible && visibleTabIds.has(tab.id)))
+					.map((tab) => tab.chatId)
+			].filter((id): id is string => !!id)
+		)
+	);
 	$: if (mounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
 		const href =

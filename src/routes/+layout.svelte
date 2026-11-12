@@ -32,6 +32,7 @@
 		tags,
 		temporaryChatEnabled,
 		openEmbeddedChatIds,
+		hiddenChatIds,
 		isLastActiveTab,
 		isApp,
 		appInfo,
@@ -548,8 +549,8 @@
 
 		if (
 			!event?.internal &&
-			((event.chat_id !== $chatId &&
-				!$openEmbeddedChatIds.has(event.chat_id) &&
+			((((event.chat_id !== $chatId && !$openEmbeddedChatIds.has(event.chat_id)) ||
+				$hiddenChatIds.has(event.chat_id)) &&
 				!$temporaryChatEnabled) ||
 				isInBackground)
 		) {
