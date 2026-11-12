@@ -50,6 +50,7 @@
 	} from '$lib/stores';
 	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -345,6 +346,7 @@
 
 		if (res) {
 			updateFolderChatLists({ id }, undefined, true);
+			closeChatTabs(id);
 			if ($chatId === id) {
 				await goto('/');
 
