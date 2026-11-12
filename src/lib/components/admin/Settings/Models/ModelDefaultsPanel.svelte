@@ -234,7 +234,7 @@
 
 				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 
-				{#if hasTerminal}
+				{#if defaultCapabilities.terminal && hasTerminal}
 					<TerminalSelector bind:terminalId />
 				{/if}
 
