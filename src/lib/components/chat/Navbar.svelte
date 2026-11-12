@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ProfilingPanel from './Profiling/ProfilingPanel.svelte';
+	export let profilingSamples = {};
 	import { getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
@@ -237,6 +239,7 @@
 {/snippet}
 
 {#snippet renderChatActions()}
+	<ProfilingPanel {history} samples={profilingSamples} />
 	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
 		{#if chat?.id && $temporaryChatEnabled}

@@ -136,6 +136,8 @@
 	import Banner from '../common/Banner.svelte';
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
+	import { observeSample, type Sample } from './Profiling/metrics';
+	let profilingSamples: Record<string, Sample> = {};
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import ChatTabs from './ChatTabs.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -1654,6 +1656,9 @@
 						}
 					}
 				} else if (type === 'response:completion' || type === 'chat:completion') {
+					if (profilingSamples[message.id]) {
+						profilingSamples = { ...profilingSamples, [message.id]: observeSample(profilingSamples[message.id], data, performance.now()) };
+					}
 					if (type === 'response:completion') {
 						responseCompletionEventHandler(data, message);
 					} else {
@@ -4371,6 +4376,9 @@
 
 			try {
 				scrollToBottom();
+				// Keep profiling measurements in component memory, outside saved chat data.
+				for (const item of messageIdsList) profilingSamples[item.message_id] = { start: performance.now(), status: 'running' };
+				profilingSamples = { ...profilingSamples };
 				const completion = await sendMessageSocket(
 					primaryModel,
 					messages && messages.length > 0
@@ -4389,6 +4397,14 @@
 				submittedTaskIds =
 					completion?.task_ids ?? (completion?.task_id ? [completion.task_id] : []);
 			} finally {
+				for (const item of messageIdsList) {
+					const sample = profilingSamples[item.message_id];
+					const reply = history.messages[item.message_id];
+					if (sample && sample.end === undefined && reply?.error) {
+						sample.end = performance.now(); sample.status = 'error';
+					}
+				}
+				profilingSamples = { ...profilingSamples };
 				if (chatEventEmitter) clearInterval(chatEventEmitter);
 			}
 		}
@@ -4511,6 +4527,20 @@
 			params?.stream_response ??
 			$settings?.params?.stream_response ??
 			true;
+		for (const item of messageIdsList ?? [{ message_id: responseMessageId }]) {
+			if (profilingSamples[item.message_id]) {
+				const responseModel = $models.find((m) => m.id === _history.messages[item.message_id]?.model);
+				const responseParams = responseModel?.info?.params;
+				const responseStream =
+					responseParams &&
+					'stream_response' in responseParams &&
+					typeof responseParams.stream_response === 'boolean'
+						? responseParams.stream_response
+						: undefined;
+				profilingSamples[item.message_id].stream = responseStream ?? stream;
+			}
+		}
+		profilingSamples = { ...profilingSamples };
 		// Always include system prompt — backend extracts it and prepends to DB messages.
 		// Only temp chats need conversation messages (persisted chats load from DB).
 		let messages: any[] = [
@@ -4810,6 +4840,10 @@
 		const responseMessage = messageId ? history.messages[messageId] : null;
 		if (responseMessage && (responseMessage.user_id ?? chat?.user_id ?? $user?.id) !== $user?.id)
 			return;
+		for (const [id, sample] of Object.entries(profilingSamples)) {
+			if (sample.end === undefined && (taskIds?.length || id === messageId)) { sample.end = performance.now(); sample.status = 'cancelled'; }
+		}
+		profilingSamples = { ...profilingSamples };
 		eventTarget.dispatchEvent(new CustomEvent('voice:cancel_animation'));
 		cancelBrowserInteractions();
 		if (bridge?.connected && responseMessage) responseMessage.bridgeStopping = true;
@@ -5483,6 +5517,7 @@
 						</div>
 					{:else}
 						<Navbar
+							{profilingSamples}
 							tabbed={fullWidthTabs}
 							bind:tabTitleEditor
 							bind:tabActions
