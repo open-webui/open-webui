@@ -1032,7 +1032,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = '\n'.join(
-            f'{message["role"].upper()}: """{get_content_from_message(message)}"""' for message in recent_messages
+            f'{message["role"].upper()}: """{get_content_from_message(message) or ""}"""' for message in recent_messages
         )
 
         prompt = f'History:\n{chat_history}\nQuery: {user_message}' if chat_history else f'Query: {user_message}'
