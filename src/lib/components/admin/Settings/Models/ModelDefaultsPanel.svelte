@@ -75,7 +75,7 @@
 		dirty = savedSnapshot !== '' && getSnapshot() !== savedSnapshot;
 	};
 
-	$: (toolIds, updateDirty());
+	$: (toolIds, terminalId, updateDirty());
 
 	const resetPromptSuggestions = () => {
 		useDefaultPromptSuggestions = true;
@@ -235,7 +235,7 @@
 				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 
 				{#if hasTerminal}
-					<TerminalSelector bind:terminalId onChange={updateDirty} />
+					<TerminalSelector bind:terminalId />
 				{/if}
 
 				<div>
