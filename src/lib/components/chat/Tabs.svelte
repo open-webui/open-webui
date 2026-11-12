@@ -1491,6 +1491,8 @@
 		showEmbeds.set(false);
 	}
 	$: if (viewReady && $showCallOverlay) openFeature('voice');
+	$: if (viewReady && !$showCallOverlay && tabs.tabs.some((tab) => tab.kind === 'voice'))
+		closeTab('voice');
 	$: if (viewReady && $showTabs === 'voice') openFeature('voice');
 	$: if (viewReady && $showFileNav) {
 		const request = $showFileNav;
