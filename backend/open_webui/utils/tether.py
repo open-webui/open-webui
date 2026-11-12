@@ -18,16 +18,32 @@ from open_webui.models.auth_sessions import AuthSessions
 from open_webui.models.config import Config
 
 CHUNK = 65536
-WINDOW = 2 * 1024 * 1024
+# ~40 MB/s per stream at 100 ms round trip. Buffers fill only while a reader falls behind.
+WINDOW = 4 * 1024 * 1024
 MAX_MESSAGE = 16 * 1024 * 1024
+# Used when Tether does not state its own limit.
+DEFAULT_CONCURRENT_STREAMS = 16
+MAX_CONCURRENT_STREAMS = 64
+# Both ends may buffer one window per open stream, so streams × window stays within this.
+BUFFER_BUDGET = MAX_CONCURRENT_STREAMS * WINDOW
+# The receive window bounds bytes; frames are counted only to bound floods of tiny ones.
+MIN_FRAME_COST = 64
+SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
+# One default for every service: long streams stay open while data flows; silence ends them.
+TIMEOUT = aiohttp.ClientTimeout(total=None, sock_read=300)
 
 
 class RelayInterrupted(ConnectionError):
-    def __init__(self, reason='Connection lost'):
+    def __init__(self, reason='Connection lost', disconnected=False):
         super().__init__(
             f'Tether connection interrupted: {reason}. '
             'The operation may have completed. Check its result before trying again; do not automatically repeat it.'
         )
+        # Set when Tether's socket dropped, as opposed to a timeout or a rejected operation.
+        self.disconnected = disconnected
+        # Set when no response header arrived; with a safe method the request can be repeated once.
+        self.before_response = False
+        self.connection = None
 
     def result(self):
         return {'error': str(self), 'code': 'tether_interrupted', 'outcome': 'unknown', 'retryable': False}
@@ -41,6 +57,14 @@ def get_services(value):
     ):
         raise ValueError('Invalid Tether services')
     return list(dict.fromkeys(value))
+
+
+def get_max_concurrent_streams(hello, window):
+    """Tether's stated stream limit, bounded so each open stream can hold a full window."""
+    value = hello.get('max_concurrent_streams', DEFAULT_CONCURRENT_STREAMS)
+    if type(value) is not int or value < 1:
+        raise ValueError('Invalid stream limit')
+    return min(value, MAX_CONCURRENT_STREAMS, BUFFER_BUDGET // window)
 
 
 def encode(header, data=b''):
@@ -76,7 +100,8 @@ class Stream:
         self.window = presence.get('window', 256 * 1024)
         self.credit = self.receive_credit = self.window
         self.wake = asyncio.Event()
-        self.queue = asyncio.Queue(maxsize=64)
+        # Model output arrives as many tiny frames; a count of 64 failed streams far inside their window.
+        self.queue = asyncio.Queue(maxsize=self.window // MIN_FRAME_COST)
         self.closed = False
         self.lock = asyncio.Lock()
         self.error = None
@@ -108,14 +133,18 @@ class Stream:
             try:
                 await self.owner.send(self.presence, header, data)
             except (OSError, TimeoutError) as error:
-                self.fail(str(error) or 'Send failed')
+                self.fail(str(error) or 'Send failed', disconnected=isinstance(error, ConnectionError))
                 raise self.error from error
 
     def feed(self, header, data):
         if self.closed:
             return
         if header['sequence'] != self.incoming:
-            self.fail('Missing relay packet')
+            if header['type'] == 'error':
+                # Failures sent on another's behalf (a dropped socket, a full device) carry sequence 0.
+                self.fail(str(header.get('message', 'Response interrupted'))[:500], header.get('disconnected') is True)
+            else:
+                self.fail('Missing relay packet')
             return
         self.incoming += 1
         if header['type'] == 'window':
@@ -135,13 +164,15 @@ class Stream:
         except asyncio.QueueFull:
             self.fail('Relay consumer too slow')
 
-    def fail(self, message):
-        self.error = RelayInterrupted(message)
+    def fail(self, message, disconnected=False):
+        if self.error:
+            return
+        self.error = RelayInterrupted(message, disconnected)
         self.closed = True
         self.wake.set()
         while not self.queue.empty():
             self.queue.get_nowait()
-        self.queue.put_nowait(({'type': 'error', 'message': message}, b''))
+        self.queue.put_nowait(({'type': 'error', 'message': message, 'disconnected': disconnected}, b''))
 
     async def receive(self):
         if self.error:
@@ -152,7 +183,7 @@ class Stream:
             self.fail('Response timed out')
             raise self.error from error
         if header['type'] == 'error':
-            self.fail(header.get('message', 'Response interrupted'))
+            self.fail(str(header.get('message', 'Response interrupted'))[:500], header.get('disconnected') is True)
             raise self.error
         return header, data
 
@@ -182,6 +213,65 @@ class Stream:
                         await self.owner.send(self.presence, header, b'')
         finally:
             self.owner.streams.pop(self.id, None)
+
+
+class Connection:
+    """A Tether socket held by this worker."""
+
+    def __init__(self, ws, presence):
+        self.ws, self.presence = ws, presence
+        # Stream id -> worker awaiting the replies.
+        self.routes = {}
+        self.lock = asyncio.Lock()
+        # Frames from other workers go through one ordered queue, so a slow socket never blocks the
+        # worker's Redis listener and the other devices it serves.
+        self.outbox = asyncio.Queue()
+        self.queued = 0
+        self.closing = None
+        self.forwarder = asyncio.create_task(self._forward())
+
+    def full(self):
+        return len(self.routes) >= self.presence.get('max_concurrent_streams', DEFAULT_CONCURRENT_STREAMS)
+
+    async def send(self, header, data):
+        # Lock waiters are FIFO; each stream yields after one chunk.
+        async with self.lock:
+            try:
+                await asyncio.wait_for(self.ws.send_bytes(encode(header, data)), 10)
+            except TimeoutError as error:
+                # A socket that cannot drain fails every stream at once, not each after its own timeout.
+                await self.disconnect()
+                raise ConnectionError('Tether is not receiving') from error
+
+    def forward(self, header, data):
+        if self.closing:
+            return
+        if self.queued + len(data) > BUFFER_BUDGET:
+            # Never block the listener on a stuck socket: drop the connection in the background.
+            self.closing = asyncio.create_task(self.disconnect())
+            return
+        self.queued += len(data)
+        self.outbox.put_nowait((header, data))
+
+    async def _forward(self):
+        while True:
+            header, data = await self.outbox.get()
+            self.queued -= len(data)
+            try:
+                await self.send(header, data)
+            except Exception:
+                # The router's cleanup fails the affected streams on every worker.
+                await self.disconnect()
+                return
+
+    async def disconnect(self):
+        with suppress(Exception):
+            async with asyncio.timeout(5):
+                await self.ws.close(code=1011)
+
+    async def close(self):
+        self.forwarder.cancel()
+        await asyncio.gather(self.forwarder, return_exceptions=True)
 
 
 class Hub:
@@ -229,26 +319,15 @@ class Hub:
             async for message in pubsub.listen():
                 if message['type'] != 'message':
                     continue
-                header, data = decode(message['data'])
+                try:
+                    header, data = decode(message['data'])
+                except ValueError:
+                    # One malformed frame must not drop every relay this worker holds.
+                    continue
                 if header.pop('route', None) == 'connection':
                     connection = self.connections.get(header.pop('connection', ''))
-                    if not connection:
-                        continue
-                    if header['type'] == 'notification':
-                        await connection.send(header, data)
-                        continue
-                    reply = header.pop('reply', '')
-                    if header['type'] in ('http-open', 'ws-open'):
-                        if len(connection.routes) >= 16:
-                            continue
-                        connection.routes[header['stream']] = reply
-                    elif connection.routes.get(header['stream']) != reply:
-                        continue
-                    try:
-                        await connection.send(header, data)
-                    finally:
-                        if header['type'] == 'cancel':
-                            connection.routes.pop(header['stream'], None)
+                    if connection:
+                        await self.deliver(connection, header.pop('reply', ''), header, data)
                 else:
                     stream = self.streams.get(header['stream'])
                     if stream and header.pop('connection', None) == stream.presence['connection']:
@@ -261,6 +340,41 @@ class Hub:
                     await connection.ws.close(code=1011)
         finally:
             await pubsub.aclose()
+
+    async def deliver(self, connection, reply, header, data):
+        """Accept a frame another worker sent to a Tether socket held here."""
+        stream_id = header['stream']
+        if header['type'] in ('http-open', 'ws-open'):
+            # This worker holds the socket, so its count is the device's true count.
+            if connection.full():
+                await self.reject(reply, connection, stream_id, 'Tether has too many active operations.')
+                return
+            connection.routes[stream_id] = reply
+        elif header['type'] != 'notification':
+            if connection.routes.get(stream_id) != reply:
+                return
+            if header['type'] == 'cancel':
+                connection.routes.pop(stream_id, None)
+        connection.forward(header, data)
+
+    async def reject(self, worker, connection, stream_id, message, disconnected=False):
+        """Fail a remote stream at once instead of leaving it to time out."""
+        with suppress(Exception):
+            await self.redis.publish(
+                self.channel(worker),
+                encode(
+                    {
+                        'type': 'error',
+                        'stream': stream_id,
+                        'sequence': 0,
+                        'route': 'stream',
+                        'connection': connection.presence['connection'],
+                        'message': message,
+                        'disconnected': disconnected,
+                    },
+                    b'',
+                ),
+            )
 
     async def presence(self, user_id, connection_id):
         await self.start()
@@ -298,11 +412,24 @@ class Hub:
             raise HTTPException(403, 'Tether session is no longer available.')
         if service not in presence.get('services', []):
             raise HTTPException(503, 'Tether service is unavailable.')
-        if sum(s.presence['connection'] == presence['connection'] for s in self.streams.values()) >= 16:
+        # Only this worker's streams are visible here; the socket's worker enforces the device total.
+        active = sum(s.presence['connection'] == presence['connection'] for s in self.streams.values())
+        if active >= presence.get('max_concurrent_streams', DEFAULT_CONCURRENT_STREAMS):
             raise HTTPException(429, 'Tether has too many active operations.')
         stream = Stream(self, presence)
         self.streams[stream.id] = stream
         return stream
+
+    async def wait_for_presence(self, user_id, connection_id, service, previous, timeout=20):
+        """Wait for a reconnected Tether, not the socket that just dropped, to offer `service` again."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            with suppress(Exception):
+                presence = await self.presence(user_id, connection_id)
+                if presence and presence['connection'] != previous and service in presence.get('services', []):
+                    return True
+            await asyncio.sleep(1)
+        return False
 
     async def send(self, presence, header, data):
         connection = self.connections.get(presence['connection'])
@@ -310,7 +437,7 @@ class Hub:
             if not connection:
                 raise ConnectionError('Tether disconnected')
             if header['type'] in ('http-open', 'ws-open'):
-                if len(connection.routes) >= 16:
+                if connection.full():
                     raise HTTPException(429, 'Tether has too many active operations.')
                 connection.routes[header['stream']] = self.worker
             try:
@@ -409,12 +536,13 @@ async def get_terminal_connections(user, include_templates=True):
                 'owner_id': user_id,
                 'config': {
                     'chat_uploads': 'filesystem',
-                    'access_grants': [{'principal_type': 'user', 'principal_id': user_id, 'permission': 'read'}]
+                    'access_grants': [{'principal_type': 'user', 'principal_id': user_id, 'permission': 'read'}],
                 },
             }
         )
     if include_templates:
         from open_webui.utils.terminals import list_template_connections
+
         managed = [c for c in connections if c.get('server_type') == 'orchestrator']
         connections = [c for c in connections if c.get('server_type') != 'orchestrator']
         connections.extend(await list_template_connections(user, managed))
@@ -541,7 +669,7 @@ class RelayClient:
         self.user_id = user_id
         self.service = get_services([service])[0]
         self.operations = []
-        self.timeout = timeout if timeout is not None else aiohttp.ClientTimeout(total=300)
+        self.timeout = timeout if timeout is not None else TIMEOUT
 
     async def __aenter__(self):
         return self
@@ -553,7 +681,7 @@ class RelayClient:
         await asyncio.gather(*(operation.close() for operation in self.operations), return_exceptions=True)
 
     def request(self, method, url, **kwargs):
-        return Operation(self._request(method, url, **kwargs))
+        return Operation(self._retrying(method, url, **kwargs))
 
     def ws_connect(self, url, **kwargs):
         return Operation(self._request(None, url, **kwargs))
@@ -562,6 +690,22 @@ class RelayClient:
         if name in ('get', 'post', 'put', 'patch', 'delete', 'head', 'options'):
             return lambda url, **kwargs: self.request(name.upper(), url, **kwargs)
         raise AttributeError(name)
+
+    async def _retrying(self, method, url, idempotent=None, **kwargs):
+        """Repeat a safe request once when Tether dropped before any response arrived."""
+        if idempotent is None:
+            idempotent = method in SAFE_METHODS
+        body = kwargs.get('data')
+        replayable = idempotent and (body is None or isinstance(body, (bytes, bytearray, str)))
+        try:
+            return await self._request(method, url, **kwargs)
+        except RelayInterrupted as error:
+            if not (replayable and error.disconnected and error.before_response and error.connection):
+                raise
+            device = urlsplit(str(url)).hostname
+            if not await hub.wait_for_presence(self.user_id, device, self.service, error.connection):
+                raise
+        return await self._request(method, url, **kwargs)
 
     async def _request(self, method, url, **kwargs):
         parsed = urlsplit(str(url))
@@ -635,9 +779,18 @@ class RelayClient:
                 upload.cancel()
                 await asyncio.gather(upload, return_exceptions=True)
             await stream.close()
-            if isinstance(error, (OSError, TimeoutError)) and not isinstance(error, RelayInterrupted):
-                raise RelayInterrupted(str(error) or 'Response timed out') from error
-            raise
+            if isinstance(error, RelayInterrupted):
+                interrupted = error
+            elif isinstance(error, (OSError, TimeoutError)):
+                interrupted = RelayInterrupted(str(error) or 'Response timed out')
+            else:
+                raise
+            # Everything in this block precedes the response header.
+            interrupted.before_response = True
+            interrupted.connection = stream.presence['connection']
+            if interrupted is error:
+                raise
+            raise interrupted from error
 
 
 def get_terminal_client(url, user_id=None, **kwargs):
