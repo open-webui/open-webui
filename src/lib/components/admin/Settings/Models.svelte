@@ -169,6 +169,7 @@
 				if (viewOption === 'unavailable') return !availableModelIds.has(m.id) && !isPresetModel(m);
 				if (viewOption === 'base') return !isPresetModel(m);
 				if (viewOption === 'workspace') return isPresetModel(m);
+				if (viewOption === 'arena') return m?.owned_by === 'arena';
 				if (viewOption === 'enabled') return m?.is_active ?? true;
 				if (viewOption === 'disabled') return !(m?.is_active ?? true);
 				if (viewOption === 'visible') return !(m?.meta?.hidden ?? false);
