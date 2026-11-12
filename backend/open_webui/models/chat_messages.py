@@ -437,8 +437,15 @@ class ChatMessageTable:
                 json_key = self.DB_TO_JSON_KEY_MAP.get(key, key)
                 msg[json_key] = val
 
-            # Ensure content always has a value
-            msg.setdefault('content', '')
+            # Ensure content always has a value. For assistant turns that carry
+            # tool_calls, an empty/missing content must be null (the OpenAI
+            # standard form) rather than an empty string, since some
+            # intermediaries (e.g. LiteLLM) rewrite empty text blocks.
+            if msg.get('tool_calls'):
+                if msg.get('content') in (None, ''):
+                    msg['content'] = None
+            else:
+                msg.setdefault('content', '')
 
             # Mirror usage into info.usage for callers that read it there
             if 'usage' in msg:

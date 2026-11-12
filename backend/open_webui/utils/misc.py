@@ -477,7 +477,10 @@ def convert_output_to_messages(
 
         message = {
             'role': 'assistant',
-            'content': '\n'.join(pending_content) if pending_content else '',
+            # A tool-call turn without text must carry `content: null` (the
+            # standard OpenAI form), not an empty string — an empty string is a
+            # text block that some intermediaries (e.g. LiteLLM) rewrite.
+            'content': '\n'.join(pending_content) if pending_content else (None if pending_tool_calls else ''),
             **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
         }
 
