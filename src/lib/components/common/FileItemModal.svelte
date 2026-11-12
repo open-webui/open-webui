@@ -54,6 +54,7 @@
 	let excelSheetNames: string[] = [];
 	let selectedSheet = '';
 	let excelHtml = '';
+	let excelTooLargeRange = '';
 	let excelError = false;
 	let rowCount = 0;
 
@@ -169,6 +170,7 @@
 		const worksheet = excelWorkbook.Sheets[selectedSheet];
 		const result = await excelToTable(worksheet);
 		excelHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
+		excelTooLargeRange = result.tooLargeRange;
 		rowCount = result.rowCount;
 	};
 
@@ -549,6 +551,7 @@
 							<div class="h-[60vh]">
 								<ExcelPreview
 									html={excelHtml}
+									tooLargeRange={excelTooLargeRange}
 									sheetNames={excelSheetNames}
 									{selectedSheet}
 									onSheetChange={(sheet) => {

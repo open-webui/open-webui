@@ -122,6 +122,7 @@
 	let workbook: WorkBook | null = null;
 	export let sheet = '';
 	let table: string | null = null;
+	let tooLargeRange = '';
 	let root: HTMLDivElement;
 	let popover: HTMLDivElement;
 	let alive = true;
@@ -153,6 +154,7 @@
 		const result = await excelToTable(workbook.Sheets[name]);
 		if (alive && token === sheetToken) {
 			table = result.html;
+			tooLargeRange = result.tooLargeRange;
 			anchoredIds = comments
 				.filter((c) => c.location?.kind === 'cell' && c.location.sheet === sheet)
 				.map((c) => c.id);
@@ -399,6 +401,7 @@
 			html={table}
 			sheetNames={workbook?.SheetNames ?? []}
 			selectedSheet={sheet}
+			{tooLargeRange}
 			onSheetChange={setSheet}
 			editor={readOnly ? null : editor}
 			{saving}

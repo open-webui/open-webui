@@ -95,7 +95,10 @@
 		const result = await excelToTable(workbook.Sheets[sheet]);
 		if (key !== request) return;
 		selectedExcelSheet = sheet;
-		previewData = { fileOfficeHtml: DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] }) };
+		previewData = {
+			fileOfficeHtml: DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] }),
+			excelTooLargeRange: result.tooLargeRange
+		};
 	};
 	const loadOriginal = async () => {
 		controller?.abort();

@@ -17,6 +17,7 @@
 	export let html: string;
 	export let sheetNames: string[] = [];
 	export let selectedSheet = '';
+	export let tooLargeRange = '';
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 	export let editor: ExcelWorkbookEditor | null = null;
 	export let onDirtyChange: (dirty: boolean) => void = () => {};
@@ -99,6 +100,7 @@
 			)
 		: [];
 	$: if (query) matchIndex = -1;
+	$: shownRange = tooLargeRange || usedRange;
 
 	$: (editor, saving, notifyChange());
 	export const captureEdit = () =>
@@ -129,6 +131,7 @@
 		if (version !== renderVersion || sheet !== selectedSheet) return;
 		restoreAddress = focus?.address ?? '';
 		html = result.html;
+		tooLargeRange = result.tooLargeRange;
 	}
 	function applyEdits(edits: CellEdit[]) {
 		if (!editor || saving) return false;
@@ -771,7 +774,15 @@
 			>
 		</div>
 	{/if}
-	<div bind:this={viewport} use:grid={html} class="excel-viewport">{@html html}</div>
+	<div bind:this={viewport} use:grid={html} class="excel-viewport">
+		{#if tooLargeRange}
+			<p class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500">
+				{t('This sheet is too large to preview. Download it to view all cells.')}
+			</p>
+		{:else}
+			{@html html}
+		{/if}
+	</div>
 	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
 		<div class="excel-tabs scrollbar-none" role="tablist" aria-label={t('Worksheets')}>
 			{#each sheetNames as name}<button
@@ -792,7 +803,7 @@
 			role="status"
 			title={status}
 			aria-live="polite"
-			>{status || (usedRange ? `${t('Used range')}: ${usedRange}` : t('Empty sheet'))}</span
+			>{status || (shownRange ? `${t('Used range')}: ${shownRange}` : t('Empty sheet'))}</span
 		>
 		<div class="flex shrink-0 items-center gap-0.5 text-gray-500 dark:text-gray-400">
 			{#if editor}

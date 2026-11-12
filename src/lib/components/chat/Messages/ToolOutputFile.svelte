@@ -47,6 +47,7 @@
 	let currentSlide = 0;
 	let excelSheetNames: string[] = [];
 	let selectedExcelSheet = '';
+	let excelTooLargeRange = '';
 	let excelWorkbook: any = null;
 
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
@@ -120,6 +121,7 @@
 		currentSlide = 0;
 		excelSheetNames = [];
 		selectedExcelSheet = '';
+		excelTooLargeRange = '';
 		excelWorkbook = null;
 	}
 
@@ -141,6 +143,7 @@
 		const result = await excelToTable(excelWorkbook.Sheets[selectedExcelSheet]);
 		const DOMPurify = (await import('dompurify')).default;
 		fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
+		excelTooLargeRange = result.tooLargeRange;
 	}
 
 	async function loadPreview(key: string) {
@@ -324,6 +327,7 @@
 					{targetPage}
 					{excelSheetNames}
 					{selectedExcelSheet}
+					{excelTooLargeRange}
 					onSheetChange={loadExcelSheet}
 					readOnly={true}
 				/>
