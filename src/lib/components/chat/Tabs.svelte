@@ -1665,7 +1665,12 @@
 			[
 				((fullWidth && !mainChatActive) || (!largeScreen && !!$showTabs)) && chatId,
 				...tabs.tabs
-					.filter((tab) => tab.kind === 'side' && !(panelVisible && visibleTabIds.has(tab.id)))
+					.filter(
+						(tab) =>
+							tab.kind === 'chat' &&
+							tab.id !== mainChatTabId &&
+							!(panelVisible && visibleTabIds.has(tab.id))
+					)
 					.map((tab) => tab.chatId)
 			].filter((id): id is string => !!id)
 		)

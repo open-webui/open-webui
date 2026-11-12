@@ -41,6 +41,7 @@
 		showTabs as _showTabs,
 		sideChatRequest,
 		openEmbeddedChatIds,
+		hiddenChatIds,
 		showCallOverlay as _showCallOverlay,
 		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
@@ -2743,7 +2744,18 @@
 		}
 		stopAudio();
 	});
-	beforeNavigate(() => {
+	beforeNavigate(({ to, cancel }) => {
+		if (
+			!embedded &&
+			$chatId &&
+			to?.url.pathname === `/c/${$chatId}` &&
+			$hiddenChatIds.has($chatId)
+		) {
+			cancel();
+			terminalTabs?.focusMainChat();
+			if (!fullWidthTabs) showTabs.set(false);
+			return;
+		}
 		bridge?.end();
 		pendingUrlActions = null;
 	});
