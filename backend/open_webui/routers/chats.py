@@ -163,7 +163,7 @@ async def shared_chat_response(chat, user=None, db=None):
     data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
     if user is None or chat.user_id != user.id:
         data['variables'] = {}
-        for key in ('params', 'tool_servers', 'tool_ids', 'filter_ids', 'variables'):
+        for key in ('params', 'tool_servers', 'tool_ids', 'filter_ids', 'integrations', 'variables'):
             data['chat'].pop(key, None)
     messages = list((data['chat'].get('history', {}).get('messages') or {}).values())
     messages.extend(data['chat'].get('messages') or [])
