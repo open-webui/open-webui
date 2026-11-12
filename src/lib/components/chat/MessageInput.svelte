@@ -2598,6 +2598,7 @@
 										bind:show={showInputMenu}
 										bind:tab={inputMenuTab}
 										closeOnOutsideClick={inputMenuCloseOnOutsideClick}
+										{chatId}
 										bind:files
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(

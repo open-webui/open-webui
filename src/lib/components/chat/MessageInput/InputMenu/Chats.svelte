@@ -8,11 +8,11 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Loader from '$lib/components/common/Loader.svelte';
-	import { chatId } from '$lib/stores';
 	import SearchInput from './SearchInput.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
+	export let chatId: string = '';
 	export let onSelect = (e) => {};
 
 	let loaded = false;
@@ -90,7 +90,7 @@
 		items = [
 			...items,
 			...res
-				.filter((item) => item?.id !== $chatId)
+				.filter((item) => item?.id !== chatId)
 				.map((item) => {
 					return {
 						...item,
