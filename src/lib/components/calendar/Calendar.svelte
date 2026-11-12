@@ -39,6 +39,7 @@
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
 	let showCreateCalendarModal = false;
+	let editCalendar: CalendarModel | null = null;
 
 	const MONTH_NAMES = [
 		'January',
@@ -167,6 +168,12 @@
 	}
 
 	function handleCreateCalendar() {
+		editCalendar = null;
+		showCreateCalendarModal = true;
+	}
+
+	function handleEditCalendar(cal: CalendarModel) {
+		editCalendar = cal;
 		showCreateCalendarModal = true;
 	}
 
@@ -263,7 +270,11 @@
 	on:delete={() => refresh()}
 />
 
-<CreateCalendarModal bind:show={showCreateCalendarModal} on:created={handleCalendarCreated} />
+<CreateCalendarModal
+	bind:show={showCreateCalendarModal}
+	calendar={editCalendar}
+	on:created={handleCalendarCreated}
+/>
 
 <div
 	class="@container flex flex-col w-full h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar &&
@@ -395,6 +406,7 @@
 					{currentDate}
 					onToggle={toggleCalendar}
 					onCreateCalendar={handleCreateCalendar}
+					onEditCalendar={handleEditCalendar}
 					onDeleteCalendar={handleDeleteCalendar}
 					onDateSelect={handleDateSelect}
 				/>
