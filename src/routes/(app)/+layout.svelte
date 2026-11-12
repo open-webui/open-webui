@@ -265,6 +265,22 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
+	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Side chats sit
+	// inside the main chat, so an element belongs to the nearest [data-chat] around it.
+	const chatElements = <T extends HTMLElement = HTMLElement>(selector: string): T[] => {
+		const chat =
+			document.activeElement?.closest('[data-chat]') ??
+			document.querySelector('[data-chat="main"]');
+		return [...document.querySelectorAll<T>(selector)].filter(
+			(el) => !chat || el.closest('[data-chat]') === chat
+		);
+	};
+
+	const chatInput = () => {
+		const id = chatElements('[data-composer-id]')[0]?.dataset.composerId;
+		return id ? document.getElementById(id) : null;
+	};
+
 	const navigateChat = async (direction: -1 | 1) => {
 		if (!$chats?.length) return;
 
@@ -326,15 +342,15 @@
 				} else if (shortcut === Shortcut.FOCUS_INPUT) {
 					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					document.getElementById('chat-input')?.focus();
+					chatInput()?.focus();
 				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+					chatElements('.copy-code-button').at(-1)?.click();
 				} else if (shortcut === Shortcut.COPY_LAST_RESPONSE) {
 					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+					chatElements('.copy-response-button').at(-1)?.click();
 				} else if (shortcut === Shortcut.TOGGLE_SIDEBAR) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
@@ -385,20 +401,20 @@
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
-					document.getElementById('generate-message-pair-button')?.click();
+					chatElements('.generate-message-pair-button')[0]?.click();
 				} else if (shortcut === Shortcut.ALLOW_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-allow-button')]
+					const button = chatElements<HTMLButtonElement>('.tool-call-allow-button')
 						.reverse()
-						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+						.find((el) => !el.disabled);
 					if (button) {
 						console.log('Shortcut triggered: ALLOW_TOOL_CALL');
 						event.preventDefault();
 						button.click();
 					}
 				} else if (shortcut === Shortcut.DENY_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-deny-button')]
+					const button = chatElements<HTMLButtonElement>('.tool-call-deny-button')
 						.reverse()
-						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+						.find((el) => !el.disabled);
 					if (button) {
 						console.log('Shortcut triggered: DENY_TOOL_CALL');
 						event.preventDefault();
@@ -406,13 +422,11 @@
 					}
 				} else if (
 					shortcut === Shortcut.REGENERATE_RESPONSE &&
-					document.activeElement?.id === 'chat-input'
+					document.activeElement === chatInput()
 				) {
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
-					[...document.querySelectorAll('#messages-container .regenerate-response-button')]
-						?.at(-1)
-						?.click();
+					chatElements('.regenerate-response-button').at(-1)?.click();
 				}
 			});
 		};

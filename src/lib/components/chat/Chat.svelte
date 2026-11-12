@@ -5617,6 +5617,7 @@
 		? '  md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ' '} w-full max-w-full min-w-0 flex flex-col"
 	id={chatContainerId}
+	data-chat={embedded ? instanceId : 'main'}
 	role="presentation"
 	on:dragover|capture={(event) => terminalTabs?.dragOverChat(event)}
 	on:drop|capture={(event) => terminalTabs?.dropChat(event)}
