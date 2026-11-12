@@ -3896,7 +3896,7 @@ async def background_tasks_handler(ctx):
                         except Exception as e:
                             pass
 
-        if messages:
+        if messages and not is_temporary_chat_id(metadata.get('chat_id')):
             await review_memory_after_turn(
                 request=request,
                 user=user,
