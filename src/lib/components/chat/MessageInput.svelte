@@ -935,6 +935,7 @@
 	$: hasDirectToolServerAccess =
 		$config?.features?.enable_direct_integrations &&
 		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
+
 	let canCreateTerminal: boolean = false;
 	$: if (
 		terminalSelectionEnabled &&
