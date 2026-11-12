@@ -8,7 +8,7 @@ async function request(id: string, state?: ChatViewState) {
 			Authorization: `Bearer ${localStorage.token ?? ''}`,
 			'Content-Type': 'application/json'
 		},
-		...(state ? { body: JSON.stringify({ state }) } : {})
+		...(state ? { body: JSON.stringify({ state }), keepalive: true } : {})
 	});
 	if (!response.ok) throw new Error(`Chat view request failed (${response.status})`);
 	return response.json();
