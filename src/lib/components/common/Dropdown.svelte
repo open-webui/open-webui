@@ -206,7 +206,7 @@
 		const preferredTop = openAbove
 			? rect.top - constrainedHeight - sideOffset
 			: rect.bottom + sideOffset;
-		const contentWidth = contentEl.offsetWidth || 0;
+		const contentWidth = Math.max(contentEl.scrollWidth || 0, contentEl.offsetWidth || 0);
 		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
 		const maxLeft = contentWidth ? viewportRight - contentWidth - pad : preferredLeft;
 
