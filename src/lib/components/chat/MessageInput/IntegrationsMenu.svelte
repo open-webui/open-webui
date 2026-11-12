@@ -33,6 +33,9 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import SearchInput from './InputMenu/SearchInput.svelte';
 	import Wrench from '$lib/components/icons/Wrench.svelte';
+	import WrenchAlt from '$lib/components/icons/WrenchAlt.svelte';
+	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
+	import Link from '$lib/components/icons/Link.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
@@ -103,7 +106,14 @@
 			$i18n.t('Workspace'),
 			toolIds.filter((id) => !id.startsWith('server:') && !id.startsWith('direct_server:'))
 		],
-		[$i18n.t('Tool Servers'), toolIds.filter((id) => id.startsWith('server:'))],
+		[
+			$i18n.t('settings.admin.integrations.openApi.label'),
+			toolIds.filter((id) => id.startsWith('server:') && !id.startsWith('server:mcp:'))
+		],
+		[
+			$i18n.t('settings.admin.integrations.mcp.label'),
+			toolIds.filter((id) => id.startsWith('server:mcp:'))
+		],
 		[
 			$i18n.t('settings.personal.tools.sections.externalToolServers.title'),
 			toolIds.filter((id) => id.startsWith('direct_server:'))
@@ -598,7 +608,15 @@
 											placement="top"
 										>
 											<div class="shrink-0">
-												<Wrench />
+												{#if toolId.startsWith('server:mcp:')}
+													<Link />
+												{:else if toolId.startsWith('server:')}
+													<CodeBracket />
+												{:else if toolId.startsWith('direct_server:')}
+													<WrenchAlt />
+												{:else}
+													<Wrench />
+												{/if}
 											</div>
 										</Tooltip>
 										<Tooltip
