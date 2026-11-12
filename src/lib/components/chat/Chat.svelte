@@ -230,8 +230,8 @@
 				if (!processing) temporaryChatEnabled.set(value);
 			}
 		: null;
-	// chatIdProp goes stale when a new chat starts in place
-	$: autofocus = !($mobile && !embedded && chatIdProp && chatIdProp === $chatId);
+	// $chatId moves on from chatIdProp when a new chat is started without navigating
+	$: autofocus = !$mobile || embedded || !chatIdProp || chatIdProp !== $chatId;
 
 	const eventTarget = new EventTarget();
 
