@@ -195,6 +195,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	let citationsElement: HTMLDivElement;
 
@@ -890,6 +891,7 @@
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
 									{chatId}
+									{onOpenArtifacts}
 									messageId={message.id}
 									content={message.content}
 									output={message.output}

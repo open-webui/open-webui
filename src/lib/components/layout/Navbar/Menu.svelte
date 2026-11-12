@@ -12,7 +12,6 @@
 	import {
 		showTabs,
 		showOverview,
-		showArtifacts,
 		mobile,
 		temporaryChatEnabled,
 		theme,
@@ -20,7 +19,6 @@
 		settings,
 		folders,
 		showEmbeds,
-		artifactContents,
 		visibleControls
 	} from '$lib/stores';
 
@@ -59,6 +57,8 @@
 	export let chat;
 	export let onClose: Function = () => {};
 	export let scrollToTop: (() => void) | null = null;
+	export let hasArtifacts = false;
+	export let onOpenArtifacts: (() => void) | null = null;
 
 	let showFullMessages = false;
 	let show = false;
@@ -411,15 +411,14 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
-			{#if ($artifactContents ?? []).length > 0 && $visibleControls['chat.artifacts']}
+			{#if hasArtifacts && onOpenArtifacts && $visibleControls['chat.artifacts']}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
 					id="chat-artifacts-button"
-					on:click={async () => {
-						await showTabs.set(true);
-						await showArtifacts.set(true);
-						await showEmbeds.set(false);
+					on:click={() => {
+						showEmbeds.set(false);
+						onOpenArtifacts();
 					}}
 				>
 					<Cube className="size-3.5" strokeWidth="1.5" />

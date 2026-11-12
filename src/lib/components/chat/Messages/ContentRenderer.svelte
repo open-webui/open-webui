@@ -5,17 +5,7 @@
 		commentSelectionDraft,
 		selectedComment
 	} from '$lib/components/comments/anchors';
-	import {
-		config,
-		user,
-		artifactCode,
-		chatId as currentChatId,
-		mobile,
-		settings,
-		showArtifacts,
-		showTabs,
-		showEmbeds
-	} from '$lib/stores';
+	import { config, user, mobile, settings, showEmbeds } from '$lib/stores';
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
@@ -105,6 +95,9 @@
 	export let onTaskClick = (e) => {};
 	export let onToolCallResolved = (e) => {};
 	export let onSetInputText = (text) => {};
+	/** Opens the chat's artifacts; null where messages render outside a chat. */
+	/** @type {((code?: string) => void) | null} */
+	export let onOpenArtifacts = null;
 
 	/** @type {HTMLDivElement | undefined} */
 	let contentContainerElement;
@@ -172,29 +165,25 @@
 			const artifactId = codeBlockId || `${normalizedLang}:${raw}`;
 
 			if (
+				onOpenArtifacts &&
 				($settings?.detectArtifacts ?? true) &&
 				!compactPreview &&
 				isArtifact &&
 				hasClosingCodeFence(raw) &&
 				!autoOpenedArtifactIds.has(artifactId) &&
-				!$mobile &&
-				$currentChatId
+				!$mobile
 			) {
 				autoOpenedArtifactIds.add(artifactId);
 				await tick();
-				showArtifacts.set(true);
-				showTabs.set(true);
+				onOpenArtifacts();
 			}
 		}
 	);
 
 	const previewHandler = /** @type {any} */ (
 		async (/** @type {string} */ value) => {
-			console.log('Preview', value);
-			await artifactCode.set(/** @type {any} */ (value));
-			await showTabs.set(true);
-			await showArtifacts.set(true);
-			await showEmbeds.set(false);
+			showEmbeds.set(false);
+			onOpenArtifacts?.(value);
 		}
 	);
 

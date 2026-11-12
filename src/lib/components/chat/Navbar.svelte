@@ -5,7 +5,6 @@
 
 	import {
 		WEBUI_NAME,
-		artifactContents,
 		banners,
 		chatId,
 		chatTitle as _chatTitle,
@@ -56,6 +55,8 @@
 	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
 	export let scrollToTop: (() => void) | null = null;
+	export let hasArtifacts = false;
+	export let onOpenArtifacts: (() => void) | null = null;
 
 	export let chat: any;
 	export let history: any;
@@ -279,12 +280,14 @@
 		</div>
 	{/if}
 
-	{#if shareEnabled && chat?.id && (Object.keys(history?.messages ?? {}).length > 0 || scrollToTop || ($artifactContents ?? []).length > 0 || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
+	{#if shareEnabled && chat?.id && (Object.keys(history?.messages ?? {}).length > 0 || scrollToTop || hasArtifacts || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
 		<Menu
 			{chat}
 			{shareEnabled}
 			{readOnly}
 			{scrollToTop}
+			{hasArtifacts}
+			{onOpenArtifacts}
 			shareHandler={() => {
 				showShareChatModal = !showShareChatModal;
 			}}
