@@ -798,8 +798,10 @@
 
 		if (
 			!event?.internal &&
-			!$openSideChatIds.has(event.chat_id) &&
-			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
+			((event.chat_id !== $chatId &&
+				!$openSideChatIds.has(event.chat_id) &&
+				!$temporaryChatEnabled) ||
+				isInBackground)
 		) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
