@@ -192,10 +192,7 @@ class MCPClient:
     async def call_tool_raw(self, function_name: str, function_args: dict) -> dict:
         if not self.client and self.connect_args:
             # The session ends for good when the server drops it, e.g. on a restart.
-            try:
-                await self.connect(*self.connect_args)
-            except Exception:
-                pass
+            await self.connect(*self.connect_args)
         if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
