@@ -967,6 +967,12 @@
 			target: { ...selectedTarget }
 		});
 	};
+	const browserBaseUrl = (target: TerminalTarget) => {
+		const terminal = ($terminalServers ?? []).find((item) => item.id === target.selector);
+		return chatContextNeedsSavedChat(terminal) && target.context.chatId
+			? `${target.baseUrl}/chats/${encodeURIComponent(target.context.chatId)}`
+			: target.baseUrl;
+	};
 	const openBrowser = (
 		port?: number,
 		selector = $selectedTerminalId,
@@ -2045,6 +2051,7 @@
 							{:else}
 								<Browser
 									bind:this={browserViews[tab.id]}
+									baseUrl={browserBaseUrl(target!)}
 									{target}
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
