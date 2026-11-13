@@ -212,12 +212,13 @@
 				onNewChat={() => messageInput?.focus()}
 			/>
 
-			{#if !folderReadOnly && folderSection === 'chats'}
+			{#if !folderReadOnly}
 				<!-- Same mount as the in-chat composer, floating over the list and board. -->
 				<div
 					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-gray-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
+					class:hidden={folderSection !== 'chats'}
 					bind:clientHeight={composerHeight}
 				>
 					<div class="pointer-events-auto">
