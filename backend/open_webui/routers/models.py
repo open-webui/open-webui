@@ -85,7 +85,7 @@ async def _check_model_controls(form, previous, user, request):
         if not request.app.state.MODELS:
             await get_all_models(request, user=user)
         base = request.app.state.MODELS.get(form.base_model_id or form.id, {})
-        if 'pipe' in base or base.get('direct') or base.get('owned_by') == 'arena':
+        if 'pipe' in base or base.get('owned_by') == 'arena':
             raise HTTPException(400, 'Model controls require a server-managed provider model.')
 
 

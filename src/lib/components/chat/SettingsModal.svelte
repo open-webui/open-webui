@@ -27,15 +27,11 @@
 	import ArchivedChats from './Settings/ArchivedChats.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
-	import Connections from './Settings/Connections.svelte';
-	import Integrations from './Settings/Integrations.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
 	import SettingsAlt from '../icons/SettingsAlt.svelte';
-	import Link from '../icons/Link.svelte';
 	import UserCircle from '../icons/UserCircle.svelte';
 	import SoundHigh from '../icons/SoundHigh.svelte';
 	import InfoCircle from '../icons/InfoCircle.svelte';
-	import WrenchAlt from '../icons/WrenchAlt.svelte';
 	import Face from '../icons/Face.svelte';
 	import AppNotification from '../icons/AppNotification.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
@@ -214,18 +210,6 @@
 			searchPrefixes: ['settings.personal.shortcuts.']
 		},
 		{
-			id: 'connections',
-			titleKey: 'settings.personal.connections.title',
-			title: $i18n.t('settings.personal.connections.title'),
-			searchPrefixes: ['settings.personal.connections.']
-		},
-		{
-			id: 'tools',
-			titleKey: 'settings.personal.tools.title',
-			title: $i18n.t('settings.personal.tools.title'),
-			searchPrefixes: ['settings.personal.tools.']
-		},
-		{
 			id: 'personalization',
 			titleKey: 'settings.personal.personalization.title',
 			title: $i18n.t('settings.personal.personalization.title'),
@@ -392,18 +376,6 @@
 
 	const getAvailableSettings = (personalTabs: SettingsTab[], administratorTabs: SettingsTab[]) => {
 		const personalSettings = personalTabs.filter((tab) => {
-			if (tab.id === 'connections') {
-				return $config?.features?.enable_direct_connections;
-			}
-
-			if (tab.id === 'tools') {
-				return (
-					$config?.features?.enable_direct_integrations === true &&
-					($user?.role === 'admin' ||
-						($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers))
-				);
-			}
-
 			if (tab.id === 'interface') {
 				return $user?.role === 'admin' || ($user?.permissions?.settings?.interface ?? true);
 			}
@@ -488,10 +460,7 @@
 	};
 
 	const getModels = async () => {
-		return await _getModels(
-			localStorage.token,
-			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-		);
+		return await _getModels(localStorage.token);
 	};
 
 	const adminConfigSaveHandler = async () => {
@@ -675,36 +644,6 @@
 								<Keyboard className="size-3.5" strokeWidth="2" />
 								<span>{$i18n.t('settings.personal.shortcuts.title')}</span>
 							</button>
-						{:else if tabId === 'connections'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $config?.features?.enable_direct_connections)}
-								<button
-									role="tab"
-									aria-controls="tab-connections"
-									aria-selected={selectedTab === 'connections'}
-									class={tabButtonClass(selectedTab === 'connections')}
-									on:click={() => {
-										selectTab('connections');
-									}}
-								>
-									<Link className="size-3.5" strokeWidth="2" />
-									<span>{$i18n.t('settings.personal.connections.title')}</span>
-								</button>
-							{/if}
-						{:else if tabId === 'tools'}
-							{#if $user?.role === 'admin' || ($user?.role === 'user' && $user?.permissions?.features?.direct_tool_servers)}
-								<button
-									role="tab"
-									aria-controls="tab-tools"
-									aria-selected={selectedTab === 'tools'}
-									class={tabButtonClass(selectedTab === 'tools')}
-									on:click={() => {
-										selectTab('tools');
-									}}
-								>
-									<WrenchAlt className="size-3.5" strokeWidth="2" />
-									<span>{$i18n.t('settings.personal.tools.title')}</span>
-								</button>
-							{/if}
 						{:else if tabId === 'personalization'}
 							<button
 								role="tab"
@@ -869,20 +808,6 @@
 				<Notifications {saveSettings} />
 			{:else if selectedTab === 'shortcuts'}
 				<Shortcuts {saveSettings} />
-			{:else if selectedTab === 'connections'}
-				<Connections
-					saveSettings={async (updated: Record<string, any>) => {
-						await saveSettings(updated);
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
-			{:else if selectedTab === 'tools'}
-				<Integrations
-					saveSettings={async (updated: Record<string, any>) => {
-						await saveSettings(updated);
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
 			{:else if selectedTab === 'personalization'}
 				<Personalization
 					{saveSettings}

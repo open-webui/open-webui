@@ -99,7 +99,7 @@ export const getChannelMentionCandidates = async (
 	options: {
 		users: boolean;
 		apps: boolean;
-		models: { id: string; name: string; direct?: boolean }[];
+		models: { id: string; name: string; owner_id?: string }[];
 		channels: { id: string; name?: unknown; type?: string | null }[];
 	}
 ): Promise<MentionItem[]> => {
@@ -123,7 +123,7 @@ export const getChannelMentionCandidates = async (
 	return [
 		...users.map((u) => ({ type: 'user' as const, id: u.id, label: u.name })),
 		...options.models
-			.filter((m) => !m.direct)
+			.filter((m) => !m.owner_id)
 			.map((m) => ({ type: 'model' as const, id: m.id, label: m.name })),
 		...apps.map((a) => ({ type: 'app' as const, id: a.id, label: a.name })),
 		...options.channels

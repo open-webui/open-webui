@@ -39,6 +39,7 @@
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
 	let showCreateCalendarModal = false;
+	let editCalendar: CalendarModel | null = null;
 
 	const MONTH_NAMES = [
 		'January',
@@ -167,6 +168,12 @@
 	}
 
 	function handleCreateCalendar() {
+		editCalendar = null;
+		showCreateCalendarModal = true;
+	}
+
+	function handleEditCalendar(cal: CalendarModel) {
+		editCalendar = cal;
 		showCreateCalendarModal = true;
 	}
 
@@ -263,7 +270,11 @@
 	on:delete={() => refresh()}
 />
 
-<CreateCalendarModal bind:show={showCreateCalendarModal} on:created={handleCalendarCreated} />
+<CreateCalendarModal
+	bind:show={showCreateCalendarModal}
+	calendar={editCalendar}
+	on:created={handleCalendarCreated}
+/>
 
 <div
 	class="@container flex flex-col w-full h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar &&
@@ -275,7 +286,7 @@
 		<!-- Top Navbar — spans above sidebar and calendar -->
 		<nav class="px-1.5 pb-2 md:px-3 drag-region select-none shrink-0">
 			<div class="flex items-center gap-0.5 md:gap-1">
-				{#if $mobile}
+				{#if $mobile && !pageTab}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">
 						<Tooltip
 							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -395,6 +406,7 @@
 					{currentDate}
 					onToggle={toggleCalendar}
 					onCreateCalendar={handleCreateCalendar}
+					onEditCalendar={handleEditCalendar}
 					onDeleteCalendar={handleDeleteCalendar}
 					onDateSelect={handleDateSelect}
 				/>

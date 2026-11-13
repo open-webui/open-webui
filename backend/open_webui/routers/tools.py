@@ -32,6 +32,7 @@ from open_webui.models.tools import (
     Tools,
     ToolUserResponse,
 )
+from open_webui.utils.tools import get_tether_tool_servers
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_connection_access,
@@ -206,6 +207,19 @@ async def get_tools(
                 user_group_ids,
             )
         ]
+
+    # Tool servers the user added in Tether, reached through it.
+    for server in await get_tether_tool_servers(user):
+        tools.append(
+            ToolUserResponse(
+                id=f'server:tether:{server["id"]}',
+                user_id=user.id,
+                name=server['name'],
+                meta={'description': ''},
+                updated_at=int(time.time()),
+                created_at=int(time.time()),
+            )
+        )
 
     if query:
         q = query.casefold()

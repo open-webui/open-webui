@@ -24,6 +24,8 @@ export type PanelTab = {
 	chatId?: string;
 	sideChatNumber?: number;
 	sideChat?: boolean;
+	/** For an artifacts tab: the tab of the chat whose artifacts it shows. */
+	sourceTabId?: string;
 	terminalId?: string;
 	terminalNumber?: number;
 	path?: string;
@@ -152,18 +154,23 @@ export function openTab(state: PanelTabs, tab: PanelTab): PanelTabs {
 	);
 }
 
-export function openTabInSidePanel(state: PanelTabs, tab: PanelTab): PanelTabs {
-	const mainGroup = state.groups.find((group) => group.tabIds.includes(mainChatTabId));
-	if (!mainGroup) return openTab(state, tab);
-	if (state.tabs.some((item) => item.id === tab.id) && !mainGroup.tabIds.includes(tab.id))
+/** Opens `tab` in a group beside the one holding `besideId`, so both stay in view. */
+export function openTabInSidePanel(
+	state: PanelTabs,
+	tab: PanelTab,
+	besideId = mainChatTabId
+): PanelTabs {
+	const besideGroup = state.groups.find((group) => group.tabIds.includes(besideId));
+	if (!besideGroup) return openTab(state, tab);
+	if (state.tabs.some((item) => item.id === tab.id) && !besideGroup.tabIds.includes(tab.id))
 		return activateTab(state, tab.id);
 	const sideGroup =
-		state.groups.find((group) => group.id === state.activeGroupId && group.id !== mainGroup.id) ??
-		state.groups.find((group) => group.id !== mainGroup.id);
-	const next = openTab(activateTab(state, mainChatTabId), tab);
+		state.groups.find((group) => group.id === state.activeGroupId && group.id !== besideGroup.id) ??
+		state.groups.find((group) => group.id !== besideGroup.id);
+	const next = openTab(activateTab(state, besideId), tab);
 	return sideGroup
 		? moveTabToGroup(next, tab.id, sideGroup.id)
-		: splitTab(next, tab.id, mainGroup.id, 'right');
+		: splitTab(next, tab.id, besideGroup.id, 'right');
 }
 
 function removeLayoutGroup(layout: PanelLayout, groupId: string): PanelLayout | null {

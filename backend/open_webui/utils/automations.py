@@ -207,6 +207,7 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
         return
     if terminal['server_id'].startswith('template:'):
         from open_webui.utils.terminals import template_connection, require_model_access
+
         _, template = await template_connection(user, terminal['server_id'])
         scope = (template.get('data') or {}).get('scope')
         if (data.get('target') or {}).get('type') == 'channel' and (is_agent or scope == 'chat'):

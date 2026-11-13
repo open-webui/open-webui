@@ -18,6 +18,7 @@
 		{ value: 'unavailable', label: $i18n.t('Unavailable') },
 		{ value: 'base', label: $i18n.t('Base Models') },
 		{ value: 'workspace', label: $i18n.t('Workspace Models') },
+		{ value: 'arena', label: $i18n.t('settings.admin.evaluations.arenaModels.label') },
 		{ value: 'enabled', label: $i18n.t('Enabled') },
 		{ value: 'disabled', label: $i18n.t('Disabled') },
 		{ value: 'visible', label: $i18n.t('Visible') },

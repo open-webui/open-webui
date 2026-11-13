@@ -72,7 +72,7 @@
 				{/if}
 				{#if !folder.shared && (folder.unread_count ?? 0) > 0}
 					<span>·</span>
-					<span>{folder.unread_count.toLocaleString()} {$i18n.t('Unread')}</span>
+					<span>{folder.unread_count.toLocaleString()} {$i18n.t('Unread or waiting for approval')}</span>
 				{/if}
 			</div>
 		</div>

@@ -259,7 +259,6 @@ class FeaturesPermissions(BaseModel):
     channels: bool = True
     encrypted_channels: bool = False
     folders: bool = True
-    direct_tool_servers: bool = False
 
     web_search: bool = True
     image_generation: bool = True
@@ -509,18 +508,6 @@ async def update_user_settings_by_session_user(
             )
         ):
             ui_settings.pop('system', None)
-
-    if (
-        user.role != 'admin'
-        and ui_settings is not None
-        and 'toolServers' in ui_settings
-        and not await has_permission(
-            user.id,
-            'features.direct_tool_servers',
-            await Config.get('user.permissions'),
-        )
-    ):
-        ui_settings.pop('toolServers', None)
 
     ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
     if (

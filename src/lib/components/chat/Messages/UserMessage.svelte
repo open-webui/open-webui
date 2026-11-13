@@ -57,6 +57,8 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 
+	$: chatBubble = compactPreview || ($settings?.chatBubble ?? true);
+
 	let showDeleteConfirm = false;
 
 	let messageIndexEdit = false;
@@ -171,10 +173,8 @@
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
-	{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
-		<div
-			class="shrink-0 me-2 {($settings?.chatBubble ?? true) ? 'mt-6' : 'hidden @lg:flex mt-0.5'}"
-		>
+	{#if !compactPreview && (!chatBubble || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+		<div class="shrink-0 me-2 {chatBubble ? 'mt-6' : 'hidden @lg:flex mt-0.5'}">
 			<!-- LICENSE covers this Open WebUI fallback logo.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			https://docs.openwebui.com/license. -->
@@ -195,13 +195,9 @@
 			? ''
 			: 'pl-1'}"
 	>
-		{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
-			<div
-				class={($settings?.chatBubble ?? true)
-					? 'mb-1 ps-2 text-xs text-gray-400 dark:text-gray-500'
-					: ''}
-			>
-				{#if $settings?.chatBubble ?? true}
+		{#if !compactPreview && (!chatBubble || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+			<div class={chatBubble ? 'mb-1 ps-2 text-xs text-gray-400 dark:text-gray-500' : ''}>
+				{#if chatBubble}
 					{authorName}
 				{:else}
 					<Name>{isOwn && !$settings.showUsername ? $i18n.t('You') : authorName}</Name>
@@ -229,9 +225,7 @@
 								file.url?.startsWith('data') || file.url?.startsWith('http')
 									? file.url
 									: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
-							<div
-								class={($settings?.chatBubble ?? true) ? (isOwn ? 'self-end' : 'self-start') : ''}
-							>
+							<div class={chatBubble ? (isOwn ? 'self-end' : 'self-start') : ''}>
 								{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 									<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
@@ -343,14 +337,14 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Escape') {
-									document.getElementById('close-edit-message-button')?.click();
+									cancelEditMessage();
 								}
 
 								const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 								const isEnterPressed = e.key === 'Enter';
 
 								if (isCmdOrCtrlPressed && isEnterPressed) {
-									document.getElementById('confirm-edit-message-button')?.click();
+									editMessageConfirmHandler();
 								}
 							}}
 						/>
@@ -435,12 +429,10 @@
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div
-						class="flex {($settings?.chatBubble ?? true)
-							? `${isOwn ? 'justify-end' : 'justify-start'} pb-1`
-							: 'w-full'}"
+						class="flex {chatBubble ? `${isOwn ? 'justify-end' : 'justify-start'} pb-1` : 'w-full'}"
 					>
 						<div
-							class="rounded-3xl {($settings?.chatBubble ?? true)
+							class="rounded-3xl {chatBubble
 								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
 										message.files ? (isOwn ? 'rounded-se-lg' : 'rounded-ss-lg') : ''
 									}`
@@ -492,7 +484,7 @@
 
 			{#if edit !== true && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 				<div
-					class="flex items-center {($settings?.chatBubble ?? true)
+					class="flex items-center {chatBubble
 						? isOwn
 							? 'justify-end'
 							: 'justify-start'
@@ -502,16 +494,13 @@
 				>
 					{#if message.timestamp}
 						<Tooltip
-							className="flex self-center {($settings?.chatBubble ?? true) && isOwn
-								? 'mr-1'
-								: 'order-last'}"
+							className="flex self-center {chatBubble && isOwn ? 'mr-1' : 'order-last'}"
 							content={formatMessageTimestampFull(message.timestamp * 1000, $i18n.language)}
 							placement="bottom"
 						>
 							<time
 								datetime={new Date(message.timestamp * 1000).toISOString()}
-								class="{compactPreview ? '' : 'hover-reveal'} {($settings?.chatBubble ?? true) &&
-								isOwn
+								class="{compactPreview ? '' : 'hover-reveal'} {chatBubble && isOwn
 									? 'mr-1'
 									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
 							>
@@ -520,7 +509,7 @@
 						</Tooltip>
 					{/if}
 
-					{#if !compactPreview && (!($settings?.chatBubble ?? true) || !isOwn)}
+					{#if !compactPreview && (!chatBubble || !isOwn)}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button
@@ -646,7 +635,7 @@
 						{/if}
 					{/if}
 
-					{#if !compactPreview && ($settings?.chatBubble ?? true) && isOwn}
+					{#if !compactPreview && chatBubble && isOwn}
 						{#if siblings.length > 1}
 							<div class="flex self-center" dir="ltr">
 								<button

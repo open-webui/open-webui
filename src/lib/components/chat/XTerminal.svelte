@@ -19,6 +19,7 @@
 	export let readOnly = false;
 	export let connected = false;
 	export let connecting = false;
+	export let onTitleChange: (title: string) => void = () => {};
 
 	let terminalEl: HTMLDivElement;
 	let term: Terminal | null = null;
@@ -42,6 +43,7 @@
 	let reconnectTimer: ReturnType<typeof setTimeout>;
 	let reconnectDelay = 1000;
 	let reconnecting = false;
+	let processName = '';
 
 	export async function bindChat(id: string) {
 		if (readOnly || destroyed || target.context.chatId === id) return;
@@ -134,7 +136,7 @@
 						if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
 					}, 25000);
 				},
-				{ resume: true, cursor, flow_control: true }
+				{ resume: true, cursor, flow_control: true, process_info: true }
 			);
 			const socket = ws;
 			let flowControlled = false;
@@ -145,6 +147,18 @@
 					try {
 						const message = JSON.parse(event.data);
 						if (message.type === 'chat') return;
+						if (message.type === 'process') {
+							if (typeof message.name === 'string') {
+								// Apply process changes between output batches so old titles cannot overtake them.
+								outputPending = outputBatch = outputPending.then(() => {
+									if (destroyed) return;
+									processName = message.name;
+									onTitleChange(processName);
+								});
+								outputBatchBytes = 0;
+							}
+							return;
+						}
 						if (message.type === 'flow_control') {
 							flowControlled = true;
 							return;
@@ -245,6 +259,7 @@
 			minimumContrastRatio: 4.5,
 			scrollback: 5000
 		});
+		term.onTitleChange((title) => onTitleChange(title.trim() || processName));
 		updateTheme();
 		themeObserver = new MutationObserver(updateTheme);
 		themeObserver.observe(document.documentElement, {
