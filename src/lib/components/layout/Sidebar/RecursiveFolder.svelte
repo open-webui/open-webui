@@ -25,6 +25,7 @@
 		updateFolderDetails, removeFolderState, beginFolderOpening, isCurrentFolderOpening,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
+	import { refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import {
 		deleteFolderById,
@@ -154,6 +155,7 @@
 
 		if (typeof data?.last_read_at === 'number') {
 			updateFolderChatLists({ id: data.chat_id, last_read_at: data.last_read_at });
+			void refreshFolderChatLists();
 		}
 	};
 
@@ -175,6 +177,7 @@
 		}
 
 		for (const id of res.folder_ids ?? [folderId]) markFolderRead(id, $user?.id);
+		void refreshFolderChatLists();
 	};
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
@@ -303,6 +306,7 @@
 
 									if (res) {
 										dispatch('update');
+										void refreshFolderChatLists();
 									}
 								}
 							}

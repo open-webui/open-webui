@@ -35,6 +35,7 @@
 		allLoaded,
 		loadNextChatListPage,
 		refreshChatList,
+		refreshFolderChatLists,
 		refreshSidebar,
 		registerFolderRefreshHandler,
 		setAllChatsRead,
@@ -1753,7 +1754,8 @@
 										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
 
-									initChatList();
+									await initChatList();
+									void refreshFolderChatLists();
 								}
 							} else if (type === 'folder') {
 								if (folders[id].parent_id === null) {
@@ -1858,7 +1860,8 @@
 														);
 													}
 
-													initChatList();
+													await initChatList();
+													void refreshFolderChatLists();
 												}
 											}
 										}}

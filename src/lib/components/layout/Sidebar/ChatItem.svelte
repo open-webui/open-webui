@@ -49,7 +49,7 @@
 		settings,
 		user
 	} from '$lib/stores';
-	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
+	import { refreshSidebar } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
@@ -272,7 +272,7 @@
 				_chatTitle.set(title);
 			}
 
-			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshSidebar(localStorage.token);
 
 			dispatch('change');
 		}
