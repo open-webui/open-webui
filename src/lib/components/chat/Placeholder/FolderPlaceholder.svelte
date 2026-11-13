@@ -448,7 +448,7 @@
 			search: appliedSearch,
 			userIds: selectedUsers,
 			tagIds:
-				activeBy() === 'tags' && key !== 'all' ? (key === UNTAGGED ? [] : [key]) : selectedTags,
+				activeBy() === 'tags' && key !== 'all' ? [key] : selectedTags,
 			activity: activeBy() === 'activity' && key !== 'all' ? (key as FolderActivity) : activity,
 			updatedAtGte,
 			status:
