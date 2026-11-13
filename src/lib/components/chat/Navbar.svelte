@@ -103,7 +103,7 @@
 
 	// Lets the tab strip start a rename on double-click, same as the menu's Rename.
 	export const startRename = () => {
-		if (readOnly || !chat?.id) return;
+		if (readOnly || !chat?.id || $temporaryChatEnabled) return;
 		void renameHandler();
 	};
 
