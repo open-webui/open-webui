@@ -825,14 +825,18 @@
 										}}
 										on:keydown={(e) => {
 											if (e.key === 'Escape') {
-												document.getElementById('close-edit-message-button')?.click();
+												cancelEditMessage();
 											}
 
 											const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 											const isEnterPressed = e.key === 'Enter';
 
-											if (isCmdOrCtrlPressed && isEnterPressed) {
-												document.getElementById('confirm-edit-message-button')?.click();
+											if (
+												isCmdOrCtrlPressed &&
+												isEnterPressed &&
+												(!message.user_id || message.user_id === $user?.id)
+											) {
+												editMessageConfirmHandler();
 											}
 										}}
 									></textarea>

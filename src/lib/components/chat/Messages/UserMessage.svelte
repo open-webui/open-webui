@@ -337,14 +337,14 @@
 							}}
 							on:keydown={(e) => {
 								if (e.key === 'Escape') {
-									document.getElementById('close-edit-message-button')?.click();
+									cancelEditMessage();
 								}
 
 								const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 								const isEnterPressed = e.key === 'Enter';
 
 								if (isCmdOrCtrlPressed && isEnterPressed) {
-									document.getElementById('confirm-edit-message-button')?.click();
+									editMessageConfirmHandler();
 								}
 							}}
 						/>
