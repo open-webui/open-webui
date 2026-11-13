@@ -133,6 +133,7 @@
 	export let chatStreaming = false;
 	export let folderId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
+	export let activeFileContext: TerminalContext | null = null;
 	export let chatUser = null;
 	export let mainArtifacts: Readable<{ type: string; content: string }[]> = readable([]);
 

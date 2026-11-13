@@ -168,6 +168,7 @@
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	$: isTemporary = temporary ?? $temporaryChatEnabled;
 	export let terminalContext: TerminalContext | null = null;
+	export let activeFileContext: TerminalContext | null = null;
 	export let terminalSelectionEnabled = true;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
@@ -1076,9 +1077,13 @@
 				throw new Error('A saved chat is required for this terminal');
 
 			const cwd =
+				(activeFileContext?.terminalId === fileItem.terminal_id
+					? activeFileContext.currentDirectory
+					: null) ||
 				(terminalContext?.terminalId === fileItem.terminal_id
 					? terminalContext?.currentDirectory
-					: null) || (await getCwd(terminal))?.cwd;
+					: null) ||
+				(await getCwd(terminal))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
 			const uploadedFile = await uploadNewFileToTerminal(terminal, cwd, fileItem.file);
 			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
