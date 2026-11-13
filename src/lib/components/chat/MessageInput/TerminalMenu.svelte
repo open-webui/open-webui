@@ -85,7 +85,7 @@
 	const lifecycleCopy = {
 		restart: {
 			title: 'Restart {{name}}?',
-			message: 'Running work stops and the machine starts again. Files are kept.',
+			message: 'Running work stops and the instance starts again. Files are kept.',
 			label: 'Restart',
 			pending: 'Restarting {{name}}…',
 			done: '{{name}} restarted'
@@ -93,7 +93,7 @@
 		stop: {
 			title: 'Stop {{name}}?',
 			message:
-				'Running work stops. Files are kept, and the machine starts again when it is next used.',
+				'Running work stops. Files are kept, and the instance starts again when it is next used.',
 			label: 'Stop',
 			pending: 'Stopping {{name}}…',
 			done: '{{name}} stopped'
