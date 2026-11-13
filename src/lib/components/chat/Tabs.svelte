@@ -101,7 +101,7 @@
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
 	import TerminalPicker, { type TerminalOption } from './Tabs/TerminalPicker.svelte';
-	import { selectTerminal } from '$lib/utils/terminal';
+	import { selectTerminal, terminalIconName } from '$lib/utils/terminal';
 	import VoiceNote from './Tabs/VoiceNote.svelte';
 	import Browser from './Tabs/Browser.svelte';
 	import Desktop from './Tabs/Desktop.svelte';
@@ -209,6 +209,7 @@
 	};
 	let terminalViews: Record<string, XTerminal> = {};
 	let terminalTitles: Record<string, string> = {};
+	let terminalProcesses: Record<string, string> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
@@ -311,6 +312,7 @@
 		tabs = emptyTabs();
 		viewError = '';
 		terminalTitles = {};
+		terminalProcesses = {};
 		sideChatStreaming = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
@@ -2073,8 +2075,10 @@
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
-									onTitleChange={(title) => {
-										if (owner === viewEntry) terminalTitles[tab.sessionId!] = title.trim();
+									onTitleChange={(title, process) => {
+										if (owner !== viewEntry) return;
+										terminalTitles[tab.sessionId!] = title.trim();
+										terminalProcesses[tab.sessionId!] = process;
 									}}
 									onUnavailable={(message, status) => {
 										if (owner === viewEntry)
@@ -2294,6 +2298,11 @@
 								{/if}
 							{:else if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
+							{:else if tab.kind === 'terminal'}
+								<Icon
+									name={terminalIconName(terminalProcesses[tab.sessionId ?? ''] ?? '', tabLabel(tab))}
+									size={14}
+								/>
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
 							{:else if PageIcon}
