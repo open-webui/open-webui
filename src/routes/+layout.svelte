@@ -35,20 +35,19 @@
 		isLastActiveTab,
 		isApp,
 		appInfo,
-		toolServers,
 		channels,
 		channelId,
 		channelRequestQueues,
-		terminalServers,
-		showTabs,
-		showFileNavPath,
-		showFileNavDir,
 		pyodideWorker,
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
-	import { clearFolderStates, updateFolderChatLists, beginFolderOpening } from '$lib/stores/folderStates';
-	import { getFileBlobById, getFileContentById } from '$lib/apis/files';
+	import {
+		clearFolderStates,
+		updateFolderChatLists,
+		beginFolderOpening
+	} from '$lib/stores/folderStates';
+	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
@@ -61,10 +60,9 @@
 	import '../app.css';
 	import 'tippy.js/dist/tippy.css';
 
-	import { executeToolServer, getBackendConfig, getModels, getVersion } from '$lib/apis';
+	import { getBackendConfig, getModels, getVersion } from '$lib/apis';
 	import { getSessionUser, updateUserTimezone, userSignOut } from '$lib/apis/auths';
 	import { getAllTags } from '$lib/apis/chats';
-	import { chatCompletion } from '$lib/apis/openai';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import {
 		addOpenAIConnection,
@@ -74,13 +72,7 @@
 	} from '$lib/utils/connections';
 
 	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
-	import {
-		bestMatchingLanguage,
-		cleanText,
-		displayFileHandler,
-		getUserTimezone,
-		removeAllDetails
-	} from '$lib/utils';
+	import { bestMatchingLanguage, cleanText, getUserTimezone, removeAllDetails } from '$lib/utils';
 	import { setTextScale } from '$lib/utils/text-scale';
 	import { initializeTether, renewTetherSession } from '$lib/utils/tether';
 
@@ -92,7 +84,6 @@
 	import { getUserSettings } from '$lib/apis/users';
 	import { getChannelById, getChannels } from '$lib/apis/channels';
 	import { shouldNotifyChannelMessage } from '$lib/utils/channelNotifications';
-	import { resolveTerminalTarget, terminalRequest } from '$lib/apis/terminal';
 
 	const unregisterServiceWorkers = async () => {
 		if ('serviceWorker' in navigator) {
@@ -459,134 +450,6 @@
 		worker.addEventListener('error', onError);
 	};
 
-	const resolveToolServer = (serverUrl) => {
-		let toolServer = $settings?.toolServers?.find((server) => server.url === serverUrl);
-		if (!toolServer) {
-			const terminalServer = ($settings?.terminalServers ?? []).find(
-				(server) => server.url === serverUrl
-			);
-			if (terminalServer) {
-				toolServer = {
-					url: terminalServer.url,
-					auth_type: terminalServer.auth_type ?? 'bearer',
-					key: terminalServer.key ?? '',
-					path: terminalServer.path ?? '/openapi.json'
-				};
-			}
-		}
-
-		let toolServerData =
-			$toolServers?.find((server) => server.url === serverUrl) ??
-			$terminalServers?.find((server) => server.url === serverUrl);
-
-		let token = null;
-		if (toolServer) {
-			const auth_type = toolServer?.auth_type ?? 'bearer';
-			if (auth_type === 'bearer') token = toolServer?.key;
-			else if (auth_type === 'session') token = localStorage.token;
-		}
-
-		return { toolServer, toolServerData, token };
-	};
-
-	const isDirectTerminalServer = (serverUrl) =>
-		!!serverUrl &&
-		(($settings?.terminalServers ?? []).some((server) => server.url === serverUrl) ||
-			($terminalServers ?? []).some((server) => !server.id && server.url === serverUrl));
-
-	const terminalFileResult = (result, params, serverUrl, chatId) => {
-		const path = result?.path ?? params?.path;
-		const name =
-			result?.name ??
-			String(path ?? '')
-				.split('/')
-				.filter(Boolean)
-				.at(-1) ??
-			'file';
-		const contentType = result?.content_type ?? result?.mime_type ?? 'application/octet-stream';
-
-		return {
-			...(result ?? {}),
-			type: 'file',
-			source: 'open_terminal',
-			displayed: true,
-			terminal_selector: serverUrl,
-			terminal_url: serverUrl,
-			session_id: chatId,
-			path,
-			full_path: result?.full_path ?? path,
-			name,
-			mime_type: contentType,
-			content_type: contentType,
-			page: result?.page ?? params?.page
-		};
-	};
-
-	const executeTool = async (data, cb, chatId) => {
-		if (!$config?.features?.enable_tool_servers) {
-			cb?.({ error: 'Tool servers are disabled' });
-			return;
-		}
-		const { toolServer, toolServerData, token } = resolveToolServer(data.server?.url);
-		const defaultInline =
-			data?.name === 'display_file' &&
-			data?.params?.path &&
-			data?.params?.inline === undefined &&
-			$settings?.terminalFileDisplay === 'inline' &&
-			isDirectTerminalServer(data.server?.url);
-		const params = defaultInline ? { ...data.params, inline: true } : data?.params;
-		const serverParams = data?.name === 'display_file' && params ? { ...params } : params;
-		if (serverParams && data?.name === 'display_file') {
-			delete serverParams.page;
-		}
-
-		console.log('executeTool', data, toolServer);
-
-		if (toolServer) {
-			const res = await executeToolServer(
-				token,
-				toolServer.url,
-				data?.name,
-				serverParams,
-				toolServerData,
-				chatId
-			);
-
-			console.log('executeToolServer', res);
-			const result = Array.isArray(res) ? res[0] : res;
-			const inlineDisplayFile =
-				data?.name === 'display_file' && params?.path && params?.inline === true;
-			const output =
-				inlineDisplayFile && result?.exists !== false
-					? Array.isArray(res)
-						? [terminalFileResult(result, params, toolServer.url, chatId)]
-						: terminalFileResult(result, params, toolServer.url, chatId)
-					: res;
-
-			if (data?.name === 'display_file' && params?.path && !inlineDisplayFile && !chatId) {
-				if (result?.exists !== false) {
-					displayFileHandler(
-						result?.path ?? params.path,
-						{ showTabs, showFileNavPath },
-						{ page: params?.page }
-					);
-				}
-			}
-
-			if (['write_file'].includes(data?.name) && params?.path) {
-				showFileNavDir.set(result?.path ?? params.path);
-			}
-
-			if (cb) {
-				cb(structuredClone(output));
-			}
-		} else {
-			if (cb) {
-				cb({ error: 'Tool Server Not Found' });
-			}
-		}
-	};
-
 	const notify = (title, options, path) => {
 		const userId = $user?.id;
 		if (window.tether) return;
@@ -672,7 +535,7 @@
 			return;
 		}
 
-		// Session-targeted RPC calls (code execution, tool calls, direct completion)
+		// Session-targeted RPC calls (code execution)
 		// must ALWAYS be processed regardless of active chat or tab visibility,
 		// because the backend's sio.call blocks waiting for our callback response.
 		if (data?.session_id === $socket.id) {
@@ -680,126 +543,15 @@
 				console.log('execute:python', data);
 				executePythonAsWorker(data.id, data.code, cb, data.files || []);
 				return;
-			} else if (type === 'execute:tool') {
-				console.log('execute:tool', data);
-				executeTool(data, cb, event.chat_id);
-				return;
-			} else if (type === 'request:terminal') {
-				try {
-					if (!$config?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
-					const target = resolveTerminalTarget(
-						data.terminal_id,
-						[],
-						$config?.features?.enable_direct_integrations ? ($settings?.terminalServers ?? []) : [],
-						localStorage.token, { chatId: event.chat_id ?? null }
-					);
-					if (!target) throw new Error('Terminal Not Found');
-					let options = {};
-					if (data.file) {
-						const blob = await getFileBlobById(localStorage.token, data.file.id);
-						const body = new FormData();
-						body.append('file', blob, data.file.name);
-						options = { method: 'POST', body };
-					}
-					const result = await terminalRequest(target, data.path, options);
-					cb?.({ data: result });
-				} catch (error) {
-					cb?.({ error: `${error}` });
-				}
-				return;
-			} else if (type === 'request:chat:completion') {
-				console.log(data, $socket.id);
-				const { session_id, channel, form_data, model } = data;
-
-				try {
-					const directConnections = $settings?.directConnections ?? {};
-
-					if (directConnections) {
-						const urlIdx = model?.urlIdx;
-
-						const OPENAI_API_URL = directConnections.OPENAI_API_BASE_URLS[urlIdx];
-						const OPENAI_API_KEY = directConnections.OPENAI_API_KEYS[urlIdx];
-						const API_CONFIG = directConnections.OPENAI_API_CONFIGS[urlIdx];
-
-						try {
-							if (API_CONFIG?.prefix_id) {
-								const prefixId = API_CONFIG.prefix_id;
-								form_data['model'] = form_data['model'].replace(`${prefixId}.`, ``);
-							}
-
-							const [res, controller] = await chatCompletion(
-								OPENAI_API_KEY,
-								form_data,
-								OPENAI_API_URL
-							);
-
-							if (res) {
-								// raise if the response is not ok
-								if (!res.ok) {
-									throw await res.json();
-								}
-
-								if (form_data?.stream ?? false) {
-									cb({
-										status: true
-									});
-									console.log({ status: true });
-
-									// res will either be SSE or JSON
-									const reader = res.body.getReader();
-									const decoder = new TextDecoder();
-
-									const processStream = async () => {
-										while (true) {
-											// Read data chunks from the response stream
-											const { done, value } = await reader.read();
-											if (done) {
-												break;
-											}
-
-											// Decode the received chunk
-											const chunk = decoder.decode(value, { stream: true });
-
-											// Process lines within the chunk
-											const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-											for (const line of lines) {
-												console.log(line);
-												$socket?.emit(channel, line);
-											}
-										}
-									};
-
-									// Process the stream in the background
-									await processStream();
-								} else {
-									const data = await res.json();
-									cb(data);
-								}
-							} else {
-								throw new Error('An error occurred while fetching the completion');
-							}
-						} catch (error) {
-							console.error('chatCompletion', error);
-							cb(error);
-						}
-					}
-				} catch (error) {
-					console.error('chatCompletion', error);
-					cb(error);
-				} finally {
-					$socket.emit(channel, {
-						done: true
-					});
-				}
-				return;
 			}
 		}
 
 		if (
 			!event?.internal &&
-			!$openSideChatIds.has(event.chat_id) &&
-			((event.chat_id !== $chatId && !$temporaryChatEnabled) || isInBackground)
+			((event.chat_id !== $chatId &&
+				!$openSideChatIds.has(event.chat_id) &&
+				!$temporaryChatEnabled) ||
+				isInBackground)
 		) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
@@ -1105,14 +857,7 @@
 		if (event.type === 'models:refresh') {
 			const token = localStorage.token;
 			if (token) {
-				models.set(
-					await getModels(
-						token,
-						$config?.features?.enable_direct_connections
-							? ($settings?.directConnections ?? null)
-							: null
-					)
-				);
+				models.set(await getModels(token));
 			}
 			return;
 		}

@@ -64,6 +64,9 @@
 				resource_id: current.resource_id!,
 				comment_id: current.object_id!
 			};
+		} else if (current.object_type === 'chat_message' && current.resource_type === 'chat') {
+			const query = new URLSearchParams({ message: current.data.message_id! });
+			await goto(`/c/${encodeURIComponent(current.resource_id!)}?${query}`, { state });
 		} else if (current.resource_type === 'channel') {
 			const query = new URLSearchParams({
 				message: current.object_id!,

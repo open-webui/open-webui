@@ -63,6 +63,7 @@ from open_webui.routers.memories import (
 )
 from open_webui.routers.retrieval import search_web as _search_web
 from open_webui.socket.main import close_changed_note_documents, sio
+from open_webui.tools.visualizations import render_visualization  # noqa: F401 — re-exported
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.chat_id import is_saved_chat_id
@@ -1628,6 +1629,40 @@ async def replace_note_content(
 
 
 # Chats tools
+
+
+async def search_users(
+    query: str,
+    count: int = 5,
+    __user__: dict = None,
+) -> str:
+    """
+    Search users by name or email, including to resolve @mentions. To mention a user,
+    copy their exact mention token into your reply. Only users with chat access are notified.
+
+    :param query: Name or email to search for
+    :param count: Maximum results to return (default: 5, maximum: 20)
+    :return: JSON list of users with id, name, email, and mention token
+    """
+    if not __user__ or __user__.get('role') not in {'user', 'admin'}:
+        return JSONCodec.dumps({'error': 'Verified user context required'})
+
+    try:
+        result = await Users.get_users(
+            filter={'query': query, 'roles': ['user', 'admin']},
+            sort={'order_by': 'name', 'direction': 'asc'},
+            limit=max(1, min(count, 20)),
+        )
+        return JSONCodec.dumps(
+            [
+                {'id': user.id, 'name': user.name, 'email': user.email, 'mention': f'<@U:{user.id}>'}
+                for user in result['users']
+            ],
+            ensure_ascii=False,
+        )
+    except Exception:
+        log.exception('search_users failed')
+        return JSONCodec.dumps({'error': 'Could not search users'})
 
 
 async def search_chats(

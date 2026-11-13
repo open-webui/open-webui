@@ -264,10 +264,7 @@
 				/>
 				<ModelDropdown
 					bind:model_id
-					items={[
-						...$baseModels.filter((model) => !('direct' in model && model.direct)),
-						...agentModels
-					]}
+					items={[...$baseModels, ...agentModels]}
 					disabled={modelsLoading}
 					side="top"
 					align="start"

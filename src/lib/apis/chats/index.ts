@@ -1561,6 +1561,44 @@ export const addTagById = async (token: string, id: string, tagName: string) => 
 	return res;
 };
 
+export const updateTagColorById = async (
+	token: string,
+	id: string,
+	tagName: string,
+	color: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/tags`, {
+		method: 'PATCH',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({
+			name: tagName,
+			color
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = getErrorDetail(err);
+
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const deleteTagById = async (token: string, id: string, tagName: string) => {
 	let error = null;
 

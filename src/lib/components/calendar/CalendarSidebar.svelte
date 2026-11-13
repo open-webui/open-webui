@@ -3,6 +3,7 @@
 	import { settings } from '$lib/stores';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import Pencil from '$lib/components/icons/Pencil.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -11,6 +12,7 @@
 	export let currentDate: Date = new Date();
 	export let onToggle: (id: string) => void = () => {};
 	export let onCreateCalendar: () => void = () => {};
+	export let onEditCalendar: (cal: CalendarModel) => void = () => {};
 	export let onDeleteCalendar: (id: string) => void = () => {};
 	export let onDateSelect: (date: Date) => void = () => {};
 
@@ -234,6 +236,21 @@
 						{cal.name}
 					</span>
 				</button>
+
+				{#if !cal.is_system}
+					<button
+						type="button"
+						class="shrink-0 p-0.5 {isDeletable(cal)
+							? 'mr-0.5'
+							: 'mr-2'} rounded opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+							transition-all duration-150"
+						title={$i18n.t('Edit')}
+						aria-label={$i18n.t('Edit')}
+						on:click|stopPropagation={() => onEditCalendar(cal)}
+					>
+						<Pencil className="size-3" strokeWidth="2" />
+					</button>
+				{/if}
 
 				{#if isDeletable(cal)}
 					<button

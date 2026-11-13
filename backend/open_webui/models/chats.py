@@ -21,7 +21,9 @@ from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
 from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.tasks import has_active_tasks
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
+from open_webui.utils.session_records import has_pending_tool_approval
 from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
@@ -49,6 +51,28 @@ from sqlalchemy.sql.expression import bindparam
 
 log = logging.getLogger(__name__)
 ACTIVE_CHAT_GAP_SECONDS = 30 * 60
+# Filter token for chats without a folder status. The status itself is stored and returned as null;
+# only query strings, which can't carry null, need a name for it.
+NO_FOLDER_STATUS = 'none'
+
+
+def _as_seconds(value):
+    # Older rows may hold numbers as strings; chats set before tracking have none.
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def folder_status_since(meta: dict, status: str | None):
+    """When the chat would have entered `status` had all its time there been one stretch.
+
+    Earlier stretches in the same status count, so moving away and back doesn't reset it.
+    """
+    started = _as_seconds(meta.get('folder_status_at'))
+    if status is None or started is None:
+        return None
+    return started - (_as_seconds((meta.get('folder_status_durations') or {}).get(status)) or 0)
 CHAT_SEARCH_FILTER_PREFIXES = ('tag:', 'folder:', 'pinned:', 'archived:', 'shared:')
 
 
@@ -883,6 +907,7 @@ class ChatTable:
                         ):
                             updated['history']['messages'][mid] = message
                     updated['history'] = self.merge_history(updated['history'], {})
+                    self._repair_chat_current_id(updated)
 
                 updated = self._clean_null_bytes(updated)
                 chat_item.chat = updated
@@ -2105,6 +2130,7 @@ class ChatTable:
         folder_ids: list[str],
         db: AsyncSession | None = None,
     ) -> dict[str, int]:
+        """Count unread or approval-pending chats for folder notification badges."""
         if not folder_ids:
             return {}
 
@@ -2128,7 +2154,27 @@ class ChatTable:
                 )
                 .group_by(Chat.folder_id)
             )
-            return {folder_id: count for folder_id, count in result.all() if folder_id}
+            counts = {folder_id: count for folder_id, count in result.all() if folder_id}
+            result = await session.execute(
+                select(Chat.folder_id, Chat.id, ChatMessage.output)
+                .join(ChatMessage, ChatMessage.chat_id == Chat.id)
+                .where(
+                    Chat.user_id == user_id,
+                    Chat.folder_id.in_(folder_ids),
+                    Chat.archived == False,
+                    ChatMessage.role == 'assistant',
+                    ChatMessage.done.is_(False),
+                )
+            )
+            # Unfinished chats are excluded above; count each approval-pending chat once.
+            pending_chats = {
+                (folder_id, chat_id)
+                for folder_id, chat_id, output in result.all()
+                if has_pending_tool_approval(output)
+            }
+            for folder_id, _ in pending_chats:
+                counts[folder_id] = counts.get(folder_id, 0) + 1
+            return counts
 
     async def get_chats(self, skip: int = 0, limit: int = 50, db: AsyncSession | None = None) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
@@ -2602,6 +2648,324 @@ class ChatTable:
             for chat_id, author_id in (await session.execute(query, {'chat_ids': chat_ids})).all():
                 participants[chat_id].append(author_id)
         return participants
+
+    def _folder_chat_conditions(
+        self,
+        folder_id: str,
+        dialect_name: str,
+        search: str = '',
+        tag_ids: list[str] | None = None,
+        status_ids: list[str] | None = None,
+        valid_status_ids: tuple[str, ...] = (),
+    ) -> list:
+        conditions = [
+            Chat.folder_id == folder_id,
+            Chat.archived.is_(False),
+            Chat.meta['internal'].as_boolean().is_not(True),
+        ]
+
+        # Same matching as the sidebar search: the phrase, or every term.
+        phrase = chat_search_content_query(search)
+        if phrase:
+
+            def match(key: str, value: str):
+                return or_(
+                    Chat.title.ilike(f'%{value}%'),
+                    text(chat_search_message_content_match_sql(dialect_name, key)).bindparams(**{key: value}),
+                )
+
+            terms = [term for term in chat_search_terms(phrase) if term != phrase]
+            phrase_match = match('folder_phrase', phrase)
+            conditions.append(
+                or_(phrase_match, and_(*[match(f'folder_term_{i}', term) for i, term in enumerate(terms)]))
+                if terms
+                else phrase_match
+            )
+
+        # 'none' means untagged, as in the sidebar search's tag:none.
+        tag_ids = set(tag_ids or [])
+        if tag_ids:
+            if dialect_name == 'sqlite':
+                tags = "json_each(CASE WHEN json_type(chat.meta, '$.tags') = 'array' THEN json_extract(chat.meta, '$.tags') ELSE '[]' END)"
+            else:
+                tags = "json_array_elements_text(CASE WHEN json_typeof(chat.meta->'tags') = 'array' THEN chat.meta->'tags' ELSE '[]'::json END)"
+            named = sorted(tag_ids - {'none'})
+            matches = [text(f'NOT EXISTS (SELECT 1 FROM {tags} tag)')] if 'none' in tag_ids else []
+            if named:
+                matches.append(
+                    text(f'EXISTS (SELECT 1 FROM {tags} tag WHERE tag.value IN :folder_tag_ids)').bindparams(
+                        bindparam('folder_tag_ids', named, expanding=True)
+                    )
+                )
+            conditions.append(or_(*matches))
+
+        # 'not_started' was the default status's earlier name.
+        status_ids = {NO_FOLDER_STATUS if value == 'not_started' else value for value in status_ids or []}
+        if status_ids:
+            stored = Chat.meta['folder_status'].as_string()
+            named = sorted(status_ids - {NO_FOLDER_STATUS})
+            matches = [stored.in_(named)] if named else []
+            if NO_FOLDER_STATUS in status_ids:
+                # Unknown or deleted statuses read as no status.
+                matches.append(
+                    or_(stored.is_(None), stored.not_in(list(valid_status_ids)))
+                )
+            conditions.append(or_(*matches))
+        return conditions
+
+    async def get_folder_chat_page(
+        self,
+        folder_id: str,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 50,
+        search: str = '',
+        tag_ids: list[str] | None = None,
+        status_ids: list[str] | None = None,
+        valid_status_ids: tuple[str, ...] = (),
+        user_ids: list[str] | None = None,
+        activity: str | None = None,
+        updated_at_gte: int | None = None,
+        sort_by: str = 'updated_at',
+        sort_dir: str = 'desc',
+        redis=None,
+        db: AsyncSession | None = None,
+    ) -> tuple[list[dict], int]:
+        """A page of a folder's chats for the list and board views, filtered before paging."""
+        async with get_async_db_context(db) as session:
+            dialect_name = (await session.connection()).dialect.name
+            conditions = self._folder_chat_conditions(
+                folder_id, dialect_name, search, tag_ids, status_ids, valid_status_ids
+            )
+
+            if user_ids:
+                # Participants come from message history, so match them over this folder's chats.
+                wanted = set(user_ids)
+                rows = (await session.execute(select(Chat.id, Chat.user_id).where(*conditions))).all()
+                authors = await self.get_participant_ids_by_chat_ids([row[0] for row in rows], db=session)
+                conditions.append(
+                    Chat.id.in_(
+                        [
+                            chat_id
+                            for chat_id, owner in rows
+                            if owner in wanted or wanted.intersection(authors.get(chat_id, ()))
+                        ]
+                    )
+                )
+
+            if updated_at_gte is not None:
+                conditions.append(Chat.updated_at >= updated_at_gte)
+
+            if activity:
+                # Same precedence as the sidebar markers: approval > generating > unread.
+                unfinished = (
+                    await session.execute(
+                        select(ChatMessage.chat_id, ChatMessage.output)
+                        .join(Chat, Chat.id == ChatMessage.chat_id)
+                        .where(*conditions, ChatMessage.role == 'assistant', ChatMessage.done.is_(False))
+                    )
+                ).all()
+                pending_ids = {chat_id for chat_id, output in unfinished if has_pending_tool_approval(output)}
+                if activity == 'waiting_for_approval':
+                    conditions.append(Chat.id.in_(pending_ids))
+                else:
+                    active_ids = {
+                        chat_id for chat_id in {row[0] for row in unfinished} if await has_active_tasks(redis, chat_id)
+                    }
+                    if activity == 'generating':
+                        conditions.append(Chat.id.in_(active_ids - pending_ids))
+                    elif activity == 'unread':
+                        conditions.extend(
+                            [
+                                Chat.user_id == user_id,
+                                or_(
+                                    Chat.last_read_at.is_(None),
+                                    Chat.last_read_at == 0,
+                                    Chat.updated_at > Chat.last_read_at,
+                                ),
+                                Chat.id.not_in(active_ids | pending_ids),
+                            ]
+                        )
+                    elif activity == 'idle':
+                        # Everything the other three leave out.
+                        conditions.extend(
+                            [
+                                Chat.id.not_in(active_ids | pending_ids),
+                                or_(
+                                    Chat.user_id != user_id,
+                                    and_(
+                                        Chat.last_read_at.is_not(None),
+                                        Chat.last_read_at != 0,
+                                        Chat.updated_at <= Chat.last_read_at,
+                                    ),
+                                ),
+                            ]
+                        )
+
+            total = (await session.execute(select(func.count(Chat.id)).where(*conditions))).scalar_one()
+            rows = (
+                (
+                    await session.execute(
+                        select(
+                            Chat.id,
+                            Chat.title,
+                            Chat.user_id,
+                            Chat.updated_at,
+                            Chat.created_at,
+                            Chat.last_read_at,
+                            Chat.meta,
+                        )
+                        .where(*conditions)
+                        .order_by(*chat_list_order(sort_by, sort_dir, user_id))
+                        .offset(skip)
+                        .limit(limit)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+
+            tag_ids = {tag_id for row in rows for tag_id in (row['meta'] or {}).get('tags', [])}
+            owners = {row['user_id'] for row in rows}
+            labels = (
+                {
+                    (tag.user_id, tag.id): tag
+                    for tag in (
+                        await session.execute(select(Tag).where(Tag.user_id.in_(owners), Tag.id.in_(tag_ids)))
+                    )
+                    .scalars()
+                    .all()
+                }
+                if tag_ids
+                else {}
+            )
+
+            bodies = {}
+            if chat_search_content_query(search) and rows:
+                bodies = dict(
+                    (
+                        await session.execute(
+                            select(Chat.id, Chat.chat).where(Chat.id.in_([row['id'] for row in rows]))
+                        )
+                    ).all()
+                )
+
+        terms = chat_search_content_query(search).split()
+        chats = []
+        for row in rows:
+            chat = dict(row)
+            meta = chat.pop('meta') or {}
+            chat['tags'] = []
+            for tag_id in dict.fromkeys(meta.get('tags', [])):
+                tag = labels.get((chat['user_id'], tag_id))
+                chat['tags'].append(
+                    {
+                        'id': tag_id,
+                        'name': tag.name if tag else tag_id.replace('_', ' '),
+                        # The palette and default color live in the frontend.
+                        'color': (tag.meta or {}).get('color') if tag else None,
+                    }
+                )
+            status = meta.get('folder_status')
+            chat['status'] = status if status in valid_status_ids else None
+            chat['status_since'] = folder_status_since(meta, chat['status'])
+            # For the time-in-status tooltip: when the current stretch began, and earlier
+            # time per status (statuses the folder no longer has are left out).
+            chat['status_entered_at'] = (
+                _as_seconds(meta.get('folder_status_at')) if chat['status'] else None
+            )
+            chat['status_durations'] = {
+                key: seconds
+                for key, value in (meta.get('folder_status_durations') or {}).items()
+                if key in valid_status_ids and (seconds := _as_seconds(value))
+            }
+            chat['can_edit_tags'] = chat['can_edit_status'] = chat['user_id'] == user_id
+            # Only explain matches the title doesn't already show.
+            chat['search_snippet'] = (
+                chat_search_snippet(bodies.get(chat['id']) or {}, search)
+                if terms and not all(term in chat['title'].lower() for term in terms)
+                else None
+            )
+            chats.append(chat)
+        return chats, total
+
+    async def get_participant_counts_by_folder_id(
+        self, folder_id: str, db: AsyncSession | None = None
+    ) -> dict[str, int]:
+        """How many of a folder's chats each person owns or wrote in."""
+        async with get_async_db_context(db) as session:
+            dialect_name = (await session.connection()).dialect.name
+            rows = (
+                await session.execute(
+                    select(Chat.id, Chat.user_id).where(*self._folder_chat_conditions(folder_id, dialect_name))
+                )
+            ).all()
+            authors = await self.get_participant_ids_by_chat_ids([row[0] for row in rows], db=session)
+        counts: dict[str, int] = {}
+        for chat_id, owner in rows:
+            for participant_id in {owner, *authors.get(chat_id, ())}:
+                counts[participant_id] = counts.get(participant_id, 0) + 1
+        return counts
+
+    async def get_tag_counts_by_folder_id(self, folder_id: str, db: AsyncSession | None = None) -> list[dict]:
+        """Tags used in a folder with chat counts, aggregated in SQL without loading chats."""
+        async with get_async_db_context(db) as session:
+            dialect_name = (await session.connection()).dialect.name
+            if dialect_name == 'sqlite':
+                source = "json_each(chat.meta, '$.tags')"
+                internal = "COALESCE(json_extract(chat.meta, '$.internal'), 0) != 1"
+            else:
+                source = "json_array_elements_text(chat.meta->'tags')"
+                internal = "COALESCE((chat.meta->>'internal')::boolean, false) = false"
+            query = text(f"""
+                SELECT tag.value AS id, MIN(COALESCE(label.name, tag.value)) AS name,
+                    COUNT(DISTINCT chat.id) AS count
+                FROM chat CROSS JOIN {source} tag
+                LEFT JOIN tag label ON label.id = tag.value AND label.user_id = chat.user_id
+                WHERE chat.folder_id = :folder_id AND chat.archived = false AND {internal}
+                GROUP BY tag.value ORDER BY name
+            """)
+            result = await session.execute(query, {'folder_id': folder_id})
+            return [dict(row) for row in result.mappings()]
+
+    async def update_chat_folder_status_by_id_and_user_id(
+        self, id: str, folder_id: str, user_id: str, status: str | None, db: AsyncSession | None = None
+    ) -> bool:
+        """Set (or with None, clear) a chat's folder status, banking the time spent in its previous one.
+
+        Time adds up per status, so moving away and coming back doesn't reset it.
+        """
+        async with get_async_db_context(db) as session:
+            row = (
+                await session.execute(
+                    select(Chat.meta).filter_by(id=id, folder_id=folder_id, user_id=user_id)
+                )
+            ).one_or_none()
+            if row is None:
+                return False
+            meta = dict(row[0] or {})
+            previous = meta.get('folder_status')
+            if previous == status:
+                return True  # Same status: keep its clock running.
+            now = int(time.time())
+            started = _as_seconds(meta.get('folder_status_at'))
+            durations = dict(meta.get('folder_status_durations') or {})
+            if previous and previous != 'none' and started is not None:  # 'none' was stored by older builds
+                durations[previous] = (_as_seconds(durations.get(previous)) or 0) + max(0, now - started)
+            await session.execute(
+                update(Chat)
+                .filter_by(id=id)
+                .values(
+                    meta={
+                        # No status means no stored status, like chats that never had one.
+                        **{key: value for key, value in meta.items() if key not in ('folder_status', 'folder_status_at')},
+                        **({'folder_status': status, 'folder_status_at': now} if status is not None else {}),
+                        'folder_status_durations': durations,
+                    }
+                )
+            )
+            await session.commit()
+            return True
 
     async def count_all_chats_by_folder_id(
         self,

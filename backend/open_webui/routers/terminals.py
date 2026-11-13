@@ -17,6 +17,7 @@ from urllib.parse import quote, unquote, urljoin, urlsplit
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
+from multidict import CIMultiDict
 from open_webui.config import TERMINAL_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
@@ -173,8 +174,12 @@ async def browser_http(request: Request, server_id: str, sid: str, browser_token
     else:
         path = f'browser/view/{sid}/{data["capability"]}/{path}'
     return await _proxy_terminal(
-        server_id, path, request, user,
-        context=browser_context(data), browser_auth=data['relay'],
+        server_id,
+        path,
+        request,
+        user,
+        context=browser_context(data),
+        browser_auth=data['relay'],
     )
 
 
@@ -197,6 +202,8 @@ async def relay_to_browser(ws, upstream):
             await ws.send_bytes(msg.data)
         else:
             return
+    code = upstream.close_code or 1011
+    await ws.close(code=1011 if code in (1005, 1006, 1015) else code)
 
 
 async def watch_access(server_id, sid, browser_token, request):
@@ -233,7 +240,11 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, browser_token: str
     tasks = []
     try:
         async with get_terminal_client(
-            base, connection.get('instance_user_id', user.id), cookies=data['relay'].get('cookies', {}), trust_env=True
+            base,
+            connection.get('instance_user_id', user.id),
+            service=connection.get('service', 'open_terminal'),
+            cookies=data['relay'].get('cookies', {}),
+            trust_env=True,
         ) as client:
             async with client.ws_connect(
                 url,
@@ -278,7 +289,8 @@ async def list_terminal_servers(request: Request, user=Depends(get_verified_user
             'config': {'chat_uploads': terminal_chat_uploads(connection)},
         }
         for connection in connections
-        if connection.get('enabled', True) and (connection.get('template_id') or await has_connection_access(user, connection, user_group_ids))
+        if connection.get('enabled', True)
+        and (connection.get('template_id') or await has_connection_access(user, connection, user_group_ids))
     ]
 
 
@@ -295,7 +307,10 @@ async def proxy_terminal(
     user=Depends(get_verified_user),
 ):
     return await _proxy_terminal(
-        server_id, path, request, user,
+        server_id,
+        path,
+        request,
+        user,
         context={
             'chat_id': request.path_params.get('chat_id') or request.headers.get('x-session-id'),
             'model_id': request.headers.get('x-terminal-model-id'),
@@ -384,8 +399,13 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
 
     if connection.get('template_id') and safe_path == 'files/preview' and request.method == 'POST':
         browser_token = create_browser_token(
-            server_id, user.id, session_id or '', {'id': 'files', 'token': ''},
-            headers, cookies, resource='files',
+            server_id,
+            user.id,
+            session_id or '',
+            {'id': 'files', 'token': ''},
+            headers,
+            cookies,
+            resource='files',
         )
         base = request.url.path.removesuffix('/files/preview')
         return {'url': f'{base}/browser/view/files/{quote(browser_token, safe="")}/'}
@@ -393,6 +413,7 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
     session = get_terminal_client(
         base_url,
         connection.get('instance_user_id', user.id),
+        service=connection.get('service', 'open_terminal'),
         timeout=aiohttp.ClientTimeout(total=300, connect=10),
         trust_env=True,
     )
@@ -411,13 +432,14 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
         )
 
         upstream_content_type = upstream_response.headers.get('content-type', '')
-        filtered_headers = {
-            key: value
+        # Case-insensitive and multi-valued, like the upstream headers: admin headers replace the
+        # terminal's whatever their case, and repeated headers such as Set-Cookie all survive.
+        filtered_headers = CIMultiDict(
+            (key, value)
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
-        }
-        if TERMINAL_PROXY_HEADERS:
-            filtered_headers.update(TERMINAL_PROXY_HEADERS)
+        )
+        filtered_headers.update(TERMINAL_PROXY_HEADERS)
 
         port_match = re.match(r'^proxy/(\d+)/', safe_path)
         port_prefix = None
@@ -428,9 +450,6 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
                 remote_origin = f'http://localhost:{port_match[1]}'
                 destination = urlsplit(urljoin(f'{remote_origin}/{safe_path[len(port_match[0]) :]}', location))
                 if destination.netloc == urlsplit(remote_origin).netloc:
-                    filtered_headers = {
-                        key: value for key, value in filtered_headers.items() if key.lower() != 'location'
-                    }
                     filtered_headers['Location'] = (
                         port_prefix
                         + destination.path.lstrip('/')
@@ -639,7 +658,9 @@ async def _proxy_terminal_websocket(
 
     request = Request({**ws.scope, 'type': 'http', 'method': 'GET'})
     opened = False
-    session = get_terminal_client(base_url, connection.get('instance_user_id', user.id))
+    session = get_terminal_client(
+        base_url, connection.get('instance_user_id', user.id), service=connection.get('service', 'open_terminal')
+    )
     try:
         async with session.ws_connect(
             upstream_url,

@@ -316,6 +316,12 @@ _UNWRAP_EXTRA_MAINS = (
     'if (mains.length > 1) mains.forEach(main => main.replaceWith(...main.childNodes)); }'
 )
 
+# unstructured drops definition lists, figures and figure captions, text included.
+_UNWRAP_DEFINITION_LISTS_AND_FIGURES = (
+    '() => document.querySelectorAll("dl, dt, dd, figure, figcaption").forEach(element => { '
+    'const div = document.createElement("div"); div.append(...element.childNodes); element.replaceWith(div); })'
+)
+
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
     forwardable = {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
@@ -995,6 +1001,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                     if element.is_visible():
                                         element.evaluate('element => element.remove()')
                             page.evaluate(_UNWRAP_EXTRA_MAINS)
+                            page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
                             text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
@@ -1036,6 +1043,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                     if await element.is_visible():
                                         await element.evaluate('element => element.remove()')
                             await page.evaluate(_UNWRAP_EXTRA_MAINS)
+                            await page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
                             text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}

@@ -24,9 +24,9 @@
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} max-w-full"
 >
-	<nav class="px-1.5 pt-1.5 md:px-2.5 w-full drag-region">
+	<nav class="px-1.5 md:px-2.5 w-full drag-region">
 		<div class=" flex items-center">
-			{#if $mobile}
+			{#if $mobile && !pageTab}
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}

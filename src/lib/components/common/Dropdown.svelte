@@ -27,8 +27,11 @@
 	/** CSS classes for the dropdown content container */
 	export let contentClass = '';
 
-	/** Max height for the dropdown content */
-	export let maxHeight = 'min(32rem, calc(100dvh - 2rem))';
+	const DEFAULT_MAX_HEIGHT = 'min(32rem, calc(100dvh - 2rem))';
+
+	/** Max height for the dropdown content; undefined uses the default */
+	export let maxHeight: string | undefined = undefined;
+	$: effectiveMaxHeight = maxHeight ?? DEFAULT_MAX_HEIGHT;
 
 	/** Side offset in px */
 	export let sideOffset = 4;
@@ -43,7 +46,7 @@
 	let shouldFocusContent = false;
 	let positionFrame: number | undefined;
 	let settleTimers: number[] = [];
-	let resolvedMaxHeight = maxHeight;
+	let resolvedMaxHeight = maxHeight ?? DEFAULT_MAX_HEIGHT;
 	let lastContentHeight = 0;
 
 	/** Svelte action: moves the node to document.body and keeps it positioned as it resizes */
@@ -130,7 +133,7 @@
 	function positionContentDefault() {
 		if (!triggerEl || !contentEl) return;
 		const rect = (anchorElement ?? triggerEl).getBoundingClientRect();
-		resolvedMaxHeight = maxHeight;
+		resolvedMaxHeight = effectiveMaxHeight;
 
 		contentEl.style.position = 'fixed';
 		contentEl.style.zIndex = '9999';
@@ -206,7 +209,7 @@
 		const preferredTop = openAbove
 			? rect.top - constrainedHeight - sideOffset
 			: rect.bottom + sideOffset;
-		const contentWidth = contentEl.offsetWidth || 0;
+		const contentWidth = Math.max(contentEl.scrollWidth || 0, contentEl.offsetWidth || 0);
 		const preferredLeft = align === 'end' && contentWidth ? rect.right - contentWidth : rect.left;
 		const maxLeft = contentWidth ? viewportRight - contentWidth - pad : preferredLeft;
 
@@ -224,7 +227,9 @@
 		contentEl.style.left = `${Math.max(viewport.left + pad, Math.min(preferredLeft, maxLeft))}px`;
 		contentEl.style.right = 'auto';
 		resolvedMaxHeight =
-			contentHeight > availableHeight ? `min(${maxHeight}, ${availableHeight}px)` : maxHeight;
+			contentHeight > availableHeight
+				? `min(${effectiveMaxHeight}, ${availableHeight}px)`
+				: effectiveMaxHeight;
 		contentEl.style.maxHeight = resolvedMaxHeight;
 	}
 

@@ -61,6 +61,7 @@
 
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -314,6 +315,7 @@
 									{compactPreview}
 									{topPadding}
 									{onInsertToNote}
+									{onOpenArtifacts}
 									{writeAccess}
 								/>
 							{/if}
@@ -381,6 +383,7 @@
 										{editCodeBlock}
 										{topPadding}
 										{onInsertToNote}
+										{onOpenArtifacts}
 										{writeAccess}
 									/>
 								{/if}
