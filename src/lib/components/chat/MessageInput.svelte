@@ -273,14 +273,16 @@
 			cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
 				const labels = controls.querySelectorAll<HTMLElement>('[data-input-label]');
-				const terminalControls = controls.querySelector<HTMLElement>('[data-terminal-controls]');
+				const directoryControl = controls.querySelector<HTMLElement>(
+					'[data-working-directory-control]'
+				);
 				// Measure all labels together so separate controls cannot compete for the same space.
 				for (const label of labels) label.style.display = '';
-				if (terminalControls) terminalControls.style.display = '';
-				terminalControlsInMenu = !!terminalControls && controls.scrollWidth > controls.clientWidth;
-				if (terminalControls && terminalControlsInMenu) terminalControls.style.display = 'none';
-				if (controls.scrollWidth > controls.clientWidth) {
+				if (directoryControl) directoryControl.style.display = '';
+				terminalControlsInMenu = controls.scrollWidth > controls.clientWidth;
+				if (terminalControlsInMenu) {
 					for (const label of labels) label.style.display = 'none';
+					if (directoryControl) directoryControl.style.display = 'none';
 				}
 			});
 		};
@@ -2232,9 +2234,9 @@
 						<div
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
 							data-composer-id={inputId}
-							class="flex-1 flex flex-col relative w-full shadow-lg rounded-3xl border {isTemporary
-								? 'border-dashed border-gray-100 dark:border-gray-800 hover:border-gray-200 focus-within:border-gray-200 hover:dark:border-gray-700 focus-within:dark:border-gray-700'
-								: ' border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800'} {($settings?.highContrastMode ??
+							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {isTemporary
+								? 'border-dashed border-gray-200 dark:border-gray-800'
+								: ' border-gray-200 dark:border-gray-800'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
@@ -2654,11 +2656,14 @@
 													{selectedTerminalId}
 													modelId={selectedModels[0] ?? null}
 													inMenu
+													bind:tab={inputMenuTab}
 													{chatId}
 													bind:terminalContext
 													disabled={generating}
 												/>
-												<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+												{#if inputMenuTab === ''}
+													<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+												{/if}
 											{/if}
 										</svelte:fragment>
 

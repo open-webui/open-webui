@@ -31,6 +31,8 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Server from '$lib/components/icons/Server.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { fly } from 'svelte/transition';
 	import TerminalItemMenu from './TerminalItemMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -47,13 +49,18 @@
 
 	export let show = false;
 	export let inMenu = false;
+	export let tab = '';
+	const closeMenu = () => {
+		show = false;
+		if (inMenu) tab = '';
+	};
 	export let disabled = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
 
 	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
-	$: if (show)
+	$: if (inMenu ? tab === 'terminal' : show)
 		templatesApi('/connections')
 			.then((rows) => (writable = rows))
 			.catch(() => (writable = []));
@@ -105,7 +112,7 @@
 	};
 	const confirmLifecycle = (id: string, name: string, action: 'restart' | 'stop') => {
 		pending = { id, name, action };
-		show = false;
+		closeMenu();
 		showConfirm = true;
 	};
 
@@ -121,7 +128,7 @@
 	].filter((section) => !section.devices || section.terminals.length > 0);
 
 	const toggleTerminal = (id: string) => {
-		show = false;
+		closeMenu();
 		selectTerminal(selectedTerminalId, $selectedTerminalId === id ? null : id, chatId);
 	};
 
@@ -138,13 +145,13 @@
 		selectedSystemTerminal?.name ||
 		selectedSystemTerminal?.id ||
 		($selectedTerminalId ? $i18n.t('Unavailable terminal') : $i18n.t('Terminal'));
-	$: if (disabled && show) show = false;
+	$: if (disabled && (show || (inMenu && tab === 'terminal'))) closeMenu();
 
 	let showTerminals = false;
 	let managedTerminalId: string | null = null;
 	const openTerminalDialog = (id: string | null) => {
 		managedTerminalId = id;
-		show = false;
+		closeMenu();
 		showTerminals = true;
 	};
 	let info: { target: TerminalTarget; label: string } | null = null;
@@ -155,7 +162,7 @@
 			modelId: modelId
 		});
 		if (!target) return;
-		show = false;
+		closeMenu();
 		await tick();
 		files = { target, label };
 	};
@@ -170,7 +177,7 @@
 			modelId: modelId
 		});
 		if (!target) return;
-		show = false;
+		closeMenu();
 		await tick();
 		info = { target, label };
 	};
@@ -183,159 +190,198 @@
 	)
 		info = null;
 
-	$: triggerClass = inMenu
-		? `flex w-full min-w-0 items-center gap-2 h-[1.6875rem] px-2 text-[0.8125rem] rounded-xl text-left ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}`
-		: `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
-				disabled
-					? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-					: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
-							$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
-						}`
-			}`;
+	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
+		disabled
+			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
+			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
+					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
+				}`
+	}`;
 </script>
 
-<div class={inMenu ? 'w-full' : 'flex items-center translate-x-0.5'}>
-	{#if disabled}
-		<Tooltip content={selectedLabel} placement="top">
+{#snippet menuItems()}
+	<!-- Terminals, then the user's own devices -->
+	{#each systemSections as section}
+		<div class="flex items-center justify-between pl-2 pr-1 py-1">
+			<span
+				class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+			>
+				{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
+			</span>
+			{#if !section.devices}
+				<div class="flex items-center gap-0.5">
+					{#if writable.length}
+						<Tooltip content={$i18n.t('New terminal')} placement="top">
+							<button
+								type="button"
+								aria-label={$i18n.t('New terminal')}
+								class={headerButtonClass}
+								on:click|stopPropagation={() => openTerminalDialog(null)}
+							>
+								<Plus className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
+					{#if $user?.role === 'admin'}
+						<Tooltip content={$i18n.t('Settings')} placement="top">
+							<button
+								type="button"
+								aria-label={$i18n.t('Settings')}
+								class={headerButtonClass}
+								on:click|stopPropagation={() => {
+									closeMenu();
+									showSettings.set('admin:integrations');
+								}}
+							>
+								<Cog6 className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		{#each section.terminals as terminal}
+			{@const label = terminal.name || $i18n.t('Terminal')}
+			{@const owned = canManage(terminal, manageable)}
+			{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+			<div class="group/terminal relative rounded-xl">
+				<button
+					type="button"
+					role="menuitemradio"
+					aria-checked={$selectedTerminalId === terminal.id}
+					class="{rowClass} {$selectedTerminalId === terminal.id
+						? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
+						: 'pr-8'}"
+					on:click={() => toggleTerminal(terminal.id)}
+				>
+					<div class="flex flex-1 gap-2 items-center truncate">
+						{#if section.devices}
+							<Server className="size-3.5 shrink-0" strokeWidth="2" />
+						{:else}
+							<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+						{/if}
+						<span class="truncate">{label}</span>
+					</div>
+					{#if $selectedTerminalId === terminal.id}
+						<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
+							<Check className="size-3.5" />
+						</div>
+					{/if}
+				</button>
+				<div
+					class="absolute inset-y-0 {$selectedTerminalId === terminal.id
+						? 'right-6'
+						: 'right-1'} {moreClass}"
+				>
+					<TerminalItemMenu
+						{label}
+						loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
+						onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
+						onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
+						onStart={() => runLifecycle(terminal.id, label, 'start')}
+						onInfo={reachable ? () => openInfo(terminal.id, label) : null}
+						onFiles={reachable ? () => openFiles(terminal.id, label) : null}
+						onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
+					/>
+				</div>
+			</div>
+		{/each}
+	{/each}
+{/snippet}
+
+{#if inMenu}
+	{#if tab === ''}
+		<div in:fly={{ x: -20, duration: 150 }}>
 			<button
 				type="button"
-				disabled
-				aria-disabled="true"
-				aria-label={selectedLabel}
-				class={triggerClass}
+				role="menuitem"
+				{disabled}
+				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+				on:click={() => {
+					tab = 'terminal';
+				}}
 			>
-				{#if selectedDevice}
-					<Server className="size-3.5" strokeWidth="2" />
-				{:else}
-					<Cloud className="size-3.5" strokeWidth="2" />
-				{/if}
-
-				{#if inMenu || ($selectedTerminalId && selectedLabel)}
-					<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
-						>{selectedLabel}</span
-					>
-				{/if}
-				{#if inMenu}<ChevronRight />{/if}
+				{#if selectedDevice}<Server className="size-3.5 shrink-0" strokeWidth="2" />{:else}<Cloud
+						className="size-3.5 shrink-0"
+						strokeWidth="2"
+					/>{/if}
+				<span class="flex-1 truncate">{selectedLabel}</span>
+				<div class="text-gray-500"><ChevronRight /></div>
 			</button>
-		</Tooltip>
-	{:else}
-		<Dropdown bind:show align="start">
+		</div>
+	{:else if tab === 'terminal'}
+		<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+			<button
+				role="menuitem"
+				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				on:click={() => {
+					tab = '';
+				}}
+			>
+				<ChevronLeft />
+				<div class="flex items-center w-full justify-between">
+					<div>{$i18n.t('Terminals')}</div>
+				</div>
+			</button>
+			<div class="min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
+				{@render menuItems()}
+			</div>
+		</div>
+	{/if}
+{:else}
+	<div class="flex items-center translate-x-0.5">
+		{#if disabled}
 			<Tooltip content={selectedLabel} placement="top">
-				<button type="button" aria-label={selectedLabel} class={triggerClass}>
+				<button
+					type="button"
+					disabled
+					aria-disabled="true"
+					aria-label={selectedLabel}
+					class={triggerClass}
+				>
 					{#if selectedDevice}
 						<Server className="size-3.5" strokeWidth="2" />
 					{:else}
 						<Cloud className="size-3.5" strokeWidth="2" />
 					{/if}
 
-					{#if inMenu || ($selectedTerminalId && selectedLabel)}
-						<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
+					{#if $selectedTerminalId && selectedLabel}
+						<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
 							>{selectedLabel}</span
 						>
 					{/if}
-					{#if inMenu}<ChevronRight />{/if}
 				</button>
 			</Tooltip>
+		{:else}
+			<Dropdown bind:show align="start">
+				<Tooltip content={selectedLabel} placement="top">
+					<button type="button" aria-label={selectedLabel} class={triggerClass}>
+						{#if selectedDevice}
+							<Server className="size-3.5" strokeWidth="2" />
+						{:else}
+							<Cloud className="size-3.5" strokeWidth="2" />
+						{/if}
 
-			<div slot="content">
-				<DropdownMenu
-					className="{inMenu
-						? 'w-70'
-						: 'w-60'} max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-				>
-					<!-- Terminals, then the user's own devices -->
-					{#each systemSections as section}
-						<div class="flex items-center justify-between pl-2 pr-1 py-1">
-							<span
-								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+						{#if $selectedTerminalId && selectedLabel}
+							<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
+								>{selectedLabel}</span
 							>
-								{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
-							</span>
-							{#if !section.devices}
-								<div class="flex items-center gap-0.5">
-									{#if writable.length}
-										<Tooltip content={$i18n.t('New terminal')} placement="top">
-											<button
-												type="button"
-												aria-label={$i18n.t('New terminal')}
-												class={headerButtonClass}
-												on:click|stopPropagation={() => openTerminalDialog(null)}
-											>
-												<Plus className="size-3.5" />
-											</button>
-										</Tooltip>
-									{/if}
-									{#if $user?.role === 'admin'}
-										<Tooltip content={$i18n.t('Settings')} placement="top">
-											<button
-												type="button"
-												aria-label={$i18n.t('Settings')}
-												class={headerButtonClass}
-												on:click|stopPropagation={() => {
-													show = false;
-													showSettings.set('admin:integrations');
-												}}
-											>
-												<Cog6 className="size-3.5" />
-											</button>
-										</Tooltip>
-									{/if}
-								</div>
-							{/if}
-						</div>
+						{/if}
+					</button>
+				</Tooltip>
 
-						{#each section.terminals as terminal}
-							{@const label = terminal.name || $i18n.t('Terminal')}
-							{@const owned = canManage(terminal, manageable)}
-							{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
-							<div class="group/terminal relative rounded-xl">
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={$selectedTerminalId === terminal.id}
-									class="{rowClass} {$selectedTerminalId === terminal.id
-										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
-										: 'pr-8'}"
-									on:click={() => toggleTerminal(terminal.id)}
-								>
-									<div class="flex flex-1 gap-2 items-center truncate">
-										{#if section.devices}
-											<Server className="size-3.5 shrink-0" strokeWidth="2" />
-										{:else}
-											<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-										{/if}
-										<span class="truncate">{label}</span>
-									</div>
-									{#if $selectedTerminalId === terminal.id}
-										<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
-											<Check className="size-3.5" />
-										</div>
-									{/if}
-								</button>
-								<div
-									class="absolute inset-y-0 {$selectedTerminalId === terminal.id
-										? 'right-6'
-										: 'right-1'} {moreClass}"
-								>
-									<TerminalItemMenu
-										{label}
-										loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
-										onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
-										onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
-										onStart={() => runLifecycle(terminal.id, label, 'start')}
-										onInfo={reachable ? () => openInfo(terminal.id, label) : null}
-										onFiles={reachable ? () => openFiles(terminal.id, label) : null}
-										onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
-									/>
-								</div>
-							</div>
-						{/each}
-					{/each}
-				</DropdownMenu>
-			</div>
-		</Dropdown>
-	{/if}
-</div>
+				<div slot="content">
+					<DropdownMenu
+						className="w-60 max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					>
+						{@render menuItems()}
+					</DropdownMenu>
+				</div>
+			</Dropdown>
+		{/if}
+	</div>
+{/if}
 
 {#if info}
 	{#key info}
@@ -351,6 +397,7 @@
 	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}
+			bind:tab
 			target={folderTarget}
 			{chatId}
 			userId={$user?.id ?? ''}
