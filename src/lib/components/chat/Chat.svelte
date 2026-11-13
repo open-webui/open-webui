@@ -105,6 +105,7 @@
 		compactChatById,
 		createNewChat,
 		deleteChatById,
+		deleteChatMessageById,
 		forkChatById,
 		getAllTags,
 		getChatById,
@@ -4038,17 +4039,37 @@
 		saveSessionSelectedModels();
 
 		const currentHistory = history;
+		let _chatId: string | null = null;
 		processing = 'uploading';
 		try {
 			await tick();
 			if (history !== currentHistory) return { status: 'rejected' as const };
-			if ((await getChatId(currentHistory, _files)) === null)
-				return { status: 'rejected' as const };
+			_chatId = await getChatId(currentHistory, _files);
 		} catch (error) {
 			toast.error(`${error}`);
-			return { status: 'rejected' as const };
 		} finally {
 			processing = '';
+		}
+
+		if (_chatId === null) {
+			if (!existingUserMessage && history.messages[userMessageId]) {
+				const parentMessage = history.messages[userMessage.parentId];
+				if (parentMessage) {
+					parentMessage.childrenIds = parentMessage.childrenIds.filter(
+						(id) => id !== userMessageId
+					);
+				}
+				delete history.messages[userMessageId];
+				history.currentId = userMessage.parentId;
+				history = history;
+				chatFiles = chatFiles.filter((file) => !_files.includes(file));
+				if ($chatId && !$temporaryChatEnabled) {
+					deleteChatMessageById(localStorage.token, $chatId, userMessageId).catch(console.error);
+				}
+				files = [...files, ...inputFiles];
+				await draftPrompt(inputContent);
+			}
+			return { status: 'rejected' as const };
 		}
 
 		return await sendMessage(history, userMessageId, {
