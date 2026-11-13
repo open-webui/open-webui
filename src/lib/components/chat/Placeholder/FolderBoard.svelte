@@ -15,6 +15,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import FolderTags from './FolderTags.svelte';
+	import FolderChatLink from './FolderChatLink.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
 	import StatusIcon from './FolderStatusIcon.svelte';
 	import FolderStatusTime from './FolderStatusTime.svelte';
@@ -192,15 +193,16 @@
 					{/if}
 				</span>
 			{/if}
-			<a
-				class="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
+			<FolderChatLink
+				chatId={chat.id}
+				title={chat.title}
+				side="right"
+				disabled={!!dragged}
+				className="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
 					? 'text-gray-900 dark:text-white'
 					: 'text-gray-700 dark:text-gray-200'}"
-				href={`/c/${chat.id}`}
-				draggable="false"
-				title={chat.title}
-				on:click={(event) => openFolderChat(chat, appLayout, event)}>{chat.title}</a
-			>
+				onclick={(event) => openFolderChat(chat, appLayout, event)}
+			/>
 		</div>
 
 		{#if chat.search_snippet}
