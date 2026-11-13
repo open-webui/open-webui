@@ -44,6 +44,7 @@ class RelayInterrupted(ConnectionError):
         # Set when no response header arrived; with a safe method the request can be repeated once.
         self.before_response = False
         self.connection = None
+        self.device = None
 
     def result(self):
         return {'error': str(self), 'code': 'tether_interrupted', 'outcome': 'unknown', 'retryable': False}
@@ -65,6 +66,36 @@ def get_max_concurrent_streams(hello, window):
     if type(value) is not int or value < 1:
         raise ValueError('Invalid stream limit')
     return min(value, MAX_CONCURRENT_STREAMS, BUFFER_BUDGET // window)
+
+
+def get_connections(value):
+    """Connections the user added in Tether. Each is a relay service of its own, like `open_terminal`;
+    URLs and keys stay on the device."""
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > 16:
+        raise ValueError('Invalid Tether connections')
+    connections = []
+    for item in value:
+        if (
+            not isinstance(item, dict)
+            or item.get('type') not in ('openai', 'openapi', 'terminal')
+            or not isinstance(item.get('name'), str)
+        ):
+            raise ValueError('Invalid Tether connection')
+        service = get_services([item.get('service')])[0]
+        connections.append({'service': service, 'name': item['name'].strip()[:100] or service, 'type': item['type']})
+    return connections
+
+
+async def get_tether_connections(user_id, type):
+    """(presence, connection) pairs of this type across the user's online devices."""
+    return [
+        (presence, item)
+        for presence in await hub.presences(user_id)
+        for item in presence.get('connections', [])
+        if item['type'] == type and item['service'] in presence.get('services', [])
+    ]
 
 
 def encode(header, data=b''):
@@ -540,6 +571,23 @@ async def get_terminal_connections(user, include_templates=True):
                 },
             }
         )
+    # Terminals the user added in Tether: like the built-in one, but each under its own service.
+    for presence, item in await get_tether_connections(user_id, 'terminal'):
+        connections.append(
+            {
+                'id': f'tether:{presence["connection_id"]}:{item["service"]}',
+                'name': f'{presence["name"]} · {item["name"]}',
+                'url': f'tether://{presence["connection_id"]}',
+                'service': item['service'],
+                'auth_type': 'none',
+                'enabled': True,
+                'owner_id': user_id,
+                'config': {
+                    'chat_uploads': 'filesystem',
+                    'access_grants': [{'principal_type': 'user', 'principal_id': user_id, 'permission': 'read'}],
+                },
+            }
+        )
     if include_templates:
         from open_webui.utils.terminals import list_template_connections
 
@@ -573,6 +621,7 @@ class RelayResponse:
         self.content_type = self.headers.get('Content-Type', '').split(';')[0]
         self.content = self
         self.cached = None
+        self.closed = False
 
     async def iter_any(self):
         while True:
@@ -586,6 +635,11 @@ class RelayResponse:
 
     def iter_chunked(self, size):
         return self.iter_any()
+
+    async def iter_chunks(self):
+        # aiohttp yields (data, end_of_http_chunk); the relay has no HTTP chunk boundaries.
+        async for data in self.iter_any():
+            yield data, False
 
     async def read(self):
         if self.cached is None:
@@ -602,10 +656,11 @@ class RelayResponse:
     async def text(self):
         return (await self.read()).decode('utf-8', errors='replace')
 
-    async def json(self):
-        return json.loads(await self.read())
+    async def json(self, loads=json.loads, **_):
+        return loads(await self.read())
 
     async def close(self):
+        self.closed = True
         self.upload.cancel()
         await asyncio.gather(self.upload, return_exceptions=True)
         await self.stream.close()
@@ -663,6 +718,8 @@ class RelaySocket:
 
 
 class RelayClient:
+    """aiohttp-like client for `tether://<device>/<path>` URLs, served by one of the device's services."""
+
     def __init__(self, user_id, service, timeout=None):
         if not user_id:
             raise HTTPException(403, 'A user is required for Tether.')
@@ -670,6 +727,7 @@ class RelayClient:
         self.service = get_services([service])[0]
         self.operations = []
         self.timeout = timeout if timeout is not None else TIMEOUT
+        self.closed = False
 
     async def __aenter__(self):
         return self
@@ -678,6 +736,7 @@ class RelayClient:
         await self.close()
 
     async def close(self):
+        self.closed = True
         await asyncio.gather(*(operation.close() for operation in self.operations), return_exceptions=True)
 
     def request(self, method, url, **kwargs):
@@ -702,8 +761,7 @@ class RelayClient:
         except RelayInterrupted as error:
             if not (replayable and error.disconnected and error.before_response and error.connection):
                 raise
-            device = urlsplit(str(url)).hostname
-            if not await hub.wait_for_presence(self.user_id, device, self.service, error.connection):
+            if not await hub.wait_for_presence(self.user_id, error.device, self.service, error.connection):
                 raise
         return await self._request(method, url, **kwargs)
 
@@ -711,12 +769,15 @@ class RelayClient:
         parsed = urlsplit(str(url))
         if parsed.scheme != 'tether' or not parsed.hostname:
             raise ValueError('Invalid Tether URL')
+        device, path = parsed.hostname, parsed.path or '/'
         headers = dict(kwargs.get('headers') or {})
-        headers['X-User-Id'] = self.user_id
+        if self.service == 'open_terminal':
+            # Only the built-in terminal reads this; never send it to the user's own servers.
+            headers['X-User-Id'] = self.user_id
         query = parsed.query
         if kwargs.get('params'):
             query += ('&' if query else '') + urlencode(kwargs['params'], doseq=True)
-        stream = await hub.open(self.user_id, parsed.hostname, self.service)
+        stream = await hub.open(self.user_id, device, self.service)
         body = kwargs.get('data')
         if kwargs.get('json') is not None:
             body = json.dumps(kwargs['json']).encode()
@@ -735,7 +796,7 @@ class RelayClient:
                 'http-open' if method else 'ws-open',
                 service=self.service,
                 method=method,
-                path=parsed.path or '/',
+                path=path,
                 query=query,
                 headers=headers,
             )
@@ -788,12 +849,13 @@ class RelayClient:
             # Everything in this block precedes the response header.
             interrupted.before_response = True
             interrupted.connection = stream.presence['connection']
+            interrupted.device = device
             if interrupted is error:
                 raise
             raise interrupted from error
 
 
-def get_terminal_client(url, user_id=None, **kwargs):
+def get_terminal_client(url, user_id=None, service='open_terminal', **kwargs):
     if str(url).startswith('tether://'):
-        return RelayClient(user_id, service='open_terminal', timeout=kwargs.get('timeout'))
+        return RelayClient(user_id, service=service, timeout=kwargs.get('timeout'))
     return aiohttp.ClientSession(**kwargs)

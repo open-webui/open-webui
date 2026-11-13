@@ -54,7 +54,16 @@
 	export let tab = '';
 	export let closeOnOutsideClick = true;
 	$: if (!show) tab = '';
-	$: hasInternalList = ['tools', 'skills', 'files', 'notes', 'knowledge', 'chats'].includes(tab);
+	$: hasInternalList = [
+		'tools',
+		'skills',
+		'files',
+		'notes',
+		'knowledge',
+		'chats',
+		'terminal',
+		'directory'
+	].includes(tab);
 
 	let showAttachWebpageModal = false;
 	$: showAddContext =
@@ -216,9 +225,13 @@
 
 						<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
 					{/if}
+				</div>
+			{/if}
 
-					<slot name="terminal" />
+			<slot name="terminal" />
 
+			{#if tab === ''}
+				<div in:fly={{ x: -20, duration: 150 }}>
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')

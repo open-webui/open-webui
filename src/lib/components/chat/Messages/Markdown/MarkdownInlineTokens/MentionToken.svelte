@@ -22,10 +22,12 @@
 	import { browser } from '$app/environment';
 
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
 	import { channels, models } from '$lib/stores';
 	import UserStatusLinkPreview from '$lib/components/channel/Messages/Message/UserStatusLinkPreview.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let token: Tokens.Generic;
 
@@ -158,7 +160,9 @@
 							if (idType === 'C') {
 								// Open channel
 								if ($channels.find((c) => c.id === id)) {
-									await goto(`/channels/${id}`);
+									if (appLayout?.openPageTab)
+										appLayout.openPageTab({ href: `/channels/${id}`, label: '' });
+									else await goto(`/channels/${id}`);
 								}
 							} else if (idType === 'T') {
 								// Open thread

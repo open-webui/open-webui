@@ -43,7 +43,7 @@
 		.filter(
 			(model): model is Model =>
 				!!model &&
-				!('direct' in model && model.direct) &&
+				!('owner_id' in model && model.owner_id) &&
 				!('pipe' in model && model.pipe) &&
 				Object.keys(model.info?.params?.model_controls ?? {}).length > 0
 		);

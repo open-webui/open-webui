@@ -10,6 +10,7 @@
 		chatTitle as _chatTitle,
 		config,
 		mobile,
+		selectedFolder,
 		selectedTerminalId,
 		settings,
 		showSidebar,
@@ -55,8 +56,6 @@
 	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
 	export let scrollToTop: (() => void) | null = null;
-	export let hasArtifacts = false;
-	export let onOpenArtifacts: (() => void) | null = null;
 
 	export let chat: any;
 	export let history: any;
@@ -157,7 +156,9 @@
 	<input
 		bind:this={chatTitleInput}
 		bind:value={chatTitle}
-		class="min-w-0 flex-1 bg-transparent md:py-1 text-[0.9375rem] font-normal text-gray-700 outline-hidden dark:text-gray-300"
+		class="min-w-0 flex-1 bg-transparent {tabbed
+			? 'text-sm'
+			: 'md:py-1 text-[0.9375rem]'} font-normal text-gray-700 outline-hidden dark:text-gray-300"
 		aria-label={$i18n.t('Title')}
 		placeholder={generating ? $i18n.t('Generating...') : ''}
 		disabled={generating}
@@ -186,7 +187,7 @@
 				generateTitleHandler();
 			}}
 		>
-			<Sparkles strokeWidth="1.5" />
+			<Sparkles className={tabbed ? 'size-3.5' : 'size-4'} strokeWidth="1.5" />
 		</button>
 	</Tooltip>
 {/snippet}
@@ -280,14 +281,12 @@
 		</div>
 	{/if}
 
-	{#if shareEnabled && chat?.id && (Object.keys(history?.messages ?? {}).length > 0 || scrollToTop || hasArtifacts || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
+	{#if shareEnabled && chat?.id && (scrollToTop || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
 		<Menu
 			{chat}
 			{shareEnabled}
 			{readOnly}
 			{scrollToTop}
-			{hasArtifacts}
-			{onOpenArtifacts}
 			shareHandler={() => {
 				showShareChatModal = !showShareChatModal;
 			}}
@@ -327,7 +326,9 @@
 <nav
 	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
 		? 'pb-0.5'
-		: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
+		: $selectedFolder && !history.currentId
+			? 'shrink-0 pb-1'
+			: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
 >
 	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
@@ -429,7 +430,7 @@
 	{/if}
 
 	<div class="absolute top-full left-0 right-0 h-fit">
-		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+		{#if !$selectedFolder && !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
 					class=" flex flex-col gap-1 w-full max-h-28 overflow-y-auto overscroll-contain md:max-h-none md:overflow-visible"

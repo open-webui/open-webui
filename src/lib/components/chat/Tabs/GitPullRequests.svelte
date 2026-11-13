@@ -67,6 +67,9 @@
 	let selected: PullRequest | null = null;
 	let state = 'open';
 	let search = '';
+	// The search GitHub ran for the loaded list. Servers that can't search leave it empty.
+	let searched = '';
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 	let view: 'summary' | 'code' | 'checks' | 'activity' = 'summary';
 	let diff = '';
 	let listLoading = false;
@@ -112,9 +115,14 @@
 		approve: $i18n.t('Approve'),
 		'request-changes': $i18n.t('Request changes')
 	} as Record<string, string>;
-	$: filtered = prs.filter((pr) =>
-		`${pr.number} ${pr.title}`.toLowerCase().includes(search.toLowerCase())
-	);
+	// Filter what's loaded right away; GitHub's results replace it once they arrive.
+	$: filtered =
+		search.trim() === searched
+			? prs
+			: prs.filter((pr) =>
+					`${pr.number} ${pr.title}`.toLowerCase().includes(search.trim().toLowerCase())
+				);
+	$: queueSearch(search);
 	$: showingDetail = !!selected || creating || editing;
 	$: failingChecks = (selected?.statusCheckRollup ?? []).filter(
 		(check) => checkOutcome(check) === 'fail'
@@ -164,13 +172,27 @@
 		params: Record<string, string> = {},
 		payload?: Record<string, unknown>
 	) => gitRequest<T>(target, directory, `pr/${operation}`, params, payload);
+	let requested = '';
+	const queueSearch = (value: string) => {
+		if (value.trim() === requested) return;
+		requested = value.trim();
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => void load(), 300);
+	};
 	const load = async () => {
 		const version = ++listGeneration;
 		listLoading = true;
 		listError = '';
 		try {
-			const data = await request<{ items: PullRequest[] }>('list', { state });
-			if (version === listGeneration) prs = data.items;
+			const query = search.trim();
+			const data = await request<{ items: PullRequest[]; search?: string }>(
+				'list',
+				query ? { state, search: query } : { state }
+			);
+			if (version === listGeneration) {
+				prs = data.items;
+				searched = data.search ?? '';
+			}
 		} catch (reason) {
 			if (version === listGeneration)
 				listError = String(reason instanceof Error ? reason.message : reason);
@@ -267,6 +289,7 @@
 		void load();
 	});
 	onDestroy(() => {
+		clearTimeout(searchTimer);
 		++generation;
 		++listGeneration;
 	});
@@ -347,7 +370,9 @@
 			{#if !filtered.length}<div
 					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 				>
-					{$i18n.t(listLoading ? 'Loading...' : 'No pull requests')}
+					{$i18n.t(
+						listLoading ? 'Loading...' : search.trim() ? 'No results found' : 'No pull requests'
+					)}
 				</div>{/if}
 		</div>
 	</div>

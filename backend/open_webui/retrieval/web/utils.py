@@ -316,6 +316,12 @@ _UNWRAP_EXTRA_MAINS = (
     'if (mains.length > 1) mains.forEach(main => main.replaceWith(...main.childNodes)); }'
 )
 
+# unstructured drops definition lists, figures and figure captions, text included.
+_UNWRAP_DEFINITION_LISTS_AND_FIGURES = (
+    '() => document.querySelectorAll("dl, dt, dd, figure, figcaption").forEach(element => { '
+    'const div = document.createElement("div"); div.append(...element.childNodes); element.replaceWith(div); })'
+)
+
 # unstructured drops <details> and <summary> as boilerplate, text included.
 _UNWRAP_DETAILS = (
     '() => document.querySelectorAll("details, summary").forEach(element => { '
@@ -1001,6 +1007,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                     if element.is_visible():
                                         element.evaluate('element => element.remove()')
                             page.evaluate(_UNWRAP_EXTRA_MAINS)
+                            page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
                             page.evaluate(_UNWRAP_DETAILS)
                             text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
@@ -1043,6 +1050,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                     if await element.is_visible():
                                         await element.evaluate('element => element.remove()')
                             await page.evaluate(_UNWRAP_EXTRA_MAINS)
+                            await page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
                             await page.evaluate(_UNWRAP_DETAILS)
                             text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')

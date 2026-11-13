@@ -1,5 +1,4 @@
 <script lang="ts">
-	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getContext, tick } from 'svelte';
 
@@ -10,15 +9,12 @@
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 
 	import {
-		showTabs,
-		showOverview,
 		mobile,
 		temporaryChatEnabled,
 		theme,
 		user,
 		settings,
 		folders,
-		showEmbeds,
 		visibleControls
 	} from '$lib/stores';
 
@@ -27,11 +23,11 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
-	import Tags from '$lib/components/chat/Tags.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import TagPicker from '$lib/components/chat/TagPicker.svelte';
+	import Tag from '$lib/components/icons/Tag.svelte';
 	import Clipboard from '$lib/components/icons/Clipboard.svelte';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
-	import Cube from '$lib/components/icons/Cube.svelte';
-	import Map from '$lib/components/icons/Map.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Share from '$lib/components/icons/Share.svelte';
 	import ArchiveBox from '$lib/components/icons/ArchiveBox.svelte';
@@ -57,8 +53,6 @@
 	export let chat;
 	export let onClose: Function = () => {};
 	export let scrollToTop: (() => void) | null = null;
-	export let hasArtifacts = false;
-	export let onOpenArtifacts: (() => void) | null = null;
 
 	let showFullMessages = false;
 	let show = false;
@@ -395,36 +389,7 @@
 				</button>
 			{/if}
 
-			{#if Object.keys(chat?.chat?.history?.messages ?? {}).length > 0}
-				<button
-					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-					aria-haspopup="dialog"
-					on:click={() => showOverview.set(true)}
-				>
-					<Map className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Overview')}</div>
-				</button>
-			{/if}
-
 			{#if scrollToTop}
-				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
-			{/if}
-
-			{#if hasArtifacts && onOpenArtifacts && $visibleControls['chat.artifacts']}
-				<button
-					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-					id="chat-artifacts-button"
-					on:click={() => {
-						showEmbeds.set(false);
-						onOpenArtifacts();
-					}}
-				>
-					<Cube className="size-3.5" strokeWidth="1.5" />
-					<div class="flex items-center">{$i18n.t('Artifacts')}</div>
-				</button>
-
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
@@ -440,16 +405,6 @@
 					<Share className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Share')}</div>
 				</button>
-			{/if}
-
-			{#if chat?.id && !$temporaryChatEnabled}
-				<CommentButton
-					onComment={() => showTabs.set('comments')}
-					menu
-					resource={{ resource_type: 'chat', resource_id: chat.id }}
-					onOpen={() => (show = false)}
-					className="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-				/>
 			{/if}
 
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
@@ -594,10 +549,27 @@
 				{#if $visibleControls['chat.tags']}
 					<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
-					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
-					<div class="flex max-h-28 overflow-y-auto px-2 py-1" on:click={(e) => e.preventDefault()}>
-						<Tags chatId={chat.id} />
-					</div>
+					<!-- Same picker as folder chats. -->
+					<DropdownSub contentClass="select-none z-50 w-52" maxWidth={240}>
+						<button
+							slot="trigger"
+							draggable="false"
+							class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						>
+							<Tag className="size-3.5" strokeWidth="1.5" />
+							<div class="flex flex-1 items-center">{$i18n.t('Tags')}</div>
+							{#if chat?.meta?.tags?.length}<span class="text-xs tabular-nums text-gray-400"
+									>{chat.meta.tags.length}</span
+								>{/if}
+							<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+						</button>
+						<TagPicker
+							chatId={chat.id}
+							onChange={(next) => {
+								if (chat?.meta) chat.meta.tags = next.map((tag) => tag.id);
+							}}
+						/>
+					</DropdownSub>
 				{/if}
 			{/if}
 		</DropdownMenu>

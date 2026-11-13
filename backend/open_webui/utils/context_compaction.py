@@ -426,9 +426,9 @@ async def _generate_summary(
     bypass_system_prompt: bool = False,
 ) -> str:
     from open_webui.utils.chat import generate_chat_completion
+    from open_webui.utils.models import add_tether_model
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {**dict(models.items()), request.state.model['id']: request.state.model}
+    models = await add_tether_model(request, user, model_id, models)
 
     task_config = await Config.get_many(
         'task.model.params',

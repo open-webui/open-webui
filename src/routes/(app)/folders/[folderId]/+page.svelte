@@ -13,7 +13,7 @@
 		isCurrentFolderOpening,
 		isCancelledFolderRequest,
 	} from '$lib/stores/folderStates';
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, showSidebar } from '$lib/stores';
 
 	let ready = false;
 	let loadedFolderId = '';
@@ -57,7 +57,7 @@
 {#if ready}
 	<Chat />
 {:else}
-	<div class="w-full h-screen flex items-center justify-center">
-		<Spinner />
+	<div class="w-full h-screen max-h-[100dvh] flex items-center justify-center {$showSidebar ? 'md:max-w-[calc(100%-var(--sidebar-width))]' : ''}">
+		<Spinner className="size-5" />
 	</div>
 {/if}

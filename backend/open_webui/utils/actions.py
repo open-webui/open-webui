@@ -9,7 +9,7 @@ from open_webui.models.functions import Functions
 from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_call, get_event_emitter
 from open_webui.utils.middleware import process_tool_result
-from open_webui.utils.models import check_model_access, get_all_models
+from open_webui.utils.models import check_model_access, get_all_models, add_tether_model
 from open_webui.utils.plugin import get_function_module_from_cache
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -32,12 +32,7 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = await add_tether_model(request, user, form_data.get('model'))
 
     data = form_data
     model_id = data['model']
@@ -53,9 +48,8 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user: A
     if action.type != 'action' or not action.is_active:
         raise Exception(f'Action not available: {action_id}')
 
-    # Direct connections carry a client-supplied model the caller already owns,
-    # so scope the model-bound checks to server-resolved models.
-    if not getattr(request.state, 'direct', False) and user.role != 'admin':
+    # The checks apply to shared models; the caller's own models are theirs.
+    if model.get('owner_id') != user.id and user.role != 'admin':
         await check_model_access(user, model)
         # model['actions'] entries are '<function_id>' or '<function_id>.<sub_id>';
         # the function id is always the prefix.

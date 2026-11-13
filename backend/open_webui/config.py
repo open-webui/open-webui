@@ -219,11 +219,6 @@ if CUSTOM_NAME:
         pass
 
 
-# Direct connections
-
-ENABLE_DIRECT_CONNECTIONS = os.getenv('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true'
-ENABLE_DIRECT_INTEGRATIONS = os.getenv('ENABLE_DIRECT_INTEGRATIONS', 'False').lower() == 'true'
-
 # OLLAMA_BASE_URL
 
 ENABLE_OLLAMA_API = os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true'
@@ -1936,10 +1931,6 @@ USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED = (
 )
 
 
-USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS = (
-    os.getenv('USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS', 'False').lower() == 'true'
-)
-
 USER_PERMISSIONS_FEATURES_WEB_SEARCH = os.getenv('USER_PERMISSIONS_FEATURES_WEB_SEARCH', 'True').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
@@ -2048,7 +2039,6 @@ DEFAULT_USER_PERMISSIONS = {
         'folders': USER_PERMISSIONS_FEATURES_FOLDERS,
         'channels': USER_PERMISSIONS_FEATURES_CHANNELS,
         'encrypted_channels': USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS,
-        'direct_tool_servers': USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         # Chat features
         'web_search': USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         'image_generation': USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
@@ -2967,8 +2957,6 @@ DEFAULT_CONFIG = {
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
-    'direct.enable': ENABLE_DIRECT_CONNECTIONS,
-    'direct.integrations.enable': ENABLE_DIRECT_INTEGRATIONS,
     'ollama.enable': ENABLE_OLLAMA_API,
     'ollama.base_urls': OLLAMA_BASE_URLS,
     'ollama.api_configs': OLLAMA_API_CONFIGS,

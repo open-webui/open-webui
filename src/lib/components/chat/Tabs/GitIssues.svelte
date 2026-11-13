@@ -44,6 +44,9 @@
 	let selected: Issue | null = null;
 	let state = 'open';
 	let search = '';
+	// The search GitHub ran for the loaded list. Servers that can't search leave it empty.
+	let searched = '';
+	let searchTimer: ReturnType<typeof setTimeout> | undefined;
 	let listLoading = false;
 	let loading = false;
 	let busy = false;
@@ -62,9 +65,14 @@
 		{ value: 'closed', label: $i18n.t('Closed') },
 		{ value: 'all', label: $i18n.t('All') }
 	];
-	$: filtered = issues.filter((issue) =>
-		`${issue.number} ${issue.title}`.toLowerCase().includes(search.toLowerCase())
-	);
+	// Filter what's loaded right away; GitHub's results replace it once they arrive.
+	$: filtered =
+		search.trim() === searched
+			? issues
+			: issues.filter((issue) =>
+					`${issue.number} ${issue.title}`.toLowerCase().includes(search.trim().toLowerCase())
+				);
+	$: queueSearch(search);
 	$: showingDetail = !!selected || creating || editing;
 
 	const status = (issue: Issue) =>
@@ -100,13 +108,27 @@
 		params: Record<string, string> = {},
 		payload?: Record<string, unknown>
 	) => gitRequest<T>(target, directory, `issue/${operation}`, params, payload);
+	let requested = '';
+	const queueSearch = (value: string) => {
+		if (value.trim() === requested) return;
+		requested = value.trim();
+		clearTimeout(searchTimer);
+		searchTimer = setTimeout(() => void load(), 300);
+	};
 	const load = async () => {
 		const version = ++listGeneration;
 		listLoading = true;
 		listError = '';
 		try {
-			const data = await request<{ items: Issue[] }>('list', { state });
-			if (version === listGeneration) issues = data.items;
+			const query = search.trim();
+			const data = await request<{ items: Issue[]; search?: string }>(
+				'list',
+				query ? { state, search: query } : { state }
+			);
+			if (version === listGeneration) {
+				issues = data.items;
+				searched = data.search ?? '';
+			}
 		} catch (reason) {
 			if (version === listGeneration)
 				listError = String(reason instanceof Error ? reason.message : reason);
@@ -180,6 +202,7 @@
 		void load();
 	});
 	onDestroy(() => {
+		clearTimeout(searchTimer);
 		++generation;
 		++listGeneration;
 	});
@@ -256,7 +279,7 @@
 			{#if !filtered.length}<div
 					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 				>
-					{$i18n.t(listLoading ? 'Loading...' : 'No issues')}
+					{$i18n.t(listLoading ? 'Loading...' : search.trim() ? 'No results found' : 'No issues')}
 				</div>{/if}
 		</div>
 	</div>
