@@ -281,7 +281,11 @@
 				} else if (shortcut === Shortcut.FOCUS_INPUT) {
 					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					chatInput()?.focus();
+					(
+						chatElements('[data-composer-id]')
+							.map((el) => document.getElementById(el.dataset.composerId ?? ''))
+							.find((el) => el?.offsetParent) ?? chatInput()
+					)?.focus();
 				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
