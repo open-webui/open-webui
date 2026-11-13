@@ -255,13 +255,6 @@
 			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
-				<TerminalDropdown
-					{terminalServers}
-					bind:terminalServerId
-					bind:terminalCwd
-					side="top"
-					align="start"
-				/>
 				<ModelDropdown
 					bind:model_id
 					items={[...$baseModels, ...agentModels]}
@@ -276,6 +269,13 @@
 					bind:folder_id
 					folders={$folders}
 					channels={$channels}
+					side="top"
+					align="start"
+				/>
+				<TerminalDropdown
+					{terminalServers}
+					bind:terminalServerId
+					bind:terminalCwd
 					side="top"
 					align="start"
 				/>
