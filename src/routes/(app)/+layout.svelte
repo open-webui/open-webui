@@ -95,6 +95,10 @@
 	};
 
 	const refreshTerminalServers = async () => {
+		if (!$config?.features?.enable_tool_servers) {
+			terminalServers.set([]);
+			return;
+		}
 		const userId = $user?.id;
 		if (!userId || !localStorage.token) return;
 		const systemTerminals = await getTerminalServers(localStorage.token);
@@ -106,14 +110,6 @@
 				key: localStorage.token
 			}))
 		);
-	};
-
-	const setToolServers = async () => {
-		if (!$config?.features?.enable_tool_servers) {
-			terminalServers.set([]);
-			return;
-		}
-		await refreshTerminalServers();
 	};
 
 	const setBanners = async () => {
@@ -134,7 +130,7 @@
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
-				setToolServers(),
+				refreshTerminalServers(),
 				getSkills(localStorage.token).then((value) => skills.set(value))
 			]);
 			for (const result of results) {
@@ -255,13 +251,15 @@
 			return;
 		}
 
-		selectedTerminalId.set(
-			$config?.features?.enable_tool_servers ? (localStorage.selectedTerminalId ?? null) : null
-		);
-
-		setToolServers().catch((e) => {
-			console.error('Failed to load tool servers:', e);
+		await refreshTerminalServers().catch((e) => {
+			console.error('Failed to load terminals:', e);
 		});
+		selectedTerminalId.set(
+			$config?.features?.enable_tool_servers &&
+				$terminalServers?.some((terminal) => terminal.id === localStorage.selectedTerminalId)
+				? localStorage.selectedTerminalId
+				: null
+		);
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
@@ -428,6 +426,15 @@
 
 		loaded = true;
 	});
+
+	$: if (
+		loaded &&
+		$selectedTerminalId &&
+		$terminalServers !== null &&
+		!$terminalServers.some((terminal) => terminal.id === $selectedTerminalId)
+	) {
+		selectedTerminalId.set(null);
+	}
 
 	// `$page.url` must be referenced here: `$:` only tracks variables used in
 	// the statement itself, and reads inside openSettingsFromUrl don't count —
