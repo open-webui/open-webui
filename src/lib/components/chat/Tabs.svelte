@@ -855,7 +855,14 @@
 	export const dropChat = (event: DragEvent) => {
 		const bounds = chatDropBounds(event);
 		clearChatDropPreview();
-		if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+		if (
+			event.dataTransfer?.types.includes('Files') &&
+			!(
+				event.target instanceof Element &&
+				event.target.closest('[id="note-content-container"] [contenteditable="true"]')
+			)
+		)
+			event.preventDefault();
 		if (!bounds || pendingTabDrop) return;
 		const internalId = event.dataTransfer?.getData('application/x-chat-panel-tab');
 		let savedId = '';
