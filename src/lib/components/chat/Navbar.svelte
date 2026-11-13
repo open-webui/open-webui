@@ -10,6 +10,7 @@
 		chatTitle as _chatTitle,
 		config,
 		mobile,
+		selectedFolder,
 		selectedTerminalId,
 		settings,
 		showSidebar,
@@ -327,7 +328,9 @@
 <nav
 	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
 		? 'pb-0.5'
-		: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
+		: $selectedFolder && !history.currentId
+			? 'shrink-0 pb-1'
+			: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
 >
 	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div
@@ -429,7 +432,7 @@
 	{/if}
 
 	<div class="absolute top-full left-0 right-0 h-fit">
-		{#if !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+		{#if !$selectedFolder && !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
 					class=" flex flex-col gap-1 w-full max-h-28 overflow-y-auto overscroll-contain md:max-h-none md:overflow-visible"

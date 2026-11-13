@@ -4218,6 +4218,8 @@
 	let mainChatGroupId = '';
 	let tabTitleEditor: import('svelte').Snippet | undefined;
 	let tabActions: import('svelte').Snippet | undefined;
+	let folderTabActions: import('svelte').Snippet | undefined;
+
 	let tabBarActions: import('svelte').Snippet | undefined;
 
 	let initializedTerminalChatId: string | null = null;
@@ -5786,7 +5788,7 @@
 							}}
 						/>
 					{/if}
-					<div id="chat-pane" class="flex flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div id="chat-pane" class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto">
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
 						{#if (!side && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
@@ -6059,8 +6061,9 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex items-center h-full">
+							<div class="flex h-full {$selectedFolder ? 'min-h-0 flex-1 overflow-hidden' : 'items-center'}">
 								<Placeholder
+									bind:folderTabActions
 									{selectedTerminalId}
 									{terminalSkills}
 									chatId={$chatId}
@@ -6134,8 +6137,9 @@
 					bind:mainChatStyle
 					bind:mainChatGroupId
 					title={$chatTitle || $i18n.t('New Chat')}
+					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon } : null}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
-					tabActions={loading ? undefined : tabActions}
+					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}
 					bind:history

@@ -11,6 +11,7 @@
 
 	import Markdown from './Markdown.svelte';
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
+	import { getOutputText } from './structuredOutput';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
 
@@ -146,7 +147,12 @@
 				)
 			: messageContent;
 
-	let autoOpenedArtifactIds = new Set();
+	const initialContent = content;
+	const initialOutputText = getOutputText(output);
+	// The final code fence can render after the response is marked done.
+	let hasStreamed = !done;
+	$: if (!done) hasStreamed = true;
+	const seenArtifactIds = new Set();
 	/** @type {ReturnType<typeof selectedComment>} */
 	let commentSelection = null;
 
@@ -163,17 +169,18 @@
 				['html', 'svg'].includes(normalizedLang) ||
 				(normalizedLang === 'xml' && code.toLowerCase().includes('<svg'));
 			const artifactId = codeBlockId || `${normalizedLang}:${raw}`;
+			if (!isArtifact || !hasClosingCodeFence(raw) || seenArtifactIds.has(artifactId)) return;
+			// Restored blocks are seen too, so continuing a response cannot reopen them.
+			seenArtifactIds.add(artifactId);
 
 			if (
 				onOpenArtifacts &&
+				hasStreamed &&
+				(content !== initialContent || getOutputText(output) !== initialOutputText) &&
 				($settings?.detectArtifacts ?? true) &&
 				!compactPreview &&
-				isArtifact &&
-				hasClosingCodeFence(raw) &&
-				!autoOpenedArtifactIds.has(artifactId) &&
 				!$mobile
 			) {
-				autoOpenedArtifactIds.add(artifactId);
 				await tick();
 				onOpenArtifacts();
 			}

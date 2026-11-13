@@ -888,7 +888,8 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if hasResponseContent && message.error !== true}
+							{#if message.error !== true}
+								<!-- Mount before the first chunk so artifact detection can recognize new content. -->
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
@@ -896,7 +897,7 @@
 									{chatId}
 									{onOpenArtifacts}
 									messageId={message.id}
-									content={message.content}
+									content={message.content ?? ''}
 									output={message.output}
 									sources={message.sources}
 									floatingButtons={message?.done &&

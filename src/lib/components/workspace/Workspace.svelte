@@ -134,7 +134,7 @@
 			: ''} max-w-full"
 	>
 		<div class="flex h-full min-w-0 flex-1 flex-col">
-			<nav class="px-1.5 drag-region select-none">
+			<nav class="px-1.5 md:px-2.5 drag-region select-none">
 				<div class="flex items-center gap-0.5 md:gap-1">
 					{#if $mobile && !pageTab}
 						<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">

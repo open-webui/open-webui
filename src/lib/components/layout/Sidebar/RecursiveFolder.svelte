@@ -829,7 +829,7 @@
 								{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
 									<div
 										class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
-										title={$i18n.t('Unread')}
+										title={$i18n.t('Unread or waiting for approval')}
 									>
 										{formatUnreadCount(folders[folderId].unread_count)}
 									</div>

@@ -2,8 +2,6 @@
 	import { getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
-	import DOMPurify from 'dompurify';
-
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
@@ -14,33 +12,28 @@
 		loadFolderDetails,
 		updateFolderDetails,
 		removeFolderState,
-		type FolderDetails,
+		type FolderDetails
 	} from '$lib/stores/folderStates';
 
-	import {
-		deleteFolderById,
-		updateFolderById,
-		createNewFolder
-	} from '$lib/apis/folders';
+	import { deleteFolderById, updateFolderById, createNewFolder } from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
 
-	import Folder from '$lib/components/icons/Folder.svelte';
-	import XMark from '$lib/components/icons/XMark.svelte';
 	import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Emoji from '$lib/components/common/Emoji.svelte';
-	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 
 	export let folder: FolderDetails | null = null;
 	export let readOnly: boolean = false;
+	export let onNewChat: () => void = () => {};
+	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
+	$: folderTabActions = renderFolderActions;
 
 	export let onUpdate: Function = (folderId) => {};
 	export let onDelete: Function = (folderId) => {};
 
-	let showFolderModal = false;
+	export let showFolderModal = false;
 	let showCreateSubFolderModal = false;
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
@@ -78,39 +71,12 @@
 
 			toast.success($i18n.t('Folder updated successfully'));
 
-			const _folder = await loadFolderDetails(localStorage.token, targetFolder.id, true).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
-
-			const updatedFolder = { ...targetFolder, ..._folder };
-			if ($selectedFolder?.id === targetFolder.id) selectedFolder.set(updatedFolder);
-			onUpdate(updatedFolder);
-		}
-	};
-
-	const updateIconHandler = async (iconName) => {
-		const targetFolder = folder;
-		if (!targetFolder) return;
-		const res = await updateFolderById(localStorage.token, targetFolder.id, {
-			meta: {
-				icon: iconName ?? ''
-			}
-		}).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
-
-		if (res) {
-			updateFolderDetails(targetFolder.id, res);
-			targetFolder.meta = { ...targetFolder.meta, icon: iconName ?? '' };
-
-			toast.success($i18n.t('Folder updated successfully'));
-
-			const _folder = await loadFolderDetails(localStorage.token, targetFolder.id, true).catch((error) => {
-				toast.error(`${error}`);
-				return null;
-			});
+			const _folder = await loadFolderDetails(localStorage.token, targetFolder.id, true).catch(
+				(error) => {
+					toast.error(`${error}`);
+					return null;
+				}
+			);
 
 			const updatedFolder = { ...targetFolder, ..._folder };
 			if ($selectedFolder?.id === targetFolder.id) selectedFolder.set(updatedFolder);
@@ -121,12 +87,14 @@
 	const deleteHandler = async () => {
 		const targetFolder = folder;
 		if (!targetFolder) return;
-		const res = await deleteFolderById(localStorage.token, targetFolder.id, deleteFolderContents).catch(
-			(error) => {
-				toast.error(`${error}`);
-				return null;
-			}
-		);
+		const res = await deleteFolderById(
+			localStorage.token,
+			targetFolder.id,
+			deleteFolderContents
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
 
 		if (res) {
 			removeFolderState(targetFolder.id);
@@ -175,6 +143,35 @@
 	};
 </script>
 
+{#snippet renderFolderActions()}
+	{#if folder && !readOnly}
+		<div class="flex shrink-0 items-center">
+			<FolderMenu
+				align="end"
+				{onNewChat}
+				onEdit={() => {
+					showFolderModal = true;
+				}}
+				onDelete={() => {
+					showDeleteConfirm = true;
+				}}
+				onExport={() => {
+					exportHandler();
+				}}
+				onCreateSubFolder={() => {
+					showCreateSubFolderModal = true;
+				}}
+			>
+				<div
+					class="flex size-4 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+				>
+					<EllipsisHorizontal className="size-3" strokeWidth="1.5" />
+				</div>
+			</FolderMenu>
+		</div>
+	{/if}
+{/snippet}
+
 {#if folder}
 	<FolderModal
 		bind:show={showFolderModal}
@@ -218,81 +215,4 @@
 			</div>
 		</div>
 	</DeleteConfirmDialog>
-
-	<div
-		class="{folder.data?.description
-			? 'mb-0.5'
-			: 'mb-2'} px-5 @md:max-w-3xl justify-between w-full flex relative group items-center"
-	>
-		<div class="text-center flex gap-3.5 items-center">
-			{#if readOnly}
-				<div
-					class="rounded-full bg-gray-50/50 dark:bg-gray-800/40 size-11 flex justify-center items-center"
-				>
-					{#if folder?.meta?.icon}
-						<Emoji className="size-7" shortCode={folder.meta.icon} />
-					{:else}
-						<Folder className="size-6" strokeWidth="2" />
-					{/if}
-				</div>
-			{:else}
-				<EmojiPicker
-					onClose={() => {}}
-					selected={folder?.meta?.icon ?? null}
-					onSubmit={(name) => {
-						console.log(name);
-						updateIconHandler(name);
-					}}
-				>
-					<button
-						aria-label={$i18n.t('Change folder icon')}
-						class="rounded-full bg-gray-50/50 dark:bg-gray-800/40 size-11 flex justify-center items-center outline-hidden focus:outline-hidden"
-					>
-						{#if folder?.meta?.icon}
-							<Emoji className="size-7" shortCode={folder.meta.icon} />
-						{:else}
-							<Folder className="size-6" strokeWidth="2" />
-						{/if}
-					</button>
-				</EmojiPicker>
-			{/if}
-
-			<div class="text-3xl line-clamp-1">
-				{folder.name}
-			</div>
-		</div>
-
-		{#if !readOnly}
-			<div class="flex items-center translate-x-2.5">
-				<FolderMenu
-					align="end"
-					onEdit={() => {
-						showFolderModal = true;
-					}}
-					onDelete={() => {
-						showDeleteConfirm = true;
-					}}
-					onExport={() => {
-						exportHandler();
-					}}
-					onCreateSubFolder={() => {
-						showCreateSubFolderModal = true;
-					}}
-				>
-					<div class="inline-flex p-1.5 dark:hover:bg-gray-850 rounded-full touch-auto">
-						<EllipsisHorizontal className="size-4" strokeWidth="2.5" />
-					</div>
-				</FolderMenu>
-			</div>
-		{/if}
-	</div>
-
-	{#if folder.data?.description}
-		<!-- Align with the title after the row padding, icon, and gap. -->
-		<div
-			class="mb-2 w-full pl-[4.875rem] pr-6 text-left text-sm text-gray-400 dark:text-gray-500 @md:max-w-3xl"
-		>
-			<p class="line-clamp-2 whitespace-pre-wrap break-words">{folder.data.description}</p>
-		</div>
-	{/if}
 {/if}

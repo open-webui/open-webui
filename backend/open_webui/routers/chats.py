@@ -2454,3 +2454,22 @@ async def delete_tag_by_id_and_tag_name(
         return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
+
+
+class TagColorForm(BaseModel):
+    name: str
+    # A palette name chosen by the frontend, e.g. 'blue'; the server only stores it.
+    color: str = Field(min_length=1, max_length=32, pattern=r'^[a-z][a-z0-9-]*$')
+
+
+@router.patch('/{id}/tags', response_model=list[TagModel])
+async def update_chat_tag_color(request: Request, id: str, form_data: TagColorForm,
+    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+    tag_id = form_data.name.replace(' ', '_').lower()
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if not chat or tag_id not in (chat.meta or {}).get('tags', []):
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, user.id, form_data.color, db=db):
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await publish_event(request, EVENTS.CHAT_UPDATED, actor=user, subject_id=id, data={'tag': form_data.name})
+    return await Tags.get_tags_by_ids_and_user_id((chat.meta or {}).get('tags', []), user.id, db=db)

@@ -1,3 +1,4 @@
+import { FOLDER_PAGE_SIZE, type FolderStatus, type FolderActivity } from '$lib/utils/folders';
 import { readonly, writable } from 'svelte/store';
 import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
 import { getChatListByFolderId } from '$lib/apis/chats';
@@ -25,6 +26,13 @@ export type FolderChatQuery = {
 	page?: number;
 	sortBy?: 'title' | 'updated_at' | 'unread_updated_at';
 	sortDir?: 'asc' | 'desc';
+	workspace?: boolean;
+	search?: string;
+	tagIds?: string[];
+	userIds?: string[];
+	status?: FolderStatus | FolderStatus[];
+	activity?: FolderActivity;
+	updatedAtGte?: number;
 };
 export type FolderChatPage = {
 	chats: FolderChat[];
@@ -58,7 +66,22 @@ const revision = (key: string) => revisions.get(key) ?? 0;
 const changed = (key: string) => revisions.set(key, revision(key) + 1);
 
 export const folderChatPageKey = (query: FolderChatQuery = {}) =>
-	JSON.stringify([query.page ?? 1, query.sortBy ?? 'unread_updated_at', query.sortDir ?? 'desc']);
+	JSON.stringify([
+		query.page ?? 1,
+		query.sortBy ?? 'unread_updated_at',
+		query.sortDir ?? 'desc',
+		...(query.workspace
+			? [
+					true,
+					query.search?.trim() ?? '',
+					[...new Set(query.tagIds ?? [])].sort(),
+					query.status ?? null,
+					query.activity ?? null,
+					query.updatedAtGte ?? null,
+					[...new Set(query.userIds ?? [])].sort()
+				]
+			: [])
+	]);
 
 export function getFolderState(id: string): FolderState {
 	return (entries[id] ??= { details: null, chatPages: {}, sidebarPage: 1, agentModels: null });
@@ -154,6 +177,7 @@ export function loadFolderChatPage(
 			} catch (error) {
 				// Keep the sidebar's legacy fallback, but never use it to bypass access failures.
 				if (
+					query.workspace ||
 					(query.sortBy && query.sortBy !== 'unread_updated_at') ||
 					[401, 403, 404].includes((error as any)?.status)
 				)
@@ -166,12 +190,16 @@ export function loadFolderChatPage(
 			return {
 				...result,
 				total: result.total ?? result.chats.length,
-				has_more: result.has_more ?? result.chats.length === 10,
+				has_more:
+					result.has_more ?? result.chats.length === (query.workspace ? FOLDER_PAGE_SIZE : 10),
 				dirty: false
 			};
 		},
 		(result) => {
 			folder.chatPages[key] = result;
+			const searches = Object.keys(folder.chatPages).filter((key) => JSON.parse(key)[3]);
+			for (const expired of searches.slice(0, Math.max(0, searches.length - 20)))
+				delete folder.chatPages[expired];
 		}
 	);
 }
@@ -234,7 +262,14 @@ export function updateFolderChatLists(
 					? 1
 					: 0;
 		for (const [key, page] of Object.entries(folder.chatPages)) {
-			const [number, sortBy, sortDir] = JSON.parse(key);
+			const [number, sortBy, sortDir, workspace] = JSON.parse(key);
+			if (workspace) {
+				// Filter membership and column totals must be reconciled by the server.
+				page.chats = page.chats.map((item) => (item.id === chat.id ? { ...item, ...chat } : item));
+				page.dirty = true;
+				changed(resourceKey(id, key));
+				continue;
+			}
 			page.total = Math.max(0, page.total + countChange);
 			page.has_more = page.total > number * 10;
 			const existing = page.chats.find((item) => item.id === chat.id);

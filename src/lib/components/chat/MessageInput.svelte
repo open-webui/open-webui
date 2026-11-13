@@ -1987,7 +1987,7 @@
 	<div class="w-full">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
-				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
+				class="flex flex-col px-3 {$settings?.widescreenMode ?? null
 					? 'max-w-full'
 					: 'max-w-[58rem]'} w-full"
 			>
@@ -2040,7 +2040,7 @@
 
 		<div class="bg-transparent">
 			<div
-				class="{($settings?.widescreenMode ?? null)
+				class="{$settings?.widescreenMode ?? null
 					? 'max-w-full'
 					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
 			>
@@ -2235,8 +2235,8 @@
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
 							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {isTemporary
-								? 'border-dashed border-gray-200 dark:border-gray-800'
-								: ' border-gray-200 dark:border-gray-800'} {($settings?.highContrastMode ??
+								? 'border-dashed border-gray-200 dark:border-gray-850'
+								: ' border-gray-200 dark:border-gray-850'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"

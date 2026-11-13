@@ -1591,7 +1591,11 @@ async def get_event_emitter(request_info, update_db=True):
             pending_approval_ids = await ChatMessages.get_chat_ids_with_pending_approval([chat_id])
             event_data = {
                 **event_data,
-                'data': {**(event_data.get('data') or {}), 'pending_approval': chat_id in pending_approval_ids},
+                'data': {
+                    **(event_data.get('data') or {}),
+                    'pending_approval': chat_id in pending_approval_ids,
+                    **({'folder_unread_counts': await get_folder_unread_counts(user_id)} if not internal else {}),
+                },
             }
 
         room = f'user:{user_id}'

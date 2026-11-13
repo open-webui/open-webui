@@ -9,6 +9,9 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import FolderShareModal from './FolderShareModal.svelte';
+	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import XMark from '../icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -35,8 +38,9 @@
 
 	let folder = null;
 	let name = '';
-	let meta = {
-		background_image_url: null
+	let meta: { background_image_url: string | null; icon: string; [key: string]: unknown } = {
+		background_image_url: null,
+		icon: ''
 	};
 	let data = {
 		description: '',
@@ -135,8 +139,10 @@
 			if (!folder) return;
 
 			name = folder.name;
-			meta = folder.meta || {
-				background_image_url: null
+			meta = {
+				background_image_url: null,
+				icon: '',
+				...folder.meta
 			};
 			data = {
 				system_prompt: '',
@@ -173,7 +179,8 @@
 	$: if (!show && !edit) {
 		name = '';
 		meta = {
-			background_image_url: null
+			background_image_url: null,
+			icon: ''
 		};
 		data = {
 			description: '',
@@ -225,10 +232,29 @@
 							>{$i18n.t('Folder Name')}</label
 						>
 
-						<div class="flex-1">
+						<div class="flex items-center gap-2">
+							<EmojiPicker
+								side="bottom"
+								selected={meta.icon || null}
+								onSubmit={(icon: string | null) => { meta = { ...meta, icon: icon ?? '' }; }}
+							>
+								<button
+									type="button"
+									class="flex size-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40"
+									aria-label={$i18n.t('Change folder icon')}
+									title={$i18n.t('Change folder icon')}
+									disabled={loading}
+								>
+									{#if meta.icon}
+										<Emoji shortCode={meta.icon} className="size-4" />
+									{:else}
+										<FolderIcon className="size-4" />
+									{/if}
+								</button>
+							</EmojiPicker>
 							<input
 								id="folder-name"
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="min-w-0 flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Enter folder name')}

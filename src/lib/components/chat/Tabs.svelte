@@ -87,6 +87,7 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import HomeIcon from '$lib/components/icons/Home.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
@@ -159,6 +160,8 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
+	export let mainTabFolder: { id: string; name: string; icon?: string | null } | null = null;
+	$: mainTabTitle = mainTabFolder?.name ?? title;
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
@@ -293,7 +296,7 @@
 			if (version !== switchVersion) return;
 			// The chat restores its terminal and directory together; layouts must not override them.
 			owner.state.selectedTerminalId = $selectedTerminalId;
-			owner.state.panels = setMainChatTab(owner.state.panels, true, title);
+			owner.state.panels = setMainChatTab(owner.state.panels, true, mainTabTitle);
 			tabs = owner.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};
@@ -2184,10 +2187,11 @@
 				{/if}
 			</div>
 		{/each}
-		{#if viewReady && !chatLoading && !viewError && !tabs.tabs.length && canOpenNewTab}<div
-				class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
+		<!-- The mobile drawer hides the main chat tab, so count what it actually shows. -->
+		{#if viewReady && !chatLoading && !viewError && !displayTabs.tabs.length && (canOpenNewTab || !largeScreen)}<div
+				class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
 			>
-				{$i18n.t('Open a tab using the + menu.')}
+				{canOpenNewTab ? $i18n.t('Open a tab using the + menu.') : $i18n.t('No open tabs')}
 			</div>{/if}
 	</div>
 </div>
@@ -2246,13 +2250,19 @@
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.kind === 'chat' ? title : (tab.directory ?? tab.path ?? tabLabel(tab))}
-							aria-label={tab.kind === 'chat' ? title : undefined}
+							title={tab.kind === 'chat' ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
+							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 						>
 							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
 								<Spinner className="size-3.5" />
 								<span class="sr-only">{$i18n.t('Generating...')}</span>
+							{:else if tab.kind === 'chat' && mainTabFolder}
+								{#if mainTabFolder.icon}
+									<Emoji shortCode={mainTabFolder.icon} className="size-3.5" />
+								{:else}
+									<Icon name="folder" size={14} />
+								{/if}
 							{:else if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'comments'}
@@ -2262,9 +2272,9 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind !== 'chat' || !tabTitleEditor}
+							{#if tab.kind !== 'chat' || !tabTitleEditor || mainTabFolder}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
-									>{tab.kind === 'chat' ? title : tabLabel(tab)}</span
+									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
 							{/if}
 							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
@@ -2276,7 +2286,7 @@
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.kind === 'chat'}
-							{@render tabTitleEditor?.()}
+							{#if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
 						{:else}<button
 								type="button"
