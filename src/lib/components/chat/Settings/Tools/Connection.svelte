@@ -15,14 +15,12 @@
 	export let onSubmit = () => {};
 
 	export let connection = null;
-	export let direct = false;
 
 	let showConfigModal = false;
 </script>
 
 <AddToolServerModal
 	edit
-	{direct}
 	bind:show={showConfigModal}
 	{connection}
 	onDelete={() => {
@@ -48,9 +46,7 @@
 				<Tooltip
 					content={connection?.type === 'mcp'
 						? $i18n.t('settings.admin.integrations.mcp.label')
-						: direct
-							? $i18n.t('settings.personal.tools.openApi.label')
-							: $i18n.t('settings.admin.integrations.openApi.label')}
+						: $i18n.t('settings.admin.integrations.openApi.label')}
 				>
 					<WrenchAlt />
 				</Tooltip>

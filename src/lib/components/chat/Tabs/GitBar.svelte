@@ -20,12 +20,16 @@
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import GitPullRequests from './GitPullRequests.svelte';
+	import GitListDivider from './GitListDivider.svelte';
+	import GitIssues from './GitIssues.svelte';
+	import { relativeTime } from './gitPanel';
 
 	export let target: TerminalTarget | null = null;
 	export let directory = '.';
 	export let chatId: string | null = null;
 	export let active = false;
 	export let onOpenFile: (path: string) => void = () => {};
+	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
@@ -34,9 +38,17 @@
 	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
-	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
-	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
-	let prRoot = '';
+	let view: 'changes' | 'history' | 'pull requests' | 'issues' = initialView?.view ?? 'changes';
+	let github: {
+		available: boolean;
+		default_branch?: string;
+		issues?: boolean;
+		open_pull_requests?: number | null;
+		open_issues?: number | null;
+	} | null = null;
+	$: openPullRequests = github?.open_pull_requests ?? null;
+	$: openIssues = github?.issues ? (github.open_issues ?? null) : null;
+	let githubRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
 	let diff = '';
@@ -79,9 +91,6 @@
 	let resizeHeight = 0;
 	let splitWidth = 0;
 	let listWidth: number | null = initialView?.listWidth ?? null;
-	let resizingList = false;
-	let resizeListX = 0;
-	let resizeListWidth = 0;
 	$: maxListWidth = Math.max(160, splitWidth - 220);
 	$: effectiveListWidth = Math.max(
 		160,
@@ -170,24 +179,13 @@
 		syncComplete = false;
 	};
 
-	const relativeTime = (date: string) => {
-		const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
-		return seconds < 60
-			? 'now'
-			: seconds < 3600
-				? `${Math.floor(seconds / 60)}m`
-				: seconds < 86400
-					? `${Math.floor(seconds / 3600)}h`
-					: `${Math.floor(seconds / 86400)}d`;
-	};
 	const request = <T,>(
 		operation: string,
 		params: Record<string, string> = {},
 		body?: Record<string, unknown>
 	) => gitRequest<T>(target!, status?.root ?? directory, operation, params, body);
 	const refresh = (force = false): Promise<void> => {
-		if (!target || !active || !gitEnabled || (!force && document.hidden))
-			return Promise.resolve();
+		if (!target || !active || !gitEnabled || (!force && document.hidden)) return Promise.resolve();
 		if (pending) return pending;
 		const current = generation;
 		const task = gitRequest<GitStatus>(target, directory, 'status')
@@ -196,15 +194,10 @@
 				detectionError = '';
 				if (status?.root && status.root !== next.root) resetSelection();
 				status = next.is_repo ? next : null;
-				if (next.root && next.root !== prRoot) {
-					prRoot = next.root;
-					void request<{ available: boolean; default_branch?: string }>('pr/capabilities')
-						.then((data) => {
-							if (current === generation) prCapabilities = data;
-						})
-						.catch(() => {
-							if (current === generation) prCapabilities = null;
-						});
+				if (next.root && next.root !== githubRoot) {
+					githubRoot = next.root;
+					github = null;
+					void loadGitHub();
 				}
 				if (
 					selected &&
@@ -226,6 +219,18 @@
 			});
 		pending = task;
 		return task;
+	};
+	// What `gh` reports for this repo: availability, default branch, issues, and open counts.
+	// A refresh after a change keeps the last known values if it fails.
+	const loadGitHub = async (refreshing = false) => {
+		const current = generation;
+		const root = githubRoot;
+		try {
+			const data = await request<NonNullable<typeof github>>('pr/capabilities');
+			if (current === generation && root === githubRoot) github = data;
+		} catch {
+			if (!refreshing && current === generation && root === githubRoot) github = null;
+		}
 	};
 	const resetSelection = () => {
 		++diffGeneration;
@@ -261,8 +266,8 @@
 			summary = restoring?.summary ?? '';
 			description = restoring?.description ?? '';
 			commits = [];
-			prCapabilities = null;
-			prRoot = '';
+			github = null;
+			githubRoot = '';
 			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
@@ -436,7 +441,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="git-panel relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+		class="@container relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -728,7 +733,7 @@
 				<div
 					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 				>
-					{#each ['changes', 'history', ...(prCapabilities?.available ? ['pull requests'] : [])] as section}<button
+					{#each ['changes', 'history', ...(github?.available ? [...(github.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
 								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
@@ -743,9 +748,15 @@
 									? 'Changes'
 									: section === 'history'
 										? 'History'
-										: 'Pull requests'
+										: section === 'issues'
+											? 'Issues'
+											: 'Pull requests'
 							)}{#if section === 'changes' && status.files.length}<span
 									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
+								>{:else if section === 'pull requests' && openPullRequests}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
+								>{:else if section === 'issues' && openIssues}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openIssues}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -806,23 +817,40 @@
 						</div>
 					</Dropdown>
 				</div>
-				{#if view === 'pull requests' && target && status.root}
-					{#key status.root}<GitPullRequests
-							mode={diffMode}
-							{hideWhitespace}
-							{target}
-							directory={status.root}
-							branch={status.branch}
-							defaultBranch={prCapabilities?.default_branch ?? 'main'}
-							onChange={() => {
-								void refresh(true);
-							}}
-						/>{/key}
-				{:else}
-					<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
+				<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
+					{#if view === 'pull requests' && target && status.root}
+						{#key status.root}<GitPullRequests
+								listWidth={effectiveListWidth}
+								{maxListWidth}
+								onResizeList={(width) => (listWidth = width)}
+								mode={diffMode}
+								{hideWhitespace}
+								{target}
+								directory={status.root}
+								branch={status.branch}
+								defaultBranch={github?.default_branch ?? 'main'}
+								onDraft={onDraftPrompt}
+								onChange={() => {
+									void refresh(true);
+									void loadGitHub(true);
+								}}
+							/>{/key}
+					{:else if view === 'issues' && target && status.root}
+						{#key status.root}<GitIssues
+								listWidth={effectiveListWidth}
+								{maxListWidth}
+								onResizeList={(width) => (listWidth = width)}
+								{target}
+								directory={status.root}
+								onDraft={onDraftPrompt}
+								onChange={() => void loadGitHub(true)}
+							/>{/key}
+					{:else}
 						<div
-							class="git-list min-w-0 flex-1 flex flex-col overflow-hidden"
-							class:showing-diff={!!(selected || selectedCommit)}
+							class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex @min-[560px]:flex-[0_0_var(--git-list-width)] {selected ||
+							selectedCommit
+								? 'hidden'
+								: 'flex'}"
 							style:--git-list-width={`${effectiveListWidth}px`}
 						>
 							{#if view === 'changes'}
@@ -1053,63 +1081,23 @@
 								</div>
 							{/if}
 						</div>
-						<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions (Focusable splitter supports pointer and keyboard resizing.) -->
+						<GitListDivider
+							width={effectiveListWidth}
+							max={maxListWidth}
+							onResize={(width) => (listWidth = width)}
+						/>
 						<div
-							tabindex="0"
-							role="separator"
-							aria-label={$i18n.t('Resize Git list')}
-							aria-orientation="vertical"
-							aria-valuemin={160}
-							aria-valuemax={maxListWidth}
-							aria-valuenow={Math.round(effectiveListWidth)}
-							class="git-list-divider relative z-10 shrink-0 touch-none cursor-col-resize border-l border-gray-100/50 dark:border-white/2 hover:border-gray-200 dark:hover:border-gray-800 transition"
-							on:pointerdown={(event) => {
-								if (event.button !== 0) return;
-								event.preventDefault();
-								event.currentTarget.setPointerCapture(event.pointerId);
-								resizingList = true;
-								resizeListX = event.clientX;
-								resizeListWidth = effectiveListWidth;
-							}}
-							on:pointermove={(event) => {
-								if (resizingList)
-									listWidth = Math.max(
-										160,
-										Math.min(maxListWidth, resizeListWidth + event.clientX - resizeListX)
-									);
-							}}
-							on:pointerup={() => (resizingList = false)}
-							on:pointercancel={() => (resizingList = false)}
-							on:lostpointercapture={() => (resizingList = false)}
-							on:keydown={(event) => {
-								if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-									event.preventDefault();
-									listWidth = Math.max(
-										160,
-										Math.min(
-											maxListWidth,
-											event.key === 'Home'
-												? 160
-												: event.key === 'End'
-													? maxListWidth
-													: effectiveListWidth + (event.key === 'ArrowRight' ? 20 : -20)
-										)
-									);
-								}
-							}}
-						>
-							<span class="absolute inset-y-0 -left-1.5 -right-1.5 bg-transparent"></span>
-						</div>
-						<div
-							class="git-detail min-w-0 flex-1 flex-col overflow-hidden"
-							class:showing-diff={!!(selected || selectedCommit)}
+							class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex {selected ||
+							selectedCommit
+								? 'flex'
+								: 'hidden'}"
 						>
 							{#if selected || selectedCommit}
 								<div
 									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
 								>
 									<button
-										class="git-back"
+										class="@min-[560px]:hidden"
 										aria-label={$i18n.t('Back to changes')}
 										on:click={resetSelection}><Icon name="chevron-left" size={12} /></button
 									><span class="min-w-0 flex-1 truncate"
@@ -1147,8 +1135,8 @@
 									)}
 								</div>{/if}
 						</div>
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</section>
@@ -1238,34 +1226,6 @@
 		}
 		50% {
 			transform: translateY(var(--git-direction));
-		}
-	}
-	.git-panel {
-		container-type: inline-size;
-	}
-	.git-list.showing-diff,
-	.git-list-divider,
-	.git-detail {
-		display: none;
-	}
-	.git-detail.showing-diff {
-		display: flex;
-	}
-	@container (min-width: 560px) {
-		.git-list,
-		.git-list.showing-diff {
-			display: flex;
-			flex: 0 0 var(--git-list-width);
-		}
-		.git-list-divider {
-			display: block;
-			width: 1px;
-		}
-		.git-detail {
-			display: flex;
-		}
-		.git-back {
-			display: none;
 		}
 	}
 </style>

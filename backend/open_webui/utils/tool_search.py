@@ -181,7 +181,7 @@ def split_tool_call_batches(calls: list[dict], tools: dict[str, dict]) -> list[d
             expanded.append(
                 {
                     **call,
-                    'id': call_id if index == 0 else f'call_{uuid4().hex[:24]}',
+                    'id': call_id if index == 0 else f'{call_id}:{index}',
                     'function': {'name': CALL_TOOL_NAME, 'arguments': JSONCodec.dumps(entry)},
                     'provider_batch': {**batch, 'tool_name': entry['tool_name']},
                 }

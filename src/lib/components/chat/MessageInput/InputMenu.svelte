@@ -31,6 +31,7 @@
 
 	const i18n: any = getContext('i18n');
 
+	export let chatId: string = '';
 	export let files = [];
 
 	export let selectedModels: string[] = [];
@@ -53,7 +54,16 @@
 	export let tab = '';
 	export let closeOnOutsideClick = true;
 	$: if (!show) tab = '';
-	$: hasInternalList = ['tools', 'skills', 'files', 'notes', 'knowledge', 'chats'].includes(tab);
+	$: hasInternalList = [
+		'tools',
+		'skills',
+		'files',
+		'notes',
+		'knowledge',
+		'chats',
+		'terminal',
+		'directory'
+	].includes(tab);
 
 	let showAttachWebpageModal = false;
 	$: showAddContext =
@@ -154,7 +164,7 @@
 	bind:show
 	{closeOnOutsideClick}
 	visualViewportAware
-	maxHeight="18rem"
+	maxHeight={hasInternalList ? '18rem' : undefined}
 	contentClass="flex flex-col overflow-hidden!"
 	onOpenChange={(state) => {
 		if (state === false) {
@@ -215,9 +225,13 @@
 
 						<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
 					{/if}
+				</div>
+			{/if}
 
-					<slot name="terminal" />
+			<slot name="terminal" />
 
+			{#if tab === ''}
+				<div in:fly={{ x: -20, duration: 150 }}>
 					<Tooltip
 						content={fileUploadCapableModels.length !== selectedModels.length
 							? $i18n.t('Model(s) do not support file upload')
@@ -762,7 +776,7 @@
 						</div>
 					</button>
 
-					<Chats {onSelect} />
+					<Chats {chatId} {onSelect} />
 				</div>
 			{:else if tab === 'microsoft_onedrive'}
 				<div in:fly={{ x: 20, duration: 150 }}>

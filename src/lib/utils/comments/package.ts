@@ -114,7 +114,11 @@ export async function presentationSlides(pkg: OfficePackage) {
 	const doc = await pkg.xml(main);
 	if (!doc) throw new Error('Could not read presentation');
 	const rels = await pkg.relationships(main);
-	return elements(doc, 'sldId').map((slide) => {
+	// Decks with sections list every slide again in a PowerPoint 2010 extension.
+	const slides = elements(doc, 'sldId').filter(
+		(slide) => slide.namespaceURI === doc.documentElement.namespaceURI
+	);
+	return slides.map((slide) => {
 		const id = Array.from(slide.attributes).find(
 			(a) => a.localName === 'id' && a.namespaceURI
 		)?.value;

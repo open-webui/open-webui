@@ -35,6 +35,6 @@ def search_kagi(api_key: str, query: str, count: int, filter_list: Optional[list
         for result in search_results
     ]
 
-    print(results)
+    log.debug('Kagi search results: %s', results)
 
     return results

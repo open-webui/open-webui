@@ -12,6 +12,7 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	let chatMenuOpen = false;
 </script>
 
 <script lang="ts">
@@ -482,6 +483,7 @@
 			if (closeActiveHoverPreview === closeHoverPreview) {
 				closeActiveHoverPreview = null;
 			}
+			if (menuOpen) chatMenuOpen = false;
 		};
 	});
 
@@ -794,7 +796,9 @@
 						!($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
-						if (open) {
+						if (open && chatMenuOpen) {
+							openPreview = false;
+						} else if (open) {
 							activeProfileId = null;
 							overflowOpen = false;
 						}
@@ -909,10 +913,13 @@
 						{markUnreadHandler}
 						onOpen={() => {
 							menuOpen = true;
+							chatMenuOpen = true;
+							closeActiveHoverPreview?.();
 							dispatch('select');
 						}}
 						onClose={() => {
 							menuOpen = false;
+							chatMenuOpen = false;
 							dispatch('unselect');
 						}}
 						onPinChange={(chat) => refreshAfterChange(chat.pinned ? null : chat.folder_id)}

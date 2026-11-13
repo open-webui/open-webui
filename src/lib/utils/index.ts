@@ -524,6 +524,34 @@ export const formatMessageTimestamp = (inputDate, locale: string) =>
 		minute: '2-digit'
 	}) ?? '';
 
+// Compact list date: the time today, "Nov 3" this year, "Nov 3, 2024" before.
+export const formatShortDate = (seconds: number, locale: string) => {
+	const date = dayjs(seconds * 1000).locale(locale);
+	if (date.isSame(dayjs(), 'day')) return date.format('LT');
+	return date.format(date.isSame(dayjs(), 'year') ? 'MMM D' : 'll');
+};
+
+// Hover detail for a short date: "3 days ago · Monday, November 3, 2025, 2:32 PM".
+export const formatDateDetails = (seconds: number, locale: string) =>
+	`${dayjs(seconds * 1000)
+		.locale(locale)
+		.fromNow()} · ${formatMessageTimestampFull(seconds, locale)}`;
+
+// Time since a moment without "ago", e.g. "3 days" for time in a status.
+export const formatElapsed = (seconds: number, locale: string) =>
+	dayjs(seconds * 1000)
+		.locale(locale)
+		.fromNow(true);
+
+// Compact time since a moment for tight spaces: "45s", "12m", "3h", "5d".
+export const formatElapsedShort = (seconds: number) => {
+	const elapsed = Math.max(0, Math.floor(Date.now() / 1000 - seconds));
+	if (elapsed < 60) return `${elapsed}s`;
+	if (elapsed < 3600) return `${Math.floor(elapsed / 60)}m`;
+	if (elapsed < 86400) return `${Math.floor(elapsed / 3600)}h`;
+	return `${Math.floor(elapsed / 86400)}d`;
+};
+
 export const formatMessageTimestampFull = (inputDate, locale: string) =>
 	messageTimestampDate(inputDate)?.toLocaleString(locale, {
 		weekday: 'long',

@@ -37,7 +37,7 @@
 		$config?.features?.enable_comments &&
 		$user &&
 		model?.id &&
-		!model?.direct &&
+		!model?.owner_id &&
 		!model?.arena &&
 		(model?.info || $user?.role === 'admin');
 </script>

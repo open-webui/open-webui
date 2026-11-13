@@ -818,14 +818,12 @@
 	let terminalChatContextHidden = false;
 	let isPerChatTerminal = false;
 
-
 	const getTerminal = (): TerminalTarget | null => {
 		const systemTerminal = effectiveTerminalId
 			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
 		isPerChatTerminal = !!systemTerminal && systemTerminal?.scope === 'chat';
-		terminalChatContextHidden =
-			isPerChatTerminal && isTemporaryChatId(chatId);
+		terminalChatContextHidden = isPerChatTerminal && isTemporaryChatId(chatId);
 		terminalChatContextPending =
 			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);
 		if (terminalChatContextHidden || terminalChatContextPending) return null;
@@ -834,7 +832,6 @@
 		return resolveTerminalTarget(
 			effectiveTerminalId ?? systemTerminal?.id ?? null,
 			$terminalServers ?? [],
-			($settings as any)?.terminalServers ?? [],
 			localStorage.token,
 			{ chatId: chatId, modelId: modelId }
 		);
@@ -1014,14 +1011,7 @@
 		const controller = new AbortController();
 		matchController = controller;
 		matchTimer = setTimeout(async () => {
-			const data = await getFileMatches(
-				terminal,
-				query,
-				path,
-				hiddenVisible,
-				0,
-				controller.signal
-			);
+			const data = await getFileMatches(terminal, query, path, hiddenVisible, 0, controller.signal);
 			if (requestId !== matchRequestId) return;
 			if (data) {
 				matchResults = data.results;

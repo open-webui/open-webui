@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto } = getPageContext();
+	const { goto, tab: pageTab, active } = getPageContext();
 
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -191,6 +191,7 @@
 
 	$: if (
 		loaded &&
+		$active &&
 		sortKey !== undefined &&
 		sortDirection !== undefined &&
 		permission !== undefined &&
@@ -427,7 +428,7 @@
 		</DeleteConfirmDialog>
 
 		<div class="flex items-center gap-0.5 md:gap-1 mb-1">
-			{#if $mobile}
+			{#if $mobile && !pageTab}
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}

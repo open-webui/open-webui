@@ -103,6 +103,7 @@ dependencies = [
 
     "onnxruntime==1.26.0",
     "faster-whisper==1.2.1",
+    "av==14.0.1", # Caution: Set due to FATAL FIPS SELFTEST FAILURE, see discussion https://github.com/open-webui/open-webui/discussions/15720
 
     "black==26.5.1",
     "youtube-transcript-api==1.2.4",

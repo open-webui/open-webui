@@ -10,7 +10,12 @@ from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message, get_message_list
+from open_webui.utils.misc import (
+    convert_output_to_messages,
+    get_content_from_message,
+    get_last_user_message,
+    get_message_list,
+)
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
     prompt_template,
@@ -67,6 +72,8 @@ async def compact_messages_for_request(
     if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold):
         return [*system_messages, *messages], previous_summary, []
 
+    # A tool loop's messages carry the turn's summary only in the system message.
+    previous_summary = previous_summary or metadata.get('context_summary')
     boundary = _find_compaction_boundary(messages, config['retention_percentage'])
     compacted_messages = messages[:boundary]
     recent_messages = messages[boundary:]
@@ -419,9 +426,9 @@ async def _generate_summary(
     bypass_system_prompt: bool = False,
 ) -> str:
     from open_webui.utils.chat import generate_chat_completion
+    from open_webui.utils.models import add_tether_model
 
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {**dict(models.items()), request.state.model['id']: request.state.model}
+    models = await add_tether_model(request, user, model_id, models)
 
     task_config = await Config.get_many(
         'task.model.params',
@@ -445,10 +452,14 @@ async def _generate_summary(
     compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
     for messages in (compacted_messages, recent_messages):
         for idx, message in enumerate(messages):
-            if message.get('tool_calls'):
+            # Saved replies keep their tool calls as output items.
+            tool_calls = message.get('tool_calls') or [
+                call for m in convert_output_to_messages(message.get('output')) for call in m.get('tool_calls', [])
+            ]
+            if tool_calls:
                 messages[idx] = {
                     **message,
-                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(message["tool_calls"])}',
+                    'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(tool_calls)}',
                 }
 
     async def render_prompt(template: str) -> str:
