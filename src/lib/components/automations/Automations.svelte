@@ -8,6 +8,7 @@
 	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 
 	import { WEBUI_NAME, user, config, channels, folders } from '$lib/stores';
 	import { getFolders } from '$lib/apis/folders';
@@ -214,6 +215,7 @@
 			return null;
 		});
 		if (res) {
+			closePageTabs(`/automations/${automation.id}`);
 			toast.success($i18n.t(`Deleted {{name}}`, { name: automation.name }));
 		}
 
