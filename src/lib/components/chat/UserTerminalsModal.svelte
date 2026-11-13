@@ -435,7 +435,7 @@
 								ariaLabelledbyId={labelId}
 								state={!!scope}
 								disabled={scopeLocked || busy}
-								on:change={(e) => (scope = e.detail ? 'chat' : '')}
+								on:change={(e) => (scope = e.detail ? 'user' : '')}
 							/>
 						</div>
 					</UserSettingRow>

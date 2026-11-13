@@ -54,6 +54,7 @@
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
+	import FolderShareModal from './Folders/FolderShareModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let folderRegistry = {};
@@ -77,6 +78,7 @@
 
 	let openPreview = false;
 	let showFolderModal = false;
+	let showShareModal = false;
 	let edit = false;
 
 	let showCreateSubFolderModal = false;
@@ -656,6 +658,8 @@
 	</div>
 </DeleteConfirmDialog>
 
+<FolderShareModal bind:show={showShareModal} folder={folders[folderId]} />
+
 <FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
 
 <FolderModal
@@ -871,6 +875,9 @@
 								showCreateSubFolderModal = true;
 							}}
 							onMarkAllRead={markAllReadHandler}
+							onShare={($user?.role === 'admin' || (folders[folderId]?.user_id === $user?.id && $user?.permissions?.sharing?.folders))
+								? () => (showShareModal = true)
+								: null}
 						>
 							<div
 								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"

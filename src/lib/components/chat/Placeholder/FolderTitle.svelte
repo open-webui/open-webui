@@ -7,7 +7,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder } from '$lib/stores';
+	import { selectedFolder, user } from '$lib/stores';
 	import {
 		loadFolderDetails,
 		updateFolderDetails,
@@ -19,6 +19,7 @@
 	import { getChatsByFolderId } from '$lib/apis/chats';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
+	import FolderShareModal from '$lib/components/layout/Sidebar/Folders/FolderShareModal.svelte';
 
 	import FolderMenu from '$lib/components/layout/Sidebar/Folders/FolderMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
@@ -35,6 +36,7 @@
 
 	export let showFolderModal = false;
 	let showCreateSubFolderModal = false;
+	let showShareModal = false;
 	let showDeleteConfirm = false;
 	let deleteFolderContents = true;
 
@@ -161,6 +163,10 @@
 				onCreateSubFolder={() => {
 					showCreateSubFolderModal = true;
 				}}
+				onShare={$user?.role === 'admin' ||
+				(folder?.user_id === $user?.id && $user?.permissions?.sharing?.folders)
+					? () => (showShareModal = true)
+					: null}
 			>
 				<div
 					class="flex size-4 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
@@ -179,6 +185,8 @@
 		folderId={folder.id}
 		onSubmit={updateHandler}
 	/>
+
+	<FolderShareModal bind:show={showShareModal} {folder} />
 
 	<FolderModal
 		bind:show={showCreateSubFolderModal}
