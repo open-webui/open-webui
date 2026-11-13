@@ -269,6 +269,23 @@ export function hasChatViewDrafts() {
 	);
 }
 
+export function closePageTabs(href: string) {
+	for (const entry of entries.values()) {
+		const ids = entry.state.panels.tabs
+			.filter((tab) => {
+				const path = tab.kind === 'page' ? tab.href?.split(/[?#]/)[0] : undefined;
+				return path === href || path?.startsWith(`${href}/`);
+			})
+			.map((tab) => tab.id);
+		if (!ids.length) continue;
+		changeChatView(
+			entry,
+			{ ...entry.state, panels: ids.reduce(removeTab, entry.state.panels) },
+			true
+		);
+	}
+}
+
 export function clearChatViews() {
 	for (const entry of entries.values()) clearTimeout(entry.timer);
 	entries.clear();
