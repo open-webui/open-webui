@@ -2918,12 +2918,14 @@ class ChatTable:
             if dialect_name == 'sqlite':
                 source = "json_each(chat.meta, '$.tags')"
                 internal = "COALESCE(json_extract(chat.meta, '$.internal'), 0) != 1"
+                color = "json_extract(label.meta, '$.color')"
             else:
                 source = "json_array_elements_text(chat.meta->'tags')"
                 internal = "COALESCE((chat.meta->>'internal')::boolean, false) = false"
+                color = "label.meta->>'color'"
             query = text(f"""
                 SELECT tag.value AS id, MIN(COALESCE(label.name, tag.value)) AS name,
-                    COUNT(DISTINCT chat.id) AS count
+                    MIN({color}) AS color, COUNT(DISTINCT chat.id) AS count
                 FROM chat CROSS JOIN {source} tag
                 LEFT JOIN tag label ON label.id = tag.value AND label.user_id = chat.user_id
                 WHERE chat.folder_id = :folder_id AND chat.archived = false AND {internal}
