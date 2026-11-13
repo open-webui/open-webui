@@ -95,13 +95,10 @@
 
 	function resolveTerminal(): TerminalTarget | null {
 		if (!selector || $selectedTerminalId !== selector) return null;
-		return resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
-			localStorage.token,
-			{ chatId: chatId, modelId: item?.model_id ?? modelId }
-		);
+		return resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: item?.model_id ?? modelId
+		});
 	}
 
 	function clearPreview() {
@@ -176,9 +173,7 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal, path)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -197,9 +192,7 @@
 						await loadExcelSheet(excelSheetNames[0]);
 					}
 				} else if (ext === 'pptx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal, path)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {

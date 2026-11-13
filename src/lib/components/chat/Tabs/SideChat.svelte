@@ -100,7 +100,9 @@
 		prompt: draft,
 		files
 	};
-	$: title = draft.trim().slice(0, 100) || $i18n.t('New Chat');
+	let title = $i18n.t('New Chat');
+	// Sending clears the input before the chat is created.
+	$: if (draft || files.length) title = draft.trim().slice(0, 100) || $i18n.t('New Chat');
 
 	const createChat = async (chat: {
 		models: string[];

@@ -9,6 +9,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import UserSettingSection from '$lib/components/chat/Settings/UserSettingSection.svelte';
 	import UserSettingRow from '$lib/components/chat/Settings/UserSettingRow.svelte';
 	import UserSettingField from '$lib/components/chat/Settings/UserSettingField.svelte';
@@ -45,9 +46,8 @@
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
 	const connectionOf = (id: string) => id.slice('template:'.length, id.lastIndexOf(':'));
 
-	// '' is no scope: one machine for everyone with access.
+	// '' is no scope (switch off): one machine for everyone with access.
 	const scopes = [
-		{ value: '', label: 'None', hint: 'All chats share one machine.' },
 		{ value: 'user', label: 'User', hint: 'Each person gets their own machine.' },
 		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own machine.' },
 		{ value: 'model', label: 'Model', hint: 'Each model gets its own machine.' }
@@ -274,7 +274,7 @@
 		if (!terminalId || machine.status !== 'running') return null;
 		const context = machine.context ?? {};
 		if (context.user_id && context.user_id !== $user?.id) return null;
-		return resolveTerminalTarget(terminalId, $terminalServers ?? [], [], localStorage.token ?? '', {
+		return resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null
 		});
@@ -402,20 +402,42 @@
 					{/if}
 
 					<UserSettingRow
-						label={$i18n.t('Separate machine per')}
 						description={scopeLocked
 							? $i18n.t('Delete all machines to change this.')
-							: $i18n.t(scopes.find((option) => option.value === scope)?.hint ?? '')}
+							: $i18n.t(
+									scopes.find((option) => option.value === scope)?.hint ??
+										'All chats share one machine.'
+								)}
+						let:labelId
 					>
-						<SettingsSelect
-							bind:value={scope}
-							ariaLabel={$i18n.t('Separate machine per')}
-							disabled={scopeLocked || busy}
-						>
-							{#each scopes as option}
-								<option value={option.value}>{$i18n.t(option.label)}</option>
-							{/each}
-						</SettingsSelect>
+						<ModelSettingsLabel
+							slot="label"
+							label={$i18n.t('Separate machines')}
+							description={$i18n.t(
+								'Give each person, chat, or model its own machine, with its own files and running programs. When off, everyone with access shares one machine.'
+							)}
+						/>
+						<div class="flex items-center gap-2">
+							{#if scope}
+								<span class="-me-1 text-xs text-gray-400 dark:text-gray-500">{$i18n.t('per')}</span>
+								<SettingsSelect
+									bind:value={scope}
+									ariaLabel={$i18n.t('Separate machine per')}
+									disabled={scopeLocked || busy}
+									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-gray-900 dark:!bg-transparent dark:focus-visible:text-white"
+								>
+									{#each scopes as option}
+										<option value={option.value}>{$i18n.t(option.label)}</option>
+									{/each}
+								</SettingsSelect>
+							{/if}
+							<Switch
+								ariaLabelledbyId={labelId}
+								state={!!scope}
+								disabled={scopeLocked || busy}
+								on:change={(e) => (scope = e.detail ? 'user' : '')}
+							/>
+						</div>
 					</UserSettingRow>
 				</UserSettingSection>
 

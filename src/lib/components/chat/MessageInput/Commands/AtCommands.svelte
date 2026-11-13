@@ -155,11 +155,14 @@
 		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
-			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
 			localStorage.token,
 			{ chatId: $activeChatId || null, modelId: modelId }
 		);
-		if (($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope === 'chat' && ($temporaryChatEnabled || isTemporaryChatId($activeChatId)))
+		if (
+			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope ===
+				'chat' &&
+			($temporaryChatEnabled || isTemporaryChatId($activeChatId))
+		)
 			return null;
 		return target;
 	};

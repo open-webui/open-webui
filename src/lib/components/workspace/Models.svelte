@@ -196,14 +196,7 @@
 		}
 
 		try {
-			_models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			_models.set(await getModels(localStorage.token));
 		} catch (error: any) {
 			toast.error(`${error?.detail ?? error}`);
 		}
@@ -264,12 +257,7 @@
 			getModelList();
 		}
 
-		await _models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		await _models.set(await getModels(localStorage.token));
 	};
 
 	const getFullModel = async (model: any) =>
@@ -331,12 +319,7 @@
 			await getModelList();
 		}
 
-		await _models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		await _models.set(await getModels(localStorage.token));
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -583,12 +566,7 @@
 						return;
 					}
 
-					await _models.set(
-						await getModels(
-							localStorage.token,
-							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-						)
-					);
+					await _models.set(await getModels(localStorage.token));
 
 					page = 1;
 					getModelList();

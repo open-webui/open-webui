@@ -111,12 +111,7 @@
 	};
 
 	const refreshGlobalModels = async () => {
-		await models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+		await models.set(await getModels(localStorage.token));
 	};
 
 	const runModelAction = async (

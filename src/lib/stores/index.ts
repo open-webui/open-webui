@@ -106,7 +106,6 @@ export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
-export const toolServers = writable([]);
 export const terminalServers: Writable<any[] | null> = writable(null);
 
 // Persistent Pyodide worker for code interpreter FS
@@ -234,6 +233,9 @@ export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
 	external: boolean;
 	source?: string;
+	// Set on the user's own connections, which the server reaches through their Tether.
+	owner_id?: string;
+	base_url?: string;
 }
 
 export interface OllamaModel extends BaseModel {
@@ -273,7 +275,6 @@ type OllamaModelDetails = {
 
 type Settings = {
 	pinnedModels?: string[];
-	toolServers?: never[];
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
@@ -315,7 +316,6 @@ type Settings = {
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
 	terminalFileDisplay?: 'sidebar' | 'inline';
-	directConnections?: null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -445,13 +445,13 @@ type Config = {
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
 		enable_terminal_servers?: boolean;
+		// The user's own terminals, models and tool servers come from their Tether.
+		tether?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_title_generation: boolean;
 		enable_follow_up_generation: boolean;
 		enable_tags_generation: boolean;
-		enable_direct_connections: boolean;
-		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;
 		enable_pyodide_file_persistence?: boolean;
 		folder_max_file_count?: number;

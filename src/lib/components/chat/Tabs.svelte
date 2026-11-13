@@ -87,7 +87,9 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import Icon from './FileNav/Icon.svelte';
+	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
 	import HomeIcon from '$lib/components/icons/Home.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
@@ -141,6 +143,7 @@
 	export let onAskFile:
 		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
 		| null = null;
+	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let stopResponse: Function = () => {};
 	export let showMessage: Function = () => {};
 	export let files: any[] = [];
@@ -158,6 +161,8 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
+	export let mainTabFolder: { id: string; name: string; icon?: string | null } | null = null;
+	$: mainTabTitle = mainTabFolder?.name ?? title;
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
@@ -180,6 +185,7 @@
 		if (group?.activeId && tabs.activeGroupId !== id) tabs = activateTab(tabs, group.activeId);
 	};
 	let terminalViews: Record<string, XTerminal> = {};
+	let terminalTitles: Record<string, string> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
@@ -285,6 +291,7 @@
 		viewReady = false;
 		tabs = emptyTabs();
 		viewError = '';
+		terminalTitles = {};
 		sideChatStreaming = {};
 		sideTabTitleEditors = {};
 		sideTabActions = {};
@@ -296,7 +303,7 @@
 			if (version !== switchVersion) return;
 			// The chat restores its terminal and directory together; layouts must not override them.
 			owner.state.selectedTerminalId = $selectedTerminalId;
-			owner.state.panels = setMainChatTab(owner.state.panels, true, title);
+			owner.state.panels = setMainChatTab(owner.state.panels, true, mainTabTitle);
 			tabs = owner.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};
@@ -367,7 +374,6 @@
 		const target = resolveTerminalTarget(
 			tab.terminalId,
 			$terminalServers ?? [],
-			directTerminals,
 			localStorage.token ?? '',
 			tab.target?.context ?? { chatId, modelId: modelId ?? null }
 		);
@@ -549,13 +555,10 @@
 		if (tab.terminalId) {
 			const target =
 				tab.target ??
-				resolveTerminalTarget(
-					tab.terminalId,
-					$terminalServers ?? [],
-					directTerminals,
-					localStorage.token,
-					{ chatId: chatId, modelId: modelId ?? null }
-				);
+				resolveTerminalTarget(tab.terminalId, $terminalServers ?? [], localStorage.token, {
+					chatId: chatId,
+					modelId: modelId ?? null
+				});
 			tab = { ...tab, target: target ?? undefined };
 		}
 		tabs = inSidePanel ? openTabInSidePanel(tabs, tab, besideId) : openTab(tabs, tab);
@@ -569,16 +572,20 @@
 			id: `${chat ? 'side' : 'page'}:${uuidv4()}`,
 			kind: chat ? 'side' : 'page',
 			href: url.pathname + url.search + url.hash,
-			chatId: url.pathname.startsWith('/c/') ? decodeURIComponent(url.pathname.slice(3)) : undefined,
-			initialPrompt: chat ? url.searchParams.get('q') ?? '' : undefined,
+			chatId: url.pathname.startsWith('/c/')
+				? decodeURIComponent(url.pathname.slice(3))
+				: undefined,
+			initialPrompt: chat ? (url.searchParams.get('q') ?? '') : undefined,
 			label: request.label || $i18n.t(chat ? 'Chat' : 'Loading...')
 		};
 	};
-	const findPageTab = (url: URL) => tabs.tabs.find((tab) =>
-		(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
-		(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
-		(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
-	);
+	const findPageTab = (url: URL) =>
+		tabs.tabs.find(
+			(tab) =>
+				(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
+				(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
+				(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
+		);
 	export const openPageTab = (request: { href: string; label: string }) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
@@ -598,7 +605,7 @@
 		} else openPanel(createPageTab(request));
 	};
 	const navigatePageTab = async (id: string, href: string) => {
-		if (!(await pageViews[id]?.requestClose() ?? true)) return;
+		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
 			openPageTab({ href, label: '' });
@@ -621,13 +628,10 @@
 		if (!selector && !showFilesTab)
 			return askForTerminal(() => openFiles($selectedTerminalId, directory, newTab, sourceModelId));
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
-		const target = resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			directTerminals,
-			localStorage.token,
-			{ chatId: chatId, modelId: sourceModelId ?? null }
-		);
+		const target = resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: sourceModelId ?? null
+		});
 		const pinnedModel = target?.context.modelId ?? null;
 		const existing = newTab
 			? undefined
@@ -670,13 +674,10 @@
 		sourceModelId = modelId
 	) => {
 		if (!terminalAccessible(selector)) return;
-		const target = resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			directTerminals,
-			localStorage.token,
-			{ chatId: chatId, modelId: sourceModelId ?? null }
-		);
+		const target = resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: sourceModelId ?? null
+		});
 		const pinnedModel = target?.context.modelId ?? null;
 		path = path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 		const id =
@@ -711,17 +712,11 @@
 			target: { ...selectedTarget },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedTarget.selector
-					? activeFileContext
-					: undefined
+				activeFileContext?.terminalId === selectedTarget.selector ? activeFileContext : undefined
 		});
 	};
 	/** Opens the artifacts tab of the chat in `sourceTabId` beside that chat. */
-	export const openArtifacts = (
-		code?: string,
-		sourceTabId = mainChatTabId,
-		inSidePanel = true
-	) => {
+	export const openArtifacts = (code?: string, sourceTabId = mainChatTabId, inSidePanel = true) => {
 		if (!$visibleControls['chat.artifacts']) return;
 		if (sourceTabId === mainChatTabId && !viewReady) {
 			// the chat's messages can render before its tabs are restored
@@ -791,10 +786,12 @@
 		const internal =
 			!!draggedTabId || event.dataTransfer?.types.includes('application/x-chat-panel-tab');
 		if (
-			(!internal && !canDropChat(event) &&
+			(!internal &&
+				!canDropChat(event) &&
 				!event.dataTransfer?.types.includes('application/x-open-webui-page')) ||
 			!(event.target instanceof Element)
-		) return null;
+		)
+			return null;
 		if (!internal && event.target.closest('[data-composer-id]')) return null;
 		const group = event.target.closest<HTMLElement>('[data-panel-group]');
 		const panel = event.target.closest('#controls-container');
@@ -852,8 +849,8 @@
 			event.dataTransfer!.dropEffect =
 				event.dataTransfer!.effectAllowed === 'move' ||
 				event.dataTransfer!.types.includes('application/x-chat-panel-tab')
-				? 'move'
-				: 'copy';
+					? 'move'
+					: 'copy';
 	};
 	export const leaveChatDrop = (event: DragEvent) => {
 		if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node))
@@ -862,7 +859,14 @@
 	export const dropChat = (event: DragEvent) => {
 		const bounds = chatDropBounds(event);
 		clearChatDropPreview();
-		if (event.dataTransfer?.types.includes('Files')) event.preventDefault();
+		if (
+			event.dataTransfer?.types.includes('Files') &&
+			!(
+				event.target instanceof Element &&
+				event.target.closest('[id="note-content-container"] [contenteditable="true"]')
+			)
+		)
+			event.preventDefault();
 		if (!bounds || pendingTabDrop) return;
 		const internalId = event.dataTransfer?.getData('application/x-chat-panel-tab');
 		let savedId = '';
@@ -894,7 +898,8 @@
 		event.preventDefault();
 		const applyDrop = () => {
 			const groupId = bounds.groupId;
-			if (!droppedPage && savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
+			if (!droppedPage && savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId))
+				return;
 			const existing =
 				internalId ||
 				(droppedPage
@@ -906,7 +911,10 @@
 			if (!id) {
 				focusGroup(groupId);
 				id = droppedPage?.id ?? uuidv4();
-				tabs = openTab(tabs, droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId });
+				tabs = openTab(
+					tabs,
+					droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId }
+				);
 			}
 			tabs = bounds.edge
 				? splitTab(tabs, id, groupId, bounds.edge)
@@ -973,6 +981,12 @@
 			target: { ...selectedTarget }
 		});
 	};
+	const browserBaseUrl = (target: TerminalTarget) => {
+		const terminal = ($terminalServers ?? []).find((item) => item.id === target.selector);
+		return chatContextNeedsSavedChat(terminal) && target.context.chatId
+			? `${target.baseUrl}/chats/${encodeURIComponent(target.context.chatId)}`
+			: target.baseUrl;
+	};
 	const openBrowser = (
 		port?: number,
 		selector = $selectedTerminalId,
@@ -997,13 +1011,10 @@
 			return;
 		}
 		const target = selector
-			? resolveTerminalTarget(
-					selector,
-					$terminalServers ?? [],
-					directTerminals,
-					localStorage.token ?? '',
-					{ chatId: chatId, modelId: modelId ?? null }
-				)
+			? resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token ?? '', {
+					chatId: chatId,
+					modelId: modelId ?? null
+				})
 			: null;
 		if (!target) return;
 		const terminal = ($terminalServers ?? []).find((item) => item.id === selector);
@@ -1034,7 +1045,7 @@
 			await owner.pending.get(id);
 			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
-			if (tab.kind === 'page' && !(await pageViews[id]?.requestClose() ?? true)) return;
+			if (tab.kind === 'page' && !((await pageViews[id]?.requestClose()) ?? true)) return;
 			const target =
 				tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')
 					? tabTarget(tab)
@@ -1224,8 +1235,8 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	const chatContextNeedsSavedChat = (terminal: any) => terminal?.scope === 'chat';
-	$: selectedSystemTerminal = ($terminalServers ?? []).find((t) =>
-		(!!$selectedTerminalId && t.id === $selectedTerminalId)
+	$: selectedSystemTerminal = ($terminalServers ?? []).find(
+		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
 	);
 	$: selectedSystemTerminalAvailable =
 		selectedSystemTerminal &&
@@ -1233,10 +1244,7 @@
 	$: terminalFilesAvailable = !!(
 		$config?.features?.enable_tool_servers &&
 		$selectedTerminalId &&
-		(selectedSystemTerminalAvailable ||
-			(!selectedSystemTerminal &&
-				$config?.features?.enable_direct_integrations &&
-				($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))))
+		selectedSystemTerminalAvailable
 	);
 	$: showFilesTab =
 		terminalFilesAvailable ||
@@ -1284,6 +1292,7 @@
 			: null;
 	// A side chat's artifacts tab names the chat it belongs to.
 	$: tabLabel = (tab: PanelTab) => {
+		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		const source =
 			tab.kind === 'artifacts' && tab.sourceTabId !== mainChatTabId
 				? tabs.tabs.find((item) => item.id === tab.sourceTabId)
@@ -1309,7 +1318,7 @@
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
 	$: canOpenNewTab =
-		showFilesTab || terminalFilesAvailable || canSelectTerminal || newTabViews.length > 0;
+		showFilesTab || terminalFilesAvailable || canSelectTerminal || newTabViews.length > 0 || hasMessages;
 
 	const quickSplit = () => {
 		if (tabs.tabs.length < 2) {
@@ -1400,28 +1409,18 @@
 		action();
 	};
 
-	$: directTerminals =
-		($settings as { terminalServers?: { url: string; key?: string; name?: string }[] })
-			?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
 		if (!$config?.features?.enable_tool_servers) return false;
-		const system = ($terminalServers ?? []).find((terminal) => (!!selector && terminal.id === selector));
-		if (system)
-			return (
-				!(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId))
-			);
-		return !!(
-			$config?.features?.enable_direct_integrations &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true)) &&
-			directTerminals.some((terminal) => terminal.url === selector)
+		const system = ($terminalServers ?? []).find(
+			(terminal) => !!selector && terminal.id === selector
 		);
+		return !!system && !(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId));
 	};
 	$: selectedTarget =
 		terminalFilesAvailable && mounted
 			? resolveTerminalTarget(
 					$selectedTerminalId,
 					$terminalServers ?? [],
-					directTerminals,
 					localStorage.token ?? '',
 					{ chatId: chatId, modelId: modelId ?? null }
 				)
@@ -1430,16 +1429,6 @@
 	let availableTerminals: TerminalOption[] = [];
 	$: availableTerminals = $config?.features?.enable_tool_servers
 		? [
-				...($config?.features?.enable_direct_integrations &&
-				($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-					? directTerminals
-							.filter((terminal) => terminal.url)
-							.map((terminal) => ({
-								id: terminal.url,
-								label: terminal.name || terminal.url.replace(/^https?:\/\//, ''),
-								device: false
-							}))
-					: []),
 				...($terminalServers ?? [])
 					.filter(
 						(terminal) =>
@@ -1583,19 +1572,6 @@
 		showOverview.set(false);
 	});
 
-	// Clear selected direct terminal if user lost permission
-	$: if (
-		$selectedTerminalId &&
-		$terminalServers !== null &&
-		!($terminalServers ?? []).some((t) => (!!$selectedTerminalId && t.id === $selectedTerminalId)) &&
-		!(
-			$config?.features?.enable_direct_integrations &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-		)
-	) {
-		selectedTerminalId.set(null);
-	}
-
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
 		if (panelTarget && largeScreen !== event.matches) releasePanel(panelTarget);
 		largeScreen = event.matches;
@@ -1664,11 +1640,16 @@
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
 	$: if (mounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
-		const href = active?.kind === 'page'
-			? active.href
-			: active?.kind === 'chat'
-				? mainChatHref
-				: active?.kind === 'side' ? (active.chatId ? `/c/${active.chatId}` : active.href) : null;
+		const href =
+			active?.kind === 'page'
+				? active.href
+				: active?.kind === 'chat'
+					? mainChatHref
+					: active?.kind === 'side'
+						? active.chatId
+							? `/c/${active.chatId}`
+							: active.href
+						: null;
 		if (href) {
 			const url = new URL(href, location.origin);
 			if (active?.kind === 'chat' && !chatId) {
@@ -1690,7 +1671,6 @@
 			: '';
 </script>
 
-
 <ConfirmDialog
 	show={!!stopTerminalChoice}
 	title={$i18n.t('Stop terminal?')}
@@ -1710,11 +1690,13 @@
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
-		? `${activeTab.label} / ${$WEBUI_NAME}`
-		: $settings.showChatTitleInTab !== false && chatId && title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
-			: $WEBUI_NAME}</title>
+	<title
+		>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
+			? `${activeTab.label} / ${$WEBUI_NAME}`
+			: $settings.showChatTitleInTab !== false && chatId && title
+				? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
+				: $WEBUI_NAME}</title
+	>
 </svelte:head>
 
 <svelte:window
@@ -2006,10 +1988,14 @@
 								chatId: chat.id,
 								...(chat.title ? { label: chat.title } : {})
 							})}
-						parentChatId={tab.sideChat ? owner.chatId ?? '' : ''}
+						parentChatId={tab.sideChat ? (owner.chatId ?? '') : ''}
 						parentFolderId={tab.href ? null : folderId}
 						{history}
-						modelId={tab.href ? new URL(tab.href, location.origin).searchParams.get('models') ?? new URL(tab.href, location.origin).searchParams.get('model') ?? modelId : modelId}
+						modelId={tab.href
+							? (new URL(tab.href, location.origin).searchParams.get('models') ??
+								new URL(tab.href, location.origin).searchParams.get('model') ??
+								modelId)
+							: modelId}
 						{systemPrompt}
 						initialPrompt={tab.initialPrompt ?? ''}
 					/>
@@ -2077,6 +2063,9 @@
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
+									onTitleChange={(title) => {
+										if (owner === viewEntry) terminalTitles[tab.sessionId!] = title.trim();
+									}}
 									onUnavailable={(message, status) => {
 										if (owner === viewEntry)
 											sessionFailures = { ...sessionFailures, [tab.id]: { message, status } };
@@ -2085,6 +2074,7 @@
 							{:else}
 								<Browser
 									bind:this={browserViews[tab.id]}
+									baseUrl={browserBaseUrl(target!)}
 									{target}
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
@@ -2202,6 +2192,7 @@
 									openFile(path, tab.terminalId!, null, fileTarget?.context.modelId)}
 								onOpenDirectory={(path) =>
 									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
+								{onDraftPrompt}
 							/>
 						{/if}
 					</div>
@@ -2210,10 +2201,11 @@
 				{/if}
 			</div>
 		{/each}
-		{#if viewReady && !chatLoading && !viewError && !tabs.tabs.length && canOpenNewTab}<div
-				class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
+		<!-- The mobile drawer hides the main chat tab, so count what it actually shows. -->
+		{#if viewReady && !chatLoading && !viewError && !displayTabs.tabs.length && (canOpenNewTab || !largeScreen)}<div
+				class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
 			>
-				{$i18n.t('Open a tab using the + menu.')}
+				{canOpenNewTab ? $i18n.t('Open a tab using the + menu.') : $i18n.t('No open tabs')}
 			</div>{/if}
 	</div>
 </div>
@@ -2273,13 +2265,19 @@
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.kind === 'chat' ? title : (tab.directory ?? tab.path ?? tabLabel(tab))}
-							aria-label={tab.kind === 'chat' ? title : undefined}
+							title={tab.kind === 'chat' ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
+							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 						>
 							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
 								<Spinner className="size-3.5" />
 								<span class="sr-only">{$i18n.t('Generating...')}</span>
+							{:else if tab.kind === 'chat' && mainTabFolder}
+								{#if mainTabFolder.icon}
+									<Emoji shortCode={mainTabFolder.icon} className="size-3.5" />
+								{:else}
+									<Icon name="folder" size={14} />
+								{/if}
 							{:else if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'comments'}
@@ -2289,9 +2287,9 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if !titleEditor}
+							{#if !titleEditor || (tab.kind === 'chat' && mainTabFolder)}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
-									>{tab.kind === 'chat' ? title : tabLabel(tab)}</span
+									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
 							{/if}
 							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
@@ -2303,7 +2301,7 @@
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.kind === 'chat'}
-							{@render tabTitleEditor?.()}
+							{#if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
 						{:else}{@render titleEditor?.()}{@render sideTabActions[tab.id]?.()}<button
 								type="button"
@@ -2349,6 +2347,13 @@
 										>{$i18n.t('New Terminal')}</span
 									><HotkeyHint name="newTerminal" className="ms-auto" /></button
 								>{/if}
+							{#if canVoiceNote || canSelectTerminal}
+								<button on:click={openVoiceNote}>
+									<Icon name="microphone" size={14} />
+									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
+									<HotkeyHint name="voiceNote" className="ms-auto" />
+								</button>
+							{/if}
 							{#if browserEnabled || canSelectTerminal}<button on:click={() => openBrowser()}
 									><Icon name="browser" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Browser')}</span
@@ -2359,14 +2364,7 @@
 										>{$i18n.t('Desktop')}</span
 									><HotkeyHint name="openDesktop" className="ms-auto" /></button
 								>{/if}
-							{#if canVoiceNote || canSelectTerminal}
-								<button on:click={openVoiceNote}>
-									<Icon name="microphone" size={14} />
-									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
-									<HotkeyHint name="voiceNote" className="ms-auto" />
-								</button>
-							{/if}
-							{#each newTabViews as view}
+							{#each newTabViews.filter((view) => view.kind !== 'artifacts') as view}
 								<button
 									on:click={() =>
 										openFeature(
@@ -2385,6 +2383,18 @@
 									{/if}
 								</button>
 							{/each}
+							{#if hasMessages}
+								<button aria-haspopup="dialog" on:click={() => showOverview.set(true)}>
+									<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
+									<span class="flex-1 text-start">{$i18n.t('Overview')}</span>
+								</button>
+							{/if}
+							{#if showArtifactsTab}
+								<button on:click={() => openFeature('artifacts')}>
+									<Icon name={tabIcon('artifacts')} size={14} />
+									<span class="flex-1 text-start">{$i18n.t('Artifacts')}</span>
+								</button>
+							{/if}
 						</DropdownMenu>
 					</div>
 				</Dropdown>

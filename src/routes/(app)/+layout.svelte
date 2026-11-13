@@ -7,7 +7,7 @@
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getBackendConfig, getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
+	import { getBackendConfig, getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -34,7 +34,6 @@
 		showSettings,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers,
 		terminalServers,
 		selectedTerminalId,
 		showSearch,
@@ -92,93 +91,25 @@
 	};
 
 	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
 	const refreshTerminalServers = async () => {
+		if (!$config?.features?.enable_tool_servers) {
+			terminalServers.set([]);
+			return;
+		}
 		const userId = $user?.id;
 		if (!userId || !localStorage.token) return;
 		const systemTerminals = await getTerminalServers(localStorage.token);
 		if ($user?.id !== userId || !$config?.features?.enable_tool_servers) return;
-		terminalServers.update((servers) => [
-			...(servers ?? []).filter((server) => !server.id),
-			...systemTerminals.map((terminal) => ({
+		terminalServers.set(
+			systemTerminals.map((terminal) => ({
 				...terminal,
 				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
 				key: localStorage.token
 			}))
-		]);
-	};
-
-	const setToolServers = async () => {
-		if (!$config?.features?.enable_tool_servers) {
-			toolServers.set([]);
-			terminalServers.set([]);
-			return;
-		}
-		let toolServersData = await getToolServersData(
-			$config?.features?.enable_direct_integrations ? ($settings?.toolServers ?? []) : []
 		);
-		toolServersData = toolServersData.filter((data) => {
-			if (!data || data.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-						URL: data?.url
-					})
-				);
-				return false;
-			}
-			return true;
-		});
-		toolServers.set(toolServersData);
-
-		// Inject enabled terminal servers as always-on tool servers
-		const enabledTerminals = (
-			$config?.features?.enable_direct_integrations
-				? (($settings as any)?.terminalServers ?? [])
-				: []
-		).filter((s: any) => s.enabled || s.url === $selectedTerminalId);
-
-		const directTerminals =
-			enabledTerminals.length > 0
-				? (
-						await getToolServersData(
-							enabledTerminals.map((t: any) => ({
-								url: t.url,
-								auth_type: t.auth_type ?? 'bearer',
-								key: t.key ?? '',
-								path: t.path ?? '/openapi.json',
-								config: { enable: true }
-							}))
-						)
-					)
-						.filter((data) => {
-							if (!data || data.error) {
-								toast.error(
-									$i18n.t(`Failed to connect to {{URL}} terminal server`, {
-										URL: data?.url
-									})
-								);
-								return false;
-							}
-							return true;
-						})
-						.map((data, i) => ({
-							...data,
-							key: enabledTerminals[i]?.key ?? '',
-							config: enabledTerminals[i]?.config ?? data?.config ?? {}
-						}))
-				: [];
-		terminalServers.update((servers) => [
-			...directTerminals,
-			...(servers ?? []).filter((server) => server.id)
-		]);
-		await refreshTerminalServers();
 	};
 
 	const setBanners = async () => {
@@ -199,7 +130,7 @@
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
-				setToolServers(),
+				refreshTerminalServers(),
 				getSkills(localStorage.token).then((value) => skills.set(value))
 			]);
 			for (const result of results) {
@@ -218,8 +149,12 @@
 			);
 		};
 		const eventHandler = (event: { data?: { type?: string } }) => {
-			if (event?.data?.type === 'terminals:changed') changed();
-			else if (event?.data?.type === 'access:updated') void refreshAccess();
+			if (event?.data?.type === 'terminals:changed') {
+				changed();
+				// Tether devices also bring the user's own models and tool servers.
+				void setModels().catch((error) => console.error('Unable to refresh models', error));
+				void setTools().catch((error) => console.error('Unable to refresh tools', error));
+			} else if (event?.data?.type === 'access:updated') void refreshAccess();
 		};
 		socketInstance?.on('events', eventHandler);
 		socketInstance?.on('connect', changed);
@@ -316,13 +251,15 @@
 			return;
 		}
 
-		selectedTerminalId.set(
-			$config?.features?.enable_tool_servers ? (localStorage.selectedTerminalId ?? null) : null
-		);
-
-		setToolServers().catch((e) => {
-			console.error('Failed to load tool servers:', e);
+		await refreshTerminalServers().catch((e) => {
+			console.error('Failed to load terminals:', e);
 		});
+		selectedTerminalId.set(
+			$config?.features?.enable_tool_servers &&
+				$terminalServers?.some((terminal) => terminal.id === localStorage.selectedTerminalId)
+				? localStorage.selectedTerminalId
+				: null
+		);
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
@@ -342,7 +279,11 @@
 				} else if (shortcut === Shortcut.FOCUS_INPUT) {
 					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					chatInput()?.focus();
+					(
+						chatElements('[data-composer-id]')
+							.map((el) => document.getElementById(el.dataset.composerId ?? ''))
+							.find((el) => el?.offsetParent) ?? chatInput()
+					)?.focus();
 				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
@@ -485,6 +426,15 @@
 
 		loaded = true;
 	});
+
+	$: if (
+		loaded &&
+		$selectedTerminalId &&
+		$terminalServers !== null &&
+		!$terminalServers.some((terminal) => terminal.id === $selectedTerminalId)
+	) {
+		selectedTerminalId.set(null);
+	}
 
 	// `$page.url` must be referenced here: `$:` only tracks variables used in
 	// the statement itself, and reads inside openSettingsFromUrl don't count —

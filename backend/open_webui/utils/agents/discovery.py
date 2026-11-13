@@ -1,7 +1,8 @@
 """Models exposed by the selected Open Terminal environment."""
 
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
+from open_webui.utils.agents.session import model_id
 from open_webui.utils.terminals import MissingTerminalContext, get_terminal_json
 
 
@@ -51,7 +52,7 @@ async def get_models(request, user, metadata, *, provider=None, cwd=None):
         return []
     models = [
         {
-            'id': f'agent:{quote(terminal_id, safe="")}:{agent["id"]}:{quote(model["id"], safe="")}',
+            'id': model_id({'terminal_id': terminal_id, 'provider': agent['id'], 'model': model['id']}),
             'name': f'{agent["id"]}/{model["id"]}',
             'owned_by': 'terminal',
             'object': 'model',
