@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.13.4] - 2026-11-13
+## [0.13.4] - 2026-11-14
 
 ### Added
 
@@ -68,6 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ↗️ **Ports open in new tabs.** The Open in new tab button beside a port on the start page of a Browser tab now opens the server running on that port instead of a "404: Not Found" page. [#34120](https://github.com/open-webui/open-webui/pull/34120), [#34108](https://github.com/open-webui/open-webui/issues/34108)
 - 🎚️ **Steadier menu placement.** Menus that open above their button, such as Model controls and the + menu of the message input, now grow upward when their content changes instead of briefly covering the message input, and right-aligned menus in Firefox no longer creep sideways while they open. [#34052](https://github.com/open-webui/open-webui/pull/34052), [#34051](https://github.com/open-webui/open-webui/issues/34051), [#34227](https://github.com/open-webui/open-webui/pull/34227), [#34226](https://github.com/open-webui/open-webui/issues/34226)
 - 📄 **Folder page kept.** Opening a chat in another browser tab no longer sends a folder's chat list back to page 1. [#34145](https://github.com/open-webui/open-webui/pull/34145), [#34142](https://github.com/open-webui/open-webui/issues/34142)
+- ✅ **Mark folder chats read.** Mark all as read in the menu on a folder page now marks the folder's chats as read instead of doing nothing. [#34404](https://github.com/open-webui/open-webui/pull/34404), [#34403](https://github.com/open-webui/open-webui/issues/34403)
 - 🫥 **Hover preview behind menus.** A chat's hover preview in the sidebar no longer opens on top of another chat's open menu and covers its items. [#34231](https://github.com/open-webui/open-webui/pull/34231), [#34230](https://github.com/open-webui/open-webui/issues/34230)
 - 🫧 **Hover preview without bubbles.** With Chat Bubble UI turned off, your messages in a chat's hover preview now show as padded bubbles instead of text squeezed onto a grey block. [#34347](https://github.com/open-webui/open-webui/issues/34347)
 - 🔢 **Steady Tools count.** The count on the Tools tab of the workspace no longer drops to 0 for a moment when the Tools page opens. [#34236](https://github.com/open-webui/open-webui/pull/34236)
