@@ -419,7 +419,8 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
     )
 
     try:
-        body = request.stream()
+        has_body = 'content-length' in request.headers or 'transfer-encoding' in request.headers
+        body = request.stream() if has_body else None
 
         upstream_response = await session.request(
             method=request.method,
