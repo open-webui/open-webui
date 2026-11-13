@@ -327,3 +327,28 @@ export const getAutomationRuns = async (
 
 	return res;
 };
+
+/** An automation listed in a folder, with what the viewer may do with it. */
+export type FolderAutomation = AutomationResponse & {
+	user_name: string;
+	can_edit: boolean;
+	can_manage: boolean;
+};
+
+export const getFolderAutomations = async (
+	token: string,
+	folderId: string
+): Promise<FolderAutomation[]> => {
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/folders/${encodeURIComponent(folderId)}/automations`,
+		{
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	);
+	if (!res.ok) throw (await res.json().catch(() => ({})))?.detail ?? res.statusText;
+	return res.json();
+};

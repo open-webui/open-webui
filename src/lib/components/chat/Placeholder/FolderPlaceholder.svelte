@@ -46,7 +46,11 @@
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import FolderAutomations from './FolderAutomations.svelte';
+	import { getFolderAutomations, type FolderAutomation } from '$lib/apis/automations';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import TagIcon from '$lib/components/icons/Tag.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -60,6 +64,30 @@
 
 	export let folder: FolderDetails | null = null;
 	export let readOnly = false;
+	/** Which part of the folder is showing: its chats or its automations. */
+	export let folderSection: 'chats' | 'automations' = 'chats';
+	let automations: FolderAutomation[] = [];
+	let automationsLoading = false;
+	let automationsView: FolderAutomations;
+
+	async function loadAutomations() {
+		const id = folder?.id;
+		if (!id) return;
+		automationsLoading = true;
+		try {
+			const next = await getFolderAutomations(localStorage.token, id);
+			if (folder?.id === id) automations = next;
+		} catch (error) {
+			if (folder?.id === id) automations = [];
+		} finally {
+			automationsLoading = false;
+		}
+	}
+
+	function showSection(next: 'chats' | 'automations') {
+		folderSection = next;
+		if (next === 'automations') void loadAutomations();
+	}
 	export let onNewChat: () => void = () => {};
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 
@@ -733,6 +761,7 @@
 			document.querySelector('[aria-modal="true"]')
 		)
 			return;
+		if (folderSection !== 'chats' && (event.key === '/' || event.key === 'f')) return;
 		if (event.key === '/') {
 			event.preventDefault();
 			void openSearch();
@@ -807,8 +836,11 @@
 		optionsReady = false;
 		optionsError = '';
 		clearTimeout(timer);
+		folderSection = 'chats';
+		automations = [];
 		void loadOptions();
 		void load(true);
+		void loadAutomations();
 	}
 
 	// Backstop: tag groups that appear later (e.g. a tag created while open) get their chats.
@@ -981,266 +1013,328 @@
 				className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
 				strokeWidth="2"
 			/>
-			<span class="shrink-0">{$i18n.t('Chats')}</span>
-			{#if loading && hasData}
-				<Spinner className="size-3 opacity-60" />
-			{:else if hasData && !error}
-				<span class="text-sm opacity-60">{formatNumber(total)}</span>
-			{/if}
+			<Dropdown align="start" closeOnSelect>
+				<button
+					type="button"
+					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
+					aria-label={$i18n.t('Switch section')}
+				>
+					{#if folderSection === 'automations'}
+						<span>{$i18n.t('Automations')}</span>
+						{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
+							>{/if}
+					{:else}
+						<span>{$i18n.t('Chats')}</span>
+						{#if loading && hasData}
+							<Spinner className="size-3 opacity-60" />
+						{:else if hasData && !error}
+							<span class="text-sm opacity-60">{formatNumber(total)}</span>
+						{/if}
+					{/if}
+					<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
+				</button>
+				<DropdownMenu slot="content" className="w-44">
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked={folderSection === 'chats'}
+						on:click={() => showSection('chats')}
+					>
+						<Icon name="chat-bubble" size={14} />
+						<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
+						{#if hasData}<span class="text-xs tabular-nums text-gray-400"
+								>{formatNumber(total)}</span
+							>{/if}
+						{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
+					</button>
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked={folderSection === 'automations'}
+						on:click={() => showSection('automations')}
+					>
+						<Icon name="clock" size={14} />
+						<span class="flex-1 text-left">{$i18n.t('Automations')}</span>
+						{#if automations.length}<span class="text-xs tabular-nums text-gray-400"
+								>{automations.length}</span
+							>{/if}
+						{#if folderSection === 'automations'}<Check className="size-3! shrink-0" />{/if}
+					</button>
+				</DropdownMenu>
+			</Dropdown>
 		</h2>
 
 		<div class="ml-auto flex items-center gap-1">
-			{#if searchOpen || search}
-				<div
-					class="flex h-6.5 w-40 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50/60 px-2 text-gray-400 @lg:w-52 dark:border-gray-850 dark:bg-gray-850/50 dark:text-gray-500"
-				>
-					<Icon name="search" size={13} />
-					<input
-						bind:this={searchInput}
-						class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
-						aria-label={$i18n.t('Search this folder')}
-						title={$i18n.t('Search conversation titles and messages')}
-						placeholder={$i18n.t('Search…')}
-						maxlength="256"
-						bind:value={search}
-						on:input={searchChanged}
-						on:blur={() => {
-							if (!search) searchOpen = false;
-						}}
-						on:keydown={(event) => {
-							if (event.key === 'Enter') apply();
-							if (event.key === 'Escape') {
-								search = '';
-								apply();
-								searchOpen = false;
-								searchInput.blur();
-							}
-						}}
-					/>
-					{#if search}
-						<button
-							type="button"
-							class="flex size-4 shrink-0 items-center justify-center rounded-full hover:text-gray-700 dark:hover:text-gray-200"
-							aria-label={$i18n.t('Clear search')}
-							on:mousedown|preventDefault
-							on:click={() => {
-								search = '';
-								apply();
-								searchInput?.focus();
-							}}><XMark className="size-3" /></button
-						>
-					{/if}
-				</div>
-			{:else}
-				<button
-					type="button"
-					class={iconButton}
-					aria-label={$i18n.t('Search')}
-					title={`${$i18n.t('Search')}  /`}
-					on:click={openSearch}><Icon name="search" size={14} /></button
-				>
-			{/if}
-
-			<Dropdown bind:show={filterShow} align="end" onOpenChange={() => (tagQuery = '')}>
-				<button
-					type="button"
-					class="{iconButton} {filterCount ? 'text-gray-800 dark:text-gray-100' : ''}"
-					aria-label={$i18n.t('Filter')}
-					title={`${$i18n.t('Filter')}  F`}
-				>
-					<svg
-						class="size-3.75"
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.5"
-						stroke-linecap="round"
-						aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" /></svg
+			{#if folderSection === 'automations'}
+				{#if !readOnly}
+					<button
+						type="button"
+						class={iconButton}
+						aria-label={$i18n.t('New automation')}
+						title={$i18n.t('New automation')}
+						on:click={() => automationsView?.startNew()}
+						><Plus className="size-3.5" strokeWidth="2" /></button
 					>
-				</button>
+				{/if}
+			{:else}
+				{#if searchOpen || search}
+					<div
+						class="flex h-6.5 w-40 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50/60 px-2 text-gray-400 @lg:w-52 dark:border-gray-850 dark:bg-gray-850/50 dark:text-gray-500"
+					>
+						<Icon name="search" size={13} />
+						<input
+							bind:this={searchInput}
+							class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
+							aria-label={$i18n.t('Search this folder')}
+							title={$i18n.t('Search conversation titles and messages')}
+							placeholder={$i18n.t('Search…')}
+							maxlength="256"
+							bind:value={search}
+							on:input={searchChanged}
+							on:blur={() => {
+								if (!search) searchOpen = false;
+							}}
+							on:keydown={(event) => {
+								if (event.key === 'Enter') apply();
+								if (event.key === 'Escape') {
+									search = '';
+									apply();
+									searchOpen = false;
+									searchInput.blur();
+								}
+							}}
+						/>
+						{#if search}
+							<button
+								type="button"
+								class="flex size-4 shrink-0 items-center justify-center rounded-full hover:text-gray-700 dark:hover:text-gray-200"
+								aria-label={$i18n.t('Clear search')}
+								on:mousedown|preventDefault
+								on:click={() => {
+									search = '';
+									apply();
+									searchInput?.focus();
+								}}><XMark className="size-3" /></button
+							>
+						{/if}
+					</div>
+				{:else}
+					<button
+						type="button"
+						class={iconButton}
+						aria-label={$i18n.t('Search')}
+						title={`${$i18n.t('Search')}  /`}
+						on:click={openSearch}><Icon name="search" size={14} /></button
+					>
+				{/if}
 
-				<DropdownMenu slot="content" className="w-48">
-					{#each facets as item (item.id)}
-						<DropdownSub
-							contentClass={subMenu}
-							maxWidth={item.id === 'users' ? 224 : 320}
-							sideOffset={6}
+				<Dropdown bind:show={filterShow} align="end" onOpenChange={() => (tagQuery = '')}>
+					<button
+						type="button"
+						class="{iconButton} {filterCount ? 'text-gray-800 dark:text-gray-100' : ''}"
+						aria-label={$i18n.t('Filter')}
+						title={`${$i18n.t('Filter')}  F`}
+					>
+						<svg
+							class="size-3.75"
+							viewBox="0 0 16 16"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+							stroke-linecap="round"
+							aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" /></svg
 						>
+					</button>
+
+					<DropdownMenu slot="content" className="w-48">
+						{#each facets as item (item.id)}
+							<DropdownSub
+								contentClass={subMenu}
+								maxWidth={item.id === 'users' ? 224 : 320}
+								sideOffset={6}
+							>
+								<button slot="trigger" type="button" class={subRow}>
+									<span class="text-gray-500 dark:text-gray-400">{@render facetIcon(item.id)}</span>
+									<span class="min-w-0 flex-1 truncate text-left">{$i18n.t(item.label)}</span>
+									{#if facetCount(item.id)}<span class="text-xs tabular-nums text-gray-400"
+											>{facetCount(item.id)}</span
+										>{/if}
+									<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+								</button>
+
+								{#if (item.id === 'tags' && options.length > 8) || (item.id === 'users' && folderUsers.length > 8)}
+									<div class="flex h-[1.6875rem] items-center gap-2 px-2">
+										<Icon
+											name="search"
+											size={12}
+											class="shrink-0 text-gray-400 dark:text-gray-500"
+										/>
+										<input
+											class="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+											aria-label={item.id === 'users'
+												? $i18n.t('Find users')
+												: $i18n.t('Find tags')}
+											placeholder={item.id === 'users'
+												? $i18n.t('Find users…')
+												: $i18n.t('Find tags…')}
+											bind:value={tagQuery}
+										/>
+									</div>
+								{/if}
+								{#if optionsError && item.id === 'tags'}
+									<button type="button" class="text-red-500" on:click={loadOptions}
+										>{$i18n.t('Could not load tags. Retry')}</button
+									>
+								{/if}
+								{#each facetOptions(item.id, item.id === 'tags' || item.id === 'users' ? tagQuery : '') as option (`${option.facet}:${option.value}`)}
+									<button
+										type="button"
+										role={item.id === 'status' || item.id === 'tags' || item.id === 'users'
+											? 'menuitemcheckbox'
+											: 'menuitemradio'}
+										aria-checked={option.checked}
+										on:click={() => toggleOption(option)}
+									>
+										{#if option.status}
+											<StatusIcon status={option.status} />
+										{:else if option.avatar}
+											<img
+												src={option.avatar}
+												alt=""
+												class="size-3.5 shrink-0 rounded-full object-cover"
+											/>
+										{:else if item.id === 'tags'}
+											<span class="flex size-3.5 shrink-0 items-center justify-center"
+												><span class="size-2 rounded-full {option.dot}"></span></span
+											>
+										{/if}
+										<span class="min-w-0 flex-1 truncate text-left" title={option.label}
+											>{option.label}</span
+										>
+										{#if option.count != null}<span
+												class="shrink-0 text-xs tabular-nums text-gray-400">{option.count}</span
+											>{/if}
+										{#if option.checked}<Check className="size-3! shrink-0" />{/if}
+									</button>
+								{:else}
+									<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+										{$i18n.t('No results')}
+									</div>
+								{/each}
+							</DropdownSub>
+						{/each}
+						{#if filterCount}
+							<hr class="border-gray-50/30 dark:border-gray-800/30" />
+							<button type="button" on:click={clear}>
+								<XMark className="size-3.5" />{$i18n.t('Clear filters')}
+							</button>
+						{/if}
+					</DropdownMenu>
+				</Dropdown>
+
+				<Dropdown align="end">
+					<button
+						type="button"
+						class={iconButton}
+						aria-label={$i18n.t('Display options')}
+						title={$i18n.t('Display options')}
+					>
+						<AdjustmentsHorizontal className="size-3.75" />
+					</button>
+
+					<DropdownMenu slot="content" className="w-52">
+						<div class="px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+							{$i18n.t('Layout')}
+						</div>
+						{#each [['list', 'List', 'list'], ['board', 'Board', 'grid']] as const as [value, label, icon]}
+							<button
+								type="button"
+								role="menuitemradio"
+								aria-checked={view === value}
+								on:click={() => setView(value)}
+							>
+								<Icon name={icon} size={14} />
+								<span class="flex-1 text-left">{$i18n.t(label)}</span>
+								{#if view === value}<Check className="size-3! shrink-0" />{/if}
+							</button>
+						{/each}
+
+						<hr class="border-gray-50/30 dark:border-gray-800/30" />
+
+						{#if view === 'list'}
+							{@render groupMenu(
+								$i18n.t('Grouping'),
+								grouping,
+								['none', 'status', 'tags', 'activity'],
+								(value) => setGrouping(value)
+							)}
+						{:else}
+							{@render groupMenu(
+								$i18n.t('Columns'),
+								columnsBy,
+								['status', 'tags', 'activity'],
+								(value) => setColumns(value as Exclude<GroupBy, 'none'>)
+							)}
+							{@render groupMenu(
+								$i18n.t('Rows'),
+								rowsBy,
+								(['none', 'status', 'tags', 'activity'] as const).filter(
+									(value) => value !== columnsBy
+								),
+								(value) => setRows(value)
+							)}
+						{/if}
+
+						<DropdownSub contentClass={subMenu} maxWidth={320} sideOffset={6}>
 							<button slot="trigger" type="button" class={subRow}>
-								<span class="text-gray-500 dark:text-gray-400">{@render facetIcon(item.id)}</span>
-								<span class="min-w-0 flex-1 truncate text-left">{$i18n.t(item.label)}</span>
-								{#if facetCount(item.id)}<span class="text-xs tabular-nums text-gray-400"
-										>{facetCount(item.id)}</span
-									>{/if}
+								<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Ordering')}</span>
+								<span class="truncate text-gray-500 dark:text-gray-400"
+									>{sortBy === 'title' ? $i18n.t('Title') : $i18n.t('Updated')}</span
+								>
 								<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
 							</button>
-
-							{#if (item.id === 'tags' && options.length > 8) || (item.id === 'users' && folderUsers.length > 8)}
-								<div class="flex h-[1.6875rem] items-center gap-2 px-2">
-									<Icon name="search" size={12} class="shrink-0 text-gray-400 dark:text-gray-500" />
-									<input
-										class="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
-										aria-label={item.id === 'users' ? $i18n.t('Find users') : $i18n.t('Find tags')}
-										placeholder={item.id === 'users'
-											? $i18n.t('Find users…')
-											: $i18n.t('Find tags…')}
-										bind:value={tagQuery}
-									/>
-								</div>
-							{/if}
-							{#if optionsError && item.id === 'tags'}
-								<button type="button" class="text-red-500" on:click={loadOptions}
-									>{$i18n.t('Could not load tags. Retry')}</button
-								>
-							{/if}
-							{#each facetOptions(item.id, item.id === 'tags' || item.id === 'users' ? tagQuery : '') as option (`${option.facet}:${option.value}`)}
+							{#each [['updated_at', 'Updated'], ['title', 'Title']] as const as [value, label]}
 								<button
 									type="button"
-									role={item.id === 'status' || item.id === 'tags' || item.id === 'users'
-										? 'menuitemcheckbox'
-										: 'menuitemradio'}
-									aria-checked={option.checked}
-									on:click={() => toggleOption(option)}
+									role="menuitemradio"
+									aria-checked={sortBy === value}
+									on:click={() => setSort(value)}
 								>
-									{#if option.status}
-										<StatusIcon status={option.status} />
-									{:else if option.avatar}
-										<img
-											src={option.avatar}
-											alt=""
-											class="size-3.5 shrink-0 rounded-full object-cover"
-										/>
-									{:else if item.id === 'tags'}
-										<span class="flex size-3.5 shrink-0 items-center justify-center"
-											><span class="size-2 rounded-full {option.dot}"></span></span
-										>
-									{/if}
-									<span class="min-w-0 flex-1 truncate text-left" title={option.label}
-										>{option.label}</span
-									>
-									{#if option.count != null}<span
-											class="shrink-0 text-xs tabular-nums text-gray-400">{option.count}</span
-										>{/if}
-									{#if option.checked}<Check className="size-3! shrink-0" />{/if}
+									<span class="flex-1 text-left">{$i18n.t(label)}</span>
+									{#if sortBy === value}<Check className="size-3! shrink-0" />{/if}
 								</button>
-							{:else}
-								<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
-									{$i18n.t('No results')}
-								</div>
+							{/each}
+							<hr class="border-gray-50/30 dark:border-gray-800/30" />
+							{#each [['asc', 'Ascending'], ['desc', 'Descending']] as const as [value, label]}
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={sortDir === value}
+									on:click={() => setSort(sortBy, value)}
+								>
+									<span class="flex-1 text-left">{$i18n.t(label)}</span>
+									{#if sortDir === value}<Check className="size-3! shrink-0" />{/if}
+								</button>
 							{/each}
 						</DropdownSub>
-					{/each}
-					{#if filterCount}
-						<hr class="border-gray-50/30 dark:border-gray-800/30" />
-						<button type="button" on:click={clear}>
-							<XMark className="size-3.5" />{$i18n.t('Clear filters')}
-						</button>
-					{/if}
-				</DropdownMenu>
-			</Dropdown>
 
-			<Dropdown align="end">
-				<button
-					type="button"
-					class={iconButton}
-					aria-label={$i18n.t('Display options')}
-					title={$i18n.t('Display options')}
-				>
-					<AdjustmentsHorizontal className="size-3.75" />
-				</button>
-
-				<DropdownMenu slot="content" className="w-52">
-					<div class="px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
-						{$i18n.t('Layout')}
-					</div>
-					{#each [['list', 'List', 'list'], ['board', 'Board', 'grid']] as const as [value, label, icon]}
-						<button
-							type="button"
-							role="menuitemradio"
-							aria-checked={view === value}
-							on:click={() => setView(value)}
-						>
-							<Icon name={icon} size={14} />
-							<span class="flex-1 text-left">{$i18n.t(label)}</span>
-							{#if view === value}<Check className="size-3! shrink-0" />{/if}
-						</button>
-					{/each}
-
-					<hr class="border-gray-50/30 dark:border-gray-800/30" />
-
-					{#if view === 'list'}
-						{@render groupMenu(
-							$i18n.t('Grouping'),
-							grouping,
-							['none', 'status', 'tags', 'activity'],
-							(value) => setGrouping(value)
-						)}
-					{:else}
-						{@render groupMenu(
-							$i18n.t('Columns'),
-							columnsBy,
-							['status', 'tags', 'activity'],
-							(value) => setColumns(value as Exclude<GroupBy, 'none'>)
-						)}
-						{@render groupMenu(
-							$i18n.t('Rows'),
-							rowsBy,
-							(['none', 'status', 'tags', 'activity'] as const).filter(
-								(value) => value !== columnsBy
-							),
-							(value) => setRows(value)
-						)}
-					{/if}
-
-					<DropdownSub contentClass={subMenu} maxWidth={320} sideOffset={6}>
-						<button slot="trigger" type="button" class={subRow}>
-							<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Ordering')}</span>
-							<span class="truncate text-gray-500 dark:text-gray-400"
-								>{sortBy === 'title' ? $i18n.t('Title') : $i18n.t('Updated')}</span
-							>
-							<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
-						</button>
-						{#each [['updated_at', 'Updated'], ['title', 'Title']] as const as [value, label]}
+						{#if view === 'list' && grouping !== 'none'}
 							<button
 								type="button"
-								role="menuitemradio"
-								aria-checked={sortBy === value}
-								on:click={() => setSort(value)}
+								role="menuitemcheckbox"
+								aria-checked={showEmptyGroups}
+								on:click={() => {
+									showEmptyGroups = !showEmptyGroups;
+									savePrefs();
+								}}
 							>
-								<span class="flex-1 text-left">{$i18n.t(label)}</span>
-								{#if sortBy === value}<Check className="size-3! shrink-0" />{/if}
+								<span class="flex-1 text-left">{$i18n.t('Show empty groups')}</span>
+								{#if showEmptyGroups}<Check className="size-3! shrink-0" />{/if}
 							</button>
-						{/each}
-						<hr class="border-gray-50/30 dark:border-gray-800/30" />
-						{#each [['asc', 'Ascending'], ['desc', 'Descending']] as const as [value, label]}
-							<button
-								type="button"
-								role="menuitemradio"
-								aria-checked={sortDir === value}
-								on:click={() => setSort(sortBy, value)}
-							>
-								<span class="flex-1 text-left">{$i18n.t(label)}</span>
-								{#if sortDir === value}<Check className="size-3! shrink-0" />{/if}
-							</button>
-						{/each}
-					</DropdownSub>
-
-					{#if view === 'list' && grouping !== 'none'}
-						<button
-							type="button"
-							role="menuitemcheckbox"
-							aria-checked={showEmptyGroups}
-							on:click={() => {
-								showEmptyGroups = !showEmptyGroups;
-								savePrefs();
-							}}
-						>
-							<span class="flex-1 text-left">{$i18n.t('Show empty groups')}</span>
-							{#if showEmptyGroups}<Check className="size-3! shrink-0" />{/if}
-						</button>
-					{/if}
-				</DropdownMenu>
-			</Dropdown>
+						{/if}
+					</DropdownMenu>
+				</Dropdown>
+			{/if}
 		</div>
 	</div>
 
@@ -1254,7 +1348,7 @@
 		</p>
 	{/if}
 
-	{#if filterCount}
+	{#if filterCount && folderSection === 'chats'}
 		<div class="flex shrink-0 flex-wrap items-center gap-1 px-2.5 pb-1.5 md:px-3.5">
 			{#if statusFilter.length}
 				{@render chip(
@@ -1320,7 +1414,16 @@
 	{/if}
 
 	<div class="min-h-0 min-w-0 flex-1 overflow-hidden">
-		{#if loading && !hasData}
+		{#if folderSection === 'automations'}
+			<FolderAutomations
+				bind:this={automationsView}
+				folderId={folder?.id ?? ''}
+				{automations}
+				loading={automationsLoading}
+				canCreate={!readOnly}
+				onReload={loadAutomations}
+			/>
+		{:else if loading && !hasData}
 			<div
 				role="status"
 				aria-label={$i18n.t('Loading…')}

@@ -118,7 +118,11 @@
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
 		(t) =>
-			t.id && !(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
+			t.id &&
+			!(
+				($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
+				['chat', 'folder'].includes(t.scope)
+			)
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
 	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
@@ -168,7 +172,9 @@
 	};
 	const openInfo = async (selector: string, label: string) => {
 		if (
-			systemTerminals.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
+			['chat', 'folder'].includes(
+				systemTerminals.find((t) => !!selector && t.id === selector)?.scope
+			) &&
 			!isSavedChatId($activeChatId)
 		)
 			return;
@@ -244,7 +250,8 @@
 		{#each section.terminals as terminal}
 			{@const label = terminal.name || $i18n.t('Terminal')}
 			{@const owned = canManage(terminal, manageable)}
-			{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+			{@const reachable =
+				!['chat', 'folder'].includes(terminal.scope) || isSavedChatId($activeChatId)}
 			<div class="group/terminal relative rounded-xl">
 				<button
 					type="button"
@@ -393,7 +400,7 @@
 	{/key}
 {/if}
 
-{#if folderTarget && (selectedSystemTerminal?.scope !== 'chat' || isSavedChatId(chatId))}
+{#if folderTarget && (!['chat', 'folder'].includes(selectedSystemTerminal?.scope) || isSavedChatId(chatId))}
 	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}

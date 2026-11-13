@@ -35,6 +35,7 @@ class ShareForm(BaseModel):
 class InstanceForm(BaseModel):
     user_id: str | None = Field(default=None, min_length=1)
     chat_id: str | None = None
+    folder_id: str | None = None
     model_id: str | None = None
 
 
@@ -169,6 +170,7 @@ async def current_instance(
 @router.get('/{terminal_id}/instances')
 async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
     from open_webui.models.chats import Chats
+    from open_webui.models.folders import Folders
     from open_webui.models.models import Models
     from open_webui.models.users import Users
 
@@ -181,6 +183,11 @@ async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
             chat = await Chats.get_chat_by_id(value)
             owner = await Users.get_user_by_id(chat.user_id) if chat else None
             row['label'] = chat.title if chat else None
+            row['user_name'] = owner.name if owner else None
+        elif kind == 'folder':
+            folder = await Folders.get_folder_by_id(value)
+            owner = await Users.get_user_by_id(folder.user_id) if folder else None
+            row['label'] = folder.name if folder else None
             row['user_name'] = owner.name if owner else None
         elif kind == 'user':
             owner = await Users.get_user_by_id(value)

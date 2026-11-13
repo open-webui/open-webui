@@ -14,7 +14,7 @@ def model_controls(model):
             'Reasoning effort',
             'supportedReasoningEfforts',
             'reasoningEffort',
-            'reasoningEffort',
+            'label',
             'defaultReasoningEffort',
         ),
         ('service_tier', 'Service tier', 'serviceTiers', 'id', 'name', 'defaultServiceTier'),

@@ -1072,7 +1072,7 @@
 			if (!terminal) throw new Error('The attached file’s terminal is unavailable.');
 			if (fileItem.session_id && fileItem.session_id !== sessionId)
 				throw new Error('Attached files must belong to this chat.');
-			if (server.scope === 'chat' && !isSavedChatId(sessionId))
+			if (['chat', 'folder'].includes(server.scope) && !isSavedChatId(sessionId))
 				throw new Error('A saved chat is required for this terminal');
 
 			const cwd =
@@ -1161,7 +1161,7 @@
 			fileItem.file = file;
 			fileItem.terminal_id = $selectedTerminalId;
 			fileItem.session_id = chatId || null;
-			if (!chatId && filesystemUploadTerminal.scope === 'chat') {
+			if (!chatId && ['chat', 'folder'].includes(filesystemUploadTerminal.scope)) {
 				fileItem.status = 'pending';
 				files = files;
 				return;

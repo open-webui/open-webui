@@ -13,7 +13,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.automations import Automations
+from open_webui.models.automations import AutomationResponse, AutomationRuns, Automations
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -741,6 +741,29 @@ async def check_folder_read_access(request: Request, id: str, user, db: AsyncSes
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
     return folder
+
+
+@router.get('/{id}/automations')
+async def get_folder_automations(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    """The folder's automations, whoever made them. Only creators edit; folder editors may pause and run."""
+    folder = await check_folder_read_access(request, id, user, db)
+    automations = await Automations.get_by_folder(id, db=db)
+    if not automations:
+        return []
+    latest = await AutomationRuns.get_latest_batch([item.id for item in automations], db=db)
+    creators = {u.id: u.name for u in await Users.get_users_by_user_ids(list({a.user_id for a in automations}), db=db)}
+    has_write = user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    return [
+        {
+            **AutomationResponse(**item.model_dump(), last_run=latest.get(item.id)).model_dump(),
+            'user_name': creators.get(item.user_id) or 'Unknown',
+            'can_edit': item.user_id == user.id,
+            'can_manage': item.user_id == user.id or has_write,
+        }
+        for item in automations
+    ]
 
 
 @router.get('/{id}/users')

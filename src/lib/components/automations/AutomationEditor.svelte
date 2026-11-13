@@ -31,6 +31,8 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	dayjs.extend(localizedFormat);
 
@@ -271,14 +273,7 @@
 			<span class="w-24 shrink-0 text-[0.6875rem] text-gray-400 dark:text-gray-500">
 				{$i18n.t('Status')}
 			</span>
-			<span
-				class="flex min-w-0 items-center gap-1.5 text-xs {is_active
-					? 'text-emerald-700 dark:text-emerald-400'
-					: 'text-gray-600 dark:text-gray-400'}"
-			>
-				<svg class="size-1.5 shrink-0" viewBox="0 0 6 6" fill="currentColor" aria-hidden="true">
-					<circle cx="3" cy="3" r="3" />
-				</svg>
+			<span class="min-w-0 text-xs text-gray-700 dark:text-gray-300">
 				{is_active ? $i18n.t('Active') : $i18n.t('Paused')}
 			</span>
 		</div>
@@ -361,10 +356,14 @@
 							class="flex h-7 items-center gap-2 text-xs"
 						>
 							<span
-								class="h-1.5 w-1.5 shrink-0 rounded-full {run.status === 'success'
-									? 'bg-emerald-500'
-									: 'bg-red-400'}"
-							></span>
+								class="flex shrink-0 text-gray-400"
+								title={run.status === 'success' ? $i18n.t('Succeeded') : $i18n.t('Failed')}
+								aria-label={run.status === 'success' ? $i18n.t('Succeeded') : $i18n.t('Failed')}
+							>
+								{#if run.status === 'success'}<Check className="size-3" />{:else}<XMark
+										className="size-3"
+									/>{/if}
+							</span>
 							<span class="text-gray-500 dark:text-gray-400">{formatTime(run.created_at)}</span>
 							{#if run.chat_id}
 								<button
@@ -387,7 +386,10 @@
 								</button>
 							{/if}
 							{#if run.error}
-								<span class="truncate text-[0.6875rem] text-red-400" title={run.error}>
+								<span
+									class="truncate text-[0.6875rem] text-gray-400 dark:text-gray-500"
+									title={run.error}
+								>
 									{run.error}
 								</span>
 							{/if}

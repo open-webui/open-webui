@@ -100,6 +100,8 @@ export type WorkspaceChat = {
 	active?: boolean;
 	pending_approval?: boolean;
 	search_snippet?: string | null;
+	/** Set when an automation made this chat. */
+	automation_id?: string | null;
 };
 export const statusKey = (status?: FolderStatus | null) => status ?? NO_STATUS;
 

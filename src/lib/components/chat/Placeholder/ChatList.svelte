@@ -19,6 +19,7 @@
 	import FolderTags from './FolderTags.svelte';
 	import FolderChatMenu from './FolderChatMenu.svelte';
 	import FolderChatLink from './FolderChatLink.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
 	import StatusIcon from './FolderStatusIcon.svelte';
 	import FolderStatusTime from './FolderStatusTime.svelte';
@@ -246,6 +247,14 @@
 										: 'text-gray-700 dark:text-gray-200'}"
 									onclick={(event) => openFolderChat(chat, appLayout, event)}
 								/>
+							{/if}
+							{#if chat.automation_id}
+								<span
+									class="flex shrink-0 text-gray-400 dark:text-gray-500"
+									title={$i18n.t('Made by an automation')}
+									aria-label={$i18n.t('Made by an automation')}
+									><Icon name="clock" size={12} /></span
+								>
 							{/if}
 							{#if chat.search_snippet}
 								<span

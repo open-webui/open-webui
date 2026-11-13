@@ -29,6 +29,8 @@
 	export let show = false;
 	export let automation: AutomationResponse | null = null;
 	export let cloneFrom: AutomationResponse | null = null;
+	/** Folder a new automation starts in. */
+	export let folderId: string | null = null;
 
 	let name = '';
 	let prompt = '';
@@ -201,7 +203,7 @@
 			name = '';
 			prompt = '';
 			model_id = '';
-			folder_id = '';
+			folder_id = folderId ?? '';
 			target_type = 'chat';
 			channel_id = '';
 			is_active = true;
@@ -214,12 +216,12 @@
 	}
 </script>
 
-<Modal ariaLabel={name || $i18n.t('Automation')} size="md" bind:show>
+<Modal ariaLabel={name || $i18n.t('Automation')} size="lg" bind:show>
 	<div>
 		<!-- Header -->
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-sm font-medium bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 				type="text"
 				bind:value={name}
 				aria-label={$i18n.t('Automation title')}
@@ -235,13 +237,13 @@
 		</div>
 
 		<!-- Prompt -->
-		<div class="px-5 pb-2">
+		<div class="px-4 pb-2">
 			<label for="automation-instructions" class="block mb-1 text-xs text-gray-500"
 				>{$i18n.t('Instructions')}</label
 			>
 			<textarea
 				id="automation-instructions"
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[12rem]"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[min(28rem,55vh)]"
 				bind:value={prompt}
 				rows={8}
 				placeholder={$i18n.t('Enter prompt here.')}

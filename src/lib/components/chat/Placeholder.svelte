@@ -97,6 +97,8 @@
 
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
+	// The composer only belongs with the folder's chats, not its automations.
+	let folderSection: 'chats' | 'automations' = 'chats';
 
 	let models = [];
 	export let selectedModelIdx = 0;
@@ -200,16 +202,17 @@
 	{#if $selectedFolder}
 		<div
 			class="relative min-h-0 w-full flex-1"
-			style="--folder-composer-space: {folderReadOnly ? 0 : composerHeight}px"
+			style="--folder-composer-space: {folderReadOnly || folderSection !== 'chats' ? 0 : composerHeight}px"
 		>
 			<FolderPlaceholder
 				folder={$selectedFolder}
 				readOnly={folderReadOnly}
 				bind:folderTabActions
+				bind:folderSection
 				onNewChat={() => messageInput?.focus()}
 			/>
 
-			{#if !folderReadOnly}
+			{#if !folderReadOnly && folderSection === 'chats'}
 				<!-- Same mount as the in-chat composer, floating over the list and board. -->
 				<div
 					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-gray-900 {dragged

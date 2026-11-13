@@ -1169,7 +1169,10 @@
 	$: if (
 		$temporaryChatEnabled &&
 		($terminalServers ?? []).some(
-			(t) => !!$selectedTerminalId && t.id === $selectedTerminalId && t.scope === 'chat'
+			(t) =>
+				!!$selectedTerminalId &&
+				t.id === $selectedTerminalId &&
+				['chat', 'folder'].includes(t.scope)
 		)
 	) {
 		selectedTerminalId.set(null);
@@ -1188,7 +1191,9 @@
 			? JSON.stringify([
 					terminalId,
 					directory,
-					($terminalServers ?? []).find((server) => server.id === terminalId)?.scope === 'chat'
+					['chat', 'folder'].includes(
+						($terminalServers ?? []).find((server) => server.id === terminalId)?.scope
+					)
 						? $chatId
 						: null,
 					$config,

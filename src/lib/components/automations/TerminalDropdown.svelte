@@ -82,7 +82,7 @@
 						<span class="truncate">{server.name || server.id}</span>
 					</div>
 					{#if terminalServerId === server.id}
-						<div class="shrink-0 text-emerald-600 dark:text-emerald-400">
+						<div class="shrink-0 text-gray-500 dark:text-gray-400">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"

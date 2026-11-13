@@ -2882,6 +2882,7 @@ class ChatTable:
             }
             # Tags are the owner's own records; status is folder workflow, so folder editors may set it.
             chat['can_edit_tags'] = chat['user_id'] == user_id
+            chat['automation_id'] = meta.get('automation_id')
             chat['can_edit_status'] = folder_write_access or chat['user_id'] == user_id
             # Only explain matches the title doesn't already show.
             chat['search_snippet'] = (

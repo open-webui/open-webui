@@ -822,7 +822,7 @@
 		const systemTerminal = effectiveTerminalId
 			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
 			: ($terminalServers?.[0] ?? null);
-		isPerChatTerminal = !!systemTerminal && systemTerminal?.scope === 'chat';
+		isPerChatTerminal = !!systemTerminal && ['chat', 'folder'].includes(systemTerminal?.scope);
 		terminalChatContextHidden = isPerChatTerminal && isTemporaryChatId(chatId);
 		terminalChatContextPending =
 			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);

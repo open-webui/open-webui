@@ -50,6 +50,7 @@
 	const scopes = [
 		{ value: 'user', label: 'User', hint: 'Each person gets their own instance.' },
 		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own instance.' },
+		{ value: 'folder', label: 'Folder', hint: 'Each folder gets its own instance.' },
 		{ value: 'model', label: 'Model', hint: 'Each model gets its own instance.' }
 	];
 	// Open Terminal reads these at start-up; the dialog gives them their own fields.
