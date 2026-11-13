@@ -549,7 +549,7 @@
 				{#if $visibleControls['chat.tags']}
 					<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
-					<!-- Same picker as folder chats; recoloring stays in the folder view. -->
+					<!-- Same picker as folder chats. -->
 					<DropdownSub contentClass="select-none z-50 w-52" maxWidth={240}>
 						<button
 							slot="trigger"
@@ -565,7 +565,6 @@
 						</button>
 						<TagPicker
 							chatId={chat.id}
-							colors={false}
 							onChange={(next) => {
 								if (chat?.meta) chat.meta.tags = next.map((tag) => tag.id);
 							}}

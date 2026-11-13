@@ -10,7 +10,6 @@
 		updateTagColorById
 	} from '$lib/apis/chats';
 	import { colorDot, tagColor, tagColors, tagDot, type FolderTag } from '$lib/utils/tags';
-	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 
@@ -20,11 +19,11 @@
 	export let chatId: string;
 	/** The chat's tags; null fetches them when the picker opens. */
 	export let assigned: FolderTag[] | null = null;
-	/** Recoloring opens its own popup, which a hover submenu would close. */
-	export let colors = true;
 	export let onChange: (assigned: FolderTag[]) => Promise<void> | void = () => {};
 
 	let query = '';
+	// The tag whose color row is open.
+	let coloring = '';
 	let busy = false;
 	let input: HTMLInputElement;
 
@@ -117,7 +116,7 @@
 				on:click={() => toggle(tag)}
 			>
 				<span
-					class="flex size-3 shrink-0 items-center justify-center rounded-[0.25rem] border transition-colors {checked
+					class="mr-1 flex size-3 shrink-0 items-center justify-center rounded-[0.25rem] border transition-colors {checked
 						? 'border-gray-800 bg-gray-800 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
 						: 'border-gray-300 dark:border-gray-600'}"
 				>
@@ -126,45 +125,52 @@
 				<span class="size-1.5 shrink-0 rounded-full {tagDot(tag)}"></span>
 				<span class="min-w-0 flex-1 truncate text-left">{tag.name}</span>
 			</button>
-			{#if colors && checked}
-				<Dropdown align="end" closeOnSelect>
-					<button
-						type="button"
-						class="flex size-5 items-center justify-center rounded-md opacity-0 transition hover:bg-gray-100 focus-visible:opacity-100 group-hover/tag:opacity-100 dark:hover:bg-gray-800"
-						aria-label={$i18n.t('Color for {{tag}}', { tag: tag.name })}
-						title={$i18n.t('Applies wherever you use this tag')}
-						disabled={busy}
-					>
-						<span class="size-2 rounded-full ring-2 ring-white dark:ring-gray-850 {tagDot(tag)}"
-						></span>
-					</button>
-					<div
-						slot="content"
-						class="z-50 grid grid-cols-4 gap-0.5 rounded-xl border border-gray-100 bg-white p-1 shadow-lg dark:border-gray-800 dark:bg-gray-850"
-					>
-						{#each tagColors as color}
-							<button
-								type="button"
-								role="menuitemradio"
-								aria-checked={tagColor(tag) === color}
-								aria-label={$i18n.t(color)}
-								title={$i18n.t(color)}
-								class="flex size-5 items-center justify-center rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
-								disabled={busy}
-								on:click={() =>
-									mutate(() => updateTagColorById(localStorage.token, chatId, tag.name, color))}
-							>
-								<span
-									class="size-2.5 rounded-full {colorDot(color)} {tagColor(tag) === color
-										? 'ring-2 ring-gray-300 ring-offset-1 ring-offset-white dark:ring-gray-600 dark:ring-offset-gray-850'
-										: ''}"
-								></span>
-							</button>
-						{/each}
-					</div>
-				</Dropdown>
+			{#if checked}
+				<button
+					type="button"
+					class="flex size-5 items-center justify-center rounded-md transition hover:bg-gray-100 focus-visible:opacity-100 group-hover/tag:opacity-100 dark:hover:bg-gray-800 {coloring ===
+					tag.id
+						? 'opacity-100'
+						: 'opacity-0'}"
+					aria-label={$i18n.t('Color for {{tag}}', { tag: tag.name })}
+					aria-expanded={coloring === tag.id}
+					title={$i18n.t('Applies wherever you use this tag')}
+					disabled={busy}
+					on:click={() => (coloring = coloring === tag.id ? '' : tag.id)}
+				>
+					<span class="size-2 rounded-full ring-2 ring-white dark:ring-gray-850 {tagDot(tag)}"
+					></span>
+				</button>
 			{/if}
 		</div>
+		<!-- Colors open inline, so the picker also works inside hover submenus. -->
+		{#if checked && coloring === tag.id}
+			<div
+				class="flex items-center gap-0.5 pb-1 pl-6"
+				role="radiogroup"
+				aria-label={$i18n.t('Color for {{tag}}', { tag: tag.name })}
+			>
+				{#each tagColors as color}
+					<button
+						type="button"
+						role="radio"
+						aria-checked={tagColor(tag) === color}
+						aria-label={$i18n.t(color)}
+						title={$i18n.t(color)}
+						class="flex size-5 items-center justify-center rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+						disabled={busy}
+						on:click={() =>
+							mutate(() => updateTagColorById(localStorage.token, chatId, tag.name, color))}
+					>
+						<span
+							class="size-2 rounded-full {colorDot(color)} {tagColor(tag) === color
+								? 'ring-2 ring-gray-300 ring-offset-1 ring-offset-white dark:ring-gray-600 dark:ring-offset-gray-850'
+								: ''}"
+						></span>
+					</button>
+				{/each}
+			</div>
+		{/if}
 	{/each}
 
 	{#if canCreate}
