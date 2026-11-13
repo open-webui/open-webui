@@ -50,6 +50,7 @@
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
 	$: isCurrentTurn =
@@ -127,6 +128,7 @@
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
+				{onOpenArtifacts}
 				{writeAccess}
 			/>
 		{:else}
@@ -159,6 +161,7 @@
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}
+					{onOpenArtifacts}
 					{writeAccess}
 				/>
 			{/key}

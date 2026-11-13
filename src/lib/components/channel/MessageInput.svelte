@@ -898,7 +898,7 @@
 		onSave={inputVariablesModalCallback}
 	/>
 
-	<div bind:this={inputRoot} class="bg-transparent">
+	<div bind:this={inputRoot} data-composer-id={inputId} class="bg-transparent">
 		<div class="max-w-full mx-auto inset-x-0 relative">
 			<div
 				class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center"

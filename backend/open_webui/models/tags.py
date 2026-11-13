@@ -9,11 +9,10 @@ import uuid
 # local imports
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select
+from sqlalchemy import JSON, BigInteger, Column, Index, PrimaryKeyConstraint, String, delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
-
 
 class Tag(Base):  # database table mapping for tag entity
     __tablename__ = 'tag'
@@ -90,6 +89,18 @@ class TagTable:
         async with get_async_db_context(db) as db:
             result = await db.execute(select(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id))
             return [TagModel.model_validate(tag) for tag in result.scalars().all()]
+
+    async def update_tag_color_by_name_and_user_id(
+        self, name: str, user_id: str, color: str, db: AsyncSession | None = None
+    ) -> bool:
+        async with get_async_db_context(db) as db:
+            id = name.replace(' ', '_').lower()
+            meta = (await db.execute(select(Tag.meta).filter_by(id=id, user_id=user_id))).one_or_none()
+            if meta is None:
+                return False
+            await db.execute(update(Tag).filter_by(id=id, user_id=user_id).values(meta={**(meta[0] or {}), 'color': color}))
+            await db.commit()
+            return True
 
     async def delete_tag_by_name_and_user_id(self, name: str, user_id: str, db: AsyncSession | None = None) -> bool:
         try:

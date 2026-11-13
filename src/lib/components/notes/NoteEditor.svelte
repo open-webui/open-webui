@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
 	import { getPageContext, onTabLeave } from '$lib/utils/page';
-	const { goto, url: pageUrl } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
@@ -1137,7 +1137,7 @@ ${content}
 
 <div bind:this={noteRoot} class="w-full h-full flex">
 	<div class="h-full flex flex-col min-w-0 flex-1 relative">
-		<div class="relative flex-1 w-full h-full flex justify-center pt-1.5 md:pt-2" id="note-editor">
+		<div class="relative flex-1 w-full h-full flex justify-center" id="note-editor">
 			{#if loading}
 				<div class=" absolute top-0 bottom-0 left-0 right-0 flex">
 					<div class="m-auto">
@@ -1148,7 +1148,7 @@ ${content}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-1.5 md:px-3">
 						<div class="w-full min-w-0 flex items-center">
-							{#if $mobile}
+							{#if $mobile && !pageTab}
 								<Tooltip
 									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								>
@@ -1169,7 +1169,7 @@ ${content}
 							{/if}
 
 							<input
-								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile
+								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile && !pageTab
 									? 'ml-1'
 									: ''}"
 								type="text"

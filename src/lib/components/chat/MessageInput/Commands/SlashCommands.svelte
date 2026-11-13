@@ -121,8 +121,9 @@
 		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
-			$settings?.terminalServers ?? [],
-			localStorage.token, { chatId: $chatId || null, modelId: modelId });
+			localStorage.token,
+			{ chatId: $chatId || null, modelId: modelId }
+		);
 		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		const q = query.trim().toLowerCase();

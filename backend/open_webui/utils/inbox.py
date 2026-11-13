@@ -2,19 +2,19 @@
 
 from collections import defaultdict
 
+from open_webui.models.notifications import Notification, insert_notifications
 from sqlalchemy import and_, false, or_, select, true
 from sqlalchemy.orm import load_only
 
-from open_webui.models.notifications import Notification, insert_notifications
-
 
 def source_models():
-    from open_webui.utils.comments import resource_models
     from open_webui.models.automations import Automation, AutomationRun
     from open_webui.models.calendar import Calendar, CalendarEvent
     from open_webui.models.channels import Channel
+    from open_webui.models.chat_messages import ChatMessage
     from open_webui.models.comments import Comment
     from open_webui.models.messages import Message
+    from open_webui.utils.comments import resource_models
 
     return {
         **resource_models(),
@@ -23,6 +23,7 @@ def source_models():
         'calendar': Calendar,
         'calendar_event': CalendarEvent,
         'channel': Channel,
+        'chat_message': ChatMessage,
         'comment': Comment,
         'message': Message,
     }
@@ -52,6 +53,15 @@ async def validate_source(event_type, resource_type, resource_id, object_type, o
         )
     elif event_type.startswith('channel.'):
         valid = object_type == 'message' and resource_type == 'channel' and obj.channel_id == resource_id
+    elif event_type == 'chat.mentioned':
+        valid = (
+            object_type == 'chat_message'
+            and resource_type == 'chat'
+            and obj.chat_id == resource_id
+            and obj.role == 'assistant'
+            and obj.done
+            and not obj.error
+        )
     elif event_type == 'automation.run_failed':
         valid = (
             object_type == 'automation_run'
@@ -115,27 +125,26 @@ async def resource_queries(user, db):
             else or_(model.user_id == user.id, grant(kind, model.id))
         )
         queries[kind] = select(model.id).where(allowed)
-    if config.get('comments.enable'):
-        chat = models['chat']
-        # UNION (not UNION ALL) terminates even if legacy folder data contains a cycle.
-        folders = (
-            select(Folder.id)
-            .where(or_(Folder.user_id == user.id, grant('folder', Folder.id)))
-            .cte('inbox_folders', recursive=True)
+    chat = models['chat']
+    # UNION (not UNION ALL) terminates even if legacy folder data contains a cycle.
+    folders = (
+        select(Folder.id)
+        .where(or_(Folder.user_id == user.id, grant('folder', Folder.id)))
+        .cte('inbox_folders', recursive=True)
+    )
+    folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
+    shared = select(SharedChat.chat_id).where(
+        SharedChat.chat['share_mode'].as_string() == 'continue', grant('shared_chat', SharedChat.chat_id)
+    )
+    queries['chat'] = select(chat.id).where(
+        or_(
+            chat.user_id == user.id,
+            true() if admin and ENABLE_ADMIN_CHAT_ACCESS else false(),
+            and_(true() if admin else false(), chat.meta['internal'].as_boolean().is_(True)),
+            chat.id.in_(shared),
+            chat.folder_id.in_(select(folders.c.id)),
         )
-        folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
-        shared = select(SharedChat.chat_id).where(
-            SharedChat.chat['share_mode'].as_string() == 'continue', grant('shared_chat', SharedChat.chat_id)
-        )
-        queries['chat'] = select(chat.id).where(
-            or_(
-                chat.user_id == user.id,
-                true() if admin and ENABLE_ADMIN_CHAT_ACCESS else false(),
-                and_(true() if admin else false(), chat.meta['internal'].as_boolean().is_(True)),
-                chat.id.in_(shared),
-                chat.folder_id.in_(select(folders.c.id)),
-            )
-        )
+    )
     if await enabled('channels'):
         channel = models['channel']
         member = (
@@ -169,13 +178,21 @@ async def resource_queries(user, db):
 
 
 async def eligible_recipients(recipients, resource_type, resource_id, actor_id, db):
+    from open_webui.models.chats import Chats
+    from open_webui.models.config import Config
     from open_webui.models.users import User, UserModel
 
+    if not await Config.get('comments.enable'):
+        recipients = {id: kind for id, kind in recipients.items() if not kind.startswith('comment.')}
     users = (await db.scalars(select(User).where(User.id.in_(recipients), User.role.in_(['user', 'admin'])))).all()
     eligible = {}
     for row in users:
         kind = recipients[row.id]
         if row.id == actor_id and kind.startswith(('comment.', 'channel.')):
+            continue
+        if kind == 'chat.mentioned':
+            if await Chats.has_chat_access(resource_id, UserModel.model_validate(row), permission='read', db=db):
+                eligible[row.id] = kind
             continue
         if resource_type is not None:
             queries = await resource_queries(UserModel.model_validate(row), db=db)
@@ -189,7 +206,10 @@ async def eligible_recipients(recipients, resource_type, resource_id, actor_id, 
 
 
 async def visible_clause(user, db):
+    from open_webui.models.config import Config
+
     queries = await resource_queries(user, db=db)
+    comments_enabled = await Config.get('comments.enable')
     models = source_models()
     resources = or_(
         *[
@@ -201,13 +221,18 @@ async def visible_clause(user, db):
     for kind, parent_column, events in (
         ('comment', 'resource_id', ['comment.created', 'comment.replied', 'comment.mentioned']),
         ('message', 'channel_id', ['channel.mentioned', 'channel.replied']),
+        ('chat_message', 'chat_id', ['chat.mentioned']),
         ('automation_run', 'automation_id', ['automation.run_failed']),
         ('calendar_event', 'calendar_id', ['calendar.alert']),
     ):
         model = models[kind]
         conditions = [model.id == Notification.object_id, getattr(model, parent_column) == Notification.resource_id]
         if kind == 'comment':
-            conditions += [model.resource_type == Notification.resource_type, model.deleted_at.is_(None)]
+            conditions += [
+                true() if comments_enabled else false(),
+                model.resource_type == Notification.resource_type,
+                model.deleted_at.is_(None),
+            ]
         if kind == 'calendar_event':
             conditions.append(model.is_cancelled.is_(False))
         objects.append(
@@ -234,6 +259,20 @@ async def visible_clause(user, db):
     )
 
 
+def chat_message_text(message):
+    from open_webui.utils.misc import get_output_text
+
+    if isinstance(message.output, list):
+        return get_output_text(message.output)
+    if isinstance(message.content, str):
+        return message.content
+    return ''.join(
+        part.get('text', '')
+        for part in message.content or []
+        if isinstance(part, dict) and part.get('type') in {'text', 'output_text'}
+    )
+
+
 async def hydrate(rows, db):
     """Fetch each actor/resource/object type once, never once per notification."""
     from open_webui.models.users import User
@@ -252,19 +291,20 @@ async def hydrate(rows, db):
         fields = ['id', 'title', 'name']
         if kind in {'comment', 'message'}:
             fields += ['content', 'target_type', 'target_id', 'parent_id']
+        elif kind == 'chat_message':
+            fields += ['content', 'output', 'chat_id']
         columns = [getattr(model, field) for field in fields if hasattr(model, field)]
         objects[kind] = {
             obj.id: obj
             for obj in (await db.scalars(select(model).options(load_only(*columns)).where(model.id.in_(values)))).all()
         }
-    actors = {
+    user_ids = {r.actor_id for r in rows if r.actor_id}
+    for message in objects.get('chat_message', {}).values():
+        user_ids.update(mentioned_users(chat_message_text(message)))
+    users = {
         u.id: {'id': u.id, 'name': u.name}
         for u in (
-            await db.scalars(
-                select(User)
-                .options(load_only(User.id, User.name))
-                .where(User.id.in_({r.actor_id for r in rows if r.actor_id}))
-            )
+            await db.scalars(select(User).options(load_only(User.id, User.name)).where(User.id.in_(user_ids)))
         ).all()
     }
     result = []
@@ -282,12 +322,19 @@ async def hydrate(rows, db):
             data.update(target_type=obj.target_type, target_id=obj.target_id, parent_id=obj.parent_id)
         elif row.object_type == 'message':
             data['parent_id'] = obj.parent_id
+        elif row.object_type == 'chat_message':
+            content = chat_message_text(obj)
+            for id in mentioned_users(content):
+                if id in users:
+                    content = content.replace(f'<@U:{id}>', f'@{users[id]["name"]}')
+            preview = replace_mentions(content)[:300]
+            data['message_id'] = obj.id.removeprefix(f'{obj.chat_id}-')
         elif row.object_type == 'calendar_event':
             title = obj.title
         result.append(
             {
                 **{c.name: getattr(row, c.name) for c in Notification.__table__.columns},
-                'actor': actors.get(row.actor_id),
+                'actor': users.get(row.actor_id),
                 'title': title,
                 'preview': preview,
                 'data': data,
@@ -382,7 +429,32 @@ async def consume_event(event, db):
 
     subject_id = (event.subject or {}).get('id')
     models = source_models()
-    if event.event in {EVENTS.COMMENT_CREATED.name, EVENTS.COMMENT_UPDATED.name}:
+    if event.event == EVENTS.CHAT_FINISHED.name:
+        from open_webui.utils.chat_id import is_saved_chat_id
+
+        message_id = event.data.get('message_id')
+        if not is_saved_chat_id(subject_id) or not message_id:
+            return set()
+        message = await db.get(models['chat_message'], f'{subject_id}-{message_id}')
+        if (
+            not message
+            or message.chat_id != subject_id
+            or message.role != 'assistant'
+            or not message.done
+            or message.error
+        ):
+            return set()
+        return await insert_notifications(
+            recipients={id: 'chat.mentioned' for id in mentioned_users(chat_message_text(message))},
+            event_key=f'chat:{subject_id}:message:{message_id}:mentioned',
+            resource_type='chat',
+            resource_id=subject_id,
+            object_type='chat_message',
+            object_id=message.id,
+            data={'model_name': event.data.get('model_name') or message.model_id or 'Assistant'},
+            db=db,
+        )
+    elif event.event in {EVENTS.COMMENT_CREATED.name, EVENTS.COMMENT_UPDATED.name}:
         comment = await db.get(models['comment'], subject_id)
         if not comment or comment.deleted_at:
             raise ValueError('Comment event references an unavailable comment')

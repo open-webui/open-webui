@@ -99,8 +99,6 @@ async def create_timer(
     model_id = metadata.get('model_id') or (metadata.get('model') or {}).get('id')
     if not model_id:
         return 'Error: model context is required.'
-    if metadata.get('direct'):
-        return 'Error: timers are unavailable for direct connections.'
 
     chat_id = str(uuid4())
     user_message_id = str(uuid4())

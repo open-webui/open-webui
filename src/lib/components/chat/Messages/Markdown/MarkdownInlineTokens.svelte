@@ -3,10 +3,12 @@
 	import { toast } from 'svelte-sonner';
 
 	import type { Token, Tokens } from 'marked';
+	import type { AppLayoutContext } from '$lib/types';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	const terminalDocument = getContext<
 		| {
 				localPath: (ref: string) => string | null;
@@ -86,7 +88,9 @@
 					url.pathname.startsWith('/channels/'))
 			) {
 				e.preventDefault();
-				goto(url.pathname + url.search + url.hash);
+				if (appLayout?.openPageTab && !url.pathname.startsWith('/c/'))
+					appLayout.openPageTab({ href: url.pathname + url.search + url.hash, label: '' });
+				else goto(url.pathname + url.search + url.hash);
 			}
 		} catch {
 			// Invalid URL, let browser handle it
