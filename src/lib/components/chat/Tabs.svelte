@@ -181,6 +181,7 @@
 		if (group?.activeId && tabs.activeGroupId !== id) tabs = activateTab(tabs, group.activeId);
 	};
 	let terminalViews: Record<string, XTerminal> = {};
+	let terminalTitles: Record<string, string> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
@@ -282,6 +283,7 @@
 		viewReady = false;
 		tabs = emptyTabs();
 		viewError = '';
+		terminalTitles = {};
 		sideChatStreaming = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
@@ -1276,6 +1278,7 @@
 			: null;
 	// A side chat's artifacts tab names the chat it belongs to.
 	$: tabLabel = (tab: PanelTab) => {
+		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		const source =
 			tab.kind === 'artifacts' && tab.sourceTabId !== mainChatTabId
 				? tabs.tabs.find((item) => item.id === tab.sourceTabId)
@@ -2043,6 +2046,9 @@
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
+									onTitleChange={(title) => {
+										if (owner === viewEntry) terminalTitles[tab.sessionId!] = title.trim();
+									}}
 									onUnavailable={(message, status) => {
 										if (owner === viewEntry)
 											sessionFailures = { ...sessionFailures, [tab.id]: { message, status } };
