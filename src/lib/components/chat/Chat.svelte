@@ -59,14 +59,17 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
+	import { updateFolderById } from '$lib/apis/folders';
 	import {
 		getFolderAgentModels,
 		loadFolderAgentModels,
 		setFolderModelConnections,
 		isCancelledFolderRequest,
 		updateFolderChatLists,
+		updateFolderDetails,
 		type FolderDetails
 	} from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -244,7 +247,7 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
-	let navbarElement;
+	let navbarElement: { startRename?: () => void } | undefined;
 
 	let showEventConfirmation = false;
 	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
@@ -4224,6 +4227,21 @@
 	let tabActions: import('svelte').Snippet | undefined;
 	let folderTabActions: import('svelte').Snippet | undefined;
 
+	// Renaming the folder from its tab saves like the Edit Folder modal.
+	const renameFolder = async (folderId: string, name: string) => {
+		try {
+			const updated = await updateFolderById(localStorage.token, folderId, { name });
+			if (!updated) return;
+			updateFolderDetails(folderId, updated);
+			selectedFolder.update((current) =>
+				current?.id === folderId ? { ...current, ...updated } : current
+			);
+			await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
+		} catch (error) {
+			toast.error(String(error));
+		}
+	};
+
 	let tabBarActions: import('svelte').Snippet | undefined;
 
 	let initializedTerminalChatId: string | null = null;
@@ -5474,9 +5492,8 @@
 			const res = await deleteChatById(localStorage.token, id);
 			if (res) {
 				updateFolderChatLists({ id }, undefined, true);
-				if (side) {
-					onCloseEmbedded?.();
-				} else {
+				closeChatTabs(id);
+				if (!side) {
 					initNewChat();
 					await goto('/');
 				}
@@ -6159,8 +6176,10 @@
 					bind:mainChatStyle
 					bind:mainChatGroupId
 					title={$chatTitle || $i18n.t('New Chat')}
-					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon } : null}
+					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon, canEdit: $user?.role === 'admin' || $selectedFolder.user_id === $user?.id || $selectedFolder.write_access } : null}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
+					onRenameMainTab={() => navbarElement?.startRename?.()}
+					onRenameFolder={renameFolder}
 					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}

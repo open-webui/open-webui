@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 	import { getPageContext, onTabLeave } from '$lib/utils/page';
 	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
@@ -903,6 +904,7 @@ ${content}
 
 		if (!deleted) return;
 		updateFolderChatLists({ id: chatId }, undefined, true);
+		closeChatTabs(chatId);
 
 		let chats =
 			(await getNoteChatsById(localStorage.token, note.id).catch((error) => {

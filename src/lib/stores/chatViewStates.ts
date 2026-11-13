@@ -186,6 +186,21 @@ export function updateViewTab(entry: Entry, id: string, values: Partial<PanelTab
 	);
 }
 
+export function closeChatTabs(chatId: string) {
+	for (const entry of entries.values()) {
+		const ids = entry.state.panels.tabs
+			.filter((tab) => tab.kind === 'side' && tab.chatId === chatId)
+			.map((tab) => tab.id);
+		if (!ids.length) continue;
+		for (const id of ids) entry.drafts.delete(id);
+		changeChatView(
+			entry,
+			{ ...entry.state, panels: ids.reduce(removeTab, entry.state.panels) },
+			true
+		);
+	}
+}
+
 export function createViewSession(entry: Entry, id: string, target: TerminalTarget) {
 	const pending = entry.pending.get(id);
 	if (pending) return pending;
@@ -252,6 +267,23 @@ export function hasChatViewDrafts() {
 	return [...entries.values()].some((entry) =>
 		[...entry.drafts.values()].some((draft) => draft?.dirty)
 	);
+}
+
+export function closePageTabs(href: string) {
+	for (const entry of entries.values()) {
+		const ids = entry.state.panels.tabs
+			.filter((tab) => {
+				const path = tab.kind === 'page' ? tab.href?.split(/[?#]/)[0] : undefined;
+				return path === href || path?.startsWith(`${href}/`);
+			})
+			.map((tab) => tab.id);
+		if (!ids.length) continue;
+		changeChatView(
+			entry,
+			{ ...entry.state, panels: ids.reduce(removeTab, entry.state.panels) },
+			true
+		);
+	}
 }
 
 export function clearChatViews() {

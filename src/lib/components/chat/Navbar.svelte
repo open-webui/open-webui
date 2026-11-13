@@ -103,6 +103,12 @@
 		}, 0);
 	};
 
+	// Lets the tab strip start a rename on double-click, same as the menu's Rename.
+	export const startRename = () => {
+		if (readOnly || !chat?.id) return;
+		void renameHandler();
+	};
+
 	const editChatTitle = async () => {
 		// Disabling the field to generate a title blurs it, which would save the empty field
 		if (!confirmEdit || generating) return;

@@ -628,6 +628,7 @@ async def get_shared_folder_chats(
         chats, total = await Chats.get_folder_chat_page(
             id,
             user.id,
+            folder_write_access=has_write,
             skip=skip,
             limit=limit,
             search=search.strip(),
@@ -771,7 +772,11 @@ async def update_folder_chat_status(request: Request, id: str, chat_id: str, for
     folder = await check_folder_read_access(request, id, user, db)
     if form_data.status is not None and form_data.status not in folder_status_ids(folder.meta):
         raise HTTPException(status_code=422, detail='Invalid status')
-    if not await Chats.update_chat_folder_status_by_id_and_user_id(chat_id, id, user.id, form_data.status, db=db):
+    # Folder editors may set status on any chat in the folder; others only on their own.
+    has_write = user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    if not await Chats.update_chat_folder_status_by_id(
+        chat_id, id, None if has_write else user.id, form_data.status, db=db
+    ):
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     await publish_event(request, EVENTS.CHAT_UPDATED, actor=user, subject_id=chat_id,
         data={'folder_id': id, 'folder_status': form_data.status})

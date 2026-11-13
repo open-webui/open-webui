@@ -101,7 +101,7 @@
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
 	import TerminalPicker, { type TerminalOption } from './Tabs/TerminalPicker.svelte';
-	import { selectTerminal } from '$lib/utils/terminal';
+	import { selectTerminal, terminalIconName } from '$lib/utils/terminal';
 	import VoiceNote from './Tabs/VoiceNote.svelte';
 	import Browser from './Tabs/Browser.svelte';
 	import Desktop from './Tabs/Desktop.svelte';
@@ -161,10 +161,33 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
-	export let mainTabFolder: { id: string; name: string; icon?: string | null } | null = null;
+	export let mainTabFolder: { id: string; name: string; icon?: string | null; canEdit?: boolean } | null =
+		null;
+	/** Double-clicking the folder tab renames the folder inline. */
+	export let onRenameFolder: ((folderId: string, name: string) => Promise<void>) | null = null;
+	let renamingFolder = false;
+	let folderNameDraft = '';
+	const startFolderRename = async () => {
+		if (!mainTabFolder?.canEdit || !onRenameFolder) return;
+		folderNameDraft = mainTabFolder.name;
+		renamingFolder = true;
+		await tick();
+		const input = document.querySelector<HTMLInputElement>('[data-folder-tab-rename]');
+		input?.focus();
+		input?.select();
+	};
+	const saveFolderRename = async () => {
+		if (!renamingFolder || !mainTabFolder) return;
+		renamingFolder = false;
+		const name = folderNameDraft.trim();
+		if (name && name !== mainTabFolder.name) await onRenameFolder?.(mainTabFolder.id, name);
+	};
+	$: if (!mainTabFolder) renamingFolder = false;
 	$: mainTabTitle = mainTabFolder?.name ?? title;
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	/** Double-clicking the main chat tab renames the chat. */
+	export let onRenameMainTab: (() => void) | null = null;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	$: fullWidth = largeScreen;
@@ -186,6 +209,7 @@
 	};
 	let terminalViews: Record<string, XTerminal> = {};
 	let terminalTitles: Record<string, string> = {};
+	let terminalProcesses: Record<string, string> = {};
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
@@ -292,6 +316,7 @@
 		tabs = emptyTabs();
 		viewError = '';
 		terminalTitles = {};
+		terminalProcesses = {};
 		sideChatStreaming = {};
 		sideTabTitleEditors = {};
 		sideTabActions = {};
@@ -2063,8 +2088,10 @@
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={dragged}
-									onTitleChange={(title) => {
-										if (owner === viewEntry) terminalTitles[tab.sessionId!] = title.trim();
+									onTitleChange={(title, process) => {
+										if (owner !== viewEntry) return;
+										terminalTitles[tab.sessionId!] = title.trim();
+										terminalProcesses[tab.sessionId!] = process;
 									}}
 									onUnavailable={(message, status) => {
 										if (owner === viewEntry)
@@ -2268,6 +2295,11 @@
 							title={tab.kind === 'chat' ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
 							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
+							on:dblclick={() => {
+								if (tab.kind !== 'chat') return;
+								if (mainTabFolder) void startFolderRename();
+								else onRenameMainTab?.();
+							}}
 						>
 							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
 								<Spinner className="size-3.5" />
@@ -2280,6 +2312,11 @@
 								{/if}
 							{:else if tab.kind === 'file'}
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
+							{:else if tab.kind === 'terminal'}
+								<Icon
+									name={terminalIconName(terminalProcesses[tab.sessionId ?? ''] ?? '', tabLabel(tab))}
+									size={14}
+								/>
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
 							{:else if PageIcon}
@@ -2287,7 +2324,7 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if !titleEditor || (tab.kind === 'chat' && mainTabFolder)}
+							{#if tab.kind === 'chat' && mainTabFolder ? !renamingFolder : !titleEditor}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
 									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
@@ -2301,7 +2338,26 @@
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.kind === 'chat'}
-							{#if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
+							{#if mainTabFolder && renamingFolder}
+								<input
+									data-folder-tab-rename
+									bind:value={folderNameDraft}
+									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-gray-700 outline-hidden dark:text-gray-300"
+									aria-label={$i18n.t('Folder Name')}
+									on:click|stopPropagation
+									on:keydown={(e) => {
+										if (e.isComposing || e.keyCode === 229) return;
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											void saveFolderRename();
+										} else if (e.key === 'Escape') {
+											e.preventDefault();
+											renamingFolder = false;
+										}
+									}}
+									on:blur={saveFolderRename}
+								/>
+							{:else if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
 						{:else}{@render titleEditor?.()}{@render sideTabActions[tab.id]?.()}<button
 								type="button"
