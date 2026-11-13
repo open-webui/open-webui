@@ -77,7 +77,7 @@
 	<div class="flex h-full min-h-0 flex-col">
 		<div class="shrink-0 px-1.5 pb-1 md:px-2.5">
 			<div class="flex items-center gap-0.5 md:gap-1">
-				{#if $mobile}
+				{#if $mobile && !pageTab}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button

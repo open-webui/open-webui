@@ -5,22 +5,13 @@
 		commentSelectionDraft,
 		selectedComment
 	} from '$lib/components/comments/anchors';
-	import {
-		config,
-		user,
-		artifactCode,
-		chatId as currentChatId,
-		mobile,
-		settings,
-		showArtifacts,
-		showTabs,
-		showEmbeds
-	} from '$lib/stores';
+	import { config, user, mobile, settings, showEmbeds } from '$lib/stores';
 	import { onDestroy, onMount, tick, getContext } from 'svelte';
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
 	import StructuredOutputRenderer from './StructuredOutputRenderer.svelte';
+	import { getOutputText } from './structuredOutput';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
 
@@ -105,6 +96,9 @@
 	export let onTaskClick = (e) => {};
 	export let onToolCallResolved = (e) => {};
 	export let onSetInputText = (text) => {};
+	/** Opens the chat's artifacts; null where messages render outside a chat. */
+	/** @type {((code?: string) => void) | null} */
+	export let onOpenArtifacts = null;
 
 	/** @type {HTMLDivElement | undefined} */
 	let contentContainerElement;
@@ -153,7 +147,12 @@
 				)
 			: messageContent;
 
-	let autoOpenedArtifactIds = new Set();
+	const initialContent = content;
+	const initialOutputText = getOutputText(output);
+	// The final code fence can render after the response is marked done.
+	let hasStreamed = !done;
+	$: if (!done) hasStreamed = true;
+	const seenArtifactIds = new Set();
 	/** @type {ReturnType<typeof selectedComment>} */
 	let commentSelection = null;
 
@@ -170,31 +169,28 @@
 				['html', 'svg'].includes(normalizedLang) ||
 				(normalizedLang === 'xml' && code.toLowerCase().includes('<svg'));
 			const artifactId = codeBlockId || `${normalizedLang}:${raw}`;
+			if (!isArtifact || !hasClosingCodeFence(raw) || seenArtifactIds.has(artifactId)) return;
+			// Restored blocks are seen too, so continuing a response cannot reopen them.
+			seenArtifactIds.add(artifactId);
 
 			if (
+				onOpenArtifacts &&
+				hasStreamed &&
+				(content !== initialContent || getOutputText(output) !== initialOutputText) &&
 				($settings?.detectArtifacts ?? true) &&
 				!compactPreview &&
-				isArtifact &&
-				hasClosingCodeFence(raw) &&
-				!autoOpenedArtifactIds.has(artifactId) &&
-				!$mobile &&
-				$currentChatId
+				!$mobile
 			) {
-				autoOpenedArtifactIds.add(artifactId);
 				await tick();
-				showArtifacts.set(true);
-				showTabs.set(true);
+				onOpenArtifacts();
 			}
 		}
 	);
 
 	const previewHandler = /** @type {any} */ (
 		async (/** @type {string} */ value) => {
-			console.log('Preview', value);
-			await artifactCode.set(/** @type {any} */ (value));
-			await showTabs.set(true);
-			await showArtifacts.set(true);
-			await showEmbeds.set(false);
+			showEmbeds.set(false);
+			onOpenArtifacts?.(value);
 		}
 	);
 

@@ -74,7 +74,7 @@
 
 	let showDeleteConfirm = false;
 
-	let tools = [];
+	let tools = null;
 	let updatingTools: Record<string, boolean> = {};
 	let filteredItems = [];
 

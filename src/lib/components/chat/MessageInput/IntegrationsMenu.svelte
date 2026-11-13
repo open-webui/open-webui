@@ -12,8 +12,7 @@
 		terminalServers,
 		user,
 		tools as _tools,
-		skills as _skills,
-		toolServers
+		skills as _skills
 	} from '$lib/stores';
 
 	import { deleteOAuthSession } from '$lib/apis/auths';
@@ -99,23 +98,18 @@
 
 	$: toolIds = Object.keys(tools ?? {});
 	$: toolGroups = [
+		[$i18n.t('Workspace'), toolIds.filter((id) => !id.startsWith('server:'))],
 		[
-			$i18n.t('Workspace'),
-			toolIds.filter((id) => !id.startsWith('server:') && !id.startsWith('direct_server:'))
+			$i18n.t('Tool Servers'),
+			toolIds.filter((id) => id.startsWith('server:') && !id.startsWith('server:tether:'))
 		],
-		[$i18n.t('Tool Servers'), toolIds.filter((id) => id.startsWith('server:'))],
-		[
-			$i18n.t('settings.personal.tools.sections.externalToolServers.title'),
-			toolIds.filter((id) => id.startsWith('direct_server:'))
-		]
+		[$i18n.t('Your devices'), toolIds.filter((id) => id.startsWith('server:tether:'))]
 	].filter(([, ids]) => ids.length > 0);
 	$: skillIds = Object.keys(skills ?? {});
 	$: skillGroups = [
 		[$i18n.t('Workspace'), skillIds.filter((id) => skills?.[id]?.source !== 'terminal')],
 		[
 			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.name ||
-				($settings?.terminalServers ?? []).find((server) => server.url === $selectedTerminalId)
-					?.name ||
 				$i18n.t('Terminal'),
 			skillIds.filter((id) => skills?.[id]?.source === 'terminal')
 		]
@@ -162,22 +156,6 @@
 				return a;
 			}, {});
 
-		for (const serverIdx in ($toolServers ?? []) as any[]) {
-			const server = (($toolServers ?? []) as any[])[serverIdx];
-			if (server.info) {
-				const name = server?.info?.title ?? server.url;
-				if (q && !name.toLowerCase().includes(q)) {
-					continue;
-				}
-
-				items[`direct_server:${serverIdx}`] = {
-					id: `direct_server:${serverIdx}`,
-					name,
-					description: server.info.description ?? ''
-				};
-			}
-		}
-
 		tools = items;
 
 		if (!q) {
@@ -213,8 +191,9 @@
 		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
-			$settings?.terminalServers ?? [],
-			localStorage.token, { chatId: $chatId || null, modelId: selectedModels[0] ?? null });
+			localStorage.token,
+			{ chatId: $chatId || null, modelId: selectedModels[0] ?? null }
+		);
 		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		return items;

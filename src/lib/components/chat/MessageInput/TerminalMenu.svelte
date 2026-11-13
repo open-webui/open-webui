@@ -1,6 +1,6 @@
 <script lang="ts">
 	export let modelId: string | null = null;
-	import { getContext, onDestroy, tick } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import UserTerminalsModal from '../UserTerminalsModal.svelte';
@@ -20,7 +20,7 @@
 		temporaryChatEnabled,
 		user
 	} from '$lib/stores';
-	import { getToolServersData } from '$lib/apis';
+	import { selectTerminal } from '$lib/utils/terminal';
 	import { isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -31,6 +31,8 @@
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Server from '$lib/components/icons/Server.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import { fly } from 'svelte/transition';
 	import TerminalItemMenu from './TerminalItemMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -47,15 +49,18 @@
 
 	export let show = false;
 	export let inMenu = false;
+	export let tab = '';
+	const closeMenu = () => {
+		show = false;
+		if (inMenu) tab = '';
+	};
 	export let disabled = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
-	let disposed = false;
-	onDestroy(() => (disposed = true));
 
 	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
-	$: if (show)
+	$: if (inMenu ? tab === 'terminal' : show)
 		templatesApi('/connections')
 			.then((rows) => (writable = rows))
 			.catch(() => (writable = []));
@@ -80,7 +85,7 @@
 	const lifecycleCopy = {
 		restart: {
 			title: 'Restart {{name}}?',
-			message: 'Running work stops and the machine starts again. Files are kept.',
+			message: 'Running work stops and the instance starts again. Files are kept.',
 			label: 'Restart',
 			pending: 'Restarting {{name}}…',
 			done: '{{name}} restarted'
@@ -88,7 +93,7 @@
 		stop: {
 			title: 'Stop {{name}}?',
 			message:
-				'Running work stops. Files are kept, and the machine starts again when it is next used.',
+				'Running work stops. Files are kept, and the instance starts again when it is next used.',
 			label: 'Stop',
 			pending: 'Stopping {{name}}…',
 			done: '{{name}} stopped'
@@ -107,7 +112,7 @@
 	};
 	const confirmLifecycle = (id: string, name: string, action: 'restart' | 'stop') => {
 		pending = { id, name, action };
-		show = false;
+		closeMenu();
 		showConfirm = true;
 	};
 
@@ -121,144 +126,43 @@
 		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
 		{ devices: true, terminals: systemTerminals.filter(isDevice) }
 	].filter((section) => !section.devices || section.terminals.length > 0);
-	$: directTerminals = (
-		$config?.features?.enable_direct_integrations &&
-		($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-			? ($settings?.terminalServers ?? [])
-			: []
-	).filter((s) => s.url);
 
-	const refreshTerminalServersStore = async (servers: typeof directTerminals) => {
-		// Preserve system terminals (those with an `id`) — only refresh direct ones
-		const existingSystemTerminals = ($terminalServers ?? []).filter((t) => t.id);
-
-		const activeTerminals = servers.filter((s) => s.enabled);
-		if (activeTerminals.length > 0) {
-			let data = await getToolServersData(
-				activeTerminals.map((t) => ({
-					url: t.url,
-					auth_type: t.auth_type ?? 'bearer',
-					key: t.key ?? '',
-					path: t.path ?? '/openapi.json',
-					config: { enable: true }
-				}))
-			);
-			data = data.filter((d) => d && !d.error);
-			terminalServers.set([
-				...data.map((d, i) => ({
-					...d,
-					key: activeTerminals[i]?.key ?? '',
-					config: activeTerminals[i]?.config ?? d?.config ?? {}
-				})),
-				...existingSystemTerminals
-			]);
-		} else {
-			terminalServers.set(existingSystemTerminals);
-		}
-	};
-
-	const selectDirect = async (terminal: (typeof directTerminals)[0]) => {
-		const newId = $selectedTerminalId === terminal.url ? null : terminal.url;
-		if (!(await saveSelection(newId))) return;
-		selectedTerminalId.set(newId);
-
-		// Enable the selected direct terminal, disable all others
-		const updatedServers = ($settings?.terminalServers ?? []).map((s) => ({
-			...s,
-			enabled: newId !== null && s.url === terminal.url
-		}));
-
-		settings.set({
-			...$settings,
-			terminalServers: updatedServers
-		});
-
-		show = false;
-
-		// Refresh the store so Chat.svelte can inject it as a tool
-		await refreshTerminalServersStore(updatedServers);
-	};
-
-	const selectSystem = async (terminal: (typeof systemTerminals)[0]) => {
-		const newId = $selectedTerminalId === terminal.id ? null : terminal.id;
-		if (!(await saveSelection(newId))) return;
-		selectedTerminalId.set(newId);
-
-		// Disable all direct terminals when switching to a system terminal
-		if ($settings?.terminalServers?.some((s) => s.enabled)) {
-			const updatedServers = ($settings.terminalServers ?? []).map((s) => ({
-				...s,
-				enabled: false
-			}));
-			settings.set({
-				...$settings,
-				terminalServers: updatedServers
-			});
-			await refreshTerminalServersStore(updatedServers);
-		}
-
-		show = false;
+	const toggleTerminal = (id: string) => {
+		closeMenu();
+		selectTerminal(selectedTerminalId, $selectedTerminalId === id ? null : id, chatId);
 	};
 
 	$: selectedSystemTerminal = systemTerminals.find(
 		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
 	);
-	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
-	$: folderTarget = resolveTerminalTarget(
-		$selectedTerminalId,
-		systemTerminals,
-		directTerminals,
-		'',
-		{ chatId: $activeChatId || null, modelId: modelId }
-	);
+	$: folderTarget = resolveTerminalTarget($selectedTerminalId, systemTerminals, '', {
+		chatId: $activeChatId || null,
+		modelId: modelId
+	});
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
 		selectedSystemTerminal?.name ||
 		selectedSystemTerminal?.id ||
-		selectedDirectTerminal?.name ||
-		selectedDirectTerminal?.url?.replace(/^https?:\/\//, '') ||
 		($selectedTerminalId ? $i18n.t('Unavailable terminal') : $i18n.t('Terminal'));
-	$: if (disabled && show) show = false;
+	$: if (disabled && (show || (inMenu && tab === 'terminal'))) closeMenu();
 
 	let showTerminals = false;
 	let managedTerminalId: string | null = null;
 	const openTerminalDialog = (id: string | null) => {
 		managedTerminalId = id;
-		show = false;
+		closeMenu();
 		showTerminals = true;
 	};
-	async function saveSelection(id: string | null) {
-		const ownerChatId = chatId;
-		const ownerActiveChatId = $activeChatId;
-		if (isSavedChatId(ownerChatId)) {
-			try {
-				await updateChatById(localStorage.token, ownerChatId!, {
-					terminal_id: id,
-					working_directory: ''
-				});
-			} catch (e) {
-				toast.error(String(e));
-				return false;
-			}
-		}
-		return !disposed && chatId === ownerChatId && $activeChatId === ownerActiveChatId;
-	}
-	async function selectTerminal(id: string) {
-		if (await saveSelection(id)) selectedTerminalId.set(id);
-	}
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
 	const openFiles = async (selector: string, label: string) => {
-		const target = resolveTerminalTarget(
-			selector,
-			systemTerminals,
-			directTerminals,
-			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
-		);
+		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+			chatId: $activeChatId || null,
+			modelId: modelId
+		});
 		if (!target) return;
-		show = false;
+		closeMenu();
 		await tick();
 		files = { target, label };
 	};
@@ -268,15 +172,12 @@
 			!isSavedChatId($activeChatId)
 		)
 			return;
-		const target = resolveTerminalTarget(
-			selector,
-			systemTerminals,
-			directTerminals,
-			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
-		);
+		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+			chatId: $activeChatId || null,
+			modelId: modelId
+		});
 		if (!target) return;
-		show = false;
+		closeMenu();
 		await tick();
 		info = { target, label };
 	};
@@ -285,225 +186,202 @@
 		(info &&
 			// A new chat has no ID: the store holds '' and the target holds null.
 			((info.target.context.chatId ?? '') !== ($activeChatId || '') ||
-				(info.target.system
-					? !systemTerminals.some((t) => t.id === info?.target.selector)
-					: !directTerminals.some((t) => t.url === info?.target.selector))))
+				!systemTerminals.some((t) => t.id === info?.target.selector)))
 	)
 		info = null;
 
-	$: triggerClass = inMenu
-		? `flex w-full min-w-0 items-center gap-2 h-[1.6875rem] px-2 text-[0.8125rem] rounded-xl text-left ${disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}`
-		: `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
-				disabled
-					? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-					: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
-							$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
-						}`
-			}`;
+	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
+		disabled
+			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
+			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
+					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
+				}`
+	}`;
 </script>
 
-<div class={inMenu ? 'w-full' : 'flex items-center translate-x-0.5'}>
-	{#if disabled}
-		<Tooltip content={selectedLabel} placement="top">
+{#snippet menuItems()}
+	<!-- Terminals, then the user's own devices -->
+	{#each systemSections as section}
+		<div class="flex items-center justify-between pl-2 pr-1 py-1">
+			<span
+				class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+			>
+				{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
+			</span>
+			{#if !section.devices}
+				<div class="flex items-center gap-0.5">
+					{#if writable.length}
+						<Tooltip content={$i18n.t('New terminal')} placement="top">
+							<button
+								type="button"
+								aria-label={$i18n.t('New terminal')}
+								class={headerButtonClass}
+								on:click|stopPropagation={() => openTerminalDialog(null)}
+							>
+								<Plus className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
+					{#if $user?.role === 'admin'}
+						<Tooltip content={$i18n.t('Settings')} placement="top">
+							<button
+								type="button"
+								aria-label={$i18n.t('Settings')}
+								class={headerButtonClass}
+								on:click|stopPropagation={() => {
+									closeMenu();
+									showSettings.set('admin:integrations');
+								}}
+							>
+								<Cog6 className="size-3.5" />
+							</button>
+						</Tooltip>
+					{/if}
+				</div>
+			{/if}
+		</div>
+
+		{#each section.terminals as terminal}
+			{@const label = terminal.name || $i18n.t('Terminal')}
+			{@const owned = canManage(terminal, manageable)}
+			{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+			<div class="group/terminal relative rounded-xl">
+				<button
+					type="button"
+					role="menuitemradio"
+					aria-checked={$selectedTerminalId === terminal.id}
+					class="{rowClass} {$selectedTerminalId === terminal.id
+						? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
+						: 'pr-8'}"
+					on:click={() => toggleTerminal(terminal.id)}
+				>
+					<div class="flex flex-1 gap-2 items-center truncate">
+						{#if section.devices}
+							<Server className="size-3.5 shrink-0" strokeWidth="2" />
+						{:else}
+							<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+						{/if}
+						<span class="truncate">{label}</span>
+					</div>
+					{#if $selectedTerminalId === terminal.id}
+						<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
+							<Check className="size-3.5" />
+						</div>
+					{/if}
+				</button>
+				<div
+					class="absolute inset-y-0 {$selectedTerminalId === terminal.id
+						? 'right-6'
+						: 'right-1'} {moreClass}"
+				>
+					<TerminalItemMenu
+						{label}
+						loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
+						onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
+						onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
+						onStart={() => runLifecycle(terminal.id, label, 'start')}
+						onInfo={reachable ? () => openInfo(terminal.id, label) : null}
+						onFiles={reachable ? () => openFiles(terminal.id, label) : null}
+						onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
+					/>
+				</div>
+			</div>
+		{/each}
+	{/each}
+{/snippet}
+
+{#if inMenu}
+	{#if tab === ''}
+		<div in:fly={{ x: -20, duration: 150 }}>
 			<button
 				type="button"
-				disabled
-				aria-disabled="true"
-				aria-label={selectedLabel}
-				class={triggerClass}
+				role="menuitem"
+				{disabled}
+				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+				on:click={() => {
+					tab = 'terminal';
+				}}
 			>
-				{#if selectedDevice}
-					<Server className="size-3.5" strokeWidth="2" />
-				{:else}
-					<Cloud className="size-3.5" strokeWidth="2" />
-				{/if}
-
-				{#if inMenu || ($selectedTerminalId && selectedLabel)}
-					<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
-						>{selectedLabel}</span
-					>
-				{/if}
-				{#if inMenu}<ChevronRight />{/if}
+				{#if selectedDevice}<Server className="size-3.5 shrink-0" strokeWidth="2" />{:else}<Cloud
+						className="size-3.5 shrink-0"
+						strokeWidth="2"
+					/>{/if}
+				<span class="flex-1 truncate">{selectedLabel}</span>
+				<div class="text-gray-500"><ChevronRight /></div>
 			</button>
-		</Tooltip>
-	{:else}
-		<Dropdown bind:show align="start">
+		</div>
+	{:else if tab === 'terminal'}
+		<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+			<button
+				role="menuitem"
+				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				on:click={() => {
+					tab = '';
+				}}
+			>
+				<ChevronLeft />
+				<div class="flex items-center w-full justify-between">
+					<div>{$i18n.t('Terminals')}</div>
+				</div>
+			</button>
+			<div class="min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
+				{@render menuItems()}
+			</div>
+		</div>
+	{/if}
+{:else}
+	<div class="flex items-center translate-x-0.5">
+		{#if disabled}
 			<Tooltip content={selectedLabel} placement="top">
-				<button type="button" aria-label={selectedLabel} class={triggerClass}>
+				<button
+					type="button"
+					disabled
+					aria-disabled="true"
+					aria-label={selectedLabel}
+					class={triggerClass}
+				>
 					{#if selectedDevice}
 						<Server className="size-3.5" strokeWidth="2" />
 					{:else}
 						<Cloud className="size-3.5" strokeWidth="2" />
 					{/if}
 
-					{#if inMenu || ($selectedTerminalId && selectedLabel)}
-						<span class="truncate text-[0.8125rem] {inMenu ? 'flex-1' : 'max-w-[9.375rem]'}"
+					{#if $selectedTerminalId && selectedLabel}
+						<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
 							>{selectedLabel}</span
 						>
 					{/if}
-					{#if inMenu}<ChevronRight />{/if}
 				</button>
 			</Tooltip>
+		{:else}
+			<Dropdown bind:show align="start">
+				<Tooltip content={selectedLabel} placement="top">
+					<button type="button" aria-label={selectedLabel} class={triggerClass}>
+						{#if selectedDevice}
+							<Server className="size-3.5" strokeWidth="2" />
+						{:else}
+							<Cloud className="size-3.5" strokeWidth="2" />
+						{/if}
 
-			<div slot="content">
-				<DropdownMenu
-					className="{inMenu
-						? 'w-70'
-						: 'w-60'} max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
-				>
-					<!-- Direct terminals (gated by permission) -->
-					{#if directTerminals.length > 0}
-						<div class="flex items-center justify-between pl-2 pr-1 py-1">
-							<span
-								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+						{#if $selectedTerminalId && selectedLabel}
+							<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
+								>{selectedLabel}</span
 							>
-								{$i18n.t('Direct')}
-							</span>
-							<Tooltip content={$i18n.t('Add Terminal')} placement="top">
-								<button
-									type="button"
-									aria-label={$i18n.t('Add Terminal')}
-									class={headerButtonClass}
-									on:click|stopPropagation={() => {
-										show = false;
-										showSettings.set('tools');
-									}}
-								>
-									<Plus className="size-3.5" />
-								</button>
-							</Tooltip>
-						</div>
+						{/if}
+					</button>
+				</Tooltip>
 
-						{#each directTerminals as terminal}
-							{@const label = terminal.name || terminal.url.replace(/^https?:\/\//, '')}
-							<div class="group/terminal relative rounded-xl">
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={$selectedTerminalId === terminal.url}
-									class="{rowClass} {$selectedTerminalId === terminal.url
-										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
-										: 'pr-8'}"
-									on:click={() => selectDirect(terminal)}
-								>
-									<div class="flex flex-1 gap-2 items-center truncate">
-										<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-										<span class="truncate">{label}</span>
-									</div>
-									{#if $selectedTerminalId === terminal.url}
-										<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
-											<Check className="size-3.5" />
-										</div>
-									{/if}
-								</button>
-								<div
-									class="absolute inset-y-0 {$selectedTerminalId === terminal.url
-										? 'right-6'
-										: 'right-1'} {moreClass}"
-								>
-									<TerminalItemMenu
-										{label}
-										onInfo={() => openInfo(terminal.url, label)}
-										onFiles={() => openFiles(terminal.url, label)}
-									/>
-								</div>
-							</div>
-						{/each}
-					{/if}
-
-					<!-- Terminals, then the user's own devices -->
-					{#each systemSections as section}
-						<div class="flex items-center justify-between pl-2 pr-1 py-1">
-							<span
-								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
-							>
-								{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
-							</span>
-							{#if !section.devices}
-								<div class="flex items-center gap-0.5">
-									{#if writable.length}
-										<Tooltip content={$i18n.t('New terminal')} placement="top">
-											<button
-												type="button"
-												aria-label={$i18n.t('New terminal')}
-												class={headerButtonClass}
-												on:click|stopPropagation={() => openTerminalDialog(null)}
-											>
-												<Plus className="size-3.5" />
-											</button>
-										</Tooltip>
-									{/if}
-									{#if $user?.role === 'admin'}
-										<Tooltip content={$i18n.t('Settings')} placement="top">
-											<button
-												type="button"
-												aria-label={$i18n.t('Settings')}
-												class={headerButtonClass}
-												on:click|stopPropagation={() => {
-													show = false;
-													showSettings.set('admin:integrations');
-												}}
-											>
-												<Cog6 className="size-3.5" />
-											</button>
-										</Tooltip>
-									{/if}
-								</div>
-							{/if}
-						</div>
-
-						{#each section.terminals as terminal}
-							{@const label = terminal.name || $i18n.t('Terminal')}
-							{@const owned = canManage(terminal, manageable)}
-							{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
-							<div class="group/terminal relative rounded-xl">
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={$selectedTerminalId === terminal.id}
-									class="{rowClass} {$selectedTerminalId === terminal.id
-										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
-										: 'pr-8'}"
-									on:click={() => selectSystem(terminal)}
-								>
-									<div class="flex flex-1 gap-2 items-center truncate">
-										{#if section.devices}
-											<Server className="size-3.5 shrink-0" strokeWidth="2" />
-										{:else}
-											<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-										{/if}
-										<span class="truncate">{label}</span>
-									</div>
-									{#if $selectedTerminalId === terminal.id}
-										<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
-											<Check className="size-3.5" />
-										</div>
-									{/if}
-								</button>
-								<div
-									class="absolute inset-y-0 {$selectedTerminalId === terminal.id
-										? 'right-6'
-										: 'right-1'} {moreClass}"
-								>
-									<TerminalItemMenu
-										{label}
-										loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
-										onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
-										onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
-										onStart={() => runLifecycle(terminal.id, label, 'start')}
-										onInfo={reachable ? () => openInfo(terminal.id, label) : null}
-										onFiles={reachable ? () => openFiles(terminal.id, label) : null}
-										onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
-									/>
-								</div>
-							</div>
-						{/each}
-					{/each}
-				</DropdownMenu>
-			</div>
-		</Dropdown>
-	{/if}
-</div>
+				<div slot="content">
+					<DropdownMenu
+						className="w-60 max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
+					>
+						{@render menuItems()}
+					</DropdownMenu>
+				</div>
+			</Dropdown>
+		{/if}
+	</div>
+{/if}
 
 {#if info}
 	{#key info}
@@ -519,6 +397,7 @@
 	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}
+			bind:tab
 			target={folderTarget}
 			{chatId}
 			userId={$user?.id ?? ''}
@@ -538,7 +417,7 @@
 		bind:show={showTerminals}
 		terminalId={managedTerminalId}
 		connections={writable}
-		onCreate={selectTerminal}
+		onCreate={async (id) => selectTerminal(selectedTerminalId, id, chatId)}
 	/>
 {/if}
 

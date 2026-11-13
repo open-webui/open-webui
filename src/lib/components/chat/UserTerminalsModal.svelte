@@ -9,6 +9,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import UserSettingSection from '$lib/components/chat/Settings/UserSettingSection.svelte';
 	import UserSettingRow from '$lib/components/chat/Settings/UserSettingRow.svelte';
 	import UserSettingField from '$lib/components/chat/Settings/UserSettingField.svelte';
@@ -45,12 +46,11 @@
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
 	const connectionOf = (id: string) => id.slice('template:'.length, id.lastIndexOf(':'));
 
-	// '' is no scope: one machine for everyone with access.
+	// '' is no scope (switch off): one machine for everyone with access.
 	const scopes = [
-		{ value: '', label: 'None', hint: 'All chats share one machine.' },
-		{ value: 'user', label: 'User', hint: 'Each person gets their own machine.' },
-		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own machine.' },
-		{ value: 'model', label: 'Model', hint: 'Each model gets its own machine.' }
+		{ value: 'user', label: 'User', hint: 'Each person gets their own instance.' },
+		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own instance.' },
+		{ value: 'model', label: 'Model', hint: 'Each model gets its own instance.' }
 	];
 	// Open Terminal reads these at start-up; the dialog gives them their own fields.
 	const START_DIR = 'OPEN_TERMINAL_START_DIR';
@@ -67,6 +67,8 @@
 		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
 	const item =
 		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition';
+
+	type MachineAction = 'restart' | 'stop' | 'start' | 'delete';
 
 	let busy = false;
 	let loading = !!terminalId;
@@ -94,6 +96,9 @@
 		run: () => Promise<void>;
 	} | null = null;
 	let showConfirm = false;
+	// Machine actions in flight, by machine id. Kept apart from `busy` so a restart shows on its
+	// own row instead of on Save, and doesn't lock the form or the other machines.
+	let pending: Record<string, MachineAction> = {};
 
 	$: serverId = terminalId ? connectionOf(terminalId) : connectionId;
 	$: loadStatus(serverId);
@@ -274,7 +279,7 @@
 		if (!terminalId || machine.status !== 'running') return null;
 		const context = machine.context ?? {};
 		if (context.user_id && context.user_id !== $user?.id) return null;
-		return resolveTerminalTarget(terminalId, $terminalServers ?? [], [], localStorage.token ?? '', {
+		return resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null
 		});
@@ -283,32 +288,44 @@
 	const machineCopy = {
 		restart: [
 			'Restart {{name}}?',
-			'Running work stops and the machine starts again. Files are kept.',
+			'Running work stops and the instance starts again. Files are kept.',
 			'Restart'
 		],
 		stop: [
 			'Stop {{name}}?',
-			'Running work stops. Files are kept, and the machine starts again when it is next used.',
+			'Running work stops. Files are kept, and the instance starts again when it is next used.',
 			'Stop'
 		],
-		delete: ['Delete {{name}}?', 'The machine and its files are deleted.', 'Delete']
+		delete: ['Delete {{name}}?', 'The instance and its files are deleted.', 'Delete']
 	};
 
-	const sendMachineAction = async (
-		machine: any,
-		action: 'restart' | 'stop' | 'start' | 'delete'
-	) => {
-		await templatesApi(
-			`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
-			action === 'delete' ? 'DELETE' : 'POST',
-			machine.context ?? {}
-		);
-		await loadMachines();
+	const pendingCopy: Record<MachineAction, string> = {
+		restart: 'Restarting...',
+		stop: 'Stopping...',
+		start: 'Starting...',
+		delete: 'Deleting...'
 	};
 
-	function machineAction(machine: any, action: 'restart' | 'stop' | 'start' | 'delete') {
+	async function sendMachineAction(machine: any, action: MachineAction) {
+		pending = { ...pending, [machine.id]: action };
+		try {
+			await templatesApi(
+				`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
+				action === 'delete' ? 'DELETE' : 'POST',
+				machine.context ?? {}
+			);
+		} catch (e) {
+			toast.error(`${machineName(machine)}: ${e instanceof Error ? e.message : e}`);
+		} finally {
+			await loadMachines().catch(() => {});
+			const { [machine.id]: _, ...rest } = pending;
+			pending = rest;
+		}
+	}
+
+	function machineAction(machine: any, action: MachineAction) {
 		// Starting changes nothing that is running, so it needs no confirmation.
-		if (action === 'start') return run(() => sendMachineAction(machine, action));
+		if (action === 'start') return sendMachineAction(machine, action);
 		const [heading, message, button] = machineCopy[action];
 		confirm(
 			$i18n.t(heading, { name: machineName(machine) }),
@@ -322,14 +339,15 @@
 		confirm(
 			$i18n.t('Delete {{name}}?', { name }),
 			machines.length
-				? $i18n.t('This deletes {{count}} machines and their files.', { count: machines.length })
+				? $i18n.t('This deletes {{count}} instances and their files.', { count: machines.length })
 				: $i18n.t('This terminal is deleted.'),
 			$i18n.t('Delete'),
-			async () => {
-				await templatesApi(path(terminalId!), 'DELETE');
-				await refreshServers();
-				show = false;
-			}
+			() =>
+				run(async () => {
+					await templatesApi(path(terminalId!), 'DELETE');
+					await refreshServers();
+					show = false;
+				})
 		);
 	}
 
@@ -402,20 +420,42 @@
 					{/if}
 
 					<UserSettingRow
-						label={$i18n.t('Separate machine per')}
 						description={scopeLocked
-							? $i18n.t('Delete all machines to change this.')
-							: $i18n.t(scopes.find((option) => option.value === scope)?.hint ?? '')}
+							? $i18n.t('Delete all instances to change this.')
+							: $i18n.t(
+									scopes.find((option) => option.value === scope)?.hint ??
+										'All chats share one instance.'
+								)}
+						let:labelId
 					>
-						<SettingsSelect
-							bind:value={scope}
-							ariaLabel={$i18n.t('Separate machine per')}
-							disabled={scopeLocked || busy}
-						>
-							{#each scopes as option}
-								<option value={option.value}>{$i18n.t(option.label)}</option>
-							{/each}
-						</SettingsSelect>
+						<ModelSettingsLabel
+							slot="label"
+							label={$i18n.t('Separate instances')}
+							description={$i18n.t(
+								'Give each person, chat, or model its own instance, with its own files and running programs. When off, everyone with access shares one instance.'
+							)}
+						/>
+						<div class="flex items-center gap-2">
+							{#if scope}
+								<span class="-me-1 text-xs text-gray-400 dark:text-gray-500">{$i18n.t('per')}</span>
+								<SettingsSelect
+									bind:value={scope}
+									ariaLabel={$i18n.t('Separate instance per')}
+									disabled={scopeLocked || busy}
+									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-gray-900 dark:!bg-transparent dark:focus-visible:text-white"
+								>
+									{#each scopes as option}
+										<option value={option.value}>{$i18n.t(option.label)}</option>
+									{/each}
+								</SettingsSelect>
+							{/if}
+							<Switch
+								ariaLabelledbyId={labelId}
+								state={!!scope}
+								disabled={scopeLocked || busy}
+								on:change={(e) => (scope = e.detail ? 'user' : '')}
+							/>
+						</div>
 					</UserSettingRow>
 				</UserSettingSection>
 
@@ -465,7 +505,7 @@
 								label={$i18n.t('Setup script')}
 								forId="terminal-setup-script"
 								description={$i18n.t(
-									'Runs in the start directory each time the machine starts, before it is ready. Only the home folder is kept between restarts, so make it safe to run again.'
+									'Runs in the start directory each time the instance starts, before it is ready. Only the home folder is kept between restarts, so make it safe to run again.'
 								)}
 							>
 								<textarea
@@ -614,7 +654,7 @@
 									</div>
 								{/each}
 								<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-									{$i18n.t('Set when the machine starts.')}
+									{$i18n.t('Set when the instance starts.')}
 								</p>
 							</div>
 						</div>
@@ -624,7 +664,7 @@
 				{#if terminalId}
 					<section class="mt-4 w-full">
 						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Machines')}
+							{$i18n.t('Instances')}
 							<span class="text-gray-400 dark:text-gray-600">{machines.length}</span>
 						</div>
 						<div class="flex flex-col gap-1 py-1">
@@ -636,15 +676,21 @@
 												· {machine.user_name}</span
 											>{/if}
 									</div>
-									<span class="shrink-0 text-xs text-gray-500">
-										{machine.status === 'running' ? $i18n.t('Running') : $i18n.t('Stopped')}
+									<span class="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
+										{#if pending[machine.id]}
+											{$i18n.t(pendingCopy[pending[machine.id]])}
+											<Spinner className="size-3" />
+										{:else}
+											{machine.status === 'running' ? $i18n.t('Running') : $i18n.t('Stopped')}
+										{/if}
 									</span>
 									<Dropdown align="end" closeOnSelect>
 										<button
 											type="button"
 											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
 											aria-label={$i18n.t('More options for {{name}}', { name: title })}
-											disabled={busy}><EllipsisHorizontal className="size-3.5" /></button
+											disabled={busy || !!pending[machine.id]}
+											><EllipsisHorizontal className="size-3.5" /></button
 										>
 										<div slot="content">
 											<DropdownMenu className="min-w-40">
@@ -689,7 +735,7 @@
 													type="button"
 													class={item}
 													on:click={() => machineAction(machine, 'delete')}
-													><GarbageBin className="size-3.5" />{$i18n.t('Delete machine')}</button
+													><GarbageBin className="size-3.5" />{$i18n.t('Delete instance')}</button
 												>
 											</DropdownMenu>
 										</div>
@@ -697,7 +743,7 @@
 								</div>
 							{:else}
 								<div class="text-xs text-gray-400 dark:text-gray-600">
-									{$i18n.t('No machines yet. One starts the first time the terminal is used.')}
+									{$i18n.t('No instances yet. One starts the first time the terminal is used.')}
 								</div>
 							{/each}
 						</div>
@@ -784,9 +830,5 @@
 	title={confirmation?.title ?? ''}
 	message={confirmation?.message ?? ''}
 	confirmLabel={confirmation?.label}
-	onConfirm={() =>
-		run(async () => {
-			await confirmation?.run();
-			showConfirm = false;
-		})}
+	onConfirm={() => confirmation?.run()}
 />

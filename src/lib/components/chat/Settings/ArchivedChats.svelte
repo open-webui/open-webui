@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import {
 		archiveChatById,
@@ -160,6 +161,7 @@
 		});
 		if (!deleted) return;
 		updateFolderChatLists({ id }, undefined, true);
+		closeChatTabs(id);
 
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;

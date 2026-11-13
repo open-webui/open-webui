@@ -151,7 +151,6 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.tether import get_terminal_connections
 from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
@@ -728,7 +727,6 @@ async def process_tool_result(
     tool_function_name,
     tool_result,
     tool_type,
-    direct_tool=False,
     metadata=None,
     user=None,
 ):
@@ -781,9 +779,7 @@ async def process_tool_result(
         else:
             tool_result = tool_result.body.decode('utf-8', 'replace')
 
-    elif (tool_type in EXTERNAL_TOOL_TYPES and isinstance(tool_result, tuple)) or (
-        direct_tool and isinstance(tool_result, list) and len(tool_result) == 2
-    ):
+    elif tool_type in EXTERNAL_TOOL_TYPES and isinstance(tool_result, tuple):
         tool_result, tool_response_headers = tool_result
 
         try:
@@ -1033,7 +1029,7 @@ async def chat_completion_tools_handler(
 
         recent_messages = messages[-4:] if len(messages) > 4 else messages
         chat_history = '\n'.join(
-            f'{message["role"].upper()}: """{get_content_from_message(message)}"""' for message in recent_messages
+            f'{message["role"].upper()}: """{get_content_from_message(message) or ""}"""' for message in recent_messages
         )
 
         prompt = f'History:\n{chat_history}\nQuery: {user_message}' if chat_history else f'Query: {user_message}'
@@ -1110,10 +1106,9 @@ async def chat_completion_tools_handler(
 
                 tool = None
                 tool_type = ''
-                direct_tool = False
 
                 try:
-                    tool_function_params, tool_result, tool, tool_type, direct_tool = await execute_tool_call(
+                    tool_function_params, tool_result, tool, tool_type = await execute_tool_call(
                         body,
                         {**metadata, 'tools': tools},
                         event_caller,
@@ -1128,7 +1123,6 @@ async def chat_completion_tools_handler(
                     tool_function_name,
                     tool_result,
                     tool_type,
-                    direct_tool,
                     metadata,
                     user,
                 )
@@ -2243,12 +2237,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     }
     # Initialize events to store additional event to be sent to the client
     # Initialize contexts and citation
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    from open_webui.utils.models import add_tether_model
+
+    models = await add_tether_model(request, user, form_data.get('model'))
 
     task_model_id = get_task_model_id(
         form_data['model'],
@@ -2440,10 +2431,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     tool_ids = form_data.pop('tool_ids', None)
     terminal_id = form_data.pop('terminal_id', None)
     if not ENABLE_TOOL_SERVERS:
-        if terminal_id or metadata.get('tool_servers'):
+        if terminal_id:
             log.debug('Excluded external plugins disabled by plugin configuration')
         terminal_id = None
-        metadata['tool_servers'] = None
     files = form_data.pop('files', None)
     form_data.pop('folder_id', None)
     metadata['terminal_id'] = terminal_id
@@ -2669,13 +2659,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # skip all server-side tool resolution and pass the caller's tools through
     # unchanged.  Sending `tools: []` explicitly opts out of builtin injection.
     if payload_tools is None:
-        # Server side tools
         tool_ids = metadata.get('tool_ids', None)
-        # Client side tools
-        direct_tool_servers = metadata.get('tool_servers', None)
-
         log.debug('tool_ids=%r', tool_ids)
-        log.debug('direct_tool_servers=%r', direct_tool_servers)
 
         tools_dict = {}
 
@@ -2734,7 +2719,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                                 'callable': tool_function,
                                 'type': 'mcp',
                                 'client': client,
-                                'direct': False,
                             }
                     except Exception:
                         log.exception("Failed to connect to MCP server '%s'", server_id)
@@ -2771,10 +2755,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 tools_dict = {**tools_dict, **mcp_tools_dict}
 
         # Resolve terminal tools if terminal_id is set (outside tool_ids check
-        # so system terminals work even when no other tools are selected)
+        # so system terminals work even when no other tools are selected).
+        # get_terminal_tools does the access check, including a shared chat's owner pick.
         terminal_capability = (model.get('info', {}).get('meta', {}).get('capabilities') or {}).get('terminal', True)
-        terminal_connection_ids = {connection.get('id') for connection in await get_terminal_connections(user)}
-        if terminal_id and terminal_capability and terminal_id in terminal_connection_ids:
+        if terminal_id and terminal_capability:
             try:
                 terminal_result = await get_terminal_tools(
                     request,
@@ -2798,33 +2782,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             except Exception as e:
                 log.exception(e)
                 raise HTTPException(status_code=503, detail=f'Terminal unavailable: {e}') from e
-
-        if direct_tool_servers:
-            for tool_server in direct_tool_servers:
-                if tool_server.get('is_terminal') is True and not terminal_capability:
-                    continue
-                # Copy so the pops below keep metadata intact for sub-agents and approval resumes
-                tool_server = dict(tool_server)
-                tool_server_system_prompt = tool_server.pop('system_prompt', None)
-                if tool_server_system_prompt:
-                    form_data['messages'] = add_or_update_system_message(
-                        tool_server_system_prompt,
-                        form_data['messages'],
-                        append=True,
-                    )
-
-                tool_specs = tool_server.pop('specs', [])
-
-                for tool in tool_specs:
-                    tools_dict[tool['name']] = {
-                        'spec': (
-                            get_builtin_tool_spec(display_file)
-                            if tool_server.get('is_terminal') and tool['name'] == 'display_file'
-                            else tool
-                        ),
-                        'direct': True,
-                        'server': tool_server,
-                    }
 
         if terminal_id and terminal_capability:
             from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
@@ -2879,10 +2836,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             for name, tool_dict in builtin_tools.items():
                 if name not in tools_dict:
                     tools_dict[name] = tool_dict
-                elif name == 'display_file' and (
-                    tools_dict[name].get('type') == 'terminal'
-                    or tools_dict[name].get('server', {}).get('is_terminal') is True
-                ):
+                elif name == 'display_file' and tools_dict[name].get('type') == 'terminal':
                     tools_dict[name] = {**tools_dict[name], 'file_tool': tool_dict}
 
         await filter_user_terminal_tools(request, user, tools_dict, metadata, extra_params)
@@ -3061,6 +3015,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             summary_content = f'[CONVERSATION SUMMARY]\n{context_summary}'
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
 
+    metadata['context_summary'] = context_summary
     return form_data, metadata, events, False
 
 
@@ -3201,7 +3156,7 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
         history.append(tool_call)
     tool_call['status'] = 'failed' if error else 'in_progress'
     if error:
-        return {}, error, None, None, False
+        return {}, error, None, None
     params = JSONCodec.loads(tool_call['arguments'])
     if name == 'display_file' and (
         str(params.get('path', '')).startswith('/api/v1/files/')
@@ -3209,11 +3164,10 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
     ):
         if tool.get('file_tool'):
             tool = tool['file_tool']
-        elif tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True:
+        elif tool.get('type') == 'terminal':
             tool_call['status'] = 'failed'
-            return params, 'Error: Uploaded file display is not available.', None, None, False
+            return params, 'Error: Uploaded file display is not available.', None, None
     tool_type = tool.get('type', '')
-    direct_tool = tool.get('direct', False)
     if tool_type != 'mcp':
         allowed_params = tool.get('spec', {}).get('parameters', {}).get('properties', {})
         params = {key: value for key, value in params.items() if key in allowed_params}
@@ -3238,43 +3192,26 @@ async def execute_tool_call(form_data, metadata, event_caller, tool_call, histor
             is not True
         ):
             tool_call['status'] = 'failed'
-            return params, 'Error: tool call was not approved.', tool, tool_type, direct_tool
+            return params, 'Error: tool call was not approved.', tool, tool_type
 
         tool_call['started_at'] = time.time()
         started = time.perf_counter()
         try:
-            if direct_tool:
-                if not event_caller:
-                    result = 'Error: Browser session is not connected for this direct tool.'
-                else:
-                    result = await event_caller(
-                        {
-                            'type': 'execute:tool',
-                            'data': {
-                                'id': str(uuid4()),
-                                'name': name,
-                                'params': params,
-                                'server': tool.get('server', {}),
-                                'session_id': metadata.get('session_id'),
-                            },
-                        }
-                    )
-            else:
-                function = await get_updated_tool_function(
-                    function=tool['callable'],
-                    extra_params={
-                        '__messages__': form_data.get('messages', []),
-                        '__files__': metadata.get('files') or [],
-                    },
-                )
-                result = await function(**params)
+            function = await get_updated_tool_function(
+                function=tool['callable'],
+                extra_params={
+                    '__messages__': form_data.get('messages', []),
+                    '__files__': metadata.get('files') or [],
+                },
+            )
+            result = await function(**params)
         finally:
             tool_call['ended_at'] = time.time()
             tool_call['duration'] = time.perf_counter() - started
     except Exception as e:
         result = {'error': str(e)}
     tool_call['status'] = 'failed' if _is_tool_result_error(result) else 'completed'
-    return params, result, tool, tool_type, direct_tool
+    return params, result, tool, tool_type
 
 
 async def resume_tool_calls(request, form_data, user, model, metadata, message) -> bool:
@@ -3362,9 +3299,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
         try:
             history = [call for call in output if call.get('type') == 'function_call']
             history = history[: next(i for i, call in enumerate(history) if call.get('call_id') == item['call_id'])]
-            params, result, tool, tool_type, direct_tool = await execute_tool_call(
-                form_data, metadata, event_caller, item, history
-            )
+            params, result, tool, tool_type = await execute_tool_call(form_data, metadata, event_caller, item, history)
             files, embeds = [], []
             if result is None and tool is None:
                 result = (
@@ -3375,9 +3310,7 @@ async def resume_tool_calls(request, form_data, user, model, metadata, message) 
                 terminal_file_result = build_terminal_file_tool_result(name, params, result, tool, metadata)
                 if terminal_file_result:
                     result = terminal_file_result
-                result, files, embeds = await process_tool_result(
-                    request, name, result, tool_type, direct_tool, metadata, user
-                )
+                result, files, embeds = await process_tool_result(request, name, result, tool_type, metadata, user)
                 await terminal_event_handler(name, params, result, event_emitter)
             content = await tool_result_with_citations(
                 item.get('name', ''),
@@ -3497,7 +3430,6 @@ async def pause_for_tool_approval(chat_id: str, message_id: str, output: list[di
                 'tool_ids': metadata.get('tool_ids') or [],
                 'skill_ids': metadata.get('skill_ids') or [],
                 'terminal_id': metadata.get('terminal_id'),
-                'tool_servers': metadata.get('tool_servers'),
                 'filter_ids': metadata.get('filter_ids') or [],
                 'features': metadata.get('features') or {},
                 'variables': metadata.get('variables') or {},
@@ -3896,7 +3828,7 @@ async def background_tasks_handler(ctx):
                         except Exception as e:
                             pass
 
-        if messages:
+        if messages and not is_temporary_chat_id(metadata.get('chat_id')):
             await review_memory_after_turn(
                 request=request,
                 user=user,
@@ -4996,7 +4928,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
 
                             if data:
-                                if 'event' in data and not getattr(request.state, 'direct', False):
+                                if 'event' in data:
                                     await event_emitter(data.get('event', {}))
 
                                 if 'selected_model_id' in data:
@@ -6034,9 +5966,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 )
                             except ToolApprovalRequired:
                                 break
-                        tool_function_params, tool_result, tool, tool_type, direct_tool = tool_results[
-                            tool_call['call_id']
-                        ]
+                        tool_function_params, tool_result, tool, tool_type = tool_results[tool_call['call_id']]
                         if tool_result is None:
                             results.append(
                                 {
@@ -6064,7 +5994,6 @@ async def streaming_chat_response_handler(response, ctx):
                             tool_function_name,
                             tool_result,
                             tool_type,
-                            direct_tool,
                             metadata,
                             user,
                         )

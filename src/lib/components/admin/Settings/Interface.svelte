@@ -54,6 +54,7 @@
 		CONTEXT_COMPACTION_TOKEN_CAP: 80000,
 		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: 40,
 		CONTEXT_COMPACTION_PROMPT_TEMPLATE: '',
+		VISUALIZATION_PROMPT_TEMPLATE: '',
 		ENABLE_TOOL_PERMISSIONS: false,
 		ENABLE_TOOL_CALL_LABELS: false,
 		ENABLE_TOOL_PERMISSIONS_AUTO: false,
@@ -77,20 +78,24 @@
 	let toolSearchAlwaysLoaded = '';
 	let defaultDecisionsPrompt = '';
 	let defaultPermissionsPrompt = '';
+	let defaultVisualizationPrompt = '';
 	let toolSearchEmbeddingModel = '';
 	const readChatConfigMetadata = () => {
 		const {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = '',
 			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT = '',
+			DEFAULT_VISUALIZATION_PROMPT_TEMPLATE = '',
 			TOOL_SEARCH_EMBEDDING_MODEL = '',
 			...settings
 		} = chatConfig as typeof chatConfig & {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT?: string;
 			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT?: string;
+			DEFAULT_VISUALIZATION_PROMPT_TEMPLATE?: string;
 			TOOL_SEARCH_EMBEDDING_MODEL?: string;
 		};
 		defaultDecisionsPrompt = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT;
 		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT;
+		defaultVisualizationPrompt = DEFAULT_VISUALIZATION_PROMPT_TEMPLATE;
 		toolSearchEmbeddingModel = TOOL_SEARCH_EMBEDDING_MODEL;
 		chatConfig = settings;
 	};
@@ -719,6 +724,19 @@
 						/>
 					</AdminSettingField>
 				{/if}
+
+				<AdminSettingField
+					label={$i18n.t('settings.admin.interface.visualizationPrompt.label')}
+					description={$i18n.t('settings.admin.interface.visualizationPrompt.description')}
+					forId="visualization-prompt"
+				>
+					<Textarea
+						id="visualization-prompt"
+						className={textareaClass}
+						bind:value={chatConfig.VISUALIZATION_PROMPT_TEMPLATE}
+						placeholder={defaultVisualizationPrompt}
+					/>
+				</AdminSettingField>
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.generation.title')}>

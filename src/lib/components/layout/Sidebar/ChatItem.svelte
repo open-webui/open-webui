@@ -12,6 +12,7 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	let chatMenuOpen = false;
 </script>
 
 <script lang="ts">
@@ -50,7 +51,7 @@
 	} from '$lib/stores';
 	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
-	import { updateChatTabLabels } from '$lib/stores/chatViewStates';
+	import { closeChatTabs, updateChatTabLabels } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -347,6 +348,7 @@
 
 		if (res) {
 			updateFolderChatLists({ id }, undefined, true);
+			closeChatTabs(id);
 			if ($chatId === id) {
 				await goto('/');
 
@@ -484,6 +486,7 @@
 			if (closeActiveHoverPreview === closeHoverPreview) {
 				closeActiveHoverPreview = null;
 			}
+			if (menuOpen) chatMenuOpen = false;
 		};
 	});
 
@@ -796,7 +799,9 @@
 						!($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
-						if (open) {
+						if (open && chatMenuOpen) {
+							openPreview = false;
+						} else if (open) {
 							activeProfileId = null;
 							overflowOpen = false;
 						}
@@ -911,10 +916,13 @@
 						{markUnreadHandler}
 						onOpen={() => {
 							menuOpen = true;
+							chatMenuOpen = true;
+							closeActiveHoverPreview?.();
 							dispatch('select');
 						}}
 						onClose={() => {
 							menuOpen = false;
+							chatMenuOpen = false;
 							dispatch('unselect');
 						}}
 						onPinChange={(chat) => refreshAfterChange(chat.pinned ? null : chat.folder_id)}

@@ -948,6 +948,9 @@
 		if (event.data?.type === 'chat:active') {
 			updateFolderChatLists({ id: event.chat_id, active: event.data.data?.active ?? false, pending_approval: event.data.data?.pending_approval ?? false });
 			const eventData = event.data.data ?? {};
+			if (eventData.folder_unread_counts) {
+				applyFolderUnreadCounts(eventData.folder_unread_counts);
+			}
 			const active = eventData.active ?? false;
 			const pendingApproval = eventData.pending_approval ?? false;
 			const found = setChatActive(event.chat_id, active, pendingApproval);

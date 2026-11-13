@@ -333,10 +333,9 @@ def prepare_tool_call(call, schema=None, *, display_labels=False, approval_revie
 
 
 def final_answer_payload(payload):
-    """Make one OpenAI-compatible continuation request with tools disabled."""
+    """Make one OpenAI-compatible continuation request with tool calls turned off."""
     return {
         **payload,
-        'tools': [],
         'tool_choice': 'none',
         'messages': [*payload.get('messages', []), {'role': 'system', 'content': FINAL_ANSWER_PROMPT}],
     }

@@ -61,8 +61,10 @@
 	};
 
 	export const reset = () => {
-		instance?.moveTo(0, 0);
-		instance?.zoomAbs(0, 0, 1);
+		if (!instance) return;
+		const { x, y } = instance.getTransform();
+		instance.zoomAbs(x, y, 1);
+		instance.moveTo(0, 0);
 		updateZoomLevel();
 	};
 

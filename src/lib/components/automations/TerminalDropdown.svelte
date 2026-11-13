@@ -29,12 +29,16 @@
 	<Dropdown bind:show={showDropdown} {side} {align}>
 		<button
 			type="button"
+			aria-label={terminalLabel}
+			title={terminalLabel}
 			class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
 				{terminalServerId ? 'text-black dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}
 				hover:text-gray-900 dark:hover:text-gray-100"
 		>
 			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-			<span class="whitespace-nowrap max-w-32 truncate">{terminalLabel}</span>
+			{#if terminalServerId}
+				<span class="whitespace-nowrap max-w-32 truncate">{terminalLabel}</span>
+			{/if}
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
