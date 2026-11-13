@@ -2272,7 +2272,6 @@
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
 					{@const PageIcon =
 						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
-					{@const titleEditor = tab.kind === 'chat' ? tabTitleEditor : sideTabTitleEditors[tab.id]}
 					<div
 						role="presentation"
 						data-panel-tab={tab.id}
@@ -2324,7 +2323,7 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind === 'chat' && mainTabFolder ? !renamingFolder : !titleEditor}
+							{#if (tab.kind !== 'chat' || (mainTabFolder ? !renamingFolder : !tabTitleEditor)) && !sideTabTitleEditors[tab.id]}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
 									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
@@ -2359,7 +2358,9 @@
 								/>
 							{:else if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
-						{:else}{@render titleEditor?.()}{@render sideTabActions[tab.id]?.()}<button
+						{:else}
+							{@render sideTabTitleEditors[tab.id]?.()}
+							{@render sideTabActions[tab.id]?.()}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[
