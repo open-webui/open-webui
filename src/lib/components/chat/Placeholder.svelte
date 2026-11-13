@@ -184,7 +184,8 @@
 		? 'flex h-full min-h-0 flex-col overflow-hidden'
 		: 'm-auto max-w-[58rem] px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
 >
-	{#if $temporaryChatEnabled}
+	<!-- In a folder, temporary mode shows on the composer alone. -->
+	{#if $temporaryChatEnabled && !$selectedFolder}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
