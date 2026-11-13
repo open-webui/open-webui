@@ -11,7 +11,7 @@
 	export let initialPrompt = '';
 	export let standalone = false;
 	export let initialView: any = null;
-	export const captureView = () => ({ draft, files, context });
+	export const captureView = () => ({ draft, files, context, temporary });
 	export let chatId = '';
 	export let streaming = false;
 	export let artifacts: Writable<{ type: string; content: string }[]> = writable([]);
@@ -28,6 +28,7 @@
 	const restored = !!initialView;
 	let draft = initialView?.draft ?? initialPrompt;
 	let files: any[] = initialView?.files ?? [];
+	let temporary: boolean = initialView?.temporary ?? false;
 	$: sideChatAllowed =
 		$user?.role === 'admin' ||
 		($user?.role === 'user' && (standalone || ($user.permissions?.chat?.side_chat ?? false)));
@@ -90,10 +91,11 @@
 		history: convertMessagesToHistory(context),
 		chatFiles: contextFiles(),
 		temporary:
-			!chatId &&
-			$user?.role !== 'admin' &&
-			($user?.permissions?.chat?.temporary ?? true) &&
-			($user?.permissions?.chat?.temporary_enforced ?? false),
+			temporary ||
+			(!chatId &&
+				$user?.role !== 'admin' &&
+				($user?.permissions?.chat?.temporary ?? true) &&
+				($user?.permissions?.chat?.temporary_enforced ?? false)),
 		prompt: draft,
 		files
 	};
@@ -143,6 +145,7 @@
 		bind:prompt={draft}
 		bind:streaming
 		bind:files
+		bind:temporary
 		{artifacts}
 		{onOpenArtifacts}
 		onCreateEmbeddedChat={createChat}
