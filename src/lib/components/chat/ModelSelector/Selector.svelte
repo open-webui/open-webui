@@ -134,7 +134,12 @@
 	};
 	const focusChatInput = () => {
 		if (!$mobile) {
-			document.getElementById('chat-input')?.focus();
+			document
+				.getElementById(
+					triggerElement?.closest('[data-composer-id]')?.getAttribute('data-composer-id') ??
+						'chat-input'
+				)
+				?.focus();
 		}
 
 		if (
