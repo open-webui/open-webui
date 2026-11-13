@@ -1249,8 +1249,7 @@
 
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
-	const chatContextNeedsSavedChat = (terminal: any) =>
-		['chat', 'folder'].includes(terminal?.scope);
+	const chatContextNeedsSavedChat = (terminal: any) => terminal?.scope === 'chat';
 	$: selectedSystemTerminal = ($terminalServers ?? []).find(
 		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
 	);

@@ -192,10 +192,7 @@ async def list_template_connections(user, connections):
 
 class MissingTerminalContext(HTTPException):
     def __init__(self, scope):
-        detail = {
-            'chat': 'This terminal requires a saved chat',
-            'folder': 'This terminal requires a chat in a folder',
-        }.get(scope, f'This terminal requires a {scope}')
+        detail = 'This terminal requires a saved chat' if scope == 'chat' else f'This terminal requires a {scope}'
         super().__init__(409, detail)
 
 
@@ -203,21 +200,17 @@ def get_terminal_context(template, user_id, metadata=None):
     """Validate a template's scope and return context for its environment."""
     metadata = metadata or {}
     scope = (template.get('data') or {}).get('scope')
-    if scope not in (None, 'user', 'chat', 'folder', 'model'):
+    if scope not in (None, 'user', 'chat', 'model'):
         raise HTTPException(422, 'Invalid template scope')
     chat_id = metadata.get('chat_id')
-    folder_id = metadata.get('folder_id')
     model_id = metadata.get('model_id') or metadata.get('model')
     if scope == 'chat' and not is_saved_chat_id(chat_id):
-        raise MissingTerminalContext(scope)
-    if scope == 'folder' and not folder_id:
         raise MissingTerminalContext(scope)
     if scope == 'model' and not model_id:
         raise MissingTerminalContext(scope)
     return {
         'user_id': user_id,
         'chat_id': chat_id if is_saved_chat_id(chat_id) else None,
-        'folder_id': folder_id if scope == 'folder' else None,
         'model_id': model_id if scope == 'model' else None,
     }
 
@@ -260,8 +253,6 @@ def terminal_headers(connection):
     }
     if context.get('chat_id'):
         headers['X-Terminal-Chat-Id'] = context['chat_id']
-    if context.get('folder_id'):
-        headers['X-Terminal-Folder-Id'] = context['folder_id']
     if context.get('model_id'):
         headers['X-Terminal-Model-Id'] = context['model_id']
     return headers
@@ -332,25 +323,11 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
         if stored and stored != terminal_id:
             raise HTTPException(409, 'Chat terminal selection changed; refresh the chat')
 
-    folder = None
-    if scope == 'folder':
-        # The folder comes from the saved chat, never from the request.
-        metadata['folder_id'] = None
-        if chat and chat.folder_id:
-            from open_webui.models.folders import Folders
-            from open_webui.utils.access_control.folders import has_folder_access
-
-            folder = await Folders.get_folder_by_id(chat.folder_id)
-            if folder is None or not await has_folder_access(user.id, folder, 'write', None):
-                raise HTTPException(403, 'Folder access denied')
-            metadata['folder_id'] = folder.id
-
     principal = instance_user
-    if not shared_session and scope in ('chat', 'folder') and chat:
-        owner_id = folder.user_id if folder else chat.user_id
-        owner = user if owner_id == user.id else await Users.get_user_by_id(owner_id)
+    if not shared_session and scope == 'chat' and chat:
+        owner = user if chat.user_id == user.id else await Users.get_user_by_id(chat.user_id)
         if owner is None:
-            raise HTTPException(403, f"{'Folder' if folder else 'Chat'} owner is unavailable")
+            raise HTTPException(403, 'Chat owner is unavailable')
         if (
             owner.id != instance_user.id
             and not await has_connection_access(owner, connection)
