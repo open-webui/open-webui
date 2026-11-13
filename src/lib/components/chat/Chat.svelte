@@ -4509,6 +4509,7 @@
 			}
 		);
 	};
+	setContext('chat', { chatId, submitHandler });
 
 	const sendMessage = async (
 		_history,
