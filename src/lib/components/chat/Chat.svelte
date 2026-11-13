@@ -1018,6 +1018,7 @@
 		codeInterpreterEnabled = false;
 
 		if (chatIdProp) {
+			if ($selectedFolder) selectedFolder.set(null);
 			await loadChat(signal);
 		} else if (!embedded) {
 			await goto('/');
