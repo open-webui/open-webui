@@ -69,6 +69,7 @@
 		updateFolderDetails,
 		type FolderDetails
 	} from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -5483,6 +5484,7 @@
 			const res = await deleteChatById(localStorage.token, id);
 			if (res) {
 				updateFolderChatLists({ id }, undefined, true);
+				closeChatTabs(id);
 				initNewChat();
 				await goto('/');
 				await refreshChatList(localStorage.token, { refreshPinned: true });
