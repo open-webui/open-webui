@@ -151,9 +151,10 @@
 				})
 				.catch(() => {});
 		}
+		const input = document.activeElement;
 		const keydownListener = (e: KeyboardEvent) => {
 			// required to prevent the default enter behavior
-			if (e.key === 'Enter') {
+			if (e.key === 'Enter' && e.target === input) {
 				e.preventDefault();
 				select(selectedIndex);
 			}
