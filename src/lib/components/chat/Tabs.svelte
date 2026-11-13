@@ -161,7 +161,28 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
-	export let mainTabFolder: { id: string; name: string; icon?: string | null } | null = null;
+	export let mainTabFolder: { id: string; name: string; icon?: string | null; canEdit?: boolean } | null =
+		null;
+	/** Double-clicking the folder tab renames the folder inline. */
+	export let onRenameFolder: ((folderId: string, name: string) => Promise<void>) | null = null;
+	let renamingFolder = false;
+	let folderNameDraft = '';
+	const startFolderRename = async () => {
+		if (!mainTabFolder?.canEdit || !onRenameFolder) return;
+		folderNameDraft = mainTabFolder.name;
+		renamingFolder = true;
+		await tick();
+		const input = document.querySelector<HTMLInputElement>('[data-folder-tab-rename]');
+		input?.focus();
+		input?.select();
+	};
+	const saveFolderRename = async () => {
+		if (!renamingFolder || !mainTabFolder) return;
+		renamingFolder = false;
+		const name = folderNameDraft.trim();
+		if (name && name !== mainTabFolder.name) await onRenameFolder?.(mainTabFolder.id, name);
+	};
+	$: if (!mainTabFolder) renamingFolder = false;
 	$: mainTabTitle = mainTabFolder?.name ?? title;
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
@@ -2257,7 +2278,9 @@
 							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 							on:dblclick={() => {
-								if (tab.kind === 'chat' && !mainTabFolder) onRenameMainTab?.();
+								if (tab.kind !== 'chat') return;
+								if (mainTabFolder) void startFolderRename();
+								else onRenameMainTab?.();
 							}}
 						>
 							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
@@ -2278,7 +2301,7 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind !== 'chat' || !tabTitleEditor || mainTabFolder}
+							{#if tab.kind !== 'chat' || (mainTabFolder ? !renamingFolder : !tabTitleEditor)}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
 									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
@@ -2292,7 +2315,26 @@
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.kind === 'chat'}
-							{#if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
+							{#if mainTabFolder && renamingFolder}
+								<input
+									data-folder-tab-rename
+									bind:value={folderNameDraft}
+									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-gray-700 outline-hidden dark:text-gray-300"
+									aria-label={$i18n.t('Folder Name')}
+									on:click|stopPropagation
+									on:keydown={(e) => {
+										if (e.isComposing || e.keyCode === 229) return;
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											void saveFolderRename();
+										} else if (e.key === 'Escape') {
+											e.preventDefault();
+											renamingFolder = false;
+										}
+									}}
+									on:blur={saveFolderRename}
+								/>
+							{:else if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
 						{:else}<button
 								type="button"
