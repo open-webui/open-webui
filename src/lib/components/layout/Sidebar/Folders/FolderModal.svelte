@@ -65,15 +65,10 @@
 
 		modelTimer = setTimeout(async () => {
 			try {
-				const available = await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_integrations
-						? ($settings?.directConnections ?? null)
-						: null,
-					false,
-					false,
-					{ terminalId, cwd: cwd.trim() }
-				);
+				const available = await getModels(localStorage.token, false, false, {
+					terminalId,
+					cwd: cwd.trim()
+				});
 				if (request === modelRequest) terminalModels = available;
 			} catch (error) {
 				if (request === modelRequest) toast.error(`${error}`);

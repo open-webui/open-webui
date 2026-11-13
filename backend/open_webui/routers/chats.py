@@ -1513,12 +1513,16 @@ async def update_chat_by_id(
             and set(form_data.chat) <= {'models', 'terminal_id', 'working_directory'}
             and await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat)
         ):
-            folder = await Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id, db=db) if chat.folder_id else None
+            folder = (
+                await Folders.get_folder_by_id_and_user_id(chat.folder_id, user.id, db=db) if chat.folder_id else None
+            )
             if not folder or set(form_data.chat) != {'title'}:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
             title = form_data.chat['title']
             if not isinstance(title, str) or not title.strip():
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Invalid title'))
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Invalid title')
+                )
             form_data.chat['title'] = title.strip()
     if chat:
         set_message_authors(form_data.chat, user)

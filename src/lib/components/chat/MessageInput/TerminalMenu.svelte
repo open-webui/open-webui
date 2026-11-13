@@ -119,12 +119,6 @@
 		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
 		{ devices: true, terminals: systemTerminals.filter(isDevice) }
 	].filter((section) => !section.devices || section.terminals.length > 0);
-	$: directTerminals = (
-		$config?.features?.enable_direct_integrations &&
-		($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-			? ($settings?.terminalServers ?? [])
-			: []
-	).filter((s) => s.url);
 
 	const toggleTerminal = (id: string) => {
 		show = false;
@@ -134,21 +128,15 @@
 	$: selectedSystemTerminal = systemTerminals.find(
 		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
 	);
-	$: selectedDirectTerminal = directTerminals.find((t) => t.url === $selectedTerminalId);
-	$: folderTarget = resolveTerminalTarget(
-		$selectedTerminalId,
-		systemTerminals,
-		directTerminals,
-		'',
-		{ chatId: $activeChatId || null, modelId: modelId }
-	);
+	$: folderTarget = resolveTerminalTarget($selectedTerminalId, systemTerminals, '', {
+		chatId: $activeChatId || null,
+		modelId: modelId
+	});
 	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
 
 	$: selectedLabel =
 		selectedSystemTerminal?.name ||
 		selectedSystemTerminal?.id ||
-		selectedDirectTerminal?.name ||
-		selectedDirectTerminal?.url?.replace(/^https?:\/\//, '') ||
 		($selectedTerminalId ? $i18n.t('Unavailable terminal') : $i18n.t('Terminal'));
 	$: if (disabled && show) show = false;
 
@@ -162,13 +150,10 @@
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
 	const openFiles = async (selector: string, label: string) => {
-		const target = resolveTerminalTarget(
-			selector,
-			systemTerminals,
-			directTerminals,
-			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
-		);
+		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+			chatId: $activeChatId || null,
+			modelId: modelId
+		});
 		if (!target) return;
 		show = false;
 		await tick();
@@ -180,13 +165,10 @@
 			!isSavedChatId($activeChatId)
 		)
 			return;
-		const target = resolveTerminalTarget(
-			selector,
-			systemTerminals,
-			directTerminals,
-			localStorage.token ?? '',
-			{ chatId: $activeChatId || null, modelId: modelId }
-		);
+		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+			chatId: $activeChatId || null,
+			modelId: modelId
+		});
 		if (!target) return;
 		show = false;
 		await tick();
@@ -197,9 +179,7 @@
 		(info &&
 			// A new chat has no ID: the store holds '' and the target holds null.
 			((info.target.context.chatId ?? '') !== ($activeChatId || '') ||
-				(info.target.system
-					? !systemTerminals.some((t) => t.id === info?.target.selector)
-					: !directTerminals.some((t) => t.url === info?.target.selector))))
+				!systemTerminals.some((t) => t.id === info?.target.selector)))
 	)
 		info = null;
 
@@ -263,66 +243,6 @@
 						? 'w-70'
 						: 'w-60'} max-w-[calc(100vw-2rem)] max-h-72 overflow-y-auto overflow-x-hidden scrollbar-thin"
 				>
-					<!-- Direct terminals (gated by permission) -->
-					{#if directTerminals.length > 0}
-						<div class="flex items-center justify-between pl-2 pr-1 py-1">
-							<span
-								class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
-							>
-								{$i18n.t('Direct')}
-							</span>
-							<Tooltip content={$i18n.t('Add Terminal')} placement="top">
-								<button
-									type="button"
-									aria-label={$i18n.t('Add Terminal')}
-									class={headerButtonClass}
-									on:click|stopPropagation={() => {
-										show = false;
-										showSettings.set('tools');
-									}}
-								>
-									<Plus className="size-3.5" />
-								</button>
-							</Tooltip>
-						</div>
-
-						{#each directTerminals as terminal}
-							{@const label = terminal.name || terminal.url.replace(/^https?:\/\//, '')}
-							<div class="group/terminal relative rounded-xl">
-								<button
-									type="button"
-									role="menuitemradio"
-									aria-checked={$selectedTerminalId === terminal.url}
-									class="{rowClass} {$selectedTerminalId === terminal.url
-										? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
-										: 'pr-8'}"
-									on:click={() => toggleTerminal(terminal.url)}
-								>
-									<div class="flex flex-1 gap-2 items-center truncate">
-										<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-										<span class="truncate">{label}</span>
-									</div>
-									{#if $selectedTerminalId === terminal.url}
-										<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
-											<Check className="size-3.5" />
-										</div>
-									{/if}
-								</button>
-								<div
-									class="absolute inset-y-0 {$selectedTerminalId === terminal.url
-										? 'right-6'
-										: 'right-1'} {moreClass}"
-								>
-									<TerminalItemMenu
-										{label}
-										onInfo={() => openInfo(terminal.url, label)}
-										onFiles={() => openFiles(terminal.url, label)}
-									/>
-								</div>
-							</div>
-						{/each}
-					{/if}
-
 					<!-- Terminals, then the user's own devices -->
 					{#each systemSections as section}
 						<div class="flex items-center justify-between pl-2 pr-1 py-1">

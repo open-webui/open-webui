@@ -360,7 +360,6 @@
 		const target = resolveTerminalTarget(
 			tab.terminalId,
 			$terminalServers ?? [],
-			directTerminals,
 			localStorage.token ?? '',
 			tab.target?.context ?? { chatId, modelId: modelId ?? null }
 		);
@@ -542,13 +541,10 @@
 		if (tab.terminalId) {
 			const target =
 				tab.target ??
-				resolveTerminalTarget(
-					tab.terminalId,
-					$terminalServers ?? [],
-					directTerminals,
-					localStorage.token,
-					{ chatId: chatId, modelId: modelId ?? null }
-				);
+				resolveTerminalTarget(tab.terminalId, $terminalServers ?? [], localStorage.token, {
+					chatId: chatId,
+					modelId: modelId ?? null
+				});
 			tab = { ...tab, target: target ?? undefined };
 		}
 		tabs = inSidePanel ? openTabInSidePanel(tabs, tab, besideId) : openTab(tabs, tab);
@@ -562,16 +558,20 @@
 			id: `${chat ? 'side' : 'page'}:${uuidv4()}`,
 			kind: chat ? 'side' : 'page',
 			href: url.pathname + url.search + url.hash,
-			chatId: url.pathname.startsWith('/c/') ? decodeURIComponent(url.pathname.slice(3)) : undefined,
-			initialPrompt: chat ? url.searchParams.get('q') ?? '' : undefined,
+			chatId: url.pathname.startsWith('/c/')
+				? decodeURIComponent(url.pathname.slice(3))
+				: undefined,
+			initialPrompt: chat ? (url.searchParams.get('q') ?? '') : undefined,
 			label: request.label || $i18n.t(chat ? 'Chat' : 'Loading...')
 		};
 	};
-	const findPageTab = (url: URL) => tabs.tabs.find((tab) =>
-		(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
-		(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
-		(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
-	);
+	const findPageTab = (url: URL) =>
+		tabs.tabs.find(
+			(tab) =>
+				(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
+				(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
+				(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
+		);
 	export const openPageTab = (request: { href: string; label: string }) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
@@ -591,7 +591,7 @@
 		} else openPanel(createPageTab(request));
 	};
 	const navigatePageTab = async (id: string, href: string) => {
-		if (!(await pageViews[id]?.requestClose() ?? true)) return;
+		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
 			openPageTab({ href, label: '' });
@@ -614,13 +614,10 @@
 		if (!selector && !showFilesTab)
 			return askForTerminal(() => openFiles($selectedTerminalId, directory, newTab, sourceModelId));
 		if (selector ? !terminalAccessible(selector) : !showFilesTab) return;
-		const target = resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			directTerminals,
-			localStorage.token,
-			{ chatId: chatId, modelId: sourceModelId ?? null }
-		);
+		const target = resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: sourceModelId ?? null
+		});
 		const pinnedModel = target?.context.modelId ?? null;
 		const existing = newTab
 			? undefined
@@ -663,13 +660,10 @@
 		sourceModelId = modelId
 	) => {
 		if (!terminalAccessible(selector)) return;
-		const target = resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			directTerminals,
-			localStorage.token,
-			{ chatId: chatId, modelId: sourceModelId ?? null }
-		);
+		const target = resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: sourceModelId ?? null
+		});
 		const pinnedModel = target?.context.modelId ?? null;
 		path = path.replace(/\\/g, '/').replace(/\/{2,}/g, '/');
 		const id =
@@ -704,17 +698,11 @@
 			target: { ...selectedTarget },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedTarget.selector
-					? activeFileContext
-					: undefined
+				activeFileContext?.terminalId === selectedTarget.selector ? activeFileContext : undefined
 		});
 	};
 	/** Opens the artifacts tab of the chat in `sourceTabId` beside that chat. */
-	export const openArtifacts = (
-		code?: string,
-		sourceTabId = mainChatTabId,
-		inSidePanel = true
-	) => {
+	export const openArtifacts = (code?: string, sourceTabId = mainChatTabId, inSidePanel = true) => {
 		if (!$visibleControls['chat.artifacts']) return;
 		if (sourceTabId === mainChatTabId && !viewReady) {
 			// the chat's messages can render before its tabs are restored
@@ -784,10 +772,12 @@
 		const internal =
 			!!draggedTabId || event.dataTransfer?.types.includes('application/x-chat-panel-tab');
 		if (
-			(!internal && !canDropChat(event) &&
+			(!internal &&
+				!canDropChat(event) &&
 				!event.dataTransfer?.types.includes('application/x-open-webui-page')) ||
 			!(event.target instanceof Element)
-		) return null;
+		)
+			return null;
 		if (!internal && event.target.closest('[data-composer-id]')) return null;
 		const group = event.target.closest<HTMLElement>('[data-panel-group]');
 		const panel = event.target.closest('#controls-container');
@@ -845,8 +835,8 @@
 			event.dataTransfer!.dropEffect =
 				event.dataTransfer!.effectAllowed === 'move' ||
 				event.dataTransfer!.types.includes('application/x-chat-panel-tab')
-				? 'move'
-				: 'copy';
+					? 'move'
+					: 'copy';
 	};
 	export const leaveChatDrop = (event: DragEvent) => {
 		if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node))
@@ -887,7 +877,8 @@
 		event.preventDefault();
 		const applyDrop = () => {
 			const groupId = bounds.groupId;
-			if (!droppedPage && savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId)) return;
+			if (!droppedPage && savedId === chatId && !tabs.tabs.some((tab) => tab.id === mainChatTabId))
+				return;
 			const existing =
 				internalId ||
 				(droppedPage
@@ -899,7 +890,10 @@
 			if (!id) {
 				focusGroup(groupId);
 				id = droppedPage?.id ?? uuidv4();
-				tabs = openTab(tabs, droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId });
+				tabs = openTab(
+					tabs,
+					droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId }
+				);
 			}
 			tabs = bounds.edge
 				? splitTab(tabs, id, groupId, bounds.edge)
@@ -990,13 +984,10 @@
 			return;
 		}
 		const target = selector
-			? resolveTerminalTarget(
-					selector,
-					$terminalServers ?? [],
-					directTerminals,
-					localStorage.token ?? '',
-					{ chatId: chatId, modelId: modelId ?? null }
-				)
+			? resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token ?? '', {
+					chatId: chatId,
+					modelId: modelId ?? null
+				})
 			: null;
 		if (!target) return;
 		const terminal = ($terminalServers ?? []).find((item) => item.id === selector);
@@ -1027,7 +1018,7 @@
 			await owner.pending.get(id);
 			const tab = owner.state.panels.tabs.find((item) => item.id === id);
 			if (!tab) return;
-			if (tab.kind === 'page' && !(await pageViews[id]?.requestClose() ?? true)) return;
+			if (tab.kind === 'page' && !((await pageViews[id]?.requestClose()) ?? true)) return;
 			const target =
 				tab.sessionId && (tab.kind === 'terminal' || tab.kind === 'browser')
 					? tabTarget(tab)
@@ -1215,8 +1206,8 @@
 	$: hasMessages = history?.messages && Object.keys(history.messages).length > 0;
 
 	const chatContextNeedsSavedChat = (terminal: any) => terminal?.scope === 'chat';
-	$: selectedSystemTerminal = ($terminalServers ?? []).find((t) =>
-		(!!$selectedTerminalId && t.id === $selectedTerminalId)
+	$: selectedSystemTerminal = ($terminalServers ?? []).find(
+		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
 	);
 	$: selectedSystemTerminalAvailable =
 		selectedSystemTerminal &&
@@ -1224,10 +1215,7 @@
 	$: terminalFilesAvailable = !!(
 		$config?.features?.enable_tool_servers &&
 		$selectedTerminalId &&
-		(selectedSystemTerminalAvailable ||
-			(!selectedSystemTerminal &&
-				$config?.features?.enable_direct_integrations &&
-				($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))))
+		selectedSystemTerminalAvailable
 	);
 	$: showFilesTab =
 		terminalFilesAvailable ||
@@ -1391,28 +1379,18 @@
 		action();
 	};
 
-	$: directTerminals =
-		($settings as { terminalServers?: { url: string; key?: string; name?: string }[] })
-			?.terminalServers ?? [];
 	const terminalAccessible = (selector: string) => {
 		if (!$config?.features?.enable_tool_servers) return false;
-		const system = ($terminalServers ?? []).find((terminal) => (!!selector && terminal.id === selector));
-		if (system)
-			return (
-				!(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId))
-			);
-		return !!(
-			$config?.features?.enable_direct_integrations &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true)) &&
-			directTerminals.some((terminal) => terminal.url === selector)
+		const system = ($terminalServers ?? []).find(
+			(terminal) => !!selector && terminal.id === selector
 		);
+		return !!system && !(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId));
 	};
 	$: selectedTarget =
 		terminalFilesAvailable && mounted
 			? resolveTerminalTarget(
 					$selectedTerminalId,
 					$terminalServers ?? [],
-					directTerminals,
 					localStorage.token ?? '',
 					{ chatId: chatId, modelId: modelId ?? null }
 				)
@@ -1421,16 +1399,6 @@
 	let availableTerminals: TerminalOption[] = [];
 	$: availableTerminals = $config?.features?.enable_tool_servers
 		? [
-				...($config?.features?.enable_direct_integrations &&
-				($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-					? directTerminals
-							.filter((terminal) => terminal.url)
-							.map((terminal) => ({
-								id: terminal.url,
-								label: terminal.name || terminal.url.replace(/^https?:\/\//, ''),
-								device: false
-							}))
-					: []),
 				...($terminalServers ?? [])
 					.filter(
 						(terminal) =>
@@ -1574,19 +1542,6 @@
 		showOverview.set(false);
 	});
 
-	// Clear selected direct terminal if user lost permission
-	$: if (
-		$selectedTerminalId &&
-		$terminalServers !== null &&
-		!($terminalServers ?? []).some((t) => (!!$selectedTerminalId && t.id === $selectedTerminalId)) &&
-		!(
-			$config?.features?.enable_direct_integrations &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true))
-		)
-	) {
-		selectedTerminalId.set(null);
-	}
-
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
 		if (panelTarget && largeScreen !== event.matches) releasePanel(panelTarget);
 		largeScreen = event.matches;
@@ -1655,11 +1610,16 @@
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
 	$: if (mounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
-		const href = active?.kind === 'page'
-			? active.href
-			: active?.kind === 'chat'
-				? mainChatHref
-				: active?.kind === 'side' ? (active.chatId ? `/c/${active.chatId}` : active.href) : null;
+		const href =
+			active?.kind === 'page'
+				? active.href
+				: active?.kind === 'chat'
+					? mainChatHref
+					: active?.kind === 'side'
+						? active.chatId
+							? `/c/${active.chatId}`
+							: active.href
+						: null;
 		if (href) {
 			const url = new URL(href, location.origin);
 			if (active?.kind === 'chat' && !chatId) {
@@ -1681,7 +1641,6 @@
 			: '';
 </script>
 
-
 <ConfirmDialog
 	show={!!stopTerminalChoice}
 	title={$i18n.t('Stop terminal?')}
@@ -1701,11 +1660,13 @@
 	<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
-		? `${activeTab.label} / ${$WEBUI_NAME}`
-		: $settings.showChatTitleInTab !== false && chatId && title
-			? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
-			: $WEBUI_NAME}</title>
+	<title
+		>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
+			? `${activeTab.label} / ${$WEBUI_NAME}`
+			: $settings.showChatTitleInTab !== false && chatId && title
+				? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
+				: $WEBUI_NAME}</title
+	>
 </svelte:head>
 
 <svelte:window
@@ -1994,10 +1955,14 @@
 								chatId: chat.id,
 								...(chat.title ? { label: chat.title } : {})
 							})}
-						parentChatId={tab.sideChat ? owner.chatId ?? '' : ''}
+						parentChatId={tab.sideChat ? (owner.chatId ?? '') : ''}
 						parentFolderId={tab.href ? null : folderId}
 						{history}
-						modelId={tab.href ? new URL(tab.href, location.origin).searchParams.get('models') ?? new URL(tab.href, location.origin).searchParams.get('model') ?? modelId : modelId}
+						modelId={tab.href
+							? (new URL(tab.href, location.origin).searchParams.get('models') ??
+								new URL(tab.href, location.origin).searchParams.get('model') ??
+								modelId)
+							: modelId}
 						{systemPrompt}
 						initialPrompt={tab.initialPrompt ?? ''}
 					/>

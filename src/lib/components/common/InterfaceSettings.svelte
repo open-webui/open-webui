@@ -29,18 +29,11 @@
 	$: currentSettings = (settingsValue ?? $settings ?? {}) as Record<string, any>;
 	$: externalSettings = settingsValue !== null;
 	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
-	$: hasDirectToolServerAccess =
-		$user?.role === 'admin' || ($user?.permissions?.features?.direct_tool_servers ?? true);
-	$: hasDirectTerminal =
-		($terminalServers ?? []).some((server) => !server.id) ||
-		(currentSettings?.terminalServers ?? []).some((server) => server.url);
 	// Defaults apply to every user, so they follow what the instance offers.
 	$: hasTerminal =
 		$config?.features?.enable_tool_servers &&
 		(($terminalServers ?? []).some((server) => server.id) ||
-			(externalSettings
-				? $config?.features?.enable_direct_integrations
-				: hasDirectToolServerAccess && hasDirectTerminal));
+			(externalSettings && $config?.features?.tether));
 
 	let backgroundImageUrl: string | null = null;
 	let inputFiles: FileList | null = null;

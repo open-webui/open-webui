@@ -12,11 +12,10 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import { detectTerminalServerType, verifyTerminalServerConnection } from '$lib/apis/configs';
+	import { verifyTerminalServerConnection } from '$lib/apis/configs';
 	const i18n = getContext<any>('i18n');
 	export let show = false;
 	export let edit = false;
-	export let direct = false;
 	export let connection: any = null;
 	export let onSubmit: Function = () => {};
 	export let onDelete: () => void = () => {};
@@ -63,12 +62,10 @@
 		busy = true;
 		error = '';
 		try {
-			const type = direct
-				? await detectTerminalServerType(url, key)
-				: (await verifyTerminalServerConnection(localStorage.token, { url, key, auth_type })).type;
+			const type = (
+				await verifyTerminalServerConnection(localStorage.token, { url, key, auth_type })
+			).type;
 			if (!type) throw new Error('Failed to connect to the terminal server');
-			if (direct && type === 'orchestrator')
-				throw new Error('Add Terminals as an administrator-managed connection.');
 			serverType = type;
 			if (announce) toast.success($i18n.t('Server connection verified'));
 			return true;
@@ -91,8 +88,7 @@
 				user_shell_tools: userShellTools
 			};
 			delete configuration.contexts;
-			if (!direct) configuration.access_grants = accessGrants;
-			else delete configuration.access_grants;
+			configuration.access_grants = accessGrants;
 			const result = {
 				...(connection ?? {}),
 				url: url.trim().replace(/\/$/, ''),
@@ -106,7 +102,7 @@
 				config: configuration
 			};
 			for (const old of ['instances', 'policy_id', 'policy', 'lifecycle']) delete result[old];
-			if (!direct) result.id = connection?.id || id.trim() || uuidv4();
+			result.id = connection?.id || id.trim() || uuidv4();
 			await onSubmit(result);
 			show = false;
 		} catch (e) {
@@ -151,21 +147,19 @@
 					required
 				/>
 			</div>
-			{#if !direct}
-				<div class="min-w-0 flex-1">
-					<label for="terminal-id" class="mb-0.5 block text-xs text-gray-500">
-						{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
-					</label>
-					<input
-						id="terminal-id"
-						class="{input} font-mono"
-						bind:value={id}
-						placeholder="auto"
-						disabled={!!connection?.id}
-						autocomplete="off"
-					/>
-				</div>
-			{/if}
+			<div class="min-w-0 flex-1">
+				<label for="terminal-id" class="mb-0.5 block text-xs text-gray-500">
+					{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
+				</label>
+				<input
+					id="terminal-id"
+					class="{input} font-mono"
+					bind:value={id}
+					placeholder="auto"
+					disabled={!!connection?.id}
+					autocomplete="off"
+				/>
+			</div>
 		</div>
 		<div class="flex items-end gap-2">
 			<div class="min-w-0 flex-1">
@@ -202,10 +196,8 @@
 				<select id="terminal-auth-type" class="{select} shrink-0 py-0.5" bind:value={auth_type}>
 					<option value="bearer">{$i18n.t('Bearer')}</option>
 					<option value="none">{$i18n.t('None')}</option>
-					{#if !direct}
-						<option value="session">{$i18n.t('Session')}</option>
-						<option value="system_oauth">{$i18n.t('OAuth')}</option>
-					{/if}
+					<option value="session">{$i18n.t('Session')}</option>
+					<option value="system_oauth">{$i18n.t('OAuth')}</option>
 				</select>
 				<div class="min-w-0 flex-1">
 					<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} />
@@ -237,18 +229,16 @@
 				<option value="filesystem">{$i18n.t('Filesystem')}</option>
 			</select>
 		</div>
-		{#if !direct}
-			<Collapsible
-				title={$i18n.t('Access')}
-				buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-				chevronClassName="size-3.5"
-				chevronStrokeWidth="2"
-			>
-				<div slot="content" class="mt-2">
-					<AccessControl bind:accessGrants accessRoles={['read', 'write']} onChange={() => {}} />
-				</div>
-			</Collapsible>
-		{/if}
+		<Collapsible
+			title={$i18n.t('Access')}
+			buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+			chevronClassName="size-3.5"
+			chevronStrokeWidth="2"
+		>
+			<div slot="content" class="mt-2">
+				<AccessControl bind:accessGrants accessRoles={['read', 'write']} onChange={() => {}} />
+			</div>
+		</Collapsible>
 		<Collapsible
 			title={$i18n.t('Advanced')}
 			buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -293,23 +283,21 @@
 						<option value="always">{$i18n.t('Always Include')}</option>
 					</select>
 				</div>
-				{#if !direct}
-					<div class="flex items-center justify-between gap-3">
-						<div>
-							<label for="forward-cookies" class="text-xs font-medium"
-								>{$i18n.t('Forward cookies')}</label
-							>
-							<p class="text-xs text-gray-500">
-								{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
-							</p>
-						</div>
-						<Switch
-							id="forward-cookies"
-							ariaLabel={$i18n.t('Forward cookies')}
-							bind:state={forwardCookies}
-						/>
+				<div class="flex items-center justify-between gap-3">
+					<div>
+						<label for="forward-cookies" class="text-xs font-medium"
+							>{$i18n.t('Forward cookies')}</label
+						>
+						<p class="text-xs text-gray-500">
+							{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
+						</p>
 					</div>
-				{/if}
+					<Switch
+						id="forward-cookies"
+						ariaLabel={$i18n.t('Forward cookies')}
+						bind:state={forwardCookies}
+					/>
+				</div>
 				<div>
 					<label for="openapi-path" class="mb-0.5 block text-xs font-medium"
 						>{$i18n.t('OpenAPI Spec')}</label

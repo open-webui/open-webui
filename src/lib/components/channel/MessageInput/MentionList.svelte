@@ -172,7 +172,7 @@
 			if (modelSuggestions) {
 				_models = [
 					...$baseModels
-						.filter((m) => !m?.direct)
+						.filter((m) => !('owner_id' in m && m.owner_id))
 						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
 				];
 			}

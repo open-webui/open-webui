@@ -215,7 +215,11 @@ export function sortFolderChats(
 	});
 }
 
-export function updateFolderChatLists(chat: FolderChat, destination?: string | null, remove = false) {
+export function updateFolderChatLists(
+	chat: FolderChat,
+	destination?: string | null,
+	remove = false
+) {
 	const { chat: conversation, ...row } = chat;
 	chat = row;
 	for (const [id, folder] of Object.entries(entries)) {
@@ -299,7 +303,6 @@ export function getFolderAgentModels(folder: FolderDetails): Model[] | null {
 export async function loadFolderAgentModels(
 	token: string,
 	folder: FolderDetails,
-	connections: any,
 	refresh = false
 ): Promise<Model[]> {
 	const loaded = getFolderAgentModels(folder);
@@ -315,7 +318,7 @@ export async function loadFolderAgentModels(
 		async () => {
 			let discovery = agentRequests.get(resource);
 			if (!discovery) {
-				discovery = getModels(token, connections, false, false, {
+				discovery = getModels(token, false, false, {
 					terminalId,
 					chatId: null,
 					cwd: directory || null

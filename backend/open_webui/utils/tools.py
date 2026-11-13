@@ -128,7 +128,7 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     set_tool_module_in_cache,
 )
-from open_webui.utils.tether import RelayInterrupted, get_terminal_client
+from open_webui.utils.tether import RelayInterrupted, get_tether_connections, get_terminal_client
 from open_webui.utils.terminals import (
     get_terminal_server_url,
 )
@@ -483,16 +483,23 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                 if len(splits) == 2:
                     type = 'openapi'
                     server_id = splits[1]
-                elif len(splits) == 3:
+                elif len(splits) >= 3:
                     type = splits[1]
-                    server_id = splits[2]
+                    server_id = ':'.join(splits[2:])
 
                 server_id_splits = server_id.split('|')
                 if len(server_id_splits) == 2:
                     server_id = server_id_splits[0]
                     function_names = server_id_splits[1].split(',')
 
-                if type == 'openapi':
+                if type == 'tether':
+                    # A tool server the user added in Tether, reached through it.
+                    loaded = await get_tether_tool_server(user, server_id)
+                    if loaded is None:
+                        log.warning(f"Tool server {server_id} is not offered by any of the user's devices")
+                        continue
+                    tool_server_data, tool_server_connection = loaded
+                elif type == 'openapi':
                     tool_server_data = None
                     for server in await get_tool_servers(request):
                         if server['id'] == server_id:
@@ -518,68 +525,68 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                         log.warning(f'Access denied to tool server {server_id} for user {user.id}')
                         continue
 
-                    specs = tool_server_data.get('specs', [])
-                    function_name_filter_list = tool_server_connection.get('config', {}).get(
-                        'function_name_filter_list', ''
-                    )
-
-                    if isinstance(function_name_filter_list, str):
-                        function_name_filter_list = function_name_filter_list.split(',')
-
-                    for spec in specs:
-                        function_name = spec['name']
-                        if function_name_filter_list:
-                            if not is_string_allowed(function_name, function_name_filter_list):
-                                # Skip this function
-                                continue
-
-                        metadata = extra_params.get('__metadata__', {})
-
-                        async def make_tool_function(function_name, tool_server_data, connection, server_id, metadata):
-                            async def tool_function(**kwargs):
-                                headers, cookies = await build_tool_server_headers(
-                                    connection, request, user, server_id=server_id, metadata=metadata
-                                )
-                                headers.setdefault('Content-Type', 'application/json')
-                                return await execute_tool_server(
-                                    url=tool_server_data['url'],
-                                    headers=headers,
-                                    cookies=cookies,
-                                    name=function_name,
-                                    params=kwargs,
-                                    server_data=tool_server_data,
-                                )
-
-                            return tool_function
-
-                        tool_function = await make_tool_function(
-                            function_name, tool_server_data, tool_server_connection, server_id, metadata
-                        )
-
-                        callable = await get_async_tool_function_and_apply_extra_params(
-                            tool_function,
-                            {},
-                        )
-
-                        tool_dict = {
-                            'tool_id': tool_id,
-                            'callable': callable,
-                            'spec': clean_openai_tool_schema(spec),
-                            # Misc info
-                            'type': 'external',
-                        }
-
-                        # Handle function name collisions
-                        while function_name in tools_dict:
-                            log.warning(f'Tool {function_name} already exists in another tools!')
-                            # Prepend server ID to function name
-                            function_name = f'{server_id}_{function_name}'
-
-                        tool_dict['spec'] = {**tool_dict['spec'], 'name': function_name}
-                        tools_dict[function_name] = tool_dict
-
                 else:
                     continue
+
+                specs = tool_server_data.get('specs', [])
+                function_name_filter_list = tool_server_connection.get('config', {}).get(
+                    'function_name_filter_list', ''
+                )
+
+                if isinstance(function_name_filter_list, str):
+                    function_name_filter_list = function_name_filter_list.split(',')
+
+                for spec in specs:
+                    function_name = spec['name']
+                    if function_name_filter_list:
+                        if not is_string_allowed(function_name, function_name_filter_list):
+                            # Skip this function
+                            continue
+
+                    metadata = extra_params.get('__metadata__', {})
+
+                    async def make_tool_function(function_name, tool_server_data, connection, server_id, metadata):
+                        async def tool_function(**kwargs):
+                            headers, cookies = await build_tool_server_headers(
+                                connection, request, user, server_id=server_id, metadata=metadata
+                            )
+                            headers.setdefault('Content-Type', 'application/json')
+                            return await execute_tool_server(
+                                url=tool_server_data['url'],
+                                headers=headers,
+                                cookies=cookies,
+                                name=function_name,
+                                params=kwargs,
+                                server_data=tool_server_data,
+                            )
+
+                        return tool_function
+
+                    tool_function = await make_tool_function(
+                        function_name, tool_server_data, tool_server_connection, server_id, metadata
+                    )
+
+                    callable = await get_async_tool_function_and_apply_extra_params(
+                        tool_function,
+                        {},
+                    )
+
+                    tool_dict = {
+                        'tool_id': tool_id,
+                        'callable': callable,
+                        'spec': clean_openai_tool_schema(spec),
+                        # Misc info
+                        'type': 'external',
+                    }
+
+                    # Handle function name collisions
+                    while function_name in tools_dict:
+                        log.warning(f'Tool {function_name} already exists in another tools!')
+                        # Prepend server ID to function name
+                        function_name = f'{server_id}_{function_name}'
+
+                    tool_dict['spec'] = {**tool_dict['spec'], 'name': function_name}
+                    tools_dict[function_name] = tool_dict
 
     return tools_dict
 
@@ -803,7 +810,6 @@ async def get_builtin_tools(
         is_builtin_tool_enabled('subagents')
         and config.get('subagents.enable')
         and getattr(request.state, 'internal', False) is not True
-        and getattr(request.state, 'direct', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
         and await has_user_permission('subagents')
     ):
@@ -1381,6 +1387,7 @@ async def get_terminal_cwd(
     base_url: str,
     headers: dict,
     cookies: dict | None = None,
+    service: str = 'open_terminal',
 ) -> str | None:
     """Fetch the current working directory from a terminal server."""
     try:
@@ -1388,6 +1395,7 @@ async def get_terminal_cwd(
         async with get_terminal_client(
             base_url,
             headers.get('X-User-Id'),
+            service=service,
             timeout=aiohttp.ClientTimeout(total=5),
             trust_env=True,
         ) as session:
@@ -1406,6 +1414,7 @@ async def get_terminal_system_prompt(
     base_url: str,
     headers: dict,
     cookies: dict | None = None,
+    service: str = 'open_terminal',
 ) -> str | None:
     """Fetch the system prompt from a terminal server.
 
@@ -1418,6 +1427,7 @@ async def get_terminal_system_prompt(
         async with get_terminal_client(
             base_url,
             headers.get('X-User-Id'),
+            service=service,
             timeout=aiohttp.ClientTimeout(total=3),
             trust_env=True,
         ) as session:
@@ -1555,7 +1565,10 @@ async def get_terminal_tools(
         return {}
 
     from open_webui.utils.terminals import find_terminal_connection, terminal_headers
-    connection = await find_terminal_connection(user, terminal_id, extra_params.get('__metadata__', {}), request=request)
+
+    connection = await find_terminal_connection(
+        user, terminal_id, extra_params.get('__metadata__', {}), request=request
+    )
     if connection is None:
         raise RuntimeError(f"Terminal server '{terminal_id}' not found")
     if not connection.get('enabled', True):
@@ -1570,15 +1583,22 @@ async def get_terminal_tools(
         url = get_terminal_server_url(connection)
         discovery_headers = {**bearer_auth_header(connection['key']), **terminal_headers(connection)}
         openapi = await get_tool_server_data(url + '/openapi.json', discovery_headers)
-        server_data = {'id': terminal_id, 'url': url, 'openapi': openapi, 'specs': convert_openapi_to_tool_payload(openapi)}
-    elif connection.get('owner_id') == user.id:
-        url = connection['url']
-        openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id})
         server_data = {
             'id': terminal_id,
             'url': url,
             'openapi': openapi,
             'specs': convert_openapi_to_tool_payload(openapi),
+        }
+    elif connection.get('owner_id') == user.id:
+        url = connection['url']
+        service = connection.get('service', 'open_terminal')
+        openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id}, service=service)
+        server_data = {
+            'id': terminal_id,
+            'url': url,
+            'openapi': openapi,
+            'specs': convert_openapi_to_tool_payload(openapi),
+            'service': service,
         }
     else:
         terminal_servers = await get_terminal_servers(request)
@@ -1617,12 +1637,15 @@ async def get_terminal_tools(
     connection_config = connection.get('config') or {}
     terminal_cwd = None
     if connection_config.get('working_directory_context', True):
+        service = server_data.get('service', 'open_terminal')
         terminal_cwd, system_prompt = await asyncio.gather(
-            get_terminal_cwd(server_data['url'], headers, cookies),
-            get_terminal_system_prompt(server_data['url'], headers, cookies),
+            get_terminal_cwd(server_data['url'], headers, cookies, service),
+            get_terminal_system_prompt(server_data['url'], headers, cookies, service),
         )
     else:
-        system_prompt = await get_terminal_system_prompt(server_data['url'], headers, cookies)
+        system_prompt = await get_terminal_system_prompt(
+            server_data['url'], headers, cookies, server_data.get('service', 'open_terminal')
+        )
     if not system_prompt:
         system_prompt = server_data.get('system_prompt')
 
@@ -1642,8 +1665,9 @@ async def get_terminal_tools(
             async def tool_function(**kwargs):
                 call_headers = dict(hdrs)
                 if connection.get('template_id'):
-                    current = await find_terminal_connection(user, terminal_id,
-                        {**metadata, 'scope': connection.get('scope')}, request=request)
+                    current = await find_terminal_connection(
+                        user, terminal_id, {**metadata, 'scope': connection.get('scope')}, request=request
+                    )
                     if current is None:
                         raise HTTPException(403, 'Terminal access revoked')
                     call_headers.update(terminal_headers(current))
@@ -1675,7 +1699,9 @@ async def get_terminal_tools(
     return tools_dict, system_prompt
 
 
-async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]:
+async def get_tool_server_data(
+    url: str, headers: dict | None, service: str = 'open_terminal', user_id: str | None = None
+) -> dict[str, Any]:
     if not ENABLE_TOOL_SERVERS:
         raise RuntimeError('Tool servers are disabled')
 
@@ -1690,7 +1716,9 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with get_terminal_client(url, _headers.get('X-User-Id'), timeout=timeout, trust_env=True) as session:
+        async with get_terminal_client(
+            url, user_id or _headers.get('X-User-Id'), service=service, timeout=timeout, trust_env=True
+        ) as session:
             async with session.get(url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL) as response:
                 if response.status != 200:
                     error_body = await response.json()
@@ -1722,6 +1750,40 @@ async def get_tool_server_data(url: str, headers: dict | None) -> dict[str, Any]
 
     log.debug('Fetched data: %s', res)
     return res
+
+
+async def get_tether_tool_servers(user) -> list[dict]:
+    """OpenAPI tool servers the user added in Tether, by id (`<device>:<connection>`)."""
+    if not ENABLE_TOOL_SERVERS:
+        return []
+    return [
+        {
+            'id': f'{presence["connection_id"]}:{item["service"]}',
+            'name': f'{presence["name"]} · {item["name"]}',
+            'url': f'tether://{presence["connection_id"]}',
+            'service': item['service'],
+        }
+        for presence, item in await get_tether_connections(user.id, 'openapi')
+    ]
+
+
+async def get_tether_tool_server(user, server_id: str) -> tuple[dict, dict] | None:
+    """Spec data and connection for a tool server the user added in Tether. Tether adds the key."""
+    server = next((s for s in await get_tether_tool_servers(user) if s['id'] == server_id), None)
+    if server is None:
+        return None
+    grant = {'principal_type': 'user', 'principal_id': user.id, 'permission': 'read'}
+    connection = {
+        'url': server['url'],
+        'path': 'openapi.json',
+        'auth_type': 'none',
+        'info': {'id': server_id, 'name': server['name']},
+        'service': server['service'],
+        'user_id': user.id,
+        'config': {'enable': True, 'access_grants': [grant]},
+    }
+    data = await get_tool_servers_data([connection])
+    return (data[0], connection) if data else None
 
 
 async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1762,6 +1824,8 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 task = get_tool_server_data(
                     spec_url,
                     {'Authorization': f'Bearer {token}'} if token else None,
+                    service=server.get('service', 'open_terminal'),
+                    user_id=server.get('user_id'),
                 )
             elif spec_type == 'json' and server.get('spec', ''):
                 # Use provided JSON spec
@@ -1820,6 +1884,8 @@ async def get_tool_servers_data(servers: list[dict[str, Any]]) -> list[dict[str,
                 'openapi': openapi_data,
                 'info': response.get('info'),
                 'specs': response.get('specs'),
+                # A tool server the user added in Tether is reached through it.
+                **({'service': server['service'], 'user_id': server.get('user_id')} if server.get('service') else {}),
             }
         )
 
@@ -1933,7 +1999,8 @@ async def execute_tool_server(
 
         async with get_terminal_client(
             url,
-            (headers or {}).get('X-User-Id'),
+            server_data.get('user_id') or (headers or {}).get('X-User-Id'),
+            service=server_data.get('service', 'open_terminal'),
             trust_env=True,
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER),
         ) as session:

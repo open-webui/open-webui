@@ -26,12 +26,7 @@
 	const i18n: any = getContext('i18n');
 
 	const getModels = async () => {
-		const models = await _getModels(
-			localStorage.token,
-			$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null,
-			false,
-			true
-		);
+		const models = await _getModels(localStorage.token, false, true);
 		return models;
 	};
 
@@ -371,20 +366,6 @@
 			<AdminSettingSection
 				title={$i18n.t('settings.admin.connections.sections.userConnections.title')}
 			>
-				<AdminSettingRow
-					label={$i18n.t('settings.admin.connections.directConnections.label')}
-					description={$i18n.t('settings.admin.connections.directConnections.description')}
-					let:labelId
-				>
-					<Switch
-						bind:state={connectionsConfig.ENABLE_DIRECT_CONNECTIONS}
-						on:change={async () => {
-							updateConnectionsHandler();
-						}}
-						ariaLabelledbyId={labelId}
-					/>
-				</AdminSettingRow>
-
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.connections.cacheBaseModelList.label')}
 					description={$i18n.t('settings.admin.connections.cacheBaseModelList.description')}

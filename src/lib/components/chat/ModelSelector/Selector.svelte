@@ -281,8 +281,6 @@
 							return item.model?.connection_type === 'local';
 						} else if (selectedConnectionType === 'external') {
 							return item.model?.connection_type === 'external';
-						} else if (selectedConnectionType === 'direct') {
-							return item.model?.direct;
 						}
 					})
 			: items
@@ -301,8 +299,6 @@
 							return item.model?.connection_type === 'local';
 						} else if (selectedConnectionType === 'external') {
 							return item.model?.connection_type === 'external';
-						} else if (selectedConnectionType === 'direct') {
-							return item.model?.direct;
 						}
 					})
 	).filter((item) => includeHidden || !(item.model?.info?.meta?.hidden ?? false));
@@ -360,9 +356,6 @@
 			: []),
 		...(items.find((item) => item.model?.connection_type === 'external')
 			? [{ value: 'connection:external', label: $i18n.t('External') }]
-			: []),
-		...(items.find((item) => item.model?.direct)
-			? [{ value: 'connection:direct', label: $i18n.t('Direct') }]
 			: []),
 		...tags.map((tag) => ({ value: `tag:${tag}`, label: tag }))
 	];
@@ -569,12 +562,7 @@
 					})
 				);
 
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				models.set(await getModels(localStorage.token));
 			} else {
 				toast.error($i18n.t('Download canceled'));
 			}
@@ -697,12 +685,7 @@
 						modelName: model
 					})
 				);
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				models.set(await getModels(localStorage.token));
 			}
 		} catch (error) {
 			if (!controller.signal.aborted) {
@@ -795,12 +778,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Model unloaded successfully'));
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
@@ -845,12 +823,7 @@
 				value = '';
 			}
 
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 
 		deleteModelTarget = null;
@@ -926,12 +899,7 @@
 				? 'dark:placeholder-gray-100 placeholder-gray-800'
 				: 'placeholder-gray-400'}"
 			on:mouseenter={async () => {
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-					)
-				);
+				models.set(await getModels(localStorage.token));
 			}}
 		>
 			<span class="min-w-0 flex-1 truncate">{triggerLabel}</span>

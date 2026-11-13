@@ -40,7 +40,6 @@
 		showCallOverlay,
 		tools,
 		skills,
-		toolServers,
 		terminalServers,
 		user as _user,
 		showTabs,
@@ -902,7 +901,7 @@
 
 	let fileUploadEnabled: boolean = true;
 	$: fileUploadEnabled =
-		(getFilesystemUploadTerminal($selectedTerminalId, $terminalServers, $settings) ||
+		(getFilesystemUploadTerminal($selectedTerminalId, $terminalServers) ||
 			fileUploadCapableModels.length === selectedModelIds.length) &&
 		($_user?.role === 'admin' || $_user?.permissions?.chat?.file_upload);
 
@@ -927,16 +926,10 @@
 		modelCapabilitiesById
 	);
 
-	$: hasDirectToolServerAccess =
-		$config?.features?.enable_direct_integrations &&
-		($_user?.role === 'admin' || ($_user?.permissions?.features?.direct_tool_servers ?? true));
 	$: showTerminalSelector =
 		terminalSelectionEnabled &&
 		$config?.features?.enable_tool_servers &&
-		(($terminalServers ?? []).some((t) => t.id) ||
-			(hasDirectToolServerAccess &&
-				(($terminalServers ?? []).some((t) => !t.id) ||
-					($settings?.terminalServers ?? []).some((s) => s.url))));
+		($terminalServers ?? []).some((t) => t.id);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(
@@ -953,7 +946,7 @@
 	$: showInputSelections = $settings?.showInputSelections ?? false;
 
 	let showToolsButton = false;
-	$: showToolsButton = ($tools ?? []).length > 0 || ($toolServers ?? []).length > 0;
+	$: showToolsButton = ($tools ?? []).length > 0;
 
 	let showSkillsButton = false;
 	$: showSkillsButton =
@@ -1052,19 +1045,12 @@
 
 	const getFilesystemUploadTerminal = (
 		selectedId = $selectedTerminalId,
-		servers: any[] | null = $terminalServers,
-		settingsValue: any = $settings
+		servers: any[] | null = $terminalServers
 	) => {
 		if (!selectedId) return null;
-
-		const systemTerminal = (servers ?? []).find(
-			(t: any) => t.id && t.id === selectedId && t.config?.chat_uploads === 'filesystem'
-		);
-		if (systemTerminal) return systemTerminal;
-
 		return (
-			(settingsValue?.terminalServers ?? []).find(
-				(t: any) => t.url === selectedId && t.enabled && t.config?.chat_uploads === 'filesystem'
+			(servers ?? []).find(
+				(t: any) => t.id && t.id === selectedId && t.config?.chat_uploads === 'filesystem'
 			) ?? null
 		);
 	};
@@ -1076,13 +1062,10 @@
 		try {
 			const server = getFilesystemUploadTerminal(fileItem.terminal_id);
 			const terminal = server
-				? resolveTerminalTarget(
-						fileItem.terminal_id,
-						$terminalServers ?? [],
-						($settings as any)?.terminalServers ?? [],
-						localStorage.token,
-						{ chatId: sessionId, modelId: selectedModels[0] ?? null }
-					)
+				? resolveTerminalTarget(fileItem.terminal_id, $terminalServers ?? [], localStorage.token, {
+						chatId: sessionId,
+						modelId: selectedModels[0] ?? null
+					})
 				: null;
 			if (!terminal) throw new Error('The attached file’s terminal is unavailable.');
 			if (fileItem.session_id && fileItem.session_id !== sessionId)
@@ -1095,11 +1078,7 @@
 					? terminalContext?.currentDirectory
 					: null) || (await getCwd(terminal))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
-			const uploadedFile = await uploadNewFileToTerminal(
-				terminal,
-				cwd,
-				fileItem.file
-			);
+			const uploadedFile = await uploadNewFileToTerminal(terminal, cwd, fileItem.file);
 			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
 
 			fileItem.status = 'uploaded';
@@ -2603,8 +2582,7 @@
 										selectedModels={selectedModelIds}
 										fileUploadCapableModels={getFilesystemUploadTerminal(
 											$selectedTerminalId,
-											$terminalServers,
-											$settings
+											$terminalServers
 										)
 											? selectedModelIds
 											: fileUploadCapableModels}
