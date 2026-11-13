@@ -21,7 +21,18 @@ export type CustomStatus = {
 };
 export type StatusDef = CustomStatus & { custom: boolean };
 
+// Ready-made statuses for folders that never set up their own; an empty list means none.
+export const defaultStatuses: CustomStatus[] = [
+	{ id: 'backlog', name: 'Backlog', glyph: 'backlog', color: 'gray' },
+	{ id: 'todo', name: 'To do', glyph: 'todo', color: 'gray' },
+	{ id: 'in_progress', name: 'In progress', glyph: 'in_progress', color: 'amber' },
+	{ id: 'waiting', name: 'Waiting', glyph: 'waiting', color: 'blue' },
+	{ id: 'done', name: 'Done', glyph: 'done', color: 'violet' }
+];
+const usesDefaultStatuses = (meta?: { statuses?: unknown } | null) => meta?.statuses == null;
+
 export const customStatuses = (meta?: { statuses?: unknown } | null): CustomStatus[] => {
+	if (usesDefaultStatuses(meta)) return defaultStatuses;
 	const seen = new Set<string>([NO_STATUS]);
 	return (Array.isArray(meta?.statuses) ? meta.statuses : [])
 		.filter(
@@ -47,7 +58,11 @@ export const statusDefs = (
 	t: (key: string) => string
 ): StatusDef[] => [
 	{ id: NO_STATUS, name: t('No status'), custom: false },
-	...customStatuses(meta).map((item) => ({ ...item, custom: true }))
+	...customStatuses(meta).map((item) => ({
+		...item,
+		name: usesDefaultStatuses(meta) ? t(item.name) : item.name,
+		custom: true
+	}))
 ];
 
 export const newStatusId = () => `s_${Math.random().toString(36).slice(2, 10)}`;

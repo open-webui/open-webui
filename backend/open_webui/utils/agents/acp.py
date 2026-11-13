@@ -4,6 +4,8 @@ import asyncio
 import contextlib
 import json
 
+from . import reasoning_effort
+
 
 class Client:
     def __init__(self, transport, handle):
@@ -92,8 +94,10 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
     session_id = None
     streaming = False
     tools = {}
+    config_options = []
 
     async def handle(message):
+        nonlocal config_options
         method, params = message.get('method'), message.get('params') or {}
         if params.get('sessionId') and session_id and params['sessionId'] != session_id:
             if 'id' in message:
@@ -118,9 +122,13 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
                 )
                 return
             await client.send({'id': message['id'], 'result': result})
-        elif method == 'session/update' and streaming:
+        elif method == 'session/update':
             update = params.get('update') or {}
             kind = update.get('sessionUpdate')
+            if kind == 'config_option_update':
+                config_options = update.get('configOptions', [])
+            if not streaming:
+                return
             if kind in {'agent_message_chunk', 'agent_thought_chunk'}:
                 content = update.get('content') or {}
                 if content.get('type') == 'text':
@@ -182,22 +190,38 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
         if capabilities.get('loadSession') or 'resume' in capabilities.get('sessionCapabilities', {}):
             output.state['session_id'] = session_id
         await output.flush(force=True)
+        config_options = session.get('configOptions', config_options)
         config = next(
-            (c for c in session.get('configOptions', []) if c.get('category') == 'model' or c.get('id') == 'model'),
+            (c for c in config_options if c.get('category') == 'model' or c.get('id') == 'model'),
             None,
         )
         if not config and not session.get('models') and options.get('resume_state', {}).get('model_config'):
             config = {'id': options['resume_state']['model_config']}
         if config:
             output.state['model_config'] = config['id']
-            await client.request(
+            configured = await client.request(
                 'session/set_config_option',
                 {'sessionId': session_id, 'configId': config['id'], 'value': options['model']},
             )
+            config_options = configured.get('configOptions', config_options)
         elif session.get('models') or options.get('resume'):
             await client.request('session/set_model', {'sessionId': session_id, 'modelId': options['model']})
         else:
             raise ValueError('Agent did not advertise model selection for this session')
+        effort = reasoning_effort(options)
+        if effort is not None:
+            config = next((c for c in config_options if c.get('category') == 'thought_level'), None)
+            values = [
+                value['value']
+                for group in (config or {}).get('options', [])
+                for value in (group['options'] if 'group' in group else [group])
+            ]
+            if not config or effort not in values:
+                raise ValueError('Agent does not support the selected reasoning effort for this model')
+            await client.request(
+                'session/set_config_option',
+                {'sessionId': session_id, 'configId': config['id'], 'value': effort},
+            )
         await output.flush(force=True, persist=True)
         if images and not capabilities.get('promptCapabilities', {}).get('image'):
             raise ValueError('This agent does not support image prompts')

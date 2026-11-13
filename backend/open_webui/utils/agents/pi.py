@@ -5,6 +5,8 @@ import contextlib
 import json
 from uuid import uuid4
 
+from . import reasoning_effort
+
 
 async def run(transport, output, prompt, images, options):
     messages = transport.read_messages()
@@ -118,6 +120,9 @@ async def run(transport, output, prompt, images, options):
         if not separator or not model:
             raise ValueError('Pi models must include their provider')
         await request('set_model', {'provider': provider, 'modelId': model})
+        effort = reasoning_effort(options)
+        if effort is not None:
+            await request('set_thinking_level', {'level': effort})
         state = await request('get_state')
         output.state['session_id'] = state['sessionId']
         if options.get('resume') and state['sessionId'] != options['resume']:
