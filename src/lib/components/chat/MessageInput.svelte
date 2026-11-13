@@ -937,7 +937,8 @@
 	$: if (
 		terminalSelectionEnabled &&
 		$config?.features?.enable_tool_servers &&
-		!($terminalServers ?? []).some((t) => t.id)
+		$terminalServers &&
+		!$terminalServers.some((t) => t.id)
 	)
 		templatesApi('/connections')
 			.then((rows) => (canCreateTerminal = rows.length > 0))
