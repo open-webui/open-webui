@@ -7,7 +7,6 @@
 		WEBUI_NAME,
 		banners,
 		chatId,
-		chatTitle as _chatTitle,
 		config,
 		mobile,
 		selectedFolder,
@@ -61,6 +60,8 @@
 	export let history: any;
 	export let title = '';
 	export let tabbed = false;
+	export let side: boolean = false;
+	export let temporary: boolean = false;
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
 	export let tabBarActions: Snippet | undefined = undefined;
@@ -71,6 +72,7 @@
 	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
 	export let moveChatHandler: (id: string, folderId: string) => void;
+	export let onRename: (id: string, title: string) => void;
 
 	let closedBannerIds = [];
 
@@ -127,10 +129,7 @@
 		);
 		if (!res) return;
 		updateFolderChatLists({ id: chat.id, title: newTitle });
-
-		if (chat.id === $chatId) {
-			_chatTitle.set(newTitle);
-		}
+		onRename(res.id, newTitle);
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 		await refreshFolderChatLists();
 	};
@@ -249,7 +248,7 @@
 {#snippet renderChatActions()}
 	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
-		{#if chat?.id && $temporaryChatEnabled}
+		{#if chat?.id && temporary}
 			<Tooltip content={$i18n.t(`Save Chat`)}>
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -265,7 +264,7 @@
 		{/if}
 	{/if}
 
-	{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
+	{#if $mobile && !side && !temporary && chat && chat.id}
 		<Tooltip content={$i18n.t('New Chat')}>
 			<button
 				class="flex size-6 {$showSidebar
@@ -287,11 +286,12 @@
 		</div>
 	{/if}
 
-	{#if shareEnabled && chat?.id && (scrollToTop || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
+	{#if shareEnabled && chat?.id && (scrollToTop || (!readOnly && !temporary) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
 		<Menu
 			{chat}
 			{shareEnabled}
 			{readOnly}
+			{temporary}
 			{scrollToTop}
 			shareHandler={() => {
 				showShareChatModal = !showShareChatModal;
@@ -318,16 +318,18 @@
 	{/if}
 {/snippet}
 
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
+<ShareChatModal bind:show={showShareChatModal} chatId={chat?.id} />
 
-<button
-	id="new-chat-button"
-	class="hidden"
-	on:click={() => {
-		initNewChat();
-	}}
-	aria-label={$i18n.t('New Chat')}
-/>
+{#if !side}
+	<button
+		id="new-chat-button"
+		class="hidden"
+		on:click={() => {
+			initNewChat();
+		}}
+		aria-label={$i18n.t('New Chat')}
+	/>
+{/if}
 
 <nav
 	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
@@ -382,7 +384,7 @@
 								</h1>
 							{/if}
 
-							{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
+							{#if !side && !temporary && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
 								<button
 									id="delete-chat-button"
 									aria-label={$i18n.t('Delete')}
@@ -436,7 +438,7 @@
 	{/if}
 
 	<div class="absolute top-full left-0 right-0 h-fit">
-		{#if !$selectedFolder && !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
+		{#if !side && !$selectedFolder && !history.currentId && !$chatId && ($banners.length > 0 || ($config?.license_metadata?.type ?? null) === 'trial' || (($config?.license_metadata?.seats ?? null) !== null && $config?.user_count > $config?.license_metadata?.seats))}
 			<div class=" w-full z-30">
 				<div
 					class=" flex flex-col gap-1 w-full max-h-28 overflow-y-auto overscroll-contain md:max-h-none md:overflow-visible"

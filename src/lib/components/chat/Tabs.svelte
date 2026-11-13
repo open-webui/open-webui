@@ -223,6 +223,8 @@
 	// The code block each artifacts tab was last asked to show.
 	let artifactSelections: Record<string, { code: string }> = {};
 	let pendingArtifacts: { code?: string } | null = null;
+	let sideTabTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
+	let sideTabActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
 	let viewReady = false;
 	let viewError = '';
@@ -265,6 +267,8 @@
 		tabs = emptyTabs();
 		sideChatStreaming = {};
 		pendingArtifacts = null;
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		++switchVersion;
 		tabsChatId = undefined;
 	}
@@ -314,6 +318,8 @@
 		terminalTitles = {};
 		terminalProcesses = {};
 		sideChatStreaming = {};
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
 		viewEntry = owner;
@@ -374,6 +380,8 @@
 		viewEntry = null;
 		tabs = emptyTabs();
 		sideChatStreaming = {};
+		sideTabTitleEditors = {};
+		sideTabActions = {};
 		tabsChatId = undefined;
 		clearChatViews();
 	}
@@ -1100,6 +1108,8 @@
 					delete sideArtifacts[id];
 					delete artifactSelections[`artifacts:${id}`];
 				}
+				delete sideTabTitleEditors[id];
+				delete sideTabActions[id];
 				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
 					showTabs.set(false);
 				await tick();
@@ -1994,6 +2004,9 @@
 						bind:streaming={sideChatStreaming[tab.id]}
 						artifacts={sideArtifactsFor(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
+						bind:tabTitleEditor={sideTabTitleEditors[tab.id]}
+						bind:tabActions={sideTabActions[tab.id]}
+						onClose={() => closeTab(tab.id)}
 						initialView={owner.transient[`side:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
 						onChatUpdate={(chat) =>
@@ -2311,7 +2324,7 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind !== 'chat' || (mainTabFolder ? !renamingFolder : !tabTitleEditor)}
+							{#if (tab.kind !== 'chat' || (mainTabFolder ? !renamingFolder : !tabTitleEditor)) && !sideTabTitleEditors[tab.id]}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
 									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
 								>
@@ -2346,7 +2359,9 @@
 								/>
 							{:else if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
 							{@render tabActions?.()}
-						{:else}<button
+						{:else}
+							{@render sideTabTitleEditors[tab.id]?.()}
+							{@render sideTabActions[tab.id]?.()}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[
