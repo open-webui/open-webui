@@ -5734,8 +5734,6 @@
 								}
 							}}
 							{history}
-							hasArtifacts={$artifacts.length > 0}
-							onOpenArtifacts={canOpenArtifacts ? openArtifacts : null}
 							title={$chatTitle}
 							shareEnabled={!!history.currentId}
 							{initNewChat}

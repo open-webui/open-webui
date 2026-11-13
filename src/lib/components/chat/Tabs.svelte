@@ -89,6 +89,7 @@
 	import Icon from './FileNav/Icon.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
+	import Map from '$lib/components/icons/Map.svelte';
 	import HomeIcon from '$lib/components/icons/Home.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
@@ -1307,7 +1308,7 @@
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
 	$: canOpenNewTab =
-		showFilesTab || terminalFilesAvailable || canSelectTerminal || newTabViews.length > 0;
+		showFilesTab || terminalFilesAvailable || canSelectTerminal || newTabViews.length > 0 || hasMessages;
 
 	const quickSplit = () => {
 		if (tabs.tabs.length < 2) {
@@ -2332,6 +2333,13 @@
 										>{$i18n.t('New Terminal')}</span
 									><HotkeyHint name="newTerminal" className="ms-auto" /></button
 								>{/if}
+							{#if canVoiceNote || canSelectTerminal}
+								<button on:click={openVoiceNote}>
+									<Icon name="microphone" size={14} />
+									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
+									<HotkeyHint name="voiceNote" className="ms-auto" />
+								</button>
+							{/if}
 							{#if browserEnabled || canSelectTerminal}<button on:click={() => openBrowser()}
 									><Icon name="browser" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Browser')}</span
@@ -2342,14 +2350,7 @@
 										>{$i18n.t('Desktop')}</span
 									><HotkeyHint name="openDesktop" className="ms-auto" /></button
 								>{/if}
-							{#if canVoiceNote || canSelectTerminal}
-								<button on:click={openVoiceNote}>
-									<Icon name="microphone" size={14} />
-									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
-									<HotkeyHint name="voiceNote" className="ms-auto" />
-								</button>
-							{/if}
-							{#each newTabViews as view}
+							{#each newTabViews.filter((view) => view.kind !== 'artifacts') as view}
 								<button
 									on:click={() =>
 										openFeature(
@@ -2368,6 +2369,18 @@
 									{/if}
 								</button>
 							{/each}
+							{#if hasMessages}
+								<button aria-haspopup="dialog" on:click={() => showOverview.set(true)}>
+									<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
+									<span class="flex-1 text-start">{$i18n.t('Overview')}</span>
+								</button>
+							{/if}
+							{#if showArtifactsTab}
+								<button on:click={() => openFeature('artifacts')}>
+									<Icon name={tabIcon('artifacts')} size={14} />
+									<span class="flex-1 text-start">{$i18n.t('Artifacts')}</span>
+								</button>
+							{/if}
 						</DropdownMenu>
 					</div>
 				</Dropdown>
