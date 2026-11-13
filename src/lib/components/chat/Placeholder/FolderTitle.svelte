@@ -15,8 +15,14 @@
 		type FolderDetails
 	} from '$lib/stores/folderStates';
 
-	import { deleteFolderById, updateFolderById, createNewFolder } from '$lib/apis/folders';
+	import {
+		deleteFolderById,
+		updateFolderById,
+		createNewFolder,
+		markFolderChatsReadById
+	} from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
+	import { refreshSidebar } from '$lib/stores/chatList';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
 	import FolderShareModal from '$lib/components/layout/Sidebar/Folders/FolderShareModal.svelte';
@@ -105,6 +111,16 @@
 		}
 	};
 
+	const markAllReadHandler = async () => {
+		const res = await markFolderChatsReadById(localStorage.token, folder.id).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		await refreshSidebar(localStorage.token);
+	};
+
 	const exportHandler = async () => {
 		const chats = await getChatsByFolderId(localStorage.token, folder.id).catch((error) => {
 			toast.error(`${error}`);
@@ -160,6 +176,7 @@
 				onExport={() => {
 					exportHandler();
 				}}
+				onMarkAllRead={markAllReadHandler}
 				onCreateSubFolder={() => {
 					showCreateSubFolderModal = true;
 				}}
