@@ -244,7 +244,7 @@
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
 
-	let navbarElement;
+	let navbarElement: { startRename?: () => void } | undefined;
 
 	let showEventConfirmation = false;
 	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
@@ -6137,6 +6137,7 @@
 					title={$chatTitle || $i18n.t('New Chat')}
 					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon } : null}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
+					onRenameMainTab={() => navbarElement?.startRename?.()}
 					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}

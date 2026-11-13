@@ -165,6 +165,8 @@
 	$: mainTabTitle = mainTabFolder?.name ?? title;
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	/** Double-clicking the main chat tab renames the chat. */
+	export let onRenameMainTab: (() => void) | null = null;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	$: fullWidth = largeScreen;
@@ -2254,6 +2256,9 @@
 							title={tab.kind === 'chat' ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
 							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
+							on:dblclick={() => {
+								if (tab.kind === 'chat' && !mainTabFolder) onRenameMainTab?.();
+							}}
 						>
 							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
 								<Spinner className="size-3.5" />
