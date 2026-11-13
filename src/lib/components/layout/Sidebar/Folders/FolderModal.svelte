@@ -22,7 +22,9 @@
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
 	import FileNav from '$lib/components/chat/FileNav.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
-	import TerminalSelector from '$lib/components/workspace/Models/TerminalSelector.svelte';
+	import TerminalMenu from '$lib/components/chat/MessageInput/TerminalMenu.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import { writable } from 'svelte/store';
 
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Knowledge from '$lib/components/workspace/Models/Knowledge.svelte';
@@ -80,6 +82,19 @@
 				if (request === modelRequest) modelsLoading = false;
 			}
 		}, 250);
+	};
+
+	// The composer's terminal menu picks the folder's default terminal.
+	const folderTerminal = writable<string | null>(null);
+	$: folderTerminal.set(data.terminal_id || null);
+	const folderTerminalSelection = {
+		subscribe: folderTerminal.subscribe,
+		set: (id: string | null) => {
+			if ((id ?? '') === data.terminal_id) return;
+			data.terminal_id = id ?? '';
+			data.working_directory = '';
+			data.model_ids = data.model_ids.filter((modelId) => !modelId.startsWith('agent:'));
+		}
 	};
 
 	$: modelTerminalId = data.terminal_id;
@@ -346,17 +361,30 @@
 						buttonClassName="w-full py-1 text-xs font-normal text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition"
 					>
 						<div slot="content" class="space-y-0.5 pt-1">
-							<TerminalSelector
-								bind:terminalId={data.terminal_id}
-								label={$i18n.t('Default terminal')}
-								description={$i18n.t(
-									'Select the terminal used by default for new chats in this folder.'
-								)}
-								onChange={() => {
-									data.working_directory = '';
-									data.model_ids = data.model_ids.filter((id) => !id.startsWith('agent:'));
-								}}
-							/>
+							<div
+								class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs font-normal text-gray-600 dark:text-gray-400 sm:grid-cols-[8rem_minmax(0,1fr)]"
+							>
+								<ModelSettingsLabel
+									label={$i18n.t('Default terminal')}
+									description={$i18n.t(
+										'Select the terminal used by default for new chats in this folder.'
+									)}
+								/>
+								<div class="flex min-w-0">
+									<TerminalMenu selectedTerminalId={folderTerminalSelection} showDirectory={false}>
+										{#snippet trigger(selected: string | null, label: string)}
+											<button
+												type="button"
+												class="flex w-fit max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 text-left text-xs font-normal text-gray-900 dark:text-gray-100"
+											>
+												<span class="sr-only">{$i18n.t('Default terminal')}: </span>
+												<span class="truncate">{selected ? label : $i18n.t('None')}</span>
+												<ChevronDown className="size-3 shrink-0" />
+											</button>
+										{/snippet}
+									</TerminalMenu>
+								</div>
+							</div>
 							{#if data.terminal_id}
 								<div
 									class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 px-1 py-1 sm:grid-cols-[8rem_minmax(0,1fr)]"

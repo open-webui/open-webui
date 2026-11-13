@@ -57,6 +57,10 @@
 	export let disabled = false;
 	export let chatId: string | null = null;
 	export let terminalContext: TerminalContext | null = null;
+	/** Also offers the working directory of the selected terminal. */
+	export let showDirectory = true;
+	/** Replaces the icon button that opens the menu; receives the selected ID and its label. */
+	export let trigger: import('svelte').Snippet<[string | null, string]> | undefined = undefined;
 
 	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
@@ -355,21 +359,25 @@
 			</Tooltip>
 		{:else}
 			<Dropdown bind:show align="start">
-				<Tooltip content={selectedLabel} placement="top">
-					<button type="button" aria-label={selectedLabel} class={triggerClass}>
-						{#if selectedDevice}
-							<Server className="size-3.5" strokeWidth="2" />
-						{:else}
-							<Cloud className="size-3.5" strokeWidth="2" />
-						{/if}
+				{#if trigger}
+					{@render trigger($selectedTerminalId, selectedLabel)}
+				{:else}
+					<Tooltip content={selectedLabel} placement="top">
+						<button type="button" aria-label={selectedLabel} class={triggerClass}>
+							{#if selectedDevice}
+								<Server className="size-3.5" strokeWidth="2" />
+							{:else}
+								<Cloud className="size-3.5" strokeWidth="2" />
+							{/if}
 
-						{#if $selectedTerminalId && selectedLabel}
-							<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
-								>{selectedLabel}</span
-							>
-						{/if}
-					</button>
-				</Tooltip>
+							{#if $selectedTerminalId && selectedLabel}
+								<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
+									>{selectedLabel}</span
+								>
+							{/if}
+						</button>
+					</Tooltip>
+				{/if}
 
 				<div slot="content">
 					<DropdownMenu
@@ -393,7 +401,7 @@
 	{/key}
 {/if}
 
-{#if folderTarget && (selectedSystemTerminal?.scope !== 'chat' || isSavedChatId(chatId))}
+{#if showDirectory && folderTarget && (selectedSystemTerminal?.scope !== 'chat' || isSavedChatId(chatId))}
 	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}
