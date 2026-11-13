@@ -128,7 +128,14 @@
 			const signal = AbortSignal.any([lifetime.signal, extra.mcpReq.signal]);
 			if (!text || !(await requestConfirmation($i18n.t('Confirm Prompt from Embed'), text, signal)))
 				throw new Error('Message cancelled');
-			window.postMessage({ type: 'input:prompt:submit', text }, window.origin);
+			window.postMessage(
+				{
+					type: 'input:prompt:submit',
+					text,
+					chat: iframe.closest('[data-chat]')?.getAttribute('data-chat')
+				},
+				window.origin
+			);
 			return {};
 		};
 		bridge.onopenlink = async ({ url }) => {
