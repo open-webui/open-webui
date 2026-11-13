@@ -54,7 +54,7 @@
 >
 	<div class="flex-1 max-h-full overflow-y-auto">
 		{#if loaded}
-			<div class="pb-1 px-1.5 pt-1.5 md:px-2.5 md:pt-2">
+			<div class="pb-1 px-1.5 md:px-2.5">
 				<Notes />
 			</div>
 		{:else}

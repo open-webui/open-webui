@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
+	import { writable, type Writable } from 'svelte/store';
 	import { v4 as uuidv4 } from 'uuid';
 	import { user } from '$lib/stores';
 	import { createNewChat } from '$lib/apis/chats';
@@ -12,6 +13,9 @@
 	export let initialView: any = null;
 	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
+	export let streaming = false;
+	export let artifacts: Writable<{ type: string; content: string }[]> = writable([]);
+	export let onOpenArtifacts: (code?: string) => void = () => {};
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
 	export let parentFolderId: string | null = null;
@@ -93,7 +97,9 @@
 		prompt: draft,
 		files
 	};
-	$: title = draft.trim().slice(0, 100) || $i18n.t('New Chat');
+	let title = $i18n.t('New Chat');
+	// Sending clears the input before the chat is created.
+	$: if (draft || files.length) title = draft.trim().slice(0, 100) || $i18n.t('New Chat');
 
 	const createChat = async (chat: {
 		models: string[];
@@ -135,7 +141,10 @@
 		embeddedDraft={restored || !chatId ? embeddedDraft : null}
 		initialPrompt={restored ? '' : initialPrompt}
 		bind:prompt={draft}
+		bind:streaming
 		bind:files
+		{artifacts}
+		{onOpenArtifacts}
 		onCreateEmbeddedChat={createChat}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}

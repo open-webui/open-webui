@@ -268,8 +268,7 @@
 	let actionIds = [];
 	let accessGrants: any[] = [];
 	let terminalId = '';
-	$: hasTerminal =
-		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
+	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
 	let tts = { voice: '' };
 	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
@@ -380,7 +379,7 @@
 						(edit && baseModel.id === info.base_model_id)) &&
 					(!baseModel?.preset || (edit && baseModel.id === info.base_model_id)) &&
 					baseModel?.owned_by !== 'arena' &&
-					!(baseModel?.direct ?? false) &&
+					!(baseModel?.owner_id ?? false) &&
 					(includeHidden ||
 						!(baseModel?.info?.meta?.hidden ?? false) ||
 						baseModel.id === info.base_model_id)
@@ -777,14 +776,7 @@
 	const productionHandler = async (value: any) => {
 		await loadModel(value);
 		try {
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		} catch (error) {
 			toast.error(`${error}`);
 		}
@@ -1772,7 +1764,7 @@
 													id="model-subagents"
 													label={$i18n.t('Models')}
 													items={($baseModels ?? [])
-														.filter((model) => !('direct' in model && model.direct))
+														.filter((model) => !('owner_id' in model && model.owner_id))
 														.map((model) => ({
 															id: model.id,
 															name: model.name,
