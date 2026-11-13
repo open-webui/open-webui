@@ -609,7 +609,7 @@
 					{ id: uuidv4(), prompt: instruction, files: attachments }
 				]
 			}));
-		} else if ((await getChatId(history, attachments)) !== null) {
+		} else {
 			await submitPrompt(instruction, attachments);
 		}
 	};
@@ -4037,6 +4037,20 @@
 
 		saveSessionSelectedModels();
 
+		const currentHistory = history;
+		processing = 'uploading';
+		try {
+			await tick();
+			if (history !== currentHistory) return { status: 'rejected' as const };
+			if ((await getChatId(currentHistory, _files)) === null)
+				return { status: 'rejected' as const };
+		} catch (error) {
+			toast.error(`${error}`);
+			return { status: 'rejected' as const };
+		} finally {
+			processing = '';
+		}
+
 		return await sendMessage(history, userMessageId, {
 			modelId: bridgeRequest?.modelId ?? null
 		});
@@ -4232,7 +4246,7 @@
 			inputFiles.find((file) => file.type === 'filesystem')?.terminal_id ?? $selectedTerminalId;
 		const context =
 			$config?.features?.enable_tool_servers &&
-			!Object.keys(_history.messages).length &&
+			!Object.values(_history.messages).some((message) => message.role === 'assistant') &&
 			terminalContext &&
 			terminalContext.terminalId === terminalId
 				? terminalContext
@@ -4400,15 +4414,13 @@
 		const currentHistory = history;
 		processing = 'uploading';
 		try {
-			const _chatId = await getChatId(currentHistory);
-			if (_chatId === null) return { status: 'rejected' };
-
-			if (history !== currentHistory) return { status: 'rejected' };
-			if (
-				files.some((file) => file.status === 'pending' && file.file instanceof File) &&
-				!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history))))
-			)
-				return { status: 'rejected' };
+			if (files.some((file) => file.status === 'pending' && file.file instanceof File)) {
+				const _chatId = await getChatId(currentHistory);
+				if (_chatId === null) return { status: 'rejected' };
+				if (history !== currentHistory) return { status: 'rejected' };
+				if (!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history)))))
+					return { status: 'rejected' };
+			}
 			if (history !== currentHistory) return { status: 'rejected' };
 		} catch (error) {
 			toast.error(`${error}`);
