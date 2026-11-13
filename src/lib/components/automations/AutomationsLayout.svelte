@@ -3,6 +3,7 @@
 	const { goto, tab: pageTab } = getPageContext();
 
 	import { getContext, onMount, setContext } from 'svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import { writable } from 'svelte/store';
 
 	import { config, mobile, showSidebar, user } from '$lib/stores';
@@ -113,7 +114,10 @@
 							{$total === null ? '' : formatNumber($total)}
 						</span>
 						{#if itemName}
-							<span class="text-sm text-gray-300 dark:text-gray-800 px-2">/</span>
+							<ChevronRight
+								className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
+								strokeWidth="2"
+							/>
 							<span class="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-white">
 								{itemName}
 							</span>
