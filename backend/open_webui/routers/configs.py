@@ -60,6 +60,7 @@ CODE_EXECUTION_CONFIG_KEYS = {
 MODELS_CONFIG_KEYS = {
     'DEFAULT_MODELS': 'ui.default_models',
     'DEFAULT_PINNED_MODELS': 'ui.default_pinned_models',
+    'DEFAULT_MODEL_TAG': 'ui.default_model_tag',
     'MODEL_ORDER_LIST': 'ui.model_order_list',
     'DEFAULT_MODEL_METADATA': 'models.default_metadata',
     'DEFAULT_MODEL_PARAMS': 'models.default_params',
@@ -598,6 +599,7 @@ async def set_code_execution_config(
 class ModelsConfigForm(BaseModel):
     DEFAULT_MODELS: str | None
     DEFAULT_PINNED_MODELS: str | None
+    DEFAULT_MODEL_TAG: str | None = None
     MODEL_ORDER_LIST: list[str] | None
     DEFAULT_MODEL_METADATA: dict | None = None
     DEFAULT_MODEL_PARAMS: dict | None = None

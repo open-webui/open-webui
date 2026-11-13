@@ -220,7 +220,7 @@
 
 	let searchValue = '';
 
-	let selectedTag = '';
+	let selectedTag = selectionOnly ? '' : ($config?.default_model_tag ?? '').toLowerCase();
 	let selectedConnectionType = '';
 	let selectedFilter = '';
 	let modelFilterItems = [];
@@ -747,6 +747,9 @@
 				.map((tag) => tag.name.toLowerCase());
 			// Remove duplicates and sort
 			tags = Array.from(new Set(tags)).sort((a, b) => a.localeCompare(b));
+			if (selectedTag && !tags.includes(selectedTag)) {
+				selectedTag = '';
+			}
 		}
 	});
 
