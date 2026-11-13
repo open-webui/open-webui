@@ -558,9 +558,13 @@
 			if (loaded) void loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
 				if (!isCancelledFolderRequest(error)) console.error(error);
 			});
-			if (appLayout?.initNewChat) await appLayout.initNewChat(true, true);
-			else await goto(`/folders/${folderId}`);
-			if (isCurrentFolderOpening(generation) && $mobile) showSidebar.set(false);
+			if (appLayout?.initNewChat) {
+				await appLayout.initNewChat(true, true);
+				if (isCurrentFolderOpening(generation) && $mobile) showSidebar.set(false);
+			} else {
+				await goto(`/folders/${folderId}`);
+				if ($mobile) showSidebar.set(false);
+			}
 		} catch (error) {
 			if (isCurrentFolderOpening(generation) && !isCancelledFolderRequest(error)) toast.error(`${error}`);
 		}
