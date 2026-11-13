@@ -160,6 +160,7 @@
 			selectedFolder.update((current) =>
 				current?.id === folderId ? { ...current, ...updated } : current
 			);
+			await refreshFolderChatLists(null);
 		} catch (error) {
 			toast.error(String(error));
 		} finally {
