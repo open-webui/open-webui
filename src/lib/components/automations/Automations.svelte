@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto } = getPageContext();
+	const { goto, active } = getPageContext();
 
 	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext } from 'svelte';
@@ -122,7 +122,7 @@
 	};
 
 	// Immediate response to page/filter changes (gate behind loaded)
-	$: if (loaded && page && statusFilter !== undefined) {
+	$: if (loaded && $active && page && statusFilter !== undefined) {
 		getAutomationList();
 	}
 
