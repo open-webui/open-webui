@@ -19,6 +19,8 @@
 
 	export let side: 'top' | 'bottom' = 'top';
 	export let align: 'start' | 'end' = 'start';
+	/** Render the trigger as a bare value, for label | value rows. */
+	export let plain = false;
 
 	/** Optional callback when any value changes */
 	export let onChange: () => void = () => {};
@@ -165,34 +167,35 @@
 <Dropdown bind:show={showDropdown} {side} {align}>
 	<button
 		type="button"
-		class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-			text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+		class={plain
+			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
+			: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke-width="1.5"
-			stroke="currentColor"
-			class="size-3.5"
-		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-			/>
-		</svg>
-		<span class="whitespace-nowrap">{scheduleLabel}</span>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke-width="2"
-			stroke="currentColor"
-			class="size-2.5"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-		</svg>
+		{#if !plain}<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="1.5"
+				stroke="currentColor"
+				class="size-3.5"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+				/>
+			</svg>{/if}
+		<span class={plain ? 'truncate' : 'whitespace-nowrap'}>{scheduleLabel}</span>
+		{#if !plain}<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="2"
+				stroke="currentColor"
+				class="size-2.5"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+			</svg>{/if}
 	</button>
 
 	<div
