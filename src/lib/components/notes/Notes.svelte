@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, tab: pageTab } = getPageContext();
+	const { goto, tab: pageTab, active } = getPageContext();
 
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -191,6 +191,7 @@
 
 	$: if (
 		loaded &&
+		$active &&
 		sortKey !== undefined &&
 		sortDirection !== undefined &&
 		permission !== undefined &&
