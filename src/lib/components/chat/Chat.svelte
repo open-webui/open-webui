@@ -150,6 +150,7 @@
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import Tabs from './Tabs.svelte';
+	import { pageTabKey } from './Tabs/tabs';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ElicitationDialog from './ElicitationDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -2743,7 +2744,21 @@
 		}
 		stopAudio();
 	});
-	beforeNavigate(() => {
+	beforeNavigate(({ to, type, cancel }) => {
+		if (
+			!embedded &&
+			!initialPage &&
+			to &&
+			(type === 'goto' || type === 'link') &&
+			to.url.origin === location.origin &&
+			to.url.pathname !== '/' &&
+			!to.url.pathname.startsWith('/c/') &&
+			pageTabKey(to.url)
+		) {
+			cancel();
+			terminalTabs?.openPageTab({ href: to.url.pathname + to.url.search + to.url.hash, label: '' });
+			return;
+		}
 		bridge?.end();
 		pendingUrlActions = null;
 	});
