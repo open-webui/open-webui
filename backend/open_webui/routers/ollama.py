@@ -1210,7 +1210,7 @@ class OpenAIChatMessage(BaseModel):
     """A single message in an OpenAI-compatible chat request."""
 
     role: str
-    content: Union[str | None, list[OpenAIChatMessageContent]]
+    content: Union[str | None, list[OpenAIChatMessageContent]] = None
     model_config = ConfigDict(extra='allow')
 
 
