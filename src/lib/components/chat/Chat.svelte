@@ -150,6 +150,7 @@
 	import Navbar from '$lib/components/chat/Navbar.svelte';
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import Tabs from './Tabs.svelte';
+	import { pageTabKey } from './Tabs/tabs';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ElicitationDialog from './ElicitationDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -2741,6 +2742,15 @@
 			await tick();
 			initNewChat();
 		}
+		if (
+			!embedded &&
+			initialPage &&
+			from &&
+			to &&
+			from.url.pathname !== to.url.pathname &&
+			pageTabKey(to.url)
+		)
+			terminalTabs?.openPageTab({ href: to.url.pathname + to.url.search + to.url.hash, label: '' });
 		stopAudio();
 	});
 	beforeNavigate(() => {
@@ -2748,7 +2758,13 @@
 		pendingUrlActions = null;
 	});
 	onNavigate(({ from, to }) => {
-		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;
+		if (
+			!embedded &&
+			to &&
+			from?.url.pathname !== to.url.pathname &&
+			!(initialPage && pageTabKey(to.url))
+		)
+			loading = true;
 	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
