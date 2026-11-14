@@ -56,7 +56,8 @@
 		showFileNavPath,
 		showFileNavDir,
 		chatRequestQueues,
-		desktopEvent
+		desktopEvent,
+		folders
 	} from '$lib/stores';
 	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { updateFolderById } from '$lib/apis/folders';
@@ -508,6 +509,8 @@
 	$: isShared = chat != null && chat.user_id !== $user?.id;
 	$: if (isShared && $showCallOverlay) showCallOverlay.set(false);
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
+	$: canRename =
+		!isShared || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id;
 	$: sideChatAllowed =
 		$user?.role === 'admin' ||
 		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
@@ -4225,14 +4228,14 @@
 	let titleInput: HTMLInputElement;
 	let generatingTitle = false;
 	let titleEditChatId = '';
-	$: if (loading || isShared || $temporaryChatEnabled || $chatId !== titleEditChatId)
+	$: if (loading || !canRename || $temporaryChatEnabled || $chatId !== titleEditChatId)
 		editingTitle = false;
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
 
 	export const startRename = async () => {
 		if (
 			loading ||
-			isShared ||
+			!canRename ||
 			!$chatId ||
 			$temporaryChatEnabled ||
 			isTemporaryChatId($chatId) ||
