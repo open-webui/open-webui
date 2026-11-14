@@ -1781,12 +1781,23 @@ async def get_event_call(request_info):
 
     async def __event_caller__(event_data):
         session_id = request_info['session_id']
+        chat_id = request_info['chat_id']
+        message_id = request_info['message_id']
         if is_temporary_chat_id(request_info['chat_id']):
             owner = await get_temporary_chat(redis, request_info['chat_id'])
             if owner and owner['user_id'] == request_info['user_id']:
                 session_id = request_info['session_id'] = owner['session_id']
                 if 'session_id' in (event_data.get('data') or {}):
                     event_data = {**event_data, 'data': {**event_data['data'], 'session_id': session_id}}
+
+        if request_info.get('internal') is True and 'session_id' not in (event_data.get('data') or {}):
+            # The page only answers for its open chat.
+            metas = await Chats.get_chat_metas_by_chat_ids([chat_id], include_archived=True)
+            if not metas:
+                return {'error': 'Client session disconnected.'}
+            chat_id, message_id = metas[0]['parent_chat_id'], metas[0]['parent_message_id']
+            if chat_id not in ((SESSION_POOL.get(session_id) or {}).get('chat_ids') or []):
+                session_id = await asyncio.to_thread(get_user_chat_session_id, request_info['user_id'], chat_id)
 
         # session_id is client-supplied; only the requesting user's own live session may be targeted.
         session = SESSION_POOL.get(session_id)
@@ -1827,8 +1838,8 @@ async def get_event_call(request_info):
                         sio.call(
                             'events',
                             {
-                                'chat_id': request_info['chat_id'],
-                                'message_id': request_info['message_id'],
+                                'chat_id': chat_id,
+                                'message_id': message_id,
                                 'data': event_data,
                             },
                             to=session_id,
@@ -1864,7 +1875,7 @@ async def get_event_call(request_info):
                                         next_session_id = None
                                 else:
                                     next_session_id = await asyncio.to_thread(
-                                        get_user_chat_session_id, request_info['user_id'], request_info['chat_id']
+                                        get_user_chat_session_id, request_info['user_id'], chat_id
                                     )
                                 if next_session_id is not None:
                                     session_id = request_info['session_id'] = next_session_id
@@ -1880,8 +1891,8 @@ async def get_event_call(request_info):
                 await sio.emit(
                     'events',
                     {
-                        'chat_id': request_info.get('chat_id'),
-                        'message_id': request_info.get('message_id'),
+                        'chat_id': chat_id,
+                        'message_id': message_id,
                         'data': {'type': 'request:interaction:done', 'data': {'interaction_id': interaction_id}},
                     },
                     to=session_id,
