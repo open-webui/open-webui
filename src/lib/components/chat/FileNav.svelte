@@ -5,6 +5,7 @@
 	import type { TerminalContext } from '$lib/types';
 	import type { TerminalTarget } from '$lib/apis/terminal';
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
+	import { watchTerminalFiles } from '$lib/apis/terminal/events';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import CloneRepository from './FileNav/CloneRepository.svelte';
@@ -1238,16 +1239,54 @@
 		return normalizedEntries;
 	};
 
-	const refreshExpandedDirs = async () => {
-		for (const directory of [...expandedDirs]) {
-			await fetchExpandedDir(directory);
+	// Re-lists the shown folders in place: no spinner, and selection and preview stay put.
+	let refreshes = 0;
+	const refreshBrowser = async () => {
+		const terminal = selectedTerminal;
+		if (!terminal || loading) return;
+		const refresh = ++refreshes;
+		const generation = loadGeneration;
+		const paths = [currentPath, ...expandedDirs];
+		const listings = await Promise.all(paths.map((path) => listFiles(terminal, path)));
+		if (refresh !== refreshes || generation !== loadGeneration || loading) return;
+		if (listings[0]) {
+			error = null;
+			currentWritable = listings[0].writable !== false;
+			entries = normalizeEntries(listings[0].entries);
 		}
+		const cache = new Map(treeCache);
+		paths.forEach(
+			(path, i) => listings[i] && cache.set(path, normalizeEntries(listings[i].entries))
+		);
+		treeCache = cache;
+		saveTreeState();
 	};
 
-	const refreshBrowser = async () => {
-		await loadDir(currentPath, { preserveTree: true });
-		await refreshExpandedDirs();
+	// The terminal's watcher reports real changes, including ones made outside the chat.
+	let watchedFolder = '';
+	let stopWatching: (() => void) | undefined;
+	let watcherConnected = false;
+	const watchFolder = async (terminal: TerminalTarget | null, directory: string, on: boolean) => {
+		const folder = on && terminal ? `${terminal.baseUrl}:${directory}` : '';
+		if (folder === watchedFolder) return;
+		watchedFolder = folder;
+		stopWatching?.();
+		stopWatching = undefined;
+		watcherConnected = false;
+		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
+		if (folder !== watchedFolder || disposed) return;
+		stopWatching = watchTerminalFiles(
+			terminal,
+			directory,
+			() => !selectedFile && refreshBrowser(),
+			(message) => (watcherConnected = !message)
+		);
 	};
+	$: void watchFolder(
+		selectedTerminal,
+		currentPath,
+		mounted && active && savedPathLoaded && !onSelectDirectory
+	);
 
 	const toggleExpand = async (path: string) => {
 		const directory = asDirectoryPath(path);
@@ -2227,7 +2266,9 @@
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
-			invalidateTreeCache(dir);
+			// '/' means a command ran, so anything shown may have changed.
+			const dirShown = filePath === '/' || dir === currentPath || expandedDirs.has(dir);
+			if (!dirShown) invalidateTreeCache(dir);
 			if (comparison) return;
 
 			if (selectedFile) {
@@ -2235,10 +2276,8 @@
 					const fileName = selectedFile.split('/').pop() ?? '';
 					await openEntry({ name: fileName, type: 'file', size: 0 }, { refresh: true });
 				}
-			} else {
-				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
-					await refreshBrowser();
-				}
+			} else if (dirShown && !watcherConnected) {
+				await refreshBrowser();
 			}
 		});
 
@@ -2316,6 +2355,7 @@
 	});
 
 	onDestroy(() => {
+		stopWatching?.();
 		++gitBaseGeneration;
 		overwriteChoice?.(false);
 		disposed = true;
