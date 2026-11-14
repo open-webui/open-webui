@@ -137,7 +137,7 @@ class MCPClient:
                 # legacy servers. The read timeout bounds that handshake and every
                 # later request that does not set its own; the SDK caps the probe itself.
                 async with Client(
-                    streamable_http_client(url, http_client=http_client),
+                    streamable_http_client(url, http_client=http_client, max_sse_event_size=None),
                     extensions=[advertise('io.modelcontextprotocol/ui', {'mimeTypes': ['text/html;profile=mcp-app']})],
                     read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
                     elicitation_callback=self.elicit if self.event_caller else None,
