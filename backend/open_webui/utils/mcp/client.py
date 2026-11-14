@@ -77,6 +77,7 @@ class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
         self.client: Optional[Client] = None
         self.session_task: Optional[asyncio.Task] = None
+        self.connect_args: Optional[tuple[str, Optional[dict], Optional[httpx2.Auth]]] = None
         self.event_caller = event_caller
         self.server_name = server_name
         self.instructions: Optional[str] = None
@@ -118,6 +119,7 @@ class MCPClient:
             return ElicitResult(action='cancel')
 
     async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx2.Auth] = None):
+        self.connect_args = (url, headers, auth)
         # A failed request makes the SDK cancel the task that opened the session, so it gets its own task.
         connected = asyncio.get_running_loop().create_future()
         self.session_task = asyncio.create_task(self.run_session(url, headers, auth, connected))
@@ -188,6 +190,9 @@ class MCPClient:
         return tool_specs
 
     async def call_tool_raw(self, function_name: str, function_args: dict) -> dict:
+        if not self.client and self.connect_args:
+            # The session ends for good when the server drops it, e.g. on a restart.
+            await self.connect(*self.connect_args)
         if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
