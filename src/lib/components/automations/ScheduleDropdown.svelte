@@ -129,7 +129,21 @@
 				if (k && v) parts[k] = v;
 			});
 		const freq = parts.FREQ || 'DAILY';
-		if (!['HOURLY', 'DAILY', 'WEEKLY', 'MONTHLY'].includes(freq) || parts.COUNT || parts.UNTIL) {
+		const visualParts: Record<string, string[]> = {
+			HOURLY: ['FREQ', 'INTERVAL', 'BYMINUTE'],
+			DAILY: ['FREQ', 'INTERVAL', 'BYHOUR', 'BYMINUTE'],
+			WEEKLY: ['FREQ', 'INTERVAL', 'BYDAY', 'BYHOUR', 'BYMINUTE'],
+			MONTHLY: ['FREQ', 'INTERVAL', 'BYMONTHDAY', 'BYHOUR', 'BYMINUTE']
+		};
+		const fitsVisual = Object.entries(parts).every(
+			([key, value]) =>
+				visualParts[freq]?.includes(key) &&
+				(key === 'FREQ' ||
+					(key === 'BYDAY'
+						? /^(MO|TU|WE|TH|FR|SA|SU)(,(MO|TU|WE|TH|FR|SA|SU))*$/.test(value)
+						: /^\d+$/.test(value)))
+		);
+		if (!visualParts[freq] || !fitsVisual) {
 			frequency = 'CUSTOM';
 			prevFrequency = 'CUSTOM';
 			customRrule = s;
