@@ -711,6 +711,23 @@ try:
 except (ValueError, TypeError):
     MCP_INITIALIZE_TIMEOUT = 10
 
+# Maximum size in bytes for a single Server-Sent Event (SSE) payload from an MCP server.
+# Defaults to 1 MiB (1,048,576 bytes) as enforced by the MCP Python SDK.
+# Raise this limit or set to 0 / 'none' for unlimited if connecting to MCP servers
+# returning large tool lists or verbose schemas.
+MCP_MAX_SSE_EVENT_SIZE = os.getenv('MCP_MAX_SSE_EVENT_SIZE', '')
+if MCP_MAX_SSE_EVENT_SIZE.strip() == '':
+    MCP_MAX_SSE_EVENT_SIZE = 1048576
+elif MCP_MAX_SSE_EVENT_SIZE.lower() in ('none', 'null', '0', '-1'):
+    MCP_MAX_SSE_EVENT_SIZE = None
+else:
+    try:
+        MCP_MAX_SSE_EVENT_SIZE = int(MCP_MAX_SSE_EVENT_SIZE)
+        if MCP_MAX_SSE_EVENT_SIZE <= 0:
+            MCP_MAX_SSE_EVENT_SIZE = None
+    except (ValueError, TypeError):
+        MCP_MAX_SSE_EVENT_SIZE = 1048576
+
 
 # AIOHTTP Connection Pool
 

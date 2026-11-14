@@ -15,6 +15,7 @@ from open_webui.env import (
     AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER,
     MCP_INITIALIZE_TIMEOUT,
+    MCP_MAX_SSE_EVENT_SIZE,
 )
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.mcp.apps import (
@@ -137,7 +138,11 @@ class MCPClient:
                 # legacy servers. The read timeout bounds that handshake and every
                 # later request that does not set its own; the SDK caps the probe itself.
                 async with Client(
-                    streamable_http_client(url, http_client=http_client),
+                    streamable_http_client(
+                        url,
+                        http_client=http_client,
+                        max_sse_event_size=MCP_MAX_SSE_EVENT_SIZE,
+                    ),
                     extensions=[advertise('io.modelcontextprotocol/ui', {'mimeTypes': ['text/html;profile=mcp-app']})],
                     read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
                     elicitation_callback=self.elicit if self.event_caller else None,
@@ -165,7 +170,7 @@ class MCPClient:
         while True:
             result = await self.client.list_tools(cursor=cursor)
             tools.extend(result.tools)
-            cursor = result.next_cursor
+            cursor = getattr(result, 'next_cursor', getattr(result, 'nextCursor', None))
             if cursor is None:
                 break
 
