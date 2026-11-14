@@ -262,6 +262,22 @@
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		preserveChatView = preserve && viewReady;
+		if (preserveChatView && viewEntry?.chatId) {
+			// The new chat gets a copy; shells and browsers stay with the chat they were opened in.
+			const carried = chatViewEntry(viewEntry.userId, null);
+			let panels = viewEntry.state.panels;
+			for (const tab of panels.tabs) {
+				if (tab.kind === 'terminal' || tab.kind === 'browser') panels = removeTab(panels, tab.id);
+			}
+			carried.state = {
+				...viewEntry.state,
+				panels: { ...panels, tabs: panels.tabs.map((tab) => ({ ...tab, target: undefined })) }
+			};
+			carried.drafts = new Map(viewEntry.drafts);
+			carried.transient = { ...viewEntry.transient };
+			viewEntry = carried;
+			tabs = carried.state.panels;
+		}
 		if (preserveChatView) return;
 		viewReady = false;
 		tabs = emptyTabs();
