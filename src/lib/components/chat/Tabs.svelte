@@ -112,7 +112,7 @@
 	import GitBar from './Tabs/GitBar.svelte';
 	import Artifacts from './Artifacts.svelte';
 	import Embeds from './Tabs/Embeds.svelte';
-	import SideChat from './Tabs/SideChat.svelte';
+	import ChatTab from './Tabs/ChatTab.svelte';
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
@@ -149,7 +149,8 @@
 	export let files: any[] = [];
 	export let modelId: string | null = null;
 	export let systemPrompt = '';
-	export let canSideChat = false;
+	export let canBranchChat = false;
+	$: canOpenChat = $user?.role === 'admin' || $user?.role === 'user';
 
 	export let codeInterpreterEnabled = false;
 	// Retired layout controls: keep their translations.
@@ -213,13 +214,14 @@
 	export const hasTerminals = () => tabs.tabs.some((tab) => tab.kind === 'terminal');
 	let browserViews: Record<string, Browser> = {};
 	let gitViews: Record<string, GitBar> = {};
-	let sideViews: Record<string, SideChat> = {};
-	let sideChatStreaming: Record<string, boolean> = {};
-	// Each side chat writes its artifacts here; its artifacts tab reads them.
-	const sideArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
-	const sideArtifactsFor = (id: string) => (sideArtifacts[id] ??= writable([]));
+	let chatViews: Record<string, ChatTab> = {};
+	let chatTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
+	let chatStreamingStates: Record<string, boolean> = {};
+	// Each chat writes its artifacts here; its artifacts tab reads them.
+	const chatArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
+	const chatArtifactsFor = (id: string) => (chatArtifacts[id] ??= writable([]));
 	const artifactsOf = (sourceTabId = mainChatTabId) =>
-		sourceTabId === mainChatTabId ? mainArtifacts : sideArtifactsFor(sourceTabId);
+		sourceTabId === mainChatTabId ? mainArtifacts : chatArtifactsFor(sourceTabId);
 	// The code block each artifacts tab was last asked to show.
 	let artifactSelections: Record<string, { code: string }> = {};
 	let pendingArtifacts: { code?: string } | null = null;
@@ -238,7 +240,7 @@
 			const draft = fileViews[tab.id]?.captureView?.();
 			if (draft) owner.drafts.set(tab.id, draft);
 			if (gitViews[tab.id]) owner.transient[`git:${tab.id}`] = gitViews[tab.id].captureView();
-			if (sideViews[tab.id]) owner.transient[`side:${tab.id}`] = sideViews[tab.id].captureView();
+			if (chatViews[tab.id]) owner.transient[`chat:${tab.id}`] = chatViews[tab.id].captureView();
 		}
 		owner.transient.gitDiffModes = fileGitDiffModes;
 		owner.transient.gitHideWhitespace = fileGitHideWhitespace;
@@ -263,7 +265,8 @@
 		if (preserveChatView) return;
 		viewReady = false;
 		tabs = emptyTabs();
-		sideChatStreaming = {};
+		chatStreamingStates = {};
+		chatTitleEditors = {};
 		pendingArtifacts = null;
 		++switchVersion;
 		tabsChatId = undefined;
@@ -313,7 +316,8 @@
 		viewError = '';
 		terminalTitles = {};
 		terminalProcesses = {};
-		sideChatStreaming = {};
+		chatStreamingStates = {};
+		chatTitleEditors = {};
 		tabsChatId = id;
 		const owner = chatViewEntry($user.id, id, $temporaryChatEnabled);
 		viewEntry = owner;
@@ -333,7 +337,7 @@
 			sessionFailures = {};
 			sessionAttempts = {};
 			viewReady = true;
-			hasOpenedTabs = tabs.tabs.some((tab) => tab.kind !== 'chat');
+			hasOpenedTabs = tabs.tabs.some((tab) => tab.id !== mainChatTabId);
 		} catch (error) {
 			if (version === switchVersion) viewError = String(error);
 		}
@@ -373,7 +377,8 @@
 		viewReady = false;
 		viewEntry = null;
 		tabs = emptyTabs();
-		sideChatStreaming = {};
+		chatStreamingStates = {};
+		chatTitleEditors = {};
 		tabsChatId = undefined;
 		clearChatViews();
 	}
@@ -507,14 +512,13 @@
 			artifacts: 'code',
 			preview: 'browser',
 			voice: 'microphone',
-			comments: 'chat-bubble',
-			side: 'chat-lines'
+			comments: 'chat-bubble'
 		})[kind];
 	const domId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
 	$: activeTab = tabs.tabs.find((tab) => tab.id === tabs.activeId);
 	$: contextTab =
-		activeTab?.kind === 'chat'
+		activeTab?.id === mainChatTabId
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
 	$: activeFileContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
@@ -586,8 +590,8 @@
 		const url = new URL(request.href, location.origin);
 		const chat = url.pathname === '/' || url.pathname.startsWith('/c/');
 		return {
-			id: `${chat ? 'side' : 'page'}:${uuidv4()}`,
-			kind: chat ? 'side' : 'page',
+			id: `${chat ? 'chat' : 'page'}:${uuidv4()}`,
+			kind: chat ? 'chat' : 'page',
 			href: url.pathname + url.search + url.hash,
 			chatId: url.pathname.startsWith('/c/')
 				? decodeURIComponent(url.pathname.slice(3))
@@ -755,16 +759,16 @@
 		openArtifacts(code);
 	}
 	const openFeature = (
-		kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'side',
+		kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat',
 		inSidePanel = false
 	) => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		if (kind === 'artifacts') return openArtifacts(undefined, mainChatTabId, inSidePanel);
 		const view = availableViews.find((view) => view.kind === kind)!;
-		if (kind === 'side') {
-			let sideChatNumber = 1;
-			while (tabs.tabs.some((tab) => tab.kind === 'side' && tab.sideChatNumber === sideChatNumber))
-				sideChatNumber++;
+		if (kind === 'chat') {
+			let chatNumber = 1;
+			while (tabs.tabs.some((tab) => tab.kind === 'chat' && tab.chatNumber === chatNumber))
+				chatNumber++;
 			const pending = $sideChatRequest;
 			const initialPrompt = pending?.parentId === chatId ? pending.prompt : '';
 			if (pending?.parentId === chatId) sideChatRequest.set(null);
@@ -772,9 +776,9 @@
 				{
 					id: uuidv4(),
 					kind,
-					label: `${view.label} ${sideChatNumber}`,
-					sideChatNumber,
-					sideChat: true,
+					label: `${view.label} ${chatNumber}`,
+					chatNumber,
+					parentChatId: pending?.parentId === chatId ? (chatId ?? undefined) : undefined,
 					initialPrompt
 				},
 				inSidePanel
@@ -790,7 +794,7 @@
 	let pendingTabDrop: (() => void) | null = null;
 	const clearChatDropPreview = () => (chatDropPreview = null);
 	const canDropChat = (event: Pick<DragEvent, 'dataTransfer'>) =>
-		canSideChat &&
+		canOpenChat &&
 		($user?.role === 'admin' ||
 			!(
 				($user?.permissions?.chat?.temporary ?? true) &&
@@ -930,7 +934,7 @@
 				id = droppedPage?.id ?? uuidv4();
 				tabs = openTab(
 					tabs,
-					droppedPage ?? { id, kind: 'side', label: $i18n.t('Chat'), chatId: savedId }
+					droppedPage ?? { id, kind: 'chat', label: $i18n.t('Chat'), chatId: savedId }
 				);
 			}
 			tabs = bounds.edge
@@ -1087,20 +1091,21 @@
 			owner.drafts.delete(id);
 			const previousPanels = owner.state.panels;
 			let closedPanels = removeTab(previousPanels, id);
-			// a side chat's artifacts have nothing to show once the chat is gone
-			if (tab.kind === 'side') closedPanels = removeTab(closedPanels, `artifacts:${id}`);
+			// a chat's artifacts have nothing to show once the chat is gone
+			if (tab.kind === 'chat') closedPanels = removeTab(closedPanels, `artifacts:${id}`);
 			changeChatView(owner, { ...owner.state, panels: closedPanels });
 			if (owner === viewEntry) {
 				tabs = owner.state.panels;
 				delete dirtyFiles[id];
 				delete fileContexts[id];
-				delete sideChatStreaming[id];
+				delete chatStreamingStates[id];
+				delete chatTitleEditors[id];
 				delete artifactSelections[id];
-				if (tab.kind === 'side') {
-					delete sideArtifacts[id];
+				if (tab.kind === 'chat') {
+					delete chatArtifacts[id];
 					delete artifactSelections[`artifacts:${id}`];
 				}
-				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.kind === 'chat')))
+				if (!tabs.tabs.length || (!largeScreen && tabs.tabs.every((tab) => tab.id === mainChatTabId)))
 					showTabs.set(false);
 				await tick();
 				if (owner === viewEntry) document.getElementById(domId(tabs.activeId))?.focus();
@@ -1305,7 +1310,7 @@
 					...commentTarget
 				}
 			: null;
-	// A side chat's artifacts tab names the chat it belongs to.
+	// A chat's artifacts tab names the chat it belongs to.
 	$: tabLabel = (tab: PanelTab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		const source =
@@ -1319,9 +1324,9 @@
 	$: availableViews = [
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
 		{
-			kind: 'side',
+			kind: 'chat',
 			label: $i18n.t('New Chat'),
-			available: canSideChat
+			available: canOpenChat
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
@@ -1340,7 +1345,7 @@
 			const view = availableViews.find((view) => view.available);
 			if (!view) return;
 			if (view.kind === 'files') openFiles();
-			else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
+			else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat');
 		}
 		tabs = setSplitTabs(tabs, true);
 	};
@@ -1380,7 +1385,7 @@
 				if ((desktopEnabled && selectedTarget) || canSelectTerminal) action = openDesktop;
 				break;
 			case Shortcut.NEW_CHAT_TAB:
-				if (canSideChat) action = () => openFeature('side');
+				if (canOpenChat) action = () => openFeature('chat');
 				break;
 			case Shortcut.OPEN_COMMENTS:
 				if (showCommentsTab) action = () => openFeature('comments');
@@ -1512,10 +1517,10 @@
 	) {
 		const options = [
 			...availableViews
-				.filter((view) => view.available && view.kind !== 'side')
+				.filter((view) => view.available && view.kind !== 'chat')
 				.map((view) => () => {
 					if (view.kind === 'files') openFiles();
-					else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side');
+					else openFeature(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat');
 				}),
 			...(terminalFilesAvailable ? [newFile] : []),
 			...(terminalEnabled ? [newTerminal] : []),
@@ -1524,7 +1529,7 @@
 		];
 		if (terminalFilesAvailable || (!hasOpenedTabs && showFilesTab)) openFiles();
 		else if (options.length === 1) options[0]();
-		else if (!options.length && !canSideChat) showTabs.set(false);
+		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasOpenedTabs = true;
 	}
 	$: if (
@@ -1536,7 +1541,7 @@
 	)
 		sideChatRequest.set(null);
 	$: if (viewReady && $showTabs === 'side') {
-		if (canSideChat) openFeature('side', true);
+		if (canBranchChat) openFeature('chat', true);
 		else sideChatRequest.set(null);
 		showTabs.set(tabs.tabs.length > 0);
 	}
@@ -1658,16 +1663,16 @@
 		const href =
 			active?.kind === 'page'
 				? active.href
-				: active?.kind === 'chat'
+				: active?.id === mainChatTabId
 					? mainChatHref
-					: active?.kind === 'side'
+					: active?.kind === 'chat'
 						? active.chatId
 							? `/c/${active.chatId}`
 							: active.href
 						: null;
 		if (href) {
 			const url = new URL(href, location.origin);
-			if (active?.kind === 'chat' && !chatId) {
+			if (active?.id === mainChatTabId && !chatId) {
 				// delete() re-encodes the other parameters even when it removes nothing.
 				if ($temporaryChatEnabled) url.searchParams.set('temporary-chat', 'true');
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
@@ -1706,7 +1711,7 @@
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title
-		>{activeTab?.kind === 'page' || activeTab?.kind === 'side'
+		>{activeTab?.kind === 'page' || (activeTab?.kind === 'chat' && activeTab.id !== mainChatTabId)
 			? `${activeTab.label} / ${$WEBUI_NAME}`
 			: $settings.showChatTitleInTab !== false && chatId && title
 				? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
@@ -1926,7 +1931,7 @@
 				></div>
 			</div>
 		{/each}
-		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.kind !== 'chat') as tab (`${viewEntry?.instanceId}:${tab.id}`)}
+		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (`${viewEntry?.instanceId}:${tab.id}`)}
 			{@const owner = viewEntry!}
 			{@const target =
 				mounted && $config && $user && $settings && $terminalServers !== null
@@ -1984,23 +1989,23 @@
 						overlay={dragged}
 						artifacts={artifactsOf(tab.sourceTabId)}
 						selection={artifactSelections[tab.id] ?? null}
-						chatId={(source?.kind === 'side' ? source.chatId : owner.chatId) ?? ''}
+						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat' ? source.chatId : owner.chatId) ?? ''}
 					/>
-				{:else if tab.kind === 'side'}
-					<SideChat
-						standalone={!!tab.href}
-						bind:this={sideViews[tab.id]}
-						bind:streaming={sideChatStreaming[tab.id]}
-						artifacts={sideArtifactsFor(tab.id)}
+				{:else if tab.kind === 'chat'}
+					<ChatTab
+						bind:this={chatViews[tab.id]}
+						bind:streaming={chatStreamingStates[tab.id]}
+						bind:tabTitleEditor={chatTitleEditors[tab.id]}
+						artifacts={chatArtifactsFor(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
-						initialView={owner.transient[`side:${tab.id}`]}
+						initialView={owner.transient[`chat:${tab.id}`]}
 						chatId={tab.chatId ?? ''}
 						onChatUpdate={(chat) =>
 							updateViewTab(owner, tab.id, {
 								chatId: chat.id,
 								...(chat.title ? { label: chat.title } : {})
 							})}
-						parentChatId={tab.sideChat ? (owner.chatId ?? '') : ''}
+						parentChatId={tab.parentChatId ?? ''}
 						parentFolderId={tab.href ? null : folderId}
 						{history}
 						modelId={tab.href
@@ -2257,6 +2262,10 @@
 				}}
 			>
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
+					{@const titleEditor =
+						tab.id === mainChatTabId
+							? mainTabFolder ? undefined : tabTitleEditor
+							: chatTitleEditors[tab.id]}
 					{@const PageIcon =
 						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
 					<div
@@ -2271,26 +2280,27 @@
 					>
 						<button
 							role="tab"
-							aria-keyshortcuts={tab.kind === 'chat'
+							aria-keyshortcuts={tab.id === mainChatTabId
 								? undefined
 								: 'Alt+Shift+ArrowLeft Alt+Shift+ArrowRight'}
 							id={domId(tab.id)}
 							aria-controls={`${domId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.kind === 'chat' ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
-							aria-label={tab.kind === 'chat' ? mainTabTitle : undefined}
+							title={tab.id === mainChatTabId ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
+							aria-label={tab.id === mainChatTabId ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 							on:dblclick={() => {
-								if (tab.kind !== 'chat') return;
+								if (tab.kind === 'chat') void chatViews[tab.id]?.startRename();
+								if (tab.id !== mainChatTabId) return;
 								if (mainTabFolder) void startFolderRename();
 								else onRenameMainTab?.();
 							}}
 						>
-							{#if (tab.kind === 'chat' && chatStreaming) || (tab.kind === 'side' && sideChatStreaming[tab.id])}
+							{#if (tab.id === mainChatTabId && chatStreaming) || (tab.kind === 'chat' && chatStreamingStates[tab.id])}
 								<Spinner className="size-3.5" />
 								<span class="sr-only">{$i18n.t('Generating...')}</span>
-							{:else if tab.kind === 'chat' && mainTabFolder}
+							{:else if tab.id === mainChatTabId && mainTabFolder}
 								{#if mainTabFolder.icon}
 									<Emoji shortCode={mainTabFolder.icon} className="size-3.5" />
 								{:else}
@@ -2310,20 +2320,21 @@
 							{:else}
 								<Icon name={tabIcon(tab.kind)} size={14} />
 							{/if}
-							{#if tab.kind !== 'chat' || (mainTabFolder ? !renamingFolder : !tabTitleEditor)}
+							{#if !titleEditor && !(tab.id === mainChatTabId && mainTabFolder && renamingFolder)}
 								<span class="max-w-30 overflow-hidden text-ellipsis"
-									>{tab.kind === 'chat' ? mainTabTitle : tabLabel(tab)}</span
+									>{tab.id === mainChatTabId ? mainTabTitle : tabLabel(tab)}</span
 								>
 							{/if}
 							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
 									>{commentCount}</span
 								>{/if}
 						</button>
+						{@render titleEditor?.()}
 						{#if tab.untitled || dirtyFiles[tab.id]}<span
 								class="ms-1 size-1.5 shrink-0 rounded-full bg-gray-400"
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
-						{#if tab.kind === 'chat'}
+						{#if tab.id === mainChatTabId}
 							{#if mainTabFolder && renamingFolder}
 								<input
 									data-folder-tab-rename
@@ -2343,7 +2354,7 @@
 									}}
 									on:blur={saveFolderRename}
 								/>
-							{:else if !mainTabFolder}{@render tabTitleEditor?.()}{/if}
+							{/if}
 							{@render tabActions?.()}
 						{:else}<button
 								type="button"
@@ -2410,7 +2421,7 @@
 								<button
 									on:click={() =>
 										openFeature(
-											view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'side'
+											view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat'
 										)}
 								>
 									{#if view.kind === 'comments'}
@@ -2418,7 +2429,7 @@
 									{:else}
 										<Icon name={tabIcon(view.kind as PanelTab['kind'])} size={14} />
 									{/if}<span class="flex-1 text-start">{view.label}</span>
-									{#if view.kind === 'side'}
+									{#if view.kind === 'chat'}
 										<HotkeyHint name="newChatTab" className="ms-auto" />
 									{:else if view.kind === 'comments'}
 										<HotkeyHint name="openComments" className="ms-auto" />

@@ -30,7 +30,7 @@
 		user,
 		MODEL_DOWNLOAD_POOL,
 		mobile,
-		models,
+		models as _models,
 		temporaryChatEnabled,
 		settings,
 		config,
@@ -56,6 +56,8 @@
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
 	import ModelItem from './ModelItem.svelte';
+
+	const models = getContext<typeof _models>('chatModels') ?? _models;
 
 	const i18n: any = getContext('i18n');
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { models, pinnedModels, settings, user } from '$lib/stores';
+	import { models as _models, pinnedModels, settings, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -7,6 +7,8 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 	import equal from 'fast-deep-equal';
+	const models = getContext<typeof _models>('chatModels') ?? _models;
+
 	const i18n = getContext('i18n');
 
 	export let selectedModels = [''];

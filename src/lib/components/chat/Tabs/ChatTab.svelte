@@ -3,13 +3,13 @@
 	import { writable, type Writable } from 'svelte/store';
 	import { v4 as uuidv4 } from 'uuid';
 	import { user } from '$lib/stores';
-	import { createNewChat } from '$lib/apis/chats';
-	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
 	import { convertMessagesToHistory, isRasterImageContentType } from '$lib/utils';
 	import Chat from '../Chat.svelte';
+	let chatView: Chat | undefined;
+	export const startRename = () => chatView?.startRename();
+	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 
 	export let initialPrompt = '';
-	export let standalone = false;
 	export let initialView: any = null;
 	export const captureView = () => ({ draft, files, context });
 	export let chatId = '';
@@ -23,18 +23,18 @@
 	export let modelId: string | null = null;
 	export let systemPrompt = '';
 	const i18n = getContext<any>('i18n');
-	const originalChatId = parentChatId;
 	const draftKey = uuidv4();
 	const restored = !!initialView;
 	let draft = initialView?.draft ?? initialPrompt;
 	let files: any[] = initialView?.files ?? [];
-	$: sideChatAllowed =
+	$: chatAllowed =
 		$user?.role === 'admin' ||
-		($user?.role === 'user' && (standalone || ($user.permissions?.chat?.side_chat ?? false)));
+		($user?.role === 'user' &&
+			(chatId || !parentChatId || ($user.permissions?.chat?.side_chat ?? false)));
 	// Snapshot the active branch once; later parent edits and streaming stay in the parent.
 	let context = (() => {
 		if (initialView?.context) return initialView.context;
-		if (chatId || standalone) return [];
+		if (chatId || !parentChatId) return [];
 		const branch: any[] = [];
 		let current = history?.currentId;
 		const seen = new Set<string>();
@@ -100,41 +100,14 @@
 	let title = $i18n.t('New Chat');
 	// Sending clears the input before the chat is created.
 	$: if (draft || files.length) title = draft.trim().slice(0, 100) || $i18n.t('New Chat');
-
-	const createChat = async (chat: {
-		models: string[];
-		params: Record<string, any>;
-		variables: Record<string, any>;
-	}) => {
-		const created = await createNewChat(
-			localStorage.token,
-			{
-				title,
-				...(originalChatId && {
-					originalChatId,
-					branchPointMessageId: context.at(-1)?.id ?? null
-				}),
-				models: chat.models,
-				params: chat.params,
-				history: convertMessagesToHistory(context),
-				messages: context,
-				files: contextFiles(),
-				tags: [],
-				timestamp: Date.now()
-			},
-			parentFolderId,
-			chat.variables
-		);
-		void refreshChatList(localStorage.token);
-		if (created.folder_id) void refreshFolderChatLists(created.folder_id, created);
-		return created;
-	};
 </script>
 
-{#if sideChatAllowed}
+{#if chatAllowed}
 	<Chat
+		bind:this={chatView}
+		bind:tabTitleEditor
 		embedded={true}
-		side={true}
+		tabbed={true}
 		{parentChatId}
 		chatIdProp={chatId}
 		embeddedDraftKey={chatId ? '' : draftKey}
@@ -145,7 +118,8 @@
 		bind:files
 		{artifacts}
 		{onOpenArtifacts}
-		onCreateEmbeddedChat={createChat}
+		draftTitle={title}
+		draftFolderId={parentFolderId}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}
 	/>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { models, mobile, settings, user, type Model } from '$lib/stores';
+	import { models as _models, mobile, settings, user, type Model } from '$lib/stores';
 	import Controls from '../Controls/Controls.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -16,6 +16,8 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import { localizeModelControls, resolveLocalizedModelName } from '$lib/utils/localizedContent';
+
+	const models = getContext<typeof _models>('chatModels') ?? _models;
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];

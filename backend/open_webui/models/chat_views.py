@@ -21,6 +21,9 @@ class PanelTab(ViewModel):
     terminalId: str | None = None
     terminalNumber: int | None = None
     chatId: str | None = None
+    chatNumber: int | None = None
+    parentChatId: str | None = None
+    # Accept layouts from older clients; current clients normalize these on read.
     sideChatNumber: int | None = None
     sideChat: bool | None = None
     path: str | None = None

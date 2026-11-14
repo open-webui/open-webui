@@ -2,7 +2,7 @@
 	import { getContext, onMount, setContext, tick } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { socket, selectedFolder, user } from '$lib/stores';
+	import { config, socket, selectedFolder, user } from '$lib/stores';
 	import {
 		loadFolderChatPage,
 		updateFolderDetails,
@@ -71,22 +71,28 @@
 	let automationsView: FolderAutomations;
 
 	async function loadAutomations() {
-		const id = folder?.id;
-		if (!id) return;
+		const folderId = folder?.id;
+		if (!folderId || !canUseAutomations) return;
 		automationsLoading = true;
 		try {
-			const next = await getFolderAutomations(localStorage.token, id);
-			if (folder?.id === id) automations = next;
+			const folderAutomations = await getFolderAutomations(localStorage.token, folderId);
+			if (folder?.id === folderId) automations = folderAutomations;
 		} catch (error) {
-			if (folder?.id === id) automations = [];
+			if (folder?.id === folderId) automations = [];
 		} finally {
 			automationsLoading = false;
 		}
 	}
 
-	function showSection(next: 'chats' | 'automations') {
-		folderSection = next;
-		if (next === 'automations') void loadAutomations();
+	$: canUseAutomations =
+		$config?.features?.enable_automations &&
+		($user?.role === 'admin' || $user?.permissions?.features?.automations);
+
+	$: if (!canUseAutomations && folderSection === 'automations') folderSection = 'chats';
+
+	function showSection(section: 'chats' | 'automations') {
+		folderSection = section;
+		if (section === 'automations') void loadAutomations();
 	}
 	export let onNewChat: () => void = () => {};
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
@@ -1013,55 +1019,66 @@
 				className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
 				strokeWidth="2"
 			/>
-			<Dropdown align="start" closeOnSelect>
-				<button
-					type="button"
-					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
-					aria-label={$i18n.t('Switch section')}
-				>
-					{#if folderSection === 'automations'}
-						<span>{$i18n.t('Automations')}</span>
-						{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
-							>{/if}
-					{:else}
-						<span>{$i18n.t('Chats')}</span>
-						{#if loading && hasData}
-							<Spinner className="size-3 opacity-60" />
-						{:else if hasData && !error}
-							<span class="text-sm opacity-60">{formatNumber(total)}</span>
+			{#if canUseAutomations}
+				<Dropdown align="start" closeOnSelect>
+					<button
+						type="button"
+						class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
+						aria-label={$i18n.t('Switch section')}
+					>
+						{#if folderSection === 'automations'}
+							<span>{$i18n.t('Automations')}</span>
+							{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
+								>{/if}
+						{:else}
+							<span>{$i18n.t('Chats')}</span>
+							{#if loading && hasData}
+								<Spinner className="size-3 opacity-60" />
+							{:else if hasData && !error}
+								<span class="text-sm opacity-60">{formatNumber(total)}</span>
+							{/if}
 						{/if}
+						<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
+					</button>
+					<DropdownMenu slot="content" className="w-44">
+						<button
+							type="button"
+							role="menuitemradio"
+							aria-checked={folderSection === 'chats'}
+							on:click={() => showSection('chats')}
+						>
+							<Icon name="chat-bubble" size={14} />
+							<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
+							{#if hasData}<span class="text-xs tabular-nums text-gray-400"
+									>{formatNumber(total)}</span
+								>{/if}
+							{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
+						</button>
+						<button
+							type="button"
+							role="menuitemradio"
+							aria-checked={folderSection === 'automations'}
+							on:click={() => showSection('automations')}
+						>
+							<Icon name="clock" size={14} />
+							<span class="flex-1 text-left">{$i18n.t('Automations')}</span>
+							{#if automations.length}<span class="text-xs tabular-nums text-gray-400"
+									>{automations.length}</span
+								>{/if}
+							{#if folderSection === 'automations'}<Check className="size-3! shrink-0" />{/if}
+						</button>
+					</DropdownMenu>
+				</Dropdown>
+			{:else}
+				<span class="flex shrink-0 items-center gap-1">
+					<span>{$i18n.t('Chats')}</span>
+					{#if loading && hasData}
+						<Spinner className="size-3 opacity-60" />
+					{:else if hasData && !error}
+						<span class="text-sm opacity-60">{formatNumber(total)}</span>
 					{/if}
-					<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
-				</button>
-				<DropdownMenu slot="content" className="w-44">
-					<button
-						type="button"
-						role="menuitemradio"
-						aria-checked={folderSection === 'chats'}
-						on:click={() => showSection('chats')}
-					>
-						<Icon name="chat-bubble" size={14} />
-						<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
-						{#if hasData}<span class="text-xs tabular-nums text-gray-400"
-								>{formatNumber(total)}</span
-							>{/if}
-						{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
-					</button>
-					<button
-						type="button"
-						role="menuitemradio"
-						aria-checked={folderSection === 'automations'}
-						on:click={() => showSection('automations')}
-					>
-						<Icon name="clock" size={14} />
-						<span class="flex-1 text-left">{$i18n.t('Automations')}</span>
-						{#if automations.length}<span class="text-xs tabular-nums text-gray-400"
-								>{automations.length}</span
-							>{/if}
-						{#if folderSection === 'automations'}<Check className="size-3! shrink-0" />{/if}
-					</button>
-				</DropdownMenu>
-			</Dropdown>
+				</span>
+			{/if}
 		</h2>
 
 		<div class="ml-auto flex items-center gap-1">

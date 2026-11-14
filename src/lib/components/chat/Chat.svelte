@@ -29,7 +29,7 @@
 		chatId as _chatId,
 		config,
 		type Model,
-		models,
+		models as _models,
 		tags as allTags,
 		settings,
 		showSidebar,
@@ -40,14 +40,14 @@
 		audioQueue as _audioQueue,
 		showTabs as _showTabs,
 		sideChatRequest,
-		openSideChatIds,
+		openEmbeddedChatIds,
 		showCallOverlay as _showCallOverlay,
 		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
 		chatTitle as _chatTitle,
 		tools,
 		skills,
-		terminalSkills,
+		terminalSkills as _terminalSkills,
 		terminalServers,
 		functions,
 		selectedFolder as _selectedFolder,
@@ -148,6 +148,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
+	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import Tabs from './Tabs.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ElicitationDialog from './ElicitationDialog.svelte';
@@ -171,7 +172,7 @@
 	let mainChatHref = '/';
 	$: if ($chatId) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
-	export let side = false;
+	export let tabbed = false;
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
@@ -180,10 +181,10 @@
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
 	const showCallOverlay = embedded ? writable(false) : _showCallOverlay;
 	const showEmbeds = embedded ? writable(false) : _showEmbeds;
-	// A side chat uses the main chat's terminal and never changes it.
-	const selectedTerminalId = side
-		? { subscribe: _selectedTerminalId.subscribe, set: () => {} }
-		: _selectedTerminalId;
+	const selectedTerminalId = tabbed ? writable(get(_selectedTerminalId)) : _selectedTerminalId;
+	const terminalSkills = tabbed ? writable<any[]>([]) : _terminalSkills;
+	const models = tabbed ? writable(get(_models)) : _models;
+	setContext('chatModels', models);
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
@@ -198,6 +199,8 @@
 	} | null = null;
 	export let initialPrompt = '';
 	export let parentChatId = '';
+	export let draftTitle = '';
+	export let draftFolderId: string | null = null;
 	export let suggestedPrompts = [];
 	export let selectedText = '';
 	export let notePageId = '';
@@ -229,8 +232,8 @@
 	let audioElement: HTMLAudioElement;
 	$: chatContainerId = embedded ? `note-chat-container-${instanceId}` : 'chat-container';
 	$: messageInputDropzoneId = embedded ? `note-chat-input-dropzone-${instanceId}` : 'chat-pane';
-	$: dropzoneId = side ? chatContainerId : messageInputDropzoneId;
-	const onTemporaryChange = side
+	$: dropzoneId = tabbed ? chatContainerId : messageInputDropzoneId;
+	const onTemporaryChange = tabbed
 		? (value: boolean) => {
 				if (!processing) temporaryChatEnabled.set(value);
 			}
@@ -246,8 +249,6 @@
 	let isNearTop = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
-
-	let navbarElement: { startRename?: () => void } | undefined;
 
 	let showEventConfirmation = false;
 	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
@@ -562,7 +563,7 @@
 		messages: {},
 		currentId: null
 	};
-	// A side chat hides its parent's context up to here.
+	// Context inherited at creation is hidden up to this message.
 	let branchPointMessageId: string | null = null;
 	$: contextOnly = !!branchPointMessageId && history.currentId === branchPointMessageId;
 	$: inputHistory = contextOnly ? { messages: {}, currentId: null } : history;
@@ -592,7 +593,7 @@
 
 	// Chat Input
 	export let prompt = '';
-	let chatFiles = [];
+	let chatFiles: any[] = [];
 	export let files: any[] = [];
 	let terminalContext: TerminalContext | null = null;
 	const askFile = async (instruction: string, file: FilesystemFile) => {
@@ -1108,7 +1109,7 @@
 	const saveSessionSelectedModels = () => {
 		const selectedModelsString = JSON.stringify(selectedModels);
 		if (
-			side ||
+			tabbed ||
 			selectedModels.length === 0 ||
 			(selectedModels.length === 1 && selectedModels[0] === '') ||
 			sessionStorage.selectedModels === selectedModelsString
@@ -1120,7 +1121,7 @@
 	};
 
 	const continueOAuthRedirect = async () => {
-		if (side) {
+		if (tabbed) {
 			pendingOAuthTools = [];
 			return;
 		}
@@ -1202,7 +1203,6 @@
 		folder: FolderDetails | null = null,
 		signal = chatLoadController.signal
 	) => {
-		if (side) return;
 		const terminalId = $selectedTerminalId;
 		const environment = folder ? null : getAgentEnvironment();
 		loadedAgentEnvironment = null;
@@ -1264,7 +1264,7 @@
 	$: if ($selectedTerminalId !== lastTerminalSkillSelector) {
 		if (terminalContext?.terminalId !== $selectedTerminalId) terminalContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !id.startsWith('terminal:'));
-		if (!side) terminalSkills.set([]);
+		terminalSkills.set([]);
 		lastTerminalSkillSelector = $selectedTerminalId;
 		// Folder initialization already requests this exact environment.
 		if (
@@ -1671,15 +1671,15 @@
 			});
 	};
 	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
-	let openSideChatId: string = '';
-	$: if (embedded && $chatId !== openSideChatId) {
-		openSideChatIds.update((ids) => {
+	let openEmbeddedChatId: string = '';
+	$: if (embedded && $chatId !== openEmbeddedChatId) {
+		openEmbeddedChatIds.update((ids) => {
 			const next = new Set(ids);
-			next.delete(openSideChatId);
+			next.delete(openEmbeddedChatId);
 			if ($chatId) next.add($chatId);
 			return next;
 		});
-		openSideChatId = $chatId;
+		openEmbeddedChatId = $chatId;
 	}
 
 	const chatEventHandler = async (event, cb) => {
@@ -1707,7 +1707,7 @@
 		}
 		if (event.shared && event.user_id === $user?.id && event.data?.type !== 'chat:messages') return;
 		// The first event can identify a new chat before the HTTP response arrives.
-		if (!side && !$chatId && event.chat_id && history.messages[event.message_id]) {
+		if (!tabbed && !$chatId && event.chat_id && history.messages[event.message_id]) {
 			chatId.set(event.chat_id);
 		}
 		const interactionType = event?.data?.type;
@@ -1729,7 +1729,7 @@
 		) {
 			if (!cb) return;
 			if (event.chat_id !== $chatId) {
-				if (!embedded && !$openSideChatIds.has(event.chat_id))
+				if (!embedded && !$openEmbeddedChatIds.has(event.chat_id))
 					cb({ status: 'cancelled', answers: {} });
 				return;
 			}
@@ -2157,7 +2157,7 @@
 		loading = true;
 		console.log('mounted');
 		if (!embedded && appLayout) appLayout.initNewChat = initNewChat;
-		if (!side) window.addEventListener('message', onMessageHandler);
+		if (!tabbed) window.addEventListener('message', onMessageHandler);
 		$socket?.on('events', chatEventHandler);
 		$socket?.on('connect', handleSocketConnect);
 		$socket?.on('disconnect', clearTyping);
@@ -2256,7 +2256,7 @@
 				if (embedded && $chatId) {
 					if ($temporaryChatEnabled)
 						stopTasksByChatId(localStorage.token, $chatId).catch(console.error);
-					openSideChatIds.update((ids) => {
+					openEmbeddedChatIds.update((ids) => {
 						const next = new Set(ids);
 						next.delete($chatId);
 						return next;
@@ -3212,7 +3212,7 @@
 
 		const id = $chatId;
 		const loadedChat = await getChatById(localStorage.token, id, signal).catch(async (error) => {
-			if (side && !signal.aborted) toast.error(`${error}`);
+			if (tabbed && !signal.aborted) toast.error(`${error}`);
 			console.error('[note-chat] getChatById failed', {
 				chatIdProp,
 				activeChatId: $chatId,
@@ -3324,7 +3324,7 @@
 					chatContent.originalChatId === parentChatId
 						? (chatContent.branchPointMessageId ?? null)
 						: null;
-				if (side) await onEmbeddedChatTitle?.(id, chatContent.title);
+				if (tabbed) await onEmbeddedChatTitle?.(id, chatContent.title);
 
 				params = structuredClone(chatContent?.params ?? {});
 				delete params.note_id;
@@ -4194,7 +4194,7 @@
 				if (!embedded) {
 					await goto(`/c/${result.id}`);
 					await refreshChatList(localStorage.token, { refreshPinned: true });
-				} else if (side) {
+				} else if (tabbed) {
 					await onSelectEmbeddedChat?.(result.id);
 					await refreshChatList(localStorage.token, { refreshPinned: true });
 				}
@@ -4219,7 +4219,84 @@
 	let mainChatActive = false;
 	let mainChatStyle = '';
 	let mainChatGroupId = '';
-	let tabTitleEditor: import('svelte').Snippet | undefined;
+	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	let editingTitle = false;
+	let titleDraft = '';
+	let titleInput: HTMLInputElement;
+	let generatingTitle = false;
+	let titleEditChatId = '';
+	$: if (loading || isShared || $temporaryChatEnabled || $chatId !== titleEditChatId)
+		editingTitle = false;
+	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
+
+	export const startRename = async () => {
+		if (
+			loading ||
+			isShared ||
+			!$chatId ||
+			$temporaryChatEnabled ||
+			isTemporaryChatId($chatId) ||
+			generatingTitle
+		)
+			return;
+		titleEditChatId = $chatId;
+		titleDraft = $chatTitle;
+		editingTitle = true;
+		await tick();
+		setTimeout(() => {
+			titleInput?.focus();
+			titleInput?.select();
+		}, 0);
+	};
+
+	const editChatTitle = async () => {
+		// Generating a title disables and blurs the field; wait for the generated value.
+		if (!editingTitle || generatingTitle) return;
+		editingTitle = false;
+		const title = titleDraft.trim();
+		if (title === $chatTitle) return;
+		if (!title) {
+			toast.error($i18n.t('Title cannot be an empty string.'));
+			return;
+		}
+		const id = $chatId;
+		try {
+			const updated = await updateChatById(localStorage.token, id, { title });
+			if (!updated) return;
+			updateFolderChatLists({ id, title });
+			if ($chatId === id) {
+				chatTitle.set(title);
+				if (embedded) await onEmbeddedChatTitle?.(id, title);
+			}
+			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshFolderChatLists();
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	};
+
+	const generateChatTitle = async () => {
+		const id = $chatId;
+		generatingTitle = true;
+		titleDraft = '';
+		const messages = createMessagesList(history, history.currentId).map((message) => ({
+			role: message.role,
+			content: getOutputText(message.output) || message.content || ''
+		}));
+		const generatedTitle = await generateTitle(
+			localStorage.token,
+			selectedModels.find((modelId: string) => modelId) ?? '',
+			messages
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		generatingTitle = false;
+		if ($chatId !== id || !editingTitle) return;
+		titleDraft = generatedTitle || $chatTitle;
+		await editChatTitle();
+	};
+
 	let tabActions: import('svelte').Snippet | undefined;
 	let folderTabActions: import('svelte').Snippet | undefined;
 
@@ -4299,7 +4376,7 @@
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
-			if (!_chatId && (context?.currentDirectory || terminalTabs?.hasTerminals())) {
+			if (!_chatId && (tabbed || context?.currentDirectory || terminalTabs?.hasTerminals())) {
 				_chatId = await initChatHandler(_history);
 			}
 			await tick();
@@ -5260,7 +5337,7 @@
 
 	const initChatHandler = async (_history: typeof history) => {
 		let _chatId = $chatId;
-		const selectedFolderId = $selectedFolder?.id;
+		const selectedFolderId = $selectedFolder?.id ?? draftFolderId;
 		const context = terminalContext;
 
 		if (!$temporaryChatEnabled) {
@@ -5268,7 +5345,8 @@
 				localStorage.token,
 				{
 					id: _chatId,
-					title: $i18n.t('New Chat'),
+					title: draftTitle || $i18n.t('New Chat'),
+					...(parentChatId && { originalChatId: parentChatId, branchPointMessageId }),
 					models: selectedModels,
 					terminal_id: $selectedTerminalId,
 					working_directory:
@@ -5276,11 +5354,12 @@
 					system: $settings.system ?? undefined,
 					params: params,
 					history: _history,
+					files: chatFiles,
 					messages: createMessagesList(_history, _history.currentId),
 					tags: [],
 					timestamp: Date.now()
 				},
-				$selectedFolder?.id,
+				selectedFolderId,
 				chatVariables
 			);
 
@@ -5290,6 +5369,11 @@
 			if (selectedFolderId) updateFolderChatLists(createdChat, selectedFolderId);
 			_chatId = chat.id;
 			await chatId.set(_chatId);
+			if (tabbed) {
+				loadedChatIdProp = _chatId;
+				chatTitle.set(createdChat.chat?.title ?? createdChat.title);
+				await onSelectEmbeddedChat?.(_chatId);
+			}
 
 			if (!embedded) {
 				saveDraft(getChatInputDraft(), _chatId, false);
@@ -5298,9 +5382,7 @@
 
 			await tick();
 
-			if (!embedded) {
-				await refreshChatList(localStorage.token);
-			}
+			await refreshChatList(localStorage.token);
 
 			if (selectedFolderId) {
 				await refreshFolderChatLists(selectedFolderId, chat);
@@ -5408,7 +5490,7 @@
 		},
 		draft = getChatInputDraft()
 	) => {
-		if (side) return;
+		if (tabbed) return;
 		await tick();
 		saveSessionSelectedModels();
 		await saveDraft(draft, null, false);
@@ -5498,6 +5580,46 @@
 		}
 	};
 </script>
+
+{#snippet renderTitleEditor()}
+	<input
+		bind:this={titleInput}
+		bind:value={titleDraft}
+		class="min-w-0 flex-1 bg-transparent {tabbed || fullWidthTabs
+			? 'text-sm'
+			: 'md:py-1 text-[0.9375rem]'} font-normal text-gray-700 outline-hidden dark:text-gray-300"
+		aria-label={$i18n.t('Title')}
+		placeholder={generatingTitle ? $i18n.t('Generating...') : ''}
+		disabled={generatingTitle}
+		on:click|stopPropagation
+		on:keydown={(e) => {
+			if (e.isComposing || e.keyCode === 229) return;
+
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				editChatTitle();
+			} else if (e.key === 'Escape') {
+				e.preventDefault();
+				editingTitle = false;
+			}
+		}}
+		on:blur={editChatTitle}
+	/>
+
+	<Tooltip content={$i18n.t('Generate')}>
+		<button
+			class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+			aria-label={$i18n.t('Generate')}
+			disabled={generatingTitle}
+			on:mousedown={(e) => e.preventDefault()}
+			on:click|stopPropagation={() => {
+				generateChatTitle();
+			}}
+		>
+			<Sparkles className={tabbed || fullWidthTabs ? 'size-3.5' : 'size-4'} strokeWidth="1.5" />
+		</button>
+	</Tooltip>
+{/snippet}
 
 <audio bind:this={audioElement} style="display: none;"></audio>
 
@@ -5703,7 +5825,7 @@
 					{/if}
 				{:else}
 					<FilesOverlay show={dragged} />
-					{#if embedded && !side}
+					{#if embedded && !tabbed}
 						<div
 							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
 						>
@@ -5733,11 +5855,11 @@
 					{:else if !embedded}
 						<Navbar
 							tabbed={fullWidthTabs}
-							bind:tabTitleEditor
+							{tabTitleEditor}
+							renameHandler={startRename}
 							bind:tabActions
 							bind:tabBarActions
 							{liveParticipants}
-							bind:this={navbarElement}
 							readOnly={isShared}
 							chat={{
 								id: $chatId,
@@ -5807,7 +5929,7 @@
 					{/if}
 					<div id="chat-pane" class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto">
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
-						{#if (!side && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
+						{#if (!tabbed && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
 								id={messagesContainerId}
@@ -5889,7 +6011,6 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
-										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -5965,7 +6086,7 @@
 							{/if}
 						{:else if embedded}
 							<div class="flex h-full min-h-0 flex-col justify-end">
-								{#if side}
+								{#if tabbed}
 									<div class="flex flex-1 items-center justify-center px-6">
 										<div class="max-w-56 text-center">
 											<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
@@ -6010,7 +6131,6 @@
 										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
-										terminalSelectionEnabled={!side}
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
 										callActive={!!(bridge?.connected || bridge?.connecting)}
@@ -6156,7 +6276,7 @@
 					title={$chatTitle || $i18n.t('New Chat')}
 					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon, canEdit: $user?.role === 'admin' || $selectedFolder.user_id === $user?.id || $selectedFolder.write_access } : null}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
-					onRenameMainTab={() => navbarElement?.startRename?.()}
+					onRenameMainTab={startRename}
 					onRenameFolder={renameFolder}
 					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
@@ -6169,7 +6289,7 @@
 					folderId={chat ? (chat.folder_id ?? null) : ($selectedFolder?.id ?? null)}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
-					canSideChat={sideChatAllowed}
+					canBranchChat={sideChatAllowed}
 					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}

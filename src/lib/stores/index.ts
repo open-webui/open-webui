@@ -193,7 +193,7 @@ export const selectedTerminalId: Writable<string | null> = writable(null);
 export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
-export const openSideChatIds = writable<Set<string>>(new Set());
+export const openEmbeddedChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
 export type QueryData = {

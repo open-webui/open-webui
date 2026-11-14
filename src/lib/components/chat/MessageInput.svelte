@@ -35,7 +35,7 @@
 		type Model,
 		mobile,
 		settings,
-		models,
+		models as _models,
 		config,
 		showCallOverlay,
 		tools,
@@ -131,6 +131,8 @@
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
+
+	const models = getContext<typeof _models>('chatModels') ?? _models;
 
 	const i18n: any = getContext('i18n');
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;

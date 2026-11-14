@@ -13,8 +13,7 @@ export type PanelTabKind =
 	| 'artifacts'
 	| 'preview'
 	| 'voice'
-	| 'comments'
-	| 'side';
+	| 'comments';
 export type PanelTab = {
 	id: string;
 	kind: PanelTabKind;
@@ -22,8 +21,9 @@ export type PanelTab = {
 	href?: string;
 	initialPrompt?: string;
 	chatId?: string;
-	sideChatNumber?: number;
-	sideChat?: boolean;
+	chatNumber?: number;
+	/** Set only when a new conversation explicitly inherits another chat's context. */
+	parentChatId?: string;
 	/** For an artifacts tab: the tab of the chat whose artifacts it shows. */
 	sourceTabId?: string;
 	terminalId?: string;
@@ -79,6 +79,28 @@ export const emptyTabs = (): PanelTabs => ({
 	layout: { type: 'group', groupId: 'default' }
 });
 export const mainChatTabId = 'main-chat';
+
+/** Read layouts saved before all conversation tabs used kind: 'chat'. */
+export function normalizeChatTab(
+	tab: Omit<PanelTab, 'kind'> & {
+		kind: PanelTabKind | 'side';
+		sideChatNumber?: number;
+		sideChat?: boolean;
+	},
+	parentChatId: string | null
+): PanelTab {
+	const { sideChatNumber, sideChat, ...current } = tab;
+	return {
+		...current,
+		kind: current.kind === 'side' ? 'chat' : current.kind,
+		chatNumber: current.chatNumber ?? sideChatNumber,
+		parentChatId:
+			current.parentChatId ??
+			(current.kind === 'side' && (sideChat ?? (!current.href && !!sideChatNumber))
+				? (parentChatId ?? undefined)
+				: undefined)
+	};
+}
 
 export function setMainChatTab(state: PanelTabs, visible: boolean, label = 'Chat'): PanelTabs {
 	if (!visible) {
