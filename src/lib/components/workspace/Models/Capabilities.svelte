@@ -99,9 +99,7 @@
 	{#if availableCapabilities.some((key) => $visibleControls[`model_editor.capabilities.${key}`])}
 		<ModelSettingsSection
 			label={$i18n.t('settings.admin.models.capabilities.title')}
-			description={$i18n.t(
-				'Choose which features are available for this model. The connected model and provider must support them.'
-			)}
+			description={$i18n.t('Choose which features are available for this model.')}
 		>
 			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 				<span class="min-w-0 truncate"
