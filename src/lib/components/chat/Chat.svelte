@@ -632,6 +632,7 @@
 	let chatVariables = {};
 	let showChatVariablesModal = false;
 	let loadedChatIdProp = '';
+	let closedChatIdProp = '';
 	let currentDraftKey = '';
 
 	// Chat parameters own the approval mode; chats without an override use the user default.
@@ -963,6 +964,7 @@
 		});
 	};
 
+	$: if (chatIdProp && chatIdProp === closedChatIdProp) chatIdProp = '';
 	$: if (chatIdProp && chatIdProp !== loadedChatIdProp) {
 		noteChatDebug('chatIdProp changed; loading linked chat', {
 			previousChatIdProp: loadedChatIdProp
@@ -2744,6 +2746,7 @@
 		stopAudio();
 	});
 	beforeNavigate(() => {
+		closedChatIdProp = '';
 		bridge?.end();
 		pendingUrlActions = null;
 	});
@@ -3070,6 +3073,7 @@
 		}
 		await chatId.set('');
 		if (preserveTabs) {
+			closedChatIdProp = chatIdProp;
 			chatIdProp = '';
 			loadedChatIdProp = '';
 			chat = null;
