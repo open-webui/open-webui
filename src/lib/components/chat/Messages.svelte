@@ -73,7 +73,8 @@
 
 	const loadMoreMessages = async () => {
 		const element = getMessagesContainer();
-		const previousScrollHeight = element?.scrollHeight ?? 0;
+		const firstMessage = element?.querySelector('.message-listitem');
+		const previousTop = firstMessage?.getBoundingClientRect().top ?? 0;
 
 		messagesLoading = true;
 		messagesCount += 8;
@@ -82,8 +83,8 @@
 
 		await tick();
 
-		if (element) {
-			element.scrollTop += element.scrollHeight - previousScrollHeight;
+		if (element && firstMessage) {
+			element.scrollTop += firstMessage.getBoundingClientRect().top - previousTop;
 		}
 
 		messagesLoading = false;
