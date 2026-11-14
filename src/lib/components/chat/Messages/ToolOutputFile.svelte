@@ -64,7 +64,11 @@
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
 	$: targetPage = normalizeDocumentTargetPage(item?.page);
 	$: selector = item?.terminal_selector;
-	$: terminal = resolveTerminal();
+	let terminal: TerminalTarget | null = null;
+	$: {
+		(selector, $selectedTerminalId, $terminalServers, $settings);
+		terminal = resolveTerminal();
+	}
 	$: unavailable = !terminal && !fileId;
 	$: previewKey =
 		fileId || (terminal ? `${terminal.baseUrl}|${terminal.key}|${path}|${chatId}` : '');
