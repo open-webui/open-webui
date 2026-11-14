@@ -264,7 +264,14 @@
 			node.style.height = `${node.scrollHeight}px`;
 		};
 		fit();
-		return { update: fit };
+		let width = node.clientWidth;
+		const observer = new ResizeObserver(() => {
+			if (node.clientWidth === width) return;
+			width = node.clientWidth;
+			fit();
+		});
+		observer.observe(node);
+		return { update: fit, destroy: () => observer.disconnect() };
 	};
 
 	const toggleHandler = async () => {
