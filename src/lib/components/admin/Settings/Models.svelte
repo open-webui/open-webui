@@ -343,6 +343,7 @@
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: defaultModelIds.join(','),
 			DEFAULT_PINNED_MODELS: defaultPinnedModelIds.join(','),
+			DEFAULT_MODEL_TAG: modelsConfig?.DEFAULT_MODEL_TAG ?? null,
 			MODEL_ORDER_LIST: orderedModelIds,
 			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
 			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null
@@ -389,6 +390,7 @@
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: nextDefaultModelIds.join(','),
 			DEFAULT_PINNED_MODELS: nextDefaultPinnedModelIds.join(','),
+			DEFAULT_MODEL_TAG: modelsConfig?.DEFAULT_MODEL_TAG ?? null,
 			MODEL_ORDER_LIST: modelsConfig?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: modelsConfig?.DEFAULT_MODEL_METADATA ?? null,
 			DEFAULT_MODEL_PARAMS: modelsConfig?.DEFAULT_MODEL_PARAMS ?? null

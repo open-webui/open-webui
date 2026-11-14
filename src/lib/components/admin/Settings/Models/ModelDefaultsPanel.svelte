@@ -17,6 +17,7 @@
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
+	import AdminSettingRow from '$lib/components/admin/Settings/AdminSettingRow.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
 
@@ -35,6 +36,7 @@
 	let defaultFeatureIds = [];
 	let toolIds = [];
 	let defaultParams = {};
+	let defaultModelTag = '';
 	let builtinTools = {};
 	let promptSuggestions = [];
 	let useDefaultPromptSuggestions = false;
@@ -57,6 +59,7 @@
 			defaultFeatureIds,
 			toolIds,
 			defaultParams: Object.fromEntries(configuredParams),
+			defaultModelTag,
 			builtinTools,
 			promptSuggestions: useDefaultPromptSuggestions
 				? null
@@ -97,6 +100,7 @@
 		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
 
 		defaultParams = config?.DEFAULT_MODEL_PARAMS ?? {};
+		defaultModelTag = config?.DEFAULT_MODEL_TAG ?? '';
 		useDefaultPromptSuggestions = $appConfig?.default_prompt_suggestions == null;
 		promptSuggestions = resolveLocalizedPromptSuggestions(
 			$appConfig?.default_prompt_suggestions,
@@ -126,6 +130,7 @@
 		const res = await setModelsConfig(localStorage.token, {
 			DEFAULT_MODELS: config?.DEFAULT_MODELS ?? null,
 			DEFAULT_PINNED_MODELS: config?.DEFAULT_PINNED_MODELS ?? null,
+			DEFAULT_MODEL_TAG: defaultModelTag.trim() || null,
 			MODEL_ORDER_LIST: config?.MODEL_ORDER_LIST ?? [],
 			DEFAULT_MODEL_METADATA: metadata,
 			DEFAULT_MODEL_PARAMS: Object.fromEntries(configuredParams)
@@ -224,6 +229,24 @@
 				</div>
 
 				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
+
+				<AdminSettingRow
+					className="px-1"
+					label={$i18n.t('settings.admin.models.defaults.defaultModelTag.label')}
+					description={$i18n.t(
+						'Filter the model selector by this tag by default. Users can still clear the filter.'
+					)}
+					let:labelId
+				>
+					<input
+						id={`${labelId}-control`}
+						class="w-40 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+						type="text"
+						bind:value={defaultModelTag}
+						on:input={updateDirty}
+						placeholder={$i18n.t('Tag')}
+					/>
+				</AdminSettingRow>
 
 				<div>
 					<button

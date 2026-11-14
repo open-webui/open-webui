@@ -1693,6 +1693,8 @@ DEFAULT_MODELS = os.getenv('DEFAULT_MODELS', None)
 
 DEFAULT_PINNED_MODELS = os.getenv('DEFAULT_PINNED_MODELS', None)
 
+DEFAULT_MODEL_TAG = os.getenv('DEFAULT_MODEL_TAG', None)
+
 # None uses the frontend's localized defaults; an empty list disables suggestions.
 try:
     DEFAULT_PROMPT_SUGGESTIONS = JSONCodec.loads(os.getenv('DEFAULT_PROMPT_SUGGESTIONS', 'null'))
@@ -3241,6 +3243,7 @@ DEFAULT_CONFIG = {
     'ui.default_locale': DEFAULT_LOCALE,
     'ui.default_models': DEFAULT_MODELS,
     'ui.default_pinned_models': DEFAULT_PINNED_MODELS,
+    'ui.default_model_tag': DEFAULT_MODEL_TAG,
     'ui.default_interface_settings': DEFAULT_INTERFACE_SETTINGS,
     'ui.visibility': UI_VISIBILITY,
     'ui.i18n': {},
