@@ -188,12 +188,12 @@
 	};
 
 	const initHandler = async () => {
-		if (currentId) {
+		if (currentId && $active) {
 			updateLastReadAt(currentId);
 		}
 
 		currentId = id;
-		updateLastReadAt(id);
+		if ($active) updateLastReadAt(id);
 
 		top = false;
 		messages = null;
@@ -410,7 +410,7 @@
 	onDestroy(() => {
 		stopInvitation();
 		// last read at
-		updateLastReadAt(id);
+		if ($active) updateLastReadAt(id);
 		if ($_channelId === id) _channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
