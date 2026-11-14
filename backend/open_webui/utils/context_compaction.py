@@ -313,6 +313,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
         if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+            tokens += _estimate_trailing_tool_output_tokens(messages[idx])
             tokens += _estimate_messages_tokens(messages[idx + 1 :])
             return _build_context_usage(tokens, threshold)
 
@@ -389,6 +390,7 @@ def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: 
     for idx in range(len(messages) - 1, -1, -1):
         usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
         if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
+            tokens += _estimate_trailing_tool_output_tokens(messages[idx])
             return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
 
     estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
@@ -605,6 +607,15 @@ def _estimate_messages_tokens(messages: list[dict]) -> int:
             # Inline data is not part of the file tags sent to the model.
             total += _estimate_tokens(BASE64_DATA_URI_RE.sub('', JSONCodec.dumps(files, ensure_ascii=False)))
     return total
+
+
+def _estimate_trailing_tool_output_tokens(message: dict) -> int:
+    tokens = 0
+    for item in reversed(message.get('output') or []):
+        if item.get('type') != 'function_call_output':
+            break
+        tokens += _estimate_tokens(item)
+    return tokens
 
 
 def _estimate_tokens(value: Any) -> int:
