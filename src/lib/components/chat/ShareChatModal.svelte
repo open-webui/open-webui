@@ -166,6 +166,11 @@
 				</div>
 
 				<div class="mt-3">
+					{#if shareMode === 'continue'}
+						<p class="mb-3 text-xs text-gray-500">
+							{$i18n.t('People who can reply can also use this chat’s own terminal.')}
+						</p>
+					{/if}
 					<AccessControl
 						bind:accessGrants
 						accessRoles={['read']}

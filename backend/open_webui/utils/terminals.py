@@ -6,9 +6,14 @@ import logging
 import ntpath
 import posixpath
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
-from open_webui.env import AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
+import aiohttp
+
+from fastapi import HTTPException
+
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
+from open_webui.utils.headers import bearer_auth_header
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.skill_files import (
     SKILL_CONTENT_MAX_CHARS,
@@ -18,10 +23,6 @@ from open_webui.utils.skill_files import (
     skill_overview,
 )
 
-TERMINAL_CONTEXT_HEADER = 'X-Terminal-Context-Id'
-TERMINAL_CONTEXT_DEFAULT = 'default'
-TERMINAL_CONTEXT_TYPES = {'chat', 'automation'}
-TERMINAL_CONTEXT_ID_SOURCES = {'chat': 'chat_id', 'automation': 'automation_id'}
 TERMINAL_CHAT_UPLOAD_MODES = {'default', 'filesystem'}
 MAX_AGENTS_MD_BYTES = 32 * 1024
 
@@ -29,99 +30,11 @@ log = logging.getLogger(__name__)
 
 
 def is_terminal_orchestrator(connection: dict) -> bool:
-    """Return whether this connection points at Terminals, not raw Open Terminal."""
-    return connection.get('server_type') == 'orchestrator' or bool(connection.get('policy_id'))
+    return connection.get('server_type') == 'orchestrator'
 
 
 def get_terminal_server_url(connection: dict) -> str:
-    """Return the upstream base URL for a terminal connection.
-
-    An explicit policy uses the named-policy route. Connections without one
-    keep their existing root route.
-    """
-    base_url = str(connection.get('url') or '').rstrip('/')
-    policy_id = str(connection.get('policy_id') or '').strip()
-    if policy_id:
-        return f'{base_url}/p/{quote(policy_id, safe="")}'
-    return base_url
-
-
-def terminal_context_config(connection: dict, context: str) -> dict | bool:
-    """Return config for an OpenWebUI terminal context.
-
-    Missing config is legacy behavior: available, shared default terminal.
-    """
-    if not is_terminal_orchestrator(connection):
-        return {}
-
-    contexts = (connection.get('config') or {}).get('contexts')
-    if not isinstance(contexts, dict):
-        return {}
-
-    value = contexts.get(context, {})
-    if value is False:
-        return False
-    return value if isinstance(value, dict) else {}
-
-
-def terminal_context_available(connection: dict, context: str) -> bool:
-    """Return whether this terminal is exposed in an OpenWebUI context."""
-    if context not in TERMINAL_CONTEXT_TYPES:
-        return False
-    return terminal_context_config(connection, context) is not False
-
-
-def terminal_context_id(
-    connection: dict,
-    metadata: dict | None = None,
-    context: str = 'chat',
-) -> str | None:
-    """Return the terminal runtime context for trusted request metadata."""
-    if not is_terminal_orchestrator(connection) or not terminal_context_available(connection, context):
-        return None
-
-    config = terminal_context_config(connection, context)
-    context_id_source = config.get('context_id') if isinstance(config, dict) else None
-    if not context_id_source or context_id_source == TERMINAL_CONTEXT_DEFAULT:
-        return None
-
-    if context_id_source != TERMINAL_CONTEXT_ID_SOURCES.get(context):
-        return None
-
-    metadata = metadata or {}
-
-    if context == 'automation':
-        automation_id = metadata.get('automation_id')
-        return f'automation:{automation_id}' if automation_id else None
-
-    chat_id = metadata.get('chat_id')
-    if context == 'chat' and chat_id and is_saved_chat_id(chat_id):
-        return f'chat:{chat_id}'
-    return None
-
-
-def terminal_contexts(connection: dict) -> dict:
-    """Return normalized sparse context config for clients."""
-    if not is_terminal_orchestrator(connection):
-        return {}
-
-    contexts = (connection.get('config') or {}).get('contexts')
-    if not isinstance(contexts, dict):
-        return {}
-
-    result = {}
-    for context, value in contexts.items():
-        if context not in TERMINAL_CONTEXT_TYPES:
-            continue
-        if value is False:
-            result[context] = False
-        elif isinstance(value, dict):
-            context_id_source = value.get('context_id')
-            if context_id_source in {TERMINAL_CONTEXT_DEFAULT, TERMINAL_CONTEXT_ID_SOURCES[context]}:
-                result[context] = {'context_id': context_id_source}
-            else:
-                result[context] = {}
-    return result
+    return str(connection.get('url') or '').rstrip('/')
 
 
 def terminal_chat_uploads(connection: dict) -> str:
@@ -130,49 +43,345 @@ def terminal_chat_uploads(connection: dict) -> str:
     return value if value in TERMINAL_CHAT_UPLOAD_MODES else 'default'
 
 
-async def resolve_terminal_connection(request, user, metadata):
-    """Resolve an authorized backend connection and trusted runtime headers."""
-    terminal_id = metadata.get('terminal_id')
-    if not ENABLE_TOOL_SERVERS or not terminal_id:
-        return None
-    from open_webui.utils.tether import get_terminal_connections
+async def server_request(connection, path, *, method='GET', body=None, params=None):
+    if not connection.get('key'):
+        raise HTTPException(503, 'A Terminals server key is required')
+    url = connection['url'].rstrip('/') + '/' + path.lstrip('/')
+    try:
+        async with aiohttp.ClientSession(trust_env=True, timeout=aiohttp.ClientTimeout(total=180)) as session:
+            async with session.request(
+                method,
+                url,
+                headers=bearer_auth_header(connection['key']),
+                json=body,
+                params=params,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                allow_redirects=False,
+            ) as response:
+                if response.status >= 300:
+                    try:
+                        detail = (await response.json()).get('detail', 'Terminals request failed')
+                    except Exception:
+                        detail = 'Terminals request failed'
+                    raise HTTPException(response.status if response.status >= 400 else 502, detail)
+                return await response.json()
+    except (aiohttp.ClientError, asyncio.TimeoutError):
+        raise HTTPException(503, 'Terminals is unavailable')
+
+
+async def get_connection(user, connection_id):
+    from open_webui.models.config import Config
+    from open_webui.utils.access_control import has_connection_access
+
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(403, 'Tool servers are disabled')
+    connections = await Config.get('terminal_server.connections', []) or []
+    connection = next((c for c in connections if c.get('id') == connection_id), None)
+    if not connection or not connection.get('enabled', True) or connection.get('server_type') != 'orchestrator':
+        raise HTTPException(404, 'Managed terminal connection not found')
+    if not await has_connection_access(user, connection) and not await has_connection_write_access(user, connection):
+        raise HTTPException(403, 'Terminal connection access denied')
+    return connection
+
+
+async def has_connection_write_access(user, connection, user_group_ids=None):
+    from open_webui.models.groups import Groups
+    from open_webui.utils.access_control import has_access
+
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
+    if user.role == 'admin' and (
+        BYPASS_ADMIN_ACCESS_CONTROL or not (connection.get('config') or {}).get('access_grants')
+    ):
+        return True
+    if user_group_ids is None:
+        user_group_ids = {g.id for g in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
+    return await has_access(user.id, 'write', (connection.get('config') or {}).get('access_grants', []), user_group_ids)
+
+
+def template_terminal_id(connection_id, template_id):
+    return f'template:{connection_id}:{quote(template_id, safe="")}'
+
+
+def split_template_id(terminal_id):
+    if not terminal_id.startswith('template:'):
+        raise HTTPException(400, 'Invalid template terminal ID')
+    connection_id, separator, encoded = terminal_id.removeprefix('template:').rpartition(':')
+    template_id = unquote(encoded)
+    if (
+        not separator
+        or not connection_id
+        or not template_id
+        or template_terminal_id(connection_id, template_id) != terminal_id
+    ):
+        raise HTTPException(400, 'Invalid template terminal ID')
+    return connection_id, template_id
+
+
+async def require_terminal_access(user, terminal_id):
+    from open_webui.models.access_grants import AccessGrants
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+
+    if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
+        return
+    if await AccessGrants.has_access(user.id, 'terminal', terminal_id, 'read'):
+        return
+    raise HTTPException(403, 'Terminal access denied')
+
+
+async def template_connection(user, terminal_id, permission='read'):
+    connection_id, template_id = split_template_id(terminal_id)
+    connection = await get_connection(user, connection_id)
+    if not await has_connection_write_access(user, connection):
+        if permission == 'write':
+            raise HTTPException(403, 'Terminal connection write access required')
+        await require_terminal_access(user, terminal_id)
+    template = await server_request(connection, f'api/v1/terminals/templates/{quote(template_id, safe="")}')
+    return connection, template
+
+
+async def list_template_connections(user, connections):
+    from open_webui.models.access_grants import AccessGrants
     from open_webui.models.groups import Groups
     from open_webui.models.users import UserModel
     from open_webui.utils.access_control import has_connection_access
+
+    if not isinstance(user, UserModel):
+        user = UserModel(**user)
+    group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
+    result = []
+    for connection in connections:
+        if connection.get('server_type') != 'orchestrator' or not connection.get('enabled', True):
+            continue
+        writable = await has_connection_write_access(user, connection, group_ids)
+        if not writable and not await has_connection_access(user, connection, group_ids):
+            continue
+        try:
+            templates = await server_request(connection, 'api/v1/terminals/templates')
+        except HTTPException as exc:
+            log.warning('Cannot list templates for connection %s: HTTP %s', connection['id'], exc.status_code)
+            continue
+        selectors = [template_terminal_id(connection['id'], template['id']) for template in templates]
+        readable = (
+            set(selectors)
+            if writable
+            else await AccessGrants.get_accessible_resource_ids(
+                user_id=user.id,
+                resource_type='terminal',
+                resource_ids=selectors,
+                permission='read',
+                user_group_ids=group_ids,
+            )
+        )
+        for template, selector in zip(templates, selectors):
+            if selector not in readable:
+                continue
+            data = template.get('data') or {}
+            result.append(
+                {
+                    **connection,
+                    'id': selector,
+                    'name': data.get('name') or template['id'],
+                    'template_id': template['id'],
+                    'scope': data.get('scope'),
+                    'auth_type': 'bearer',
+                }
+            )
+    return result
+
+
+class MissingTerminalContext(HTTPException):
+    def __init__(self, scope):
+        detail = 'This terminal requires a saved chat' if scope == 'chat' else f'This terminal requires a {scope}'
+        super().__init__(409, detail)
+
+
+def get_terminal_context(template, user_id, metadata=None):
+    """Validate a template's scope and return context for its environment."""
+    metadata = metadata or {}
+    scope = (template.get('data') or {}).get('scope')
+    if scope not in (None, 'user', 'chat', 'model'):
+        raise HTTPException(422, 'Invalid template scope')
+    chat_id = metadata.get('chat_id')
+    model_id = metadata.get('model_id') or metadata.get('model')
+    if scope == 'chat' and not is_saved_chat_id(chat_id):
+        raise MissingTerminalContext(scope)
+    if scope == 'model' and not model_id:
+        raise MissingTerminalContext(scope)
+    return {
+        'user_id': user_id,
+        'chat_id': chat_id if is_saved_chat_id(chat_id) else None,
+        'model_id': model_id if scope == 'model' else None,
+    }
+
+
+async def require_model_access(user, model_id, terminal_id, request=None):
+    if not model_id:
+        raise MissingTerminalContext('model')
+    if model_id.startswith('agent:'):
+        parts = model_id.split(':', 3)
+        if len(parts) != 4 or unquote(parts[1]) != terminal_id or not all(parts[1:]):
+            raise HTTPException(403, 'Agent model does not belong to this terminal')
+        # Agent access follows its terminal. Execution still validates the live agent catalog.
+        return
+    from open_webui.models.models import Models
+    from open_webui.utils.models import check_model_access, get_all_models, get_filtered_models
+
+    if request is not None:
+        models = await get_all_models(request, user=user)
+        permitted = await get_filtered_models(models, user)
+        if not any(model['id'] == model_id for model in permitted):
+            raise HTTPException(403, 'Model access denied')
+    else:
+        row = await Models.get_model_by_id(model_id)
+        if row is None:
+            raise HTTPException(403, 'Model not found')
+        try:
+            await check_model_access(user, {'id': model_id}, row)
+        except Exception as exc:
+            raise HTTPException(403, 'Model access denied') from exc
+
+
+def terminal_headers(connection):
+    """Only consumes context produced by find_terminal_connection, never browser headers."""
+    if not connection.get('template_id'):
+        return {'X-User-Id': connection['instance_user_id']} if connection.get('instance_user_id') else {}
+    context = connection['terminal_context']
+    headers = {
+        'X-Terminal-Template-Id': connection['template_id'],
+        'X-User-Id': context['user_id'],
+    }
+    if context.get('chat_id'):
+        headers['X-Terminal-Chat-Id'] = context['chat_id']
+    if context.get('model_id'):
+        headers['X-Terminal-Model-Id'] = context['model_id']
+    return headers
+
+
+async def find_terminal_connection(user, terminal_id, metadata=None, request=None):
+    from open_webui.models.chats import Chats
+    from open_webui.models.users import UserModel, Users
+    from open_webui.utils.access_control import has_connection_access
+    from open_webui.utils.tether import get_terminal_connections
+
+    if not ENABLE_TOOL_SERVERS:
+        raise HTTPException(403, 'Tool servers are disabled')
+    if not isinstance(user, UserModel):
+        user = UserModel(**user)
+    metadata = dict(metadata or {})
+    chat = None
+    shared_session = None
+    instance_user = user
+    chat_id = metadata.get('chat_id')
+    if chat_id and is_saved_chat_id(chat_id):
+        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
+        if chat is None:
+            raise HTTPException(403, 'Chat access denied')
+        if chat.meta.get('internal') is True and chat.meta.get('type') == 'subagent':
+            # A sub-agent shares the machine and files of its parent chat.
+            metadata['chat_id'] = chat.meta.get('parent_chat_id')
+            return await find_terminal_connection(user, terminal_id, metadata, request=request)
+        from open_webui.utils.agents.session import get_session, model_id
+
+        shared_session = await get_session(chat)
+        if shared_session and shared_session['terminal_id'] != terminal_id:
+            shared_session = None
+        if shared_session:
+            metadata['model_id'] = model_id(shared_session)
+            instance_user_id = shared_session.get('terminal_user_id') or shared_session['user']
+            instance_user = user if instance_user_id == user.id else await Users.get_user_by_id(instance_user_id)
+            if instance_user is None:
+                raise HTTPException(403, 'Agent terminal owner is unavailable')
+
+    def authorized_connection(connection):
+        if shared_session:
+            connection = {**connection, 'instance_user_id': instance_user.id}
+        return connection
+
+    if not terminal_id.startswith('template:'):
+        connections = await get_terminal_connections(instance_user, include_templates=False)
+        connection = next((c for c in connections if c.get('id') == terminal_id), None)
+        if (
+            not connection
+            or not connection.get('enabled', True)
+            or not await has_connection_access(instance_user, connection)
+        ):
+            return None
+        if is_terminal_orchestrator(connection):
+            raise HTTPException(409, 'Select a terminal template')
+        return authorized_connection(connection)
+
+    connection_id, template_id = split_template_id(terminal_id)
+    connection = await get_connection(instance_user, connection_id)
+    template = await server_request(connection, f'api/v1/terminals/templates/{quote(template_id, safe="")}')
+    scope = (template.get('data') or {}).get('scope')
+
+    if chat and not shared_session:
+        stored = (chat.chat or {}).get('terminal_id')
+        if chat.user_id != user.id and stored != terminal_id:
+            raise HTTPException(403, 'Use the terminal selected by the chat owner')
+        if stored and stored != terminal_id:
+            raise HTTPException(409, 'Chat terminal selection changed; refresh the chat')
+
+    principal = instance_user
+    if not shared_session and scope == 'chat' and chat:
+        owner = user if chat.user_id == user.id else await Users.get_user_by_id(chat.user_id)
+        if owner is None:
+            raise HTTPException(403, 'Chat owner is unavailable')
+        if (
+            owner.id != instance_user.id
+            and not await has_connection_access(owner, connection)
+            and not await has_connection_write_access(owner, connection)
+        ):
+            raise HTTPException(403, 'Terminal connection access denied')
+        principal = owner
+    if not await has_connection_write_access(principal, connection):
+        await require_terminal_access(principal, terminal_id)
+
+    context = get_terminal_context(template, instance_user.id, metadata)
+    if scope == 'model':
+        await require_model_access(instance_user, context['model_id'], terminal_id, request)
+    if metadata.get('automation_id'):
+        from open_webui.models.automations import Automations
+
+        automation = await Automations.get_by_id(metadata['automation_id'])
+        if not automation or automation.user_id != user.id:
+            raise HTTPException(403, 'Automation terminal access denied')
+    return authorized_connection(
+        {
+            **connection,
+            'id': terminal_id,
+            'template_id': template_id,
+            'scope': scope,
+            'auth_type': 'bearer',
+            'terminal_context': context,
+        }
+    )
+
+
+async def resolve_terminal_connection(request, user, metadata):
+    """Resolve an authorized backend connection and trusted instance headers."""
+    terminal_id = metadata.get('terminal_id')
+    if not ENABLE_TOOL_SERVERS or not terminal_id:
+        return None
+    from open_webui.models.users import UserModel
     from open_webui.utils.tools import build_tool_server_headers
 
     user_model = user if isinstance(user, UserModel) else UserModel(**user)
-    connections = await get_terminal_connections(user_model)
-    connection = next((item for item in connections if item.get('id') == terminal_id), None)
+    connection = await find_terminal_connection(user_model, terminal_id, metadata, request=request)
 
     if connection:
-        terminal_context = 'automation' if metadata.get('automation_id') else 'chat'
-        context_id = terminal_context_id(connection, metadata, terminal_context)
-        config = terminal_context_config(connection, terminal_context)
-        if (
-            not connection.get('enabled', True)
-            or not terminal_context_available(connection, terminal_context)
-            or (config.get('context_id') in {'chat_id', 'automation_id'} and not context_id)
-        ):
-            return None
-        user_group_ids = {
-            group.id for group in await Groups.get_groups_by_member_id(user_model.id, include_inherited=True)
-        }
-        if not await has_connection_access(user_model, connection, user_group_ids):
-            return None
-
         headers, cookies = await build_tool_server_headers(
             connection,
             request,
             user_model,
             metadata=metadata,
         )
+        headers.update(terminal_headers(connection))
         headers['Accept'] = 'application/json'
-        headers['X-User-Id'] = user_model.id
+        headers['X-User-Id'] = connection.get('instance_user_id', user_model.id)
         if metadata.get('chat_id'):
             headers['X-Session-Id'] = metadata['chat_id']
-        if context_id:
-            headers[TERMINAL_CONTEXT_HEADER] = context_id
         return connection, headers, cookies
     return None
 
@@ -188,7 +397,7 @@ async def get_terminal_json(
     method: str = 'GET',
     body: dict | None = None,
 ):
-    """Read JSON or upload a file through an admin terminal or a personal terminal's browser."""
+    """Read JSON or upload a file through the chat's terminal connection."""
     metadata = metadata or {}
     terminal_id = metadata.get('terminal_id')
     if not ENABLE_TOOL_SERVERS or not terminal_id:
@@ -208,7 +417,7 @@ async def get_terminal_json(
             from open_webui.storage.provider import Storage
 
             source = await Files.get_file_by_id(file['id'])
-            if not source or source.user_id != headers['X-User-Id'] or not source.path:
+            if not source or source.user_id != (user.id if hasattr(user, 'id') else user['id']) or not source.path:
                 return None
             local_path = await asyncio.to_thread(Storage.get_file, source.path)
             body = aiohttp.FormData()
@@ -223,7 +432,8 @@ async def get_terminal_json(
         try:
             async with get_terminal_client(
                 get_terminal_server_url(connection),
-                user.id if hasattr(user, 'id') else user['id'],
+                connection.get('instance_user_id') or (user.id if hasattr(user, 'id') else user['id']),
+                service=connection.get('service', 'open_terminal'),
                 timeout=timeout,
                 trust_env=True,
             ) as session:
@@ -243,21 +453,6 @@ async def get_terminal_json(
                 f"Terminal '{connection.get('name') or terminal_id}' timed out. "
                 'It may still be starting. Please try again.'
             ) from error
-
-    event_caller = (extra_params or {}).get('__event_call__')
-    if event_caller:
-        result = await event_caller(
-            {
-                'type': 'request:terminal',
-                'data': {
-                    'terminal_id': terminal_id,
-                    'path': path,
-                    'session_id': metadata.get('session_id'),
-                    **({'file': file} if file else {}),
-                },
-            }
-        )
-        return result.get('data') if isinstance(result, dict) else None
     return None
 
 
@@ -308,25 +503,16 @@ async def filter_user_terminal_tools(request, user, tools: dict, metadata: dict,
     shell_tools = {
         name: tool
         for name, tool in tools.items()
-        if name in {'read_user_terminal', 'send_user_terminal_input'}
-        and (tool.get('type') == 'terminal' or tool.get('server', {}).get('is_terminal') is True)
+        if name in {'read_user_terminal', 'send_user_terminal_input'} and tool.get('type') == 'terminal'
     }
     selected = {
         name: tool
         for name, tool in shell_tools.items()
-        if terminal_id
-        and (
-            tool.get('tool_id') == f'terminal:{terminal_id}'
-            or (tool.get('direct') and tool.get('server', {}).get('url') == terminal_id)
-        )
+        if terminal_id and tool.get('tool_id') == f'terminal:{terminal_id}'
     }
     available = False
     if selected and not metadata.get('automation_id') and not metadata.get('internal'):
-        available = any(
-            tool.get('user_shell_tools') == 'always'
-            or (tool.get('direct') and (tool.get('server', {}).get('config') or {}).get('user_shell_tools') == 'always')
-            for tool in selected.values()
-        )
+        available = any(tool.get('user_shell_tools') == 'always' for tool in selected.values())
         if not available and metadata.get('chat_id'):
             try:
                 # This endpoint checks ownership, a live process, and a connected shell.
@@ -400,7 +586,8 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
     base_url = get_terminal_server_url(connection)
     async with get_terminal_client(
         base_url,
-        user.id if hasattr(user, 'id') else user['id'],
+        connection.get('instance_user_id') or (user.id if hasattr(user, 'id') else user['id']),
+        service=connection.get('service', 'open_terminal'),
         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL),
         trust_env=True,
     ) as session:

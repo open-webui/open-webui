@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget;
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import type { WorkBook } from 'xlsx';
 	export let onReady = () => {};
@@ -30,9 +32,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	const i18n: any = getContext('i18n');
 	export let path: string;
-	export let baseUrl: string;
-	export let apiKey: string;
-	export let chatId: string | null = null;
+
 	export let targetPage: number | null = null;
 	export let readOnly = true;
 	export let dirty = false;
@@ -67,7 +67,7 @@
 		saving = true;
 		try {
 			const bytes = await editor.bytes();
-			const current = await downloadFileBlob(baseUrl, apiKey, path, chatId ?? undefined);
+			const current = await downloadFileBlob(target, path);
 			if (!current)
 				throw new Error('Could not check the current file. Your changes are still in the editor.');
 			if (!editor.matches(await current.blob.arrayBuffer()))
@@ -76,13 +76,11 @@
 				);
 			// shortcut: the terminal upload API has no conditional write; it cannot prevent a concurrent write after this check.
 			const result = await uploadToTerminal(
-				baseUrl,
-				apiKey,
+				target,
 				path.slice(0, path.lastIndexOf('/') + 1) || '/',
 				new File([bytes], path.split('/').pop()!, {
 					type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-				}),
-				chatId ?? undefined
+				})
 			);
 			if (!result)
 				throw new Error('Failed to save workbook. Your changes are still in the editor.');
@@ -255,7 +253,7 @@
 	};
 	async function load() {
 		const previewPromise = ['docx', 'pptx'].includes(ext)
-			? downloadFilePreview(baseUrl, apiKey, path, chatId ?? undefined, abort.signal)
+			? downloadFilePreview(target, path, abort.signal)
 					.then(async (r) => {
 						if (r) {
 							const bytes = await r.blob.arrayBuffer();
@@ -268,7 +266,7 @@
 					.catch(() => undefined)
 			: Promise.resolve();
 		try {
-			const raw = await downloadFileBlob(baseUrl, apiKey, path, chatId ?? undefined, abort.signal);
+			const raw = await downloadFileBlob(target, path, abort.signal);
 			if (!raw) throw new Error('Original file unavailable');
 			const bytes = await raw.blob.arrayBuffer();
 			if (!alive) return;

@@ -199,7 +199,6 @@ from open_webui.socket.main import (
     periodic_session_pool_cleanup,
     periodic_socket_authentication,
     periodic_usage_pool_cleanup,
-    redis_event_listener,
     sio,
 )
 from open_webui.socket.main import (
@@ -268,6 +267,7 @@ from open_webui.utils.models import (
     get_all_models,
     get_filtered_models,
 )
+from open_webui.routers.openai import get_tether_model, get_tether_models
 from open_webui.utils.payload import apply_model_controls
 from open_webui.utils.oauth import (
     OAuthClientInformationFull,
@@ -437,7 +437,6 @@ async def lifespan(app: FastAPI):
             app.state.redis_task_heartbeat = asyncio.create_task(redis_task_heartbeat(app))
 
     if WEBSOCKET_MANAGER == 'redis':
-        app.state.redis_event_listener = asyncio.create_task(redis_event_listener())
         # socket.io only starts listening on its first connect; event call answers need it earlier
         sio.manager_initialized = True
         sio.manager.initialize()
@@ -534,9 +533,6 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_heartbeat'):
         app.state.redis_task_heartbeat.cancel()
-
-    if hasattr(app.state, 'redis_event_listener'):
-        app.state.redis_event_listener.cancel()
 
     app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
@@ -898,6 +894,12 @@ async def get_models(
     # models the caller can actually see.
     models = await get_filtered_models(models, user)
 
+    # The user's own connections, reached through their Tether. Shared models win on id clashes.
+    if refresh:
+        await get_tether_models.cache.clear()
+    known = {model['id'] for model in models}
+    models.extend(model for model in (await get_tether_models(user)).values() if model['id'] not in known)
+
     for model in models:
         info = model.get('info') if isinstance(model.get('info'), dict) else {}
         meta = info.get('meta') if isinstance(info.get('meta'), dict) else {}
@@ -1089,17 +1091,6 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     return await generate_embeddings(request, form_data, user)
 
 
-async def _set_direct_model(request: Request, model_item: dict, user) -> None:
-    model_meta = (model_item.get('info') or {}).get('meta') or {}
-    knowledge_items = model_meta.get('knowledge')
-    if knowledge_items:
-        from open_webui.utils.access_control.files import get_accessible_folder_files
-
-        model_meta['knowledge'] = await get_accessible_folder_files(knowledge_items, user)
-    request.state.direct = True
-    request.state.model = model_item
-
-
 @app.post('/api/chat/completions')
 @app.post('/api/v1/chat/completions')  # Experimental: Compatibility with OpenAI API
 async def chat_completion(
@@ -1112,7 +1103,6 @@ async def chat_completion(
 
     model_id = form_data.get('model', None)
     request.state.model_id = model_id
-    model_item = form_data.pop('model_item', {})
     tasks = form_data.pop('background_tasks', None)
 
     from open_webui.utils.terminals import get_folder_terminal_defaults, initialize_terminal_directory
@@ -1145,18 +1135,21 @@ async def chat_completion(
         agent_model = next((item for item in candidates if item['id'] == model_id), None)
         if agent_model is None:
             raise HTTPException(400, 'Agent model is unavailable in the selected terminal')
-        model_item = {}  # Never trust client-supplied model metadata or direct-provider flags.
 
     metadata = {}
     try:
         model_info = None
         fallback_model = None
         missing_base_model = False
-        if not model_item.get('direct', False):
-            if agent_model is None and model_id not in request.app.state.MODELS:
+        tether_model = None
+        if agent_model is None and model_id not in request.app.state.MODELS:
+            # The user's own connection, reached through their Tether.
+            tether_model = await get_tether_model(request, user, model_id)
+            if tether_model is None:
                 raise Exception('Model not found')
 
-            model = agent_model or request.app.state.MODELS[model_id]
+        model = agent_model or tether_model or request.app.state.MODELS[model_id]
+        if tether_model is None:
             model_info = await Models.get_model_by_id(model_id)
             missing_base_model = bool(
                 model_info and model_info.base_model_id and model_info.base_model_id not in request.app.state.MODELS
@@ -1191,9 +1184,6 @@ async def chat_completion(
                         await check_model_access(user, fallback_model)
                 except Exception as e:
                     raise e
-        else:
-            model = model_item
-            await _set_direct_model(request, model, user)
 
         # Read before the fallback below can rebind model to a different one.
         model_capabilities = ((model.get('info') or {}).get('meta') or {}).get('capabilities') or {}
@@ -1281,22 +1271,6 @@ async def chat_completion(
 
         chat_variables = normalize_chat_variables(chat_variables)
 
-        # Drop tool_servers if caller lacks features.direct_tool_servers —
-        # mirrors the storage-side strip in user/settings/update.
-        tool_servers = form_data.pop('tool_servers', None)
-        if (
-            tool_servers
-            and user.role != 'admin'
-            and not await has_permission(
-                user.id,
-                'features.direct_tool_servers',
-                await Config.get('user.permissions'),
-            )
-        ):
-            tool_servers = None
-        if tool_servers and not await Config.get('direct.integrations.enable', False):
-            tool_servers = None
-
         automation_id = form_data.pop('automation_id', None)
         from open_webui.utils.tool_permissions import resolve_tool_approval_mode
 
@@ -1306,6 +1280,7 @@ async def chat_completion(
         )
         approval_resume = getattr(request.state, 'tool_approval_resume', None)
         metadata = {
+            'model_id': model_id,
             'tool_approval_resume': approval_resume[2]
             if approval_resume and approval_resume[:2] == (chat_id, form_data.get('assistant_message_id'))
             else None,
@@ -1323,7 +1298,6 @@ async def chat_completion(
             'folder_id': form_data.pop('folder_id', None),
             'filter_ids': form_data.pop('filter_ids', []),
             'tool_ids': form_data.get('tool_ids', None),
-            'tool_servers': tool_servers,
             'files': form_data.get('files', None),
             'features': form_data.get('features', {}),
             'variables': form_data.get('variables', {}),
@@ -1341,7 +1315,6 @@ async def chat_completion(
                 'chat_variables': copy.deepcopy(chat_variables),
             },
             'model': model,
-            'direct': model_item.get('direct', False),
             'params': {
                 'stream_delta_chunk_size': stream_delta_chunk_size,
                 'reasoning_tags': reasoning_tags,
@@ -1474,6 +1447,9 @@ async def chat_completion(
                                 'id': chat_id,
                                 'title': 'New Chat',
                                 'models': [entry['model_id'] for entry in message_ids],
+                                'terminal_id': (model.get('agent') or {}).get('terminal_id')
+                                or form_data.get('terminal_id'),
+                                'working_directory': requested_directory or '',
                                 'history': {
                                     'currentId': all_assistant_ids[0] if all_assistant_ids else user_message_id,
                                     'messages': history_messages,
@@ -1665,20 +1641,17 @@ async def chat_completion(
                             response_meta.pop('response_ended_at', None)
                             message['meta'] = response_meta
                             message['done'] = False
-                if not metadata.get('direct'):
-                    target = (
-                        model_info
-                        if form_data['model'] == model_id
-                        else await Models.get_model_by_id(form_data['model'])
-                    )
-                    controls = target.params.model_dump().get('model_controls', {}) if target else {}
-                    if model.get('agent'):
-                        controls = model.get('info', {}).get('params', {}).get('model_controls', {})
-                    form_data['params'] = apply_model_controls(
-                        copy.deepcopy(form_data.get('params') or {}),
-                        controls,
-                        model_controls.get(form_data['model'], {}),
-                    )
+                target = (
+                    model_info if form_data['model'] == model_id else await Models.get_model_by_id(form_data['model'])
+                )
+                controls = target.params.model_dump().get('model_controls', {}) if target else {}
+                if model.get('agent'):
+                    controls = model.get('info', {}).get('params', {}).get('model_controls', {})
+                form_data['params'] = apply_model_controls(
+                    copy.deepcopy(form_data.get('params') or {}),
+                    controls,
+                    model_controls.get(form_data['model'], {}),
+                )
                 ctx = None
                 if is_new_chat:
                     await initialize_terminal_directory(
@@ -1687,7 +1660,17 @@ async def chat_completion(
                 if model.get('agent'):
                     from open_webui.utils.agents.runner import run as run_agent
 
-                    return await run_agent(request, form_data, user, metadata, model)
+                    response = await run_agent(request, form_data, user, metadata, model)
+                    if tasks and TASKS.TITLE_GENERATION in tasks:
+                        title_tasks = {TASKS.TITLE_GENERATION: tasks[TASKS.TITLE_GENERATION]}
+                        ctx = await build_chat_response_context(
+                            request, form_data, user, model, metadata, title_tasks, []
+                        )
+                        try:
+                            await background_tasks_handler(ctx)
+                        except Exception:
+                            log.exception('Error generating agent chat title')
+                    return response
                 # Saved chats load the message after approved tool calls run, so their results are kept
                 if metadata.get('assistant_message_id') and not is_saved_chat_id(metadata.get('chat_id')):
                     ctx = await build_chat_response_context(request, form_data, user, model, metadata, tasks, [])
@@ -1861,6 +1844,7 @@ async def chat_completion(
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
+                'model_id': entry['model_id'],
                 'chat_context': copy.deepcopy(metadata['chat_context']),
                 'message_id': assistant_message_id,
                 'task_id': str(uuid4()),
@@ -2172,11 +2156,6 @@ async def chat_completed(request: Request, form_data: dict, user=Depends(get_ver
     await verify_chat_ownership(form_data.get('chat_id'), user)
 
     try:
-        model_item = form_data.pop('model_item', {})
-
-        if model_item.get('direct', False):
-            await _set_direct_model(request, model_item, user)
-
         return await chat_completed_handler(request, form_data, user)
     except Exception as e:
         raise HTTPException(
@@ -2190,11 +2169,6 @@ async def chat_action(request: Request, action_id: str, form_data: dict, user=De
     await verify_chat_ownership(form_data.get('chat_id'), user)
 
     try:
-        model_item = form_data.pop('model_item', {})
-
-        if model_item.get('direct', False):
-            await _set_direct_model(request, model_item, user)
-
         return await chat_action_handler(request, action_id, form_data, user)
     except Exception as e:
         raise HTTPException(
@@ -2393,8 +2367,6 @@ async def get_app_config(request: Request):
         'ui.enable_login_form',
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
-        'direct.enable',
-        'direct.integrations.enable',
         'terminal_server.connections',
         'folders.enable',
         'folders.max_file_count',
@@ -2499,9 +2471,6 @@ async def get_app_config(request: Request):
                     'enable_pyodide_file_persistence': ENABLE_PYODIDE_FILE_PERSISTENCE,
                     'enable_public_active_users_count': ENABLE_PUBLIC_ACTIVE_USERS_COUNT,
                     'enable_easter_eggs': ENABLE_EASTER_EGGS,
-                    'enable_direct_connections': config.get('direct.enable'),
-                    'enable_direct_integrations': ENABLE_TOOL_SERVERS
-                    and config.get('direct.integrations.enable', False),
                     'enable_plugins': ENABLE_PLUGINS,
                     'enable_tools': ENABLE_TOOLS,
                     'enable_functions': ENABLE_FUNCTIONS,

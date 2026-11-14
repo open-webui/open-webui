@@ -55,6 +55,10 @@ class ReminderData(NotificationData):
     start_at: int
 
 
+class ChatMentionData(NotificationData):
+    model_name: str
+
+
 class SystemData(NotificationData):
     message: str = Field(min_length=1, max_length=2000)
 
@@ -64,6 +68,7 @@ DATA_TYPES = {
     'comment.replied': NotificationData,
     'comment.mentioned': NotificationData,
     'channel.mentioned': NotificationData,
+    'chat.mentioned': ChatMentionData,
     'channel.replied': NotificationData,
     'calendar.alert': ReminderData,
     'automation.run_failed': NotificationData,
@@ -76,7 +81,7 @@ async def emit_changes(user_ids):
 
     for user_id in user_ids:
         try:
-            await sio.emit('notifications:changed', {}, room=f'user:{user_id}')
+            await sio.emit('events', {'data': {'type': 'notifications:changed'}}, room=f'user:{user_id}')
         except Exception:
             log.exception('Could not broadcast inbox change for %s', user_id)
 

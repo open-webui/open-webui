@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { WorkspaceContext } from '$lib/types';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -13,11 +17,10 @@
 
 	dayjs.extend(relativeTime);
 
-	import { goto } from '$app/navigation';
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { WEBUI_NAME, config, user, workspaceActions, workspaceCounts } from '$lib/stores';
+	import { WEBUI_NAME, config, user } from '$lib/stores';
 	import { COMMUNITY_ORIGINS } from '$lib/constants';
 
 	import {
@@ -70,6 +73,7 @@
 	let shiftKey = false;
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const { workspaceActions, workspaceCounts } = getContext<WorkspaceContext>('workspace');
 	let promptsImportInputElement: HTMLInputElement;
 	let loaded = false;
 
@@ -389,23 +393,20 @@
 		searchController?.abort();
 		clearTimeout(searchDebounceTimer);
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="prompts" onUpdated={getPromptList} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Prompts')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Prompts') + ' / ' + $WEBUI_NAME} />
 
 <h1 class="sr-only">{$i18n.t('Prompts')}</h1>
 
 <Comments modal bind:view={comments} resourceType="prompt">
-	{#if loaded}
+	{#if loaded && prompts !== null}
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete prompt?')}

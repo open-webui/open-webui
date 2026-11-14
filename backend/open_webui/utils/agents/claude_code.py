@@ -5,23 +5,33 @@ import contextlib
 import json
 from uuid import uuid4
 
+from . import reasoning_effort
+
 
 async def run(transport, output, prompt, images, options):
     async def send(message):
         await transport.write(json.dumps(message) + '\n')
 
-    initialize_id = uuid4().hex
-    await send({'type': 'control_request', 'request_id': initialize_id, 'request': {'subtype': 'initialize'}})
     messages = transport.read_messages()
-    async with asyncio.timeout(60):
-        async for message in messages:
-            if (
-                message.get('type') == 'control_response'
-                and message.get('response', {}).get('request_id') == initialize_id
-            ):
-                if message['response'].get('subtype') == 'error':
-                    raise ValueError(message['response'].get('error', 'Claude initialization failed'))
-                break
+
+    async def request(control):
+        request_id = uuid4().hex
+        await send({'type': 'control_request', 'request_id': request_id, 'request': control})
+        async with asyncio.timeout(60):
+            async for message in messages:
+                if (
+                    message.get('type') == 'control_response'
+                    and message.get('response', {}).get('request_id') == request_id
+                ):
+                    if message['response'].get('subtype') == 'error':
+                        raise ValueError(message['response'].get('error', 'Claude request failed'))
+                    return
+        raise ValueError('Claude ended before replying')
+
+    await request({'subtype': 'initialize'})
+    effort = reasoning_effort(options)
+    if effort is not None:
+        await request({'subtype': 'apply_flag_settings', 'settings': {'effortLevel': effort}})
     content = [{'type': 'text', 'text': prompt}]
     for image in images:
         prefix, data = image.split(',', 1)
@@ -42,7 +52,7 @@ async def run(transport, output, prompt, images, options):
             kind = message.get('type')
             if kind == 'system' and message.get('subtype') == 'init':
                 output.state['session_id'] = message['session_id']
-                await output.flush(force=True)
+                await output.flush(force=True, persist=True)
             elif kind == 'control_request':
                 request = message['request']
                 if request.get('subtype') != 'can_use_tool':

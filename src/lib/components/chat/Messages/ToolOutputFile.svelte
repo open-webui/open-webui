@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Terminal unavailable");
 	// $i18n.t("No preview available");
@@ -23,6 +24,7 @@
 
 	export let item: any;
 	export let chatId = '';
+	export let modelId: string | null = null;
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -64,14 +66,9 @@
 	$: selector = item?.terminal_selector;
 	$: terminal = resolveTerminal();
 	$: unavailable = !terminal && !fileId;
-	$: previewKey = fileId || (terminal ? `${terminal.url}|${terminal.key}|${path}|${chatId}` : '');
-	$: isPerChatTerminal =
-		($terminalServers ?? []).find((server: any) => server.id === selector)?.contexts?.chat
-			?.context_id === 'chat_id';
-	$: previewBaseUrl =
-		terminal && isPerChatTerminal && chatId
-			? `${terminal.url}/chats/${encodeURIComponent(chatId)}`
-			: (terminal?.url ?? '');
+	$: previewKey =
+		fileId || (terminal ? `${terminal.baseUrl}|${terminal.key}|${path}|${chatId}` : '');
+
 	$: previewClass = isImage(path)
 		? 'h-[22rem]'
 		: isPdf(path) ||
@@ -96,22 +93,12 @@
 
 	const t = (key: string, vars?: Record<string, unknown>) => $i18n?.t?.(key, vars) ?? key;
 
-	function resolveTerminal(): { url: string; key: string } | null {
+	function resolveTerminal(): TerminalTarget | null {
 		if (!selector || $selectedTerminalId !== selector) return null;
-
-		const systemTerminal = ($terminalServers ?? []).find((server: any) => server.id === selector);
-		if (systemTerminal?.url) {
-			return { url: systemTerminal.url, key: localStorage.token };
-		}
-
-		const directTerminal = (($settings as any)?.terminalServers ?? []).find(
-			(server: any) => server.url === selector && server.enabled
-		);
-		if (directTerminal?.url) {
-			return { url: directTerminal.url, key: directTerminal.key ?? '' };
-		}
-
-		return null;
+		return resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+			chatId: chatId,
+			modelId: item?.model_id ?? modelId
+		});
 	}
 
 	function clearPreview() {
@@ -141,7 +128,7 @@
 				: null;
 		}
 		if (!terminal) return null;
-		return downloadFileBlob(terminal.url, terminal.key, path, chatId || undefined);
+		return downloadFileBlob(terminal, path);
 	}
 
 	async function loadExcelSheet(sheet: string) {
@@ -186,9 +173,7 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal.url, terminal.key, path, chatId || undefined)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -207,9 +192,7 @@
 						await loadExcelSheet(excelSheetNames[0]);
 					}
 				} else if (ext === 'pptx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal.url, terminal.key, path, chatId || undefined)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -226,7 +209,7 @@
 				if (!result) throw new Error(t('Preview failed'));
 				fileContent = await result.blob.text();
 			} else if (terminal) {
-				fileContent = await readFile(terminal.url, terminal.key, path, chatId || undefined);
+				fileContent = await readFile(terminal, path);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : t('Preview failed');
@@ -326,9 +309,8 @@
 					{fileModelData}
 					{fileDocxData}
 					{fileContent}
-					baseUrl={fileId ? '' : previewBaseUrl}
+					target={fileId ? null : terminal}
 					{chatId}
-					apiKey={terminal?.key ?? ''}
 					{fileOfficeHtml}
 					{fileOfficeSlides}
 					{currentSlide}

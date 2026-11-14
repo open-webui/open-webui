@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -8,7 +11,6 @@
 
 	const i18n = getContext<any>('i18n');
 
-	import { goto } from '$app/navigation';
 	import VersionDiff from '$lib/components/workspace/common/VersionDiff.svelte';
 	import ToolHistory from './ToolHistory.svelte';
 	import { getToolHistoryDiff } from '$lib/apis/tools';

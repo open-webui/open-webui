@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
+	import equal from 'fast-deep-equal';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import { page } from '$app/stores';
 	import {
 		user,
@@ -32,16 +35,25 @@
 		allLoaded,
 		loadNextChatListPage,
 		refreshChatList,
+		refreshFolderChatLists,
 		refreshSidebar,
 		registerFolderRefreshHandler,
 		setAllChatsRead,
 		setChatActive,
 		setChatReadAt
 	} from '$lib/stores/chatList';
+	import {
+		folderStates,
+		markFolderChatsDirty,
+		updateFolderChatLists,
+		updateFolderDetails,
+		removeFolderState,
+	} from '$lib/stores/folderStates';
 	import { onMount, getContext, setContext, tick, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
 
 	const i18n: any = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	// Preserve the former app sidebar label for i18n extraction.
 	// t('App navigation')
 
@@ -188,6 +200,7 @@
 						id
 					);
 					if (!result) throw new Error('Chat action failed');
+					updateFolderChatLists({ id }, undefined, true);
 					succeeded.add(id);
 				} catch (error) {
 					console.error(`Failed to ${action} chat:`, error);
@@ -253,13 +266,12 @@
 	let showSharedFolders = false;
 	let showChatsMenu = false;
 
-	let folders = {};
+	let folders: Record<string, any> = {};
 	type SelectedSidebarFolder = { id: string } | null;
 	let folderRegistry: Record<
 		string,
 		{
-			setFolderItems?: () => unknown;
-			upsertChat?: (chat: Record<string, unknown>) => unknown;
+			setFolderItems?: (append?: boolean, refresh?: boolean) => unknown;
 			setChatActive?: (chatId: string, active: boolean, pendingApproval: boolean) => boolean;
 			setChatReadAt?: (chatId: string, lastReadAt: number) => boolean;
 			setAllChatsRead?: () => unknown;
@@ -270,12 +282,28 @@
 
 	let sharedFolders: any[] = [];
 
+	let retainedFolderId: string | null = null;
+	$: if ($selectedFolder?.id) {
+		const id = $selectedFolder.id;
+		const details = $folderStates[id]?.details;
+		if (details) {
+			retainedFolderId = id;
+			const display = { name: details.name, meta: details.meta, write_access: details.write_access, access_grants: details.access_grants };
+			const current = { name: $selectedFolder.name, meta: $selectedFolder.meta, write_access: $selectedFolder.write_access, access_grants: $selectedFolder.access_grants };
+			if (!equal(display, current)) selectedFolder.set({ ...$selectedFolder, ...display });
+		} else if (!$folderStates[id] && retainedFolderId === id) {
+			selectedFolder.set(null);
+			if ($page.url.pathname.startsWith('/folders/')) void goto('/');
+		}
+	} else retainedFolderId = null;
+
+
 	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
 		if (!folder?.id) {
 			return;
 		}
 
-		folderRegistry[folder.id]?.setFolderItems?.();
+		folderRegistry[folder.id]?.setFolderItems?.(false, false);
 	};
 
 	$: pinnedItems = $settings?.pinnedMenuItems ?? DEFAULT_PINNED_ITEMS;
@@ -537,6 +565,7 @@
 	};
 
 	const refreshChatRows = async () => {
+		markFolderChatsDirty();
 		const result = await refreshChatList(localStorage.token, { refreshPinned: true });
 		if (result.accepted) {
 			await initFolders();
@@ -870,10 +899,6 @@
 			}
 
 			if (folderId) {
-				if (chat) {
-					return folderRegistry[folderId]?.upsertChat?.(chat);
-				}
-
 				return folderRegistry[folderId]?.setFolderItems?.();
 			}
 
@@ -922,7 +947,11 @@
 		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
+			updateFolderChatLists({ id: event.chat_id, active: event.data.data?.active ?? false, pending_approval: event.data.data?.pending_approval ?? false });
 			const eventData = event.data.data ?? {};
+			if (eventData.folder_unread_counts) {
+				applyFolderUnreadCounts(eventData.folder_unread_counts);
+			}
 			const active = eventData.active ?? false;
 			const pendingApproval = eventData.pending_approval ?? false;
 			const found = setChatActive(event.chat_id, active, pendingApproval);
@@ -938,6 +967,7 @@
 				await refreshChatRows();
 			}
 		} else if (event.data?.type === 'chat:list') {
+			if (typeof event.data.data?.last_read_at === 'number') updateFolderChatLists({ id: event.chat_id, last_read_at: event.data.data.last_read_at });
 			const eventData = event.data.data ?? {};
 			const folderUnreadCounts = eventData.folder_unread_counts;
 			if (folderUnreadCounts) {
@@ -959,7 +989,57 @@
 		}
 	};
 
-	const newChatHandler = async () => {
+	const openSidebarPage = (href: string, label = '') => {
+		const url = new URL(href, location.origin);
+		if (!appLayout?.openPageTab || url.origin !== location.origin || !pageTabKey(url)) return false;
+		appLayout.openPageTab({ href: url.pathname + url.search + url.hash, label });
+		closeMobileSidebar();
+		return true;
+	};
+	const sidebarLinkClickHandler = (event: MouseEvent) => {
+		if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+			return;
+		const link = (event.target as Element)?.closest<HTMLAnchorElement>('#sidebar a[href]');
+		if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
+		if (link.closest('#sidebar-chat-item')?.querySelector('[role="checkbox"]')) return;
+		if (link.pathname.startsWith('/c/') && link.pathname !== `/c/${$chatId}`) return;
+		if (link.pathname === '/' && !link.search) return;
+		if (openSidebarPage(link.href, link.getAttribute('aria-label') || link.textContent?.trim())) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		}
+	};
+
+	const sidebarPageDragHandler = (event: DragEvent) => {
+		if (!(event.target instanceof Element) || !event.dataTransfer) return;
+		const link =
+			event.target.closest<HTMLAnchorElement>('#sidebar a[href]') ??
+			(event.target.closest('#sidebar')
+				? event.target.querySelector<HTMLAnchorElement>('a[href]')
+				: null);
+		if (!link) return;
+		const url = new URL(link.href);
+		if (
+			url.origin !== location.origin ||
+			!pageTabKey(url) ||
+			url.pathname.startsWith('/c/') ||
+			(url.pathname === '/' && !url.search)
+		)
+			return;
+		const item = {
+			type: 'page',
+			href: url.pathname + url.search + url.hash,
+			label: link.getAttribute('aria-label') || link.textContent?.trim() || ''
+		};
+		event.dataTransfer.setData('application/x-open-webui-page', JSON.stringify(item));
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+		event.dataTransfer.setData('text/plain', JSON.stringify(item));
+		event.dataTransfer.effectAllowed = 'copyMove';
+	};
+
+	const newChatHandler = async (event?: MouseEvent) => {
+		if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)) return;
+		event?.preventDefault();
 		selectedChatId = null;
 		selectedFolder.set(null);
 		closeMobileSidebar();
@@ -969,6 +1049,8 @@
 		} else {
 			await temporaryChatEnabled.set(false);
 		}
+		if (appLayout?.initNewChat) await appLayout.initNewChat(true);
+		else await goto('/');
 	};
 
 	const itemClickHandler = async () => {
@@ -1025,7 +1107,7 @@
 			await initChannels();
 			showCreateChannel = false;
 			showChannels = true;
-			goto(`/channels/${res.id}`);
+			if (!openSidebarPage(`/channels/${res.id}`, res.name)) goto(`/channels/${res.id}`);
 		}
 	}}
 />
@@ -1039,6 +1121,8 @@
 />
 
 <svelte:window
+	on:click|capture={sidebarLinkClickHandler}
+	on:dragstart|capture={sidebarPageDragHandler}
 	bind:innerWidth={viewportWidth}
 	on:pointermove={(e) => {
 		if (!isResizing) return;
@@ -1092,7 +1176,6 @@
 		id="sidebar-new-chat-button"
 		class="hidden"
 		on:click={() => {
-			goto('/');
 			newChatHandler();
 		}}
 	/>
@@ -1156,7 +1239,6 @@
 									e.stopImmediatePropagation();
 									e.preventDefault();
 
-									goto('/');
 									newChatHandler();
 								}}
 								aria-label={$i18n.t('New Chat')}
@@ -1206,7 +1288,7 @@
 											goto(meta.href);
 											itemClickHandler();
 										}}
-										draggable="false"
+										draggable="true"
 										aria-label={$i18n.t(meta.label)}
 									>
 										<div
@@ -1458,7 +1540,7 @@
 												: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
 											href={meta.href}
 											on:click={itemClickHandler}
-											draggable="false"
+											draggable="true"
 											aria-label={$i18n.t(meta.label)}
 										>
 											<div class="self-center flex size-4 shrink-0 items-center justify-center">
@@ -1507,7 +1589,7 @@
 							onAdd={async () => {
 								const note = await createNoteHandler('New Note');
 								if (note) {
-									goto(`/notes/${note.id}`);
+									if (!openSidebarPage(`/notes/${note.id}`, note.title)) goto(`/notes/${note.id}`);
 								}
 							}}
 							onAddLabel={$i18n.t('New Note')}
@@ -1574,6 +1656,7 @@
 									);
 
 									if (res) {
+										updateFolderDetails(id, res);
 										await initFolders();
 									}
 								}
@@ -1585,6 +1668,11 @@
 								{shiftKey}
 								onFolderUnreadCounts={applyFolderUnreadCounts}
 								onDelete={(folderId) => {
+									for (const childId of Object.keys(folders)) {
+										let parentId = childId;
+										while (parentId && parentId !== folderId) parentId = folders[parentId]?.parent_id;
+										if (parentId) removeFolderState(childId);
+									}
 									let id = $selectedFolder?.id;
 									while (id && id !== folderId) id = folders[id]?.parent_id;
 									if (id) selectedFolder.set(null);
@@ -1657,6 +1745,7 @@
 										folderRegistry[chat.folder_id]?.setFolderItems();
 
 										if (res) {
+											updateFolderChatLists(res, null);
 											chat = res;
 										}
 									}
@@ -1665,7 +1754,8 @@
 										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
 
-									initChatList();
+									await initChatList();
+									void refreshFolderChatLists();
 								}
 							} else if (type === 'folder') {
 								if (folders[id].parent_id === null) {
@@ -1758,6 +1848,7 @@
 														});
 
 														if (res) {
+															updateFolderChatLists(res, null);
 															chat = res;
 														}
 													}
@@ -1769,7 +1860,8 @@
 														);
 													}
 
-													initChatList();
+													await initChatList();
+													void refreshFolderChatLists();
 												}
 											}
 										}}

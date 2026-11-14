@@ -1,4 +1,7 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget | null = null;
+
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -16,8 +19,6 @@
 
 	export let notebook: Record<string, unknown>;
 	export let filePath: string = '';
-	export let baseUrl: string = '';
-	export let apiKey: string = '';
 	export let readOnly = false;
 
 	interface NotebookCell {
@@ -128,14 +129,14 @@
 	let runningCell: number | null = null;
 	let runAllActive = false;
 
-	const canExecute = !readOnly && baseUrl && apiKey && filePath;
+	const canExecute = !readOnly && target?.baseUrl && target?.key && filePath;
 
 	const startSession = async (): Promise<boolean> => {
-		if (!baseUrl || !apiKey || !filePath) return false;
+		if (!target?.baseUrl || !target?.key || !filePath) return false;
 		kernelStarting = true;
 		kernelError = null;
 
-		const result = await createNotebookSession(baseUrl, apiKey, filePath);
+		const result = await createNotebookSession(target, filePath);
 
 		if ('error' in result) {
 			kernelStarting = false;
@@ -150,8 +151,8 @@
 	};
 
 	const stopSession = async () => {
-		if (sessionId && baseUrl && apiKey) {
-			await stopNotebookSession(baseUrl, apiKey, sessionId);
+		if (sessionId && target?.baseUrl && target?.key) {
+			await stopNotebookSession(target, sessionId);
 		}
 		sessionId = null;
 		kernelReady = false;
@@ -172,7 +173,7 @@
 			editingCell = editingCell;
 		}
 
-		const result = await executeNotebookCell(baseUrl, apiKey, sessionId!, index, source);
+		const result = await executeNotebookCell(target!, sessionId!, index, source);
 
 		if ('error' in result) {
 			cells[index].outputs = [
@@ -219,7 +220,7 @@
 
 <div class="notebook-view">
 	<!-- Toolbar -->
-	{#if !readOnly && baseUrl && apiKey && filePath}
+	{#if !readOnly && target?.baseUrl && target?.key && filePath}
 		<div class="nb-toolbar flex items-center gap-1 px-2 py-0.5">
 			<button
 				class="nb-btn text-[0.6rem]"
@@ -315,7 +316,7 @@
 					<div class="nb-cell-gutter">
 						{#if runningCell === i}
 							<div class="nb-cell-label"><Spinner className="size-3" /></div>
-						{:else if !readOnly && baseUrl && apiKey && filePath}
+						{:else if !readOnly && target?.baseUrl && target?.key && filePath}
 							<button
 								class="nb-run-btn"
 								on:click={() => runCell(i)}

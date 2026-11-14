@@ -16,6 +16,8 @@
 		config,
 		mobile,
 		settings,
+		selectedTerminalId,
+		terminalSkills,
 		socket,
 		user
 	} from '$lib/stores';
@@ -67,6 +69,8 @@
 	export let chatInputElement: any;
 
 	export let id: string | null = null;
+	let inputRoot: HTMLDivElement;
+	$: inputId = `channel-input-${channel?.id ?? ''}-${parentId ?? 'main'}`;
 	export let channel: any = null;
 	export let messages: any[] | null = [];
 
@@ -270,7 +274,7 @@
 	const replaceVariables = (variables: Record<string, any>) => {
 		console.log('Replacing variables:', variables);
 
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`);
 
 		if (chatInput) {
 			chatInputElement.replaceVariables(variables);
@@ -279,7 +283,7 @@
 	};
 
 	export const setText = async (text?: string, cb?: (text: string) => void) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`);
 
 		if (chatInput) {
 			if (text !== '') {
@@ -299,7 +303,7 @@
 	};
 
 	const getCommand = () => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`);
 		let word = '';
 
 		if (chatInput) {
@@ -310,14 +314,14 @@
 	};
 
 	const replaceCommandWithText = (text) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`);
 		if (!chatInput) return;
 
 		chatInputElement?.replaceCommandWithText(text);
 	};
 
 	const insertTextAtCursor = async (text: string) => {
-		const chatInput = document.getElementById('chat-input');
+		const chatInput = inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`);
 		if (!chatInput) return;
 
 		text = await textVariableHandler(text);
@@ -332,7 +336,7 @@
 		text = await inputVariableHandler(text);
 		await tick();
 
-		const chatInputContainer = document.getElementById('chat-input-container');
+		const chatInputContainer = inputRoot?.querySelector<HTMLElement>('[id="chat-input-container"]');
 		if (chatInputContainer) {
 			chatInputContainer.scrollTop = chatInputContainer.scrollHeight;
 		}
@@ -563,6 +567,7 @@
 	};
 
 	const handleKeyDown = (event: KeyboardEvent) => {
+		if (!inputRoot?.contains(event.target as Node)) return;
 		if (event.key === 'Shift') {
 			shiftKey = true;
 		}
@@ -765,6 +770,8 @@
 						.run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					selectedTerminalId,
+					terminalSkills,
 					i18n,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -773,7 +780,7 @@
 							console.log('Selected model:', data);
 						}
 
-						document.getElementById('chat-input')?.focus();
+						inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`)?.focus();
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -808,9 +815,11 @@
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
+					selectedTerminalId,
+					terminalSkills,
 					i18n,
 					onSelect: (e) => {
-						document.getElementById('chat-input')?.focus();
+						inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`)?.focus();
 					},
 
 					insertTextHandler: insertTextAtCursor,
@@ -835,7 +844,7 @@
 			await tick();
 			if (isDestroyed) return;
 
-			dropzoneElement = document.getElementById('channel-container');
+			dropzoneElement = inputRoot?.closest<HTMLElement>('[id="channel-container"]') ?? null;
 			if (dropzoneElement) {
 				dropzoneElement.addEventListener('dragover', onDragOver);
 				dropzoneElement.addEventListener('drop', onDrop);
@@ -889,7 +898,7 @@
 		onSave={inputVariablesModalCallback}
 	/>
 
-	<div class="bg-transparent">
+	<div bind:this={inputRoot} data-composer-id={inputId} class="bg-transparent">
 		<div class="max-w-full mx-auto inset-x-0 relative">
 			<div
 				class="absolute top-0 left-0 right-0 mx-auto inset-x-0 bg-transparent flex justify-center"
@@ -1099,7 +1108,7 @@
 								>
 									{#key $settings?.richTextInput && $settings?.showFormattingToolbar}
 										<RichTextInput
-											id="chat-input"
+											id={inputId}
 											className="input-prose min-h-fit h-full text-sm!"
 											bind:this={chatInputElement}
 											bind:editor={inputEditor}
@@ -1133,8 +1142,9 @@
 
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												const suggestionsContainerElement =
-													document.getElementById('suggestions-container');
+												const suggestionsContainerElement = inputRoot?.querySelector<HTMLElement>(
+													'[id="suggestions-container"]'
+												);
 
 												if (!suggestionsContainerElement) {
 													if (

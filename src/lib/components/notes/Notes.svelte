@@ -1,8 +1,12 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto, tab: pageTab, active } = getPageContext();
+
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 	import fileSaver from 'file-saver';
 
 	const { saveAs } = fileSaver;
@@ -18,7 +22,6 @@
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	import { goto } from '$app/navigation';
 	import {
 		WEBUI_NAME,
 		config,
@@ -110,6 +113,7 @@
 		});
 
 		if (res) {
+			closePageTabs(`/notes/${id}`);
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			init();
 		}
@@ -189,6 +193,7 @@
 
 	$: if (
 		loaded &&
+		$active &&
 		sortKey !== undefined &&
 		sortDirection !== undefined &&
 		permission !== undefined &&
@@ -374,23 +379,20 @@
 			}
 		};
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="notes" onUpdated={init} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Notes')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Notes') + ' / ' + $WEBUI_NAME} />
 
 <FilesOverlay show={dragged} />
 
 <div id="notes-container" class="w-full min-h-full h-full">
-	{#if loaded}
+	{#if loaded && items !== null && total !== null}
 		<input
 			id="notes-import-input"
 			bind:this={notesImportInputElement}
@@ -428,7 +430,7 @@
 		</DeleteConfirmDialog>
 
 		<div class="flex items-center gap-0.5 md:gap-1 mb-1">
-			{#if $mobile}
+			{#if $mobile && !pageTab}
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}

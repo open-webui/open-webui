@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import { v4 as uuidv4 } from 'uuid';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
 
 	import { toast } from 'svelte-sonner';
 
-	import { goto } from '$app/navigation';
 	import { onMount, tick, getContext } from 'svelte';
 
 	import {

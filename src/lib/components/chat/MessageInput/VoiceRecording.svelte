@@ -435,8 +435,9 @@
 	let maxVisibleItems = 300;
 	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
 
+	let containerElement: HTMLDivElement;
 	const handleKeyDown = (e) => {
-		if (recording && e.key === 'Escape') {
+		if (recording && e.key === 'Escape' && containerElement?.getClientRects().length) {
 			e.preventDefault();
 			cancelRecording();
 			onCancel();
@@ -480,6 +481,7 @@
 </script>
 
 <div
+	bind:this={containerElement}
 	bind:clientWidth={containerWidth}
 	class="{loading
 		? ' bg-gray-100/50 dark:bg-gray-850/50'

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget;
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { ListeningPort } from '$lib/apis/terminal';
 	import { getListeningPorts, getPortProxyUrl, getTerminalFeatures } from '$lib/apis/terminal';
@@ -9,11 +11,9 @@
 	const i18n = getContext<any>('i18n');
 	const dispatch = createEventDispatcher<{ previewPort: number }>();
 
-	export let baseUrl: string;
 	export let active = true;
 	export let previewBaseUrl: string | null = null;
-	export let apiKey: string;
-	export let chatId: string | null = null;
+
 
 	let ports: ListeningPort[] = [];
 	let loading = false;
@@ -25,7 +25,7 @@
 	const loadPorts = async () => {
 		const current = generation;
 		loading = true;
-		const next = await getListeningPorts(baseUrl, apiKey, chatId);
+		const next = await getListeningPorts(target);
 		if (current !== generation) return;
 		ports = next;
 		loading = false;
@@ -38,15 +38,13 @@
 		if (context !== key) ports = [];
 		context = key;
 		loading = false;
-		if (!enabled || !baseUrl) return;
-		const connection = { baseUrl, key: apiKey, selector: '', system: false };
-		const features = await getTerminalFeatures(connection, chatId);
+		if (!enabled || !target.baseUrl) return;
+		const features = await getTerminalFeatures(target);
 		if (current !== generation) return;
 		if (features.events === true) {
 			loading = true;
 			stopWatching = watchTerminalPorts(
-				connection,
-				chatId,
+				target,
 				(next) => {
 					ports = next;
 					loading = false;
@@ -65,12 +63,12 @@
 	};
 
 	const openPortExternal = (port: number) => {
-		const url = getPortProxyUrl(previewBaseUrl ?? baseUrl, port);
+		const url = getPortProxyUrl(previewBaseUrl ?? target.baseUrl, port);
 		window.open(url, '_blank', 'noopener,noreferrer');
 	};
 
 	// Only discover ports while the browser start view is visible.
-	$: configure(JSON.stringify([baseUrl, apiKey, chatId]), mounted && active);
+	$: configure(JSON.stringify([target.baseUrl, target.key, target.context]), mounted && active);
 	onMount(() => {
 		mounted = true;
 	});

@@ -156,8 +156,13 @@ class Relay:
 
     async def invite(self, state, channel):
         await self.sio.emit(
-            'encryption:available',
-            {'channel': channel, 'session': state['session'] if state else None},
+            'events',
+            {
+                'data': {
+                    'type': 'encryption:available',
+                    'data': {'channel': channel, 'session': state['session'] if state else None},
+                }
+            },
             room=f'channel:{channel}',
         )
 

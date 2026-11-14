@@ -1,8 +1,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Backend CI — Python formatting checks via Ruff
+# Backend CI — Python formatting checks via Ruff and lock file check
 # Runs on pushes and PRs to main/dev when backend files change
 # ─────────────────────────────────────────────────────────────────────────────
 name: Python CI
+
+permissions:
+  contents: read
 
 on:
   push:
@@ -41,3 +44,24 @@ jobs:
 
       - name: Detect logic errors
         run: ruff check --select=F --ignore=F401,F403,F405,F541,F811,F841 --output-format=github .
+
+  # ── Dockerfile lock files match the requirements files ───────────────────
+  lock-check:
+    name: Requirements locks up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5.1.0
+
+      - uses: actions/setup-python@v6.3.0
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: pip install uv==0.12.10
+
+      - name: Regenerate locks
+        run: backend/update-locks.sh
+
+      - name: Verify locks are up to date
+        run: test -z "$(git status --porcelain -- backend)"

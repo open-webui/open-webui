@@ -287,6 +287,10 @@ select {
 	animation: fade-in-token 100ms ease-out;
 }
 
+.katex {
+	text-transform: none;
+}
+
 .katex-mathml {
 	display: none;
 }

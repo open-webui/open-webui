@@ -227,6 +227,7 @@ _SHARING_PERMISSION_KEYS = {
     'channel': (None, 'sharing.public_channels', None),
     'calendar': (None, 'sharing.public_calendars', None),
     'shared_chat': (None, 'sharing.public_chats', 'sharing.open_chats'),
+    'terminal': (None, None, None),
 }
 
 
@@ -296,6 +297,8 @@ async def validate_access_grants(
 ) -> list:
     """Reject unauthorized sharing changes before replacing any stored grants."""
     grants = normalize_access_grants(access_grants)
+    if resource_type == 'terminal' and any(grant['permission'] != 'read' for grant in grants):
+        raise HTTPException(400, 'Template access grants must be read-only')
     allowed = await filter_allowed_access_grants(default_permissions, user_id, user_role, grants, resource_type, db=db)
     if len(allowed) != len(grants):
         raise HTTPException(403, 'You do not have permission to share with the requested audience')

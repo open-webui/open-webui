@@ -1,4 +1,8 @@
 <script lang="ts">
+	import type { WorkspaceContext } from '$lib/types';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -14,8 +18,9 @@
 	const { saveAs } = fileSaver;
 
 	import { onMount, getContext, tick, onDestroy } from 'svelte';
-	import { goto } from '$app/navigation';
+
 	const i18n = getContext<any>('i18n');
+	const { workspaceActions, workspaceCounts } = getContext<WorkspaceContext>('workspace');
 	dayjs.extend(relativeTime);
 
 	import {
@@ -25,9 +30,7 @@
 		models as _models,
 		pinnedModels,
 		settings,
-		user,
-		workspaceActions,
-		workspaceCounts
+		user
 	} from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import {
@@ -193,14 +196,7 @@
 		}
 
 		try {
-			_models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			_models.set(await getModels(localStorage.token));
 		} catch (error: any) {
 			toast.error(`${error?.detail ?? error}`);
 		}
@@ -261,12 +257,7 @@
 			getModelList();
 		}
 
-		await _models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		await _models.set(await getModels(localStorage.token));
 	};
 
 	const getFullModel = async (model: any) =>
@@ -328,12 +319,7 @@
 			await getModelList();
 		}
 
-		await _models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		await _models.set(await getModels(localStorage.token));
 	};
 
 	const copyLinkHandler = async (model) => {
@@ -524,23 +510,20 @@
 			window.removeEventListener('blur', onBlur);
 		};
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
 <WorkspaceAccessModal bind:this={accessModal} resourceType="models" onUpdated={getModelList} />
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	<title>
-		{$i18n.t('Models')} / {$WEBUI_NAME}
-	</title>
-</svelte:head>
+<PageTitle title={$i18n.t('Models') + ' / ' + $WEBUI_NAME} />
 
 <h1 class="sr-only">{$i18n.t('Models')}</h1>
 
 <Comments modal bind:view={comments} resourceType="model">
-	{#if loaded}
+	{#if loaded && models !== null && total !== null}
 		<ModelDeleteConfirmDialog
 			bind:show={showModelDeleteConfirm}
 			on:confirm={() => {
@@ -583,12 +566,7 @@
 						return;
 					}
 
-					await _models.set(
-						await getModels(
-							localStorage.token,
-							$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-						)
-					);
+					await _models.set(await getModels(localStorage.token));
 
 					page = 1;
 					getModelList();

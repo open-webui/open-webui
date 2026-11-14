@@ -12,6 +12,7 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	let chatMenuOpen = false;
 </script>
 
 <script lang="ts">
@@ -48,7 +49,9 @@
 		settings,
 		user
 	} from '$lib/stores';
-	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
+	import { refreshSidebar } from '$lib/stores/chatList';
+	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -263,12 +266,13 @@
 				return null;
 			});
 			if (!res) return;
+			updateFolderChatLists({ id, title });
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
 			}
 
-			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshSidebar(localStorage.token);
 
 			dispatch('change');
 		}
@@ -342,6 +346,8 @@
 		});
 
 		if (res) {
+			updateFolderChatLists({ id }, undefined, true);
+			closeChatTabs(id);
 			if ($chatId === id) {
 				await goto('/');
 
@@ -363,6 +369,7 @@
 
 		try {
 			await archiveChatById(localStorage.token, id);
+			updateFolderChatLists({ id }, undefined, true);
 
 			if ($chatId === id) {
 				await goto('/');
@@ -389,6 +396,7 @@
 			);
 
 			if (res) {
+				updateFolderChatLists(res, folderId);
 				await refreshAfterChange(folderId);
 
 				toast.success($i18n.t('Chat moved successfully'));
@@ -477,6 +485,7 @@
 			if (closeActiveHoverPreview === closeHoverPreview) {
 				closeActiveHoverPreview = null;
 			}
+			if (menuOpen) chatMenuOpen = false;
 		};
 	});
 
@@ -771,6 +780,7 @@
 				<a
 					class="flex min-w-0 flex-1 items-center"
 					href="/c/{id}"
+					aria-label={chatTitle || title}
 					aria-current={id === $chatId ? 'page' : undefined}
 					on:click={selectChatHandler}
 					draggable="false"
@@ -788,7 +798,9 @@
 						!($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
-						if (open) {
+						if (open && chatMenuOpen) {
+							openPreview = false;
+						} else if (open) {
 							activeProfileId = null;
 							overflowOpen = false;
 						}
@@ -797,6 +809,7 @@
 					<LinkPreview.Trigger
 						class="flex min-w-0 flex-1 -my-1.5 py-1.5 items-center"
 						href="/c/{id}"
+						aria-label={chatTitle || title}
 						aria-current={id === $chatId ? 'page' : undefined}
 						onclick={selectChatHandler}
 						ondblclick={renameChatFromDoubleClick}
@@ -902,10 +915,13 @@
 						{markUnreadHandler}
 						onOpen={() => {
 							menuOpen = true;
+							chatMenuOpen = true;
+							closeActiveHoverPreview?.();
 							dispatch('select');
 						}}
 						onClose={() => {
 							menuOpen = false;
+							chatMenuOpen = false;
 							dispatch('unselect');
 						}}
 						onPinChange={(chat) => refreshAfterChange(chat.pinned ? null : chat.folder_id)}

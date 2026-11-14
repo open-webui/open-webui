@@ -259,12 +259,12 @@ class FeaturesPermissions(BaseModel):
     channels: bool = True
     encrypted_channels: bool = False
     folders: bool = True
-    direct_tool_servers: bool = False
 
     web_search: bool = True
     image_generation: bool = True
     code_interpreter: bool = True
     memories: bool = True
+    subagents: bool = True
     automations: bool = False
     calendar: bool = True
     webhooks: bool = False
@@ -428,7 +428,7 @@ async def update_default_user_permissions(request: Request, form_data: UserPermi
     from open_webui.socket.main import sio
 
     try:
-        await sio.emit('access:updated', {})
+        await sio.emit('events', {'data': {'type': 'access:updated'}})
     except Exception:
         log.exception('Unable to refresh default user permissions')
     await publish_event(
@@ -508,18 +508,6 @@ async def update_user_settings_by_session_user(
             )
         ):
             ui_settings.pop('system', None)
-
-    if (
-        user.role != 'admin'
-        and ui_settings is not None
-        and 'toolServers' in ui_settings
-        and not await has_permission(
-            user.id,
-            'features.direct_tool_servers',
-            await Config.get('user.permissions'),
-        )
-    ):
-        ui_settings.pop('toolServers', None)
 
     ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
     if (

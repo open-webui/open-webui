@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { onMount, tick, getContext } from 'svelte';
+	import { onMount, tick, getContext, setContext } from 'svelte';
+	import type { AppLayoutContext } from '$lib/types';
 
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 
-	import { getBackendConfig, getModels, getToolServersData, getVersionUpdates } from '$lib/apis';
+	import { getBackendConfig, getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
 	import { getSessionUser } from '$lib/apis/auths';
@@ -33,7 +34,6 @@
 		showSettings,
 		showChangelog,
 		temporaryChatEnabled,
-		toolServers,
 		terminalServers,
 		selectedTerminalId,
 		showSearch,
@@ -45,6 +45,8 @@
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
+	import Chat from '$lib/components/chat/Chat.svelte';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
@@ -54,8 +56,11 @@
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
 	const i18n = getContext('i18n');
+	setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
+	$: routeHasTabs = ['/(app)', '/(app)/c/[id]'].includes($page.route.id ?? '');
+	$: usePageTabs = !routeHasTabs && !!pageTabKey($page.url);
 
 	let version;
 	let handledSettingsUrl = '';
@@ -86,85 +91,25 @@
 	};
 
 	const setModels = async () => {
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections ? ($settings?.directConnections ?? null) : null
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
-	const setToolServers = async () => {
+	const refreshTerminalServers = async () => {
 		if (!$config?.features?.enable_tool_servers) {
-			toolServers.set([]);
 			terminalServers.set([]);
 			return;
 		}
-		let toolServersData = await getToolServersData(
-			$config?.features?.enable_direct_integrations ? ($settings?.toolServers ?? []) : []
-		);
-		toolServersData = toolServersData.filter((data) => {
-			if (!data || data.error) {
-				toast.error(
-					$i18n.t(`Failed to connect to {{URL}} OpenAPI tool server`, {
-						URL: data?.url
-					})
-				);
-				return false;
-			}
-			return true;
-		});
-		toolServers.set(toolServersData);
-
-		// Inject enabled terminal servers as always-on tool servers
-		const enabledTerminals = (
-			$config?.features?.enable_direct_integrations
-				? (($settings as any)?.terminalServers ?? [])
-				: []
-		).filter((s: any) => s.enabled || s.url === $selectedTerminalId);
-
-		// Fetch terminal servers the user has access to (for FileNav + terminal_id)
+		const userId = $user?.id;
+		if (!userId || !localStorage.token) return;
 		const systemTerminals = await getTerminalServers(localStorage.token);
-		terminalServers.set([
-			...(enabledTerminals.length > 0
-				? (
-						await getToolServersData(
-							enabledTerminals.map((t: any) => ({
-								url: t.url,
-								auth_type: t.auth_type ?? 'bearer',
-								key: t.key ?? '',
-								path: t.path ?? '/openapi.json',
-								config: { enable: true }
-							}))
-						)
-					)
-						.filter((data) => {
-							if (!data || data.error) {
-								toast.error(
-									$i18n.t(`Failed to connect to {{URL}} terminal server`, {
-										URL: data?.url
-									})
-								);
-								return false;
-							}
-							return true;
-						})
-						.map((data, i) => ({
-							...data,
-							key: enabledTerminals[i]?.key ?? '',
-							config: enabledTerminals[i]?.config ?? data?.config ?? {}
-						}))
-				: []),
-			// Store with proxy URL and session key for FileNav file browsing
-			...systemTerminals.map((t) => ({
-				id: t.id,
-				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
-				name: t.name,
-				key: localStorage.token,
-				contexts: t.contexts ?? {},
-				config: t.config ?? {}
+		if ($user?.id !== userId || !$config?.features?.enable_tool_servers) return;
+		terminalServers.set(
+			systemTerminals.map((terminal) => ({
+				...terminal,
+				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
+				key: localStorage.token
 			}))
-		]);
+		);
 	};
 
 	const setBanners = async () => {
@@ -185,7 +130,7 @@
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
-				setToolServers(),
+				refreshTerminalServers(),
 				getSkills(localStorage.token).then((value) => skills.set(value))
 			]);
 			for (const result of results) {
@@ -198,9 +143,24 @@
 
 	onMount(() => {
 		const socketInstance = $socket;
-		socketInstance?.on('access:updated', refreshAccess);
+		const changed = () => {
+			void refreshTerminalServers().catch((error) =>
+				console.error('Unable to refresh terminals', error)
+			);
+		};
+		const eventHandler = (event: { data?: { type?: string } }) => {
+			if (event?.data?.type === 'terminals:changed') {
+				changed();
+				// Tether devices also bring the user's own models and tool servers.
+				void setModels().catch((error) => console.error('Unable to refresh models', error));
+				void setTools().catch((error) => console.error('Unable to refresh tools', error));
+			} else if (event?.data?.type === 'access:updated') void refreshAccess();
+		};
+		socketInstance?.on('events', eventHandler);
+		socketInstance?.on('connect', changed);
 		return () => {
-			socketInstance?.off('access:updated', refreshAccess);
+			socketInstance?.off('events', eventHandler);
+			socketInstance?.off('connect', changed);
 		};
 	});
 
@@ -240,6 +200,22 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
+	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Side chats sit
+	// inside the main chat, so an element belongs to the nearest [data-chat] around it.
+	const chatElements = <T extends HTMLElement = HTMLElement>(selector: string): T[] => {
+		const chat =
+			document.activeElement?.closest('[data-chat]') ??
+			document.querySelector('[data-chat="main"]');
+		return [...document.querySelectorAll<T>(selector)].filter(
+			(el) => !chat || el.closest('[data-chat]') === chat
+		);
+	};
+
+	const chatInput = () => {
+		const id = chatElements('[data-composer-id]')[0]?.dataset.composerId;
+		return id ? document.getElementById(id) : null;
+	};
+
 	const navigateChat = async (direction: -1 | 1) => {
 		if (!$chats?.length) return;
 
@@ -275,14 +251,15 @@
 			return;
 		}
 
-		selectedTerminalId.set(
-			$config?.features?.enable_tool_servers ? (localStorage.selectedTerminalId ?? null) : null
-		);
-
-		setToolServers().catch((e) => {
-			console.error('Failed to load tool servers:', e);
-			terminalServers.set([]);
+		await refreshTerminalServers().catch((e) => {
+			console.error('Failed to load terminals:', e);
 		});
+		selectedTerminalId.set(
+			$config?.features?.enable_tool_servers &&
+				$terminalServers?.some((terminal) => terminal.id === localStorage.selectedTerminalId)
+				? localStorage.selectedTerminalId
+				: null
+		);
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
@@ -302,15 +279,19 @@
 				} else if (shortcut === Shortcut.FOCUS_INPUT) {
 					console.log('Shortcut triggered: FOCUS_INPUT');
 					event.preventDefault();
-					document.getElementById('chat-input')?.focus();
+					(
+						chatElements('[data-composer-id]')
+							.map((el) => document.getElementById(el.dataset.composerId ?? ''))
+							.find((el) => el?.offsetParent) ?? chatInput()
+					)?.focus();
 				} else if (shortcut === Shortcut.COPY_LAST_CODE_BLOCK) {
 					console.log('Shortcut triggered: COPY_LAST_CODE_BLOCK');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-code-button')]?.at(-1)?.click();
+					chatElements('.copy-code-button').at(-1)?.click();
 				} else if (shortcut === Shortcut.COPY_LAST_RESPONSE) {
 					console.log('Shortcut triggered: COPY_LAST_RESPONSE');
 					event.preventDefault();
-					[...document.getElementsByClassName('copy-response-button')]?.at(-1)?.click();
+					chatElements('.copy-response-button').at(-1)?.click();
 				} else if (shortcut === Shortcut.TOGGLE_SIDEBAR) {
 					console.log('Shortcut triggered: TOGGLE_SIDEBAR');
 					event.preventDefault();
@@ -361,20 +342,20 @@
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
-					document.getElementById('generate-message-pair-button')?.click();
+					chatElements('.generate-message-pair-button')[0]?.click();
 				} else if (shortcut === Shortcut.ALLOW_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-allow-button')]
+					const button = chatElements<HTMLButtonElement>('.tool-call-allow-button')
 						.reverse()
-						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+						.find((el) => !el.disabled);
 					if (button) {
 						console.log('Shortcut triggered: ALLOW_TOOL_CALL');
 						event.preventDefault();
 						button.click();
 					}
 				} else if (shortcut === Shortcut.DENY_TOOL_CALL) {
-					const button = [...document.getElementsByClassName('tool-call-deny-button')]
+					const button = chatElements<HTMLButtonElement>('.tool-call-deny-button')
 						.reverse()
-						.find((el) => !(el as HTMLButtonElement).disabled) as HTMLButtonElement | undefined;
+						.find((el) => !el.disabled);
 					if (button) {
 						console.log('Shortcut triggered: DENY_TOOL_CALL');
 						event.preventDefault();
@@ -382,11 +363,11 @@
 					}
 				} else if (
 					shortcut === Shortcut.REGENERATE_RESPONSE &&
-					document.activeElement?.id === 'chat-input'
+					document.activeElement === chatInput()
 				) {
 					console.log('Shortcut triggered: REGENERATE_RESPONSE');
 					event.preventDefault();
-					[...document.getElementsByClassName('regenerate-response-button')]?.at(-1)?.click();
+					chatElements('.regenerate-response-button').at(-1)?.click();
 				}
 			});
 		};
@@ -446,6 +427,15 @@
 		loaded = true;
 	});
 
+	$: if (
+		loaded &&
+		$selectedTerminalId &&
+		$terminalServers !== null &&
+		!$terminalServers.some((terminal) => terminal.id === $selectedTerminalId)
+	) {
+		selectedTerminalId.set(null);
+	}
+
 	// `$page.url` must be referenced here: `$:` only tracks variables used in
 	// the statement itself, and reads inside openSettingsFromUrl don't count —
 	// without it, client-side navigations to `?settings=...` are never handled.
@@ -495,7 +485,9 @@
 				{#if loaded}
 					<main class="contents">
 						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
-						<slot />
+						{#if usePageTabs}
+							<Chat initialPage={$page.url.pathname + $page.url.search + $page.url.hash} />
+						{:else}<slot />{/if}
 					</main>
 				{:else}
 					<div

@@ -143,16 +143,19 @@ export class Conversation {
 			this.enqueue(() => this.receive(event));
 		};
 		const end = () => this.close();
+		const eventHandler = (event: { data?: { type?: string } }) => {
+			if (event?.data?.type === 'access:updated') end();
+		};
 		socket.on('encryption:event', receive);
 		socket.on('disconnect', end);
-		socket.on('access:updated', end);
+		socket.on('events', eventHandler);
 		window.addEventListener('pagehide', end);
 		window.addEventListener('beforeunload', end);
 		document.addEventListener('freeze', end);
 		this.disposers.push(() => {
 			socket.off('encryption:event', receive);
 			socket.off('disconnect', end);
-			socket.off('access:updated', end);
+			socket.off('events', eventHandler);
 			window.removeEventListener('pagehide', end);
 			window.removeEventListener('beforeunload', end);
 			document.removeEventListener('freeze', end);

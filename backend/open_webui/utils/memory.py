@@ -500,7 +500,7 @@ async def _review_memory(
         role = message.get('role', '')
         content = message.get('content', '')
         if not isinstance(content, str):
-            content = get_content_from_message(message)
+            content = get_content_from_message(message) or ''
         content = content.strip()
         if role not in {'user', 'assistant'} or not content:
             continue

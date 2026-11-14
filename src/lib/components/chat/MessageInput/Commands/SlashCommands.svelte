@@ -1,22 +1,16 @@
 <script lang="ts">
+	export let modelId: string | null = null;
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext, onDestroy } from 'svelte';
+	import type { Readable, Writable } from 'svelte/store';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
 	import {
 		listTerminalSkills,
-		resolveTerminalConnection,
+		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import {
-		user,
-		chatId,
-		selectedTerminalId,
-		settings,
-		terminalServers,
-		terminalSkills,
-		visibleControls
-	} from '$lib/stores';
+	import { user, chatId, settings, terminalServers, visibleControls } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
@@ -30,6 +24,8 @@
 	const i18n: any = getContext('i18n');
 
 	export let query = '';
+	export let selectedTerminalId: Readable<string | null>;
+	export let terminalSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 	export let canCompact = false;
 	export let canCompare = false;
@@ -122,13 +118,13 @@
 	});
 
 	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
-		const connection = resolveTerminalConnection(
+		const target = resolveTerminalTarget(
 			$selectedTerminalId,
 			$terminalServers ?? [],
-			$settings?.terminalServers ?? [],
-			localStorage.token
+			localStorage.token,
+			{ chatId: $chatId || null, modelId: modelId }
 		);
-		const items = await listTerminalSkills(connection, $chatId || null).catch(() => []);
+		const items = await listTerminalSkills(target).catch(() => []);
 		terminalSkills.set(items);
 		const q = query.trim().toLowerCase();
 		return q

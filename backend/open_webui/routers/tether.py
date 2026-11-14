@@ -3,15 +3,32 @@
 import asyncio
 import json
 from contextlib import suppress
-from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, WebSocket
 from open_webui.models.auth_sessions import AuthSessions
 from open_webui.utils.auth import decode_token, get_verified_user_by_token
-from open_webui.utils.tether import CHUNK, WINDOW, hub, encode, decode, get_services
+from open_webui.utils.tether import (
+    CHUNK,
+    WINDOW,
+    Connection,
+    hub,
+    decode,
+    get_connections,
+    get_max_concurrent_streams,
+    get_services,
+)
 
 router = APIRouter()
+
+
+async def changed(user_id):
+    """A device connected, left or changed what it offers: drop cached models and tell open pages."""
+    from open_webui.routers.openai import get_tether_models
+    from open_webui.socket.main import emit_to_users
+
+    await get_tether_models.cache.clear()
+    await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, [user_id])
 
 
 @router.websocket('/connect')
@@ -27,6 +44,11 @@ async def connect(ws: WebSocket):
         if type(window) is not int or window < CHUNK:
             raise ValueError('Invalid relay window')
         window = min(window, WINDOW)
+        max_concurrent_streams = get_max_concurrent_streams(hello, window)
+        # Version 1 predates service lists and only offered a terminal.
+        services = get_services(hello.get('services', ['open_terminal'] if hello['version'] == 1 else None))
+        notifications = hello.get('notifications') is True
+        connections = get_connections(hello.get('connections'))
         token = hello.get('token', '')
         user = await get_verified_user_by_token(token, getattr(ws.app.state, 'redis', None))
         claims = decode_token(token)
@@ -39,43 +61,36 @@ async def connect(ws: WebSocket):
         name = hello.get('name')
         if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
             raise ValueError('A connection name of 1–100 characters is required')
+        name = name.strip()
         await hub.start()
-        presence = {
-            'connection': str(uuid4()),
-            'worker': hub.worker,
-            'session': row.id,
-            'user': user.id,
-            'connection_id': connection_id,
-            'name': name.strip(),
-            'notifications': hello.get('notifications') is True,
-            'window': window,
-            'services': get_services(hello.get('services', ['open_terminal'] if hello['version'] == 1 else None)),
-        }
-        connection = SimpleNamespace(ws=ws, presence=presence, routes={}, lock=asyncio.Lock(), pending=0)
-
-        async def send(header, data):
-            if connection.pending >= 64:
-                raise ConnectionError('Relay send queue full')
-            connection.pending += 1
-            try:
-                # Lock waiters are FIFO; each stream yields after one chunk.
-                async with connection.lock:
-                    await asyncio.wait_for(ws.send_bytes(encode(header, data)), 10)
-            finally:
-                connection.pending -= 1
-
-        connection.send = send
+        presence = dict(
+            connection=str(uuid4()),
+            worker=hub.worker,
+            session=row.id,
+            user=user.id,
+            connection_id=connection_id,
+            name=name,
+            notifications=notifications,
+            window=window,
+            max_concurrent_streams=max_concurrent_streams,
+            services=services,
+            connections=connections,
+        )
+        connection = Connection(ws, presence)
         key = hub.key(user.id, connection_id)
         record = json.dumps(presence)
         # A reconnect replaces the previous connection, including on another worker.
         for old in list(hub.connections.values()):
             if old.presence['user'] == user.id and old.presence['connection_id'] == connection_id:
                 await old.ws.close(code=1000)
-        await ws.send_json({'type': 'ready', 'notifications': True, 'window': window})
+        await ws.send_json(
+            {'type': 'ready', 'notifications': True, 'window': window, 'max_concurrent_streams': max_concurrent_streams}
+        )
         hub.connections[presence['connection']] = connection
         presence_lock = asyncio.Lock()
         if hub.redis:
             await hub.redis.set(key, record, ex=60)
+        await changed(user.id)
 
         async def watch():
             while True:
@@ -115,11 +130,14 @@ async def connect(ws: WebSocket):
                 update = json.loads(message['text'])
                 if update.get('type') == 'services':
                     services = get_services(update.get('services'))
+                    connections = get_connections(update.get('connections'))
                     name = update.get('name', presence['name'])
                     if not isinstance(name, str) or not 1 <= len(name.strip()) <= 100:
                         raise ValueError('A device name of 1–100 characters is required')
                     async with presence_lock:
-                        updated_record = json.dumps({**presence, 'services': services, 'name': name.strip()})
+                        updated_record = json.dumps(
+                            {**presence, 'services': services, 'connections': connections, 'name': name.strip()}
+                        )
                         if hub.redis:
                             replaced = await hub.redis.eval(
                                 "if redis.call('get', KEYS[1]) == ARGV[1] then redis.call('set', KEYS[1], ARGV[2], 'EX', 60); return 1 else return 0 end",
@@ -131,8 +149,10 @@ async def connect(ws: WebSocket):
                             if not replaced:
                                 raise ValueError('Tether connection was replaced')
                         presence['services'] = services
+                        presence['connections'] = connections
                         presence['name'] = name.strip()
                         record = updated_record
+                    await changed(user.id)
                     continue
                 updated = decode_token(update.get('token', ''))
                 current = await get_verified_user_by_token(
@@ -156,6 +176,7 @@ async def connect(ws: WebSocket):
             watcher.cancel()
             await asyncio.gather(watcher, return_exceptions=True)
         if connection:
+            await connection.close()
             hub.connections.pop(connection.presence['connection'], None)
             if hub.redis:
                 with suppress(Exception):
@@ -165,26 +186,11 @@ async def connect(ws: WebSocket):
                         key,
                         record,
                     )
-            for stream_id in list(connection.routes):
+            await changed(connection.presence['user'])
+            for stream_id, worker in list(connection.routes.items()):
                 stream = hub.streams.get(stream_id)
                 if stream:
-                    stream.fail('Tether disconnected; operation completion may be unknown')
-                else:
-                    worker = connection.routes[stream_id]
-                    if hub.redis:
-                        # An explicit failure is terminal even if a preceding frame was lost.
-                        with suppress(Exception):
-                            await hub.redis.publish(
-                                hub.channel(worker),
-                                encode(
-                                    {
-                                        'type': 'error',
-                                        'stream': stream_id,
-                                        'sequence': 0,
-                                        'route': 'stream',
-                                        'connection': connection.presence['connection'],
-                                        'message': 'Tether disconnected',
-                                    },
-                                    b'',
-                                ),
-                            )
+                    stream.fail('Tether disconnected; operation completion may be unknown', disconnected=True)
+                elif hub.redis:
+                    # An explicit failure is terminal even if a preceding frame was lost.
+                    await hub.reject(worker, connection, stream_id, 'Tether disconnected', disconnected=True)

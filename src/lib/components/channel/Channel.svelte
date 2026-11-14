@@ -1,15 +1,16 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto, url: pageUrl, tab: pageTab, active } = getPageContext();
+
 	import { toast } from 'svelte-sonner';
 
 	import { onDestroy, onMount, tick } from 'svelte';
-	import { goto, onNavigate } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { onNavigate } from '$app/navigation';
 	import { v4 as uuidv4 } from 'uuid';
 	import type { Socket } from 'socket.io-client';
 
 	import {
 		config,
-		chatId,
 		channels,
 		channelId as _channelId,
 		showSidebar,
@@ -32,6 +33,11 @@
 	export let id = '';
 
 	let mounted = false;
+	$: if (mounted && $active && id) {
+		_channelId.set(id);
+		updateLastReadAt(id);
+	}
+	$: if (mounted && !$active && $_channelId === id) _channelId.set(null);
 	let invitationSession: string | null = null;
 	let stopInvitation = () => {};
 	$: watchInvitation(
@@ -51,10 +57,14 @@
 		if (!enabled || !connection || !channelId) return;
 		let alive = true;
 		let revision = 0;
-		const receive = (event: { channel: string; session: string | null }) => {
-			if (event.channel === channelId) {
+		const receive = (event: {
+			data?: { type?: string; data?: { channel: string; session: string | null } };
+		}) => {
+			if (event?.data?.type !== 'encryption:available') return;
+			const data = event.data.data;
+			if (data?.channel === channelId) {
 				revision++;
-				invitationSession = event.session;
+				invitationSession = data.session;
 			}
 		};
 		const clear = () => {
@@ -71,13 +81,13 @@
 				})
 				.catch(() => {});
 		};
-		connection.on('encryption:available', receive);
+		connection.on('events', receive);
 		connection.on('disconnect', clear);
 		connection.on('connect', query);
 		query();
 		stopInvitation = () => {
 			alive = false;
-			connection.off('encryption:available', receive);
+			connection.off('events', receive);
 			connection.off('disconnect', clear);
 			connection.off('connect', query);
 		};
@@ -112,11 +122,8 @@
 		initHandler();
 	}
 
-	$: if (channel && $page.url.searchParams.get('thread')) {
-		threadId = $page.url.searchParams.get('thread');
-		if (!$page.url.searchParams.has('message')) {
-			window.history.replaceState(history.state, '', `/channels/${id}`);
-		}
+	$: if (channel && $pageUrl.searchParams.get('thread')) {
+		threadId = $pageUrl.searchParams.get('thread');
 	}
 
 	const scrollToBottom = () => {
@@ -187,7 +194,6 @@
 
 		currentId = id;
 		updateLastReadAt(id);
-		_channelId.set(id);
 
 		top = false;
 		messages = null;
@@ -225,7 +231,7 @@
 			const data = event?.data?.data ?? null;
 
 			if (type === 'message') {
-				if (document.visibilityState === 'visible') {
+				if ($active && document.visibilityState === 'visible') {
 					updateLastReadAt(id);
 				}
 
@@ -392,9 +398,6 @@
 
 	onMount(() => {
 		mounted = true;
-		if ($chatId) {
-			chatId.set('');
-		}
 
 		$socket?.on('events:channel', channelEventHandler);
 
@@ -408,157 +411,179 @@
 		stopInvitation();
 		// last read at
 		updateLastReadAt(id);
-		_channelId.set(null);
+		if ($_channelId === id) _channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
 		mediaQuery?.removeEventListener('change', handleMediaQuery);
 	});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
-<svelte:head>
-	<!-- LICENSE covers this Open WebUI browser-title identifier.
+<!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
-	{#if channel?.type === 'dm'}
-		<title
-			>{channel?.name.trim() ||
-				channel?.users.reduce((a, e, i, arr) => {
-					if (e.id === $user?.id) {
-						return a;
-					}
+{#if channel?.type === 'dm'}
+	<PageTitle
+		title={(channel?.name.trim() ||
+			channel?.users.reduce((a, e, i, arr) => {
+				if (e.id === $user?.id) {
+					return a;
+				}
 
-					if (a) {
-						return `${a}, ${e.name}`;
-					} else {
-						return e.name;
-					}
-				}, '')} / Open WebUI</title
-		>
-	{:else}
-		<title>#{channel?.name ?? 'Channel'} / Open WebUI</title>
-	{/if}
-</svelte:head>
+				if (a) {
+					return `${a}, ${e.name}`;
+				} else {
+					return e.name;
+				}
+			}, '')) + ' / Open WebUI'}
+	/>
+{:else}
+	<PageTitle title={'#' + (channel?.name ?? 'Channel') + ' / Open WebUI'} />
+{/if}
 
-<div
-	class="h-screen max-h-[100dvh] transition-width duration-200 ease-in-out {$showSidebar
-		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
-		: ''} w-full max-w-full min-w-0 flex flex-col"
-	id="channel-container"
->
-	<div class="w-full h-full flex">
-		<div class="h-full flex flex-col min-w-0 flex-1 relative">
-			<Navbar
-				{channel}
-				onPin={pinHandler}
-				onUpdate={async () => {
-					channel = await getChannelById(localStorage.token, id).catch((error) => {
-						return null;
-					});
-				}}
-			>
-				<svelte:fragment slot="subtitle">
-					{#if invitationSession}
-						<div
-							class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
-						>
-							<span>{$i18n.t('Encrypted chat in progress')}</span>
-							<span aria-hidden="true">·</span>
-							<button
-								type="button"
-								aria-label={$i18n.t('Join encrypted chat')}
-								class="text-[0.6875rem] font-normal text-gray-700 underline-offset-2 hover:underline dark:text-gray-200"
-								on:click={() => {
-									if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
-									enter(id, { action: 'join', session: invitationSession });
-									void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
-								}}
+{#if !channel || messages === null}
+	<div class="flex h-full items-center justify-center"><Spinner className="size-5" /></div>
+{:else}
+	<div
+		class="h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar && !pageTab
+			? 'md:max-w-[calc(100%-var(--sidebar-width))]'
+			: ''} w-full max-w-full min-w-0 flex flex-col"
+		id="channel-container"
+	>
+		<div class="w-full h-full flex">
+			<div class="h-full flex flex-col min-w-0 flex-1 relative">
+				<Navbar
+					{channel}
+					onPin={pinHandler}
+					onUpdate={async () => {
+						channel = await getChannelById(localStorage.token, id).catch((error) => {
+							return null;
+						});
+					}}
+				>
+					<svelte:fragment slot="subtitle">
+						{#if invitationSession}
+							<div
+								class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
 							>
-								{$i18n.t('Join')}
-							</button>
+								<span>{$i18n.t('Encrypted chat in progress')}</span>
+								<span aria-hidden="true">·</span>
+								<button
+									type="button"
+									aria-label={$i18n.t('Join encrypted chat')}
+									class="text-[0.6875rem] font-normal text-gray-700 underline-offset-2 hover:underline dark:text-gray-200"
+									on:click={() => {
+										if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
+										enter(id, { action: 'join', session: invitationSession });
+										void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
+									}}
+								>
+									{$i18n.t('Join')}
+								</button>
+							</div>
+						{/if}
+					</svelte:fragment>
+				</Navbar>
+
+				{#if channel && messages !== null}
+					<div class="flex-1 overflow-y-auto">
+						<div
+							class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
+							id="messages-container"
+							bind:this={messagesContainerElement}
+							on:scroll={(e) => {
+								scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
+							}}
+						>
+							{#key id}
+								<Messages
+									{channel}
+									{top}
+									bind:messages
+									{replyToMessage}
+									onReply={async (message) => {
+										replyToMessage = message;
+										await tick();
+										chatInputElement?.focus();
+									}}
+									onThread={async (id: string, trigger: HTMLButtonElement) => {
+										threadTrigger = trigger;
+										threadId = id;
+										await tick();
+										threadChatInputElement?.focus();
+									}}
+									onPin={pinHandler}
+									onLoad={async () => {
+										const newMessages = await getChannelMessages(
+											localStorage.token,
+											id,
+											messages.length
+										);
+
+										messages = [...messages, ...newMessages];
+
+										if (newMessages.length < 50) {
+											top = true;
+											return;
+										}
+									}}
+								/>
+							{/key}
 						</div>
-					{/if}
-				</svelte:fragment>
-			</Navbar>
+					</div>
 
-			{#if channel && messages !== null}
-				<div class="flex-1 overflow-y-auto">
-					<div
-						class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
-						id="messages-container"
-						bind:this={messagesContainerElement}
-						on:scroll={(e) => {
-							scrollEnd = Math.abs(messagesContainerElement.scrollTop) <= 50;
-						}}
-					>
-						{#key id}
-							<Messages
+					<div class=" pb-3 px-3">
+						<MessageInput
+							id="root"
+							{messages}
+							bind:chatInputElement
+							bind:replyToMessage
+							{typingUsers}
+							{channel}
+							userSuggestions={true}
+							channelSuggestions={true}
+							disabled={!channel?.write_access}
+							placeholder={!channel?.write_access
+								? $i18n.t('You do not have permission to send messages in this channel.')
+								: $i18n.t('Type here...')}
+							{onChange}
+							onSubmit={submitHandler}
+							{scrollToBottom}
+							{scrollEnd}
+						/>
+					</div>
+				{:else}
+					<div class=" flex items-center justify-center h-full w-full">
+						<div class="m-auto">
+							<Spinner className="size-5" />
+						</div>
+					</div>
+				{/if}
+			</div>
+
+			{#if !largeScreen}
+				{#if threadId !== null}
+					<Drawer show={threadId !== null} ariaLabel={$i18n.t('Thread')} onClose={closeThread}>
+						<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
+							<Thread
+								{threadId}
 								{channel}
-								{top}
-								bind:messages
-								{replyToMessage}
-								onReply={async (message) => {
-									replyToMessage = message;
-									await tick();
-									chatInputElement?.focus();
-								}}
-								onThread={async (id: string, trigger: HTMLButtonElement) => {
-									threadTrigger = trigger;
-									threadId = id;
-									await tick();
-									threadChatInputElement?.focus();
-								}}
+								bind:chatInputElement={threadChatInputElement}
 								onPin={pinHandler}
-								onLoad={async () => {
-									const newMessages = await getChannelMessages(
-										localStorage.token,
-										id,
-										messages.length
-									);
-
-									messages = [...messages, ...newMessages];
-
-									if (newMessages.length < 50) {
-										top = true;
-										return;
-									}
-								}}
+								onClose={closeThread}
 							/>
-						{/key}
-					</div>
-				</div>
-
-				<div class=" pb-3 px-3">
-					<MessageInput
-						id="root"
-						{messages}
-						bind:chatInputElement
-						bind:replyToMessage
-						{typingUsers}
-						{channel}
-						userSuggestions={true}
-						channelSuggestions={true}
-						disabled={!channel?.write_access}
-						placeholder={!channel?.write_access
-							? $i18n.t('You do not have permission to send messages in this channel.')
-							: $i18n.t('Type here...')}
-						{onChange}
-						onSubmit={submitHandler}
-						{scrollToBottom}
-						{scrollEnd}
-					/>
-				</div>
-			{:else}
-				<div class=" flex items-center justify-center h-full w-full">
-					<div class="m-auto">
-						<Spinner className="size-5" />
-					</div>
-				</div>
-			{/if}
-		</div>
-
-		{#if !largeScreen}
-			{#if threadId !== null}
-				<Drawer show={threadId !== null} ariaLabel={$i18n.t('Thread')} onClose={closeThread}>
-					<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
+						</div>
+					</Drawer>
+				{/if}
+			{:else if threadId !== null}
+				<ResizableSidePanel
+					open={true}
+					bind:width={threadPanelWidth}
+					minWidth={320}
+					maxWidth={640}
+					minSiblingWidth={360}
+					className="h-full"
+				>
+					<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">
 						<Thread
 							{threadId}
 							{channel}
@@ -567,27 +592,8 @@
 							onClose={closeThread}
 						/>
 					</div>
-				</Drawer>
+				</ResizableSidePanel>
 			{/if}
-		{:else if threadId !== null}
-			<ResizableSidePanel
-				open={true}
-				bind:width={threadPanelWidth}
-				minWidth={320}
-				maxWidth={640}
-				minSiblingWidth={360}
-				className="h-full"
-			>
-				<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">
-					<Thread
-						{threadId}
-						{channel}
-						bind:chatInputElement={threadChatInputElement}
-						onPin={pinHandler}
-						onClose={closeThread}
-					/>
-				</div>
-			</ResizableSidePanel>
-		{/if}
+		</div>
 	</div>
-</div>
+{/if}

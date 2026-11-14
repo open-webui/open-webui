@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import { settings } from '$lib/stores';
-	import { goto } from '$app/navigation';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 

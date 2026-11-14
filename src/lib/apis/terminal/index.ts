@@ -100,6 +100,12 @@ export type TerminalSystemInfo = {
 				memory_bytes: number;
 		  }[]
 		| null;
+	/** Present when the terminal has a setup script. */
+	setup?: {
+		status: 'running' | 'ok' | 'failed';
+		exit_code?: number;
+		log_tail?: string;
+	};
 };
 
 export type TerminalFeatures = {
@@ -113,17 +119,13 @@ export type TerminalFeatures = {
 
 // Missing flags mean unsupported; never probe a new endpoint on an older server.
 export async function getTerminalFeatures(
-	connection: Pick<TerminalConnection, 'baseUrl' | 'key'>,
-	chatId: string | null,
+	target: Pick<TerminalTarget, 'baseUrl' | 'key' | 'context'>,
 	signal?: AbortSignal
 ): Promise<TerminalFeatures> {
 	try {
-		const result = await terminalRequest<{ features?: TerminalFeatures }>(
-			connection,
-			chatId,
-			'/api/config',
-			{ signal }
-		);
+		const result = await terminalRequest<{ features?: TerminalFeatures }>(target, '/api/config', {
+			signal
+		});
 		return result.features ?? {};
 	} catch {
 		return {};
@@ -148,18 +150,18 @@ export type TerminalSkill = {
 	is_active: boolean;
 	source: 'terminal';
 	terminal_path: string;
-	terminal_scope: 'global';
 	terminal_selector: string;
 	terminal_name?: string;
 };
 
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export type TerminalConnection = {
+export type TerminalTarget = {
 	selector: string;
 	baseUrl: string;
 	key: string;
 	system: boolean;
+	context: { chatId: string | null; modelId: string | null };
 };
 export type TerminalProcess = {
 	id: string;
@@ -173,17 +175,23 @@ export type TerminalProcessOutput = TerminalProcess & {
 	truncated: boolean;
 };
 
-export const resolveTerminalConnection = (
+export const resolveTerminalTarget = (
 	selector: string | null,
 	servers: any[],
-	directServers: any[],
-	token: string
-): TerminalConnection | null => {
+	token: string,
+	context: Partial<TerminalTarget['context']> = {}
+): TerminalTarget | null => {
 	if (!get(config)?.features?.enable_tool_servers || !selector) return null;
-	if (servers.some((server) => server.id === selector)) {
+	const server = servers.find((server) => server.id === selector);
+	if (server) {
+		if (server.scope === 'model' && !context.modelId) return null;
 		return {
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
+			context: {
+				chatId: context.chatId ?? null,
+				modelId: server.scope === 'model' ? (context.modelId ?? null) : null
+			},
 			// Panels outlive Tether's token rotations; read the current session at request time.
 			get key() {
 				return typeof localStorage === 'undefined' ? token : (localStorage.getItem('token') ?? '');
@@ -191,10 +199,7 @@ export const resolveTerminalConnection = (
 			system: true
 		};
 	}
-	const direct = directServers.find((server) => server.url === selector);
-	return direct
-		? { selector, baseUrl: direct.url.replace(/\/$/, ''), key: direct.key ?? '', system: false }
-		: null;
+	return null;
 };
 
 export class TerminalRequestError extends Error {
@@ -208,18 +213,16 @@ export class TerminalRequestError extends Error {
 }
 
 export const terminalRequest = async <T>(
-	connection: Pick<TerminalConnection, 'baseUrl' | 'key'>,
-	chatId: string | null,
+	target: Pick<TerminalTarget, 'baseUrl' | 'key' | 'context'>,
 	path: string,
 	options: RequestInit = {}
 ): Promise<T> => {
 	if (!get(config)?.features?.enable_tool_servers)
 		throw new TerminalRequestError('Tool servers are disabled', 403);
-	const response = await fetch(`${connection.baseUrl}${path}`, {
+	const response = await fetch(`${target.baseUrl}${path}`, {
 		...options,
 		headers: {
-			Authorization: `Bearer ${connection.key.trim()}`,
-			...(chatId ? { 'X-Session-Id': chatId } : {}),
+			...terminalHeaders(target),
 			...options.headers
 		}
 	});
@@ -237,9 +240,15 @@ export const terminalRequest = async <T>(
 	return response.json();
 };
 
-const bearerHeaders = (apiKey: string): Record<string, string> => {
+export const terminalHeaders = (
+	target: Pick<TerminalTarget, 'key' | 'context'>
+): Record<string, string> => {
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
-	return { Authorization: `Bearer ${apiKey.trim()}` };
+	return {
+		Authorization: `Bearer ${target.key.trim()}`,
+		...(target.context.chatId ? { 'X-Session-Id': target.context.chatId } : {}),
+		...(target.context.modelId ? { 'X-Terminal-Model-Id': target.context.modelId } : {})
+	};
 };
 
 export const joinTerminalPath = (base: string, child: string) => {
@@ -258,10 +267,11 @@ const hasHiddenPathPart = (path: string) =>
 		.some((part) => part.startsWith('.'));
 
 export type TerminalServer = {
+	template_id?: string;
+	scope?: 'user' | 'chat' | 'model' | null;
 	id: string;
 	url: string;
 	name: string;
-	contexts?: Record<string, false | { context_id?: string }>;
 	config?: {
 		chat_uploads?: 'default' | 'filesystem';
 		[key: string]: unknown;
@@ -279,26 +289,10 @@ export const getTerminalServers = async (token: string): Promise<TerminalServer[
 	return res.json().catch(() => []);
 };
 
-export const getTerminalConfig = async (
-	baseUrl: string,
-	apiKey: string
-): Promise<{ features: TerminalFeatures } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/api/config`;
-	const res = await fetch(url, {
-		headers: bearerHeaders(apiKey)
-	}).catch(() => null);
-	if (!res || !res.ok) return null;
-	return res.json().catch(() => null);
-};
+export const getCwd = async (target: TerminalTarget): Promise<TerminalCwd | null> => {
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/cwd`;
+	const headers: Record<string, string> = terminalHeaders(target);
 
-export const getCwd = async (
-	baseUrl: string,
-	apiKey: string,
-	sessionId?: string
-): Promise<TerminalCwd | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
 	const res = await fetch(url, { headers }).catch(() => null);
 	if (!res || !res.ok) return null;
 	const json = await res.json().catch(() => null);
@@ -311,15 +305,13 @@ export const getCwd = async (
 };
 
 export const listFiles = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string = '/',
-	sessionId?: string
+	target: TerminalTarget,
+	path: string = '/'
 ): Promise<TerminalFileList | null> => {
 	// The endpoint uses `directory` as the query param name
-	const url = `${baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, { headers })
 		.then(async (res) => {
 			if (!res.ok) throw await res.json();
@@ -333,18 +325,15 @@ export const listFiles = async (
 };
 
 export const searchFiles = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	query: string,
 	path: string = '.',
 	limit: number = 20,
 	type: 'file' | 'directory' | 'any' = 'any',
-	sessionId?: string,
 	showHidden: boolean = false,
 	signal?: AbortSignal
 ): Promise<TerminalFileSearchResponse | null> => {
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const headers: Record<string, string> = terminalHeaders(target);
 
 	const searchParams = new URLSearchParams({
 		query,
@@ -353,7 +342,7 @@ export const searchFiles = async (
 		type,
 		show_hidden: String(showHidden)
 	});
-	const base = baseUrl.replace(/\/$/, '');
+	const base = target.baseUrl.replace(/\/$/, '');
 	const searchRes = await fetch(`${base}/files/search?${searchParams.toString()}`, {
 		headers,
 		signal
@@ -397,17 +386,14 @@ export const searchFiles = async (
 };
 
 export const getFileMatches = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	query: string,
 	path: string = '.',
 	showHidden: boolean = false,
 	offset: number = 0,
-	sessionId?: string,
 	signal?: AbortSignal
 ): Promise<TerminalFileMatchesResponse | null> => {
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const headers: Record<string, string> = terminalHeaders(target);
 
 	const params = new URLSearchParams({
 		query,
@@ -415,10 +401,13 @@ export const getFileMatches = async (
 		show_hidden: String(showHidden),
 		offset: String(offset)
 	});
-	const res = await fetch(`${baseUrl.replace(/\/$/, '')}/files/matches?${params.toString()}`, {
-		headers,
-		signal
-	}).catch((err) => {
+	const res = await fetch(
+		`${target.baseUrl.replace(/\/$/, '')}/files/matches?${params.toString()}`,
+		{
+			headers,
+			signal
+		}
+	).catch((err) => {
 		if (err?.name !== 'AbortError') console.error('open-terminal getFileMatches error:', err);
 		return null;
 	});
@@ -428,18 +417,16 @@ export const getFileMatches = async (
 };
 
 export const readComparisonSource = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	path: string,
 	signal: AbortSignal,
-	sessionId?: string,
 	size?: number
 ): Promise<string> => {
 	checkSourceSize(size);
-	const headers = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const headers = terminalHeaders(target);
+
 	const response = await fetch(
-		`${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`,
+		`${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`,
 		{ headers, signal }
 	).catch(() => {
 		signal.throwIfAborted();
@@ -448,15 +435,10 @@ export const readComparisonSource = async (
 	return readSourceResponse(response, signal);
 };
 
-export const readFile = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string,
-	sessionId?: string
-): Promise<string | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+export const readFile = async (target: TerminalTarget, path: string): Promise<string | null> => {
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, { headers }).catch((err) => {
 		console.error('open-terminal readFile error:', err);
 		return null;
@@ -477,38 +459,30 @@ export const readFile = async (
 };
 
 export const listTerminalSkills = async (
-	connection: TerminalConnection | null,
-	chatId?: string | null
+	target: TerminalTarget | null
 ): Promise<TerminalSkill[]> => {
-	if (!connection) return [];
+	if (!target) return [];
 
-	const skills = await terminalRequest<TerminalSkill[]>(
-		connection,
-		chatId ?? null,
-		'/skills'
-	).catch(() => []);
+	const skills = await terminalRequest<TerminalSkill[]>(target, '/skills').catch(() => []);
 
 	return (Array.isArray(skills) ? skills : []).map((skill) => ({
 		...skill,
 		is_active: true,
 		source: 'terminal',
 		terminal_path: skill.terminal_path ?? (skill as any).location ?? '',
-		terminal_scope: skill.terminal_scope ?? (skill as any).scope ?? 'global',
-		terminal_selector: connection.selector,
-		terminal_name: connection.selector
+		terminal_selector: target.selector,
+		terminal_name: target.selector
 	}));
 };
 
 export const downloadFileBlob = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	path: string,
-	sessionId?: string,
 	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res || !res.ok) return null;
@@ -520,15 +494,13 @@ export const downloadFileBlob = async (
 };
 
 export const downloadFilePreview = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	path: string,
-	sessionId?: string,
 	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, { headers, signal }).catch(() => null);
 
 	if (!res) return null;
@@ -544,17 +516,15 @@ export const downloadFilePreview = async (
 };
 
 export const archiveFromTerminal = async (
-	baseUrl: string,
-	apiKey: string,
-	paths: string[],
-	sessionId?: string
+	target: TerminalTarget,
+	paths: string[]
 ): Promise<{ blob: Blob; filename: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/archive`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/archive`;
 	const headers: Record<string, string> = {
-		...bearerHeaders(apiKey),
+		...terminalHeaders(target),
 		'Content-Type': 'application/json'
 	};
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+
 	const res = await fetch(url, {
 		method: 'POST',
 		headers,
@@ -572,17 +542,15 @@ export const archiveFromTerminal = async (
 };
 
 export const uploadToTerminal = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	directory: string,
-	file: File,
-	sessionId?: string
+	file: File
 ): Promise<{ path: string; size: number } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/upload?directory=${encodeURIComponent(directory)}`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/upload?directory=${encodeURIComponent(directory)}`;
 	const body = new FormData();
 	body.append('file', file);
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, {
 		method: 'POST',
 		headers,
@@ -603,14 +571,12 @@ export const uploadToTerminal = async (
 let newFileUploadQueue: Promise<void> = Promise.resolve();
 
 export const uploadNewFileToTerminal = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	directory: string,
-	file: File,
-	sessionId?: string
+	file: File
 ): Promise<{ path: string; size: number } | null> => {
 	const upload = newFileUploadQueue.then(async () => {
-		const listing = await listFiles(baseUrl, apiKey, directory, sessionId);
+		const listing = await listFiles(target, directory);
 		if (!listing) return null;
 
 		const names = new Set(listing.entries.map((entry) => entry.name));
@@ -626,7 +592,7 @@ export const uploadNewFileToTerminal = async (
 			name === file.name
 				? file
 				: new File([file], name, { type: file.type, lastModified: file.lastModified });
-		return uploadToTerminal(baseUrl, apiKey, directory, uploadFile, sessionId);
+		return uploadToTerminal(target, directory, uploadFile);
 	});
 	newFileUploadQueue = upload.then(
 		() => undefined,
@@ -636,17 +602,15 @@ export const uploadNewFileToTerminal = async (
 };
 
 export const createDirectory = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string,
-	sessionId?: string
+	target: TerminalTarget,
+	path: string
 ): Promise<{ path: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/mkdir`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/mkdir`;
 	const headers: Record<string, string> = {
-		...bearerHeaders(apiKey),
+		...terminalHeaders(target),
 		'Content-Type': 'application/json'
 	};
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+
 	const res = await fetch(url, {
 		method: 'POST',
 		headers,
@@ -664,14 +628,12 @@ export const createDirectory = async (
 };
 
 export const deleteEntry = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string,
-	sessionId?: string
+	target: TerminalTarget,
+	path: string
 ): Promise<{ path: string; type: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/delete?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = bearerHeaders(apiKey);
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/delete?path=${encodeURIComponent(path)}`;
+	const headers: Record<string, string> = terminalHeaders(target);
+
 	const res = await fetch(url, {
 		method: 'DELETE',
 		headers
@@ -688,17 +650,15 @@ export const deleteEntry = async (
 };
 
 export const setCwd = async (
-	baseUrl: string,
-	apiKey: string,
-	path: string,
-	sessionId?: string
+	target: TerminalTarget,
+	path: string
 ): Promise<{ cwd: string } | null> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/cwd`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = {
-		...bearerHeaders(apiKey),
+		...terminalHeaders(target),
 		'Content-Type': 'application/json'
 	};
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+
 	const res = await fetch(url, {
 		method: 'POST',
 		headers,
@@ -716,18 +676,16 @@ export const setCwd = async (
 };
 
 export const moveEntry = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	source: string,
-	destination: string,
-	sessionId?: string
+	destination: string
 ): Promise<{ source: string; destination: string } | { error: string }> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/files/move`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/files/move`;
 	const headers: Record<string, string> = {
-		...bearerHeaders(apiKey),
+		...terminalHeaders(target),
 		'Content-Type': 'application/json'
 	};
-	if (sessionId) headers['X-Session-Id'] = sessionId;
+
 	const res = await fetch(url, {
 		method: 'POST',
 		headers,
@@ -744,16 +702,11 @@ export const moveEntry = async (
 	return res;
 };
 
-export const getListeningPorts = async (
-	baseUrl: string,
-	apiKey: string,
-	sessionId?: string | null
-): Promise<ListeningPort[]> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/ports`;
+export const getListeningPorts = async (target: TerminalTarget): Promise<ListeningPort[]> => {
+	const url = `${target.baseUrl.replace(/\/$/, '')}/ports`;
 	const res = await fetch(url, {
 		headers: {
-			...bearerHeaders(apiKey),
-			...(sessionId ? { 'X-Session-Id': sessionId } : {})
+			...terminalHeaders(target)
 		}
 	}).catch(() => null);
 	if (!res || !res.ok) return [];
@@ -769,15 +722,14 @@ export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''
 // Notebook execution
 
 export const createNotebookSession = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	path: string
 ): Promise<{ id: string; kernel: string; status: string } | { error: string }> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/notebooks`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/notebooks`;
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			...bearerHeaders(apiKey),
+			...terminalHeaders(target),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({ path })
@@ -797,20 +749,19 @@ export const createNotebookSession = async (
 };
 
 export const executeNotebookCell = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	sessionId: string,
 	cellIndex: number,
 	source?: string
 ): Promise<{ status: string; execution_count?: number; outputs: any[] } | { error: string }> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}/execute`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}/execute`;
 	const body: Record<string, any> = { cell_index: cellIndex };
 	if (source !== undefined) body.source = source;
 
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			...bearerHeaders(apiKey),
+			...terminalHeaders(target),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
@@ -830,14 +781,13 @@ export const executeNotebookCell = async (
 };
 
 export const stopNotebookSession = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	sessionId: string
 ): Promise<boolean> => {
-	const url = `${baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}`;
+	const url = `${target.baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}`;
 	const res = await fetch(url, {
 		method: 'DELETE',
-		headers: bearerHeaders(apiKey)
+		headers: { ...terminalHeaders(target) }
 	}).catch(() => null);
 	return res?.ok ?? false;
 };
@@ -864,19 +814,16 @@ export type TerminalComparison = {
 };
 
 export const compareFiles = async (
-	baseUrl: string,
-	apiKey: string,
+	target: TerminalTarget,
 	request: TerminalComparisonRequest,
-	sessionId?: string,
 	signal?: AbortSignal
 ): Promise<TerminalComparison> => {
-	const response = await fetch(`${baseUrl.replace(/\/$/, '')}/files/compare`, {
+	const response = await fetch(`${target.baseUrl.replace(/\/$/, '')}/files/compare`, {
 		method: 'POST',
 		signal,
 		headers: {
-			...bearerHeaders(apiKey),
-			'Content-Type': 'application/json',
-			...(sessionId ? { 'X-Session-Id': sessionId } : {})
+			...terminalHeaders(target),
+			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(request)
 	});
@@ -897,3 +844,18 @@ export const compareFiles = async (
 		);
 	return body;
 };
+
+export async function templatesApi(path = '', method = 'GET', body?: unknown) {
+	const response = await fetch(`${WEBUI_API_BASE_URL}/terminals/templates${path}`, {
+		method,
+		headers: {
+			Authorization: `Bearer ${localStorage.token}`,
+			...(body !== undefined ? { 'Content-Type': 'application/json' } : {})
+		},
+		...(body !== undefined ? { body: JSON.stringify(body) } : {})
+	});
+	const data = await response.json().catch(() => null);
+	if (!response.ok)
+		throw new Error(typeof data?.detail === 'string' ? data.detail : 'Terminal request failed');
+	return data;
+}

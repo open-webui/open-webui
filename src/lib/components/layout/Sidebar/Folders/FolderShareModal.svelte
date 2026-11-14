@@ -8,8 +8,13 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import { getFolderById, updateFolderAccessById } from '$lib/apis/folders';
+	import { updateFolderAccessById } from '$lib/apis/folders';
 	import { user } from '$lib/stores';
+	import {
+		loadFolderDetails,
+		updateFolderDetails,
+		markFolderChatsDirty,
+	} from '$lib/stores/folderStates';
 
 	type AccessGrant = {
 		id?: string;
@@ -33,7 +38,7 @@
 	const loadAccessGrants = async () => {
 		loading = true;
 		try {
-			const freshFolder = await getFolderById(localStorage.token, folder.id);
+			const freshFolder = await loadFolderDetails(localStorage.token, folder.id, true);
 			if (freshFolder) {
 				accessGrants = freshFolder.access_grants ?? [];
 				shareMode = freshFolder.data?.share_mode ?? null;
@@ -58,6 +63,9 @@
 				shareMode
 			);
 			if (res) {
+				updateFolderDetails(folder.id, res);
+				markFolderChatsDirty(folder.id);
+				await loadFolderDetails(localStorage.token, folder.id, true);
 				accessGrants = res.access_grants ?? accessGrants;
 				toast.success($i18n.t('Saved'));
 			}

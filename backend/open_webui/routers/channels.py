@@ -1217,14 +1217,19 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                 # An inactive/removed app or one without write access cannot post a public reply.
                 log.warning('Could not save app error reply: app=%s message=%s', app_id, message_id)
             await emit_to_users(
-                'events:app',
+                'events',
                 {
-                    'app_id': app_id,
-                    'app_name': app_name,
-                    'channel_id': channel_id,
-                    'message_id': message_id,
-                    'parent_id': parent_id,
-                    'reply': {'type': 'error', 'content': detail},
+                    'data': {
+                        'type': 'channel:app',
+                        'data': {
+                            'app_id': app_id,
+                            'app_name': app_name,
+                            'channel_id': channel_id,
+                            'message_id': message_id,
+                            'parent_id': parent_id,
+                            'reply': {'type': 'error', 'content': detail},
+                        },
+                    }
                 },
                 [user_id],
             )

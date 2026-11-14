@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { navigating, page } from '$app/state';
 
 	import Chat from '$lib/components/chat/Chat.svelte';
+
+	const params = $derived(
+		(navigating.to?.route.id === page.route.id && navigating.to.params) || page.params
+	);
 </script>
 
-<Chat chatIdProp={$page.params.id} />
+<Chat chatIdProp={params.id} />

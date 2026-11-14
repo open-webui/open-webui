@@ -524,7 +524,18 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     return models
 
 
+async def add_tether_model(request: Request, user, model_id, models=None):
+    """`models` (default: the shared models), plus the user's own model `model_id` when it is one."""
+    models = request.app.state.MODELS if models is None else models
+    tether_model = await openai.get_tether_model(request, user, model_id)
+    # dict(...items()) is one HGETALL on a Redis-backed pool.
+    return {**dict(models.items()), model_id: tether_model} if tether_model else models
+
+
 async def check_model_access(user, model, model_info=None, db=None):
+    if model.get('owner_id') is not None and model.get('owner_id') == getattr(user, 'id', None):
+        # The caller's own connection, resolved from their settings.
+        return
     if model.get('arena'):
         meta = model.get('info', {}).get('meta', {})
         access_grants = meta.get('access_grants', [])
