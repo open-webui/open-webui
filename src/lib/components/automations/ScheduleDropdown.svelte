@@ -153,15 +153,8 @@
 		return 'Schedule';
 	};
 
-	$: scheduleLabel = (() => {
-		if (frequency === 'ONCE') return 'Once';
-		if (frequency === 'HOURLY') return 'Hourly';
-		if (frequency === 'DAILY') return 'Daily';
-		if (frequency === 'WEEKLY') return 'Weekly';
-		if (frequency === 'MONTHLY') return 'Monthly';
-		if (frequency === 'CUSTOM') return 'Custom';
-		return 'Schedule';
-	})();
+	$: scheduleLabel =
+		FREQUENCIES.find((option) => option.key === frequency)?.label ?? $i18n.t('Schedule');
 </script>
 
 <Dropdown bind:show={showDropdown} {side} {align}>
