@@ -663,7 +663,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                     log.debug('Failed to create MCP client: %s', e)
                     raise HTTPException(
                         status_code=400,
-                        detail=f'Failed to create MCP client',
+                        detail=f'Failed to create MCP client: {e}',
                     )
                 finally:
                     if client:
