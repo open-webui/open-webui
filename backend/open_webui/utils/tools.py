@@ -2061,7 +2061,7 @@ async def execute_tool_server(
     except RelayInterrupted as err:
         return (err.result(), None)
     except Exception as err:
-        error = str(err)
+        error = str(err) or type(err).__name__
         log.warning(f'API Request Error: {error}')
         return ({'error': error}, None)
 
