@@ -1711,7 +1711,10 @@
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title
-		>{activeTab?.kind === 'page' || (activeTab?.kind === 'chat' && activeTab.id !== mainChatTabId)
+		>{activeTab?.kind === 'page' ||
+		(activeTab?.kind === 'chat' &&
+			activeTab.id !== mainChatTabId &&
+			$settings.showChatTitleInTab !== false)
 			? `${activeTab.label} / ${$WEBUI_NAME}`
 			: $settings.showChatTitleInTab !== false && chatId && title
 				? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
