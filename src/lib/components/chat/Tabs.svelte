@@ -626,6 +626,11 @@
 		} else openPanel(createPageTab(request));
 	};
 	const navigatePageTab = async (id: string, href: string) => {
+		const existing = findPageTab(new URL(href, location.origin));
+		if (existing?.kind === 'page' && existing.id !== id) {
+			openPageTab({ href, label: '' });
+			return;
+		}
 		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
