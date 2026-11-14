@@ -5,6 +5,7 @@
 	import { updateChatById } from '$lib/apis/chats';
 	import { refreshChatList } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { updateChatTabLabels } from '$lib/stores/chatViewStates';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
 	import {
@@ -65,6 +66,7 @@
 		try {
 			await updateChatById(localStorage.token, chat.id, { title });
 			updateFolderChatLists({ id: chat.id, title });
+			updateChatTabLabels(chat.id, title);
 			if (chat.id === $chatId) chatTitle.set(title);
 			await Promise.all([
 				refreshChatList(localStorage.token, { refreshPinned: true }),

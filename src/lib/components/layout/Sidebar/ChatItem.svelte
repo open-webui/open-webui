@@ -51,7 +51,7 @@
 	} from '$lib/stores';
 	import { refreshSidebar } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
-	import { closeChatTabs } from '$lib/stores/chatViewStates';
+	import { closeChatTabs, updateChatTabLabels } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -267,6 +267,7 @@
 			});
 			if (!res) return;
 			updateFolderChatLists({ id, title });
+			updateChatTabLabels(id, title);
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
