@@ -314,7 +314,7 @@
 					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
-								<div class="capitalize shrink-0">{item.type}</div>
+								<div class="capitalize shrink-0">{$i18n.t('Knowledge Base')}</div>
 								•
 							{/if}
 
