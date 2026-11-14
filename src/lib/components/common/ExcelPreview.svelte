@@ -88,6 +88,7 @@
 	let resizing: { col: number; x: number; width: number } | null = null;
 	let pendingLink = '';
 	let usedRange = '';
+	let tooLarge = false;
 	let lastUsedRow = 0,
 		lastUsedCol = 0;
 	const widths = new Map<string, Map<number, number>>();
@@ -660,6 +661,7 @@
 				Math.max(0, (previousCols ?? 0) - cols[cols.length - 1])
 			);
 			usedRange = table?.dataset.usedRange ?? '';
+			tooLarge = table?.dataset.tooLarge === 'true';
 			lastUsedRow = Number(table?.dataset.lastRow ?? 0);
 			lastUsedCol = Number(table?.dataset.lastCol ?? 0);
 			anchor = null;
@@ -771,7 +773,14 @@
 			>
 		</div>
 	{/if}
-	<div bind:this={viewport} use:grid={html} class="excel-viewport">{@html html}</div>
+	<div bind:this={viewport} use:grid={html} class="excel-viewport">
+		{@html html}
+		{#if tooLarge}
+			<p class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500">
+				{t('This sheet is too large to preview. Download it to view all cells.')}
+			</p>
+		{/if}
+	</div>
 	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
 		<div class="excel-tabs scrollbar-none" role="tablist" aria-label={t('Worksheets')}>
 			{#each sheetNames as name}<button

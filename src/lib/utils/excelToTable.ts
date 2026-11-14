@@ -262,7 +262,11 @@ export async function excelToTable(worksheet: PreviewSheet): Promise<ExcelTableR
 		lastCol = range.e.c;
 	// shortcut: bounded HTML grid; use virtualization before supporting larger used ranges.
 	if (rowCount * colCount > 200000)
-		throw new Error('This sheet is too large to preview. Download it to view all cells.');
+		return {
+			html: `<table data-used-range="${usedRange}" data-too-large="true"></table>`,
+			rowCount,
+			colCount
+		};
 	// A worksheet continues past its populated range; the viewer grows these blank margins on scroll.
 	range.e.r = Math.min(1048575, Math.max(59, range.e.r + 20));
 	range.e.c = Math.min(16383, Math.max(19, range.e.c + 4));
