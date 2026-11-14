@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, afterUpdate } from 'svelte';
+	import { getContext, afterUpdate, tick } from 'svelte';
 	import type { GitFile } from '$lib/apis/terminal/git';
 	export let gitFile: GitFile | null = null;
 	export let gitDiffOpen = false;
@@ -56,6 +56,33 @@
 	let uploadInput: HTMLInputElement;
 	let breadcrumbEl: HTMLDivElement;
 
+	let editingPath = false;
+	let pathValue = '';
+	let pathInput: HTMLInputElement;
+
+	const startPathEdit = async () => {
+		pathValue = breadcrumbs[breadcrumbs.length - 1].path;
+		editingPath = true;
+		await tick();
+		pathInput?.focus();
+		pathInput?.select();
+	};
+
+	const submitPathEdit = () => {
+		let path = pathValue.trim().replace(/\\/g, '/');
+		editingPath = false;
+		if (!path) return;
+		const rootPattern = /^([a-z]:)?(\/|$)/i;
+		if (!rootPattern.test(path)) path = breadcrumbs[breadcrumbs.length - 1].path + path;
+		const prefix = path.match(rootPattern)![0];
+		const parts: string[] = [];
+		for (const part of path.slice(prefix.length).split('/')) {
+			if (part === '..') parts.pop();
+			else if (part && part !== '.') parts.push(part);
+		}
+		onNavigate(prefix + parts.join('/'));
+	};
+
 	const showSeparator = (index: number) =>
 		index > 0 && (breadcrumbs[0]?.label !== '/' || index > 1);
 
@@ -100,9 +127,39 @@
 		</Tooltip>
 	</div>
 
+	{#if editingPath}
+		<input
+			bind:this={pathInput}
+			bind:value={pathValue}
+			class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden dark:text-gray-200"
+			aria-label={$i18n.t('Path')}
+			on:keydown={(e) => {
+				if (e.key === 'Enter' && !e.isComposing) submitPathEdit();
+				if (e.key === 'Escape') {
+					e.preventDefault();
+					e.stopPropagation();
+					editingPath = false;
+				}
+			}}
+			on:blur={() => (editingPath = false)}
+		/>
+	{/if}
 	<div
 		bind:this={breadcrumbEl}
-		class="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-none"
+		class="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-none cursor-text"
+		class:hidden={editingPath}
+		role="textbox"
+		tabindex="0"
+		aria-label={$i18n.t('Path')}
+		on:click={(e) => {
+			if (!(e.target as Element).closest('button')) startPathEdit();
+		}}
+		on:keydown={(e) => {
+			if (e.target === e.currentTarget && e.key === 'Enter') {
+				e.preventDefault();
+				startPathEdit();
+			}
+		}}
 	>
 		{#each breadcrumbs as crumb, i}
 			{#if showSeparator(i)}
