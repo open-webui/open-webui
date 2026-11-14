@@ -76,6 +76,8 @@
 	let agentModels: AgentModel[] = [];
 	let scheduleDropdown: ScheduleDropdown;
 	let scheduleTick = 0;
+	// The stored rule as the schedule fields rebuild it, so an untouched schedule is not a change.
+	let savedRrule = '';
 	let saving = false;
 	let fieldsReady = false;
 
@@ -90,6 +92,7 @@
 		terminalCwd = source.data.terminal?.cwd ?? '';
 		await tick();
 		scheduleDropdown?.parseRrule(source.data.rrule);
+		savedRrule = scheduleDropdown?.buildRrule?.() ?? source.data.rrule;
 		scheduleTick++;
 		fieldsReady = true;
 	}
@@ -105,7 +108,7 @@
 			channel_id !== (automation.data.target?.channel_id ?? '') ||
 			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
 			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
-			rruleNow(scheduleTick) !== automation.data.rrule);
+			rruleNow(scheduleTick) !== savedRrule);
 
 	// Agent models depend on the chosen terminal, as in the automation modal.
 	let modelRequest = 0;
