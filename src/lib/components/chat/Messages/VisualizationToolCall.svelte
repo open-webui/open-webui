@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import { get } from 'svelte/store';
-	import { chatId as activeChatId, config, settings } from '$lib/stores';
+	import { get, type Readable } from 'svelte/store';
+	import { config, settings } from '$lib/stores';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import { buildToolCallToken, getToolResultText, type OutputItem } from './structuredOutput';
@@ -27,6 +27,9 @@
 	export let resolving = false;
 	export let onResolve: (approved: boolean) => void = () => {};
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const chat = getContext<{ chatId: Readable<string>; submitHandler: (prompt: string) => void }>(
+		'chat'
+	);
 	const decoder = createVisualizationArgumentDecoder();
 	let ready = false,
 		initialized = false;
@@ -156,7 +159,7 @@
 			!initialized ||
 			!execute ||
 			confirmCall ||
-			get(activeChatId) !== chatId ||
+			get(chat.chatId) !== chatId ||
 			typeof data.requestId !== 'string' ||
 			data.requestId.length > 80 ||
 			typeof data.text !== 'string' ||
@@ -171,8 +174,8 @@
 		confirmCall = (accept) => {
 			showConfirmation = false;
 			confirmCall = undefined;
-			const sent = accept && current === generation && get(activeChatId) === chatId;
-			if (sent) window.postMessage({ type: 'input:prompt:submit', text: data.text }, window.origin);
+			const sent = accept && current === generation && get(chat.chatId) === chatId;
+			if (sent) chat.submitHandler(data.text);
 			reply(sent);
 		};
 	}
@@ -247,7 +250,7 @@
 		const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 		const onMotion = () => sendContext();
 		motion.addEventListener('change', onMotion);
-		const unsubscribe = activeChatId.subscribe((id) => {
+		const unsubscribe = chat.chatId.subscribe((id) => {
 			if (id !== chatId) confirmCall?.(false);
 		});
 		resize();
