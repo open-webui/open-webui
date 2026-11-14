@@ -118,7 +118,12 @@
 		updateChatParams,
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
-	import { resolveTerminalTarget, setCwd, type FilesystemFile } from '$lib/apis/terminal';
+	import {
+		listTerminalSkills,
+		resolveTerminalTarget,
+		setCwd,
+		type FilesystemFile
+	} from '$lib/apis/terminal';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
@@ -1275,6 +1280,25 @@
 		) {
 			void refreshAgentModels();
 		}
+	}
+
+	// Sent skill mentions and the Skills menu need the terminal's skills before any list opens.
+	$: if (!side) {
+		const terminalId = $selectedTerminalId;
+		void listTerminalSkills(
+			resolveTerminalTarget(
+				terminalId,
+				$terminalServers ?? [],
+				$settings?.terminalServers ?? [],
+				localStorage.token,
+				{
+					chatId: $chatId || null,
+					modelId: selectedModels[0] ?? null
+				}
+			)
+		).then((items) => {
+			if (terminalId === $selectedTerminalId) terminalSkills.set(items);
+		});
 	}
 
 	const applyFolderTerminal = (folder: any) => {
