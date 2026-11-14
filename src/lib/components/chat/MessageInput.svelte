@@ -2660,7 +2660,7 @@
 													bind:tab={inputMenuTab}
 													{chatId}
 													bind:terminalContext
-													disabled={generating || !terminalSelectionEnabled}
+													disabled={isActive || !terminalSelectionEnabled}
 												/>
 												{#if inputMenuTab === ''}
 													<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
@@ -2934,7 +2934,7 @@
 													bind:show={showTerminalMenu}
 													{chatId}
 													bind:terminalContext
-													disabled={generating || !terminalSelectionEnabled}
+													disabled={isActive || !terminalSelectionEnabled}
 												/>
 											</div>
 										{/if}
