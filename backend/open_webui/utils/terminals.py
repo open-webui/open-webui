@@ -351,6 +351,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
         {
             **connection,
             'id': terminal_id,
+            'name': (template.get('data') or {}).get('name') or template_id,
             'template_id': template_id,
             'scope': scope,
             'auth_type': 'bearer',
