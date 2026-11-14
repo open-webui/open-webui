@@ -116,8 +116,8 @@
 			return;
 		}
 
-		if (auth_type === 'oauth_2.1_static' && (!oauthClientId || !oauthClientSecret)) {
-			toast.error($i18n.t('Please enter Client ID and Client Secret'));
+		if (auth_type === 'oauth_2.1_static' && !oauthClientId) {
+			toast.error($i18n.t('Please enter Client ID'));
 			return;
 		}
 
@@ -136,12 +136,13 @@
 			client_secret?: string;
 			oauth_server_url?: string;
 			oauth_scope?: string;
+			auth_type?: string;
 		} = {
 			url: url,
 			client_id: id,
 			...(oauthScope ? { oauth_scope: oauthScope } : {}),
 			...(auth_type === 'oauth_2.1_static'
-				? { client_secret: oauthClientSecret, oauth_server_url: oauthServerUrl }
+				? { client_secret: oauthClientSecret || '', oauth_server_url: oauthServerUrl, auth_type: 'oauth_2.1_static' }
 				: {})
 		};
 
@@ -818,7 +819,7 @@
 												/>
 												<SensitiveInput
 													bind:value={oauthClientSecret}
-													placeholder={$i18n.t('Client Secret')}
+													placeholder={$i18n.t('Client Secret (Optional for public clients)')}
 													required={false}
 												/>
 												<div class="flex flex-1 items-center">

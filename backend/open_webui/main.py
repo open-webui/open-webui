@@ -2861,7 +2861,7 @@ async def register_client(request, client_id: str) -> bool:
             info = connection.get('info') or {}
             oauth_client_id = info.get('oauth_client_id') or ''
             oauth_client_secret = info.get('oauth_client_secret') or ''
-            if not oauth_client_id or not oauth_client_secret:
+            if not oauth_client_id:
                 # Fall back to blob for backward compatibility
                 existing_client_info = info.get('oauth_client_info', '')
                 if not existing_client_info:

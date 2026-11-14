@@ -177,6 +177,7 @@ class OAuthClientRegistrationForm(BaseModel):
     client_secret: str | None = None
     oauth_server_url: str | None = None
     oauth_scope: str | None = None
+    auth_type: str | None = None
 
 
 @router.post('/oauth/clients/register')
@@ -196,14 +197,14 @@ async def register_oauth_client(
 
         oauth_server_url = form_data.oauth_server_url if form_data.oauth_server_url else form_data.url
 
-        if form_data.client_secret:
+        if form_data.auth_type == 'oauth_2.1_static' or form_data.client_secret:
             # Static credentials: skip dynamic registration, build from provided credentials
             oauth_client_info = await get_oauth_client_info_with_static_credentials(
                 request,
                 oauth_client_id,
                 oauth_server_url,
                 oauth_client_id=form_data.client_id,
-                oauth_client_secret=form_data.client_secret,
+                oauth_client_secret=form_data.client_secret or '',
                 oauth_scope=form_data.oauth_scope,
             )
         else:

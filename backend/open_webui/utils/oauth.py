@@ -710,20 +710,23 @@ async def get_oauth_client_info_with_static_credentials(
         )
 
         # Determine token_endpoint_auth_method
-        token_endpoint_auth_method = 'client_secret_post'
-        if (
-            oauth_server_metadata.token_endpoint_auth_methods_supported
-            and token_endpoint_auth_method not in oauth_server_metadata.token_endpoint_auth_methods_supported
-        ):
-            # List order is no preference; prefer a method that sends the secret
-            if 'client_secret_basic' in oauth_server_metadata.token_endpoint_auth_methods_supported:
-                token_endpoint_auth_method = 'client_secret_basic'
-            else:
-                token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
+        if not oauth_client_secret:
+            token_endpoint_auth_method = 'none'
+        else:
+            token_endpoint_auth_method = 'client_secret_post'
+            if (
+                oauth_server_metadata.token_endpoint_auth_methods_supported
+                and token_endpoint_auth_method not in oauth_server_metadata.token_endpoint_auth_methods_supported
+            ):
+                # List order is no preference; prefer a method that sends the secret
+                if 'client_secret_basic' in oauth_server_metadata.token_endpoint_auth_methods_supported:
+                    token_endpoint_auth_method = 'client_secret_basic'
+                else:
+                    token_endpoint_auth_method = oauth_server_metadata.token_endpoint_auth_methods_supported[0]
 
         oauth_client_info = OAuthClientInformationFull(
             client_id=oauth_client_id,
-            client_secret=oauth_client_secret,
+            client_secret=oauth_client_secret if oauth_client_secret else None,
             redirect_uris=[redirect_uri],
             grant_types=['authorization_code', 'refresh_token'],
             response_types=['code'],
@@ -754,9 +757,12 @@ def resolve_oauth_client_info(connection: dict) -> dict:
     data = decrypt_data(info.get('oauth_client_info', ''))
 
     if connection.get('auth_type') == 'oauth_2.1_static':
-        if info.get('oauth_client_id') and info.get('oauth_client_secret'):
+        if info.get('oauth_client_id'):
             data['client_id'] = info['oauth_client_id']
-            data['client_secret'] = info['oauth_client_secret']
+            if info.get('oauth_client_secret'):
+                data['client_secret'] = info['oauth_client_secret']
+            else:
+                data.pop('client_secret', None)
 
     return data
 
