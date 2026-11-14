@@ -366,6 +366,12 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
                 None,
             )
             if start is not None:
+                # A summary saved after the cut supersedes this checkpoint.
+                if any(
+                    message.get('contextSummary') or message.get('context_summary')
+                    for message in messages[cut_idx + 1 : idx]
+                ):
+                    break
                 while start and output[start - 1].get('type') != 'function_call_output':
                     start -= 1
                 return [
