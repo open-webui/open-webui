@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { getContext, onDestroy, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import { toast } from 'svelte-sonner';
 	import { folders, mobile, settings, tags } from '$lib/stores';
 	import { copyToClipboard } from '$lib/utils';
@@ -33,6 +35,7 @@
 	import PreviewMarkdown from './Search/PreviewMarkdown.svelte';
 
 	const i18n: any = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	// Preserve translations from the former chat search and preview during extraction.
 	// $i18n.t('Failed to load chat'); $i18n.t('Select a conversation to preview');
 	export let show = false;
@@ -220,7 +223,10 @@
 
 	async function open(result = selected) {
 		if (!result) return;
-		await goto(result.url);
+		const url = new URL(result.url, location.origin);
+		if (appLayout?.openPageTab && !url.pathname.startsWith('/c/') && pageTabKey(url))
+			appLayout.openPageTab({ href: result.url, label: '' });
+		else await goto(result.url);
 		close();
 	}
 
@@ -295,11 +301,17 @@
 	}
 
 	async function create(type: 'chat' | 'note') {
-		await goto(
-			type === 'chat'
-				? `/?q=${encodeURIComponent(query)}`
-				: `/notes/new?content=${encodeURIComponent(query)}`
-		);
+		if (type === 'note' && appLayout?.openPageTab)
+			appLayout.openPageTab({
+				href: `/notes/new?content=${encodeURIComponent(query)}`,
+				label: ''
+			});
+		else
+			await goto(
+				type === 'chat'
+					? `/?q=${encodeURIComponent(query)}`
+					: `/notes/new?content=${encodeURIComponent(query)}`
+			);
 		close();
 	}
 
