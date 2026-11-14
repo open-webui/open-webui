@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Callable, Iterator, Optional, Sequence, Union
 from urllib.parse import unquote, urlparse
 
+import anyio.to_thread
 import tiktoken
 from fastapi import (
     APIRouter,
@@ -134,6 +135,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 log = logging.getLogger(__name__)
 
 TIKTOKEN_DISALLOWED_SPECIAL = ()
+_save_semaphore: asyncio.Semaphore | None = None
+_save_tasks: set[asyncio.Task] = set()
 
 # Utility functions
 # Let us find what is true among the many voices,
@@ -1407,17 +1410,14 @@ def has_duplicate_content(collection_name: str, hash: str, file_id: str | None) 
     return False
 
 
-def save_docs_to_vector_db(
+def _prepare_docs_for_vector_db(
     request: Request,
     docs,
     collection_name,
     config: dict,
     metadata: dict | None = None,
-    overwrite: bool = False,
     split: bool = True,
-    add: bool = False,
-    user=None,
-) -> bool:
+) -> tuple[list[str], list[dict]]:
     def _get_docs_info(docs: list[Document]) -> str:
         docs_info = set()
 
@@ -1521,13 +1521,30 @@ def save_docs_to_vector_db(
         }
         for doc in docs
     ]
+    return texts, metadatas
+
+
+async def _save_docs_to_vector_db(
+    request: Request,
+    docs,
+    collection_name,
+    config: dict,
+    metadata: dict | None = None,
+    overwrite: bool = False,
+    split: bool = True,
+    add: bool = False,
+    user=None,
+) -> bool:
+    texts, metadatas = await run_in_threadpool(
+        _prepare_docs_for_vector_db, request, docs, collection_name, config, metadata=metadata, split=split
+    )
 
     try:
-        if get_vector_db_client().has_collection(collection_name=collection_name):
+        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
             log.info('collection %s already exists', collection_name)
 
             if overwrite:
-                get_vector_db_client().delete_collection(collection_name=collection_name)
+                await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 log.info('deleting existing collection %s', collection_name)
             elif add is False:
                 log.info('collection %s already exists, overwrite is False and add is False', collection_name)
@@ -1570,8 +1587,6 @@ def save_docs_to_vector_db(
             # Round up to whole provider batches to preserve request boundaries.
             buffer_size = batch_size * ((buffer_size + batch_size - 1) // batch_size)
 
-        # Run async embedding in sync context using the main event loop
-        # This allows the main loop to stay responsive to health checks during long operations
         embedding_timeout = RAG_EMBEDDING_TIMEOUT
 
         log.info('adding to collection %s', collection_name)
@@ -1579,20 +1594,15 @@ def save_docs_to_vector_db(
         try:
             for start in range(0, len(texts), buffer_size):
                 buffer_texts = texts[start : start + buffer_size]
-                future = asyncio.run_coroutine_threadsafe(
+                started_at = time.monotonic()
+                embeddings = await asyncio.wait_for(
                     embedding_function(
                         [text.replace('\n', ' ') for text in buffer_texts],
                         prefix=config['rag.embedding_content_prefix'],
                         user=user,
                     ),
-                    request.app.state.main_loop,
+                    timeout=embedding_timeout,
                 )
-                started_at = time.monotonic()
-                try:
-                    embeddings = future.result(timeout=embedding_timeout)
-                except TimeoutError:
-                    future.cancel()
-                    raise
                 if embedding_timeout is not None:
                     embedding_timeout = max(embedding_timeout - (time.monotonic() - started_at), 0)
                 log.info('embeddings generated %s for %s items', len(embeddings), len(buffer_texts))
@@ -1608,19 +1618,19 @@ def save_docs_to_vector_db(
                 ]
 
                 inserted_ids.extend(item['id'] for item in items)
-                get_vector_db_client().insert(
+                await ASYNC_VECTOR_DB_CLIENT.insert(
                     collection_name=collection_name,
                     items=items,
                 )
-                del items, embeddings, future
+                del items, embeddings
         except Exception:
             if inserted_ids:
                 try:
                     if add:
-                        get_vector_db_client().delete(collection_name=collection_name, ids=inserted_ids)
+                        await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=collection_name, ids=inserted_ids)
                     else:
                         # This call created/replaced the collection; an empty one would make retries skip indexing.
-                        get_vector_db_client().delete_collection(collection_name=collection_name)
+                        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
                 except Exception:
                     log.exception('failed to remove partially added items from collection %s', collection_name)
             raise
@@ -1630,6 +1640,43 @@ def save_docs_to_vector_db(
     except Exception as e:
         log.exception(e)
         raise e
+
+
+async def save_docs_to_vector_db(
+    request: Request,
+    docs,
+    collection_name,
+    config: dict,
+    metadata: dict | None = None,
+    overwrite: bool = False,
+    split: bool = True,
+    add: bool = False,
+    user=None,
+) -> bool:
+    """Save as a task that finishes even if the caller is cancelled."""
+    global _save_semaphore
+    if _save_semaphore is None:
+        # Bound concurrent saves like the thread pool does.
+        _save_semaphore = asyncio.Semaphore(anyio.to_thread.current_default_thread_limiter().total_tokens)
+    save_semaphore = _save_semaphore
+    await save_semaphore.acquire()
+    task = asyncio.create_task(
+        _save_docs_to_vector_db(
+            request,
+            docs,
+            collection_name,
+            config,
+            metadata=metadata,
+            overwrite=overwrite,
+            split=split,
+            add=add,
+            user=user,
+        )
+    )
+    task.add_done_callback(lambda _: save_semaphore.release())
+    _save_tasks.add(task)
+    task.add_done_callback(_save_tasks.discard)
+    return await asyncio.shield(task)
 
 
 class ProcessFileForm(BaseModel):
@@ -1830,14 +1877,9 @@ async def index_file(
 
                     # External embedding API takes time (5-60s+).
                     # Subsequent updates use fresh async sessions.
-                    # NOTE: save_docs_to_vector_db is a sync function that
-                    # calls asyncio.run_coroutine_threadsafe(..., main_loop).result()
-                    # which blocks the calling thread.  We MUST run it in a
-                    # worker thread to avoid deadlocking the event loop.
                     result = True
                     for name in collection_names:
-                        result = await run_in_threadpool(
-                            save_docs_to_vector_db,
+                        result = await save_docs_to_vector_db(
                             request,
                             docs=docs,
                             collection_name=name,
@@ -1952,7 +1994,7 @@ async def process_text(
     log.debug('text_content: %s', text_content)
 
     config = await Config.get_many(*RETRIEVAL_CONFIG_KEYS.values())
-    result = await run_in_threadpool(save_docs_to_vector_db, request, docs, collection_name, config, user=user)
+    result = await save_docs_to_vector_db(request, docs, collection_name, config, user=user)
     if result:
         await publish_event(
             request,
@@ -2216,8 +2258,7 @@ async def process_web(
                 await _validate_collection_access([collection_name], user, access_type='write')
 
             if not config['web.search.bypass_embedding_and_retrieval']:
-                await run_in_threadpool(
-                    save_docs_to_vector_db,
+                await save_docs_to_vector_db(
                     request,
                     docs,
                     collection_name,
@@ -2773,8 +2814,7 @@ async def process_web_search(request: Request, form_data: SearchForm, user=Depen
             collection_name = f'web-search-{user.id}-{calculate_sha256_string("-".join(form_data.queries))}'[:63]
 
             try:
-                await run_in_threadpool(
-                    save_docs_to_vector_db,
+                await save_docs_to_vector_db(
                     request,
                     docs,
                     collection_name,
@@ -3174,8 +3214,7 @@ async def process_files_batch(
     # Save all documents in one batch
     if all_docs:
         try:
-            await run_in_threadpool(
-                save_docs_to_vector_db,
+            await save_docs_to_vector_db(
                 request,
                 all_docs,
                 collection_name,
