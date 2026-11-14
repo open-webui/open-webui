@@ -621,7 +621,8 @@
 		const existing = findPageTab(url);
 		if (existing) {
 			selectTab(existing.id);
-			if (existing.href !== request.href && url.pathname !== '/workspace')
+			const sameChat = !!existing.chatId && url.pathname === `/c/${existing.chatId}`;
+			if (existing.href !== request.href && url.pathname !== '/workspace' && !sameChat)
 				void navigatePageTab(existing.id, request.href);
 		} else openPanel(createPageTab(request));
 	};
