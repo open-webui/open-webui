@@ -198,6 +198,14 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not messages_map:
         messages_map = history.get('messages') or {}
 
+    current_message = messages_map.get(current_id, {})
+    # Empty replies, such as failed ones, never reach the model, so the summary goes on the message before.
+    if (
+        current_message.get('role') == 'assistant'
+        and not current_message.get('content')
+        and not current_message.get('output')
+    ):
+        current_id = current_message.get('parentId')
     messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
     compacted_messages = messages[:-1]
     recent_messages = messages[-1:]
