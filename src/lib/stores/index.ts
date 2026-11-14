@@ -194,6 +194,7 @@ export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
+export const hiddenChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
 export type QueryData = {
