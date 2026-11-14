@@ -1495,6 +1495,7 @@
 				onMore={loadMore}
 				onMove={move}
 				onTagsChange={changed}
+				ownsFolder={!!folder?.user_id && folder.user_id === $user?.id}
 			/>
 		{/if}
 	</div>
