@@ -419,6 +419,7 @@
 	}
 
 	export let messageInput = false;
+	export let autofocus: boolean = true;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
@@ -842,7 +843,7 @@
 			setTimeout(() => {
 				if (destroyed || !editor || editor.isDestroyed) return;
 				const templateFound = selectNextTemplate(editor.view.state, editor.view.dispatch);
-				if (!templateFound && !suppressAutoFocus) {
+				if (!templateFound && !suppressAutoFocus && autofocus) {
 					editor.commands.focus('end');
 				}
 			}, 0);
@@ -1100,7 +1101,7 @@
 			],
 			content: provider ? undefined : content,
 			editable,
-			autofocus: messageInput && !$showCallOverlay,
+			autofocus: messageInput && autofocus && !$showCallOverlay,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 

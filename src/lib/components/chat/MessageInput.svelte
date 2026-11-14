@@ -174,6 +174,7 @@
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
+	export let autofocus: boolean = true;
 	export let callActive = false;
 	export let callEnabled = true;
 
@@ -1882,7 +1883,7 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			if (!$showCallOverlay) {
+			if (!$showCallOverlay && autofocus) {
 				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}
@@ -2405,6 +2406,7 @@
 													json={true}
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
+													{autofocus}
 													followUpSuggestion={!generating &&
 													history?.messages?.[history?.currentId]?.role === 'assistant' &&
 													history?.messages?.[history?.currentId]?.done

@@ -238,6 +238,8 @@
 				if (!processing) temporaryChatEnabled.set(value);
 			}
 		: null;
+	// $chatId moves on from chatIdProp when a new chat is started without navigating
+	$: autofocus = !$mobile || embedded || !chatIdProp || chatIdProp !== $chatId;
 
 	const eventTarget = new EventTarget();
 
@@ -3423,7 +3425,7 @@
 						({ prompt, files } = embeddedDraft);
 						messageInput?.setText(prompt);
 					}
-					messageInput?.focus({ preventScroll: true });
+					if (autofocus) messageInput?.focus({ preventScroll: true });
 				}
 				return true;
 			} else {
@@ -6042,6 +6044,7 @@
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
+										{autofocus}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
