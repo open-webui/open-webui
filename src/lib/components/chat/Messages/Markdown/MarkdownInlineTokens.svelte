@@ -6,6 +6,8 @@
 	import type { AppLayoutContext } from '$lib/types';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
+	import { loadFolderDetails } from '$lib/stores/folderStates';
 
 	const i18n = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -22,7 +24,7 @@
 	>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { skills, terminalSkills } from '$lib/stores';
+	import { selectedFolder, skills, terminalSkills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
@@ -77,18 +79,27 @@
 	/**
 	 * Handle link clicks - intercept same-origin app URLs for in-app navigation
 	 */
+	const openFolder = async (folderId: string, href: string) => {
+		const folder = appLayout?.initNewChat
+			? await loadFolderDetails(localStorage.token, folderId).catch(() => null)
+			: null;
+		if (!folder) return goto(href);
+		selectedFolder.set(folder);
+		await appLayout?.initNewChat?.(true, true);
+	};
+
 	const handleLinkClick = (e: MouseEvent, href: string) => {
 		try {
 			const url = new URL(href, window.location.origin);
 			// Check if same origin and an in-app route
 			if (
 				url.origin === window.location.origin &&
-				(url.pathname.startsWith('/notes/') ||
-					url.pathname.startsWith('/c/') ||
-					url.pathname.startsWith('/channels/'))
+				(url.pathname.startsWith('/folders/') || pageTabKey(url))
 			) {
 				e.preventDefault();
-				if (appLayout?.openPageTab && !url.pathname.startsWith('/c/'))
+				if (url.pathname.startsWith('/folders/'))
+					void openFolder(url.pathname.split('/')[2] ?? '', url.pathname);
+				else if (appLayout?.openPageTab && !url.pathname.startsWith('/c/'))
 					appLayout.openPageTab({ href: url.pathname + url.search + url.hash, label: '' });
 				else goto(url.pathname + url.search + url.hash);
 			}
