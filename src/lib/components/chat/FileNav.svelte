@@ -56,7 +56,6 @@
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
-	import { documentMarkdown } from './FileNav/MarkdownDocument.svelte';
 	import CommentFilePreview from './FileNav/CommentFilePreview.svelte';
 	import { supportsComments } from '$lib/utils/comments/types';
 	import FileComparisonModal from './FileNav/FileComparisonModal.svelte';
@@ -770,7 +769,6 @@
 	);
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
-	let outlineMenuOpen = false;
 
 	// Office preview state
 	let fileOfficeHtml: string | null = null;
@@ -799,9 +797,6 @@
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
-	$: hasHeadings =
-		isMarkdown &&
-		documentMarkdown.lexer(fileContent ?? '').some((token) => token.type === 'heading');
 
 	// Upload / folder creation
 	let isDragOver = false;
@@ -1150,7 +1145,6 @@
 		fileSearchTarget = null;
 		documentTargetPage = null;
 		fileContent = null;
-		outlineMenuOpen = false;
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
@@ -2577,8 +2571,8 @@
 						</button>
 					</Tooltip>
 				{/each}
-				{#if hasHeadings && !showRaw && !fileSearchTarget && !showGitDiff}
-					<Dropdown bind:show={outlineMenuOpen} align="end" sideOffset={4}>
+				{#if !showRaw && !fileSearchTarget && !showGitDiff}
+					<Dropdown align="end" sideOffset={4} closeOnSelect>
 						<Tooltip content={$i18n.t('Outline')}>
 							<button
 								type="button"
@@ -2597,17 +2591,18 @@
 									<button
 										type="button"
 										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
-										on:click={() => {
-											heading.scrollIntoView();
-											outlineMenuOpen = false;
-										}}
+										on:click={() => heading.scrollIntoView()}
 									>
 										<span
 											class="truncate"
-											style:padding-inline-start="{(Number(heading.tagName.slice(1)) - 1) * 12}px"
+											style:padding-left={`${(Number(heading.tagName.slice(1)) - 1) * 12}px`}
 											>{heading.textContent}</span
 										>
 									</button>
+								{:else}
+									<div class="px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t('No results')}
+									</div>
 								{/each}
 							</DropdownMenu>
 						</div>
