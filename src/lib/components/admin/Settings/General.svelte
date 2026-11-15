@@ -99,7 +99,6 @@
 		uiI18nEntries = i18nToEntries(adminConfig.I18N ?? {});
 
 		banners = [...$_banners];
-
 	});
 </script>
 
@@ -123,13 +122,9 @@
 						</div>
 						<div class="mt-1 flex flex-wrap gap-x-1 text-gray-700 dark:text-gray-200">
 							<BuildVersion />
-
 						</div>
-
 					</div>
-
 				</div>
-
 			</AdminSettingSection>
 
 			<AdminSettingSection title={$i18n.t('settings.admin.general.sections.features.title')}>

@@ -24,14 +24,28 @@
 		{/if}
 		<UserSettingSection title={$i18n.t('License')}>
 			<div class="text-xs text-gray-400 dark:text-gray-500">
-				<a href="/static/THIRD_PARTY_LICENSE.txt" target="_blank" rel="noopener noreferrer" class="underline">{$i18n.t('License')}</a>
+				<a
+					href="/static/THIRD_PARTY_LICENSE.txt"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="underline">{$i18n.t('License')}</a
+				>
 			</div>
 			<div class="text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Emoji graphics provided by')}
-				<a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener noreferrer">Twemoji</a>,
-				{$i18n.t('licensed under')} <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC-BY 4.0</a>.
+				<a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener noreferrer"
+					>Twemoji</a
+				>,
+				{$i18n.t('licensed under')}
+				<a
+					href="https://creativecommons.org/licenses/by/4.0/"
+					target="_blank"
+					rel="noopener noreferrer">CC-BY 4.0</a
+				>.
 			</div>
-			<div class="text-xs text-gray-400 dark:text-gray-500">Original project created by Tim J. Baek.</div>
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				Original project created by Tim J. Baek.
+			</div>
 		</UserSettingSection>
 	</div>
 </div>

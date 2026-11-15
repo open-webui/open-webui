@@ -1522,7 +1522,6 @@
 	</div>
 {/if}
 
-
 <div aria-live="polite">
 	<Toaster
 		theme={$theme.includes('dark')

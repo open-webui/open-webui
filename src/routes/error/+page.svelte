@@ -29,7 +29,6 @@
 						{$i18n.t(
 							"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend."
 						)}
-
 					</div>
 
 					<div class=" mt-6 mx-auto relative group w-fit">

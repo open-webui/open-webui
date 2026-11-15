@@ -149,7 +149,6 @@
 							{$i18n.t('No tool server connections configured.')}
 						</div>
 					{/if}
-
 				</div>
 			</section>
 

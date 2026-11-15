@@ -183,7 +183,6 @@
 			{#if false}
 				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
-
 		</DropdownMenu>
 	</div>
 </Dropdown>

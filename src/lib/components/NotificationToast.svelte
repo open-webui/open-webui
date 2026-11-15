@@ -105,7 +105,11 @@
 		<!-- LICENSE covers this Open WebUI notification logo.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<img src="{WEBUI_BASE_URL}/static/gcat.png" alt="" class="size-6 rounded-full bg-gray-900 p-1" />
+		<img
+			src="{WEBUI_BASE_URL}/static/gcat.png"
+			alt=""
+			class="size-6 rounded-full bg-gray-900 p-1"
+		/>
 	</div>
 
 	<div>
