@@ -2388,6 +2388,22 @@ async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: Asyn
 # Add Chat Tag By Id
 
 
+async def get_chat_with_tag_access(id: str, user, db: AsyncSession):
+    """The chat whose tags this user may change: their own, or any chat in a folder they can edit.
+
+    Tags are the chat owner's records, so a folder editor's change is made in the owner's tags.
+    """
+    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    if chat:
+        return chat
+    chat = await Chats.get_chat_by_id(id, db=db)
+    if chat and chat.folder_id and (
+        user.role == 'admin' or await has_folder_write_access(user.id, chat.folder_id, db=db)
+    ):
+        return chat
+    return None
+
+
 @router.post('/{id}/tags', response_model=list[TagModel])
 async def add_tag_by_id_and_tag_name(
     request: Request,
@@ -2396,8 +2412,9 @@ async def add_tag_by_id_and_tag_name(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await get_chat_with_tag_access(id, user, db)
     if chat:
+        owner_id = chat.user_id
         tags = chat.meta.get('tags', [])
         tag_id = form_data.name.replace(' ', '_').lower()
 
@@ -2408,7 +2425,7 @@ async def add_tag_by_id_and_tag_name(
             )
 
         if tag_id not in tags:
-            await Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
+            await Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, owner_id, form_data.name, db=db)
             await publish_event(
                 request,
                 EVENTS.CHAT_TAG_ADDED,
@@ -2417,9 +2434,9 @@ async def add_tag_by_id_and_tag_name(
                 data={'tag': form_data.name},
             )
 
-        chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+        chat = await Chats.get_chat_by_id_and_user_id(id, owner_id, db=db)
         tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, owner_id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -2435,9 +2452,10 @@ async def delete_tag_by_id_and_tag_name(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await get_chat_with_tag_access(id, user, db)
     if chat:
-        await Chats.delete_tag_by_id_and_user_id_and_tag_name(id, user.id, form_data.name, db=db)
+        owner_id = chat.user_id
+        await Chats.delete_tag_by_id_and_user_id_and_tag_name(id, owner_id, form_data.name, db=db)
         await publish_event(
             request,
             EVENTS.CHAT_TAG_REMOVED,
@@ -2446,12 +2464,12 @@ async def delete_tag_by_id_and_tag_name(
             data={'tag': form_data.name},
         )
 
-        if await Chats.count_chats_by_tag_name_and_user_id(form_data.name, user.id, db=db) == 0:
-            await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
+        if await Chats.count_chats_by_tag_name_and_user_id(form_data.name, owner_id, db=db) == 0:
+            await Tags.delete_tag_by_name_and_user_id(form_data.name, owner_id, db=db)
 
-        chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+        chat = await Chats.get_chat_by_id_and_user_id(id, owner_id, db=db)
         tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, user.id, db=db)
+        return await Tags.get_tags_by_ids_and_user_id(tags, owner_id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -2466,10 +2484,10 @@ class TagColorForm(BaseModel):
 async def update_chat_tag_color(request: Request, id: str, form_data: TagColorForm,
     user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     tag_id = form_data.name.replace(' ', '_').lower()
-    chat = await Chats.get_chat_by_id_and_user_id(id, user.id, db=db)
+    chat = await get_chat_with_tag_access(id, user, db)
     if not chat or tag_id not in (chat.meta or {}).get('tags', []):
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, user.id, form_data.color, db=db):
+    if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, chat.user_id, form_data.color, db=db):
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     await publish_event(request, EVENTS.CHAT_UPDATED, actor=user, subject_id=id, data={'tag': form_data.name})
-    return await Tags.get_tags_by_ids_and_user_id((chat.meta or {}).get('tags', []), user.id, db=db)
+    return await Tags.get_tags_by_ids_and_user_id((chat.meta or {}).get('tags', []), chat.user_id, db=db)
