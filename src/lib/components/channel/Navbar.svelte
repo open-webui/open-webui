@@ -69,11 +69,6 @@
 <nav
 	class="sticky top-0 z-30 w-full px-1.5 md:px-3 py-1 -mb-8 flex items-center drag-region flex-col"
 >
-	<div
-		id="navbar-bg-gradient-to-b"
-		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-	></div>
-
 	<div class=" flex max-w-full w-full mx-auto pt-0.5 bg-transparent">
 		<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center w-full max-w-full">
 			{#if $mobile}
