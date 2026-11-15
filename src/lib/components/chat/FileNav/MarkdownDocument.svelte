@@ -4,7 +4,7 @@
 	import { footnoteExtension } from '$lib/utils/marked/footnote-extension';
 
 	// Documents must not inherit chat's global extensions or soft-line-break settings.
-	const documentMarkdown = new Marked(markedKatexExtension(), {
+	export const documentMarkdown = new Marked(markedKatexExtension(), {
 		breaks: false,
 		extensions: [
 			{

@@ -51,10 +51,12 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilePreview from './FileNav/FilePreview.svelte';
+	import { documentMarkdown } from './FileNav/MarkdownDocument.svelte';
 	import CommentFilePreview from './FileNav/CommentFilePreview.svelte';
 	import { supportsComments } from '$lib/utils/comments/types';
 	import FileComparisonModal from './FileNav/FileComparisonModal.svelte';
@@ -768,6 +770,7 @@
 	);
 	let fileSearchTarget: FileSearchTarget | null = null;
 	let documentTargetPage: number | null = null;
+	let outlineMenuOpen = false;
 
 	// Office preview state
 	let fileOfficeHtml: string | null = null;
@@ -796,6 +799,9 @@
 	$: isOfficeFile = OFFICE_EXTS.has(getFileExt(selectedFile));
 	$: isTextFile =
 		fileContent !== null && fileImageUrl === null && filePdfData === null && !isOfficeFile;
+	$: hasHeadings =
+		isMarkdown &&
+		documentMarkdown.lexer(fileContent ?? '').some((token) => token.type === 'heading');
 
 	// Upload / folder creation
 	let isDragOver = false;
@@ -1144,6 +1150,7 @@
 		fileSearchTarget = null;
 		documentTargetPage = null;
 		fileContent = null;
+		outlineMenuOpen = false;
 		if (fileImageUrl) {
 			URL.revokeObjectURL(fileImageUrl);
 			fileImageUrl = null;
@@ -2570,6 +2577,42 @@
 						</button>
 					</Tooltip>
 				{/each}
+				{#if hasHeadings && !showRaw && !fileSearchTarget && !showGitDiff}
+					<Dropdown bind:show={outlineMenuOpen} align="end" sideOffset={4}>
+						<Tooltip content={$i18n.t('Outline')}>
+							<button
+								type="button"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+								aria-label={$i18n.t('Outline')}
+							>
+								<Icon name="list" size={11} strokeWidth={1.4} />
+							</button>
+						</Tooltip>
+
+						<div slot="content">
+							<DropdownMenu
+								className="min-w-[9.375rem] max-w-72 max-h-80 overflow-y-auto z-[9999999]"
+							>
+								{#each viewerRoot.querySelectorAll('h1, h2, h3, h4, h5, h6') as heading}
+									<button
+										type="button"
+										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+										on:click={() => {
+											heading.scrollIntoView();
+											outlineMenuOpen = false;
+										}}
+									>
+										<span
+											class="truncate"
+											style:padding-inline-start="{(Number(heading.tagName.slice(1)) - 1) * 12}px"
+											>{heading.textContent}</span
+										>
+									</button>
+								{/each}
+							</DropdownMenu>
+						</div>
+					</Dropdown>
+				{/if}
 			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
