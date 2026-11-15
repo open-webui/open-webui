@@ -4,7 +4,7 @@
 	"-1 for no limit, or a positive integer for a specific limit": "-1 untuk tanpa batas, atau bilangan bulat positif untuk batas tertentu",
 	"(latest)": "(terbaru)",
 	"(leave blank for to use commercial endpoint)": "(kosongkan untuk menggunakan endpoint komersial)",
-	"[Last] dddd [at] h:mm A": "[dddd lalu pukul] h:mm A",
+	"[Last] dddd [at] h:mm A": "dddd [lalu pukul] h:mm A",
 	"[Today at] h:mm A": "[Hari ini pukul] h:mm A",
 	"[Yesterday at] h:mm A": "[Kemarin pukul] h:mm A",
 	"{{ models }}": "{{ models }}",
