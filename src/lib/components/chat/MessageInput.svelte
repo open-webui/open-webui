@@ -47,7 +47,7 @@
 		showFileNavDir,
 		TTSWorker,
 		temporaryChatEnabled,
-		sideChatRequest,
+		chatTabRequest,
 		visibleControls
 	} from '$lib/stores';
 
@@ -1753,8 +1753,8 @@
 					onComments: openComments,
 					onSide: () => {
 						if (!canSide) return;
-						sideChatRequest.set({ parentId: chatId, prompt: '' });
-						showTabs.set('side');
+						chatTabRequest.set({ parentChatId: chatId, prompt: '' });
+						showTabs.set('chat');
 					},
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),

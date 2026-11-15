@@ -39,7 +39,7 @@
 		socket,
 		audioQueue as _audioQueue,
 		showTabs as _showTabs,
-		sideChatRequest,
+		chatTabRequest,
 		openEmbeddedChatIds,
 		showCallOverlay as _showCallOverlay,
 		temporaryChatEnabled as _temporaryChatEnabled,
@@ -491,7 +491,7 @@
 		// the list is rebuilt after a debounce, so it can lag behind the block being opened
 		getContents();
 		if (embedded) onOpenArtifacts?.(code);
-		else terminalTabs?.openArtifacts(code);
+		else tabs?.openArtifacts(code);
 	};
 	// a notes chat has nowhere to show them
 	$: canOpenArtifacts = !embedded || !!onOpenArtifacts;
@@ -508,7 +508,7 @@
 	$: isShared = chat != null && chat.user_id !== $user?.id;
 	$: if (isShared && $showCallOverlay) showCallOverlay.set(false);
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
-	$: sideChatAllowed =
+	$: canOpenChatTab =
 		$user?.role === 'admin' ||
 		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
 	let cloning = false;
@@ -600,7 +600,7 @@
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
 		const attachments = [structuredClone(file)];
 		if (fullWidthTabs) {
-			terminalTabs?.focusMainChat();
+			tabs?.focusMainChat();
 			await tick();
 			if (!$showCallOverlay) messageInput?.focus({ preventScroll: true });
 		}
@@ -621,7 +621,7 @@
 	// Adds text to the composer for the user to review, keeping any draft already there.
 	const draftPrompt = async (text: string) => {
 		if (fullWidthTabs) {
-			terminalTabs?.focusMainChat();
+			tabs?.focusMainChat();
 			await tick();
 		}
 		messageInput?.setText(prompt.trim() ? `${prompt.trimEnd()}\n\n${text}` : text);
@@ -993,7 +993,7 @@
 	onDestroy(() => chatLoadController.abort());
 	const navigateHandler = async () => {
 		loading = true;
-		terminalTabs?.prepareChatSwitch();
+		tabs?.resetForChatSwitch();
 		const signal = startChatLoad();
 		modelDefaults = null;
 		cancelBrowserInteractions();
@@ -2178,7 +2178,7 @@
 		) {
 			tick().then(async () => {
 				await initNewChat();
-				if (initialPage) terminalTabs?.openPageTab({ href: initialPage, label: '' });
+				if (initialPage) tabs?.openPageTab({ href: initialPage, label: '' });
 			});
 		}
 
@@ -2898,14 +2898,15 @@
 		}
 		if (destinationFolder?.id) mainChatHref = `/folders/${destinationFolder.id}`;
 		if (keepDraft && !$chatId && !history.currentId && previousHref === mainChatHref) {
-			terminalTabs?.focusMainChat();
+			tabs?.focusMainChat();
 			return;
 		}
-		terminalTabs?.prepareChatSwitch(preserveTabs);
+		if (preserveTabs) tabs?.carryPagesToNewChat();
+		else tabs?.resetForChatSwitch();
 		loading = true;
 		if (
 			!embedded &&
-			($showTabs === 'comments' || $showTabs === 'side' || typeof $showTabs === 'object')
+			($showTabs === 'comments' || $showTabs === 'chat' || typeof $showTabs === 'object')
 		)
 			showTabs.set(false);
 		const signal = startChatLoad();
@@ -3189,12 +3190,12 @@
 		);
 
 		await tick();
-		if (preserveTabs) terminalTabs?.focusMainChat();
+		if (preserveTabs) tabs?.focusMainChat();
 		messageInput?.focus({ preventScroll: true });
 	};
 
 	const loadChat = async (signal = startChatLoad()) => {
-		if (chatIdProp && chatIdProp !== $chatId) terminalTabs?.prepareChatSwitch();
+		if (chatIdProp && chatIdProp !== $chatId) tabs?.resetForChatSwitch();
 		if (chatIdProp && chatIdProp !== $chatId) {
 			terminalContext = null;
 			history = { messages: {}, currentId: null };
@@ -4214,7 +4215,7 @@
 		prompt = '';
 	};
 
-	let terminalTabs: Tabs;
+	let tabs: Tabs;
 	let fullWidthTabs = false;
 	let mainChatActive = false;
 	let mainChatStyle = '';
@@ -4376,13 +4377,13 @@
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
-			if (!_chatId && (tabbed || context?.currentDirectory || terminalTabs?.hasTerminals())) {
+			if (!_chatId && (tabbed || context?.currentDirectory || tabs?.hasTerminalTabs())) {
 				_chatId = await initChatHandler(_history);
 			}
 			await tick();
 		}
 		if (history !== _history) return null;
-		if (_chatId) await terminalTabs?.bindTerminalChat(_chatId);
+		if (_chatId) await tabs?.attachChatViewTo(_chatId);
 		if (history !== _history || $chatId !== _chatId) return null;
 		// Also covers temporary/embedded chats and retries after a failed initialization.
 		if (_chatId) await initializeTerminalDirectory(_chatId, context);
@@ -4433,21 +4434,21 @@
 			messageInput?.openComments();
 			return { status: 'rejected' };
 		}
-		const sideCommand = String(userPrompt)
+		const chatTabCommand = String(userPrompt)
 			.trim()
 			.match(/^\/(?:side|btw)(?:\s+([\s\S]*))?$/i);
-		if (sideCommand && !sideChatAllowed) {
+		if (chatTabCommand && !canOpenChatTab) {
 			toast.error($i18n.t('You do not have permission to use side chat.'));
 			return { status: 'rejected' };
 		}
-		if (sideCommand && !embedded && $chatId && history.currentId) {
+		if (chatTabCommand && !embedded && $chatId && history.currentId) {
 			if (selectedModels.length !== 1 || !selectedModelIds[0]) {
 				toast.error($i18n.t('Select only one model to open a side chat.'));
 				return { status: 'rejected' };
 			}
 			clearCommandInput();
-			sideChatRequest.set({ parentId: $chatId, prompt: sideCommand[1] ?? '' });
-			showTabs.set('side');
+			chatTabRequest.set({ parentChatId: $chatId, prompt: chatTabCommand[1] ?? '' });
+			showTabs.set('chat');
 			return { status: 'rejected' };
 		}
 		if (String(userPrompt).trim() === '/fork') {
@@ -5789,9 +5790,9 @@
 	id={chatContainerId}
 	data-chat={embedded ? instanceId : 'main'}
 	role="presentation"
-	on:dragover|capture={(event) => terminalTabs?.dragOverChat(event)}
-	on:drop|capture={(event) => terminalTabs?.dropChat(event)}
-	on:dragleave={(event) => terminalTabs?.leaveChatDrop(event)}
+	on:dragover|capture={(event) => tabs?.handleChatDragOver(event)}
+	on:drop|capture={(event) => tabs?.handleChatDrop(event)}
+	on:dragleave={(event) => tabs?.handleChatDragLeave(event)}
 >
 	<div in:fade={{ duration: 50 }} class="w-full h-full flex flex-col">
 		{#if backgroundImage}
@@ -5811,8 +5812,8 @@
 				style={fullWidthTabs ? mainChatStyle : undefined}
 				data-main-chat-pane
 				data-panel-group={fullWidthTabs ? mainChatGroupId : undefined}
-				on:focusin={() => fullWidthTabs && terminalTabs?.focusMainChat()}
-				on:pointerdown={() => fullWidthTabs && terminalTabs?.focusMainChat()}
+				on:focusin={() => fullWidthTabs && tabs?.focusMainChat()}
+				on:pointerdown={() => fullWidthTabs && tabs?.focusMainChat()}
 				id={fullWidthTabs ? 'chat-panel-main-chat-view' : undefined}
 				role={fullWidthTabs ? 'tabpanel' : undefined}
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
@@ -6281,15 +6282,15 @@
 					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}
-					bind:history
+					bind:chatHistory={history}
 					bind:files
 					chatId={$chatId}
 					mainArtifacts={artifacts}
-					bind:this={terminalTabs}
+					bind:this={tabs}
 					folderId={chat ? (chat.folder_id ?? null) : ($selectedFolder?.id ?? null)}
 					chatUser={chatOwner}
 					modelId={selectedModelIds?.at(0) ?? null}
-					canBranchChat={sideChatAllowed}
+					{canOpenChatTab}
 					systemPrompt={params?.system || $settings.system || ''}
 					submitPrompt={submitHandler}
 					onAskFile={askFile}

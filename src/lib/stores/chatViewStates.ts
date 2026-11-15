@@ -6,12 +6,12 @@ import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
 import { createBrowserSession } from '$lib/apis/terminal/browser';
 import { isSavedChatId } from '$lib/utils/chatId';
 import {
-	emptyTabs,
+	createTabsState,
 	mainChatTabId,
 	normalizeChatTab,
 	removeTab,
 	type ChatViewState,
-	type PanelTab
+	type Tab
 } from '$lib/components/chat/Tabs/tabs';
 
 export type EditorDraft = {
@@ -91,7 +91,7 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 		instanceId: uuidv4(),
 		userId,
 		chatId,
-		state: { schemaVersion: 1, selectedTerminalId: null, panels: emptyTabs() },
+		state: { schemaVersion: 1, selectedTerminalId: null, panels: createTabsState() },
 		drafts: new Map(),
 		transient: {},
 		pending: new Map(),
@@ -171,7 +171,7 @@ export async function flushChatView(entry: Entry): Promise<void> {
 	return entry.write;
 }
 
-export function updateViewTab(entry: Entry, id: string, values: Partial<PanelTab>) {
+export function updateViewTab(entry: Entry, id: string, values: Partial<Tab>) {
 	if (!entry.state.panels.tabs.some((tab) => tab.id === id)) return;
 	changeChatView(
 		entry,

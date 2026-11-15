@@ -200,7 +200,7 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
-	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Side chats sit
+	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Chat tabs sit
 	// inside the main chat, so an element belongs to the nearest [data-chat] around it.
 	const chatElements = <T extends HTMLElement = HTMLElement>(selector: string): T[] => {
 		const chat =

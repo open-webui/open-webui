@@ -173,7 +173,7 @@ export const showChangelog = writable(false);
 export const showTabs = writable<
 	| boolean
 	| 'comments'
-	| 'side'
+	| 'chat'
 	| 'voice'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
@@ -194,7 +194,7 @@ export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
-export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
+export const chatTabRequest = writable<{ parentChatId: string; prompt: string } | null>(null);
 
 export type QueryData = {
 	query: string;
