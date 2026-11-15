@@ -1,192 +1,37 @@
 <script lang="ts">
-	// Keep keys in nested template expressions visible to i18next-parser.
-	// $i18n.t("licensed under");
-
-	import { getVersionUpdates } from '$lib/apis';
 	import { getOllamaVersion } from '$lib/apis/ollama';
-	import { WEBUI_BUILD_CHANNEL, WEBUI_VERSION } from '$lib/constants';
-	import { WEBUI_NAME, config, settings, showChangelog } from '$lib/stores';
-	import { compareVersion } from '$lib/utils';
 	import { onMount, getContext } from 'svelte';
-
 	import BuildVersion from '$lib/components/common/BuildVersion.svelte';
-	import UserSettingRow from './UserSettingRow.svelte';
 	import UserSettingSection from './UserSettingSection.svelte';
-
 	const i18n: any = getContext('i18n');
-
 	let ollamaVersion = '';
-
-	let updateAvailable = null;
-	let version = {
-		current: '',
-		latest: ''
-	};
-	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
-
-	const checkForVersionUpdates = async () => {
-		updateAvailable = null;
-		version = await getVersionUpdates(localStorage.token).catch((error) => {
-			return {
-				current: WEBUI_VERSION,
-				latest: null
-			};
-		});
-
-		console.log(version);
-
-		updateAvailable = compareVersion(version.latest, version.current);
-		console.log(updateAvailable);
-	};
-
 	onMount(async () => {
-		ollamaVersion = await getOllamaVersion(localStorage.token).catch((error) => {
-			return '';
-		});
-
-		if (WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check) {
-			checkForVersionUpdates();
-		}
+		ollamaVersion = await getOllamaVersion(localStorage.token).catch(() => '');
 	});
 </script>
 
-<div id="tab-about" class="flex flex-col h-full justify-between text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('settings.personal.about.title')}
-	</h2>
-
+<div id="tab-about" class="flex flex-col h-full text-sm">
+	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">GCAT</h2>
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<!-- LICENSE covers this Open WebUI About identifier.
-		Do not alter, remove, obscure, or replace it except as LICENSE permits:
-		https://docs.openwebui.com/license. -->
-		<UserSettingSection
-			title={`${$WEBUI_NAME} ${$i18n.t('settings.personal.about.sections.version.title')}`}
-			first
-		>
-			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
-				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
-					<div
-						class="flex flex-wrap {($settings?.highContrastMode ?? false)
-							? 'items-center'
-							: ''} gap-1"
-					>
-						<BuildVersion />
-
-						{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
-							{#if version.latest === null}
-								<span>{$i18n.t('Could not check for updates')}</span>
-							{:else}
-								<a
-									class={($settings?.highContrastMode ?? false)
-										? 'inline-flex min-h-6 items-center'
-										: ''}
-									href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
-									target="_blank"
-								>
-									{updateAvailable === null
-										? $i18n.t('Checking for updates...')
-										: updateAvailable
-											? `(v${version.latest} ${$i18n.t('available!')})`
-											: $i18n.t('(latest)')}
-								</a>
-							{/if}
-						{/if}
-					</div>
-
-					<button
-						class="self-start {($settings?.highContrastMode ?? false)
-							? 'inline-flex min-h-6 items-center'
-							: ''} {actionButtonClass}"
-						on:click={() => {
-							showChangelog.set(true);
-						}}
-					>
-						<div>{$i18n.t('settings.personal.about.seeWhatSNew.label')}</div>
-					</button>
-				</div>
-
-				{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
-					<button
-						class={actionButtonClass}
-						on:click={() => {
-							checkForVersionUpdates();
-						}}
-					>
-						{$i18n.t('settings.personal.about.checkForUpdates.label')}
-					</button>
-				{/if}
-			</UserSettingRow>
+		<UserSettingSection title="GCAT" first>
+			<img src="/static/gcat.svg" alt="GCAT logo" class="size-10 rounded-xl bg-gray-900 p-2" />
+			<BuildVersion />
 		</UserSettingSection>
-
 		{#if ollamaVersion}
 			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
-				<div class="text-xs text-gray-600 dark:text-gray-400">
-					{ollamaVersion ?? 'N/A'}
-				</div>
+				<div class="text-xs text-gray-600 dark:text-gray-400">{ollamaVersion}</div>
 			</UserSettingSection>
 		{/if}
-
-		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
-			{#if $config?.license_metadata}
-				<!-- LICENSE covers this Open WebUI license attribution.
-				Do not alter, remove, obscure, or replace it except as LICENSE permits:
-				https://docs.openwebui.com/license. -->
-				<div class="text-xs text-gray-600 dark:text-gray-400">
-					{#if !$WEBUI_NAME.includes('Open WebUI')}
-						<span>{$WEBUI_NAME}</span> -
-					{/if}
-
-					<span class="capitalize">{$config?.license_metadata?.type}</span>
-					{$i18n.t('license purchased by')}
-					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
-				</div>
-			{:else}
-				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://discord.gg/5rJgQTnV4s"
-						target="_blank">Discord</a
-					>
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://twitter.com/OpenWebUI"
-						target="_blank">X</a
-					>
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://github.com/open-webui/open-webui"
-						target="_blank">GitHub</a
-					>
-				</div>
-			{/if}
-
+		<UserSettingSection title={$i18n.t('License')}>
+			<div class="text-xs text-gray-400 dark:text-gray-500">
+				<a href="/static/THIRD_PARTY_LICENSE.txt" target="_blank" rel="noopener noreferrer" class="underline">{$i18n.t('License')}</a>
+			</div>
 			<div class="text-xs text-gray-400 dark:text-gray-500">
 				{$i18n.t('Emoji graphics provided by')}
-				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
-					'licensed under'
-				)}
-				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
+				<a href="https://github.com/jdecked/twemoji" target="_blank" rel="noopener noreferrer">Twemoji</a>,
+				{$i18n.t('licensed under')} <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC-BY 4.0</a>.
 			</div>
-
-			<div class="text-xs text-gray-400 dark:text-gray-500">
-				<!-- LICENSE covers this Open WebUI copyright attribution.
-				Do not alter, remove, obscure, or replace it except as LICENSE permits:
-				https://docs.openwebui.com/license. -->
-				{$i18n.t('Copyright (c)')}
-				{new Date().getFullYear()}
-				<a href="https://openwebui.com" target="_blank" class="underline">Open WebUI Inc.</a>
-				<a href="https://github.com/open-webui/open-webui/blob/main/LICENSE" target="_blank"
-					>{$i18n.t('All rights reserved.')}</a
-				>
-			</div>
-
-			<div class="text-xs text-gray-400 dark:text-gray-500">
-				{$i18n.t('Created by')}
-				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
-					>Tim J. Baek</a
-				>
-			</div>
+			<div class="text-xs text-gray-400 dark:text-gray-500">Original project created by Tim J. Baek.</div>
 		</UserSettingSection>
 	</div>
 </div>

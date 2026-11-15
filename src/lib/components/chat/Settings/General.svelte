@@ -192,21 +192,6 @@
 					{/each}
 				</SettingsSelect>
 			</UserSettingRow>
-			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
-				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-					{$i18n.t("Couldn't find your language?")}
-					<a
-						class="font-normal underline text-gray-400 dark:text-gray-600"
-						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
-						target="_blank"
-					>
-						<!-- LICENSE covers this Open WebUI wordmark.
-						Do not alter, remove, obscure, or replace it except as LICENSE permits:
-						https://docs.openwebui.com/license. -->
-						{$i18n.t('Help us translate Open WebUI!')}
-					</a>
-				</div>
-			{/if}
 		</UserSettingSection>
 
 		{#if canEditSystemPrompt}

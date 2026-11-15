@@ -79,7 +79,6 @@ from open_webui.env import (
     AUDIT_INCLUDED_PATHS,
     AUDIT_LOG_LEVEL,
     BYPASS_MODEL_ACCESS_CONTROL,
-    CHANGELOG,
     DEPLOYMENT_ID,
     ENABLE_AUDIT_GET_REQUESTS,
     ENABLE_COMPRESSION_MIDDLEWARE,
@@ -342,27 +341,9 @@ class CORSStaticFiles(StaticFiles):
 
 
 if LOG_FORMAT != 'json':
-    banner = rf"""
- ██████╗ ██████╗ ███████╗███╗   ██╗    ██╗    ██╗███████╗██████╗ ██╗   ██╗██╗
-██╔═══██╗██╔══██╗██╔════╝████╗  ██║    ██║    ██║██╔════╝██╔══██╗██║   ██║██║
-██║   ██║██████╔╝█████╗  ██╔██╗ ██║    ██║ █╗ ██║█████╗  ██████╔╝██║   ██║██║
-██║   ██║██╔═══╝ ██╔══╝  ██║╚██╗██║    ██║███╗██║██╔══╝  ██╔══██╗██║   ██║██║
-╚██████╔╝██║     ███████╗██║ ╚████║    ╚███╔███╔╝███████╗██████╔╝╚██████╔╝██║
- ╚═════╝ ╚═╝     ╚══════╝╚═╝  ╚═══╝     ╚══╝╚══╝ ╚══════╝╚═════╝  ╚═════╝ ╚═╝
-
-
-v{VERSION} - building the best AI user interface.
-{f'Commit: {WEBUI_BUILD_HASH}' if WEBUI_BUILD_HASH != 'dev-build' else ''}
-https://github.com/open-webui/open-webui
-"""
-    try:
-        print(banner)
-    except UnicodeEncodeError:
-        # Stdout can't encode the box-drawing banner (Windows cp1252, redirected/headless stdout); fall back to ASCII.
-        # LICENSE covers this Open WebUI CLI identifier.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        print(f'Open WebUI v{VERSION} - building the best AI user interface.\nhttps://github.com/open-webui/open-webui')
+    print(f'{WEBUI_NAME} v{VERSION} - your AI workspace.')
+    if WEBUI_BUILD_HASH != 'dev-build':
+        print(f'Commit: {WEBUI_BUILD_HASH}')
 
 
 @asynccontextmanager
@@ -554,7 +535,7 @@ apply_orjson_http_json()
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 app = FastAPI(
-    title='Open WebUI',
+    title=WEBUI_NAME,
     docs_url='/docs' if ENV == 'dev' else None,
     openapi_url='/openapi.json' if ENV == 'dev' else None,
     redoc_url=None,
@@ -2087,7 +2068,7 @@ async def generate_messages(
     pipeline, then converts the response back to Anthropic Messages format.
 
     Supports both streaming and non-streaming requests.
-    All models configured in Open WebUI are accessible via this endpoint.
+    All models configured in GCAT are accessible via this endpoint.
 
     Authentication: Supports both standard Authorization header and
     Anthropic's x-api-key header (via middleware translation).
@@ -2776,35 +2757,21 @@ async def get_app_version():
 
 @app.get('/api/version/updates')
 async def get_app_latest_release_version(user=Depends(get_verified_user)):
-    if not ENABLE_VERSION_UPDATE_CHECK:
-        log.debug(f'Version update check is disabled, returning current version as latest version')
-        return {'current': VERSION, 'latest': VERSION}
-    try:
-        timeout = aiohttp.ClientTimeout(total=1)
-        async with aiohttp.ClientSession(timeout=timeout, trust_env=True) as session:
-            async with session.get(
-                'https://api.github.com/repos/open-webui/open-webui/releases/latest',
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as response:
-                response.raise_for_status()
-                data = await response.json()
-                latest_version = data['tag_name']
-
-                return {'current': VERSION, 'latest': latest_version[1:]}
-    except Exception as e:
-        log.warning(f'Version update check failed: {e}')
-        return {'current': VERSION, 'latest': None}
+    # Upstream releases are not GCAT releases. Keep the API shape without
+    # advertising unrelated updates or contacting the upstream release service.
+    return {'current': VERSION, 'latest': VERSION}
 
 
 @app.get('/api/changelog')
 async def get_app_changelog():
-    return {key: CHANGELOG[key] for idx, key in enumerate(CHANGELOG) if idx < 5}
+    # The bundled upstream history is retained on disk, not presented as GCAT news.
+    return {}
 
 
 @app.get('/api/usage')
 async def get_current_usage(user=Depends(get_verified_user)):
     """
-    Get current usage statistics for Open WebUI.
+    Get current usage statistics for GCAT.
     This is an experimental endpoint and subject to change.
     """
     try:
@@ -3057,54 +3024,35 @@ async def oauth_backchannel_logout(
 
 @app.get('/manifest.json')
 async def get_manifest_json():
-    external_pwa_manifest_url = getattr(app.state, 'EXTERNAL_PWA_MANIFEST_URL', None)
-    if external_pwa_manifest_url:
-        # LICENSE covers this install-time Open WebUI branding surface, including
-        # names, logos, manifests, metadata, and surrounding UI.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        session = await get_session()
-        async with session.get(
-            external_pwa_manifest_url,
-            ssl=AIOHTTP_CLIENT_SESSION_SSL,
-        ) as r:
-            r.raise_for_status()
-            return await r.json()
-    else:
-        # LICENSE covers this generated Open WebUI install branding surface,
-        # including names, logos, manifests, metadata, and surrounding UI.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        return {
-            'name': app.state.WEBUI_NAME,
-            'short_name': app.state.WEBUI_NAME,
-            'description': f'{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
-            'start_url': '/',
-            'display': 'standalone',
-            'background_color': '#343541',
-            'icons': [
-                # LICENSE covers this Open WebUI install icon.
-                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-                # https://docs.openwebui.com/license.
-                {
-                    'src': '/static/logo.png',
-                    'type': 'image/png',
-                    'sizes': '500x500',
-                    'purpose': 'any',
-                },
-                {
-                    'src': '/static/logo.png',
-                    'type': 'image/png',
-                    'sizes': '500x500',
-                    'purpose': 'maskable',
-                },
-            ],
-            'share_target': {
-                'action': '/',
-                'method': 'GET',
-                'params': {'text': 'shared'},
+    # Always serve local branding; a legacy external manifest must not replace
+    # GCAT's identity. The SVG remains crisp at every installed-app icon size.
+    return {
+        'name': WEBUI_NAME,
+        'short_name': WEBUI_NAME,
+        'description': f'{WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
+        'start_url': '/',
+        'display': 'standalone',
+        'background_color': '#343541',
+        'icons': [
+            {
+                'src': '/static/gcat.svg',
+                'type': 'image/svg+xml',
+                'sizes': 'any',
+                'purpose': 'any',
             },
-        }
+            {
+                'src': '/static/gcat.svg',
+                'type': 'image/svg+xml',
+                'sizes': 'any',
+                'purpose': 'maskable',
+            },
+        ],
+        'share_target': {
+            'action': '/',
+            'method': 'GET',
+            'params': {'text': 'shared'},
+        },
+    }
 
 
 @app.get('/opensearch.xml')
@@ -3118,7 +3066,7 @@ async def get_opensearch_xml():
     <ShortName>{app.state.WEBUI_NAME}</ShortName>
     <Description>Search {app.state.WEBUI_NAME}</Description>
     <InputEncoding>UTF-8</InputEncoding>
-    <Image width="16" height="16" type="image/x-icon">{webui_url}/static/favicon.png</Image>
+    <Image width="16" height="16" type="image/png">{webui_url}/static/gcat.png</Image>
     <Url type="text/html" method="get" template="{webui_url}/?q={'{searchTerms}'}"/>
     <moz:SearchForm>{webui_url}</moz:SearchForm>
     </OpenSearchDescription>
@@ -3249,7 +3197,7 @@ def swagger_ui_html(*args, **kwargs):
         **kwargs,
         swagger_js_url='/static/swagger-ui/swagger-ui-bundle.js',
         swagger_css_url='/static/swagger-ui/swagger-ui.css',
-        swagger_favicon_url='/static/swagger-ui/favicon.png',
+        swagger_favicon_url='/static/gcat.png',
     )
 
 

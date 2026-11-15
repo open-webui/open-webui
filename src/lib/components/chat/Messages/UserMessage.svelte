@@ -182,7 +182,7 @@
 				<ProfileImage
 					src={authorId
 						? `${WEBUI_API_BASE_URL}/users/${authorId}/profile/image`
-						: `${WEBUI_BASE_URL}/static/favicon.png`}
+						: `${WEBUI_BASE_URL}/static/gcat.png`}
 					className={'size-7 user-message-profile-image'}
 				/>
 			</ProfilePreview>

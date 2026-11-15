@@ -96,7 +96,7 @@
 				</button>
 			{/if}
 
-			{#if $config.features.enable_community_sharing}
+			{#if false}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
 					draggable="false"

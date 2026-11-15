@@ -193,7 +193,7 @@ class SignupForm(BaseModel):
     name: str
     email: str
     password: str
-    profile_image_url: str | None = '/user.png'
+    profile_image_url: str | None = '/static/gcat.png'
 
     @field_validator('profile_image_url')
     @classmethod
@@ -290,7 +290,7 @@ class AuthsTable:
         email: str,
         password: str,
         name: str,
-        profile_image_url: str = '/user.png',
+        profile_image_url: str = '/static/gcat.png',
         role: str = 'pending',
         oauth: dict | None = None,
         db: AsyncSession | None = None,

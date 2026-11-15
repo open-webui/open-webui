@@ -150,7 +150,7 @@ async def notify(
     # LICENSE covers this Open WebUI notification identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
-    app_name = getattr(app_name, 'WEBUI_NAME', 'Open WebUI')
+    app_name = getattr(app_name, 'WEBUI_NAME', 'GCAT')
     try:
         result = await notify_target(user_id, message, target=target, title=title, app_name=app_name)
         return f'Notification sent to {result.get("target_id")}.'

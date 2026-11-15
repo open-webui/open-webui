@@ -392,9 +392,6 @@
 		};
 		setupKeyboardShortcuts();
 
-		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
-			showChangelog.set($settings?.version !== $config.version);
-		}
 
 		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
 			if ($page.url.searchParams.get('temporary-chat') === 'true') {
@@ -406,24 +403,6 @@
 			}
 		}
 
-		// Check for version updates
-		if (
-			WEBUI_BUILD_CHANNEL === 'main' &&
-			$user?.role === 'admin' &&
-			$config?.features?.enable_version_update_check
-		) {
-			// Check if the user has dismissed the update toast in the last 24 hours
-			if (localStorage.dismissedUpdateToast) {
-				const dismissedUpdateToast = new Date(Number(localStorage.dismissedUpdateToast));
-				const now = new Date();
-
-				if (now - dismissedUpdateToast > 24 * 60 * 60 * 1000) {
-					checkForVersionUpdates();
-				}
-			} else {
-				checkForVersionUpdates();
-			}
-		}
 		// Persist showTabs: track open/close state separately from saved size
 		// chatControlsSize always retains the last width for openPane()
 		await showTabs.set(!$mobile ? localStorage.showTabs === 'true' : false);

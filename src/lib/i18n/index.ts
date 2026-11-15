@@ -7,6 +7,7 @@ import dayjs, { getDayjsLocale } from '$lib/dayjs';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import { assembleSettingsTranslations } from './settings-translations';
+import { brandTranslation } from './branding';
 import languages from './locales/languages.json';
 
 let overrides: I18nOverrides = {};
@@ -93,10 +94,16 @@ export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 	detector.addDetector({ name: 'defaultLocale', lookup: () => defaultLocale });
 
 	return i18next
+		.use({
+			type: 'postProcessor',
+			name: 'gcatBranding',
+			process: brandTranslation
+		})
 		.use(resourcesToBackend(loadResource))
 		.use(detector)
 		.init({
 			debug: false,
+			postProcess: ['gcatBranding'],
 			detection: {
 				order: ['querystring', 'localStorage', 'defaultLocale', 'navigator'],
 				caches: ['localStorage'],

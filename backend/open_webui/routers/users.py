@@ -847,7 +847,7 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
                     media_type = header.split(';')[0].lstrip('data:').lower()
 
                     if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
-                        return FileResponse(f'{STATIC_DIR}/user.png')
+                        return FileResponse(f'{STATIC_DIR}/gcat.png')
 
                     return StreamingResponse(
                         image_buffer,
@@ -859,7 +859,7 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
                     )
                 except Exception as e:
                     pass
-        return FileResponse(f'{STATIC_DIR}/user.png')
+        return FileResponse(f'{STATIC_DIR}/gcat.png')
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

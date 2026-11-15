@@ -39,35 +39,6 @@
 		return shareUrl;
 	};
 
-	const shareChat = async () => {
-		const _chat = chat.chat;
-		console.log('share', _chat);
-
-		// LICENSE covers this Open WebUI Community wordmark.
-		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-		// https://docs.openwebui.com/license.
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
-		const url = 'https://openwebui.com';
-		// const url = 'http://localhost:5173';
-
-		const tab = await window.open(`${url}/chats/upload`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(
-						JSON.stringify({
-							chat: _chat,
-							models: $models.filter((m) => _chat.models.includes(m.id))
-						}),
-						'*'
-					);
-				}
-			},
-			false
-		);
-	};
 
 	const loadAccessGrants = async () => {
 		if (!chatId) return;
@@ -194,20 +165,6 @@
 				</div>
 
 				<div class="flex justify-end gap-1 mt-3">
-					{#if $config?.features.enable_community_sharing}
-						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800"
-							type="button"
-							on:click={() => {
-								shareChat();
-							}}
-						>
-							<!-- LICENSE covers this Open WebUI Community wordmark.
-							Do not alter, remove, obscure, or replace it except as LICENSE permits:
-							https://docs.openwebui.com/license. -->
-							{$i18n.t('Share to Open WebUI Community')}
-						</button>
-					{/if}
 
 					<button
 						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"

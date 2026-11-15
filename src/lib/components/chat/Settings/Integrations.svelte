@@ -150,12 +150,6 @@
 						</div>
 					{/if}
 
-					<a
-						class="mt-2 inline-block text-[0.6875rem] text-gray-500 underline decoration-gray-300 underline-offset-4 hover:text-gray-700 dark:text-gray-500 dark:decoration-gray-700 dark:hover:text-gray-300"
-						href="https://github.com/open-webui/openapi-servers"
-						target="_blank"
-						rel="noopener noreferrer">{$i18n.t('Learn more about OpenAPI tool servers.')} ↗</a
-					>
 				</div>
 			</section>
 
@@ -177,7 +171,7 @@
 							Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							https://docs.openwebui.com/license. -->
 						{$i18n.t(
-							'CORS must be properly configured by the provider to allow requests from Open WebUI.'
+							'CORS must be properly configured by the provider to allow requests from GCAT.'
 						)}
 					</p>
 				</div>

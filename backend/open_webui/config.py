@@ -12,7 +12,6 @@ from typing import Optional, Union
 from urllib.parse import urlparse
 
 import redis
-import requests
 from authlib.integrations.starlette_client import OAuth
 from pydantic import BaseModel, StrictBool, TypeAdapter
 
@@ -186,37 +185,9 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # LICENSE covers this legacy Open WebUI branding path.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
-CUSTOM_NAME = os.getenv('CUSTOM_NAME', '')
-
-if CUSTOM_NAME:
-    try:
-        r = requests.get(f'https://api.openwebui.com/api/v1/custom/{CUSTOM_NAME}')
-        data = r.json()
-        if r.ok:
-            if 'logo' in data:
-                WEBUI_FAVICON_URL = url = (
-                    f'https://api.openwebui.com{data["logo"]}' if data['logo'][0] == '/' else data['logo']
-                )
-
-                r = requests.get(url, stream=True)
-                if r.status_code == 200:
-                    with open(f'{STATIC_DIR}/favicon.png', 'wb') as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
-
-            if 'splash' in data:
-                url = f'https://api.openwebui.com{data["splash"]}' if data['splash'][0] == '/' else data['splash']
-
-                r = requests.get(url, stream=True)
-                if r.status_code == 200:
-                    with open(f'{STATIC_DIR}/splash.png', 'wb') as f:
-                        r.raw.decode_content = True
-                        shutil.copyfileobj(r.raw, f)
-
-            WEBUI_NAME = data['name']
-    except Exception as e:
-        log.exception(e)
-        pass
+# Retain the compatibility symbol without fetching remote branding or replacing
+# the bundled GCAT name, favicon, or splash assets.
+CUSTOM_NAME = ''
 
 
 # Direct connections
@@ -2139,7 +2110,7 @@ DEFAULT_ARENA_MODEL = {
         # LICENSE covers this Open WebUI fallback logo.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
-        'profile_image_url': '/favicon.png',
+        'profile_image_url': '/static/gcat.png',
         'description': 'Submit your questions to anonymous AI chatbots and vote on the best response.',
         'model_ids': None,
     },

@@ -28,6 +28,8 @@ _SAFE_STATIC_PATHS = frozenset(
         '/user.png',
         '/favicon.png',
         '/static/favicon.png',
+        '/static/gcat.png',
+        '/static/gcat.svg',
     }
 )
 

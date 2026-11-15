@@ -1123,7 +1123,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
                 await notify(
                     u.id,
                     f'channel:{channel.id}:{message.id}',
-                    f'{channel.name} / Open WebUI',
+                    f'{channel.name} / GCAT',
                     message.content,
                     '/channels/' + quote(channel.id, safe=''),
                 )
@@ -2068,7 +2068,7 @@ async def get_webhook_profile_image(
         # LICENSE covers this Open WebUI fallback logo.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
-        return FileResponse(f'{STATIC_DIR}/favicon.png')
+        return FileResponse(f'{STATIC_DIR}/gcat.png')
 
     channel = await Channels.get_channel_by_id(webhook.channel_id, db=db)
     if not channel:
@@ -2109,7 +2109,7 @@ async def get_webhook_profile_image(
     # LICENSE covers this Open WebUI fallback logo.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
-    return FileResponse(f'{STATIC_DIR}/favicon.png')
+    return FileResponse(f'{STATIC_DIR}/gcat.png')
 
 
 @router.get('/{id}/webhooks', response_model=list[ChannelWebhookModel])

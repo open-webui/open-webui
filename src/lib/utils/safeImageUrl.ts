@@ -3,7 +3,7 @@ import { WEBUI_BASE_URL } from '$lib/constants';
 // LICENSE covers this Open WebUI fallback logo.
 // Do not alter, remove, obscure, or replace it except as LICENSE permits:
 // https://docs.openwebui.com/license.
-const PLACEHOLDER_IMAGE = '/favicon.png';
+const PLACEHOLDER_IMAGE = '/static/gcat.png';
 
 /**
  * Validates an image URL against an allowlist of safe patterns and returns

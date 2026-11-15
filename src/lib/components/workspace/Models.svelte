@@ -282,27 +282,7 @@
 		goto('/workspace/models/create');
 	};
 
-	const shareModelHandler = async (model) => {
-		// LICENSE covers this Open WebUI Community wordmark.
-		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-		// https://docs.openwebui.com/license.
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
-
-		const url = 'https://openwebui.com';
-		const fullModel = getFullModel(model);
-
-		const tab = await window.open(`${url}/post?type=model`, '_blank');
-
-		const messageHandler = async (event) => {
-			if (event.origin !== url) return;
-			if (event.data === 'loaded') {
-				tab.postMessage(JSON.stringify(await fullModel), '*');
-				window.removeEventListener('message', messageHandler);
-			}
-		};
-
-		window.addEventListener('message', messageHandler, false);
-	};
+	const shareModelHandler = async (_model) => {};
 
 	const hideModelHandler = async (model) => {
 		const updatedModel = {
@@ -809,7 +789,7 @@
 														// LICENSE covers this Open WebUI fallback logo.
 														// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 														// https://docs.openwebui.com/license.
-														e.target.src = '/favicon.png';
+														e.target.src = '/static/gcat.png';
 													}}
 												/>
 											</div>
@@ -1047,13 +1027,6 @@
 			{/if}
 		</div>
 
-		{#if $config?.features.enable_community_sharing}
-			<CommunityDiscover
-				href="https://openwebui.com/search?type=model"
-				title={$i18n.t('Discover a model')}
-				description={$i18n.t('Discover, download, and explore model presets')}
-			/>
-		{/if}
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">
 			<Spinner className="size-5" />

@@ -83,21 +83,20 @@ def override_static(path: str, content: str):
 def get_license_data(app, key):
     def data_handler(data):
         for k, v in data.items():
-            if k == 'resources':
-                # LICENSE covers these Open WebUI branding assets.
-                # Do not alter, remove, obscure, or replace them except as LICENSE permits:
-                # https://docs.openwebui.com/license.
-                for p, c in v.items():
-                    globals().get('override_static', lambda a, b: None)(p, c)
+            # License validation and entitlement data remain supported, but remote
+            # branding must never overwrite GCAT's bundled assets or public name.
+            if k in {'resources', 'name'}:
+                continue
             elif k == 'count':
                 setattr(app.state, 'USER_COUNT', v)
-            elif k == 'name':
-                # LICENSE covers this Open WebUI product name.
-                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-                # https://docs.openwebui.com/license.
-                setattr(app.state, 'WEBUI_NAME', v)
             elif k == 'metadata':
-                setattr(app.state, 'LICENSE_METADATA', v)
+                # Preserve entitlement metadata, excluding upstream login branding.
+                metadata = (
+                    {key: value for key, value in v.items() if key not in {'login_footer', 'auth_logo_position'}}
+                    if isinstance(v, dict)
+                    else v
+                )
+                setattr(app.state, 'LICENSE_METADATA', metadata)
 
     def handler(u):
         try:

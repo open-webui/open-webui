@@ -320,8 +320,8 @@
 									<img
 										id="logo"
 										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
-										class="size-24 rounded-full"
+										src="{WEBUI_BASE_URL}/static/gcat.png"
+										class="size-24 rounded-full bg-gray-900 p-3"
 										alt="{$WEBUI_NAME} logo"
 									/>
 								</div>
@@ -704,8 +704,8 @@
 						<img
 							id="logo"
 							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" w-6 rounded-full"
+							src="{WEBUI_BASE_URL}/static/gcat.png"
+							class="w-6 rounded-full bg-gray-900 p-1"
 							alt=""
 						/>
 					</div>

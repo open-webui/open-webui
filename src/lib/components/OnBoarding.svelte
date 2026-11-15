@@ -47,8 +47,8 @@
 			<img
 				id="logo"
 				crossorigin="anonymous"
-				src="/static/favicon.png"
-				class="size-6 rounded-full"
+				src="/static/gcat.svg"
+				class="size-8 rounded-lg bg-gray-900 p-1"
 				alt="{$WEBUI_NAME} logo"
 			/>
 		</div>
@@ -76,7 +76,7 @@
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					<div class="mb-4 text-[0.6875rem] font-medium tracking-[0.18em] uppercase opacity-35">
-						Open WebUI
+						GCAT
 					</div>
 
 					<h1
@@ -112,14 +112,6 @@
 							</svg>
 						</button>
 
-						<a
-							class="inline-flex items-center text-sm text-white/60 transition hover:text-white"
-							href="https://docs.openwebui.com/"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							{$i18n.t('Read the docs')}
-						</a>
 					</div>
 				</div>
 			</div>

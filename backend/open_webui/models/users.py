@@ -374,7 +374,7 @@ class UsersTable:
         id: str,
         name: str,
         email: str,
-        profile_image_url: str = '/user.png',
+        profile_image_url: str = '/static/gcat.png',
         role: str = 'pending',
         username: str | None = None,
         oauth: dict | None = None,
@@ -383,7 +383,7 @@ class UsersTable:
         try:
             profile_image_url = validate_image_url(profile_image_url)
         except ValueError:
-            profile_image_url = '/user.png'
+            profile_image_url = '/static/gcat.png'
 
         async with get_async_db_context(db) as session:
             user = UserModel(
@@ -750,7 +750,7 @@ class UsersTable:
         try:
             profile_image_url = validate_image_url(profile_image_url)
         except ValueError:
-            profile_image_url = '/user.png'
+            profile_image_url = '/static/gcat.png'
 
         async with get_async_db_context(db) as session:
             user = await session.get(User, id)

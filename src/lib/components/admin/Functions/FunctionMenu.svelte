@@ -89,7 +89,7 @@
 				<div class="flex items-center">{$i18n.t('Edit')}</div>
 			</button>
 
-			{#if $config?.features.enable_community_sharing}
+			{#if false}
 				<button
 					class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
 					on:click={() => {

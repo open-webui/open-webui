@@ -1029,7 +1029,7 @@ async def get_model_profile_image(
                     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                     # https://docs.openwebui.com/license.
                     return RedirectResponse(
-                        url='/static/favicon.png',
+                        url='/static/gcat.png',
                         status_code=status.HTTP_302_FOUND,
                     )
 
@@ -1059,7 +1059,7 @@ async def get_model_profile_image(
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
     return RedirectResponse(
-        url='/static/favicon.png',
+        url='/static/gcat.png',
         status_code=status.HTTP_302_FOUND,
     )
 

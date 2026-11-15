@@ -130,7 +130,7 @@ class ERROR_MESSAGES(str, Enum):
     # LICENSE covers this Open WebUI error identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.
-    SERVER_CONNECTION_ERROR = 'Open WebUI: Server Connection Error'
+    SERVER_CONNECTION_ERROR = 'GCAT: Server Connection Error'
     REQUIRED_FIELD_EMPTY = lambda name='': f'Required field {name} is empty'
     OAUTH_NOT_CONFIGURED = lambda name='': f"Provider '{name}' is not configured"
 

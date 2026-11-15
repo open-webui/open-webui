@@ -729,7 +729,7 @@
 															// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 															// https://docs.openwebui.com/license.
 															const image = e.currentTarget as HTMLImageElement;
-															if (!image.src.endsWith('/favicon.png')) image.src = '/favicon.png';
+															if (!image.src.endsWith('/static/gcat.png')) image.src = '/static/gcat.png';
 														}}
 													/>
 													<button

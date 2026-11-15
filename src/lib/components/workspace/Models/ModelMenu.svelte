@@ -219,7 +219,7 @@
 				</button>
 			{/if}
 
-			{#if writeAccess && $config?.features.enable_community_sharing}
+			{#if false}
 				<button
 					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
 					on:click={() => runAndClose(shareHandler)}

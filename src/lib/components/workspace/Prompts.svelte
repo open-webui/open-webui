@@ -219,26 +219,7 @@
 		}
 	};
 
-	const shareHandler = async (prompt) => {
-		// LICENSE covers this Open WebUI Community wordmark.
-		// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-		// https://docs.openwebui.com/license.
-		toast.success($i18n.t('Redirecting you to Open WebUI Community'));
-
-		const url = 'https://openwebui.com';
-
-		const tab = await window.open(`${url}/prompts/create`, '_blank');
-		window.addEventListener(
-			'message',
-			(event) => {
-				if (event.origin !== url) return;
-				if (event.data === 'loaded') {
-					tab.postMessage(JSON.stringify(prompt), '*');
-				}
-			},
-			false
-		);
-	};
+	const shareHandler = async (_prompt) => {};
 
 	const toPromptDraft = (prompt: any): PromptDraft => ({
 		name: prompt.name || prompt.title || 'Prompt',
@@ -809,13 +790,6 @@
 			{/if}
 		</div>
 
-		{#if $config?.features.enable_community_sharing}
-			<CommunityDiscover
-				href="https://openwebui.com/search?type=prompt"
-				title={$i18n.t('Discover a prompt')}
-				description={$i18n.t('Discover, download, and explore custom prompts')}
-			/>
-		{/if}
 	{:else}
 		<div class="w-full h-full flex justify-center items-center">
 			<Spinner className="size-5" />

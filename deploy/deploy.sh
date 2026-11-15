@@ -20,8 +20,13 @@ if [[ -n "$previous" && "$previous" != "$CHAT_IMAGE" ]]; then
   echo "Previous image: $previous"
 fi
 docker pull "$CHAT_IMAGE"
-docker compose -f compose.production.yml config --quiet
-docker compose -f compose.production.yml up -d --no-deps webui
+compose=(docker compose -f compose.production.yml)
+# Server-owned migration overrides must survive image deployments and rollbacks.
+if [[ -f compose.production.override.yml ]]; then
+  compose+=(-f compose.production.override.yml)
+fi
+"${compose[@]}" config --quiet
+"${compose[@]}" up -d --no-deps webui
 ok=false
 for attempt in $(seq 1 36); do
   if [[ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8089/health 2>/dev/null || true)" == 200 ]] &&
@@ -36,7 +41,7 @@ if [[ "$ok" != true ]]; then
   docker logs --tail 60 chat1-webui >&2 || true
   if [[ -n "$previous" && "$previous" != "$CHAT_IMAGE" ]]; then
     echo "Health failed; rolling back to $previous" >&2
-    CHAT_IMAGE="$previous" docker compose -f compose.production.yml up -d --no-deps webui
+    CHAT_IMAGE="$previous" "${compose[@]}" up -d --no-deps webui
     for attempt in $(seq 1 24); do
       if [[ "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 3 http://127.0.0.1:8089/health 2>/dev/null || true)" == 200 ]] &&
          [[ "$(docker inspect --format '{{.Config.Image}}' chat1-webui 2>/dev/null || true)" == "$previous" ]]; then

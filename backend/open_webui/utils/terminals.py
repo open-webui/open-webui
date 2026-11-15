@@ -348,14 +348,14 @@ async def filter_user_terminal_tools(request, user, tools: dict, metadata: dict,
             'spec': {
                 **tool['spec'],
                 'description': tool['spec'].get('description', '')
-                + "\nReads the user's Open WebUI Terminal tab, separate from the Desktop. "
+                + "\nReads the user's GCAT Terminal tab, separate from the Desktop. "
                 'Use this tool when the user refers to an open terminal tab.',
             },
         }
 
 
 async def upload_files_to_terminal(request, user, files: list[dict], metadata: dict, extra_params: dict):
-    """Copy Open WebUI files to the selected terminal, adding terminal_path or terminal_error to each entry."""
+    """Copy GCAT files to the selected terminal, adding terminal_path or terminal_error to each entry."""
     if not metadata.get('terminal_id') or not files:
         return
     try:
@@ -380,11 +380,11 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
                 entry['terminal_path'] = result['path']
             except Exception as error:
                 log.warning('File terminal upload failed (%s)', type(error).__name__)
-                entry['terminal_error'] = 'File saved in Open WebUI, but upload to the selected terminal failed.'
+                entry['terminal_error'] = 'File saved in GCAT, but upload to the selected terminal failed.'
     except Exception as error:
         log.warning('File terminal unavailable (%s)', type(error).__name__)
         for entry in files:
-            entry['terminal_error'] = 'File saved in Open WebUI, but the selected terminal is unavailable.'
+            entry['terminal_error'] = 'File saved in GCAT, but the selected terminal is unavailable.'
 
 
 async def get_terminal_file(request, user, metadata: dict, path: str, *, max_bytes: int) -> bytes:
@@ -395,7 +395,7 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
 
     resolved = await resolve_terminal_connection(request, user, metadata)
     if not resolved:
-        raise ValueError('Reading files requires a terminal connection reachable by Open WebUI.')
+        raise ValueError('Reading files requires a terminal connection reachable by GCAT.')
     connection, headers, cookies = resolved
     base_url = get_terminal_server_url(connection)
     async with get_terminal_client(

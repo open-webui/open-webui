@@ -264,7 +264,7 @@
 										// LICENSE covers this Open WebUI fallback logo.
 										// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										// https://docs.openwebui.com/license.
-										e.currentTarget.src = '/favicon.png';
+										e.currentTarget.src = '/static/gcat.png';
 									}}
 								/>
 							{:else if item.type === 'user'}
@@ -276,7 +276,7 @@
 										// LICENSE covers this Open WebUI fallback logo.
 										// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										// https://docs.openwebui.com/license.
-										e.currentTarget.src = '/favicon.png';
+										e.currentTarget.src = '/static/gcat.png';
 									}}
 								/>
 							{/if}

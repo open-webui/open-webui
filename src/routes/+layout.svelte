@@ -71,7 +71,7 @@
 		removeTerminalConnection
 	} from '$lib/utils/connections';
 
-	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import {
 		bestMatchingLanguage,
 		cleanText,
@@ -83,7 +83,6 @@
 	import { initializeTether, renewTetherSession } from '$lib/utils/tether';
 
 	import NotificationToast from '$lib/components/NotificationToast.svelte';
-	import SyncStatsModal from '$lib/components/chat/Settings/SyncStatsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MfaManagement from '$lib/components/auth/MfaManagement.svelte';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
@@ -133,9 +132,6 @@
 	let isAuthRedirectInProgress = false;
 
 	let showRefresh = false;
-
-	let showSyncStatsModal = false;
-	let syncStatsEventData = null;
 
 	let heartbeatInterval = null;
 	let disconnectToastTimer = null;
@@ -655,13 +651,13 @@
 			if ($isLastActiveTab) {
 				if ($settings?.notificationEnabled ?? false) {
 					notify(
-						`${data.title} / Open WebUI`,
+						`${data.title} / GCAT`,
 						{
 							body: timeStr,
 							// LICENSE covers this Open WebUI notification identifier.
 							// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 							// https://docs.openwebui.com/license.
-							icon: `${WEBUI_BASE_URL}/static/favicon.png`
+							icon: `${WEBUI_BASE_URL}/static/gcat.png`
 						},
 						'/calendar'
 					);
@@ -816,13 +812,13 @@
 					if ($isLastActiveTab) {
 						if ($settings?.notificationEnabled ?? false) {
 							notify(
-								`${displayTitle} / Open WebUI`,
+								`${displayTitle} / GCAT`,
 								{
 									body: contentPreview,
 									// LICENSE covers this Open WebUI notification identifier.
 									// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									// https://docs.openwebui.com/license.
-									icon: `${WEBUI_BASE_URL}/static/favicon.png`
+									icon: `${WEBUI_BASE_URL}/static/gcat.png`
 								},
 								`/c/${event.chat_id}`
 							);
@@ -963,7 +959,7 @@
 						// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						// https://docs.openwebui.com/license.
 						notify(
-							`${title} / Open WebUI`,
+							`${title} / GCAT`,
 							{
 								body: content,
 								icon: `${WEBUI_API_BASE_URL}/users/${data?.user?.id}/profile/image`
@@ -1147,17 +1143,6 @@
 		}
 	};
 
-	const windowMessageEventHandler = async (event) => {
-		if (!COMMUNITY_ORIGINS.includes(event.origin)) {
-			return;
-		}
-
-		if (event.data === 'export:stats' || event.data?.type === 'export:stats') {
-			syncStatsEventData = event.data;
-			showSyncStatsModal = true;
-		}
-	};
-
 	onMount(async () => {
 		const originalFetch = window.fetch.bind(window);
 		stopTether = await initializeTether(originalFetch);
@@ -1182,8 +1167,6 @@
 
 			return response;
 		};
-
-		window.addEventListener('message', windowMessageEventHandler);
 
 		let touchstartY = 0;
 
@@ -1378,7 +1361,7 @@
 			// visual, textual, symbolic identifiers, metadata, and surrounding UI.
 			// Do not alter, remove, obscure, or replace it except as LICENSE permits:
 			// https://docs.openwebui.com/license.
-			await WEBUI_NAME.set(backendConfig.name);
+			await WEBUI_NAME.set('GCAT');
 
 			if ($config) {
 				await setupSocket($config.features?.enable_websocket ?? true);
@@ -1451,18 +1434,8 @@
 			loaded = true;
 		}
 
-		// Auto-show SyncStatsModal when opened with ?sync=true (from community)
-		if (
-			(window.opener ?? false) &&
-			$page.url.searchParams.get('sync') === 'true' &&
-			($config?.features?.enable_community_sharing ?? false)
-		) {
-			showSyncStatsModal = true;
-		}
-
 		return () => {
 			window.removeEventListener('resize', onResize);
-			window.removeEventListener('message', windowMessageEventHandler);
 			document.removeEventListener('touchstart', touchstartHandler);
 			document.removeEventListener('touchmove', touchmoveHandler);
 			document.removeEventListener('touchend', touchendHandler);
@@ -1510,7 +1483,7 @@
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title>{$WEBUI_NAME}</title>
-	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/favicon.png" />
+	<link crossorigin="anonymous" rel="icon" href="{WEBUI_BASE_URL}/static/gcat.png" />
 
 	<meta name="apple-mobile-web-app-title" content={$WEBUI_NAME} />
 	<meta name="description" content={$WEBUI_NAME} />
@@ -1549,9 +1522,6 @@
 	</div>
 {/if}
 
-{#if $config?.features.enable_community_sharing}
-	<SyncStatsModal bind:show={showSyncStatsModal} eventData={syncStatsEventData} />
-{/if}
 
 <div aria-live="polite">
 	<Toaster

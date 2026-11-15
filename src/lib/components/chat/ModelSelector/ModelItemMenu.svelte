@@ -180,30 +180,10 @@
 				<div class="flex items-center">{$i18n.t('Copy Link')}</div>
 			</button>
 
-			{#if $config?.features.enable_community_sharing}
+			{#if false}
 				<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
-			{#if $config?.features.enable_community_sharing}
-				<button
-					type="button"
-					class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition"
-					on:click={(e) => {
-						e.stopPropagation();
-						e.preventDefault();
-
-						window.open(
-							`https://openwebui.com/models?q=${encodeURIComponent(model?.id ?? '')}`,
-							'_blank'
-						);
-						show = false;
-					}}
-				>
-					<GlobeAlt className="size-3.5" />
-
-					<div class="flex items-center">{$i18n.t('Community Reviews')}</div>
-				</button>
-			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -793,7 +793,7 @@ async def signup_handler(
     email: str,
     password: str,
     name: str,
-    profile_image_url: str = '/user.png',
+    profile_image_url: str = '/static/gcat.png',
     *,
     db: AsyncSession,
     source: str = 'api',

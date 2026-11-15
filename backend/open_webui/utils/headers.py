@@ -189,8 +189,7 @@ async def get_headers_and_cookies(
                 # LICENSE covers this Open WebUI upstream metadata identifier.
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
-                'HTTP-Referer': 'https://openwebui.com/',
-                'X-Title': 'Open WebUI',
+                'X-Title': 'GCAT',
             }
             if 'openrouter.ai' in url
             else {}
