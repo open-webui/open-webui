@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab, active } = getPageContext();
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -237,6 +237,13 @@
 	}
 
 	$: if (loaded) void openLinkedEvent($pageUrl.searchParams.get('event'));
+
+	let shown = true;
+	const reloadWhenShown = (isActive: boolean) => {
+		if (isActive && !shown) void refresh();
+		shown = isActive;
+	};
+	$: if (loaded) reloadWhenShown($active);
 
 	onMount(async () => {
 		if (
