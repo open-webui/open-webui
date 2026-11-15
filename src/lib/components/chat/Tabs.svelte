@@ -225,11 +225,34 @@
 	// The code block each artifacts tab was last asked to show.
 	let artifactSelections: Record<string, { code: string }> = {};
 	let queuedArtifactCode: { code?: string } | null = null;
-	let viewEntry: ReturnType<typeof chatViewEntry> | null = null;
+	type ChatViewEntry = ReturnType<typeof chatViewEntry>;
+	/**
+	 * Where the tab layout of the current chat stands.
+	 * - idle: nothing is shown (before the first load, after a chat switch or sign-out)
+	 * - loading / loadFailed: the layout saved for `chatId` is being read, or could not be
+	 * - ready: the layout of `chatId` is shown; `error` reports a failed save
+	 * - carrying: a new chat kept the open pages and waits for `chatId` to move off `fromChatId`
+	 * - attaching / attachFailed: an unsaved layout is being moved to the chat `chatId`
+	 */
+	type ViewState =
+		| { status: 'idle' }
+		| { status: 'loading'; entry: ChatViewEntry; chatId: string | null }
+		| { status: 'loadFailed'; entry: ChatViewEntry; chatId: string | null; error: string }
+		| { status: 'ready'; entry: ChatViewEntry; chatId: string | null; error: string }
+		| { status: 'carrying'; entry: ChatViewEntry; fromChatId: string | null }
+		| { status: 'attaching'; entry: ChatViewEntry; chatId: string; done: Promise<void> }
+		| { status: 'attachFailed'; entry: ChatViewEntry; chatId: string; error: string };
+	let viewState: ViewState = { status: 'idle' };
+	// Read-only projections of `viewState`; only setView writes them.
+	let viewEntry: ChatViewEntry | null = null;
 	let viewReady = false;
 	let viewError = '';
-	let restoreRequestId = 0;
-	let attachInFlight: Promise<void> | null = null;
+	const setView = (next: ViewState) => {
+		viewState = next;
+		viewEntry = next.status === 'idle' ? null : next.entry;
+		viewReady = ['ready', 'carrying', 'attaching', 'attachFailed'].includes(next.status);
+		viewError = 'error' in next ? next.error : '';
+	};
 	let sessionFailures: Record<string, { message: string; status?: number }> = {};
 	let sessionAttempts: Record<string, number> = {};
 
@@ -259,7 +282,6 @@
 			selectedTerminalId: $selectedTerminalId
 		});
 	}
-	let preserveChatView = false;
 	const leaveChatView = () => {
 		stopTerminalChoice?.(false);
 		stopTerminalChoice = null;
@@ -268,20 +290,16 @@
 	};
 	export function resetForChatSwitch() {
 		leaveChatView();
-		preserveChatView = false;
-		viewReady = false;
+		setView({ status: 'idle' });
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		queuedArtifactCode = null;
-		++restoreRequestId;
-		tabsChatId = undefined;
 	}
 	/** Starts a new chat that keeps the open pages; everything else stays with the chat being left. */
 	export function carryPagesToNewChat() {
 		if (!viewReady || !$user?.id) return resetForChatSwitch();
 		leaveChatView();
-		preserveChatView = true;
 		let carried = tabs;
 		for (const tab of tabs.tabs) {
 			if (tab.id !== mainChatTabId && tab.kind !== 'page') carried = removeTab(carried, tab.id);
@@ -294,23 +312,33 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		queuedArtifactCode = null;
-		const chatView = chatViewEntry($user.id, null, $temporaryChatEnabled);
-		chatView.state = { ...chatView.state, panels: carried, selectedTerminalId: $selectedTerminalId };
-		viewEntry = chatView;
+		const entry = chatViewEntry($user.id, null, $temporaryChatEnabled);
+		entry.state = {
+			...entry.state,
+			panels: carried,
+			selectedTerminalId: $selectedTerminalId
+		};
+		setView({ status: 'carrying', entry, fromChatId: chatId });
 		tabs = carried;
 		hasExtraTabs = carried.tabs.some((tab) => tab.id !== mainChatTabId);
 	}
-	export async function attachChatViewTo(id: string) {
-		if (!viewEntry || viewEntry.chatId === id) return;
-		if (attachInFlight) return attachInFlight;
-		const chatView = viewEntry;
+	export function attachChatViewTo(id: string): Promise<void> {
+		if (viewState.status === 'attaching') return viewState.done;
+		if (
+			viewState.status !== 'ready' &&
+			viewState.status !== 'carrying' &&
+			viewState.status !== 'attachFailed'
+		)
+			return Promise.resolve();
+		const entry = viewState.entry;
+		if (entry.chatId === id) return Promise.resolve();
 		captureView();
-		attachInFlight = promoteChatView(
-			chatView,
+		const done = promoteChatView(
+			entry,
 			id,
 			async () => {
 				await tick();
-				for (const tab of chatView.state.panels.tabs) {
+				for (const tab of entry.state.panels.tabs) {
 					if (!tab.sessionId) continue;
 					if (tab.kind === 'terminal') {
 						if (!terminalViews[tab.id]) throw new Error('Terminal is not connected');
@@ -322,54 +350,73 @@
 				}
 			},
 			$temporaryChatEnabled
-		)
-			.then(() => {
-				tabsChatId = id;
-				viewEntry = chatView;
-				preserveChatView = false;
-				viewError = '';
-			})
-			.finally(() => {
-				attachInFlight = null;
-			});
-		return attachInFlight;
+		).then(
+			() => {
+				if (viewEntry === entry) setView({ status: 'ready', entry, chatId: id, error: '' });
+			},
+			(error) => {
+				if (viewEntry === entry)
+					setView({
+						status: 'attachFailed',
+						entry,
+						chatId: id,
+						error: entry.error || String(error)
+					});
+				throw error;
+			}
+		);
+		setView({ status: 'attaching', entry, chatId: id, done });
+		return done;
 	}
 
 	async function restoreChatView(id: string | null) {
 		if (!$user?.id) return;
-		const version = ++restoreRequestId;
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
-		viewReady = false;
 		tabs = createTabsState();
-		viewError = '';
 		terminalTitles = {};
 		terminalProcesses = {};
 		chatStreamingStates = {};
 		chatTitleEditors = {};
-		tabsChatId = id;
-		const chatView = chatViewEntry($user.id, id, $temporaryChatEnabled);
-		viewEntry = chatView;
+		const entry = chatViewEntry($user.id, id, $temporaryChatEnabled);
+		const loading: ViewState = { status: 'loading', entry, chatId: id };
+		setView(loading);
 		try {
-			await loadChatView(chatView);
-			if (version !== restoreRequestId) return;
+			await loadChatView(entry);
+			if (viewState !== loading) return;
 			// The chat restores its terminal and directory together; layouts must not override them.
-			chatView.state.selectedTerminalId = $selectedTerminalId;
-			chatView.state.panels = setMainChatTab(chatView.state.panels, true, mainTabTitle);
-			tabs = chatView.state.panels;
+			entry.state.selectedTerminalId = $selectedTerminalId;
+			entry.state.panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
+			tabs = entry.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};
 			fileGitStatuses = {};
-			fileGitDiffModes = chatView.transient.gitDiffModes ?? {};
-			fileGitHideWhitespace = chatView.transient.gitHideWhitespace ?? {};
+			fileGitDiffModes = entry.transient.gitDiffModes ?? {};
+			fileGitHideWhitespace = entry.transient.gitHideWhitespace ?? {};
 			commentAnchor = {};
 			sessionFailures = {};
 			sessionAttempts = {};
-			viewReady = true;
+			setView({ status: 'ready', entry, chatId: id, error: entry.error });
 			hasExtraTabs = tabs.tabs.some((tab) => tab.id !== mainChatTabId);
 		} catch (error) {
-			if (version === restoreRequestId) viewError = String(error);
+			if (viewState === loading)
+				setView({ status: 'loadFailed', entry, chatId: id, error: String(error) });
 		}
+	}
+	/** Keeps the layout in step with the chat: carry it over, attach it to the new chat id, or load. */
+	function followChat(current: ViewState, id: string | null) {
+		if (current.status === 'idle') return void restoreChatView(id);
+		if (current.status === 'carrying') {
+			if (id === current.fromChatId) return;
+			if (id) void attachChatViewTo(id).catch(() => {});
+			else setView({ status: 'ready', entry: current.entry, chatId: id, error: '' });
+			return;
+		}
+		if (current.chatId === id) return;
+		const unsaved = !current.entry.chatId;
+		if (unsaved && id && (current.status === 'ready' || current.status === 'attachFailed'))
+			void attachChatViewTo(id).catch(() => {});
+		else void restoreChatView(id);
 	}
 	const persistPanels = (
 		nextTabs: typeof tabs,
@@ -411,12 +458,10 @@
 	};
 	$: persistPanels(tabs, $selectedTerminalId, viewReady);
 	$: if (viewEntry && viewEntry.userId !== $user?.id) {
-		viewReady = false;
-		viewEntry = null;
+		setView({ status: 'idle' });
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
-		tabsChatId = undefined;
 		clearChatViews();
 	}
 	const forgetDraftsForUnreachableTerminals = (..._connections: unknown[]) => {
@@ -461,7 +506,6 @@
 	let dirtyFiles: Record<string, boolean> = {};
 	let fileContexts: Record<string, TerminalContext | null> = {};
 	let panelTarget: HTMLElement | null = null;
-	let tabsChatId: string | null | undefined = undefined;
 	let hasExtraTabs = false;
 	let commentAnchor: { comment_id?: string } = {};
 	let closingTabIds = new Set<string>();
@@ -1535,15 +1579,7 @@
 		void loadTerminalFeatures();
 	}
 
-	$: if (isMounted && !chatLoading && $user?.id && chatId !== tabsChatId) {
-		if (viewEntry && viewReady && (preserveChatView || (!viewEntry.chatId && chatId))) {
-			tabsChatId = chatId;
-			if (chatId)
-				void attachChatViewTo(chatId).catch((error) => {
-					viewError = String(error);
-				});
-		} else void restoreChatView(chatId);
-	}
+	$: if (isMounted && !chatLoading && $user?.id) followChat(viewState, chatId);
 	$: if (
 		isMounted &&
 		viewReady &&
@@ -1617,7 +1653,7 @@
 		stopTerminalChoice?.(false);
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
-		++restoreRequestId;
+		setView({ status: 'idle' });
 		++commentCountRequestId;
 		++featureCheckRequestId;
 		showOverview.set(false);
@@ -1632,10 +1668,10 @@
 		if (appLayout) appLayout.openPageTab = openPageTab;
 		const unregisterCapture = registerChatViewCapture(captureView);
 		const unsubscribeViews = chatViewChanges.subscribe(() => {
-			if (viewEntry && viewReady) {
-				tabs = viewEntry.state.panels;
-				viewError = viewEntry.error;
-			}
+			if (!viewEntry || !viewReady) return;
+			tabs = viewEntry.state.panels;
+			if (viewState.status === 'ready' && viewState.error !== viewEntry.error)
+				setView({ ...viewState, error: viewEntry.error });
 		});
 		document.addEventListener('keydown', handleWorkspaceShortcut, true);
 		const unsubscribeVisibility = showTabs.subscribe((visible) => {
@@ -1875,9 +1911,10 @@
 				<button
 					class="underline ml-2"
 					on:click={() => {
-						if (viewEntry?.promoting && chatId) void attachChatViewTo(chatId).catch(() => {});
-						else if (viewReady && viewEntry) void flushChatView(viewEntry);
-						else void restoreChatView(chatId);
+						if (viewState.status === 'attachFailed')
+							void attachChatViewTo(viewState.chatId).catch(() => {});
+						else if (viewState.status === 'ready') void flushChatView(viewState.entry);
+						else if (viewState.status === 'loadFailed') void restoreChatView(viewState.chatId);
 					}}>{$i18n.t('Retry')}</button
 				>
 			</div>
