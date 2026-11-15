@@ -248,6 +248,7 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	let filterShow = false;
+	let filterDropdown: Dropdown;
 	let tagQuery = '';
 
 	$: groupByLabel = (value: GroupBy) =>
@@ -689,6 +690,12 @@
 		filterShow = true;
 	}
 
+	function openFilterFromKeyboard() {
+		tagQuery = '';
+		if (filterDropdown) filterDropdown.openWithFocus();
+		else filterShow = true;
+	}
+
 	async function openSearch() {
 		searchOpen = true;
 		await tick();
@@ -773,7 +780,7 @@
 			void openSearch();
 		} else if (event.key === 'f') {
 			event.preventDefault();
-			void openFilter();
+			openFilterFromKeyboard();
 		} else if (event.key === 'c' && !readOnly) {
 			// Jump into the floating composer.
 			event.preventDefault();
@@ -1145,7 +1152,12 @@
 					>
 				{/if}
 
-				<Dropdown bind:show={filterShow} align="end" onOpenChange={() => (tagQuery = '')}>
+				<Dropdown
+					bind:this={filterDropdown}
+					bind:show={filterShow}
+					align="end"
+					onOpenChange={() => (tagQuery = '')}
+				>
 					<button
 						type="button"
 						class="{iconButton} {filterCount ? 'text-gray-800 dark:text-gray-100' : ''}"

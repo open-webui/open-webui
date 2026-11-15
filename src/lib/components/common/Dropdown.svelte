@@ -302,6 +302,8 @@
 		onOpenChange(true);
 	}
 
+	export const openWithFocus = () => openDropdown(true);
+
 	function closeDropdown(restoreFocus = !!contentEl?.contains(document.activeElement)) {
 		if (!show) return;
 		show = false;
