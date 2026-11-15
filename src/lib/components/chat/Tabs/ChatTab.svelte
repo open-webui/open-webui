@@ -7,6 +7,7 @@
 	import Chat from '../Chat.svelte';
 	let chatView: Chat | undefined;
 	export const startRename = () => chatView?.startRename();
+	export const getOverview = () => chatView?.getOverview();
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 

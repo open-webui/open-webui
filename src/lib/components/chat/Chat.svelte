@@ -4474,6 +4474,8 @@
 	$: chatMenu = showChatMenu && !editingTitle ? renderChatMenu : undefined;
 	$: if (embedded && tabbed) tabActions = chatMenu;
 
+	export const getOverview = () => ({ history, chatUser: chatOwner, showMessage });
+
 	export const startRename = async () => {
 		if (
 			loading ||
