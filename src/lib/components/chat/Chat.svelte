@@ -170,7 +170,9 @@
 	export let chatIdProp = '';
 	export let initialPage = '';
 	let mainChatHref = '/';
-	$: if ($chatId) mainChatHref = `/c/${$chatId}`;
+	$: if ($chatId)
+		mainChatHref =
+			`/c/${$chatId}` + ($page.url.pathname === `/c/${$chatId}` ? $page.url.search : '');
 	export let embedded = false;
 	export let tabbed = false;
 	const chatId = embedded ? writable('') : _chatId;
