@@ -9,6 +9,7 @@ from open_webui.config import (
     DEFAULT_ARENA_MODEL,
 )
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
+from open_webui.events import EVENTS, publish_event
 from open_webui.functions import get_function_models
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -90,6 +91,33 @@ async def get_all_base_models(request: Request, user: UserModel = None):
     return function_models + openai_models + ollama_models
 
 
+async def publish_model_availability_events(request: Request, base_models: list[dict]):
+    available_models = {model['id']: model.get('name') for model in base_models}
+    previous_models = request.app.state.BASE_MODELS_SNAPSHOT
+    request.app.state.BASE_MODELS_SNAPSHOT = available_models
+    if previous_models is None:
+        return
+
+    for model_id in sorted(available_models.keys() - previous_models.keys()):
+        await publish_event(
+            request,
+            EVENTS.MODEL_AVAILABLE,
+            subject_id=model_id,
+            subject_type='model',
+            source='system',
+            data={'name': available_models[model_id]},
+        )
+    for model_id in sorted(previous_models.keys() - available_models.keys()):
+        await publish_event(
+            request,
+            EVENTS.MODEL_UNAVAILABLE,
+            subject_id=model_id,
+            subject_type='model',
+            source='system',
+            data={'name': previous_models[model_id]},
+        )
+
+
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
     config = await Config.get_many(
         'models.base_models_cache',
@@ -123,6 +151,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
     if base_models is None:
         base_models = await get_all_base_models(request, user=user)
+        await publish_model_availability_events(request, base_models)
         if base_models:
             request.app.state.BASE_MODELS = base_models
             if config.get('models.base_models_cache') and redis is not None:

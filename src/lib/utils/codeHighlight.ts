@@ -183,9 +183,14 @@ export function isCodeFile(path: string | null): boolean {
  * async, callers are completely unaffected by the change.
  */
 export async function highlightCode(code: string, filePath: string): Promise<string> {
-	const lang = languageForFilePath(filePath) ?? 'text';
+	return highlightCodeBlock(code, languageForFilePath(filePath) ?? 'text');
+}
 
-	const { codeToHtml } = await import('shiki');
+/** Highlight a Markdown fence, falling back to plain text for unknown language tags. */
+export async function highlightCodeBlock(code: string, language: string): Promise<string> {
+	const { codeToHtml, bundledLanguages } = await import('shiki');
+	const name = language.trim().toLowerCase();
+	const lang = Object.hasOwn(bundledLanguages, name) ? name : 'text';
 	return await codeToHtml(code, {
 		lang,
 		themes: {

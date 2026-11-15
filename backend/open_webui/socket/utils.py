@@ -214,12 +214,14 @@ class CachedRedisDict(RedisDict):
         super().__init__(name, redis_url, redis_sentinels, redis_cluster, cache_set_signature=True)
         self._cache: dict = {}
         self._cached_signature: str | None = None
+        self._cached_values: list | None = None
 
     def _refresh_cache(self) -> dict:
         stored_signature = self.redis.get(self._signature_name)
         if stored_signature is None or stored_signature != self._cached_signature:
             self._cache = self.redis.hgetall(self.name)
             self._cached_signature = stored_signature
+            self._cached_values = None
         return self._cache
 
     def __getitem__(self, key):
@@ -238,7 +240,11 @@ class CachedRedisDict(RedisDict):
         return list(self._refresh_cache().keys())
 
     def values(self):
-        return [JSONCodec.loads(v) for v in self._refresh_cache().values()]
+        cache = self._refresh_cache()
+        # Decoded once per signature; callers share these dicts read-only.
+        if self._cached_values is None:
+            self._cached_values = [JSONCodec.loads(v) for v in cache.values()]
+        return list(self._cached_values)
 
     def items(self):
         return [(k, JSONCodec.loads(v)) for k, v in self._refresh_cache().items()]
@@ -246,7 +252,7 @@ class CachedRedisDict(RedisDict):
 
 class YdocManager:
     COMPACTION_THRESHOLD = 500
-    MAX_DOCUMENTS_PER_SESSION = 20
+    MAX_DOCUMENTS_PER_USER = 20
     # Never below what one socket message can carry, or large notes open empty
     MAX_DOCUMENT_SIZE = 16 * 1024 * 1024
 

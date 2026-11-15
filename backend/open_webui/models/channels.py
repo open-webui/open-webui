@@ -3,7 +3,7 @@ import time
 import uuid
 from typing import Optional
 
-from open_webui.models.notifications import emit_changes
+from open_webui.models.notifications import emit_changes, update_notifications_read_at_by_resource_id
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.access_grants import (
     AccessGrantModel,
@@ -613,6 +613,33 @@ class ChannelTable:
             memberships = result.scalars().all()
             return [ChannelMemberModel.model_validate(membership) for membership in memberships]
 
+    async def get_members_by_user_id_and_channel_ids(
+        self, user_id: str, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, ChannelMemberModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChannelMember).filter(
+                    ChannelMember.channel_id.in_(channel_ids),
+                    ChannelMember.user_id == user_id,
+                )
+            )
+            return {
+                membership.channel_id: ChannelMemberModel.model_validate(membership)
+                for membership in result.scalars().all()
+            }
+
+    async def get_members_by_channel_ids(
+        self, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> list[ChannelMemberModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChannelMember).filter(
+                    ChannelMember.channel_id.in_(channel_ids), ChannelMember.user_id.is_not(None)
+                )
+            )
+            memberships = result.scalars().all()
+            return [ChannelMemberModel.model_validate(membership) for membership in memberships]
+
     async def pin_channel(
         self,
         channel_id: str,
@@ -678,7 +705,12 @@ class ChannelTable:
             membership.last_read_at = int(time.time_ns())
             membership.updated_at = int(time.time_ns())
 
+            notifications_updated = await update_notifications_read_at_by_resource_id(
+                user_id=user_id, resource_type='channel', resource_id=channel_id, db=db
+            )
             await db.commit()
+            if notifications_updated:
+                await emit_changes({user_id})
             return True
 
     async def update_member_active_status(

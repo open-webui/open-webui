@@ -34,10 +34,12 @@ from open_webui.models.knowledge import (
 )
 from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.utils import is_media_content_type
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
     BatchProcessFilesForm,
     ProcessFileForm,
+    index_file,
     process_file,
     process_files_batch,
 )
@@ -381,6 +383,7 @@ async def reindex_knowledge_files(
     total_files = sum(len(files) for _, files in knowledge_base_files)
     processed_files = 0
     failed_files = []
+    extracted_file_ids = set()
     start_time = time.monotonic()
 
     log.info('Starting reindexing for %s knowledge bases (%s files)', len(knowledge_bases), total_files)
@@ -413,11 +416,28 @@ async def reindex_knowledge_files(
                 )
 
                 try:
-                    # Force the KB add path to use stored SQL content instead of stale file-{id} chunks.
-                    # process_file recreates file-{id} only when that stored content exists.
-                    file_collection = f'file-{file.id}'
-                    if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-                        await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+                    if file.id not in extracted_file_ids:
+                        extracted_file_ids.add(file.id)
+                        file_collection = f'file-{file.id}'
+                        if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                            await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+
+                        # PDF page numbers only come from extraction; media keeps its stored content.
+                        if file.path and not await is_media_content_type(file.meta.get('content_type')):
+                            try:
+                                await index_file(request, ProcessFileForm(file_id=file.id), user, db)
+                            except Exception as e:
+                                log.warning(
+                                    'Error re-extracting file %s (ID: %s), using stored content: %s',
+                                    file.filename,
+                                    file.id,
+                                    e,
+                                )
+                                await Files.update_file_data_by_id(
+                                    file.id, {'content': file.data.get('content')}, db=db
+                                )
+                                if await ASYNC_VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
+                                    await ASYNC_VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
 
                     await process_file(
                         request,

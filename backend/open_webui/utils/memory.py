@@ -10,7 +10,7 @@ from open_webui.models.config import Config
 from open_webui.models.memories import Memories
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import add_or_update_system_message, get_content_from_message
+from open_webui.utils.misc import get_content_from_message, get_last_user_message_item
 
 log = logging.getLogger(__name__)
 
@@ -287,12 +287,16 @@ def model_allows_memory(model: dict | None) -> bool:
     return ((model or {}).get('info', {}).get('meta', {}).get('capabilities') or {}).get('memory', True)
 
 
-async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
+async def recall_memories(request, messages: list[dict], user, model: dict | None = None) -> str:
     if not model_allows_memory(model):
-        return form_data
+        return ''
+
+    target = get_last_user_message_item(messages)
+    if target is None:
+        return ''
 
     user_messages = []
-    for message in reversed(form_data.get('messages', [])):
+    for message in reversed(messages):
         if message.get('role') != 'user':
             continue
 
@@ -305,7 +309,7 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
 
     query = '\n\n'.join(reversed(user_messages))[-4000:]
     if not query:
-        return form_data
+        return ''
 
     all_memories = await Memories.get_memories_by_user_id(user.id)
     results = None
@@ -370,7 +374,7 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
             ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
             parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
     if not parts:
-        return form_data
+        return ''
 
     config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
     try:
@@ -382,15 +386,6 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
     except Exception:
         context_limit = 2000
 
-    messages = form_data['messages']
-    if messages and messages[0].get('role') == 'system':
-        content = messages[0].get('content', '')
-        if isinstance(content, str) and MEMORY_CONTEXT_OPEN in content:
-            start = content.find(MEMORY_CONTEXT_OPEN)
-            end = content.find(MEMORY_CONTEXT_CLOSE, start)
-            if end != -1:
-                messages[0]['content'] = (content[:start] + content[end + len(MEMORY_CONTEXT_CLOSE) :]).strip()
-
     user_parts = [part for part in parts if part.startswith('[User Memory]')]
     context_parts = [part for part in parts if not part.startswith('[User Memory]')]
     rendered = '\n\n'.join(
@@ -400,10 +395,19 @@ async def add_memory_context(request, form_data: dict, user, model: dict | None 
         ]
     ).strip()
     if not rendered:
-        return form_data
+        return ''
 
-    memory_context = f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
-    form_data['messages'] = add_or_update_system_message(memory_context, messages, append=True)
+    return f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
+
+
+async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
+    context = await recall_memories(request, form_data.get('messages', []), user, model)
+    target = get_last_user_message_item(form_data.get('messages', []))
+    if context and target is not None:
+        content = target.get('content') or ''
+        target['content'] = (
+            [*content, {'type': 'text', 'text': context}] if isinstance(content, list) else f'{content}\n{context}'
+        )
     return form_data
 
 

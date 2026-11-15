@@ -93,12 +93,13 @@ def stage_ask_user_tool_calls(
 
     for tool_call in ask_user_calls:
         call_id = tool_call.get('id') or make_output_id('fc')
-        raw_arguments = tool_call.get('function', {}).get('arguments', '{}')
-        arguments = raw_arguments
+        function = tool_call.get('function', {})
+        arguments = function.get('arguments', '{}')
+        original_arguments = function.get('original_arguments', arguments)
 
         if not error:
             try:
-                parsed_arguments = JSONCodec.loads(raw_arguments or '{}')
+                parsed_arguments = JSONCodec.loads(arguments or '{}')
                 if not isinstance(parsed_arguments, dict):
                     raise ValueError('ask_user arguments must be an object.')
                 arguments = JSONCodec.dumps(normalize_ask_user_request(parsed_arguments))
@@ -131,6 +132,8 @@ def stage_ask_user_tool_calls(
             ),
             None,
         )
+        if arguments != original_arguments:
+            item['original_arguments'] = (existing_item or {}).get('original_arguments', original_arguments)
         if existing_item:
             existing_item.update(item)
         else:

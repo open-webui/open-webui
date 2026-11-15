@@ -74,6 +74,7 @@
 
 	let query = '';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController;
 
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
@@ -159,15 +160,13 @@
 
 	const reset = () => {
 		page = 1;
-		items = null;
-		total = null;
 		allItemsLoaded = false;
 		itemsLoading = false;
 		notes = {};
 	};
 
 	const loadMoreItems = async () => {
-		if (allItemsLoaded) return;
+		if (allItemsLoaded || itemsLoading) return;
 		page += 1;
 		await getItemsPage();
 	};
@@ -178,6 +177,8 @@
 	};
 
 	const handleSearchInput = () => {
+		searchController?.abort();
+		itemsLoading = true;
 		clearTimeout(searchDebounceTimer);
 		searchDebounceTimer = setTimeout(() => {
 			if (loaded) {
@@ -202,6 +203,10 @@
 			: `/notes/${note.id}`;
 
 	const getItemsPage = async () => {
+		searchController?.abort();
+		searchController = new AbortController();
+		const { signal } = searchController;
+
 		itemsLoading = true;
 
 		if (viewOption === 'created') {
@@ -215,10 +220,13 @@
 			permission,
 			sortKey,
 			page,
-			sortKey ? sortDirection : null
+			sortKey ? sortDirection : null,
+			signal
 		).catch(() => {
 			return [];
 		});
+
+		if (signal.aborted) return;
 
 		if (res) {
 			total = res.total;
@@ -230,7 +238,7 @@
 				allItemsLoaded = false;
 			}
 
-			if (items) {
+			if (items && page > 1) {
 				const existingIds = new Set(items.map((item) => item.id));
 				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
 				items = [...items, ...newItems];
@@ -320,8 +328,16 @@
 		dropzoneElement?.addEventListener('drop', onDrop);
 		dropzoneElement?.addEventListener('dragleave', onDragLeave);
 
+		let keyboardFocusedElement: Element | null = null;
+		const onFocusIn = (event: FocusEvent) => {
+			const target = event.target as Element;
+			keyboardFocusedElement = target.matches(':focus-visible:not(input, textarea)')
+				? target
+				: null;
+		};
+
 		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Shift') {
+			if (event.key === 'Shift' && document.activeElement !== keyboardFocusedElement) {
 				shiftKey = true;
 				openNoteMenuId = null;
 			}
@@ -337,13 +353,16 @@
 			shiftKey = false;
 		};
 
+		window.addEventListener('focusin', onFocusIn);
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			searchController?.abort();
 			clearTimeout(searchDebounceTimer);
 
+			window.removeEventListener('focusin', onFocusIn);
 			window.removeEventListener('keydown', onKeyDown);
 			window.removeEventListener('keyup', onKeyUp);
 			window.removeEventListener('blur', onBlur);

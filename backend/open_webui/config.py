@@ -954,8 +954,8 @@ PADDLEOCR_VL_TOKEN = os.getenv('PADDLEOCR_VL_TOKEN', '')
 BYPASS_EMBEDDING_AND_RETRIEVAL = os.getenv('BYPASS_EMBEDDING_AND_RETRIEVAL', 'False').lower() == 'true'
 
 
-RAG_TOP_K = int(os.getenv('RAG_TOP_K', '3'))
-RAG_TOP_K_RERANKER = int(os.getenv('RAG_TOP_K_RERANKER', '3'))
+RAG_TOP_K = int(os.getenv('RAG_TOP_K', '10'))
+RAG_TOP_K_RERANKER = int(os.getenv('RAG_TOP_K_RERANKER', '10'))
 RAG_RELEVANCE_THRESHOLD = float(os.getenv('RAG_RELEVANCE_THRESHOLD', '0.0'))
 RAG_HYBRID_BM25_WEIGHT = float(os.getenv('RAG_HYBRID_BM25_WEIGHT', '0.5'))
 
@@ -966,6 +966,15 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 )
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
+RAG_FULL_TEXT_CHAR_THRESHOLD = max(
+    0,
+    int(
+        os.getenv(
+            'RAG_FULL_TEXT_CHAR_THRESHOLD',
+            os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+        )
+    ),
+)
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 KNOWLEDGE_MAX_UPLOAD_COUNT = (
@@ -1061,7 +1070,8 @@ TIKTOKEN_CACHE_DIR = os.getenv('TIKTOKEN_CACHE_DIR', f'{CACHE_DIR}/tiktoken')
 TIKTOKEN_ENCODING_NAME = os.getenv('TIKTOKEN_ENCODING_NAME', 'cl100k_base')
 
 
-CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1000'))
+# Approximate MiniLM's 256-token window at four characters per token.
+CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1024'))
 
 CHUNK_MIN_SIZE_TARGET = int(os.getenv('CHUNK_MIN_SIZE_TARGET', '0'))
 
@@ -2067,6 +2077,10 @@ SKILL_PREVIEW_MAX_CHARS = int(os.environ['SKILL_PREVIEW_MAX_CHARS']) if os.geten
 if SKILL_PREVIEW_MAX_CHARS is not None and SKILL_PREVIEW_MAX_CHARS <= 0:
     raise ValueError('SKILL_PREVIEW_MAX_CHARS must be a positive integer or unset')
 
+VIEW_CHAT_MAX_CHARS = int(os.environ['VIEW_CHAT_MAX_CHARS']) if os.getenv('VIEW_CHAT_MAX_CHARS') else None
+if VIEW_CHAT_MAX_CHARS is not None and VIEW_CHAT_MAX_CHARS <= 0:
+    raise ValueError('VIEW_CHAT_MAX_CHARS must be a positive integer or unset')
+
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
 ENABLE_ENCRYPTED_CHANNELS = os.getenv('ENABLE_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
@@ -2246,6 +2260,17 @@ CONTEXT_COMPACTION_MODEL = os.getenv('CONTEXT_COMPACTION_MODEL', '')
 ENABLE_CONTEXT_COMPACTION = os.getenv('ENABLE_CONTEXT_COMPACTION', 'False').lower() == 'true'
 
 ENABLE_TOOL_PERMISSIONS = os.getenv('ENABLE_TOOL_PERMISSIONS', 'False').lower() == 'true'
+ENABLE_TOOL_CALL_LABELS = os.getenv('ENABLE_TOOL_CALL_LABELS', 'False').lower() == 'true'
+ENABLE_TOOL_PERMISSIONS_AUTO = os.getenv('ENABLE_TOOL_PERMISSIONS_AUTO', 'False').lower() == 'true'
+TOOL_PERMISSIONS_AUTO_ENGINE = os.getenv('TOOL_PERMISSIONS_AUTO_ENGINE', '')
+TOOL_PERMISSIONS_AUTO_PROMPT = os.getenv('TOOL_PERMISSIONS_AUTO_PROMPT', '')
+TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL = os.getenv(
+    'TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1'
+)
+TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY', '')
+TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL = os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL', 'gpt-6-luna')
+TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD = float(os.getenv('TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD', '0.5'))
+
 
 CONTEXT_COMPACTION_TOKEN_THRESHOLD = int(os.getenv('CONTEXT_COMPACTION_TOKEN_THRESHOLD', '80000'))
 
@@ -2259,6 +2284,12 @@ CONTEXT_COMPACTION_RETENTION_PERCENTAGE = min(
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
 
 ENABLE_TOOL_SEARCH = os.getenv('ENABLE_TOOL_SEARCH', 'False').lower() == 'true'
+TOOL_SEARCH_ENGINE = os.getenv('TOOL_SEARCH_ENGINE', 'bm25')
+TOOL_SEARCH_DECISIONS_API_BASE_URL = os.getenv('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'https://api.openai.com/v1')
+TOOL_SEARCH_DECISIONS_API_KEY = os.getenv('TOOL_SEARCH_DECISIONS_API_KEY', '')
+TOOL_SEARCH_DECISIONS_MODEL = os.getenv('TOOL_SEARCH_DECISIONS_MODEL', 'gpt-6-luna')
+TOOL_SEARCH_DECISIONS_THRESHOLD = float(os.getenv('TOOL_SEARCH_DECISIONS_THRESHOLD', '0.5'))
+TOOL_SEARCH_DECISIONS_PROMPT = os.getenv('TOOL_SEARCH_DECISIONS_PROMPT', '')
 
 TOOL_SEARCH_DEFER_THRESHOLD = int(os.getenv('TOOL_SEARCH_DEFER_THRESHOLD', '400'))
 
@@ -2549,6 +2580,7 @@ ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS = (
 API_KEYS_ALLOWED_ENDPOINTS = os.getenv('API_KEYS_ALLOWED_ENDPOINTS', os.getenv('API_KEY_ALLOWED_ENDPOINTS', ''))
 
 JWT_EXPIRES_IN = os.getenv('JWT_EXPIRES_IN', '4w')
+SESSION_EXPIRES_IN = os.getenv('SESSION_EXPIRES_IN', '90d')
 
 if JWT_EXPIRES_IN == '-1':
     log.warning(
@@ -2929,6 +2961,7 @@ DEFAULT_CONFIG = {
     'skills.lazy_loading.enable': ENABLE_SKILL_LAZY_LOADING,
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
+    'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
     'direct.enable': ENABLE_DIRECT_CONNECTIONS,
     'direct.integrations.enable': ENABLE_DIRECT_INTEGRATIONS,
     'ollama.enable': ENABLE_OLLAMA_API,
@@ -3013,6 +3046,8 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search': ENABLE_RAG_HYBRID_SEARCH,
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
+    # Retain the stored key so renaming the setting preserves saved thresholds.
+    'rag.full_context_char_threshold': RAG_FULL_TEXT_CHAR_THRESHOLD,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'knowledge.max_upload_count': KNOWLEDGE_MAX_UPLOAD_COUNT,
     'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,
@@ -3268,7 +3303,21 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
+    'chat.tool_call_labels.enable': ENABLE_TOOL_CALL_LABELS,
+    'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,
+    'chat.tool_permissions.auto.engine': TOOL_PERMISSIONS_AUTO_ENGINE,
+    'chat.tool_permissions.auto.prompt': TOOL_PERMISSIONS_AUTO_PROMPT,
+    'chat.tool_permissions.auto.decisions.api_base_url': TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL,
+    'chat.tool_permissions.auto.decisions.api_key': TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY,
+    'chat.tool_permissions.auto.decisions.model': TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL,
+    'chat.tool_permissions.auto.decisions.threshold': TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD,
     'chat.tool_search.enable': ENABLE_TOOL_SEARCH,
+    'chat.tool_search.engine': TOOL_SEARCH_ENGINE,
+    'chat.tool_search.decisions.api_base_url': TOOL_SEARCH_DECISIONS_API_BASE_URL,
+    'chat.tool_search.decisions.api_key': TOOL_SEARCH_DECISIONS_API_KEY,
+    'chat.tool_search.decisions.model': TOOL_SEARCH_DECISIONS_MODEL,
+    'chat.tool_search.decisions.threshold': TOOL_SEARCH_DECISIONS_THRESHOLD,
+    'chat.tool_search.decisions.prompt': TOOL_SEARCH_DECISIONS_PROMPT,
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
     'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,
@@ -3292,6 +3341,7 @@ DEFAULT_CONFIG = {
     'auth.api_key.endpoint_restrictions': ENABLE_API_KEYS_ENDPOINT_RESTRICTIONS,
     'auth.api_key.allowed_endpoints': API_KEYS_ALLOWED_ENDPOINTS,
     'auth.jwt_expiry': JWT_EXPIRES_IN,
+    'auth.session_expiry': SESSION_EXPIRES_IN,
     'auth.mfa.enable': ENABLE_MFA,
     'auth.mfa.allow_oauth_bypass': MFA_ALLOW_OAUTH_BYPASS,
     'auth.mfa.allow_trusted_header_bypass': MFA_ALLOW_TRUSTED_HEADER_BYPASS,

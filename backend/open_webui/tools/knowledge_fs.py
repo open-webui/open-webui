@@ -66,7 +66,7 @@ def match_budget():
 
 
 def is_regex_pattern(pattern: str) -> bool:
-    r"""Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, [...])."""
+    r"""Detect if a pattern looks like regex (|, .*, .+, \d, \w, \s, escaped metacharacters, [...])."""
     return (
         '|' in pattern
         or '.*' in pattern
@@ -76,6 +76,7 @@ def is_regex_pattern(pattern: str) -> bool:
         or r'\w' in pattern
         or r'\s' in pattern
         or bool(re.search(r'\[.+\]', pattern))
+        or bool(re.search(r'\\[.^$|?*+()\[\]{}]', pattern))
     )
 
 

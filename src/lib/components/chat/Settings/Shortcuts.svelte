@@ -19,6 +19,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ShortcutItem from '../ShortcutItem.svelte';
+	import KeyPill from '$lib/components/common/KeyPill.svelte';
 
 	type ShortcutEntry = {
 		id: Shortcut;
@@ -91,7 +92,8 @@
 		// Modals always close on Esc on their own, so sharing it is not a conflict
 		if (!isConfigurableShortcut(id) || !chord || chord === 'Escape') return null;
 		for (const [otherId, otherChord] of Object.entries($keybindings)) {
-			if (otherId !== id && otherChord === chord) return otherId as Shortcut;
+			if (otherId !== id && formatChord(otherChord) === formatChord(chord))
+				return otherId as Shortcut;
 		}
 		return null;
 	};
@@ -254,11 +256,11 @@
 									{:else if chord}
 										<button
 											id="shortcut-binding-{id}"
-											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-center text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+											class="inline-flex rounded-full"
 											title={$i18n.t('Click to rebind')}
 											on:click={() => startRecording(id)}
 										>
-											{formatChord(chord)}
+											<KeyPill text={formatChord(chord)} />
 										</button>
 										<button
 											class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"

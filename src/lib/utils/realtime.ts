@@ -12,6 +12,7 @@ export type BridgeSubmission = {
 type CallContext = {
 	chatId?: string;
 	modelId: string;
+	terminalId?: string;
 	voiceModel?: string;
 	voice?: string;
 	messages: { role: string; content: string }[];
@@ -127,8 +128,13 @@ export class RealtimeCall {
 		try {
 			const context = this.options.context();
 			this.token = token;
-			this.configuration = JSON.stringify([context.modelId, context.voiceModel, context.voice]);
-			if (!context.modelId) throw new Error('Select one server-configured chat model.');
+			this.configuration = JSON.stringify([
+				context.modelId,
+				context.terminalId,
+				context.voiceModel,
+				context.voice
+			]);
+			if (!context.modelId) throw new Error('Select one chat model or agent.');
 			this.context = new AudioContext({ sampleRate: 24000 });
 			if (this.context.sampleRate !== 24000 || !this.context.audioWorklet) {
 				throw new Error(
@@ -160,7 +166,13 @@ export class RealtimeCall {
 			const started = Date.now();
 			this.lastPong = started;
 			ws.onopen = () =>
-				this.send({ type: 'auth', token, chat_id: context.chatId, model_id: context.modelId });
+				this.send({
+					type: 'auth',
+					token,
+					chat_id: context.chatId,
+					model_id: context.modelId,
+					terminal_id: context.terminalId
+				});
 			ws.onmessage = ({ data }) => {
 				if (session !== this.session) return;
 				try {
@@ -302,7 +314,8 @@ export class RealtimeCall {
 			return;
 		const context = this.options.context();
 		if (
-			this.configuration !== JSON.stringify([context.modelId, context.voiceModel, context.voice])
+			this.configuration !==
+			JSON.stringify([context.modelId, context.terminalId, context.voiceModel, context.voice])
 		) {
 			const token = this.token;
 			this.end();

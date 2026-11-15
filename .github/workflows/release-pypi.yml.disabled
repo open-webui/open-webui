@@ -16,15 +16,15 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5.1.0
         with:
           fetch-depth: 0
       - name: Install Git
         run: sudo apt-get update && sudo apt-get install -y git
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v5.0.0
         with:
           node-version: 22
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v6.3.0
         with:
           python-version: 3.12
       - name: Build

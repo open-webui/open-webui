@@ -5,7 +5,7 @@
 
 	import { getChannelMentionApps } from '$lib/apis/channels';
 	import { mentionAttributes } from '$lib/utils/channelMentions';
-	import { channels, models, config } from '$lib/stores';
+	import { baseModels, channels, models, config } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
@@ -171,7 +171,7 @@
 		} else {
 			if (modelSuggestions) {
 				_models = [
-					...$models
+					...$baseModels
 						.filter((m) => !m?.direct)
 						.map((m) => ({ type: 'model', id: m.id, label: m.name, data: m }))
 				];

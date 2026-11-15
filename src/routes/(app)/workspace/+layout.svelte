@@ -122,7 +122,7 @@
 			: 'md:max-w-[calc(100%-42px)]'} max-w-full"
 	>
 		<div class="flex h-full min-w-0 flex-1 flex-col">
-			<nav class="px-1.5 pt-1.5 backdrop-blur-xl drag-region select-none">
+			<nav class="px-1.5 pt-1.5 drag-region select-none">
 				<div class="flex items-center gap-0.5 md:gap-1">
 					{#if $mobile}
 						<div class="{$showSidebar ? 'md:hidden' : ''} self-center flex flex-none items-center">

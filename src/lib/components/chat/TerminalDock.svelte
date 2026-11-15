@@ -218,7 +218,8 @@
 
 <div class="terminal-dock min-h-0">
 	<div
-		class="flex h-7 min-w-0 items-center border-b border-black/5 text-[11px] text-gray-500 dark:border-white/5 dark:text-gray-400"
+		class="flex h-7 min-w-0 items-center border-black/5 text-[11px] text-gray-500 dark:border-white/5 dark:text-gray-400"
+		class:border-b={expanded}
 	>
 		{#if !expanded}
 			<button

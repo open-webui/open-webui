@@ -67,13 +67,13 @@ jobs:
         run: rm -rf /opt/hostedtoolcache
 
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5.1.0
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v3.7.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.12.0
 
       - name: Prepare CI Dockerfile
         run: |
@@ -87,7 +87,7 @@ jobs:
           ' Dockerfile > "${RUNNER_TEMP}/Dockerfile"
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -95,7 +95,7 @@ jobs:
 
       - name: Extract metadata for Docker images
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -111,7 +111,7 @@ jobs:
 
       - name: Extract metadata for Docker cache
         id: cache-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -122,7 +122,7 @@ jobs:
             latest=false
 
       - name: Build Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v5.4.0
         id: build
         with:
           context: .
@@ -146,7 +146,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: digests-${{ matrix.variant.name }}-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
@@ -183,7 +183,7 @@ jobs:
 
       - name: Download digests
         id: download
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v5.0.0
         with:
           pattern: digests-${{ matrix.variant.name }}-*
           path: /tmp/digests
@@ -204,11 +204,11 @@ jobs:
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.skip != 'true'
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.12.0
 
       - name: Log in to the Container registry
         if: steps.check.outputs.skip != 'true'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -217,7 +217,7 @@ jobs:
       - name: Extract metadata for Docker images
         if: steps.check.outputs.skip != 'true'
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v5.10.0
         with:
           images: ${{ env.FULL_IMAGE_NAME }}
           tags: |
@@ -251,7 +251,7 @@ jobs:
     steps:
       - name: Create Helm charts app token
         id: helm-app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v2.2.2
         with:
           app-id: ${{ secrets.HELM_CHARTS_APP_ID }}
           private-key: ${{ secrets.HELM_CHARTS_APP_PRIVATE_KEY }}
@@ -259,7 +259,7 @@ jobs:
           repositories: helm-charts
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.12.0
 
       - name: Verify published Open WebUI image
         id: image
@@ -279,7 +279,7 @@ jobs:
           echo "tag=${image_tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Dispatch Helm chart automation
-        uses: actions/github-script@v8
+        uses: actions/github-script@v8.0.0
         with:
           github-token: ${{ steps.helm-app-token.outputs.token }}
           script: |
@@ -334,17 +334,17 @@ jobs:
           echo "FULL_IMAGE_NAME=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v3.12.0
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.7.0
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}

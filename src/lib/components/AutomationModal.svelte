@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext, tick } from 'svelte';
+	import { createEventDispatcher, getContext, tick, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -8,13 +8,16 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
+	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
-	import { channels, folders } from '$lib/stores';
+	import { baseModels, channels, folders, type AgentModel } from '$lib/stores';
 
 	import {
 		createAutomation,
+		getAutomationModels,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse
@@ -30,6 +33,14 @@
 	let name = '';
 	let prompt = '';
 	let model_id = '';
+	let terminalServerId = '';
+	let terminalCwd = '';
+	let terminalServers: TerminalServer[] = [];
+	let agentModels: AgentModel[] = [];
+	let modelsLoading = false;
+	let initialized = false;
+	let modelRequest = 0;
+	let modelTimer: ReturnType<typeof setTimeout>;
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
@@ -38,6 +49,54 @@
 	let loading = false;
 	let foldersLoaded = false;
 	let channelsLoaded = false;
+
+	const loadAgentModels = (
+		visible: boolean,
+		terminalId: string,
+		cwd: string,
+		target: string,
+		automationId?: string
+	) => {
+		const request = ++modelRequest;
+		clearTimeout(modelTimer);
+		agentModels = [];
+		modelsLoading = visible && !!terminalId && target === 'chat';
+		if (!visible) return;
+		if (!modelsLoading) {
+			if (model_id.startsWith('agent:')) model_id = '';
+			return;
+		}
+		modelTimer = setTimeout(async () => {
+			try {
+				const available = await getAutomationModels(
+					localStorage.token,
+					terminalId,
+					cwd.trim(),
+					automationId
+				);
+				if (request !== modelRequest) return;
+				agentModels = available;
+				if (model_id.startsWith('agent:') && !available.some((model) => model.id === model_id)) {
+					model_id = '';
+				}
+			} catch (error: any) {
+				if (request === modelRequest) toast.error(error?.detail ?? String(error));
+			} finally {
+				if (request === modelRequest) modelsLoading = false;
+			}
+		}, 250);
+	};
+	$: loadAgentModels(
+		show && initialized,
+		terminalServerId,
+		terminalCwd,
+		target_type,
+		automation?.id
+	);
+	onDestroy(() => {
+		clearTimeout(modelTimer);
+		modelRequest++;
+	});
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
@@ -67,6 +126,9 @@
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
 					rrule: scheduleDropdown.buildRrule(),
+					terminal: terminalServerId
+						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
+						: undefined,
 					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
 				},
 				is_active
@@ -91,7 +153,11 @@
 	};
 
 	const init = async () => {
+		initialized = false;
 		await tick();
+		terminalServers = (await getTerminalServers(localStorage.token)).filter(
+			(server) => server.contexts?.automation !== false
+		);
 		if (!foldersLoaded && ($folders ?? []).length === 0) {
 			const res = await getFolders(localStorage.token).catch(() => null);
 			if (res) folders.set(res);
@@ -103,6 +169,8 @@
 			channelsLoaded = true;
 		}
 
+		terminalServerId = (automation ?? cloneFrom)?.data.terminal?.server_id ?? '';
+		terminalCwd = (automation ?? cloneFrom)?.data.terminal?.cwd ?? '';
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
@@ -140,6 +208,7 @@
 			channel_id = '';
 			is_active = true;
 		}
+		initialized = true;
 	};
 
 	$: if (show) {
@@ -188,7 +257,23 @@
 			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
-				<ModelDropdown bind:model_id side="top" align="start" />
+				<TerminalDropdown
+					{terminalServers}
+					bind:terminalServerId
+					bind:terminalCwd
+					side="top"
+					align="start"
+				/>
+				<ModelDropdown
+					bind:model_id
+					items={[
+						...$baseModels.filter((model) => !('direct' in model && model.direct)),
+						...agentModels
+					]}
+					disabled={modelsLoading}
+					side="top"
+					align="start"
+				/>
 
 				<DestinationDropdown
 					bind:target_type
@@ -213,7 +298,7 @@
 					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 					on:click={submitHandler}
 					type="button"
-					disabled={loading}
+					disabled={loading || modelsLoading || !initialized}
 				>
 					{automation ? $i18n.t('Save') : $i18n.t('Create')}
 					{#if loading}

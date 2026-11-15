@@ -15,6 +15,16 @@ log = logging.getLogger(__name__)
 # Let the right tool be given for the work at hand,
 # not the one that flatters, but the one that serves.
 def get_task_model_id(default_model_id: str, task_model: str, task_model_external: str, models) -> str:
+    if default_model_id.startswith('agent:'):
+        # Agent sessions cannot serve ordinary completion requests for background tasks.
+        return next(
+            (
+                model
+                for model in (task_model_external, task_model)
+                if model and model in models and not model.startswith('agent:')
+            ),
+            default_model_id,
+        )
     task_model_id = default_model_id
     # Use an available task model override for the local or external connection.
     if models.get(task_model_id, {}).get('connection_type') == 'local':

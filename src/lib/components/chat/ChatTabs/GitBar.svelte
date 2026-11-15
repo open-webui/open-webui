@@ -11,6 +11,7 @@
 		type GitCommit,
 		type GitBranch
 	} from '$lib/apis/terminal/git';
+	import { copyToClipboard } from '$lib/utils';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
 	import { parseDiffRows } from '../Messages/diff';
@@ -28,10 +29,12 @@
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
-	let expanded = false;
+	export let initialView: any = null;
+	let expanded = initialView?.expanded ?? false;
+	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
-	let view: 'changes' | 'history' | 'pull requests' = 'changes';
+	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
 	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
 	let prRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
@@ -62,18 +65,28 @@
 	let showRename = false;
 	let showUncommit = false;
 	let showDeleteBranch = false;
-	let summary = '';
-	let description = '';
+	let summary = initialView?.summary ?? '';
+	let description = initialView?.description ?? '';
 	let error = '';
 	let detectionError = '';
 	let busy = false;
 	let loadingDiff = false;
 	let confirmDiscard = false;
 	let discardFile: GitFile | null = null;
-	let height = 280;
+	let height = initialView?.height ?? 280;
 	let resizing = false;
 	let resizeY = 0;
 	let resizeHeight = 0;
+	let splitWidth = 0;
+	let listWidth: number | null = initialView?.listWidth ?? null;
+	let resizingList = false;
+	let resizeListX = 0;
+	let resizeListWidth = 0;
+	$: maxListWidth = Math.max(160, splitWidth - 220);
+	$: effectiveListWidth = Math.max(
+		160,
+		Math.min(maxListWidth, listWidth ?? (splitWidth >= 800 ? 288 : 240))
+	);
 	let mounted = false;
 	let context = '';
 	let generation = 0;
@@ -84,9 +97,25 @@
 	let configuration = 0;
 	let pending: Promise<void> | null = null;
 	let syncAction: 'publish' | 'pull' | 'push' | 'fetch';
-	$: staged = status?.files.filter((file) => file.staged) ?? [];
+	let syncFeedback: typeof syncAction | null = null;
+	let syncComplete = false;
+	let syncFeedbackTimer: ReturnType<typeof setTimeout> | undefined;
+	let pendingStaging: { action: 'stage' | 'unstage'; paths: Set<string> } | null = null;
+	$: stageStates = new Map<string, boolean | 'mixed'>(
+		(status?.files ?? []).map((file) => [
+			file.path,
+			pendingStaging?.paths.has(file.path)
+				? pendingStaging.action === 'stage'
+				: file.staged
+					? file.unstaged
+						? 'mixed'
+						: true
+					: false
+		])
+	);
+	$: staged = status?.files.filter((file) => stageStates.get(file.path)) ?? [];
 	$: allStaged =
-		!!status?.files.length && status.files.every((file) => file.staged && !file.unstaged);
+		!!status?.files.length && status.files.every((file) => stageStates.get(file.path) === true);
 	$: someStaged = staged.length > 0 && !allStaged;
 	$: additions = status?.files.reduce((sum, file) => sum + file.additions, 0) ?? 0;
 	$: deletions = status?.files.reduce((sum, file) => sum + file.deletions, 0) ?? 0;
@@ -109,9 +138,37 @@
 				? 'push'
 				: 'fetch';
 	$: syncLabel = { publish: 'Publish', pull: 'Pull', push: 'Push', fetch: 'Fetch' }[syncAction];
+	// Extraction hints for the dynamic feedback labels below.
+	// $i18n.t('Published')
+	// $i18n.t('Pulled')
+	// $i18n.t('Pushed')
+	// $i18n.t('Fetched')
+	// $i18n.t('Publishing…')
+	// $i18n.t('Pulling…')
+	// $i18n.t('Pushing…')
+	// $i18n.t('Fetching…')
+	// $i18n.t('Staging…')
+	// $i18n.t('Unstaging…')
+	$: syncMessage = syncFeedback
+		? syncComplete
+			? { publish: 'Published', pull: 'Pulled', push: 'Pushed', fetch: 'Fetched' }[syncFeedback]
+			: { publish: 'Publishing…', pull: 'Pulling…', push: 'Pushing…', fetch: 'Fetching…' }[
+					syncFeedback
+				]
+		: '';
+	$: feedbackMessage = pendingStaging
+		? pendingStaging.action === 'stage'
+			? 'Staging…'
+			: 'Unstaging…'
+		: syncMessage;
 	$: syncIcon = { publish: 'upload', pull: 'download', push: 'upload', fetch: 'refresh' }[
-		syncAction
+		busy && syncFeedback ? syncFeedback : syncAction
 	];
+	const clearSyncFeedback = () => {
+		clearTimeout(syncFeedbackTimer);
+		syncFeedback = null;
+		syncComplete = false;
+	};
 
 	const relativeTime = (date: string) => {
 		const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
@@ -184,13 +241,16 @@
 		watchError = '';
 		gitEnabled = false;
 		if (key !== context) {
+			const restoring = !context && initialView;
+			clearSyncFeedback();
+			pendingStaging = null;
 			context = key;
 			++generation;
 			pending = null;
 			status = null;
 			error = '';
 			detectionError = '';
-			expanded = false;
+			expanded = restoring?.expanded ?? false;
 			showBranches =
 				showWorktrees =
 				showRename =
@@ -198,11 +258,12 @@
 				showDeleteBranch =
 				confirmDiscard =
 					false;
-			summary = description = '';
+			summary = restoring?.summary ?? '';
+			description = restoring?.description ?? '';
 			commits = [];
 			prCapabilities = null;
 			prRoot = '';
-			view = 'changes';
+			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
 		if (enabled && connection) {
@@ -302,6 +363,11 @@
 	const act = async (action: string, fields: Record<string, unknown> = {}) => {
 		if (busy) return;
 		const current = generation;
+		clearSyncFeedback();
+		if (action === 'fetch' || action === 'pull' || action === 'push' || action === 'publish')
+			syncFeedback = action;
+		if (action === 'stage' || action === 'unstage')
+			pendingStaging = { action, paths: new Set(fields.paths as string[]) };
 		busy = true;
 		error = '';
 		try {
@@ -318,12 +384,25 @@
 			showWorktrees = false;
 			resetSelection();
 			await pending;
+			if (current !== generation) return;
 			await refresh(true);
+			if (current !== generation) return;
 			if (view === 'history') await loadHistory();
+			if (current !== generation) return;
+			if (syncFeedback) {
+				if (status?.is_repo && !detectionError && !error) {
+					syncComplete = true;
+					syncFeedbackTimer = setTimeout(clearSyncFeedback, 1800);
+				} else clearSyncFeedback();
+			}
 			if (action === 'worktree' && result.path) onOpenDirectory(result.path);
 		} catch (reason) {
-			if (current === generation) error = String(reason instanceof Error ? reason.message : reason);
+			if (current === generation) {
+				clearSyncFeedback();
+				error = String(reason instanceof Error ? reason.message : reason);
+			}
 		} finally {
+			if (current === generation) pendingStaging = null;
 			busy = false;
 		}
 	};
@@ -348,6 +427,7 @@
 		return () => document.removeEventListener('visibilitychange', visibility);
 	});
 	onDestroy(() => {
+		clearSyncFeedback();
 		mounted = false;
 		++configuration;
 		++generation;
@@ -358,7 +438,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="git-panel relative shrink-0 border-t border-gray-100/50 dark:border-white/2"
+		class="git-panel relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -459,9 +539,7 @@
 													>{/if}
 												<button
 													on:click={async () => {
-														try {
-															await navigator.clipboard.writeText(branch.name);
-														} catch {
+														if (!(await copyToClipboard(branch.name))) {
 															error = $i18n.t('Could not copy branch name');
 														}
 													}}><Icon name="copy" size={13} />{$i18n.t('Copy branch name')}</button
@@ -605,14 +683,31 @@
 					{#if status.behind}<span>↓{status.behind}</span>{/if}
 				</span>
 			{/if}
+			<span
+				role="status"
+				class="shrink-0 text-[0.625rem] font-mono whitespace-nowrap text-gray-500 dark:text-gray-400 {feedbackMessage
+					? 'ml-1.5'
+					: ''}">{feedbackMessage ? $i18n.t(feedbackMessage) : ''}</span
+			>
 			<Tooltip
-				content={[$i18n.t(syncLabel), ...(watchError ? [$i18n.t(watchError)] : [])].join('\n')}
+				content={[
+					$i18n.t(busy && syncFeedback ? syncMessage : syncLabel),
+					...(watchError ? [$i18n.t(watchError)] : [])
+				].join('\n')}
 			>
 				<button
 					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"
-					aria-label={$i18n.t(syncLabel)}
+					aria-label={$i18n.t(busy && syncFeedback ? syncMessage : syncLabel)}
+					aria-busy={busy && !!syncFeedback}
 					on:click={() => act(syncAction)}
-					disabled={busy}><Icon name={syncIcon} size={10} /></button
+					disabled={busy}
+					><span
+						class="flex"
+						class:git-fetching={busy && syncFeedback === 'fetch'}
+						class:git-pulling={busy && syncFeedback === 'pull'}
+						class:git-pushing={busy && (syncFeedback === 'push' || syncFeedback === 'publish')}
+						><Icon name={syncIcon} size={10} /></span
+					></button
 				>
 			</Tooltip>
 			<button
@@ -727,21 +822,26 @@
 							}}
 						/>{/key}
 				{:else}
-					<div class="flex min-h-0 flex-1 overflow-hidden">
+					<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
 						<div
 							class="git-list min-w-0 flex-1 flex flex-col overflow-hidden"
 							class:showing-diff={!!(selected || selectedCommit)}
+							style:--git-list-width={`${effectiveListWidth}px`}
 						>
 							{#if view === 'changes'}
 								{#if status.files.length}
 									<button
 										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100/50 dark:border-white/2 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
 										disabled={busy}
+										role="checkbox"
+										aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
+										aria-busy={!!pendingStaging}
 										aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
 										on:click={() =>
 											act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
 									>
 										<span
+											class:opacity-60={!!pendingStaging}
 											class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
 												? 'bg-gray-800 dark:bg-white'
 												: someStaged
@@ -763,6 +863,8 @@
 									class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hidden"
 								>
 									{#each status.files as file (file.path)}
+										{@const checked = stageStates.get(file.path) ?? false}
+										{@const staging = pendingStaging?.paths.has(file.path) ?? false}
 										<div
 											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left transition-colors duration-75 {selected?.path ===
 											file.path
@@ -770,16 +872,20 @@
 												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
 										>
 											<button
-												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {file.staged
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {checked
 													? 'bg-gray-800 dark:bg-white'
 													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
 												disabled={busy}
-												aria-label={`${$i18n.t(file.staged ? 'Unstage' : 'Stage')} ${file.path}`}
+												class:opacity-60={staging}
+												role="checkbox"
+												aria-checked={checked}
+												aria-busy={staging}
+												aria-label={`${$i18n.t(checked ? 'Unstage' : 'Stage')} ${file.path}`}
 												on:click={() =>
 													act(file.staged ? 'unstage' : 'stage', { paths: paths([file]) })}
 											>
-												{#if file.staged}<Icon
-														name={file.unstaged ? 'minus' : 'check'}
+												{#if checked}<Icon
+														name={checked === 'mixed' ? 'minus' : 'check'}
 														size={7}
 														class="text-white dark:text-black"
 													/>{/if}
@@ -836,20 +942,20 @@
 														{#if file.unstaged}<button on:click={() => selectFile(file, false)}
 																>{$i18n.t('Working tree changes')}</button
 															>{/if}
-														{#if file.unstaged && file.status !== 'untracked'}<button
-																disabled={busy}
-																on:click={() => {
-																	discardFile = file;
-																	confirmDiscard = true;
-																}}>{$i18n.t('Discard changes')}</button
-															>{/if}
+														<button
+															disabled={busy}
+															on:click={() => {
+																discardFile = file;
+																confirmDiscard = true;
+															}}>{$i18n.t('Discard changes')}</button
+														>
 													</DropdownMenu>
 												</div>
 											</Dropdown>
 										</div>
 									{/each}
 									{#if !status.files.length}<div
-											class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No changes')}
 										</div>{/if}
@@ -933,9 +1039,7 @@
 																><Icon name="undo" size={13} />{$i18n.t('Undo last commit')}</button
 															>{/if}<button
 															on:click={async () => {
-																try {
-																	await navigator.clipboard.writeText(commit.hash);
-																} catch {
+																if (!(await copyToClipboard(commit.hash))) {
 																	error = $i18n.t('Could not copy commit hash');
 																}
 															}}><Icon name="copy" size={13} />{$i18n.t('Copy commit hash')}</button
@@ -945,12 +1049,59 @@
 											>
 										</div>{/each}
 									{#if !commits.length}<div
-											class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No commits yet')}
 										</div>{/if}
 								</div>
 							{/if}
+						</div>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions (Focusable splitter supports pointer and keyboard resizing.) -->
+						<div
+							tabindex="0"
+							role="separator"
+							aria-label={$i18n.t('Resize Git list')}
+							aria-orientation="vertical"
+							aria-valuemin={160}
+							aria-valuemax={maxListWidth}
+							aria-valuenow={Math.round(effectiveListWidth)}
+							class="git-list-divider relative z-10 shrink-0 touch-none cursor-col-resize border-l border-gray-100/50 dark:border-white/2 hover:border-gray-200 dark:hover:border-gray-800 transition"
+							on:pointerdown={(event) => {
+								if (event.button !== 0) return;
+								event.preventDefault();
+								event.currentTarget.setPointerCapture(event.pointerId);
+								resizingList = true;
+								resizeListX = event.clientX;
+								resizeListWidth = effectiveListWidth;
+							}}
+							on:pointermove={(event) => {
+								if (resizingList)
+									listWidth = Math.max(
+										160,
+										Math.min(maxListWidth, resizeListWidth + event.clientX - resizeListX)
+									);
+							}}
+							on:pointerup={() => (resizingList = false)}
+							on:pointercancel={() => (resizingList = false)}
+							on:lostpointercapture={() => (resizingList = false)}
+							on:keydown={(event) => {
+								if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+									event.preventDefault();
+									listWidth = Math.max(
+										160,
+										Math.min(
+											maxListWidth,
+											event.key === 'Home'
+												? 160
+												: event.key === 'End'
+													? maxListWidth
+													: effectiveListWidth + (event.key === 'ArrowRight' ? 20 : -20)
+										)
+									);
+								}
+							}}
+						>
+							<span class="absolute inset-y-0 -left-1.5 -right-1.5 bg-transparent"></span>
 						</div>
 						<div
 							class="git-detail min-w-0 flex-1 flex-col overflow-hidden"
@@ -975,20 +1126,22 @@
 										>{/if}
 								</div>
 								<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden text-[0.6875rem]">
-									{#if loadingDiff}<p class="p-3 text-gray-400">
+									{#if loadingDiff}<p
+											class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+										>
 											{$i18n.t('Loading...')}
 										</p>{:else if diff}<GitDiff
 											code={diff}
 											mode={diffMode}
 											{hideWhitespace}
 										/>{:else}<div
-											class="flex h-full items-center justify-center text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
 										>
 											{$i18n.t('No text changes')}
 										</div>{/if}
 								</div>
 							{:else}<div
-									class="flex h-full items-center justify-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+									class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
 								>
 									{$i18n.t(
 										view === 'history'
@@ -1018,10 +1171,15 @@
 	</div>
 {/if}
 
+<!-- Retired warning: keep its translation.
+{$i18n.t('Discard unsaved working-tree changes to this file? This cannot be undone.')}
+-->
 <ConfirmDialog
 	bind:show={confirmDiscard}
 	title={$i18n.t('Discard changes')}
-	message={$i18n.t('Discard unsaved working-tree changes to this file? This cannot be undone.')}
+	message={$i18n.t(
+		'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
+	)}
 	on:confirm={() => {
 		if (discardFile) void act('discard', { paths: paths([discardFile]) });
 	}}
@@ -1055,10 +1213,41 @@
 />
 
 <style>
+	@media (prefers-reduced-motion: no-preference) {
+		.git-fetching {
+			animation: git-fetch 1.2s linear infinite;
+		}
+		.git-pulling,
+		.git-pushing {
+			animation: git-transfer 1s ease-out infinite;
+			--git-direction: 3px;
+		}
+		.git-pushing {
+			--git-direction: -3px;
+		}
+	}
+	@keyframes git-fetch {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+	@keyframes git-transfer {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(var(--git-direction));
+		}
+	}
 	.git-panel {
 		container-type: inline-size;
 	}
 	.git-list.showing-diff,
+	.git-list-divider,
 	.git-detail {
 		display: none;
 	}
@@ -1069,20 +1258,17 @@
 		.git-list,
 		.git-list.showing-diff {
 			display: flex;
-			flex: 0 0 240px;
-			border-inline-end: 1px solid #8080800c;
+			flex: 0 0 var(--git-list-width);
+		}
+		.git-list-divider {
+			display: block;
+			width: 1px;
 		}
 		.git-detail {
 			display: flex;
 		}
 		.git-back {
 			display: none;
-		}
-	}
-	@container (min-width: 800px) {
-		.git-list,
-		.git-list.showing-diff {
-			flex-basis: 288px;
 		}
 	}
 </style>

@@ -131,6 +131,8 @@ def parse_custom_headers(
     if not user_agent:
         user_agent = metadata.get('user_agent', '') or ''
 
+    client_ip = getattr(getattr(request, 'client', None), 'host', None) or metadata.get('client_ip', '') or ''
+
     # Extract user_message info for tree mapping
     user_message = metadata.get('user_message') or {}
     user_message_id = metadata.get('user_message_id', '') or (user_message.get('id', '') if user_message else '')
@@ -153,6 +155,8 @@ def parse_custom_headers(
         '{{USER_GROUPS}}': ','.join(group.name.strip() for group in user_groups) if user_groups else '',
         '{{USER_GROUP_IDS}}': ','.join(group.id for group in user_groups) if user_groups else '',
         '{{USER_AGENT}}': user_agent,
+        '{{USER_IP}}': client_ip,
+        '{{X_FORWARDED_FOR}}': client_ip,
         '{{AUTH_TYPE}}': getattr(getattr(request, 'state', None), 'auth_type', None) or '',
     }
 

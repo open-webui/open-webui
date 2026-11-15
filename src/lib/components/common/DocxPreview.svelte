@@ -293,7 +293,9 @@
 	{/if}
 
 	{#if error}
-		<div class="text-red-500 text-sm p-4">
+		<div
+			class="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-500"
+		>
 			{$i18n.t('Failed to load DOCX file. Please try downloading it instead.')}
 		</div>
 	{:else if fallbackHtml}

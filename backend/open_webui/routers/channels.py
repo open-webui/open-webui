@@ -59,7 +59,7 @@ from open_webui.utils.apps import (
     has_app_access,
     send_app_mention,
 )
-from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_by_id
 from open_webui.utils.channels import extract_mentions, replace_mentions
 from open_webui.utils.files import get_image_base64_from_file_id
 from open_webui.utils.models import (
@@ -193,40 +193,46 @@ async def get_channels(
     await check_channels_access(request, user)
 
     channels = await Channels.get_channels_by_user_id(user.id, db=db)
+    channel_ids = [channel.id for channel in channels]
+    dm_channel_ids = [channel.id for channel in channels if channel.type == 'dm']
+
+    channel_members = await Channels.get_members_by_user_id_and_channel_ids(user.id, channel_ids, db=db)
+    last_message_times = await Messages.get_last_message_times_by_channel_ids(channel_ids, db=db)
+    unread_counts = await Messages.get_unread_message_counts_by_user_id(user.id, channel_ids, db=db)
+
+    dm_member_user_ids = {channel_id: set() for channel_id in dm_channel_ids}
+    for member in await Channels.get_members_by_channel_ids(dm_channel_ids, db=db):
+        dm_member_user_ids[member.channel_id].add(member.user_id)
+    all_dm_users = await Users.get_users_by_user_ids(
+        list({user_id for user_ids in dm_member_user_ids.values() for user_id in user_ids}), db=db
+    )
+
     channel_list = []
     for channel in channels:
-        last_message = await Messages.get_last_message_by_channel_id(channel.id, db=db)
-        last_message_at = last_message.created_at if last_message else None
-
-        channel_member = await Channels.get_member_by_channel_and_user_id(channel.id, user.id, db=db)
-        unread_count = (
-            await Messages.get_unread_message_count(channel.id, user.id, channel_member.last_read_at, db=db)
-            if channel_member
-            else 0
-        )
+        channel_member = channel_members.get(channel.id)
 
         user_ids = None
         users = None
         if channel.type == 'dm':
-            member_user_ids = [member.user_id for member in await Channels.get_members_by_channel_id(channel.id, db=db)]
             users = [
                 UserIdNameStatusResponse(
                     **{
-                        **u.model_dump(),
-                        'is_active': Users.is_active(u),
+                        **dm_user.model_dump(),
+                        'is_active': Users.is_active(dm_user),
                     }
                 )
-                for u in await Users.get_users_by_user_ids(member_user_ids, db=db)
+                for dm_user in all_dm_users
+                if dm_user.id in dm_member_user_ids[channel.id]
             ]
-            user_ids = [u.id for u in users]
+            user_ids = [dm_user.id for dm_user in users]
 
         channel_list.append(
             ChannelListItemResponse(
                 **channel.model_dump(),
                 user_ids=user_ids,
                 users=users,
-                last_message_at=last_message_at,
-                unread_count=unread_count,
+                last_message_at=last_message_times.get(channel.id),
+                unread_count=unread_counts.get(channel.id, 0) if channel_member else 0,
                 is_channel_muted=channel_member.is_channel_muted if channel_member else False,
             )
         )
@@ -1109,6 +1115,20 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
         member = members.get(u.id)
         if member and member.is_channel_muted and u.id not in mentioned_user_ids:
             continue
+        if member and u.id != message.user_id:
+            from open_webui.utils.tether import notify
+            from urllib.parse import quote
+
+            try:
+                await notify(
+                    u.id,
+                    f'channel:{channel.id}:{message.id}',
+                    f'{channel.name} / Open WebUI',
+                    message.content,
+                    '/channels/' + quote(channel.id, safe=''),
+                )
+            except Exception:
+                log.exception('Tether channel notification failed')
         if (u.id not in active_user_ids) and member:
             if enable_user_webhooks and u.settings:
                 await publish_event(
@@ -1135,7 +1155,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
 
 async def app_channel_reply_handler(channel_id, message_id, user_id):
     """Committed human messages only; errors never cause the human POST to retry."""
-    if not await Config.get('apps.enable'):
+    if not await Config.get('apps.enable') or not await get_verified_user_by_id(user_id):
         return
     async with get_async_db() as db:
         message = await db.get(Message, message_id)
@@ -1211,6 +1231,9 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
 
 
 async def model_response_handler(request, channel, message, user, db=None):
+    if not await get_verified_user_by_id(user.id):
+        return
+
     MODELS = {model['id']: model for model in await get_filtered_models(await get_all_models(request, user=user), user)}
 
     mentions = extract_mentions(message.content)

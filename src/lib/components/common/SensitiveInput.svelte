@@ -34,7 +34,7 @@
 	$: buttonClass =
 		variant === 'settings'
 			? `ml-1.5 bg-transparent text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 ${showButtonClassName}`
-			: `pl-1.5 bg-transparent transition ${showButtonClassName}`;
+			: `min-w-6 pl-1.5 bg-transparent transition ${showButtonClassName}`;
 </script>
 
 <div class="relative {outerClass}">

@@ -24,7 +24,7 @@ def search_exa(
         filter_list (list[str] | None): List of domains to filter results by
         max_content_length (int | None): Maximum characters per result; None leaves text unlimited.
     """
-    log.info('Searching with Exa for query: %s', query)
+    log.info('Searching with Exa')
 
     headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
 

@@ -658,6 +658,11 @@ async def user_join(sid, data):
     if not user:
         return
 
+    previous = await sio.get_session(sid)
+    if previous.get('user', {}).get('id') not in (None, user.id):
+        await sio.disconnect(sid)
+        return
+
     socket_user = {
         **user.model_dump(
             exclude=[
@@ -711,7 +716,7 @@ async def refresh_chat_access(chat_id=None):
                 key = (cid, session['id'])
                 if key not in access:
                     user = await Users.get_user_by_id(session['id'])
-                    access[key] = bool(user and await Chats.get_accessible_chat_by_id(cid, user))
+                    access[key] = bool(user and await Chats.has_chat_access(cid, user))
                 if not access[key]:
                     await sio.leave_room(sid, f'chat:{cid}')
                     chat_ids.add(cid)
@@ -763,6 +768,12 @@ async def join_channel(sid, data):
             await sio.enter_room(sid, f'channel:{channel.id}')
 
 
+async def has_notes_access(user_id: str, role: str) -> bool:
+    if not await Config.get('notes.enable'):
+        return False
+    return role == 'admin' or await has_permission(user_id, 'features.notes', await Config.get('user.permissions'))
+
+
 @sio.on('note:join')
 async def join_note(sid, data):
     auth = data['auth'] if 'auth' in data else None
@@ -777,9 +788,7 @@ async def join_note(sid, data):
     if not user:
         return
 
-    if user.role != 'admin' and not await has_permission(
-        user.id, 'features.notes', await Config.get('user.permissions')
-    ):
+    if not await has_notes_access(user.id, user.role):
         return
 
     note = await Notes.get_note_by_id(data['note_id'])
@@ -891,7 +900,7 @@ async def chat_events(sid, data):
         if sid not in (get_room_sid_map(sio.manager, '/', room) or {}):
             return False
         sender = await Users.get_user_by_id(user['id'])
-        if not sender or not await Chats.get_accessible_chat_by_id(chat_id, sender, permission='write'):
+        if not sender or not await Chats.has_chat_access(chat_id, sender, permission='write'):
             return False
         await sio.emit(
             'events',
@@ -916,7 +925,7 @@ async def chat_events(sid, data):
                 await sio.leave_room(sid, f'chat:{chat_id}')
             else:
                 reader = await Users.get_user_by_id(user['id'])
-                if not reader or not await Chats.get_accessible_chat_by_id(chat_id, reader):
+                if not reader or not await Chats.has_chat_access(chat_id, reader):
                     return False
                 await sio.enter_room(sid, f'chat:{chat_id}')
             session = SESSION_POOL.get(sid)
@@ -1016,9 +1025,7 @@ async def ydoc_document_join(sid, data):
         document_id = normalize_document_id(data['document_id'])
 
         if document_id.startswith('note:'):
-            if user.get('role') != 'admin' and not await has_permission(
-                user.get('id'), 'features.notes', await Config.get('user.permissions')
-            ):
+            if not await has_notes_access(user.get('id'), user.get('role')):
                 return
 
             note_id = document_id.split(':')[1]
@@ -1040,20 +1047,26 @@ async def ydoc_document_join(sid, data):
             ):
                 log.error(f'User {user.get("id")} does not have access to note {note_id}')
                 return
+        else:
+            # Only notes have access checks, so no other document gets a room.
+            return
 
         user_id = user['id']
         user_name = user.get('name', '')
         user_color = data.get('user_color', '#000000')
 
-        if (
-            sid not in await YDOC_MANAGER.get_users(document_id)
-            and await YDOC_MANAGER.count_documents_for_user(sid) >= YDOC_MANAGER.MAX_DOCUMENTS_PER_SESSION
-        ):
-            log.warning(f'Session {sid} is at the open-document limit. Rejecting join.')
-            return
+        # Serialise per user so parallel joins cannot exceed the limit
+        async with SOCKET_EVENT_LOCKS.setdefault(('user', user_id), asyncio.Lock()):
+            user_sids = get_session_ids_by_user_ids([user_id])
+            if sid not in await YDOC_MANAGER.get_users(document_id) and (
+                sum([await YDOC_MANAGER.count_documents_for_user(user_sid) for user_sid in user_sids])
+                >= YDOC_MANAGER.MAX_DOCUMENTS_PER_USER
+            ):
+                log.warning('User %s is at the open-document limit. Rejecting join.', user_id)
+                return
 
-        log.info('User %s joining document %s', user_id, document_id)
-        await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
+            log.info('User %s joining document %s', user_id, document_id)
+            await YDOC_MANAGER.add_user(document_id=document_id, user_id=sid)
 
         # Join Socket.IO room
         await sio.enter_room(sid, f'doc_{document_id}')
@@ -1221,6 +1234,9 @@ async def yjs_document_update(sid, data):
             return
 
         if document_id.startswith('note:'):
+            if not await has_notes_access(user.get('id'), user.get('role')):
+                return
+
             note_id = document_id.split(':')[1]
             note = await Notes.get_note_by_id(note_id)
             if not note:

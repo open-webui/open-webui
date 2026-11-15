@@ -64,7 +64,7 @@
 			type="button"
 			class="flex {sidebar
 				? 'size-4.5'
-				: 'size-7'} items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 touch-auto"
+				: 'size-7'} items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors touch-auto"
 			aria-label={$i18n.t(channel.type === 'dm' ? 'Conversation options' : 'Channel options')}
 			aria-haspopup="menu"
 			aria-expanded={show}
@@ -96,8 +96,8 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={!isMuted}
-					disabled={saving}
-					class="disabled:opacity-50"
+					aria-disabled={saving}
+					class="aria-disabled:opacity-50"
 					on:click={() => setMuted(false)}
 				>
 					<AppNotification className="size-3.5 shrink-0" />
@@ -110,8 +110,8 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={isMuted}
-					disabled={saving}
-					class="disabled:opacity-50"
+					aria-disabled={saving}
+					class="aria-disabled:opacity-50"
 					on:click={() => setMuted(true)}
 				>
 					<BellSlash className="size-3.5 shrink-0" />

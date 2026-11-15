@@ -13,6 +13,7 @@
 		canGoForward: boolean;
 	}) => void;
 	export let onError: (error: string) => void = () => {};
+	export let onFailure: (error: string) => void = onError;
 	export let onStatus: (status: string) => void = () => {};
 	let surface: HTMLDivElement;
 	let frame = '';
@@ -23,11 +24,16 @@
 	let vncSocket: WebSocket | null = null;
 	let vncGeneration = 0;
 	let vncRetry: ReturnType<typeof setTimeout>;
+	let vncTimeout: ReturnType<typeof setTimeout>;
+	let vncAttempts = 0;
 	let width = 1024;
 	let height = 768;
+	let displayWidth = width;
+	let displayHeight = height;
 	let socket: WebSocket | null = null;
 	let disposed = false;
 	let retry: ReturnType<typeof setTimeout>;
+	let connectionTimeout: ReturnType<typeof setTimeout>;
 	let attempts = 0;
 	let hasConnected = false;
 	let pendingNavigation: string | null = null;
@@ -39,6 +45,7 @@
 	const stopVnc = () => {
 		vncGeneration++;
 		clearTimeout(vncRetry);
+		clearTimeout(vncTimeout);
 		releaseModifiers();
 		viewer?.disconnect();
 		viewer = null;
@@ -57,13 +64,18 @@
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			const channel = new WebSocket(url);
 			vncSocket = channel;
+			vncTimeout = setTimeout(() => channel.close(), 15000);
 			channel.onopen = () => {
 				if (generation !== vncGeneration) return;
 				viewer = new RFB(vncSurface, channel);
 				viewer.scaleViewport = true;
 				viewer.resizeSession = false;
 				viewer.qualityLevel = { low: 4, balanced: 6, crisp: 9 }[quality];
-				viewer.addEventListener('connect', () => onStatus(''));
+				viewer.addEventListener('connect', () => {
+					clearTimeout(vncTimeout);
+					vncAttempts = 0;
+					onStatus('');
+				});
 			};
 			channel.onclose = (event) => {
 				if (generation !== vncGeneration) return;
@@ -72,6 +84,11 @@
 					onStatus('');
 					onError('Browser opened in another viewer. Reopen this tab.');
 				} else if (active && !disposed) {
+					if (++vncAttempts >= 3) {
+						onStatus('');
+						onFailure('Chrome display connection failed.');
+						return;
+					}
 					onStatus('Reconnecting…');
 					vncRetry = setTimeout(startVnc, 2000);
 				}
@@ -79,7 +96,7 @@
 		} catch (error) {
 			if (generation === vncGeneration) {
 				onStatus('');
-				onError(error instanceof Error ? error.message : String(error));
+				onFailure(error instanceof Error ? error.message : String(error));
 			}
 		}
 	};
@@ -96,6 +113,9 @@
 		if (!bounds.width || !bounds.height) return;
 		width = mobile ? 390 : Math.max(240, Math.round(bounds.width));
 		height = mobile ? 844 : Math.max(200, Math.round(bounds.height));
+		const scale = Math.min(1, bounds.width / width, bounds.height / height);
+		displayWidth = width * scale;
+		displayHeight = height * scale;
 		command('viewport', { width, height, mobile });
 	};
 	$: if (socket) command('visibility', { visible: active });
@@ -168,31 +188,46 @@
 			url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
 			socket = new WebSocket(url);
 			const channel = socket;
+			connectionTimeout = setTimeout(() => channel.close(), 15000);
+			let framePending = Promise.resolve();
 			socket.binaryType = 'arraybuffer';
-			socket.onopen = () => {
+			socket.onopen = async () => {
 				onError('');
+				await tick();
+				if (disposed || socket !== channel || channel.readyState !== WebSocket.OPEN) return;
 				command('frames');
-				resize();
 				command('quality', { quality });
 				command('visibility', { visible: active });
+				resize();
 				if (pendingNavigation) {
 					command('navigate', { url: pendingNavigation });
 					pendingNavigation = null;
 				}
 			};
 			socket.onmessage = async (event) => {
+				if (disposed || socket !== channel) return;
 				try {
 					if (event.data instanceof ArrayBuffer) {
+						// A frame can arrive before navigation state is available.
+						transport = 'frames';
 						await tick();
+						if (disposed || socket !== channel || transport !== 'frames') return;
+						framePending = framePending.then(() => {
+							if (disposed || socket !== channel || transport !== 'frames') return;
+							return frames.draw(event.data);
+						});
+						await framePending;
 						if (disposed || socket !== channel) return;
-						await frames.draw(event.data);
-						if (disposed || socket !== channel) return;
-						command('frameAck');
+						clearTimeout(connectionTimeout);
+						hasConnected = true;
+						attempts = 0;
+						command('frameAck', { window: 3 });
 						onStatus('');
 						return;
 					}
 					const message = JSON.parse(event.data);
 					if (message.type === 'frame' || message.type === 'state') {
+						clearTimeout(connectionTimeout);
 						hasConnected = true;
 						attempts = 0;
 						if (message.type === 'frame' || message.transport !== 'vnc') onStatus('');
@@ -201,14 +236,16 @@
 					if (message.type === 'state') {
 						transport = message.transport ?? 'jpeg';
 						onState(message);
-						onError(message.error || '');
+						if (message.error) onFailure(message.error);
+						else onError('');
 					}
 				} catch (error) {
-					onError(error instanceof Error ? error.message : String(error));
+					onFailure(error instanceof Error ? error.message : String(error));
 				}
 			};
 			socket.onclose = (event) => {
 				if (disposed) return;
+				clearTimeout(connectionTimeout);
 				stopVnc();
 				transport = '';
 				if (event.code >= 4000 && event.code < 5000) {
@@ -220,9 +257,14 @@
 					);
 					return;
 				}
+				if (++attempts >= 3) {
+					onStatus('');
+					onFailure('Chrome connection failed.');
+					return;
+				}
 				onError('');
 				onStatus(hasConnected ? 'Reconnecting…' : 'Connecting…');
-				retry = setTimeout(connect, Math.min(1000 * 2 ** attempts++, 10000));
+				retry = setTimeout(connect, Math.min(1000 * 2 ** (attempts - 1), 10000));
 			};
 		};
 		connect();
@@ -232,6 +274,7 @@
 			disposed = true;
 			onStatus('');
 			clearTimeout(retry);
+			clearTimeout(connectionTimeout);
 			observer.disconnect();
 			stopVnc();
 			socket?.close();
@@ -276,18 +319,27 @@
 >
 	{#if transport === 'vnc'}
 		<div bind:this={vncSurface} class="vnc h-full w-full"></div>
-	{:else if transport === 'frames'}
-		<FrameCanvas bind:this={frames} />
-	{:else if frame}<img
-			src={frame}
-			alt="Browser page"
-			draggable="false"
-			class="max-h-full max-w-full select-none"
-			style:aspect-ratio={`${width}/${height}`}
-		/>{/if}
+	{:else if transport === 'frames' || frame}
+		<!-- Stream resolution can differ from the page viewport, especially in personal Chrome. -->
+		<div
+			class="frame shrink-0"
+			style:width={`${displayWidth}px`}
+			style:height={`${displayHeight}px`}
+		>
+			{#if transport === 'frames'}
+				<FrameCanvas bind:this={frames} />
+			{:else}
+				<img src={frame} alt="Browser page" draggable="false" class="h-full w-full select-none" />
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
+	.frame :global(canvas) {
+		width: 100%;
+		height: 100%;
+	}
 	.vnc > :global(div) {
 		background: transparent !important;
 	}

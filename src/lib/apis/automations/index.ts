@@ -1,3 +1,4 @@
+import type { AgentModel } from '$lib/stores';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 export type AutomationTerminalConfig = {
@@ -55,6 +56,22 @@ export type AutomationResponse = {
 	updated_at: number;
 	last_run: AutomationRunModel | null;
 	next_runs: number[] | null;
+};
+
+export const getAutomationModels = async (
+	token: string,
+	terminalId: string,
+	cwd: string,
+	automationId?: string
+): Promise<AgentModel[]> => {
+	const query = new URLSearchParams({ terminal_id: terminalId });
+	if (cwd) query.set('cwd', cwd);
+	if (automationId) query.set('automation_id', automationId);
+	const response = await fetch(`${WEBUI_API_BASE_URL}/automations/models?${query}`, {
+		headers: { authorization: `Bearer ${token}` }
+	});
+	if (!response.ok) throw await response.json();
+	return response.json();
 };
 
 export const getAutomationItems = async (

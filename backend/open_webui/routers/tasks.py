@@ -160,13 +160,15 @@ async def generate_title(request: Request, form_data: dict, user=Depends(get_ver
             status_code=status.HTTP_400_BAD_REQUEST,
             detail='No model specified for title generation. Please ensure a model is selected for this chat.',
         )
-    if model_id not in models:
+    if model_id not in models and not model_id.startswith('agent:'):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
     task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    if task_model_id not in models or task_model_id.startswith('agent:'):
+        return JSONResponse(content={'detail': 'No task model configured for agent chat titles'})
 
     log.debug('generating chat title using model %s for user %s ', task_model_id, user.email)
 
@@ -419,7 +421,7 @@ async def generate_queries(request: Request, form_data: dict, user=Depends(get_v
             )
 
     if getattr(request.state, 'cached_queries', None):
-        log.info('Reusing cached queries: %s', request.state.cached_queries)
+        log.info('Reusing cached queries')
         return request.state.cached_queries
 
     if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
@@ -507,13 +509,15 @@ async def generate_autocompletion(request: Request, form_data: dict, user=Depend
         models = request.app.state.MODELS
 
     model_id = form_data['model']
-    if model_id not in models:
+    if model_id not in models and not model_id.startswith('agent:'):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.MODEL_NOT_FOUND(),
         )
 
     task_model_id, task_model_params = await get_task_model_generation_config(model_id, models)
+    if task_model_id not in models or task_model_id.startswith('agent:'):
+        return JSONResponse(content={'detail': 'No task model configured for agent autocompletion'})
 
     log.debug('generating autocompletion using model %s for user %s', task_model_id, user.email)
 

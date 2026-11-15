@@ -95,7 +95,7 @@
 		const result = await excelToTable(workbook.Sheets[sheet]);
 		if (key !== request) return;
 		selectedExcelSheet = sheet;
-		previewData = { fileOfficeHtml: DOMPurify.sanitize(result.html) };
+		previewData = { fileOfficeHtml: DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] }) };
 	};
 	const loadOriginal = async () => {
 		controller?.abort();
@@ -134,10 +134,10 @@
 			} else if (ext === 'docx' || mime.includes('wordprocessingml'))
 				data = { fileDocxData: await blob.arrayBuffer() };
 			else if (ext === 'xlsx' || mime.includes('spreadsheetml')) {
-				const XLSX = await import('xlsx');
+				const { readExcelWorkbook } = await import('$lib/utils/excelToTable');
 				const bytes = await blob.arrayBuffer();
 				if (signal.aborted || key !== request) return;
-				workbook = XLSX.read(bytes, { type: 'array' });
+				workbook = await readExcelWorkbook(bytes);
 				excelSheetNames = workbook.SheetNames;
 				if (!excelSheetNames.length) throw new Error('This workbook has no sheets.');
 				await selectSheet(excelSheetNames[0]);

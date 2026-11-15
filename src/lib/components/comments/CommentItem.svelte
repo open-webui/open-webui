@@ -20,7 +20,7 @@
 	import CommentComposer from './CommentComposer.svelte';
 	import { commentsRequest, type ResourceComment } from '$lib/apis/comments';
 	import { highlightAnchor } from './anchors';
-	import { commentLink } from '$lib/utils';
+	import { commentLink, copyToClipboard } from '$lib/utils';
 	export let comment: ResourceComment;
 	export let onReply: (comment: ResourceComment) => void;
 	export let onChange: () => Promise<void>;
@@ -140,10 +140,11 @@
 									{/if}
 									<button
 										type="button"
-										on:click={() => {
-											navigator.clipboard
-												.writeText(new URL(commentLink(comment), location.origin).href)
-												.catch((e) => toast.error(String(e)));
+										on:click={async () => {
+											const copied = await copyToClipboard(
+												new URL(commentLink(comment), location.origin).href
+											);
+											if (!copied) toast.error($i18n.t('Unable to copy link'));
 										}}><Link /><span>{$i18n.t('Copy link')}</span></button
 									>
 									{#if comment.can_delete}

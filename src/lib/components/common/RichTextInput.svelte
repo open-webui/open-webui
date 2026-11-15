@@ -314,6 +314,7 @@
 	export let dragHandle = false;
 	export let link = false;
 	export let image = false;
+	export let allowExternalImages = false;
 	export let fileHandler = false;
 	export let attachments = false;
 	export let suggestions: Partial<import('@tiptap/suggestion').SuggestionOptions>[] | null = null;
@@ -403,6 +404,7 @@
 	export let json = false;
 	export let raw = false;
 	export let editable = true;
+	export let extensions: import('@tiptap/core').AnyExtension[] = [];
 	export let collaboration = false;
 
 	export let showFormattingToolbar = true;
@@ -478,6 +480,7 @@
 
 	let floatingMenuElement: Element | null = null;
 	let bubbleMenuElement: Element | null = null;
+	let formattingDismissed = false;
 	let element: Element | null = null;
 
 	let pendingUpdate = null;
@@ -954,6 +957,7 @@
 		editor = new Editor({
 			element: element,
 			extensions: [
+				...extensions,
 				StarterKit.configure({
 					link: link ? { autolink: autoFormat, linkOnPaste: autoFormat } : false,
 					code: false, // Disabled in favor of FixedCode (see workaround above)
@@ -1013,7 +1017,9 @@
 					: []),
 
 				CharacterCount.configure({}),
-				...(image ? [Image.configure({ allowBase64: attachments })] : []),
+				...(image
+					? [Image.configure({ allowBase64: attachments, allowExternal: allowExternalImages })]
+					: []),
 				...(attachments ? [FileAttachment.configure({ context: componentContext })] : []),
 				...(fileHandler
 					? [
@@ -1470,7 +1476,10 @@
 					editor.storage.files = files;
 				}
 			},
-			onSelectionUpdate: onSelectionUpdate,
+			onSelectionUpdate: (event) => {
+				formattingDismissed = false;
+				onSelectionUpdate(event);
+			},
 			onBlur: () => {
 				// Force-hide floating menus when editor loses focus.
 				// shouldShow alone isn't enough because it only runs on transactions.
@@ -1565,9 +1574,18 @@
 	};
 </script>
 
+<svelte:window
+	on:scroll|capture={(event) => {
+		const target = event.target;
+		if (element && target instanceof Node && (target.contains(element) || element.contains(target)))
+			formattingDismissed = true;
+	}}
+/>
+
 {#if richText && showFormattingToolbar}
 	<div
 		bind:this={bubbleMenuElement}
+		hidden={formattingDismissed}
 		id="bubble-menu"
 		class="p-0"
 		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
@@ -1577,6 +1595,7 @@
 
 	<div
 		bind:this={floatingMenuElement}
+		hidden={formattingDismissed}
 		id="floating-menu"
 		class="p-0"
 		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"

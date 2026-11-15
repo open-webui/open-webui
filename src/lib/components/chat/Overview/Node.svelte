@@ -24,7 +24,7 @@
 	$: previewClass = `text-xs mt-0.5 ${isCompacted ? 'line-clamp-1' : 'line-clamp-2'}`;
 	$: modelName = data?.model
 		? resolveLocalizedModelName(data.model, $i18n.language)
-		: (data?.message?.model ?? 'Assistant');
+		: data?.message?.modelName || data?.message?.model || 'Assistant';
 </script>
 
 <div

@@ -351,6 +351,7 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_EXTERNAL_RERANKER_TIMEOUT': 'rag.external_reranker_timeout',
     'RAG_EXTERNAL_RERANKER_URL': 'rag.external_reranker_url',
     'RAG_FULL_CONTEXT': 'rag.full_context',
+    'RAG_FULL_TEXT_CHAR_THRESHOLD': 'rag.full_context_char_threshold',
     'RAG_OLLAMA_API_KEY': 'rag.ollama.api_key',
     'RAG_OLLAMA_BASE_URL': 'rag.ollama.base_url',
     'RAG_OPENAI_API_BASE_URL': 'rag.openai.api_base_url',
@@ -616,6 +617,7 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'TOP_K': config['rag.top_k'],
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config['rag.bypass_embedding_and_retrieval'],
         'RAG_FULL_CONTEXT': config['rag.full_context'],
+        'RAG_FULL_TEXT_CHAR_THRESHOLD': config['rag.full_context_char_threshold'],
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config['rag.enable_hybrid_search'],
         'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS': config['rag.enable_hybrid_search_enriched_texts'],
@@ -861,6 +863,7 @@ class ConfigForm(BaseModel):
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
+    RAG_FULL_TEXT_CHAR_THRESHOLD: int | None = Field(default=None, ge=0)
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: bool | None = None
@@ -1083,6 +1086,7 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'TOP_K': config['rag.top_k'],
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config['rag.bypass_embedding_and_retrieval'],
         'RAG_FULL_CONTEXT': config['rag.full_context'],
+        'RAG_FULL_TEXT_CHAR_THRESHOLD': config['rag.full_context_char_threshold'],
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config['rag.enable_hybrid_search'],
         'TOP_K_RERANKER': config['rag.top_k_reranker'],
@@ -1761,6 +1765,7 @@ async def index_file(
                         'file_id': file.id,
                         'file_name': file.filename,
                         'file_content_type': file.meta.get('content_type'),
+                        'client_ip': request.client.host if request.client else '',
                     }
                     docs = await loader.aload(file.filename, file.meta.get('content_type'), file_path)
 

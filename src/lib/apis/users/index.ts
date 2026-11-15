@@ -148,7 +148,8 @@ export const getUsers = async (
 	query?: string,
 	orderBy?: string,
 	direction?: string,
-	page = 1
+	page = 1,
+	signal?: AbortSignal
 ) => {
 	let error = null;
 	let res = null;
@@ -171,6 +172,7 @@ export const getUsers = async (
 
 	res = await fetch(`${WEBUI_API_BASE_URL}/users/?${searchParams.toString()}`, {
 		method: 'GET',
+		signal,
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
@@ -181,6 +183,7 @@ export const getUsers = async (
 			return res.json();
 		})
 		.catch((err) => {
+			if (signal?.aborted) return null;
 			console.error(err);
 			error = err.detail;
 			return null;
@@ -413,11 +416,12 @@ export const getUserInfo = async (token: string) => {
 	return res;
 };
 
-export const updateUserInfo = async (token: string, info: object) => {
+export const updateUserInfo = async (token: string, info: object, signal?: AbortSignal) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/info/update`, {
 		method: 'POST',
+		signal,
 		headers: {
 			'Content-Type': 'application/json',
 			Authorization: `Bearer ${token}`
@@ -506,7 +510,10 @@ export const getAndUpdateUserLocation = async (token: string) => {
 	});
 
 	if (location) {
-		await updateUserInfo(token, { location: location });
+		// Saving optional context must not hold up sending a message.
+		void updateUserInfo(token, { location }, AbortSignal.timeout(5_000)).catch((error) => {
+			console.error('Error saving user location:', error);
+		});
 		return location;
 	} else {
 		console.info('Failed to get user location');

@@ -28,9 +28,10 @@
 	export let onClose: Function = () => {};
 
 	$: canEdit =
-		model?.preset || model?.info?.base_model_id
+		model?.owned_by !== 'terminal' &&
+		(model?.preset || model?.info?.base_model_id
 			? model?.info?.user_id === $user?.id
-			: $user?.role === 'admin';
+			: $user?.role === 'admin');
 	const providerSupportsDelete = (provider = '') => provider === 'llama.cpp';
 	$: showComments =
 		$config?.features?.enable_comments &&

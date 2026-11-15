@@ -240,7 +240,8 @@
 										<div class="flex-1">
 											<input
 												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
-												type="email"
+												type="text"
+												inputmode="email"
 												bind:value={_user.email}
 												aria-label={$i18n.t('Email')}
 												placeholder={$i18n.t('Enter Your Email')}

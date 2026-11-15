@@ -129,7 +129,11 @@
 	{#if loading}
 		<div class="flex items-center justify-center h-full"><Spinner className="size-4" /></div>
 	{:else if error}
-		<div class="p-3 text-xs text-gray-500 dark:text-gray-400">{error}</div>
+		<div
+			class="flex flex-1 items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
+		>
+			{error}
+		</div>
 	{:else}
 		<!-- Table tabs + query toggle -->
 		<div
@@ -245,7 +249,11 @@
 						</tbody>
 					</table>
 				{:else}
-					<div class="text-xs text-gray-400 text-center pt-6">{$i18n.t('No data')}</div>
+					<div
+						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
+					>
+						{$i18n.t('No data')}
+					</div>
 				{/if}
 			</div>
 

@@ -155,6 +155,21 @@ def normalize_openai_edit_image_data_url(data_url: str) -> str:
     return data_url
 
 
+def get_image_data_url(data: bytes) -> str:
+    """Validate image bytes and encode them with their detected MIME type."""
+    with Image.open(io.BytesIO(data)) as image:
+        if image.format not in {'PNG', 'JPEG', 'MPO', 'WEBP', 'GIF'}:
+            raise ValueError('Image must be PNG, JPEG, WebP, or GIF.')
+        if image.width * image.height > 25_000_000:
+            raise ValueError('Image must be at most 25 megapixels.')
+        mime_type = Image.MIME[image.format]
+        image.verify()
+    # verify() does not decode pixels for every format.
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+    return f'data:{mime_type};base64,{base64.b64encode(data).decode("utf-8")}'
+
+
 def get_image_file_item(base64_string, param_name='image'):
     header, encoded = base64_string.split(',', 1)
     mime_type = header.split(';')[0].lstrip('data:') or 'image/png'
@@ -203,7 +218,7 @@ async def set_image_model(request: Request, model: str):
 async def get_image_model(request):
     image_config = await get_image_config()
     if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'dall-e-2'
+        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'gpt-image-2'
     elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
         return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'imagen-3.0-generate-002'
     elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
@@ -366,10 +381,9 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
     try:
         if image_config.IMAGE_GENERATION_ENGINE == 'openai':
             return [
-                {'id': 'dall-e-2', 'name': 'DALL·E 2'},
-                {'id': 'dall-e-3', 'name': 'DALL·E 3'},
                 {'id': 'gpt-image-1', 'name': 'GPT-IMAGE 1'},
                 {'id': 'gpt-image-1.5', 'name': 'GPT-IMAGE 1.5'},
+                {'id': 'gpt-image-2', 'name': 'GPT-IMAGE 2'},
             ]
         elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
             return [
@@ -650,7 +664,7 @@ async def image_generations(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        image_config.IMAGE_GENERATION_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),
@@ -1003,7 +1017,7 @@ async def image_edits(
                     {}
                     if re.match(
                         IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
-                        image_config.IMAGE_EDIT_MODEL,
+                        model,
                     )
                     else {'response_format': 'b64_json'}
                 ),

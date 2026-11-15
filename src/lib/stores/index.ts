@@ -10,7 +10,7 @@ import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
 import type { Socket } from 'socket.io-client';
-import type { AudioQueue } from '$lib/utils/audio';
+import type { AudioQueue, NotificationSoundStyle } from '$lib/utils/audio';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
@@ -80,6 +80,10 @@ export const folders = writable([]);
 export const selectedFolder = writable(null);
 
 export const models: Writable<Model[]> = writable([]);
+
+export const baseModels = derived(models, ($models) =>
+	$models.filter((model) => model.owned_by !== 'terminal')
+);
 
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
@@ -176,9 +180,9 @@ export const showChangelog = writable(false);
 
 export const showTabs = writable<
 	| boolean
-	| 'files'
 	| 'comments'
 	| 'side'
+	| 'voice'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
@@ -197,28 +201,40 @@ export const artifactContents = writable(null);
 export const embed = writable(null);
 
 export const temporaryChatEnabled = writable(false);
-export const openTemporaryChatIds = writable<Set<string>>(new Set());
+export const openSideChatIds = writable<Set<string>>(new Set());
 export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
 
-// Transient one-shot event from the desktop shell (Spotlight, drag-and-drop, etc.).
-// Set by +layout.svelte, consumed and cleared by Chat.svelte.
-export type DesktopEventFile = { name: string; mimeType: string; dataUrl: string };
-export type DesktopEvent = {
-	type: string;
-	data?: any;
+export type QueryData = {
+	query: string;
+	files: { name: string; mimeType: string; dataUrl: string }[];
 };
+export type TetherEvent = { type: 'query'; data: QueryData } | { type: 'voice' };
+// The legacy call shortcut is separate from acknowledged Tether events.
+export type DesktopEvent =
+	| { type: 'call'; handoff?: never }
+	| (TetherEvent & {
+			handoff: { isCurrent: () => boolean; complete: (error?: string) => void };
+	  });
 export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 
 export const isLastActiveTab = writable(true);
-export const playingNotificationSound = writable(false);
 
-export type Model = OpenAIModel | OllamaModel;
+export type Model = OpenAIModel | OllamaModel | AgentModel;
+
+export interface AgentModel extends BaseModel {
+	owned_by: 'terminal';
+	agent: {
+		terminal_id: string;
+		provider: 'codex' | 'claude-code' | 'cursor' | 'grok' | 'opencode' | 'cline' | 'gemini' | 'pi';
+		model: string;
+	};
+}
 
 type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena';
+	owned_by: 'ollama' | 'openai' | 'arena' | 'terminal';
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -273,6 +289,7 @@ type Settings = {
 	collapseCodeBlocks?: boolean;
 	expandDetails?: boolean;
 	notificationSound?: boolean;
+	notificationSoundType?: NotificationSoundStyle;
 	notificationSoundAlways?: boolean;
 	stylizedPdfExport?: boolean;
 	notifications?: any;
@@ -287,6 +304,7 @@ type Settings = {
 	responseAutoCopy?: any;
 	richTextInput?: boolean;
 	showFormattingToolbar?: boolean;
+	showInputSelections?: boolean;
 	params?: any;
 	userLocation?: any;
 	webSearch?: any;
@@ -303,7 +321,6 @@ type Settings = {
 	terminalPreviewAllowSameOrigin?: boolean;
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
-	showFilesOnTerminalSelect?: boolean;
 	terminalFileDisplay?: 'sidebar' | 'inline';
 	directConnections?: null;
 	chatBubble?: boolean;
@@ -373,6 +390,17 @@ type Document = {
 };
 
 type Config = {
+	file?: {
+		max_size?: number | null;
+		max_count?: number | null;
+		full_context?: boolean;
+		full_text_char_threshold?: number;
+		image_compression?: { width?: number | null; height?: number | null };
+	};
+	metadata?: {
+		auth_logo_position?: 'center' | 'top-right';
+		login_footer?: string;
+	};
 	audio?: {
 		realtime?: { enabled: boolean; model: string; voice: string };
 		stt: { engine: string };
@@ -408,6 +436,7 @@ type Config = {
 		enable_admin_analytics: boolean;
 		enable_context_compaction?: boolean;
 		enable_tool_permissions?: boolean;
+		enable_tool_permissions_auto?: boolean;
 		enable_community_sharing: boolean;
 		enable_memories: boolean;
 		enable_notes?: boolean;

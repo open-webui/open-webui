@@ -785,7 +785,8 @@ class Loader:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             ] or file_ext in ['xls', 'xlsx']:
                 try:
-                    loader = UnstructuredLoader(file_path, 'xlsx')
+                    # Subtable detection is very slow on large sparse sheets.
+                    loader = UnstructuredLoader(file_path, 'xlsx', find_subtable=False)
                 except ImportError:
                     log.warning(
                         "The 'unstructured' package is not installed. "

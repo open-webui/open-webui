@@ -131,8 +131,6 @@
 
 	const reset = () => {
 		page = 1;
-		items = null;
-		total = null;
 		allItemsLoaded = false;
 		itemsLoading = false;
 	};
@@ -184,7 +182,7 @@
 				allItemsLoaded = false;
 			}
 
-			if (items) {
+			if (items && page > 1) {
 				const existingIds = new Set(items.map((item) => item.id));
 				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
 				items = [...items, ...newItems];

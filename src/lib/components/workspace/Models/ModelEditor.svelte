@@ -13,7 +13,16 @@
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
-	import { config, models, tools, functions, user, settings, visibleControls } from '$lib/stores';
+	import {
+		baseModels,
+		config,
+		models,
+		tools,
+		functions,
+		user,
+		settings,
+		visibleControls
+	} from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 
 	import { getTools } from '$lib/apis/tools';
@@ -94,6 +103,7 @@
 	let commitMessage = '';
 	let savedDraft = '';
 	let defaultMeta: Record<string, any> = {};
+	let defaultFunctionCalling: string | null = null;
 	let allowNavigation = false;
 	let showDiscard = false;
 	let afterDiscard: (() => void) | null = null;
@@ -220,7 +230,7 @@
 	};
 	$: reportedModel =
 		providerModel ??
-		$models.find((entry) => entry.id === (info.base_model_id || id)) ??
+		$baseModels.find((entry) => entry.id === (info.base_model_id || id)) ??
 		(info.base_model_id ? null : model);
 
 	$: modifiedParamCount = Object.entries(params).reduce((count, [key, value]) => {
@@ -353,6 +363,7 @@
 		return models
 			.filter(
 				(baseModel) =>
+					baseModel.owned_by !== 'terminal' &&
 					(!currentModelId ||
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
@@ -436,7 +447,7 @@
 			}
 		}
 
-		if (toolIds.length > 0) {
+		if (toolIds.length > 0 || defaultMeta.toolIds?.length > 0) {
 			modelInfo.meta.toolIds = toolIds;
 		} else {
 			if (modelInfo.meta.toolIds) {
@@ -678,9 +689,11 @@
 			enableDescription = model?.meta?.description !== null;
 
 			if (model.base_model_id) {
-				const base_model = $models
+				const base_model = $baseModels
 					.filter(
-						(m) => (!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id)
+						(m) =>
+							m.owned_by !== 'terminal' &&
+							((!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
@@ -722,7 +735,7 @@
 				}
 			});
 
-			toolIds = model?.meta?.toolIds ?? [];
+			toolIds = model?.meta?.toolIds ?? defaultMeta.toolIds ?? [];
 			subagents = { model_ids: model?.meta?.subagents?.model_ids ?? [] };
 			skillIds = model?.meta?.skillIds ?? [];
 			filterIds = model?.meta?.filterIds ?? [];
@@ -784,11 +797,13 @@
 		// reflects the actual defaults rather than hardcoded values
 		const modelsConfig = await getModelsDefaults(localStorage.token).catch(() => null);
 		defaultMeta = modelsConfig?.DEFAULT_MODEL_METADATA ?? {};
+		defaultFunctionCalling = modelsConfig?.DEFAULT_FUNCTION_CALLING ?? null;
 
 		// Use admin defaults as base, falling back to hardcoded defaults
 		capabilities = { ...DEFAULT_CAPABILITIES, ...(defaultMeta.capabilities ?? {}) };
 		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
 		builtinTools = defaultMeta.builtinTools ?? {};
+		toolIds = defaultMeta.toolIds ?? [];
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -1359,7 +1374,7 @@
 														id="workspace-base-model"
 														placeholder={$i18n.t('Select a base model')}
 														searchPlaceholder={$i18n.t('Search a model')}
-														items={getBaseModelItems($models)}
+														items={getBaseModelItems($baseModels)}
 														triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
 														selectionOnly
 														{includeHidden}
@@ -1722,6 +1737,7 @@
 									<div class="space-y-0.5">
 										<Capabilities
 											bind:capabilities
+											functionCalling={params.function_calling ?? defaultFunctionCalling}
 											bind:defaultFeatureIds
 											bind:builtinTools
 											disabled={readOnly}
@@ -1733,13 +1749,13 @@
 													'Models this model can delegate to. Users must have access to them. Leave empty to use the current model.'
 												)}
 												summary={subagents.model_ids
-													.map((id) => $models.find((model) => model.id === id)?.name || id)
+													.map((id) => $baseModels.find((model) => model.id === id)?.name || id)
 													.join(', ') || $i18n.t('Current Model')}
 											>
 												<TypeaheadSelector
 													id="model-subagents"
 													label={$i18n.t('Models')}
-													items={($models ?? [])
+													items={($baseModels ?? [])
 														.filter((model) => !('direct' in model && model.direct))
 														.map((model) => ({
 															id: model.id,

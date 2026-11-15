@@ -24,7 +24,7 @@
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
 		: ''} max-w-full"
 >
-	<nav class="px-1.5 pt-1.5 md:px-2.5 backdrop-blur-xl w-full drag-region">
+	<nav class="px-1.5 pt-1.5 md:px-2.5 w-full drag-region">
 		<div class=" flex items-center">
 			{#if $mobile}
 				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">

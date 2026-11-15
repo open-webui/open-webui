@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+	import { v4 as uuidv4 } from 'uuid';
 	import { getContext } from 'svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import { settings, mobile, user } from '$lib/stores';
@@ -32,7 +33,7 @@
 		draftAccount = $user?.id;
 	}
 	let content = drafts.get(draftKey)?.content ?? initialContent;
-	let tempId = drafts.get(draftKey)?.temp_id ?? crypto.randomUUID();
+	let tempId = drafts.get(draftKey)?.temp_id ?? uuidv4();
 	let editor: import('@tiptap/core').Editor | null = null;
 	let saving = false;
 	let submitted = false;
@@ -70,7 +71,7 @@
 			submitted = true;
 			content = '';
 			drafts.delete(draftKey);
-			tempId = crypto.randomUUID();
+			tempId = uuidv4();
 			editor?.commands.clearContent();
 			onSubmitted();
 		} catch (e) {

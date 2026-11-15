@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
-	import { config, models, settings } from '$lib/stores';
+	import { baseModels, config, models, settings } from '$lib/stores';
 	import { COMMUNITY_ORIGINS, WEBUI_BASE_URL } from '$lib/constants';
 
 	import { onMount, tick, getContext } from 'svelte';
@@ -13,7 +13,7 @@
 	const i18n = getContext<any>('i18n');
 
 	const onSubmit = async (modelInfo) => {
-		if ($models.find((m) => m.id === modelInfo.id)) {
+		if ($baseModels.find((m) => m.id === modelInfo.id)) {
 			toast.error(
 				$i18n.t(
 					"Error: A model with the ID '{{modelId}}' already exists. Please select a different ID to proceed.",

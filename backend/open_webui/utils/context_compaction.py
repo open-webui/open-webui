@@ -328,7 +328,13 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
         message = messages[idx]
         value = message.get('contextSummary') or message.get('context_summary')
         if isinstance(value, str) and value.strip():
-            return messages[idx:], value
+            # Rerun without the summary so a tool-loop reply keeps its mid-turn trim.
+            if message.get('output'):
+                [trimmed_message], _ = _apply_latest_summary_checkpoint(
+                    [{**message, 'contextSummary': None, 'context_summary': None}]
+                )
+                message = {**message, 'output': trimmed_message['output']}
+            return [message, *messages[idx + 1 :]], value
 
         marker = next(
             (
@@ -458,9 +464,6 @@ async def _generate_summary(
     if not isinstance(task_model_params, dict):
         task_model_params = {}
     task_model_params = {key: value for key, value in task_model_params.items() if value is not None and value != ''}
-    task_model_params = task_model_params or {
-        'max_tokens': models[task_model_id].get('info', {}).get('params', {}).get('max_tokens', 1000)
-    }
 
     metadata = {
         **(request.state.metadata if hasattr(request.state, 'metadata') else {}),

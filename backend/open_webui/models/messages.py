@@ -8,7 +8,22 @@ from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserNameResponse, Users
 from pydantic import BaseModel, ConfigDict, computed_field, field_validator
-from sqlalchemy import JSON, BigInteger, Boolean, Column, String, Text, and_, delete, func, or_, select, text, update
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Boolean,
+    Column,
+    Index,
+    String,
+    Text,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import exists
 
@@ -19,7 +34,7 @@ class MessageReaction(Base):
     __tablename__ = 'message_reaction'
     id = Column(Text, primary_key=True, unique=True)
     user_id = Column(Text)
-    message_id = Column(Text)
+    message_id = Column(Text, index=True)
     name = Column(Text)
     created_at = Column(BigInteger)
 
@@ -43,7 +58,7 @@ class Message(Base):
     channel_id = Column(Text, nullable=True)
 
     reply_to_id = Column(Text, nullable=True)
-    parent_id = Column(Text, nullable=True)
+    parent_id = Column(Text, nullable=True, index=True)
 
     # Pins
     is_pinned = Column(Boolean, nullable=False, default=False)
@@ -56,6 +71,8 @@ class Message(Base):
 
     created_at = Column(BigInteger)  # time_ns
     updated_at = Column(BigInteger)  # time_ns
+
+    __table_args__ = (Index('ix_message_channel_parent_created', 'channel_id', 'parent_id', 'created_at'),)
 
 
 class MessageModel(BaseModel):
@@ -412,14 +429,11 @@ class MessageTable:
             )
             all_messages = result.scalars().all()
 
+            reply_to_messages = await self._get_reply_to_messages(all_messages, db)
+
             messages = []
             for message in all_messages:
-                reply_to_message = (
-                    await self.get_message_by_id(message.reply_to_id, include_thread_replies=False, db=db)
-                    if message.reply_to_id
-                    else None
-                )
-
+                reply_to_message = reply_to_messages.get(message.reply_to_id)
                 user_info = await self._resolve_user_info(message, db)
 
                 messages.append(
@@ -427,11 +441,32 @@ class MessageTable:
                         {
                             **MessageModel.model_validate(message).model_dump(),
                             'user': user_info,
-                            'reply_to_message': (reply_to_message.model_dump() if reply_to_message else None),
+                            'reply_to_message': reply_to_message,
                         }
                     )
                 )
             return messages
+
+    async def _get_reply_to_messages(self, messages: list[Message], db: AsyncSession) -> dict[str, dict]:
+        """Fetch every reply target of the given messages in a fixed number of queries, keyed by message id."""
+        reply_to_ids = {message.reply_to_id for message in messages if message.reply_to_id}
+        if not reply_to_ids:
+            return {}
+
+        result = await db.execute(select(Message).filter(Message.id.in_(reply_to_ids)))
+        targets = {message.id: message for message in result.scalars().all()}
+
+        user_infos = {target_id: await self._resolve_user_info(target, db) for target_id, target in targets.items()}
+        author_ids = [target.user_id for target_id, target in targets.items() if user_infos[target_id] is None]
+        authors = {user.id: user for user in await Users.get_users_by_user_ids(author_ids, db=db)}
+
+        reply_to_messages = {}
+        for target_id, target in targets.items():
+            user_info = user_infos[target_id]
+            if user_info is None and target.user_id in authors:
+                user_info = authors[target.user_id].model_dump()
+            reply_to_messages[target_id] = {**MessageModel.model_validate(target).model_dump(), 'user': user_info}
+        return reply_to_messages
 
     async def get_messages_by_parent_id(
         self,
@@ -513,15 +548,36 @@ class MessageTable:
                 )
             return messages
 
-    async def get_last_message_by_channel_id(
-        self, channel_id: str, db: Optional[AsyncSession] = None
-    ) -> Optional[MessageModel]:
+    async def get_last_message_times_by_channel_ids(
+        self, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, int]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(Message).filter_by(channel_id=channel_id).order_by(Message.created_at.desc()).limit(1)
+                select(Message.channel_id, func.max(Message.created_at))
+                .filter(Message.channel_id.in_(channel_ids))
+                .group_by(Message.channel_id)
             )
-            message = result.scalars().first()
-            return MessageModel.model_validate(message) if message else None
+            return dict(result.all())
+
+    async def get_unread_message_counts_by_user_id(
+        self, user_id: str, channel_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, int]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Message.channel_id, func.count(Message.id))
+                .join(
+                    ChannelMember,
+                    and_(ChannelMember.channel_id == Message.channel_id, ChannelMember.user_id == user_id),
+                )
+                .filter(
+                    Message.channel_id.in_(channel_ids),
+                    Message.parent_id == None,  # only count top-level messages
+                    Message.created_at > func.coalesce(ChannelMember.last_read_at, 0),
+                    or_(Message.user_id != user_id, Message.user_id.is_(None)),
+                )
+                .group_by(Message.channel_id)
+            )
+            return dict(result.all())
 
     async def get_pinned_messages_by_channel_id(
         self,

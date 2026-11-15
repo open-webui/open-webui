@@ -63,7 +63,7 @@ async def comment_resource(resource_type, resource_id, user, db, *, lock=False, 
     if resource_type == 'chat':
         from open_webui.models.chats import Chats
 
-        allowed = await Chats.get_accessible_chat_by_id(resource_id, user, db=db, chat=resource) is not None
+        allowed = await Chats.has_chat_access(resource_id, user, db=db, chat=resource)
     else:
         if resource_type == 'note':
             if not await Config.get('notes.enable') or (

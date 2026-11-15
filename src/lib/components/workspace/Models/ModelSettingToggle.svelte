@@ -21,7 +21,9 @@
 	<Tooltip content={description} placement="top-start">
 		<button
 			type="button"
-			class="text-left font-normal disabled:cursor-default disabled:opacity-50"
+			class="text-left font-normal disabled:opacity-50 {description
+				? 'cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500'
+				: 'disabled:cursor-default'}"
 			{disabled}
 			on:click={() => change(!checked)}>{label}</button
 		>

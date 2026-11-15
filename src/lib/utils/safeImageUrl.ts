@@ -12,6 +12,7 @@ const PLACEHOLDER_IMAGE = '/favicon.png';
  * Allowed patterns:
  *   - Relative paths (starting with '/')
  *   - data:image/* URIs
+ *   - Blob URLs created on this origin
  *   - Same-origin URLs (starting with WEBUI_BASE_URL)
  *   - Gravatar URLs (https://www.gravatar.com/avatar/)
  *   - External HTTP(S) URLs when allowExternal is true
@@ -27,6 +28,7 @@ export function safeImageUrl(url: string, allowExternal = false): string {
 	if (
 		(WEBUI_BASE_URL && url.startsWith(WEBUI_BASE_URL)) ||
 		url.startsWith('https://www.gravatar.com/avatar/') ||
+		(typeof location !== 'undefined' && url.startsWith(`blob:${location.origin}/`)) ||
 		(allowExternal && /^https?:\/\//i.test(url)) ||
 		url.startsWith('data:') ||
 		url.startsWith('/')

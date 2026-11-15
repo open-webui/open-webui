@@ -472,7 +472,7 @@
 	{:else if error}
 		<div
 			role="alert"
-			class="absolute inset-0 flex items-center justify-center p-4 text-sm text-red-500"
+			class="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-red-500"
 		>
 			{$i18n.t('Error previewing file: {{error}}', { error })}
 		</div>

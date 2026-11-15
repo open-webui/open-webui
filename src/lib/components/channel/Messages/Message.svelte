@@ -15,7 +15,6 @@
 	dayjs.extend(localizedFormat);
 
 	import { getContext, tick } from 'svelte';
-	import { autoUpdate } from '@floating-ui/dom';
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { formatDate } from '$lib/utils';
@@ -71,13 +70,10 @@
 
 	let showButtons = false;
 
-	// The top layer escapes scroll clipping without moving actions out of the message's tab order.
-	const positionActions = (node: HTMLElement, keepOpen: boolean) => {
+	const trackActions = (node: HTMLElement, keepOpen: boolean) => {
 		const anchor = node.parentElement!;
 		const messageElement = anchor.parentElement!;
-		let cleanup: (() => void) | undefined;
 		let destroyed = false;
-		node.showPopover();
 
 		const update = () => {
 			if (destroyed) return;
@@ -89,16 +85,6 @@
 					));
 			node.style.opacity = visible ? '1' : '0';
 			node.style.pointerEvents = visible ? 'auto' : 'none';
-			if (visible && !cleanup) {
-				cleanup = autoUpdate(messageElement, node, () => {
-					const rect = anchor.getBoundingClientRect();
-					node.style.left = `${rect.right - node.offsetWidth}px`;
-					node.style.top = `${rect.top}px`;
-				});
-			} else if (!visible) {
-				cleanup?.();
-				cleanup = undefined;
-			}
 		};
 		const scheduleUpdate = () => requestAnimationFrame(update);
 		const events = ['pointerenter', 'pointerleave', 'focusin', 'focusout'];
@@ -113,7 +99,6 @@
 			},
 			destroy() {
 				destroyed = true;
-				cleanup?.();
 				for (const element of [messageElement, node]) {
 					for (const event of events) element.removeEventListener(event, scheduleUpdate);
 				}
@@ -122,6 +107,7 @@
 	};
 
 	let edit = false;
+	let editButtonElement: HTMLButtonElement;
 	let editedContent = null;
 	let showDeleteConfirmDialog = false;
 	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
@@ -272,10 +258,9 @@
 			{#if !edit && !disabled && !$$slots.header}
 				<div class="absolute right-1 -top-3">
 					<div
-						use:positionActions={showButtons}
-						popover="manual"
-						class="fixed z-9999 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
-						style="inset: auto; margin: 0; color: inherit; opacity: 0; pointer-events: none;"
+						use:trackActions={showButtons}
+						class="absolute right-0 top-0 z-20 flex w-max gap-1 rounded-lg bg-white dark:bg-gray-850 shadow-md p-0.5 border border-gray-100/30 dark:border-gray-850/30"
+						style="opacity: 0; pointer-events: none;"
 					>
 						<slot name="actions">
 							{#if onReaction}
@@ -335,8 +320,8 @@
 									<button
 										aria-label={$i18n.t('Reply in Thread')}
 										class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
-										on:click={() => {
-											onThread(message.id);
+										on:click={(event) => {
+											onThread(message.id, event.currentTarget);
 										}}
 									>
 										<ChatBubbleOvalEllipsis />
@@ -348,6 +333,7 @@
 								{#if onEdit}
 									<Tooltip content={$i18n.t('Edit')}>
 										<button
+											bind:this={editButtonElement}
 											aria-label={$i18n.t('Edit')}
 											id="edit-message-{renderedMessageId}"
 											class="hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg p-1"
@@ -640,9 +626,11 @@
 									<button
 										id="close-edit-message-button"
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
-										on:click={() => {
+										on:click={async () => {
 											edit = false;
 											editedContent = null;
+											await tick();
+											editButtonElement?.focus();
 										}}
 									>
 										{$i18n.t('Cancel')}
@@ -796,8 +784,8 @@
 							<div class="flex items-center gap-1.5 -mt-0.5 mb-1.5">
 								<button
 									class="flex min-w-0 items-center text-[0.6875rem] py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition"
-									on:click={() => {
-										onThread(message.id);
+									on:click={(event) => {
+										onThread(message.id, event.currentTarget);
 									}}
 								>
 									<span class="shrink-0 font-medium mr-1">

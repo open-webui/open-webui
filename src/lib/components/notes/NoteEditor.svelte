@@ -2,6 +2,7 @@
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
 	import {
+		baseModels,
 		config,
 		mobile,
 		models,
@@ -362,9 +363,12 @@
 	});
 	let noteCommentCount = 0;
 	$: if (currentNoteComments) showNoteChat = true;
-	const closeNotePanel = () => {
+	const closeNotePanel = async () => {
 		currentNoteComments = null;
 		showNoteChat = false;
+
+		await tick();
+		if (document.activeElement === document.body) noteChatButtonElement?.focus();
 	};
 	let noteChatId = null;
 	let noteChatLoading = false;
@@ -390,6 +394,9 @@
 	let ignoreBlur = false;
 	let titleInputFocused = false;
 	let titleGenerating = false;
+	let titleInputElement: HTMLInputElement;
+	let noteChatButtonElement: HTMLButtonElement;
+	let pagesToggleElement: HTMLButtonElement;
 
 	let dragged = false;
 	let loading = false;
@@ -579,6 +586,7 @@ ${content}
 
 		titleGenerating = false;
 		await tick();
+		if (document.activeElement === document.body) titleInputElement?.focus();
 		changeDebounceHandler();
 	};
 
@@ -1028,8 +1036,11 @@ ${content}
 		await tick();
 
 		selectedModelId =
-			resolveDefaultModelIds($models, $settings?.models, $config?.default_models?.split(','))[0] ??
-			'';
+			resolveDefaultModelIds(
+				$baseModels,
+				$settings?.models,
+				$config?.default_models?.split(',')
+			)[0] ?? '';
 
 		const dropzoneElement = document.getElementById('note-editor');
 
@@ -1150,6 +1161,7 @@ ${content}
 									? 'ml-1'
 									: ''}"
 								type="text"
+								bind:this={titleInputElement}
 								bind:value={note.title}
 								placeholder={titleGenerating ? $i18n.t('Generating...') : $i18n.t('Title')}
 								aria-label={$i18n.t('Title')}
@@ -1249,6 +1261,7 @@ ${content}
 										type="button"
 										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
 										aria-label={$i18n.t('Chat')}
+										bind:this={noteChatButtonElement}
 										on:click={openNoteChat}
 									>
 										<ChatBubbleOval className="size-4" strokeWidth="1.8" />
@@ -1423,6 +1436,7 @@ ${content}
 										class="flex max-w-full items-center gap-1 bg-transparent text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition"
 										aria-expanded={showNoteTabs}
 										aria-controls="note-tabs-panel"
+										bind:this={pagesToggleElement}
 										on:click={() => {
 											showNoteTabs = !showNoteTabs;
 										}}
@@ -1521,7 +1535,11 @@ ${content}
 							floating
 						>
 							<NoteTabs
-								onClose={() => (showNoteTabs = false)}
+								onClose={async () => {
+									showNoteTabs = false;
+									await tick();
+									pagesToggleElement?.focus();
+								}}
 								pages={note.data.pages.map((page) =>
 									page.id === 'main' && page.inherit_note_title !== false
 										? { ...page, title: note.title || $i18n.t('Untitled') }

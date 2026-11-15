@@ -105,6 +105,14 @@
 		};
 
 		for (const token of tokenList) {
+			if (
+				token.type === 'details' &&
+				token.attributes?.type === 'tool_calls' &&
+				token.attributes?.hidden === 'true' &&
+				!['pending', 'queued', 'requires_approval'].includes(token.attributes?.status ?? '')
+			) {
+				continue;
+			}
 			if (isGroupableDetailToken(token)) {
 				detailGroup.push(token);
 			} else {
@@ -149,7 +157,7 @@
 	};
 
 	$: detailButtonClassName = `py-0.5 ${
-		compactPreview ? 'text-xs' : 'text-[0.9375rem]'
+		compactPreview ? 'text-xs' : 'text-[0.90625rem]'
 	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
 
 	$: displayTokens = getDisplayTokens(tokens);

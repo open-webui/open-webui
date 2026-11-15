@@ -14,6 +14,7 @@ from open_webui.models.access_grants import AccessGrant, AccessGrantModel, Acces
 from open_webui.models.groups import Groups
 from open_webui.models.model_history import ModelHistories, ModelHistory, model_snapshot
 from open_webui.models.users import User, UserModel, UserResponse, Users
+from open_webui.utils.chat_variables import is_nested_too_deep
 from open_webui.utils.misc import json_text_variants
 from open_webui.utils.validate import validate_image_url
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationInfo, field_validator, model_validator
@@ -259,6 +260,13 @@ class ModelForm(BaseModel):
     access_grants: list[dict] | None = None
     is_active: bool = True
 
+    @field_validator('id', 'base_model_id')
+    @classmethod
+    def exclude_agent_models(cls, value: str | None) -> str | None:
+        if value and value.startswith('agent:'):
+            raise ValueError('Agent models cannot be saved or used as base models.')
+        return value
+
 
 class ModelsTable:
     async def _get_access_grants(self, model_id: str, db: AsyncSession | None = None) -> list[AccessGrantModel]:
@@ -279,6 +287,8 @@ class ModelsTable:
     async def _write_model(self, session, form, user_id, current=None, production_version_id=None):
         """Write configuration, history, and grants in the caller's transaction."""
         data = form.model_dump(exclude={'access_grants', 'commit_message'})
+        if is_nested_too_deep(data['meta']) or is_nested_too_deep(data['params']):
+            raise HTTPException(400, 'Model meta and params are nested too deeply')
         data['meta'].pop('chat_variables_schema', None)
         snapshot = model_snapshot(data)
         if current is None:
