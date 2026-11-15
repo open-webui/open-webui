@@ -361,7 +361,11 @@ def verify_ssl_cert(url: str) -> bool:
     try:
         parsed_url = urllib.parse.urlparse(url)
         hostname = parsed_url.hostname
-        context = ssl.create_default_context(cafile=certifi.where())
+        context = (
+            AIOHTTP_CLIENT_SESSION_SSL
+            if isinstance(AIOHTTP_CLIENT_SESSION_SSL, ssl.SSLContext)
+            else ssl.create_default_context(cafile=certifi.where())
+        )
         with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
             s.connect((hostname, parsed_url.port or 443))
         return True
