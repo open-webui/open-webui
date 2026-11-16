@@ -3022,13 +3022,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['context_summary'] = context_summary
 
     # Checked after compaction, which can drop the only copy the model had.
-    unchanged_ids = [
+    unchanged_call_ids = [
         call['call_id']
-        for call, result in zip(initial_output, initial_output[1:])
+        for call, call_output in zip(initial_output, initial_output[1:])
         if call.get('name') in ('list_available_skills', 'list_attached_knowledge')
-        and get_tool_results(form_data['messages'], call['name'])[-1:] == [result['output'][0]['text']]
+        and get_tool_results(form_data['messages'], call['name'])[-1:] == [call_output['output'][0]['text']]
     ]
-    initial_output = [item for item in initial_output if item.get('call_id') not in unchanged_ids]
+    initial_output = [item for item in initial_output if item.get('call_id') not in unchanged_call_ids]
     if initial_output:
         form_data['messages'].extend(
             convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
