@@ -322,6 +322,12 @@ _UNWRAP_DEFINITION_LISTS_AND_FIGURES = (
     'const div = document.createElement("div"); div.append(...element.childNodes); element.replaceWith(div); })'
 )
 
+# unstructured drops <details> and <summary> as boilerplate, text included.
+_UNWRAP_DETAILS = (
+    '() => document.querySelectorAll("details, summary").forEach(element => { '
+    'const div = document.createElement("div"); div.append(...element.childNodes); element.replaceWith(div); })'
+)
+
 
 def _forwardable_request_headers(headers: Dict[str, str]) -> Dict[str, str]:
     forwardable = {name: value for name, value in headers.items() if name.lower() not in _DROPPED_REQUEST_HEADERS}
@@ -367,6 +373,7 @@ def verify_ssl_cert(url: str) -> bool:
             else ssl.create_default_context(cafile=certifi.where())
         )
         with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
+            s.settimeout(10)
             s.connect((hostname, parsed_url.port or 443))
         return True
     except ssl.SSLError:
@@ -1007,6 +1014,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                         element.evaluate('element => element.remove()')
                             page.evaluate(_UNWRAP_EXTRA_MAINS)
                             page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
+                            page.evaluate(_UNWRAP_DETAILS)
                             text = self._extract_html(page.content())
                             page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}
@@ -1049,6 +1057,7 @@ class SafePlaywrightURLLoader(BaseLoader, RateLimitMixin, URLProcessingMixin):
                                         await element.evaluate('element => element.remove()')
                             await page.evaluate(_UNWRAP_EXTRA_MAINS)
                             await page.evaluate(_UNWRAP_DEFINITION_LISTS_AND_FIGURES)
+                            await page.evaluate(_UNWRAP_DETAILS)
                             text = await asyncio.to_thread(self._extract_html, await page.content())
                             await page.unroute_all(behavior='ignoreErrors')
                             metadata = {'source': url}

@@ -58,7 +58,6 @@ const state = writable(entries);
 export const folderStates = readonly(state);
 const notify = () => state.set(entries);
 let session = 0;
-let opening = 0;
 const revisions = new Map<string, number>();
 const pending = new Map<string, { revision: number; promise: Promise<any> }>();
 const resourceKey = (id: string, resource: string) => JSON.stringify([id, resource]);
@@ -87,8 +86,6 @@ export function getFolderState(id: string): FolderState {
 	return (entries[id] ??= { details: null, chatPages: {}, sidebarPage: 1, agentModels: null });
 }
 
-export const beginFolderOpening = () => ++opening;
-export const isCurrentFolderOpening = (generation: number) => generation === opening;
 export const isCancelledFolderRequest = (error: unknown) =>
 	error instanceof Error && error.name === 'AbortError';
 
@@ -388,7 +385,6 @@ export async function loadFolderAgentModels(
 
 export function clearFolderStates() {
 	session++;
-	opening++;
 	entries = {};
 	pending.clear();
 	agentRequests.clear();

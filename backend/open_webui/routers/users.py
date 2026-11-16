@@ -130,7 +130,25 @@ async def get_all_users(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await Users.get_users(db=db)
+    result = await Users.get_users(db=db)
+    users = result['users']
+    total = result['total']
+
+    # Look up by group: binding one IN parameter per user breaks past ~32k users
+    groups = await Groups.get_all_groups(db=db)
+    group_user_ids = await Groups.get_group_user_ids_by_ids([group.id for group in groups], db=db)
+
+    groups_by_user = {}
+    for group in groups:
+        for user_id in group_user_ids[group.id]:
+            groups_by_user.setdefault(user_id, []).append({'id': group.id, 'name': group.name})
+
+    return {
+        'users': [
+            UserInfoResponse(**{**user.model_dump(), 'groups': groups_by_user.get(user.id, [])}) for user in users
+        ],
+        'total': total,
+    }
 
 
 @router.get('/search', response_model=UserInfoListResponse)

@@ -10,7 +10,7 @@
 		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import { user, chatId, settings, terminalServers, visibleControls } from '$lib/stores';
+	import { user, settings, terminalServers, visibleControls } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
@@ -20,6 +20,9 @@
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 

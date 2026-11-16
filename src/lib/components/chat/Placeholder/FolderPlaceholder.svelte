@@ -194,6 +194,7 @@
 			selectedFolder.update((current) =>
 				current?.id === folderId ? { ...current, ...updated } : current
 			);
+			await refreshFolderChatLists(null);
 		} catch (error) {
 			toast.error(String(error));
 		} finally {
@@ -248,6 +249,7 @@
 	let timer: ReturnType<typeof setTimeout> | undefined;
 
 	let filterShow = false;
+	let filterDropdown: Dropdown;
 	let tagQuery = '';
 
 	$: groupByLabel = (value: GroupBy) =>
@@ -454,7 +456,7 @@
 			search: appliedSearch,
 			userIds: selectedUsers,
 			tagIds:
-				activeBy() === 'tags' && key !== 'all' ? (key === UNTAGGED ? [] : [key]) : selectedTags,
+				activeBy() === 'tags' && key !== 'all' ? [key] : selectedTags,
 			activity: activeBy() === 'activity' && key !== 'all' ? (key as FolderActivity) : activity,
 			updatedAtGte,
 			status:
@@ -689,6 +691,12 @@
 		filterShow = true;
 	}
 
+	function openFilterFromKeyboard() {
+		tagQuery = '';
+		if (filterDropdown) filterDropdown.openWithFocus();
+		else filterShow = true;
+	}
+
 	async function openSearch() {
 		searchOpen = true;
 		await tick();
@@ -773,7 +781,7 @@
 			void openSearch();
 		} else if (event.key === 'f') {
 			event.preventDefault();
-			void openFilter();
+			openFilterFromKeyboard();
 		} else if (event.key === 'c' && !readOnly) {
 			// Jump into the floating composer.
 			event.preventDefault();
@@ -1145,7 +1153,12 @@
 					>
 				{/if}
 
-				<Dropdown bind:show={filterShow} align="end" onOpenChange={() => (tagQuery = '')}>
+				<Dropdown
+					bind:this={filterDropdown}
+					bind:show={filterShow}
+					align="end"
+					onOpenChange={() => (tagQuery = '')}
+				>
 					<button
 						type="button"
 						class="{iconButton} {filterCount ? 'text-gray-800 dark:text-gray-100' : ''}"
@@ -1495,6 +1508,7 @@
 				onMore={loadMore}
 				onMove={move}
 				onTagsChange={changed}
+				ownsFolder={!!folder?.user_id && folder.user_id === $user?.id}
 			/>
 		{/if}
 	</div>

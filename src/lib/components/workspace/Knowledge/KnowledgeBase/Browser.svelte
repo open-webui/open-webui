@@ -147,8 +147,8 @@
 	<div class="flex h-full min-h-0 w-full flex-col">
 		<div class="flex shrink-0 items-center p-1.5">
 			<Search className="mx-1 size-3.5 shrink-0 text-gray-400" /><input
-				aria-label={$i18n.t('Search Collection')}
-				placeholder={$i18n.t('Search Collection')}
+				aria-label={$i18n.t('Search Files')}
+				placeholder={$i18n.t('Search Files')}
 				bind:value={inputQuery}
 				class="h-7 min-w-0 flex-1 bg-transparent px-1 text-xs outline-none"
 				on:input={() => {

@@ -161,7 +161,8 @@ export type TerminalTarget = {
 	baseUrl: string;
 	key: string;
 	system: boolean;
-	context: { chatId: string | null; modelId: string | null };
+	/** userId names another person's instance; only someone who manages the terminal may reach it. */
+	context: { userId?: string | null; chatId: string | null; modelId: string | null };
 };
 export type TerminalProcess = {
 	id: string;
@@ -189,6 +190,7 @@ export const resolveTerminalTarget = (
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
 			context: {
+				userId: context.userId ?? null,
 				chatId: context.chatId ?? null,
 				modelId: server.scope === 'model' ? (context.modelId ?? null) : null
 			},
@@ -246,6 +248,7 @@ export const terminalHeaders = (
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	return {
 		Authorization: `Bearer ${target.key.trim()}`,
+		...(target.context.userId ? { 'X-Terminal-User-Id': target.context.userId } : {}),
 		...(target.context.chatId ? { 'X-Session-Id': target.context.chatId } : {}),
 		...(target.context.modelId ? { 'X-Terminal-Model-Id': target.context.modelId } : {})
 	};

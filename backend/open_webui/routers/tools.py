@@ -221,6 +221,18 @@ async def get_tools(
             )
         )
 
+    for server in await get_tether_tool_servers(user, 'mcp'):
+        tools.append(
+            ToolUserResponse(
+                id=f'server:mcp:tether:{server["id"]}',
+                user_id=user.id,
+                name=server['name'],
+                meta={'description': ''},
+                updated_at=int(time.time()),
+                created_at=int(time.time()),
+            )
+        )
+
     if query:
         q = query.casefold()
         tools = [tool for tool in tools if q in (tool.name or '').casefold()]
