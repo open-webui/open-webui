@@ -182,8 +182,9 @@
 		target = resolveTerminalTarget(
 			terminalId ?? $selectedTerminalId,
 			$terminalServers ?? [],
-			($settings as { terminalServers?: { url: string; key?: string }[] })?.terminalServers ?? [],
-			localStorage.getItem('token') ?? '', { chatId: chatId, modelId: modelId });
+			localStorage.getItem('token') ?? '',
+			{ chatId: chatId, modelId: modelId }
+		);
 		if (target) {
 			stopList = readTerminalStream<TerminalProcess[]>(
 				target,

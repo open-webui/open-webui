@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, tab: pageTab } = getPageContext();
+	const { goto, tab: pageTab, active } = getPageContext();
 
 	import WorkspaceAccessModal from '$lib/components/workspace/common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 	import fileSaver from 'file-saver';
 
 	const { saveAs } = fileSaver;
@@ -112,6 +113,7 @@
 		});
 
 		if (res) {
+			closePageTabs(`/notes/${id}`);
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			init();
 		}
@@ -191,6 +193,7 @@
 
 	$: if (
 		loaded &&
+		$active &&
 		sortKey !== undefined &&
 		sortDirection !== undefined &&
 		permission !== undefined &&

@@ -12,6 +12,7 @@
 	 * therefore force-closes whichever one is still up.
 	 */
 	let closeActiveHoverPreview: (() => void) | null = null;
+	let chatMenuOpen = false;
 </script>
 
 <script lang="ts">
@@ -48,8 +49,9 @@
 		settings,
 		user
 	} from '$lib/stores';
-	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
+	import { refreshSidebar, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -264,13 +266,13 @@
 				return null;
 			});
 			if (!res) return;
-			updateFolderChatLists({ id, title });
+			setChatTitle(id, title);
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
 			}
 
-			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshSidebar(localStorage.token);
 
 			dispatch('change');
 		}
@@ -345,6 +347,7 @@
 
 		if (res) {
 			updateFolderChatLists({ id }, undefined, true);
+			closeChatTabs(id);
 			if ($chatId === id) {
 				await goto('/');
 
@@ -482,6 +485,7 @@
 			if (closeActiveHoverPreview === closeHoverPreview) {
 				closeActiveHoverPreview = null;
 			}
+			if (menuOpen) chatMenuOpen = false;
 		};
 	});
 
@@ -794,7 +798,9 @@
 						!($settings?.chatHoverPreview ?? true)}
 					bind:open={openPreview}
 					onOpenChange={(open) => {
-						if (open) {
+						if (open && chatMenuOpen) {
+							openPreview = false;
+						} else if (open) {
 							activeProfileId = null;
 							overflowOpen = false;
 						}
@@ -909,10 +915,13 @@
 						{markUnreadHandler}
 						onOpen={() => {
 							menuOpen = true;
+							chatMenuOpen = true;
+							closeActiveHoverPreview?.();
 							dispatch('select');
 						}}
 						onClose={() => {
 							menuOpen = false;
+							chatMenuOpen = false;
 							dispatch('unselect');
 						}}
 						onPinChange={(chat) => refreshAfterChange(chat.pinned ? null : chat.folder_id)}

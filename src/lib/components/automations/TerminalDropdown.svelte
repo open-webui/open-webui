@@ -14,6 +14,8 @@
 
 	export let side: 'top' | 'bottom' = 'top';
 	export let align: 'start' | 'end' = 'start';
+	/** Render the trigger as a bare value, for label | value rows. */
+	export let plain = false;
 
 	/** Optional callback when selection changes */
 	export let onChange: () => void = () => {};
@@ -29,22 +31,32 @@
 	<Dropdown bind:show={showDropdown} {side} {align}>
 		<button
 			type="button"
-			class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition
-				{terminalServerId ? 'text-black dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'}
-				hover:text-gray-900 dark:hover:text-gray-100"
+			aria-label={terminalLabel}
+			title={terminalLabel}
+			class={plain
+				? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
+				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${terminalServerId ? 'text-black dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'} hover:text-gray-900 dark:hover:text-gray-100`}
 		>
-			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
-			<span class="whitespace-nowrap max-w-32 truncate">{terminalLabel}</span>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke-width="2"
-				stroke="currentColor"
-				class="size-2.5"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-			</svg>
+			{#if plain}
+				<span class="truncate {terminalServerId ? '' : 'text-gray-400 dark:text-gray-500'}"
+					>{terminalServerId ? terminalLabel : $i18n.t('None')}</span
+				>
+			{:else}
+				<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+				{#if terminalServerId}
+					<span class="whitespace-nowrap max-w-32 truncate">{terminalLabel}</span>
+				{/if}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2"
+					stroke="currentColor"
+					class="size-2.5"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			{/if}
 		</button>
 
 		<div
@@ -78,7 +90,7 @@
 						<span class="truncate">{server.name || server.id}</span>
 					</div>
 					{#if terminalServerId === server.id}
-						<div class="shrink-0 text-emerald-600 dark:text-emerald-400">
+						<div class="shrink-0 text-gray-500 dark:text-gray-400">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"

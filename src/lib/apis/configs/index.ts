@@ -247,43 +247,6 @@ export const setTerminalServerConnections = async (token: string, connections: o
 };
 
 /**
- * Detect whether a terminal server URL points to an Orchestrator or a direct
- * Open Terminal server.
- *
- * - GET {url}/api/v1/terminals/templates → 200 → "orchestrator"
- * - GET {url}/api/config      → 200 → "terminal"
- * - Neither                         → null
- */
-export const detectTerminalServerType = async (
-	url: string,
-	key: string
-): Promise<'orchestrator' | 'terminal' | null> => {
-	const baseUrl = url.replace(/\/$/, '');
-	const headers: Record<string, string> = {};
-	if (key) {
-		headers['Authorization'] = `Bearer ${key}`;
-	}
-
-	// Orchestrators expose a templates API; plain terminals don't.
-	try {
-		const res = await fetch(`${baseUrl}/api/v1/terminals/templates`, { headers });
-		if (res.ok) return 'orchestrator';
-	} catch {
-		// ignore
-	}
-
-	// Fall back to open-terminal config endpoint.
-	try {
-		const res = await fetch(`${baseUrl}/api/config`, { headers });
-		if (res.ok) return 'terminal';
-	} catch {
-		// ignore
-	}
-
-	return null;
-};
-
-/**
  * Verify a terminal server connection via the backend proxy.
  * Used for system/admin connections to avoid CORS issues and API key exposure.
  */

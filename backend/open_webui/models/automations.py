@@ -160,6 +160,14 @@ class AutomationTable:
             row = await db.get(Automation, id)
             return AutomationModel.model_validate(row) if row else None
 
+    async def get_by_folder(self, folder_id: str, db: Optional[AsyncSession] = None) -> list[AutomationModel]:
+        """Every automation that lives in a folder, whoever created it."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(Automation).filter_by(folder_id=folder_id).order_by(Automation.created_at.asc())
+            )
+            return [AutomationModel.model_validate(r) for r in result.scalars().all()]
+
     async def get_active_by_user(self, user_id: str, db: Optional[AsyncSession] = None) -> list[AutomationModel]:
         """Get active automations for a user (for calendar RRULE expansion)."""
         async with get_async_db_context(db) as db:

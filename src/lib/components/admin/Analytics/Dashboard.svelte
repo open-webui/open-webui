@@ -39,8 +39,8 @@
 	let compare = false;
 	$: comparing = compare && chartView === 'volume' && selectedPeriod !== 'all' && validRange;
 	$: modelNames = Object.fromEntries([
-		...$models.map((model) => [model.id, model.name || model.id]),
-		...modelStats.map((model) => [model.model_id, model.name])
+		...modelStats.map((model) => [model.model_id, model.name || model.model_id]),
+		...$models.map((model) => [model.id, model.name || model.id])
 	]);
 
 	// Custom date range (YYYY-MM-DD) - persist in localStorage
@@ -132,7 +132,7 @@
 		count: number;
 		unique_users?: number;
 		unique_chats?: number;
-		name: string;
+		name?: string | null;
 	}> = [];
 	let userStats: Array<
 		{ user_id: string; name?: string; email?: string; count: number } & Partial<TokenUsage>
@@ -186,6 +186,12 @@
 		loadError = false;
 		try {
 			const { start, end } = getDateRange(selectedPeriod);
+			if (analyticsView === 'sessions') {
+				const result = await getModelAnalytics(localStorage.token, start, end, selectedGroupId);
+				if (!result) throw new Error('Incomplete analytics response');
+				if (id === loadId) modelStats = result.models ?? [];
+				return;
+			}
 			const [summaryRes, modelsRes, usersRes, dailyRes, tokensRes] = await Promise.all([
 				getSummary(localStorage.token, start, end, selectedGroupId),
 				getModelAnalytics(localStorage.token, start, end, selectedGroupId),
@@ -211,13 +217,7 @@
 			}
 			summary = summaryRes;
 
-			const modelsMap = new Map($models.map((m) => [m.id, m.name || m.id]));
-			modelStats = (modelsRes?.models ?? []).map(
-				(entry: Omit<(typeof modelStats)[number], 'name'>) => ({
-					...entry,
-					name: modelsMap.get(entry.model_id) || entry.model_id
-				})
-			);
+			modelStats = modelsRes.models ?? [];
 
 			userStats = usersRes?.users ?? [];
 			dailyStats = dailyRes?.data ?? [];
@@ -246,7 +246,8 @@
 		}
 	};
 
-	$: if (mounted && analyticsView === 'overview') {
+	$: if (mounted) {
+		analyticsView;
 		selectedPeriod;
 		customStart;
 		customEnd;
@@ -272,7 +273,8 @@
 		}
 	});
 
-	$: sortedModels = [...modelStats].sort((a, b) => {
+	$: namedModelStats = modelStats.map((model) => ({ ...model, name: modelNames[model.model_id] }));
+	$: sortedModels = [...namedModelStats].sort((a, b) => {
 		if (modelOrderBy === 'name') {
 			return modelDirection === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
 		}

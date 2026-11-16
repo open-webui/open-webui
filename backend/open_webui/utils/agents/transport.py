@@ -16,6 +16,7 @@ from open_webui.utils.tether import get_terminal_client
 class TerminalTransport:
     def __init__(self, connection, headers, cookies, user_id):
         self.url = get_terminal_server_url(connection)
+        self.service = connection.get('service', 'open_terminal')
         self.headers, self.cookies, self.user_id = headers, cookies, user_id
         self.session_id = None
         self.socket = None
@@ -38,7 +39,7 @@ class TerminalTransport:
 
     async def request(self, method, path, body=None):
         async with get_terminal_client(
-            self.url, self.user_id, timeout=aiohttp.ClientTimeout(total=30), trust_env=True
+            self.url, self.user_id, service=self.service, timeout=aiohttp.ClientTimeout(total=30), trust_env=True
         ) as client:
             async with client.request(
                 method,
@@ -77,6 +78,7 @@ class TerminalTransport:
                     async with get_terminal_client(
                         self.url,
                         self.user_id,
+                        service=self.service,
                         timeout=aiohttp.ClientTimeout(total=None, connect=30),
                         trust_env=True,
                         cookies=self.cookies,

@@ -6,8 +6,6 @@
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
-	/** @type {import('$lib/types').AppLayoutContext | undefined} */
-	const appLayout = getContext('appLayout');
 	const dispatch = createEventDispatcher();
 
 	import DOMPurify from 'dompurify';
@@ -20,11 +18,12 @@
 
 	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 	import {
-		folderStates, getFolderState, folderChatPageKey, loadFolderChatPage,
+		folderStates, folderChatPageKey, loadFolderChatPage,
 		loadFolderDetails, setFolderSidebarPage, updateFolderChatLists, markFolderRead,
-		updateFolderDetails, removeFolderState, beginFolderOpening, isCurrentFolderOpening,
+		updateFolderDetails, removeFolderState,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
+	import { refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import {
 		deleteFolderById,
@@ -54,6 +53,7 @@
 	import FolderMenu from './Folders/FolderMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import FolderModal from './Folders/FolderModal.svelte';
+	import FolderShareModal from './Folders/FolderShareModal.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 
 	export let folderRegistry = {};
@@ -77,6 +77,7 @@
 
 	let openPreview = false;
 	let showFolderModal = false;
+	let showShareModal = false;
 	let edit = false;
 
 	let showCreateSubFolderModal = false;
@@ -152,6 +153,7 @@
 
 		if (typeof data?.last_read_at === 'number') {
 			updateFolderChatLists({ id: data.chat_id, last_read_at: data.last_read_at });
+			void refreshFolderChatLists();
 		}
 	};
 
@@ -173,6 +175,7 @@
 		}
 
 		for (const id of res.folder_ids ?? [folderId]) markFolderRead(id, $user?.id);
+		void refreshFolderChatLists();
 	};
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
@@ -281,7 +284,7 @@
 									});
 								}
 
-								if (chat) {
+								if (chat && chat.folder_id !== folderId) {
 									// Move the chat
 									const res = await updateChatFolderIdById(
 										localStorage.token,
@@ -301,6 +304,7 @@
 
 									if (res) {
 										dispatch('update');
+										void refreshFolderChatLists();
 									}
 								}
 							}
@@ -549,21 +553,8 @@
 	}
 
 	const openFolderHandler = async () => {
-		const generation = beginFolderOpening();
-		const loaded = getFolderState(folderId).details;
-		try {
-			const folder = loaded ?? await loadFolderDetails(localStorage.token, folderId);
-			if (!isCurrentFolderOpening(generation)) return;
-			selectedFolder.set({ ...folders[folderId], ...folder });
-			if (loaded) void loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
-				if (!isCancelledFolderRequest(error)) console.error(error);
-			});
-			if (appLayout?.initNewChat) await appLayout.initNewChat(true, true);
-			else await goto(`/folders/${folderId}`);
-			if (isCurrentFolderOpening(generation) && $mobile) showSidebar.set(false);
-		} catch (error) {
-			if (isCurrentFolderOpening(generation) && !isCancelledFolderRequest(error)) toast.error(`${error}`);
-		}
+		await goto(`/folders/${folderId}`);
+		if ($mobile) showSidebar.set(false);
 	};
 
 	const renameHandler = async () => {
@@ -651,6 +642,8 @@
 		</div>
 	</div>
 </DeleteConfirmDialog>
+
+<FolderShareModal bind:show={showShareModal} folder={folders[folderId]} />
 
 <FolderModal bind:show={showFolderModal} edit={true} {folderId} onSubmit={updateHandler} />
 
@@ -825,7 +818,7 @@
 								{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
 									<div
 										class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
-										title={$i18n.t('Unread')}
+										title={$i18n.t('Unread or waiting for approval')}
 									>
 										{formatUnreadCount(folders[folderId].unread_count)}
 									</div>
@@ -867,6 +860,9 @@
 								showCreateSubFolderModal = true;
 							}}
 							onMarkAllRead={markAllReadHandler}
+							onShare={($user?.role === 'admin' || (folders[folderId]?.user_id === $user?.id && $user?.permissions?.sharing?.folders))
+								? () => (showShareModal = true)
+								: null}
 						>
 							<div
 								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"

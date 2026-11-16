@@ -94,6 +94,7 @@
 
 <svelte:window
 	on:click={handleWindowClick}
+	on:dragstart|capture={handleWindowClick}
 	on:keydown={handleKeydown}
 	on:scroll|capture={positionContent}
 	on:resize={positionContent}

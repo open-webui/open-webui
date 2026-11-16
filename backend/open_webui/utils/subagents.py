@@ -360,19 +360,15 @@ async def delegate(
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
-        'tool_servers': [] if background else copy.deepcopy(metadata.get('tool_servers') or []),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
         'terminal_id': metadata.get('terminal_id'),
         'features': features,
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
-        'direct': bool(metadata.get('direct')),
         'folder_id': folder_id,
     }
     if not run.get('model_id'):
         return 'Error: model context is required.'
-    if run.get('direct'):
-        return 'Error: sub-agents are unavailable for direct connections.'
     if model_id:
         available_models = await get_subagent_models(request, UserModel(**user_data), metadata.get('model') or {})
         available_ids = [model['id'] for model in available_models]
@@ -537,8 +533,6 @@ async def delegate(
             }
             if run.get('terminal_id'):
                 form_data['terminal_id'] = run['terminal_id']
-            if run.get('tool_servers'):
-                form_data['tool_servers'] = run['tool_servers']
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
             message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
             if not message:

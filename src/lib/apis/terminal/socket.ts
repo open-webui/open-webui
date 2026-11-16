@@ -39,7 +39,7 @@ export function openTerminalSocket(
 	target: TerminalTarget,
 	path: string,
 	onOpen?: (socket: WebSocket) => void,
-	resume?: { resume: true; cursor: number; flow_control?: true }
+	resume?: { resume: true; cursor: number; flow_control?: true; process_info?: true }
 ) {
 	const url = new URL(`${target.baseUrl.replace(/\/$/, '')}${path}`, location.href);
 	url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -50,6 +50,7 @@ export function openTerminalSocket(
 			JSON.stringify({
 				...resume,
 				type: 'auth',
+				...(target.context.userId ? { instance_user_id: target.context.userId } : {}),
 				...(target.context.modelId ? { model_id: target.context.modelId } : {}),
 				token: target.key.trim(),
 				chat_id: target.context.chatId ?? ''
