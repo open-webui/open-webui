@@ -4053,18 +4053,17 @@
 		}
 
 		if (_chatId === null) {
-			if (!existingUserMessage && history.messages[userMessageId]) {
-				const parentMessage = history.messages[userMessage.parentId];
-				if (parentMessage) {
-					parentMessage.childrenIds = parentMessage.childrenIds.filter(
-						(id) => id !== userMessageId
-					);
+			if (!existingUserMessage && history === currentHistory) {
+				if (userMessage.parentId !== null) {
+					history.messages[userMessage.parentId].childrenIds = history.messages[
+						userMessage.parentId
+					].childrenIds.filter((id) => id !== userMessageId);
 				}
 				delete history.messages[userMessageId];
 				history.currentId = userMessage.parentId;
 				history = history;
 				chatFiles = chatFiles.filter((file) => !_files.includes(file));
-				if (isNewChat && $chatId && !$temporaryChatEnabled) {
+				if (isNewChat && !embedded && $chatId && !$temporaryChatEnabled) {
 					deleteChatMessageById(localStorage.token, $chatId, userMessageId).catch(console.error);
 				}
 				files = [...files, ...inputFiles];
