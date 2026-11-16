@@ -104,12 +104,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
-from open_webui.utils.memory import (
-    add_memory_context,
-    recall_memories,
-    render_memory_context,
-    review_memory_after_turn,
-)
+from open_webui.utils.memory import add_memory_context, recall_memories, render_memory_context, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -3084,7 +3079,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
 async def preload_memory(sections: dict[str, list[str]], messages: list[dict]) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
-    result = await render_memory_context(sections, '\n'.join(get_tool_results(messages, 'recall_memories')))
+    result = await render_memory_context(sections, messages)
     return hidden_tool_result('recall_memories', result) if result else []
 
 

@@ -10,7 +10,7 @@ from open_webui.models.config import Config
 from open_webui.models.memories import Memories
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import get_content_from_message, get_last_user_message_item
+from open_webui.utils.misc import get_content_from_message, get_last_user_message_item, get_tool_results
 
 log = logging.getLogger(__name__)
 
@@ -367,7 +367,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     return sections
 
 
-async def render_memory_context(sections: dict[str, list[str]], prior_output: str = '') -> str:
+async def render_memory_context(sections: dict[str, list[str]], messages: list[dict]) -> str:
     if not any(sections.values()):
         return ''
 
@@ -381,8 +381,9 @@ async def render_memory_context(sections: dict[str, list[str]], prior_output: st
     except Exception:
         context_limit = 2000
 
+    prior_recall = '\n'.join(get_tool_results(messages, 'recall_memories'))
     limits = {'user': user_limit, 'context': context_limit}
-    full_text = {'user': '', 'context': ''}
+    measured = {'user': '', 'context': ''}
     parts = {'user': [], 'context': []}
     for title, key in (
         ('User Memory', 'user'),
@@ -392,14 +393,13 @@ async def render_memory_context(sections: dict[str, list[str]], prior_output: st
         if not sections[key]:
             continue
         group = 'user' if key == 'user' else 'context'
-        full_text[group] += f'\n\n[{title}]' if full_text[group] else f'[{title}]'
+        measured[group] += f'\n\n[{title}]' if measured[group] else f'[{title}]'
         lines = []
         for memory in sorted(sections[key], key=lambda memory: (memory.casefold(), memory)):
-            full_text[group] += '\n- '
-            # Cut where the full text crosses the limit, so the cut stays the same every turn.
-            shown = memory[: max(0, limits[group] - len(full_text[group]))]
-            full_text[group] += memory
-            if shown and f'\n- {shown}\n' not in prior_output:
+            measured[group] += '\n- '
+            shown = memory[: max(0, limits[group] - len(measured[group]))]
+            measured[group] += memory
+            if shown and f'\n- {shown}\n' not in prior_recall:
                 lines.append(f'- {shown}')
         if lines:
             parts[group].append(f'[{title}]\n' + '\n'.join(lines))
@@ -411,7 +411,8 @@ async def render_memory_context(sections: dict[str, list[str]], prior_output: st
 
 
 async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
-    context = await render_memory_context(await recall_memories(request, form_data.get('messages', []), user, model))
+    sections = await recall_memories(request, form_data.get('messages', []), user, model)
+    context = await render_memory_context(sections, [])
     target = get_last_user_message_item(form_data.get('messages', []))
     if context and target is not None:
         content = target.get('content') or ''
