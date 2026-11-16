@@ -50,6 +50,9 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import FolderAutomations from './FolderAutomations.svelte';
+	import FolderKnowledge from './FolderKnowledge.svelte';
+	import KnowledgeSelector from '$lib/components/workspace/Models/Knowledge/KnowledgeSelector.svelte';
+	import Database from '$lib/components/icons/Database.svelte';
 	import { getFolderAutomations, type FolderAutomation } from '$lib/apis/automations';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import TagIcon from '$lib/components/icons/Tag.svelte';
@@ -64,8 +67,8 @@
 
 	export let folder: FolderDetails | null = null;
 	export let readOnly = false;
-	/** Which part of the folder is showing: its chats or its automations. */
-	export let folderSection: 'chats' | 'automations' = 'chats';
+	/** Which part of the folder is showing: its chats, automations or knowledge. */
+	export let folderSection: 'chats' | 'automations' | 'knowledge' = 'chats';
 	let automations: FolderAutomation[] = [];
 	let automationsLoading = false;
 	let automationsView: FolderAutomations;
@@ -90,7 +93,16 @@
 
 	$: if (!canUseAutomations && folderSection === 'automations') folderSection = 'chats';
 
-	function showSection(section: 'chats' | 'automations') {
+	let knowledgeView: FolderKnowledge;
+	let knowledgeItems: any[] = [];
+	let showKnowledgePicker = false;
+	// Pending uploads count while the list is open; otherwise the folder's saved entries.
+	$: knowledgeCount =
+		folderSection === 'knowledge' ? knowledgeItems.length : (folder?.data?.files ?? []).length;
+	$: canUploadKnowledge =
+		$user?.role === 'admin' || ($user?.permissions?.chat?.file_upload ?? true);
+
+	function showSection(section: 'chats' | 'automations' | 'knowledge') {
 		folderSection = section;
 		if (section === 'automations') void loadAutomations();
 	}
@@ -1027,41 +1039,44 @@
 				className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
 				strokeWidth="2"
 			/>
-			{#if canUseAutomations}
-				<Dropdown align="start" closeOnSelect>
+			<Dropdown align="start" closeOnSelect>
+				<button
+					type="button"
+					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
+					aria-label={$i18n.t('Switch section')}
+				>
+					{#if folderSection === 'automations'}
+						<span>{$i18n.t('Automations')}</span>
+						{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
+							>{/if}
+					{:else if folderSection === 'knowledge'}
+						<span>{$i18n.t('Knowledge')}</span>
+						{#if knowledgeCount}<span class="text-sm opacity-60">{knowledgeCount}</span>{/if}
+					{:else}
+						<span>{$i18n.t('Chats')}</span>
+						{#if loading && hasData}
+							<Spinner className="size-3 opacity-60" />
+						{:else if hasData && !error}
+							<span class="text-sm opacity-60">{formatNumber(total)}</span>
+						{/if}
+					{/if}
+					<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
+				</button>
+				<DropdownMenu slot="content" className="w-44">
 					<button
 						type="button"
-						class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
-						aria-label={$i18n.t('Switch section')}
+						role="menuitemradio"
+						aria-checked={folderSection === 'chats'}
+						on:click={() => showSection('chats')}
 					>
-						{#if folderSection === 'automations'}
-							<span>{$i18n.t('Automations')}</span>
-							{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
-								>{/if}
-						{:else}
-							<span>{$i18n.t('Chats')}</span>
-							{#if loading && hasData}
-								<Spinner className="size-3 opacity-60" />
-							{:else if hasData && !error}
-								<span class="text-sm opacity-60">{formatNumber(total)}</span>
-							{/if}
-						{/if}
-						<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
+						<Icon name="chat-bubble" size={14} />
+						<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
+						{#if hasData}<span class="text-xs tabular-nums text-gray-400"
+								>{formatNumber(total)}</span
+							>{/if}
+						{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
 					</button>
-					<DropdownMenu slot="content" className="w-44">
-						<button
-							type="button"
-							role="menuitemradio"
-							aria-checked={folderSection === 'chats'}
-							on:click={() => showSection('chats')}
-						>
-							<Icon name="chat-bubble" size={14} />
-							<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
-							{#if hasData}<span class="text-xs tabular-nums text-gray-400"
-									>{formatNumber(total)}</span
-								>{/if}
-							{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
-						</button>
+					{#if canUseAutomations}
 						<button
 							type="button"
 							role="menuitemradio"
@@ -1075,18 +1090,22 @@
 								>{/if}
 							{#if folderSection === 'automations'}<Check className="size-3! shrink-0" />{/if}
 						</button>
-					</DropdownMenu>
-				</Dropdown>
-			{:else}
-				<span class="flex shrink-0 items-center gap-1">
-					<span>{$i18n.t('Chats')}</span>
-					{#if loading && hasData}
-						<Spinner className="size-3 opacity-60" />
-					{:else if hasData && !error}
-						<span class="text-sm opacity-60">{formatNumber(total)}</span>
 					{/if}
-				</span>
-			{/if}
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked={folderSection === 'knowledge'}
+						on:click={() => showSection('knowledge')}
+					>
+						<Database className="size-3.5" />
+						<span class="flex-1 text-left">{$i18n.t('Knowledge')}</span>
+						{#if knowledgeCount}<span class="text-xs tabular-nums text-gray-400"
+								>{knowledgeCount}</span
+							>{/if}
+						{#if folderSection === 'knowledge'}<Check className="size-3! shrink-0" />{/if}
+					</button>
+				</DropdownMenu>
+			</Dropdown>
 		</h2>
 
 		<div class="ml-auto flex items-center gap-1">
@@ -1100,6 +1119,43 @@
 						on:click={() => automationsView?.startNew()}
 						><Plus className="size-3.5" strokeWidth="2" /></button
 					>
+				{/if}
+			{:else if folderSection === 'knowledge'}
+				{#if !readOnly}
+					<KnowledgeSelector
+						bind:show={showKnowledgePicker}
+						align="end"
+						selectedItems={knowledgeItems}
+						on:select={(event) => knowledgeView?.add(event.detail)}
+					>
+						<button
+							type="button"
+							class={iconButton}
+							aria-label={$i18n.t('Add knowledge')}
+							title={$i18n.t('Add knowledge')}><Plus className="size-3.5" strokeWidth="2" /></button
+						>
+						<svelte:fragment slot="actions">
+							{#if canUploadKnowledge}
+								<button
+									type="button"
+									class="hover:text-gray-900 dark:hover:text-gray-100"
+									on:click={() => {
+										showKnowledgePicker = false;
+										knowledgeView?.upload();
+									}}>{$i18n.t('Upload Files')}</button
+								>
+							{/if}
+							{#if $user?.role === 'admin' || $user?.permissions?.workspace?.knowledge}
+								<a
+									href="/workspace/knowledge"
+									target="_blank"
+									rel="noreferrer"
+									class="ml-auto hover:text-gray-900 dark:hover:text-gray-100"
+									>{$i18n.t('Manage')}</a
+								>
+							{/if}
+						</svelte:fragment>
+					</KnowledgeSelector>
 				{/if}
 			{:else}
 				{#if searchOpen || search}
@@ -1452,6 +1508,14 @@
 				loading={automationsLoading}
 				canCreate={!readOnly}
 				onReload={loadAutomations}
+			/>
+		{:else if folderSection === 'knowledge'}
+			<FolderKnowledge
+				bind:this={knowledgeView}
+				bind:items={knowledgeItems}
+				{folder}
+				{readOnly}
+				onPick={() => (showKnowledgePicker = true)}
 			/>
 		{:else if loading && !hasData}
 			<div

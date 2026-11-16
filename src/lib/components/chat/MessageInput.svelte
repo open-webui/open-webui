@@ -1388,6 +1388,8 @@
 
 	const isAttachmentDrop = (event: DragEvent) => {
 		if (!(event.target instanceof Element)) return false;
+		// Areas with their own file drop, like a folder's Knowledge list, keep what lands on them.
+		if (event.target.closest('[data-file-drop-target]')) return false;
 		const composer = event.target.closest('[data-composer-id]');
 		if (composer) return composer.getAttribute('data-composer-id') === inputId;
 		// Files can land anywhere in this chat's dropzone. Sidebar items still target
