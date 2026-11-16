@@ -17,7 +17,7 @@
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
-	import { goto, beforeNavigate, afterNavigate, onNavigate } from '$app/navigation';
+	import { goto, beforeNavigate, afterNavigate } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	import { get, writable, type Unsubscriber, type Writable } from 'svelte/store';
@@ -264,7 +264,7 @@
 						return;
 					}
 					window.history.replaceState(window.history.state, '', `${location.pathname}${search}`);
-					if ($chatId) await initNewChat(false, false, value);
+					if ($chatId) await initNewChat({ temporary: value });
 					else temporaryChat.set(value);
 				};
 
@@ -1015,6 +1015,7 @@
 	onDestroy(() => chatLoadController.abort());
 	const navigateHandler = async () => {
 		loading = true;
+		selectedFolder.set(null);
 		tabs?.resetForChatSwitch();
 		const signal = startChatLoad();
 		modelDefaults = null;
@@ -2168,16 +2169,6 @@
 		);
 		audioQueue.set(audioQueueInstance);
 
-		if (
-			!embedded &&
-			(initialPage || $page.url.pathname === '/' || $page.url.pathname.startsWith('/folders/'))
-		) {
-			tick().then(async () => {
-				await initNewChat();
-				if (initialPage) tabs?.openPageTab({ href: initialPage, label: '' });
-			});
-		}
-
 		const selectedFolderSubscribe = selectedFolder.subscribe(async (folder) => {
 			await tick();
 			// Navigation applies defaults in initNewChat; only explicit settings edits reach here.
@@ -2228,7 +2219,11 @@
 
 			messageInput?.focus({ preventScroll: true });
 		};
-		init();
+		if (embedded) init();
+		else
+			void tick().then(() => {
+				if (!routeInitialized) void followRoute();
+			});
 
 		return () => {
 			try {
@@ -2240,6 +2235,7 @@
 				}
 				if (appLayout?.initNewChat === initNewChat) delete appLayout.initNewChat;
 				selectedFolderSubscribe();
+				if (!embedded) selectedFolder.set(null);
 
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
 				// to the admin panel), otherwise the previously-viewed chat stays selected
@@ -2724,25 +2720,31 @@
 		});
 		return () => bridge?.end();
 	});
-	// Only real navigation resets the chat; shallow sidebar state changes must preserve it.
-	afterNavigate(async ({ from, to }) => {
-		// A navigation that mounts this page starts its new chat in onMount.
-		if (
-			!embedded &&
-			from?.route.id === to?.route.id &&
-			(to?.url.pathname === '/' || to?.url.pathname.startsWith('/folders/'))
-		) {
-			await tick();
-			initNewChat();
+	// The layout keeps this component mounted; route changes update only the main pane.
+	let routeInitialized = false;
+	const followRoute = async () => {
+		const preserveTabs = routeInitialized;
+		routeInitialized = true;
+		await tick();
+		if ($page.route.id === '/(app)/c/[id]') {
+			chatIdProp = $page.params.id ?? '';
+		} else if ($page.params.folderId || $page.url.pathname === '/') {
+			selectedFolder.set($page.data.folder ?? null);
+			await initNewChat({ preserveTabs, url: $page.url });
+		} else if (initialPage) {
+			if (!preserveTabs) await initNewChat();
+			loading = false;
+			tabs?.openPageTab({ href: initialPage, label: '' });
 		}
+	};
+	afterNavigate(() => {
+		if (!embedded) void followRoute();
 		stopAudio();
 	});
 	beforeNavigate(() => {
+		if (!loading && !$temporaryChat) void saveDraft(getChatInputDraft(), getDraftChatId(), false);
 		bridge?.end();
 		pendingUrlActions = null;
-	});
-	onNavigate(({ from, to }) => {
-		if (!embedded && to && from?.url.pathname !== to.url.pathname) loading = true;
 	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
@@ -2877,24 +2879,22 @@
 		showTabs.set(true);
 	};
 
-	const initNewChat = async (preserveTabs = false, keepDraft = false, temporary?: boolean) => {
+	const initNewChat: NonNullable<AppLayoutContext['initNewChat']> = async ({
+		preserveTabs = false,
+		temporary,
+		url = initialPage || preserveTabs ? undefined : $page.url
+	} = {}) => {
+		if (!loading && !$temporaryChat) void saveDraft(getChatInputDraft(), getDraftChatId(), false);
 		const destinationFolder = $selectedFolder
 			? (structuredClone($selectedFolder) as FolderDetails)
 			: null;
-		const retainedDraft =
-			keepDraft && !$chatId && !history.currentId ? JSON.stringify(getChatInputDraft()) : null;
-		const searchParams =
-			initialPage || preserveTabs ? new URLSearchParams() : $page.url.searchParams;
-		const previousHref = mainChatHref;
+		const searchParams = url?.searchParams ?? new URLSearchParams();
 		mainChatHref = '/';
-		if (!initialPage && !preserveTabs && $page.url.pathname === '/') {
-			mainChatHref += $page.url.search + $page.url.hash;
+		if (url?.pathname === '/') {
+			mainChatHref += url.search + url.hash;
 		}
 		if (destinationFolder?.id) mainChatHref = `/folders/${destinationFolder.id}`;
-		if (keepDraft && !$chatId && !history.currentId && previousHref === mainChatHref) {
-			tabs?.focusMainChat();
-			return;
-		}
+
 		if (preserveTabs) tabs?.carryPagesToNewChat();
 		else tabs?.resetForChatSwitch();
 		loading = true;
@@ -3035,9 +3035,9 @@
 		autoScroll = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
-		const chatInputPrompt = (await restoreChatInput(
-			retainedDraft ?? sessionStorage.getItem(getChatInputKey())
-		))
+		prompt = '';
+		files = [];
+		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
 		const previousChatId = $chatId;
@@ -5434,8 +5434,12 @@
 	let saveDraftTimeout: ReturnType<typeof setTimeout> | null = null;
 	// chatIdProp is empty for chats started from the home page (URL set via replaceState)
 	const getDraftChatId = () => chatIdProp || $chatId || embeddedDraftKey || null;
-	const getChatInputKey = (chatId: string | null = null) =>
-		`chat-input${chatId ? `-${chatId}` : ''}`;
+	const getChatInputKey = (chatId: string | null = null) => {
+		if (chatId) return `chat-input-${chatId}`;
+		// Use the displayed pane: selectedFolder may already point to the destination.
+		const folderId = !embedded && mainChatHref.match(/^\/folders\/([^/?#]+)/)?.[1];
+		return folderId ? `chat-input-folder-${folderId}` : 'chat-input';
+	};
 
 	const getChatInputDraft = () => ({
 		prompt,
@@ -6097,7 +6101,7 @@
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
 										onChange={(data: any) => {
-											if (!$temporaryChat) {
+											if (!loading && !$temporaryChat) {
 												saveDraft(data, getDraftChatId());
 											}
 										}}
@@ -6216,7 +6220,7 @@
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
 										onChange={(data: any) => {
-											if (!$temporaryChat) {
+											if (!loading && !$temporaryChat) {
 												saveDraft(data, getDraftChatId());
 											}
 										}}
@@ -6287,7 +6291,7 @@
 										showChatVariablesModal = true;
 									}}
 									onChange={(data: any) => {
-										if (!$temporaryChat) {
+										if (!loading && !$temporaryChat) {
 											saveDraft(data, getDraftChatId());
 										}
 									}}

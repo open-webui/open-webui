@@ -61,7 +61,9 @@
 	const appLayout = setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
-	$: routeHasTabs = ['/(app)', '/(app)/c/[id]'].includes($page.route.id ?? '');
+	$: routeHasTabs = ['/(app)', '/(app)/c/[id]', '/(app)/folders/[folderId]'].includes(
+		$page.route.id ?? ''
+	);
 	$: usePageTabs = !routeHasTabs && !!pageTabKey($page.url);
 
 	let version;
@@ -341,7 +343,7 @@
 					}
 					const temporary = !$temporaryChat;
 					await goto('/');
-					setTimeout(() => appLayout.initNewChat?.(false, false, temporary), 0);
+					setTimeout(() => appLayout.initNewChat?.({ temporary }), 0);
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
@@ -478,9 +480,12 @@
 				{#if loaded}
 					<main class="contents">
 						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
-						{#if usePageTabs}
-							<Chat initialPage={$page.url.pathname + $page.url.search + $page.url.hash} />
-						{:else}<slot />{/if}
+						{#if routeHasTabs || usePageTabs}
+							<Chat
+								initialPage={usePageTabs ? $page.url.pathname + $page.url.search + $page.url.hash : ''}
+							/>
+						{/if}
+						{#if !usePageTabs}<slot />{/if}
 					</main>
 				{:else}
 					<div

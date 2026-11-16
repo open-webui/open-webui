@@ -23,7 +23,11 @@ export type TerminalContext = {
 
 export type AppLayoutContext = {
 	openPageTab?: (tab: { href: string; label: string }) => void;
-	initNewChat?: (preserveTabs?: boolean, keepDraft?: boolean, temporary?: boolean) => Promise<void>;
+	initNewChat?: (options?: {
+		preserveTabs?: boolean;
+		temporary?: boolean;
+		url?: URL;
+	}) => Promise<void>;
 };
 
 /** State of the chat a component is rendered in, so a side chat doesn't read the main chat's. */

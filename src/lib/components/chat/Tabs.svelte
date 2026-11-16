@@ -1990,7 +1990,7 @@
 				></div>
 			</div>
 		{/each}
-		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (`${viewEntry?.instanceId}:${tab.id}`)}
+		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (tab.kind === 'page' ? tab.id : `${viewEntry?.instanceId}:${tab.id}`)}
 			{@const chatView = viewEntry!}
 			{@const target =
 				isMounted && $config && $user && $settings && $terminalServers !== null

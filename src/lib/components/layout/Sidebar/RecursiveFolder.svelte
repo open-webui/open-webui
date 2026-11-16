@@ -6,8 +6,6 @@
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
-	/** @type {import('$lib/types').AppLayoutContext | undefined} */
-	const appLayout = getContext('appLayout');
 	const dispatch = createEventDispatcher();
 
 	import DOMPurify from 'dompurify';
@@ -20,9 +18,9 @@
 
 	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 	import {
-		folderStates, getFolderState, folderChatPageKey, loadFolderChatPage,
+		folderStates, folderChatPageKey, loadFolderChatPage,
 		loadFolderDetails, setFolderSidebarPage, updateFolderChatLists, markFolderRead,
-		updateFolderDetails, removeFolderState, beginFolderOpening, isCurrentFolderOpening,
+		updateFolderDetails, removeFolderState,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
@@ -555,25 +553,8 @@
 	}
 
 	const openFolderHandler = async () => {
-		const generation = beginFolderOpening();
-		const loaded = getFolderState(folderId).details;
-		try {
-			const folder = loaded ?? await loadFolderDetails(localStorage.token, folderId);
-			if (!isCurrentFolderOpening(generation)) return;
-			selectedFolder.set({ ...folders[folderId], ...folder });
-			if (loaded) void loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
-				if (!isCancelledFolderRequest(error)) console.error(error);
-			});
-			if (appLayout?.initNewChat) {
-				await appLayout.initNewChat(true, true);
-				if (isCurrentFolderOpening(generation) && $mobile) showSidebar.set(false);
-			} else {
-				await goto(`/folders/${folderId}`);
-				if ($mobile) showSidebar.set(false);
-			}
-		} catch (error) {
-			if (isCurrentFolderOpening(generation) && !isCancelledFolderRequest(error)) toast.error(`${error}`);
-		}
+		await goto(`/folders/${folderId}`);
+		if ($mobile) showSidebar.set(false);
 	};
 
 	const renameHandler = async () => {

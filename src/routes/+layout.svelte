@@ -42,13 +42,12 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
-	import { clearFolderStates, beginFolderOpening } from '$lib/stores/folderStates';
+	import { clearFolderStates } from '$lib/stores/folderStates';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
-	beforeNavigate(() => beginFolderOpening());
 
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 

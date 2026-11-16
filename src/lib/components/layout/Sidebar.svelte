@@ -1057,7 +1057,7 @@
 		selectedFolder.set(null);
 		closeMobileSidebar();
 
-		if (appLayout?.initNewChat) await appLayout.initNewChat(true);
+		if (appLayout?.initNewChat) await appLayout.initNewChat({ preserveTabs: true });
 		else await goto('/');
 	};
 
