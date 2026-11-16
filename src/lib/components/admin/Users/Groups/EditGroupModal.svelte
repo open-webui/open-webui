@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	const i18n = getContext<import('svelte/store').Writable<import('i18next').i18n>>('i18n');
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -80,6 +80,13 @@
 	export let permissions = DEFAULT_PERMISSIONS;
 
 	const submitHandler = async () => {
+		if (tabs.includes('general') && !name) {
+			selectedTab = 'general';
+			await tick();
+			document.getElementById('group-name')?.reportValidity();
+			return;
+		}
+
 		loading = true;
 
 		const group = {
