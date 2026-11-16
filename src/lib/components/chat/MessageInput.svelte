@@ -136,7 +136,7 @@
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
-	const { models, temporary } = getChatContext();
+	const { models, temporary, getCurrentDirectory } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
@@ -1069,6 +1069,7 @@
 				throw new Error('A saved chat is required for this terminal');
 
 			const cwd =
+				getCurrentDirectory?.(fileItem.terminal_id) ||
 				(terminalContext?.terminalId === fileItem.terminal_id
 					? terminalContext?.currentDirectory
 					: null) || (await getCwd(terminal))?.cwd;

@@ -532,10 +532,7 @@
 		voiceNoteDestination = {
 			target: selectedConnection,
 			chatId,
-			directory:
-				activeFileContext?.terminalId === selectedConnection.selector
-					? activeFileContext.currentDirectory
-					: undefined
+			directory: getCurrentDirectory(selectedConnection.selector)
 		};
 	};
 	$: if (!supportsTerminalFiles) showQuickOpen = false;
@@ -607,6 +604,9 @@
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
 	$: activeFileContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
+	/** The folder the active file panel shows on `terminalId`, if it shows one there. */
+	export const getCurrentDirectory = (terminalId: string | null) =>
+		activeFileContext?.terminalId === terminalId ? activeFileContext.currentDirectory : undefined;
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>

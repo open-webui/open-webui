@@ -33,6 +33,8 @@ export type ChatContext = {
 	temporary: typeof import('$lib/stores').temporaryChat;
 	audioQueue: typeof import('$lib/stores').audioQueue;
 	submitPrompt?: (prompt: string) => void;
+	/** The folder the chat's file panel shows on a terminal, if it shows one there. */
+	getCurrentDirectory?: (terminalId: string | null) => string | undefined;
 };
 
 export type WorkspaceContext = {

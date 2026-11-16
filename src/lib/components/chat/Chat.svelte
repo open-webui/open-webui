@@ -196,7 +196,8 @@
 		models,
 		temporary: temporaryChat,
 		audioQueue,
-		submitPrompt: (prompt) => submitHandler(prompt)
+		submitPrompt: (prompt) => submitHandler(prompt),
+		getCurrentDirectory: (terminalId) => tabs?.getCurrentDirectory(terminalId)
 	});
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
