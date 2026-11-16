@@ -1112,13 +1112,15 @@
 	}}
 />
 
-<FolderModal
-	bind:show={showCreateFolderModal}
-	onSubmit={async (folder) => {
-		await createFolder(folder);
-		showCreateFolderModal = false;
-	}}
-/>
+{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+	<FolderModal
+		bind:show={showCreateFolderModal}
+		onSubmit={async (folder) => {
+			await createFolder(folder);
+			showCreateFolderModal = false;
+		}}
+	/>
+{/if}
 
 <svelte:window
 	on:click|capture={sidebarLinkClickHandler}
