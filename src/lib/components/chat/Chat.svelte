@@ -1306,7 +1306,7 @@
 	}
 
 	// Sent skill mentions and the Skills menu need the terminal's skills before any list opens.
-	$: if (!side) {
+	$: {
 		const terminalId = $selectedTerminalId;
 		void listTerminalSkills(
 			resolveTerminalTarget(
