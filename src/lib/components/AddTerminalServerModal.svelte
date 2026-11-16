@@ -200,7 +200,7 @@
 					<option value="system_oauth">{$i18n.t('OAuth')}</option>
 				</select>
 				<div class="min-w-0 flex-1">
-					<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} />
+					<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} required={false} />
 					{#if auth_type === 'session'}
 						<p class="mt-1 text-xs text-gray-500">
 							{$i18n.t('Forwards system user session credentials to authenticate')}
