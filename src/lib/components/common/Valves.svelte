@@ -55,7 +55,6 @@
 							valves[property] = null;
 						}
 
-						// Nothing to save until a value is entered
 						if (valves[property] !== '') {
 							dispatch('change');
 						}
