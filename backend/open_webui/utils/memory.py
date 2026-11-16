@@ -382,8 +382,16 @@ async def render_memory_context(sections: dict[str, list[str]], messages: list[d
         context_limit = 2000
 
     prior_recall = '\n'.join(get_tool_results(messages, 'recall_memories'))
+    sent_memories = set()
+    unmatched_recall = prior_recall
+    # Longest first, so a line inside a longer multi-line memory is not taken for a memory of its own.
+    for memory in sorted({memory for memories in sections.values() for memory in memories}, key=len, reverse=True):
+        if f'\n- {memory}\n' in unmatched_recall:
+            sent_memories.add(memory)
+            unmatched_recall = unmatched_recall.replace(f'\n- {memory}\n', '\n')
+
     limits = {'user': user_limit, 'context': context_limit}
-    measured = {'user': '', 'context': ''}
+    char_count = {'user': 0, 'context': 0}
     parts = {'user': [], 'context': []}
     for title, key in (
         ('User Memory', 'user'),
@@ -393,13 +401,14 @@ async def render_memory_context(sections: dict[str, list[str]], messages: list[d
         if not sections[key]:
             continue
         group = 'user' if key == 'user' else 'context'
-        measured[group] += f'\n\n[{title}]' if measured[group] else f'[{title}]'
+        char_count[group] += len(f'\n\n[{title}]') if char_count[group] else len(f'[{title}]')
         lines = []
         for memory in sorted(sections[key], key=lambda memory: (memory.casefold(), memory)):
-            measured[group] += '\n- '
-            shown = memory[: max(0, limits[group] - len(measured[group]))]
-            measured[group] += memory
-            if shown and f'\n- {shown}\n' not in prior_recall:
+            char_count[group] += len('\n- ')
+            shown = memory[: max(0, limits[group] - char_count[group])].rstrip()
+            char_count[group] += len(memory)
+            is_sent = memory in sent_memories or (shown != memory and f'\n- {shown}\n' in prior_recall)
+            if shown and not is_sent:
                 lines.append(f'- {shown}')
         if lines:
             parts[group].append(f'[{title}]\n' + '\n'.join(lines))
