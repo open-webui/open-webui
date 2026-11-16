@@ -5956,7 +5956,7 @@
 				style="background-image: url({backgroundImage})"
 			/>
 			<div
-				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white/95 to-white/70 dark:from-gray-900/95 dark:to-gray-900/75 z-0"
+				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white/90 to-white/55 dark:from-gray-900/90 dark:to-gray-900/65 z-0"
 			></div>
 		{/if}
 

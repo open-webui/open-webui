@@ -2735,7 +2735,7 @@
 
 		{#if !selectedFile && showSearch}
 			<div
-				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-200/40 px-3 dark:border-gray-850/20"
 			>
 				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
 				<input
@@ -3204,7 +3204,7 @@
 		{/if}
 
 		{#if onSelectDirectory}
-			<div class="shrink-0 border-t border-gray-50 pt-3 dark:border-gray-850/30">
+			<div class="shrink-0 border-t border-gray-200/40 pt-3 dark:border-gray-850/20">
 				{#if gitAvailable && showCloneRepository && selectedTerminal}
 					{#key `${effectiveTerminalId}:${chatId}`}
 						<CloneRepository
@@ -3255,7 +3255,7 @@
 		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
-				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+				class="shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
 			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->

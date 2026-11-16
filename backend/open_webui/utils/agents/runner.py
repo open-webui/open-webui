@@ -51,16 +51,24 @@ async def run(request, form_data, user, metadata, model):
     if chat is None:
         raise ValueError('Chat reply access denied')
     parent = (metadata.get('user_message') or {}).get('parentId')
-    previous, branched = (
-        await get_resume_point(chat, parent, exclude=metadata.get('message_id')) if parent else (None, False)
+    previous, branched, copied = (
+        await get_resume_point(chat, parent, user.id, exclude=metadata.get('message_id'))
+        if parent
+        else (None, False, False)
     )
     if previous and any(previous.get(key) != agent[key] for key in ('terminal_id', 'provider')):
         previous = None
-    # Regenerated and edited messages branch off a reply whose native conversation went on without them.
+    # Regenerated and edited messages branch off a reply whose native conversation went on without them;
+    # a forked chat's first reply continues the conversation of the chat it was forked from.
     resume_at = None
-    if previous and branched:
-        if agent['provider'] in RESUMABLE_AT and previous.get('turn'):
-            resume_at = previous['turn']
+    fork = False
+    if previous and (branched or copied):
+        if agent['provider'] in RESUMABLE_AT and (previous.get('turn') or not branched):
+            resume_at = previous.get('turn') if branched or agent['provider'] == 'codex' else None
+            # Codex copies the thread through that turn, keeping the original for the other branch. Claude
+            # branches inside its own transcript, as T3 Code does, but copies it for a forked chat so the two
+            # chats never write to one conversation.
+            fork = agent['provider'] == 'codex' or copied
         else:
             # The agent can't continue from an earlier turn: start a new conversation from the transcript.
             previous = {key: value for key, value in previous.items() if key != 'session_id'}
@@ -68,10 +76,10 @@ async def run(request, form_data, user, metadata, model):
     transport = await TerminalTransport.resolve(request, user, metadata)
     output = Output(metadata, user, transport.raise_if_failed, form_data)
     output.state = {
-        # A Codex fork is a new native conversation, which records its own id once the agent reports it.
+        # A fork is a new native conversation, which records its own id once the agent reports it.
         **{
             key: previous[key]
-            for key in ('model_config', *(() if resume_at and agent['provider'] == 'codex' else ('session_id',)))
+            for key in ('model_config', *(() if fork else ('session_id',)))
             if previous and key in previous
         },
         **agent,
@@ -141,9 +149,7 @@ async def run(request, form_data, user, metadata, model):
         'model': agent['model'],
         'resume': (previous or {}).get('session_id'),
         'resume_at': resume_at,
-        # Codex copies the thread through that turn, keeping the original for the other branch. Claude branches
-        # inside its own transcript (`--resume-session-at` without `--fork-session`), as T3 Code does.
-        'fork': bool(resume_at) and agent['provider'] == 'codex',
+        'fork': fork,
         'instructions': instructions,
         # The chat's tool permission mode; agents with their own auto review use it for Auto.
         'approval_mode': (metadata.get('params') or {}).get('tool_approval_mode', 'full'),
@@ -151,8 +157,12 @@ async def run(request, form_data, user, metadata, model):
     succeeded = False
     try:
         session = await transport.start(agent['provider'], options)
-        if resume_at and agent['provider'] == 'claude-code' and session.get('resume_at') != resume_at:
-            # An older Open Terminal would resume the latest turn instead of the one this message follows.
+        if (
+            agent['provider'] == 'claude-code'
+            and (resume_at or fork)
+            and (session.get('resume_at') != resume_at or bool(session.get('fork')) != fork)
+        ):
+            # An older Open Terminal would resume the latest turn of the original conversation instead.
             raise ValueError('Update Open Terminal to regenerate or edit earlier messages in this chat')
         extra = {'auth_method': 'cursor_login'} if agent['provider'] == 'cursor' else {}
         await run_provider(

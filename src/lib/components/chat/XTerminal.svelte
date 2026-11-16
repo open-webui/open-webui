@@ -102,7 +102,7 @@
 					selectionBackground: '#444444'
 				}
 			: {
-					background: '#ffffff',
+					background: '#ffffff00',
 					foreground: '#171717',
 					cursor: '#171717',
 					cursorAccent: '#ffffff',
@@ -309,7 +309,7 @@
 	});
 </script>
 
-<div class="terminal-view h-full min-h-0 relative bg-white dark:bg-transparent">
+<div class="terminal-view h-full min-h-0 relative bg-transparent">
 	{#if reconnecting}
 		<div
 			class="absolute top-1 right-2 z-10 rounded bg-white/90 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900/90 dark:text-gray-300"

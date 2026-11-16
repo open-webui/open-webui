@@ -1,8 +1,10 @@
-<script>
+<script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Editor } from '@tiptap/core';
+	const i18n = getContext<any>('i18n');
 
-	export let editor = null;
+	export let editor: Editor | null = null;
+	export let onComment: (() => void) | null = null;
 
 	import Bold from '$lib/components/icons/Bold.svelte';
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
@@ -23,16 +25,17 @@
 	import EmojiPicker from '../EmojiPicker.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import { shortCodesToEmojis } from '$lib/stores';
 
 	const headings = [
-		{ level: 1, label: 'Heading 1', icon: H1 },
-		{ level: 2, label: 'Heading 2', icon: H2 },
-		{ level: 3, label: 'Heading 3', icon: H3 }
+		{ level: 1 as const, label: 'Heading 1', icon: H1 },
+		{ level: 2 as const, label: 'Heading 2', icon: H2 },
+		{ level: 3 as const, label: 'Heading 3', icon: H3 }
 	];
 
 	let showHeadingMenu = false;
-	let headingMenuElement = null;
+	let headingMenuElement: HTMLElement | null = null;
 
 	// Re-evaluated on every editor transaction, since the parent re-renders with the new editor state.
 	$: activeHeading = editor
@@ -58,6 +61,21 @@
 <div
 	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 min-w-fit border border-gray-100 dark:border-gray-800"
 >
+	{#if onComment}
+		<Tooltip placement="top" content={$i18n.t('Comment')}>
+			<button
+				aria-label={$i18n.t('Comment')}
+				on:mousedown|preventDefault
+				on:click={() => onComment?.()}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<Annotation className="size-4" />
+			</button>
+		</Tooltip>
+		<div class="my-1 w-px bg-gray-100 dark:bg-gray-800" aria-hidden="true"></div>
+	{/if}
+
 	<div class="relative flex" bind:this={headingMenuElement}>
 		<Tooltip placement="top" content={$i18n.t('Heading')}>
 			<button
@@ -267,11 +285,13 @@
 
 	<EmojiPicker
 		onSubmit={(shortCode) => {
-			const codepoint = $shortCodesToEmojis[shortCode];
+			const codepoint: string | undefined = ($shortCodesToEmojis as Record<string, string>)[
+				shortCode
+			];
 			if (codepoint) {
 				const emoji = codepoint
 					.split('-')
-					.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+					.map((cp: string) => String.fromCodePoint(parseInt(cp, 16)))
 					.join('');
 				editor?.chain().focus().insertContent(emoji).run();
 			}

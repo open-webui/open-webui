@@ -408,6 +408,8 @@
 	export let collaboration = false;
 
 	export let showFormattingToolbar = true;
+	/** Adds a comment action to the selection toolbar. */
+	export let onComment: (() => void) | null = null;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -1590,7 +1592,7 @@
 		class="p-0"
 		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
 	>
-		<FormattingButtons {editor} />
+		<FormattingButtons {editor} {onComment} />
 	</div>
 
 	<div
