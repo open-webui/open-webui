@@ -424,7 +424,11 @@
 		}
 	};
 
-	$: if (!multipleEnabled && compareEnabled) setCompareEnabled(false);
+	let wasMultipleEnabled = multipleEnabled;
+	$: {
+		if (wasMultipleEnabled && !multipleEnabled && compareEnabled) setCompareEnabled(false);
+		wasMultipleEnabled = multipleEnabled;
+	}
 
 	const selectItem = (item, index: number) => {
 		selectedModelIdx = index;
