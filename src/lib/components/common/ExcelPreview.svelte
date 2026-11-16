@@ -776,9 +776,9 @@
 	<div bind:this={viewport} use:grid={html} class="excel-viewport">
 		{@html html}
 		{#if tooLarge}
-			<p class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+			<div class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500">
 				{t('This sheet is too large to preview. Download it to view all cells.')}
-			</p>
+			</div>
 		{/if}
 	</div>
 	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
