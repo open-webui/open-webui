@@ -64,11 +64,10 @@ router = APIRouter()
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.json_codec import JSONCodec
 
-# Leave half of the thread pool free while knowledge base syncs queue up.
-_thread_pool_size = (
-    THREAD_POOL_SIZE if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0 else min(32, (os.cpu_count() or 1) + 4)
+# Leave half of the default executor free while knowledge base syncs queue up.
+_knowledge_processing_semaphore: asyncio.Semaphore = asyncio.Semaphore(
+    max((THREAD_POOL_SIZE or min(32, (os.cpu_count() or 1) + 4)) // 2, 1)
 )
-_knowledge_processing_semaphore = asyncio.Semaphore(max(_thread_pool_size // 2, 1))
 
 # Upload File
 # What was entrusted here was given in good faith. Let it
@@ -472,7 +471,7 @@ async def upload_file_handler(
         if process:
             if background_tasks and process_in_background:
 
-                async def background_handler():
+                async def _background_handler():
                     async with _knowledge_processing_semaphore if knowledge_id else nullcontext():
                         await process_uploaded_file(
                             request,
@@ -483,7 +482,7 @@ async def upload_file_handler(
                             user,
                         )
 
-                background_tasks.add_task(background_handler)
+                background_tasks.add_task(_background_handler)
                 return {'status': True, **file_item.model_dump()}
             else:
                 await process_uploaded_file(
