@@ -4039,6 +4039,7 @@
 		saveSessionSelectedModels();
 
 		const currentHistory = history;
+		const isNewChat = !$chatId;
 		let _chatId: string | null = null;
 		processing = 'uploading';
 		try {
@@ -4063,11 +4064,11 @@
 				history.currentId = userMessage.parentId;
 				history = history;
 				chatFiles = chatFiles.filter((file) => !_files.includes(file));
-				if ($chatId && !$temporaryChatEnabled) {
+				if (isNewChat && $chatId && !$temporaryChatEnabled) {
 					deleteChatMessageById(localStorage.token, $chatId, userMessageId).catch(console.error);
 				}
 				files = [...files, ...inputFiles];
-				await draftPrompt(inputContent);
+				if (inputContent) await draftPrompt(inputContent);
 			}
 			return { status: 'rejected' as const };
 		}
