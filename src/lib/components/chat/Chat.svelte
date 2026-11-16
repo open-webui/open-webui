@@ -5484,6 +5484,13 @@
 			);
 
 			if (!createdChat?.id) throw new Error($i18n.t('Failed to create chat'));
+			if (!_history.currentId) {
+				// A refused first message leaves no empty chat behind.
+				await initializeTerminalDirectory(createdChat.id, context).catch(async (error) => {
+					if (await deleteChatById(localStorage.token, createdChat.id).catch(() => null))
+						throw error;
+				});
+			}
 			if (history !== _history || $chatId !== _chatId) return '';
 			chat = createdChat;
 			if (selectedFolderId) updateFolderChatLists(createdChat, selectedFolderId);
