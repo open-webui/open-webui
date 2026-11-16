@@ -2232,9 +2232,9 @@
 							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
 								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
-								: ' border-gray-200/60 dark:border-gray-850/40'} {($settings?.highContrastMode ?? false)
+								: ' border-gray-200/60 dark:border-gray-800/40'} {($settings?.highContrastMode ?? false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.235_0_0)]/90 backdrop-blur-md dark:text-gray-100"
+								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
