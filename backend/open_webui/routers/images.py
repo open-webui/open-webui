@@ -57,6 +57,8 @@ IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter()
 
+DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2'
+
 IMAGE_FILE_EXTENSIONS = {
     'image/jpeg': '.jpg',
     'image/jpg': '.jpg',
@@ -218,7 +220,9 @@ async def set_image_model(request: Request, model: str):
 async def get_image_model(request):
     image_config = await get_image_config()
     if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'gpt-image-2'
+        return (
+            image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else DEFAULT_OPENAI_IMAGE_MODEL
+        )
     elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
         return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'imagen-3.0-generate-002'
     elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
@@ -291,9 +295,11 @@ async def get_config(request: Request, user=Depends(get_admin_user)):
 
 @router.post('/config/update')
 async def update_config(request: Request, form_data: ImagesConfig, user=Depends(get_admin_user)):
-    if form_data.IMAGE_SIZE == 'auto' and not re.match(
-        IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, form_data.IMAGE_GENERATION_MODEL
-    ):
+    # Check the model requests will actually use, so an empty OpenAI model field (gpt-image default) can use auto.
+    image_model = form_data.IMAGE_GENERATION_MODEL or (
+        DEFAULT_OPENAI_IMAGE_MODEL if form_data.IMAGE_GENERATION_ENGINE == 'openai' else ''
+    )
+    if form_data.IMAGE_SIZE == 'auto' and not re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, image_model):
         raise HTTPException(
             status_code=400,
             detail=ERROR_MESSAGES.INCORRECT_FORMAT(
@@ -467,6 +473,36 @@ class CreateImageForm(BaseModel):
 
 
 GenerateImageForm = CreateImageForm  # Alias for backward compatibility
+
+
+async def raise_for_provider_status(r: aiohttp.ClientResponse) -> None:
+    """Like raise_for_status, but keeps the provider's own error message (e.g. "Invalid size")."""
+    if r.ok:
+        return
+
+    detail = ''
+    try:
+        text = await r.text()
+        try:
+            body = JSONCodec.loads(text)
+        except Exception:
+            body = None
+        error = body.get('error') if isinstance(body, dict) else None
+        if isinstance(error, dict):
+            detail = error.get('message') or ''
+        elif isinstance(error, str):
+            detail = error
+        elif isinstance(body, dict) and isinstance(body.get('message'), str):
+            detail = body['message']
+        else:
+            detail = text.strip()
+    except Exception:
+        pass
+
+    message = f'{r.status} {r.reason}'
+    if detail:
+        message = f'{message}: {detail[:500]}'
+    raise aiohttp.ClientResponseError(r.request_info, r.history, status=r.status, message=message, headers=r.headers)
 
 
 def _is_same_origin(url: str, base_url: str) -> bool:
@@ -648,6 +684,15 @@ async def image_generations(
                 headers = include_user_info_headers(headers, user)
 
             url = f'{image_config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
+            openai_size = form_data.size or image_config.IMAGE_SIZE
+            # 512x512 is the stock IMAGE_SIZE, left over from DALL-E. GPT image models reject it,
+            # so let them pick their own size unless the request asked for one.
+            if (
+                not form_data.size
+                and openai_size == '512x512'
+                and re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, model)
+            ):
+                openai_size = 'auto'
             if image_config.IMAGES_OPENAI_API_VERSION:
                 url = f'{url}?api-version={image_config.IMAGES_OPENAI_API_VERSION}'
 
@@ -655,11 +700,7 @@ async def image_generations(
                 'model': model,
                 'prompt': form_data.prompt,
                 'n': form_data.n,
-                **(
-                    {'size': form_data.size or image_config.IMAGE_SIZE}
-                    if (form_data.size or image_config.IMAGE_SIZE)
-                    else {}
-                ),
+                **({'size': openai_size} if openai_size else {}),
                 **(
                     {}
                     if re.match(
@@ -678,7 +719,7 @@ async def image_generations(
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                r.raise_for_status()
+                await raise_for_provider_status(r)
                 res = await r.json(content_type=None)
 
             images = []
@@ -730,7 +771,7 @@ async def image_generations(
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                r.raise_for_status()
+                await raise_for_provider_status(r)
                 res = await r.json(content_type=None)
 
             images = []
@@ -1061,7 +1102,7 @@ async def image_edits(
                 data=form,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                r.raise_for_status()
+                await raise_for_provider_status(r)
                 res = await r.json(content_type=None)
 
             images = []
@@ -1118,7 +1159,7 @@ async def image_edits(
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
-                r.raise_for_status()
+                await raise_for_provider_status(r)
                 res = await r.json(content_type=None)
 
             images = []
