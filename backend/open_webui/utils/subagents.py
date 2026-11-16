@@ -661,23 +661,24 @@ async def delegate(
                 updated_history = updated_chat.setdefault('history', {})
                 updated_messages = updated_history.setdefault('messages', {})
                 parent_message = updated_messages.get(parent_message_id)
-                done_assistants = [
+                is_active = await has_active_tasks(request.app.state.redis, parent_chat_id)
+                assistants = [
                     message
                     for message_id, message in updated_messages.items()
                     if message.get('role') == 'assistant'
-                    and message.get('done') is not False
+                    and (is_active or message.get('done') is not False)
                     and (
                         parent_message is None
                         or any(entry is parent_message for entry in get_message_list(updated_messages, message_id))
                     )
                 ]
                 result_parent_id = (
-                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                    if done_assistants
+                    max(assistants, key=lambda message: message.get('timestamp', 0)).get('id')
+                    if assistants
                     else parent_message_id
                 )
                 pending_message['parentId'] = result_parent_id
-                if await has_active_tasks(request.app.state.redis, parent_chat_id):
+                if is_active:
                     pending_message['meta']['status'] = 'pending'
                 updated_messages[pending_message_id] = pending_message
                 if result_parent_id and result_parent_id in updated_messages:
