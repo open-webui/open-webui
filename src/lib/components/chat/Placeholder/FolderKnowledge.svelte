@@ -12,6 +12,7 @@
 	import { decodeString, formatFileSize } from '$lib/utils';
 
 	import FileItemModal from '$lib/components/common/FileItemModal.svelte';
+	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
@@ -388,11 +389,5 @@
 		</ul>
 	{/if}
 
-	{#if dragging}
-		<div
-			class="pointer-events-none absolute inset-2 flex items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white/80 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900/80 dark:text-gray-300"
-		>
-			{$i18n.t('Drop files here')}
-		</div>
-	{/if}
+	<FilesOverlay show={dragging} />
 </div>

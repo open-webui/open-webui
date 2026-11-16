@@ -148,8 +148,9 @@
 	{/key}
 {/snippet}
 
+<!-- A page keeps files dropped on it (a knowledge base or skill uploads them); the chat composer doesn't. -->
 <!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-<div class="h-full min-h-0 min-w-0 overflow-auto" on:click={followLink}>
+<div class="h-full min-h-0 min-w-0 overflow-auto" data-file-drop-target on:click={followLink}>
 	{#if !allowed}
 		<div class="p-4 text-sm">{$i18n.t('You do not have permission to access this resource.')}</div>
 	{:else if parts[1] === 'workspace'}
