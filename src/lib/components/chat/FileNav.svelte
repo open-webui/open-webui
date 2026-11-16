@@ -1282,6 +1282,11 @@
 			error = null;
 			currentWritable = listings[0].writable !== false;
 			entries = normalizeEntries(listings[0].entries);
+		} else {
+			error =
+				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
+			entries = [];
+			clearSelection();
 		}
 		const cache = new Map(treeCache);
 		paths.forEach(
