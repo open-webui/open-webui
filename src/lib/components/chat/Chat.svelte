@@ -4063,7 +4063,8 @@
 				history.currentId = userMessage.parentId;
 				history = history;
 				chatFiles = chatFiles.filter((file) => !_files.includes(file));
-				if (isNewChat && !embedded && $chatId && !$temporaryChatEnabled) {
+				// A new chat was already saved with this message in it.
+				if (isNewChat && $chatId && !$temporaryChatEnabled) {
 					deleteChatMessageById(localStorage.token, $chatId, userMessageId).catch(console.error);
 				}
 				files = [...files, ...inputFiles];
