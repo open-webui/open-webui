@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import HTTPException
 from open_webui.models.config import Config
-from open_webui.models.memories import Memories
+from open_webui.models.memories import Memories, MemoryModel
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message_item
@@ -44,7 +44,7 @@ def memory_label(memory) -> str:
     return f'{memory.path}: {memory.content}' if memory.path else memory.content
 
 
-def memory_version(memory) -> str:
+def memory_version(memory: MemoryModel) -> str:
     return f'{memory.id}:{memory.updated_at}'
 
 
