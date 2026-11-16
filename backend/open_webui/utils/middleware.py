@@ -112,6 +112,7 @@ from open_webui.utils.misc import (
     extract_urls,
     get_content_from_message,
     get_last_assistant_message,
+    get_last_tool_result,
     get_last_user_message,
     get_last_user_message_item,
     get_message_list,
@@ -2150,6 +2151,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     event_emitter = await get_event_emitter(metadata)
     initial_output = []
+    # What the model is told is available, by the hidden tool that reports it; added after compaction, and only
+    # when the history the model sees does not already end with the same manifest.
+    manifests: dict[str, str] = {}
 
     async def emit_initial_output():
         await event_emitter({'type': 'chat:completion', 'data': {'output': initial_output}})
@@ -2624,11 +2628,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if skill_tools_enabled and skill_manifest:
             if not metadata.get('assistant_message_id'):
-                initial_output.extend(
-                    hidden_tool_result(
-                        'list_available_skills', f'<available_skills>\n{skill_manifest}</available_skills>'
-                    )
-                )
+                manifests['list_available_skills'] = f'<available_skills>\n{skill_manifest}</available_skills>'
         elif skill_manifest:
             form_data['messages'] = add_or_update_system_message(
                 f'<available_skills>\n{skill_manifest}</available_skills>',
@@ -2832,11 +2832,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     knowledge_tags.append(f'<knowledge {attrs}/>')
 
                 if knowledge_tags and not metadata.get('assistant_message_id'):
-                    initial_output.extend(
-                        hidden_tool_result(
-                            'list_attached_knowledge',
-                            '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
-                        )
+                    manifests['list_attached_knowledge'] = (
+                        '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>'
                     )
 
             builtin_tools = await get_builtin_tools(
@@ -2975,21 +2972,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     metadata.pop('initial_output', None)
-    if skill_tools_enabled and not metadata.get('assistant_message_id'):
-        initial_output.extend(
-            await preload_skills(
-                form_data['messages'],
-                activated_skill_ids & resolved_skill_ids,
-                metadata.get('tools', {}).get('view_skill'),
-            )
-        )
-    if initial_output:
-        form_data['messages'].extend(
-            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
-        )
-    # Compaction below can still add its item to the output this response starts with.
-    metadata['initial_output'] = initial_output
-
     form_data = normalize_messages_for_model(form_data)
 
     if compaction_messages is not None:
@@ -3025,6 +3007,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
 
     metadata['context_summary'] = context_summary
+
+    # Added after compaction: it can summarize away the copy the model had, and it should not summarize this turn's.
+    for name, manifest in manifests.items():
+        if get_last_tool_result(form_data['messages'], name) != manifest:
+            initial_output.extend(hidden_tool_result(name, manifest))
+    if skill_tools_enabled and not metadata.get('assistant_message_id'):
+        initial_output.extend(
+            await preload_skills(
+                form_data['messages'],
+                activated_skill_ids & resolved_skill_ids,
+                metadata.get('tools', {}).get('view_skill'),
+            )
+        )
+    if initial_output:
+        form_data['messages'].extend(
+            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
+        )
+    metadata['initial_output'] = initial_output
+
     return form_data, metadata, events, False
 
 
