@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab, active } = getPageContext();
 
 	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -238,6 +238,9 @@
 
 	$: if (loaded) void openLinkedEvent($pageUrl.searchParams.get('event'));
 
+	// Loads on mount and again whenever the tab is shown, so changes made elsewhere appear.
+	$: if (loaded && $active) void refresh();
+
 	onMount(async () => {
 		if (
 			!$config?.features?.enable_calendar ||
@@ -248,7 +251,6 @@
 		}
 
 		await loadCalendars();
-		await refresh();
 		loaded = true;
 	});
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
