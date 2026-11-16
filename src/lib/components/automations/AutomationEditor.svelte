@@ -144,13 +144,15 @@
 		}
 		saving = true;
 		try {
+			const rrule = scheduleDropdown.buildRrule();
 			const form: AutomationForm = {
 				name: name.trim(),
 				folder_id: target_type === 'channel' ? null : folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule(),
+					// An untouched schedule keeps its stored start date.
+					rrule: rrule === savedRrule ? automation.data.rrule : rrule,
 					terminal: terminalServerId
 						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
 						: undefined,
