@@ -137,7 +137,6 @@ log = logging.getLogger(__name__)
 
 TIKTOKEN_DISALLOWED_SPECIAL = ()
 _save_semaphore: asyncio.Semaphore | None = None
-_save_tasks: set[asyncio.Task] = set()
 
 # Utility functions
 # Let us find what is true among the many voices,
@@ -1674,9 +1673,14 @@ async def save_docs_to_vector_db(
             user=user,
         )
     )
-    task.add_done_callback(lambda _: save_semaphore.release())
-    _save_tasks.add(task)
-    task.add_done_callback(_save_tasks.discard)
+
+    def release_slot(done_task):
+        save_semaphore.release()
+        # The save already logged its error; a cancelled caller never reads it.
+        if not done_task.cancelled():
+            done_task.exception()
+
+    task.add_done_callback(release_slot)
     return await asyncio.shield(task)
 
 
