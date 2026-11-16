@@ -130,7 +130,12 @@
 		if (!localStorage.token) return;
 		try {
 			user.set(await getSessionUser(localStorage.token));
-			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced && !$chatId) {
+			if (
+				$user?.role !== 'admin' &&
+				$user?.permissions?.chat?.temporary &&
+				$user?.permissions?.chat?.temporary_enforced &&
+				!$chatId
+			) {
 				temporaryChat.set(true);
 			}
 			const results = await Promise.allSettled([
