@@ -404,9 +404,11 @@
 											>−{stats.deletions}</span
 										>{/if}
 								</div>
-								<div class="max-h-80 overflow-y-auto">
-									<DiffBlock code={file.diff} compact />
-								</div>
+								{#if file.diff}
+									<div class="max-h-80 overflow-y-auto">
+										<DiffBlock code={file.diff} compact />
+									</div>
+								{/if}
 							</div>
 						{/each}
 						{#if isError && result}

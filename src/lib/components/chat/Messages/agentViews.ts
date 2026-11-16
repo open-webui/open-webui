@@ -1,3 +1,5 @@
+import { structuredPatch as diffTexts } from 'diff';
+
 import type { OutputItem } from './structuredOutput';
 
 // Terminal agents (Claude Code, Codex, ACP, Pi) keep each tool's own event in `provider_data`.
@@ -5,58 +7,56 @@ export type AgentView =
 	| { kind: 'command'; command: string; output: string; exitCode?: number | null }
 	| { kind: 'edit'; files: { path: string; diff: string }[] };
 
-const lines = (text = '') => (text ? text.replace(/\n$/, '').split('\n') : []);
+// Provider events are untyped JSON; read them through these.
+type Data = Record<string, unknown>;
+const obj = (value: unknown): Data =>
+	value && typeof value === 'object' && !Array.isArray(value) ? (value as Data) : {};
+const list = (value: unknown): Data[] => (Array.isArray(value) ? value.map(obj) : []);
+const str = (value: unknown) => (value == null ? '' : String(value));
+const exitCode = (value: unknown) => (typeof value === 'number' ? value : null);
 
-// Line diff of two snippets, so unchanged lines show as context instead of removed and re-added.
-const lineDiff = (before: string[], after: string[]): string[] => {
-	if (before.length * after.length > 250_000) {
-		return [...before.map((line) => `-${line}`), ...after.map((line) => `+${line}`)];
-	}
-	const common = before.map(() => new Uint32Array(after.length + 1));
-	common.push(new Uint32Array(after.length + 1));
-	for (let i = before.length - 1; i >= 0; i--) {
-		for (let j = after.length - 1; j >= 0; j--) {
-			common[i][j] =
-				before[i] === after[j]
-					? common[i + 1][j + 1] + 1
-					: Math.max(common[i + 1][j], common[i][j + 1]);
-		}
-	}
-	const out: string[] = [];
-	let i = 0;
-	let j = 0;
-	while (i < before.length && j < after.length) {
-		if (before[i] === after[j]) {
-			out.push(` ${before[i]}`);
-			i++;
-			j++;
-		} else if (common[i + 1][j] >= common[i][j + 1]) out.push(`-${before[i++]}`);
-		else out.push(`+${after[j++]}`);
-	}
-	while (i < before.length) out.push(`-${before[i++]}`);
-	while (j < after.length) out.push(`+${after[j++]}`);
-	return out;
-};
+// Bounds the diff work on large files; past it the edit shows without a preview, like T3.
+const MAX_EDIT_LENGTH = 2000;
 
 const header = (path: string) => [`--- a/${path}`, `+++ b/${path}`];
 
-// A hunk header gives the diff its line numbers; without a known start line there is none.
-const patch = (path: string, oldText = '', newText = '', start?: number) => {
-	const before = lines(oldText);
-	const after = lines(newText);
-	const at = start ?? (before.length ? undefined : 1);
-	return [
+// `@@ -a,b +c,d @@` headers give a diff its line numbers. Unnumbered hunks keep a bare `@@`
+// between them so separate changes still read as separate.
+const formatHunks = (path: string, hunks: Data[], numbered = true) =>
+	[
 		...header(path),
-		...(at !== undefined
-			? [
-					`@@ -${before.length ? at : 0},${before.length} +${after.length ? at : 0},${after.length} @@`
-				]
-			: []),
-		...lineDiff(before, after)
+		...hunks.flatMap((hunk, index) => [
+			...(numbered
+				? [
+						`@@ -${str(hunk.oldStart)},${str(hunk.oldLines)} +${str(hunk.newStart)},${str(hunk.newLines)} @@`
+					]
+				: index
+					? ['@@']
+					: []),
+			...(Array.isArray(hunk.lines)
+				? hunk.lines.map(str).filter((line) => !line.startsWith('\\'))
+				: [])
+		])
 	].join('\n');
+
+// Diffs two texts into hunks with 3 lines of context. Whole files are numbered from line 1;
+// a snippet whose place in the file is unknown is shown without numbers.
+const patch = (path: string, oldText: string, newText: string, numbered: boolean) => {
+	const result = diffTexts(path, path, oldText, newText, undefined, undefined, {
+		context: 3,
+		maxEditLength: MAX_EDIT_LENGTH
+	});
+	return result ? formatHunks(path, list(result.hunks), numbered) : '';
 };
 
 const isPatch = (text: string) => /^(diff |--- |@@ )/m.test(text);
+
+// Antigravity replaces bare snippets (one chunk, or a ReplacementChunks list), so its diffs
+// have no known place in the file. Its StartLine only starts a search range, not the edit.
+const isSnippetEdit = (rawInput: Data) =>
+	['TargetContent', 'target_content', 'ReplacementChunks', 'replacement_chunks'].some(
+		(key) => key in rawInput
+	);
 
 const RESULT_KEYS = ['output', 'stdout', 'content', 'formatted_output'];
 
@@ -99,40 +99,25 @@ const plain = (value: unknown): string => {
 	return String(value);
 };
 
-// Provider events are untyped JSON; read them through these.
-type Data = Record<string, unknown>;
-const obj = (value: unknown): Data =>
-	value && typeof value === 'object' && !Array.isArray(value) ? (value as Data) : {};
-const list = (value: unknown): Data[] => (Array.isArray(value) ? value.map(obj) : []);
-const str = (value: unknown) => (value == null ? '' : String(value));
-const exitCode = (value: unknown) => (typeof value === 'number' ? value : null);
-
-// Claude Code's structuredPatch: hunks with their real start lines.
-const structuredPatch = (path: string, hunks: Data[]) =>
-	[
-		...header(path),
-		...hunks.flatMap((hunk) => [
-			`@@ -${str(hunk.oldStart)},${str(hunk.oldLines)} +${str(hunk.newStart)},${str(hunk.newLines)} @@`,
-			...(Array.isArray(hunk.lines) ? hunk.lines.map(str) : [])
-		])
-	].join('\n');
-
 const codexFile = (change: Data) => {
 	const path = str(change.path);
 	const diff = str(change.diff);
 	if (isPatch(diff)) return { path, diff };
 	return {
 		path,
-		diff: obj(change.kind).type === 'delete' ? patch(path, diff, '', 1) : patch(path, '', diff, 1)
+		diff:
+			obj(change.kind).type === 'delete' ? patch(path, diff, '', true) : patch(path, '', diff, true)
 	};
 };
 
 const editFile = (path: string, edits: Data[]) => ({
 	path,
 	diff: edits
-		.map((edit) =>
-			patch(path, str(edit.old_string ?? edit.oldText), str(edit.new_string ?? edit.newText))
-		)
+		.map((edit) => {
+			const oldText = str(edit.old_string ?? edit.oldText);
+			return patch(path, oldText, str(edit.new_string ?? edit.newText), !oldText);
+		})
+		.filter(Boolean)
 		.join('\n')
 });
 
@@ -161,22 +146,32 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 		return { kind: 'edit', files: list(data.changes).map(codexFile) };
 	}
 
-	// ACP tool calls
-	const diffs = list(data.content).filter((part) => part.type === 'diff');
+	// ACP tool calls; permission requests carry the call in params.toolCall.
+	// Like T3, oldText/newText are taken as whole files, so lines are numbered from 1,
+	// except for agents known to send snippets.
+	const requested = obj(obj(data.params).toolCall);
+	const call = Object.keys(requested).length ? requested : data;
+	const diffs = list(call.content).filter((part) => part.type === 'diff');
 	if (diffs.length) {
+		const snippets = isSnippetEdit(obj(call.rawInput));
 		return {
 			kind: 'edit',
 			files: diffs.map((part) => ({
 				path: str(part.path),
-				diff: patch(str(part.path), str(part.oldText), str(part.newText))
+				diff: patch(
+					str(part.path),
+					str(part.oldText),
+					str(part.newText),
+					!snippets || part.oldText == null
+				)
 			}))
 		};
 	}
-	if (data.kind === 'execute') {
+	if (call.kind === 'execute') {
 		return {
 			kind: 'command',
-			command: str(args.command ?? data.title),
-			output: plain(data.rawOutput ?? result)
+			command: str(obj(call.rawInput).command ?? args.command ?? call.title),
+			output: plain(call.rawOutput ?? result)
 		};
 	}
 
@@ -191,7 +186,7 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 			: [];
 	const piPatch = str(obj(obj(data.result).details).patch);
 	const finished = hunks.length
-		? { path, diff: structuredPatch(path, hunks) }
+		? { path, diff: formatHunks(path, hunks) }
 		: isPatch(piPatch)
 			? { path, diff: piPatch }
 			: null;
@@ -215,7 +210,7 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 		case 'write':
 			return {
 				kind: 'edit',
-				files: [finished ?? { path, diff: patch(path, '', str(args.content)) }]
+				files: [finished ?? { path, diff: patch(path, '', str(args.content), true) }]
 			};
 	}
 	return null;

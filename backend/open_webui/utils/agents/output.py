@@ -82,8 +82,9 @@ class Output:
                 if self.usage is not None:
                     message['usage'] = self.usage
                 meta = dict(message.get('meta') or {})
+                meta['model_name'] = f'{self.state["provider"]}/{self.state["model"]}'
                 meta['agent'] = create_token(
-                    {'purpose': 'terminal-agent', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
+                    {'purpose': 'agent-session', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
                 )
                 if done:
                     meta['response_ended_at'] = time.time()

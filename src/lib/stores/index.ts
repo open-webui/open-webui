@@ -217,7 +217,8 @@ export interface AgentModel extends BaseModel {
 	owned_by: 'terminal';
 	agent: {
 		terminal_id: string;
-		provider: 'codex' | 'claude-code' | 'cursor' | 'grok' | 'opencode' | 'cline' | 'gemini' | 'pi';
+		// Built-in ids such as 'codex' or 'claude-code', or 'acp-<id>' for agents configured in Open Terminal.
+		provider: string;
 		model: string;
 	};
 }
