@@ -33,6 +33,7 @@ type Entry = {
 	pending: Map<string, Promise<void>>;
 	revision: number;
 	persistedRevision: number;
+	persisted?: string;
 	loaded: boolean;
 	persistent: boolean;
 	promoting: boolean;
@@ -121,6 +122,7 @@ export async function loadChatView(entry: Entry) {
 				entry.state.panels.tabs = entry.state.panels.tabs.map((tab) =>
 					normalizeChatTab(tab, entry.chatId)
 				);
+				entry.persisted = JSON.stringify(serializeChatView(entry.state));
 			}
 			entry.loaded = true;
 			entry.error = '';
@@ -156,8 +158,11 @@ export async function flushChatView(entry: Entry): Promise<void> {
 				entries.has(key(entry.userId, entry.chatId!))
 			) {
 				const revision = entry.revision;
-				const snapshot = structuredClone(serializeChatView(entry.state));
-				await updateChatView(entry.chatId!, snapshot);
+				const snapshot = JSON.stringify(serializeChatView(entry.state));
+				if (snapshot !== entry.persisted) {
+					await updateChatView(entry.chatId!, JSON.parse(snapshot));
+					entry.persisted = snapshot;
+				}
 				entry.persistedRevision = revision;
 				entry.error = '';
 			}

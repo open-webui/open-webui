@@ -4,6 +4,7 @@ import copy
 import logging
 import re
 from dataclasses import dataclass
+from itertools import takewhile
 from typing import Any
 
 from fastapi.responses import JSONResponse
@@ -72,7 +73,7 @@ async def split_messages(messages: list[dict], metadata: dict, system_prompt: st
     messages, summary = _apply_latest_summary_checkpoint(messages)
     system_prompt = system_prompt or (get_content_from_message(system_messages[0]) if system_messages else '')
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
-    if not _exceeds_token_threshold(messages, system_prompt, summary, token_threshold):
+    if token_threshold <= 0 or _estimate_request_tokens(messages, system_prompt, summary) <= token_threshold:
         return MessageSplit(system_messages, summary, [], messages)
 
     # A tool loop's messages carry the turn's summary only in the system message.
@@ -292,15 +293,7 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
         params['model'] = model_id
     threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], {'params': params})
     messages, summary = _apply_latest_summary_checkpoint(messages)
-
-    for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-            tokens += _estimate_messages_tokens(messages[idx + 1 :])
-            return _build_context_usage(tokens, threshold)
-
-    tokens = _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
-    return _build_context_usage(tokens, threshold)
+    return _build_context_usage(_estimate_request_tokens(messages, '', summary), threshold)
 
 
 def _build_context_usage(tokens: int, threshold: int) -> dict:
@@ -365,17 +358,22 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
     return messages, None
 
 
-def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: str | None, threshold: int) -> bool:
-    if threshold <= 0:
-        return False
-
+def _estimate_request_tokens(messages: list[dict], system_prompt: str, summary: str | None) -> int:
+    """Tokens a request with these messages takes, counted from the latest reply that reports its usage."""
     for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+        if tokens := _reported_tokens(messages[idx]):
+            return tokens + _estimate_messages_tokens(messages[idx + 1 :])
+    return _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
 
-    estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
-    return estimated > threshold
+
+def _reported_tokens(message: dict) -> int:
+    """Tokens the provider reported for this reply, or 0 when it reported none."""
+    usage = message.get('usage') or (message.get('info') or {}).get('usage')
+    if not isinstance(usage, dict) or not (tokens := _usage_token_count(usage)):
+        return 0
+    # Tool results that end the reply came back after the report, e.g. ones too long for the model to answer.
+    outputs = takewhile(lambda item: item.get('type') == 'function_call_output', reversed(message.get('output') or []))
+    return tokens + sum(_estimate_tokens(item) for item in outputs)
 
 
 def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 40) -> int:
