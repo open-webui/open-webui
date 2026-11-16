@@ -706,11 +706,18 @@
 				void navigatePageTab(existing.id, request.href);
 		} else openPanel(createPageTab(request));
 	};
-	const navigatePageTab = async (id: string, href: string) => {
+	const navigatePageTab = async (
+		id: string,
+		href: string,
+		options?: Parameters<typeof goto>[1]
+	) => {
 		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
 			openPageTab({ href, label: '' });
+			if (options?.replaceState) {
+				await closeTab(id);
+			}
 		} else if (viewEntry) updateViewTab(viewEntry, id, { href });
 		await tick();
 	};
@@ -2031,7 +2038,7 @@
 						bind:this={pageViews[tab.id]}
 						href={tab.href}
 						active={visibleTabIds.has(tab.id)}
-						onNavigate={(href) => navigatePageTab(tab.id, href)}
+						onNavigate={(href, options) => navigatePageTab(tab.id, href, options)}
 						onTitleChange={(label) => {
 							if (label && tabs.tabs.find((item) => item.id === tab.id)?.label !== label)
 								updateViewTab(chatView, tab.id, { label });

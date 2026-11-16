@@ -15,7 +15,10 @@
 	export let active = false;
 	const visible = writable(active);
 	$: visible.set(active);
-	export let onNavigate: (href: string) => Promise<void>;
+	export let onNavigate: (
+		href: string,
+		options?: Parameters<typeof goto>[1]
+	) => Promise<void> | void;
 	export let onTitleChange: (title: string) => void;
 	const i18n = getContext<any>('i18n');
 	const url = writable(new URL(href, location.origin));
@@ -29,7 +32,7 @@
 		const next = new URL(target, $url);
 		if (next.origin !== location.origin || !pageTabKey(next)) return goto(next, options);
 		if (next.href === $url.href) return;
-		return onNavigate(next.pathname + next.search + next.hash);
+		return onNavigate(next.pathname + next.search + next.hash, options);
 	}
 	setContext<PageContext>('page', {
 		url,
