@@ -65,6 +65,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db, get_async_session
 from open_webui.models.files import FileModel, Files, FileUpdateForm
 from open_webui.models.knowledge import Knowledges
+from open_webui.models.users import UserModel
 
 # Document loaders
 from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
@@ -1412,8 +1413,8 @@ def has_duplicate_content(collection_name: str, hash: str, file_id: str | None) 
 
 def _prepare_docs_for_vector_db(
     request: Request,
-    docs,
-    collection_name,
+    docs: list[Document],
+    collection_name: str,
     config: dict,
     metadata: dict | None = None,
     split: bool = True,
@@ -1526,14 +1527,14 @@ def _prepare_docs_for_vector_db(
 
 async def _save_docs_to_vector_db(
     request: Request,
-    docs,
-    collection_name,
+    docs: list[Document],
+    collection_name: str,
     config: dict,
     metadata: dict | None = None,
     overwrite: bool = False,
     split: bool = True,
     add: bool = False,
-    user=None,
+    user: UserModel | None = None,
 ) -> bool:
     texts, metadatas = await run_in_threadpool(
         _prepare_docs_for_vector_db, request, docs, collection_name, config, metadata=metadata, split=split
