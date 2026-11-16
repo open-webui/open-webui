@@ -38,6 +38,8 @@
 </script>
 
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget | null = null;
 	import { getAllContexts, mount, unmount, setContext, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
 	import DOMPurify from 'dompurify';
@@ -52,8 +54,6 @@
 	export let saving = false;
 	export let id: string;
 	export let path = '';
-	export let baseUrl = '';
-	export let apiKey = '';
 	export let chatId: string | null = null;
 	export let resourceVersion = 0;
 	export let onLocalLink: (path: string) => void = () => {};
@@ -70,12 +70,12 @@
 	onDestroy(release);
 	const resolveImage = (reference: string): Promise<string | null> => {
 		const file = resolveDocumentPath(path, reference);
-		if (!file || !baseUrl) return Promise.resolve(null);
+		if (!file || !target?.baseUrl) return Promise.resolve(null);
 		if (!urls.has(file)) {
 			const current = generation;
 			urls.set(
 				file,
-				downloadFileBlob(baseUrl, apiKey, file, chatId ?? undefined).then((result) => {
+				downloadFileBlob(target, file).then((result) => {
 					if (!result || current !== generation) return null;
 					const url = URL.createObjectURL(result.blob);
 					objectUrls.push(url);
@@ -87,7 +87,7 @@
 	};
 	const resources = {
 		resolveImage,
-		localPath: (ref: string) => (baseUrl ? resolveDocumentPath(path, ref) : null),
+		localPath: (ref: string) => (target?.baseUrl ? resolveDocumentPath(path, ref) : null),
 		open: (ref: string) => {
 			const file = resolveDocumentPath(path, ref);
 			if (file) onLocalLink(file);
@@ -95,7 +95,7 @@
 	};
 	setContext('terminal-document', resources);
 	$: {
-		(resourceVersion, path, baseUrl, chatId);
+		(resourceVersion, path, target?.baseUrl, chatId);
 		release();
 	}
 

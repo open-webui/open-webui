@@ -15,6 +15,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
+    OAUTH_MAX_FIELD_SIZE,
     OAuthClientInformationFull,
     apply_connection_oauth_options,
     decrypt_data,
@@ -38,8 +39,6 @@ router = APIRouter()
 log = logging.getLogger(__name__)
 
 CONNECTIONS_CONFIG_KEYS = {
-    'ENABLE_DIRECT_CONNECTIONS': 'direct.enable',
-    'ENABLE_DIRECT_INTEGRATIONS': 'direct.integrations.enable',
     'ENABLE_BASE_MODELS_CACHE': 'models.base_models_cache',
 }
 CODE_EXECUTION_CONFIG_KEYS = {
@@ -145,8 +144,6 @@ async def set_interface_visibility(request: Request, form_data: InterfaceVisibil
 
 
 class ConnectionsConfigForm(BaseModel):
-    ENABLE_DIRECT_CONNECTIONS: bool
-    ENABLE_DIRECT_INTEGRATIONS: bool = False
     ENABLE_BASE_MODELS_CACHE: bool
 
 
@@ -329,8 +326,6 @@ class TerminalServerConnection(BaseModel):
     config: dict | None = None
 
     server_type: str | None = None
-    policy_id: str | None = None
-
     model_config = ConfigDict(extra='allow')
 
 
@@ -374,7 +369,7 @@ async def verify_terminal_server_connection(
     """
     Verify the connection to a terminal server by detecting its type.
 
-    Tries GET {url}/api/v1/policies (orchestrator) then GET {url}/api/config
+    Tries GET {url}/api/v1/terminals/templates (orchestrator) then GET {url}/api/config
     (plain terminal).  Returns ``{status: true, type: "orchestrator"|"terminal"}``.
     """
     if not ENABLE_TOOL_SERVERS:
@@ -393,10 +388,10 @@ async def verify_terminal_server_connection(
             trust_env=True,
             timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
         ) as session:
-            # Orchestrators expose a policies API; plain terminals don't.
+            # Orchestrators expose a templates API; plain terminals don't.
             try:
                 async with session.get(
-                    f'{base_url}/api/v1/policies', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+                    f'{base_url}/api/v1/terminals/templates', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
                 ) as resp:
                     if resp.ok:
                         return {'status': True, 'type': 'orchestrator'}
@@ -417,162 +412,6 @@ async def verify_terminal_server_connection(
         log.debug('Failed to connect to the terminal server: %s', e)
 
     raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
-
-
-class TerminalServerPolicyForm(BaseModel):
-    url: str
-    key: str | None = ''
-    auth_type: str | None = 'bearer'
-    policy_id: str
-    policy_data: dict | None = None
-
-
-class TerminalServerLifecycleForm(BaseModel):
-    url: str
-    key: str | None = ''
-    auth_type: str | None = 'bearer'
-    policy_id: str
-    lifecycle_data: dict | None = None
-
-
-class TerminalServerRefreshForm(BaseModel):
-    url: str
-    key: str | None = ''
-    auth_type: str | None = 'bearer'
-    user_id: str | None = None
-    policy_id: str | None = None
-    only_idle: bool = True
-    reset: bool = False
-
-
-@router.post('/terminal_servers/policy')
-async def put_terminal_server_policy(
-    request: Request, form_data: TerminalServerPolicyForm, user=Depends(get_admin_user)
-):
-    """Proxy a policy read or update to an orchestrator terminal server."""
-    if not ENABLE_TOOL_SERVERS:
-        raise HTTPException(status_code=403, detail='Tool servers are disabled')
-
-    base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
-
-    headers = {'Content-Type': 'application/json'}
-    if form_data.auth_type in ('bearer', 'session') and form_data.key:
-        headers.update(bearer_auth_header(form_data.key))
-
-    try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            policy_url = f'{base_url}/api/v1/policies/{form_data.policy_id}'
-            async with session.request(
-                'GET' if form_data.policy_data is None else 'PUT',
-                policy_url,
-                headers=headers,
-                json=form_data.policy_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as resp:
-                if resp.ok:
-                    return await resp.json()
-                detail = await resp.text()
-                raise HTTPException(status_code=resp.status, detail=detail)
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.debug('Failed to access policy on terminal server: %s', e)
-        raise HTTPException(status_code=400, detail='Failed to access policy on terminal server')
-
-
-@router.post('/terminal_servers/lifecycle')
-async def put_terminal_server_lifecycle(
-    request: Request, form_data: TerminalServerLifecycleForm, user=Depends(get_admin_user)
-):
-    """Proxy a lifecycle read or update to an orchestrator terminal server."""
-    if not ENABLE_TOOL_SERVERS:
-        raise HTTPException(status_code=403, detail='Tool servers are disabled')
-
-    base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
-
-    headers = {'Content-Type': 'application/json'}
-    if form_data.auth_type in ('bearer', 'session') and form_data.key:
-        headers.update(bearer_auth_header(form_data.key))
-
-    try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            lifecycle_url = f'{base_url}/api/v1/policies/{form_data.policy_id}/lifecycle'
-            async with session.request(
-                'GET' if form_data.lifecycle_data is None else 'PUT',
-                lifecycle_url,
-                headers=headers,
-                json=form_data.lifecycle_data,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as resp:
-                if resp.ok:
-                    return await resp.json()
-                detail = await resp.text()
-                raise HTTPException(status_code=resp.status, detail=detail)
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.debug('Failed to access lifecycle on terminal server: %s', e)
-        raise HTTPException(status_code=400, detail='Failed to access lifecycle on terminal server')
-
-
-@router.post('/terminal_servers/refresh')
-async def refresh_terminal_server_terminals(
-    request: Request, form_data: TerminalServerRefreshForm, user=Depends(get_admin_user)
-):
-    """
-    Proxy a terminal refresh request to an orchestrator terminal server.
-    """
-    if not ENABLE_TOOL_SERVERS:
-        raise HTTPException(status_code=403, detail='Tool servers are disabled')
-
-    base_url = (form_data.url or '').rstrip('/')
-    if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
-
-    headers = {'Content-Type': 'application/json'}
-    if form_data.auth_type in ('bearer', 'session') and form_data.key:
-        headers.update(bearer_auth_header(form_data.key))
-
-    body = {
-        'only_idle': form_data.only_idle,
-        'reset': form_data.reset,
-    }
-    if form_data.user_id:
-        body['user_id'] = form_data.user_id
-    if form_data.policy_id:
-        body['policy_id'] = form_data.policy_id
-
-    try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            refresh_url = f'{base_url}/api/v1/terminals/refresh'
-            async with session.post(
-                refresh_url,
-                headers=headers,
-                json=body,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as resp:
-                if resp.ok:
-                    return await resp.json()
-                detail = await resp.text()
-                raise HTTPException(status_code=resp.status, detail=detail)
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.debug('Failed to refresh terminals: %s', e)
-        raise HTTPException(status_code=400, detail='Failed to refresh terminals')
 
 
 @router.post('/tool_servers/verify')
@@ -597,6 +436,7 @@ async def verify_tool_servers_config(request: Request, form_data: ToolServerConn
                     async with aiohttp.ClientSession(
                         trust_env=True,
                         timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
+                        max_field_size=OAUTH_MAX_FIELD_SIZE,
                     ) as session:
                         async with session.get(
                             discovery_url, ssl=AIOHTTP_CLIENT_SESSION_SSL

@@ -91,18 +91,87 @@ async def _build_request(source: Request, user_id: str, *, internal: bool) -> Re
     return request
 
 
+async def queue_user_message(
+    request: Request, chat_id: str, user: UserModel, user_message: dict, parent_id: str
+) -> bool:
+    """Hold a message sent while its reply is running. The reply ends at its next step and this is answered next."""
+    if not user_message.get('id') or not await has_active_tasks(request.app.state.redis, chat_id):
+        return False
+    # Only a reply still being written holds messages. Checked before locking: the turn that answers
+    # held messages is started under this lock, and its own reply is already finished.
+    reply = await Chats.get_message_by_id_and_message_id(chat_id, parent_id)
+    if not reply or reply.get('role') != 'assistant' or reply.get('done') is not False:
+        return False
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        # Checked under the lock the reply's own cleanup takes, so the message can't be left unanswered.
+        if not await has_active_tasks(request.app.state.redis, chat_id):
+            return False
+        async with Chats._chat_transaction(chat_id) as (_, chat):
+            if not chat or chat.user_id != user.id:
+                return False
+            history = copy.deepcopy((chat.chat or {}).get('history') or {})
+            messages = history.get('messages') or {}
+            reply = messages.get(parent_id)
+            if not reply:
+                return False
+            message = {
+                'id': user_message['id'],
+                'parentId': parent_id,
+                'childrenIds': [],
+                'role': 'user',
+                'content': user_message.get('content', ''),
+                **({'files': user_message['files']} if user_message.get('files') else {}),
+                'model': reply.get('model'),
+                'user_id': user.id,
+                'user': {'id': user.id, 'name': user.name},
+                'meta': {'status': 'pending'},
+                'timestamp': int(time.time()),
+            }
+            messages[message['id']] = message
+            reply.setdefault('childrenIds', []).append(message['id'])
+            history['messages'] = messages
+            chat.chat = {**(chat.chat or {}), 'history': history}
+            chat.updated_at = int(time.time())
+        await ChatMessages.upsert_message(message['id'], chat_id, user.id, message)
+    return True
+
+
+def get_pending_run(metadata: dict, model_id: str | None = None) -> dict:
+    """The settings a turn started for pending messages takes from the turn before it."""
+    return {
+        'model_id': metadata.get('model_id') or model_id,
+        'session_id': metadata.get('session_id'),
+        'tool_ids': metadata.get('tool_ids') or [],
+        'skill_ids': metadata.get('skill_ids') or [],
+        'chat_context': metadata.get('chat_context'),
+        'filter_ids': metadata.get('filter_ids') or [],
+        'terminal_id': metadata.get('terminal_id'),
+        'features': metadata.get('features') or {},
+        'variables': metadata.get('variables') or {},
+    }
+
+
 async def process_pending_internal_messages(
     source_request: Request,
     parent_chat_id: str,
     user_id: str,
     run: dict,
+    reply_id: str | None = None,
 ) -> None:
+    """Answer pending messages once the chat is idle. With reply_id, answer only the messages queued under that
+    reply as soon as it is saved, without waiting for its follow-ups, title and other background work."""
     lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
-    while await has_active_tasks(source_request.app.state.redis, parent_chat_id):
-        await asyncio.sleep(0.25)
+    if reply_id is None:
+        while await has_active_tasks(source_request.app.state.redis, parent_chat_id):
+            await asyncio.sleep(0.25)
+    else:
+        # The turn started below asks whether its parent reply is still running, without taking this lock.
+        reply = await Chats.get_message_by_id_and_message_id(parent_chat_id, reply_id)
+        if not reply or reply.get('done') is not True:
+            return
 
     async with lock:
-        if await has_active_tasks(source_request.app.state.redis, parent_chat_id):
+        if reply_id is None and await has_active_tasks(source_request.app.state.redis, parent_chat_id):
             return
 
         user = await Users.get_user_by_id(user_id)
@@ -128,14 +197,28 @@ async def process_pending_internal_messages(
                         and meta.get('status') in (None, 'pending')
                     )
                     or (meta.get('internal') is True and meta.get('type') == 'timer')
+                    # The user's own message, held while its reply was running.
+                    or (meta.get('internal') is not True and meta.get('status') == 'pending')
                 )
             ]
+            if reply_id is not None:
+                pending = [
+                    message
+                    for message in pending
+                    if message.get('parentId') == reply_id and (message.get('meta') or {}).get('internal') is not True
+                ]
             if not pending:
                 return
 
             first = pending[0]
             first_meta = first.get('meta') or {}
-            kind = 'timer' if first_meta.get('internal') is True and first_meta.get('type') == 'timer' else 'subagent'
+            kind = (
+                'timer'
+                if first_meta.get('internal') is True and first_meta.get('type') == 'timer'
+                else 'queued'
+                if first_meta.get('internal') is not True
+                else 'subagent'
+            )
             parent_id = first.get('parentId')
             if kind == 'timer' and first_meta.get('timer_id'):
                 timer = await Chats.get_chat_by_id(first_meta['timer_id'])
@@ -145,6 +228,12 @@ async def process_pending_internal_messages(
             model_id = first.get('model') or run['model_id']
             if kind == 'timer':
                 batch = [first]
+            elif kind == 'queued':
+                batch = [
+                    message
+                    for message in pending
+                    if message.get('parentId') == parent_id and (message.get('meta') or {}).get('internal') is not True
+                ]
             else:
                 batch = [
                     message
@@ -168,6 +257,9 @@ async def process_pending_internal_messages(
                     combined_meta['timer_id'] = timer_ids[0]
                 elif timer_ids:
                     combined_meta['timer_ids'] = timer_ids
+            elif kind == 'queued':
+                # The user's own words, answered as an ordinary message.
+                combined_meta = {}
             else:
                 delegation_ids = [
                     message['meta']['delegation_id']
@@ -215,6 +307,11 @@ async def process_pending_internal_messages(
                 'meta': combined_meta,
                 'timestamp': int(time.time()),
             }
+            if kind == 'queued':
+                user_message.update(user_id=user.id, user={'id': user.id, 'name': user.name})
+                held_files = [file for message in batch for file in message.get('files') or []]
+                if held_files:
+                    user_message['files'] = held_files
             assistant_message = {
                 'id': assistant_message_id,
                 'parentId': user_message_id,
@@ -285,7 +382,16 @@ async def process_pending_internal_messages(
             'skill_ids': run.get('skill_ids') or [],
             'filter_ids': run.get('filter_ids') or [],
             'features': run.get('features') or {},
-            'files': run.get('files') or [],
+            'files': [
+                *(run.get('files') or []),
+                # Documents attached to held messages; their images reach the model with the message itself.
+                *[
+                    file
+                    for file in user_message.get('files') or []
+                    if file.get('type') in ('doc', 'text', 'note', 'chat', 'collection', 'folder')
+                    or (file.get('type') == 'file' and not is_raster_image_content_type(file.get('content_type')))
+                ],
+            ],
             'variables': run.get('variables') or {},
             'chat_variables': chat_context.get('chat_variables'),
         }
@@ -360,19 +466,15 @@ async def delegate(
         'tool_ids': copy.deepcopy(metadata.get('tool_ids') or []),
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
-        'tool_servers': [] if background else copy.deepcopy(metadata.get('tool_servers') or []),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
         'terminal_id': metadata.get('terminal_id'),
         'features': features,
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
-        'direct': bool(metadata.get('direct')),
         'folder_id': folder_id,
     }
     if not run.get('model_id'):
         return 'Error: model context is required.'
-    if run.get('direct'):
-        return 'Error: sub-agents are unavailable for direct connections.'
     if model_id:
         available_models = await get_subagent_models(request, UserModel(**user_data), metadata.get('model') or {})
         available_ids = [model['id'] for model in available_models]
@@ -537,8 +639,6 @@ async def delegate(
             }
             if run.get('terminal_id'):
                 form_data['terminal_id'] = run['terminal_id']
-            if run.get('tool_servers'):
-                form_data['tool_servers'] = run['tool_servers']
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
             message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
             if not message:
@@ -667,23 +767,24 @@ async def delegate(
                 updated_history = updated_chat.setdefault('history', {})
                 updated_messages = updated_history.setdefault('messages', {})
                 parent_message = updated_messages.get(parent_message_id)
-                done_assistants = [
+                is_active = await has_active_tasks(request.app.state.redis, parent_chat_id)
+                assistants = [
                     message
                     for message_id, message in updated_messages.items()
                     if message.get('role') == 'assistant'
-                    and message.get('done') is not False
+                    and (is_active or message.get('done') is not False)
                     and (
                         parent_message is None
                         or any(entry is parent_message for entry in get_message_list(updated_messages, message_id))
                     )
                 ]
                 result_parent_id = (
-                    max(done_assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                    if done_assistants
+                    max(assistants, key=lambda message: message.get('timestamp', 0)).get('id')
+                    if assistants
                     else parent_message_id
                 )
                 pending_message['parentId'] = result_parent_id
-                if await has_active_tasks(request.app.state.redis, parent_chat_id):
+                if is_active:
                     pending_message['meta']['status'] = 'pending'
                 updated_messages[pending_message_id] = pending_message
                 if result_parent_id and result_parent_id in updated_messages:

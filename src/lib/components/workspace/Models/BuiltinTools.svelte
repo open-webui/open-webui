@@ -10,6 +10,10 @@
 
 	let toolLabels;
 	$: toolLabels = {
+		visualizations: {
+			label: $i18n.t('settings.admin.models.builtinTools.visualizations.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.visualizations.description')
+		},
 		time: {
 			label: $i18n.t('settings.admin.models.builtinTools.time.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.time.description')
@@ -107,11 +111,13 @@
 	export let builtinTools: Record<string, boolean> = {};
 	export let capabilities: Record<string, boolean> = {};
 	export let disabled = false;
-	$: enabledTools = allTools.filter((key) => builtinTools[key] !== false);
+	$: enabledTools = allTools.filter((key) => builtinTools[key] ?? key !== 'visualizations');
 
 	const setBuiltinTool = (tool: keyof typeof toolLabels, checked: boolean) => {
 		builtinTools = { ...builtinTools };
-		if (checked) {
+		if (tool === 'visualizations') {
+			builtinTools[tool] = checked;
+		} else if (checked) {
 			delete builtinTools[tool];
 		} else {
 			builtinTools[tool] = false;
@@ -153,7 +159,7 @@
 				<ModelSettingToggle
 					label={toolLabels[key].label}
 					description={toolLabels[key].description}
-					checked={builtinTools[key] !== false}
+					checked={builtinTools[key] ?? key !== 'visualizations'}
 					{disabled}
 					on:change={(e) => setBuiltinTool(key, e.detail)}
 				/>

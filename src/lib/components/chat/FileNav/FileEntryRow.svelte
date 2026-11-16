@@ -3,6 +3,8 @@
 </script>
 
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget | null = null;
 	import { toast } from 'svelte-sonner';
 	import { LinkPreview } from 'bits-ui';
 	import { mobile, settings } from '$lib/stores';
@@ -93,8 +95,6 @@
 	export let expanded = false;
 	export let loadingChildren = false;
 	export let folderContentsVersion = 0;
-	export let terminalUrl: string = '';
-	export let terminalKey: string = '';
 	export let terminalSessionId: string | undefined = undefined;
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
@@ -191,7 +191,7 @@
 	const closeHoverPreview = () => (openPreview = false);
 	$: hoverDisabled =
 		entry.type !== 'file' ||
-		!terminalUrl ||
+		!target?.baseUrl ||
 		$mobile ||
 		renaming ||
 		menuOpen ||
@@ -219,17 +219,15 @@
 				: $i18n.t('{{count}} items', { count: folderItemCount });
 	const observeFolderContents = (node: Element) => {
 		folderItemCount = null;
-		if (!terminalUrl) return;
+		if (!target?.baseUrl) return;
 		let disposed = false;
-		const url = terminalUrl;
-		const key = terminalKey;
-		const session = terminalSessionId;
+		const capturedTarget = target;
 		const path = directoryPath;
 		const observer = new IntersectionObserver((observations) => {
 			if (!observations.some((observation) => observation.isIntersecting)) return;
 			observer.disconnect();
 			// Only inspect visible folders; failed reads leave their contents unknown.
-			void listFiles(url, key, path, session).then((result) => {
+			void listFiles(capturedTarget!, path).then((result) => {
 				if (!disposed && result)
 					folderItemCount = result.entries.filter(
 						(item) => showHidden || !item.name.startsWith('.')
@@ -637,13 +635,11 @@
 						{#if viewMode === 'list'}
 							<FileTypeIcon name={entry.name} type={entry.type} size={14} />
 						{:else}
-							{#key JSON.stringify( [terminalUrl, terminalKey, terminalSessionId, entryPath, entry.modified, entry.size] )}
+							{#key JSON.stringify( [target?.baseUrl, target?.key, terminalSessionId, entryPath, entry.modified, entry.size] )}
 								<FileGridIcon
 									{entry}
 									path={entryPath}
-									{terminalUrl}
-									{terminalKey}
-									sessionId={terminalSessionId}
+									{target}
 									itemCount={folderItemCount}
 								/>
 							{/key}
@@ -724,7 +720,7 @@
 									>{formatRelativeTime(entryDate)}</span
 								>
 							{/if}
-							{#if terminalUrl}
+							{#if target?.baseUrl}
 								{#key folderContentsVersion}
 									<span use:observeFolderContents class="text-xs text-gray-400 shrink-0"
 										>{folderCountLabel}</span
@@ -735,15 +731,14 @@
 					</button>
 				{/snippet}
 			</LinkPreview.Trigger>
-			{#if openPreview}
-				{#key JSON.stringify( [terminalUrl, terminalKey, terminalSessionId, entryPath, entry.modified, entry.size] )}
+			{#if openPreview && target}
+				{#key JSON.stringify( [target?.baseUrl, target?.key, terminalSessionId, entryPath, entry.modified, entry.size] )}
 					{#await import('./FileHoverPreview.svelte') then { default: FileHoverPreview }}
 						<FileHoverPreview
 							{entry}
 							sideOffset={viewMode === 'grid' ? 4 : 12}
 							path={entryPath}
-							{terminalUrl}
-							{terminalKey}
+							{target}
 							sessionId={terminalSessionId}
 						/>
 					{/await}

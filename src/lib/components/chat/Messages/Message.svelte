@@ -43,13 +43,14 @@
 	export let forkHandler: Function | null = null;
 	export let triggerScroll;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
 	$: isCurrentTurn =
@@ -61,6 +62,9 @@
 	const isWebKit =
 		navigator.vendor === 'Apple Computer, Inc.' ||
 		/^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+	// Firefox scroll anchoring ignores content-visibility height changes, so scrolling up jumps
+	const isFirefox = /firefox/i.test(navigator.userAgent);
 </script>
 
 <div
@@ -68,12 +72,11 @@
 	class="flex flex-col justify-between px-3.5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
-	class:message-virtualized={!isWebKit && !isCurrentTurn}
+	class:message-virtualized={!isWebKit && !isFirefox && !isCurrentTurn}
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
-				{selectedModels}
 				{user}
 				{chatId}
 				{history}
@@ -91,7 +94,7 @@
 				{deleteMessage}
 				{allowDelete}
 				{readOnly}
-				{shareMode}
+				{writeAccess}
 				{compactPreview}
 				{editCodeBlock}
 				{topPadding}
@@ -127,7 +130,8 @@
 				{editCodeBlock}
 				{topPadding}
 				{onInsertToNote}
-				{shareMode}
+				{onOpenArtifacts}
+				{writeAccess}
 			/>
 		{:else}
 			{#key messageId}
@@ -159,7 +163,8 @@
 					{editCodeBlock}
 					{topPadding}
 					{onInsertToNote}
-					{shareMode}
+					{onOpenArtifacts}
+					{writeAccess}
 				/>
 			{/key}
 		{/if}

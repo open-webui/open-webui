@@ -13,7 +13,7 @@ from open_webui.routers.ollama import (
     embed as ollama_embed,
 )
 from open_webui.routers.openai import embeddings as openai_embeddings
-from open_webui.utils.models import check_model_access
+from open_webui.utils.models import check_model_access, add_tether_model
 from open_webui.utils.payload import convert_embed_payload_openai_to_ollama
 from open_webui.utils.response import convert_embedding_response_ollama_to_openai
 
@@ -52,13 +52,7 @@ async def generate_embeddings(
                 **request.state.metadata,
             }
 
-    # If "direct" flag present, use only that model
-    if getattr(request.state, 'direct', False) and hasattr(request.state, 'model'):
-        models = {
-            request.state.model['id']: request.state.model,
-        }
-    else:
-        models = request.app.state.MODELS
+    models = await add_tether_model(request, user, form_data.get('model'))
 
     model_id = form_data.get('model')
     if model_id not in models:
@@ -66,9 +60,8 @@ async def generate_embeddings(
     model = models[model_id]
 
     # Access filtering
-    if not getattr(request.state, 'direct', False):
-        if not bypass_filter and user.role == 'user':
-            await check_model_access(user, model)
+    if not bypass_filter and user.role == 'user':
+        await check_model_access(user, model)
 
     # Ollama backend — use /api/embed which supports batch input natively
     if model.get('owned_by') == 'ollama':

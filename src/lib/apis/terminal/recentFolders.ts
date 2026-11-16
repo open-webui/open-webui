@@ -2,7 +2,7 @@ import {
 	joinTerminalPath,
 	terminalRequest,
 	TerminalRequestError,
-	type TerminalConnection,
+	type TerminalTarget,
 	type TerminalFileList
 } from './index';
 import { computeFileHash } from '$lib/utils/hash';
@@ -14,8 +14,7 @@ const historyDirectory = (home: string, userId: string) => {
 };
 
 export async function loadRecentFolders(
-	connection: TerminalConnection,
-	chatId: string | null,
+	target: TerminalTarget,
 	home: string,
 	userId: string
 ): Promise<string[]> {
@@ -23,8 +22,7 @@ export async function loadRecentFolders(
 	let listing: TerminalFileList;
 	try {
 		listing = await terminalRequest(
-			connection,
-			chatId,
+			target,
 			`/files/list?directory=${encodeURIComponent(directory)}`
 		);
 	} catch (error) {
@@ -39,8 +37,7 @@ export async function loadRecentFolders(
 		entries.map(async (entry) => {
 			try {
 				const result = await terminalRequest<{ content: string }>(
-					connection,
-					chatId,
+					target,
 					`/files/read?path=${encodeURIComponent(joinTerminalPath(directory, entry.name))}`
 				);
 				const record = JSON.parse(result.content);
@@ -60,8 +57,7 @@ export async function loadRecentFolders(
 }
 
 export async function rememberRecentFolder(
-	connection: TerminalConnection,
-	chatId: string | null,
+	target: TerminalTarget,
 	home: string,
 	userId: string,
 	path: string
@@ -70,7 +66,7 @@ export async function rememberRecentFolder(
 	const normalized = path.replace(/\/+$/, '') || '/';
 	const hash = await computeFileHash(new File([normalized], 'folder'));
 	// Separate records preserve simultaneous selections in different browsers.
-	await terminalRequest(connection, chatId, '/files/write', {
+	await terminalRequest(target, '/files/write', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({

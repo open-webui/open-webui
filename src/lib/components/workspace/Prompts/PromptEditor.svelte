@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext, onTabLeave } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -6,7 +9,7 @@
 	import { onMount, onDestroy, tick, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
-	import { goto, beforeNavigate } from '$app/navigation';
+	import { beforeNavigate } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
@@ -136,6 +139,7 @@
 			showDiscard = true;
 		} else action();
 	};
+	onTabLeave(() => !dirty || loading || window.confirm($i18n.t('Discard unsaved changes?')));
 	beforeNavigate(({ cancel }) => {
 		if (dirty && !loading && !window.confirm($i18n.t('Discard unsaved changes?'))) cancel();
 	});

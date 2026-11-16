@@ -52,16 +52,7 @@
 		if (res) {
 			toast.success($i18n.t('Function updated successfully'));
 			functions.set(await getFunctions(localStorage.token));
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null,
-					false,
-					true
-				)
-			);
+			models.set(await getModels(localStorage.token, false, true));
 		}
 		return res;
 	};
@@ -98,16 +89,7 @@
 			version_id={func.version_id}
 			onProduction={async () => {
 				functions.set(await getFunctions(localStorage.token));
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections
-							? ($settings?.directConnections ?? null)
-							: null,
-						false,
-						true
-					)
-				);
+				models.set(await getModels(localStorage.token, false, true));
 			}}
 			onSave={saveHandler}
 		/>

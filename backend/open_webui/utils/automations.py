@@ -33,6 +33,7 @@ from open_webui.models.automations import AutomationModel, AutomationRuns, Autom
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
+from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.models.messages import MessageForm
 from open_webui.models.users import Users
 from open_webui.utils.auth import create_token
@@ -205,10 +206,19 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
         if is_agent:
             raise HTTPException(400, 'Select a terminal for the agent.')
         return
-    metadata = {
-        'terminal_id': terminal['server_id'],
-        'automation_id': automation_id or f'preview:{user.id}',
-    }
+    if terminal['server_id'].startswith('template:'):
+        from open_webui.utils.terminals import template_connection, require_model_access
+
+        _, template = await template_connection(user, terminal['server_id'])
+        scope = (template.get('data') or {}).get('scope')
+        if (data.get('target') or {}).get('type') == 'channel' and (is_agent or scope == 'chat'):
+            raise HTTPException(400, 'This terminal requires a chat destination.')
+        if scope == 'model':
+            await require_model_access(user, model_id, terminal['server_id'], request)
+        return
+    metadata = {'terminal_id': terminal['server_id'], 'model_id': model_id}
+    if automation_id:
+        metadata['automation_id'] = automation_id
     if not await resolve_terminal_connection(request, user, metadata):
         raise HTTPException(400, 'The configured terminal is unavailable for this automation.')
     if is_agent:
@@ -301,7 +311,7 @@ async def _execute_channel_automation(
         await initialize_terminal_directory(
             request,
             user,
-            {'chat_id': form_data['chat_id'], 'automation_id': automation.id},
+            {'chat_id': form_data['chat_id'], 'automation_id': automation.id, 'model_id': model_id},
             terminal['server_id'],
             terminal.get('cwd'),
         )
@@ -384,8 +394,9 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _execute_channel_automation(app, automation, user, prompt, model_id, token)
             return
 
+        # Runs land in the automation's folder while its creator can still write there.
         folder_id = automation.folder_id
-        if folder_id and not await Folders.get_folder_by_id_and_user_id(folder_id, automation.user_id):
+        if folder_id and not await has_folder_write_access(automation.user_id, folder_id):
             await Automations.clear_folder_ids(automation.user_id, [folder_id])
             folder_id = None
 
@@ -432,6 +443,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
                     'meta': {'automation_id': automation.id},
                 },
             ),
+            internal_meta={'automation_id': automation.id},
         )
 
         if not chat:
@@ -491,7 +503,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await initialize_terminal_directory(
                 request,
                 user,
-                {'chat_id': chat.id, 'automation_id': automation.id},
+                {'chat_id': chat.id, 'automation_id': automation.id, 'model_id': model_id},
                 terminal['server_id'],
                 terminal.get('cwd'),
             )

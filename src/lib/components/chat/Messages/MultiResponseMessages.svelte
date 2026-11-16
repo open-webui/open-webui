@@ -2,7 +2,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile, models, settings, visibleControls } from '$lib/stores';
+	import { mobile, settings, visibleControls } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
@@ -24,6 +24,9 @@
 		formatMessageTimestampFull,
 		getDeepestChildId
 	} from '$lib/utils';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let chatId;
@@ -33,7 +36,7 @@
 
 	export let isLastMessage;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
@@ -61,6 +64,7 @@
 
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	const dispatch = createEventDispatcher();
 
@@ -314,7 +318,8 @@
 									{compactPreview}
 									{topPadding}
 									{onInsertToNote}
-									{shareMode}
+									{onOpenArtifacts}
+									{writeAccess}
 								/>
 							{/if}
 						{/key}
@@ -381,7 +386,8 @@
 										{editCodeBlock}
 										{topPadding}
 										{onInsertToNote}
-										{shareMode}
+										{onOpenArtifacts}
+										{writeAccess}
 									/>
 								{/if}
 							{/key}

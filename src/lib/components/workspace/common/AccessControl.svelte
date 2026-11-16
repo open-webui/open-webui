@@ -36,7 +36,7 @@
 	let saving = false;
 
 	export let accessRoles = ['read'];
-	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'empty', string>> =
+	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'write' | 'empty', string>> =
 		{};
 	export let accessGrants: AccessGrant[] | any = [];
 	export let accessControl: any = undefined;
@@ -629,8 +629,8 @@
 									}
 								}}
 							>
-								<option value="read">{$i18n.t('Read')}</option>
-								<option value="write">{$i18n.t('Write')}</option>
+								<option value="read">{labels.read ?? $i18n.t('Read')}</option>
+								<option value="write">{labels.write ?? $i18n.t('Write')}</option>
 							</select>
 						{:else}
 							<Badge type={'info'} content={labels.read ?? $i18n.t('Read')} />
@@ -682,8 +682,8 @@
 										}
 									}}
 								>
-									<option value="read">{$i18n.t('Read')}</option>
-									<option value="write">{$i18n.t('Write')}</option>
+									<option value="read">{labels.read ?? $i18n.t('Read')}</option>
+									<option value="write">{labels.write ?? $i18n.t('Write')}</option>
 								</select>
 							{:else}
 								<Badge type={'info'} content={labels.read ?? $i18n.t('Read')} />

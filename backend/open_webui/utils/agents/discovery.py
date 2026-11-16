@@ -1,8 +1,9 @@
 """Models exposed by the selected Open Terminal environment."""
 
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 
-from open_webui.utils.terminals import get_terminal_json
+from open_webui.utils.agents.session import model_id
+from open_webui.utils.terminals import MissingTerminalContext, get_terminal_json
 
 
 def model_controls(model):
@@ -13,7 +14,7 @@ def model_controls(model):
             'Reasoning effort',
             'supportedReasoningEfforts',
             'reasoningEffort',
-            'reasoningEffort',
+            'label',
             'defaultReasoningEffort',
         ),
         ('service_tier', 'Service tier', 'serviceTiers', 'id', 'name', 'defaultServiceTier'),
@@ -36,19 +37,22 @@ async def get_models(request, user, metadata, *, provider=None, cwd=None):
     terminal_id = metadata.get('terminal_id')
     if not terminal_id:
         return []
-    if not cwd:
-        directory = await get_terminal_json(request, user, metadata, '/files/cwd')
-        cwd = (directory or {}).get('cwd')
-    params = {'provider': provider} if provider else {}
-    if cwd:
-        params['cwd'] = cwd
-    path = '/agents' + ('?' + urlencode(params) if params else '')
-    catalog = await get_terminal_json(request, user, metadata, path)
+    try:
+        if not cwd:
+            directory = await get_terminal_json(request, user, metadata, '/files/cwd')
+            cwd = (directory or {}).get('cwd')
+        params = {'provider': provider} if provider else {}
+        if cwd:
+            params['cwd'] = cwd
+        path = '/agents' + ('?' + urlencode(params) if params else '')
+        catalog = await get_terminal_json(request, user, metadata, path)
+    except MissingTerminalContext:
+        return []
     if not catalog or catalog.get('protocol_version') != 1:
         return []
     models = [
         {
-            'id': f'agent:{quote(terminal_id, safe="")}:{agent["id"]}:{quote(model["id"], safe="")}',
+            'id': model_id({'terminal_id': terminal_id, 'provider': agent['id'], 'model': model['id']}),
             'name': f'{agent["id"]}/{model["id"]}',
             'owned_by': 'terminal',
             'object': 'model',

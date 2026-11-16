@@ -27,6 +27,9 @@ export function footnoteExtension() {
 					escapedText: escapedText
 				};
 			}
+		},
+		renderer(token: { escapedText: string }) {
+			return `<sup class="footnote-ref footnote-ref-text">${token.escapedText}</sup>`;
 		}
 	};
 }

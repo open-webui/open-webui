@@ -1,9 +1,8 @@
-import type { ListeningPort, TerminalConnection } from './index';
+import type { ListeningPort, TerminalTarget } from './index';
 import { openTerminalSocket } from './socket';
 
 function watchTerminalEvents(
-	connection: TerminalConnection,
-	chatId: string | null,
+	target: TerminalTarget,
 	subscription: { path?: string; ports?: boolean },
 	onMessage: (message: any) => void,
 	onError: (message: string) => void
@@ -13,7 +12,7 @@ function watchTerminalEvents(
 	let retry: ReturnType<typeof setTimeout>;
 	let retryDelay = 1000;
 	const connect = () => {
-		socket = openTerminalSocket(connection, chatId, '/events', (socket) => {
+		socket = openTerminalSocket(target, '/events', (socket) => {
 			socket.send(JSON.stringify({ type: 'subscribe', ...subscription }));
 		});
 		socket.onmessage = (event) => {
@@ -45,15 +44,13 @@ function watchTerminalEvents(
 }
 
 export function watchTerminalFiles(
-	connection: TerminalConnection,
-	chatId: string | null,
+	target: TerminalTarget,
 	directory: string,
 	onChange: () => void,
 	onError: (message: string) => void
 ) {
 	return watchTerminalEvents(
-		connection,
-		chatId,
+		target,
 		{ path: directory },
 		(message) => {
 			if (message.type === 'fs:ready' || message.type === 'fs:change') onChange();
@@ -63,14 +60,12 @@ export function watchTerminalFiles(
 }
 
 export function watchTerminalPorts(
-	connection: TerminalConnection,
-	chatId: string | null,
+	target: TerminalTarget,
 	onPorts: (ports: ListeningPort[]) => void,
 	onError: (message: string) => void
 ) {
 	return watchTerminalEvents(
-		connection,
-		chatId,
+		target,
 		{ ports: true },
 		(message) => {
 			if (message.type === 'ports:change') onPorts(message.ports);

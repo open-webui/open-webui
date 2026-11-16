@@ -174,13 +174,13 @@ def _serialize_json(value: Any) -> bytes:
     return json.dumps(value, separators=(',', ':'), ensure_ascii=False).encode()
 
 
-def create_app_context_token(app: AppModel, purpose: str, data: dict, expires_in: int = 900) -> str:
+def create_app_context_token(app: AppModel, typ: str, data: dict, expires_in: int = 900) -> str:
     payload = base64.urlsafe_b64encode(
         _serialize_json(
             {
                 **data,
                 'app_id': app.id,
-                'purpose': purpose,
+                'typ': typ,
                 'exp': int(time.time()) + expires_in,
                 'nonce': str(uuid.uuid4()),
             }
@@ -190,7 +190,7 @@ def create_app_context_token(app: AppModel, purpose: str, data: dict, expires_in
     return payload + '.' + base64.urlsafe_b64encode(signature).decode()
 
 
-def decode_app_context_token(app: AppModel, purpose: str, token: str) -> dict:
+def decode_app_context_token(app: AppModel, typ: str, token: str) -> dict:
     try:
         payload, signature = token.split('.')
         decoded_signature = base64.b64decode(signature, altchars=b'-_', validate=True)
@@ -203,7 +203,7 @@ def decode_app_context_token(app: AppModel, purpose: str, token: str) -> dict:
         if not hmac.compare_digest(decoded_signature, _sign_app_context(app, payload)):
             raise ValueError('Invalid context signature')
         data = json.loads(decoded_payload)
-        if data['app_id'] != app.id or data['purpose'] != purpose or data['exp'] <= time.time():
+        if data['app_id'] != app.id or data['typ'] != typ or data['exp'] <= time.time():
             raise ValueError('Expired context')
         return data
     except Exception:
@@ -633,7 +633,7 @@ async def verify_app_event(form_data: AppTokenForm, app: AppModel, db: AsyncSess
     value = decode_app_context_token(app, 'event', form_data.token)
     await check_app_channel_membership(app, value['channel']['id'], db=db)
     require_scope(app, 'channels:messages:read')
-    return {k: v for k, v in value.items() if k not in ('purpose', 'exp', 'nonce')}
+    return {k: v for k, v in value.items() if k not in ('typ', 'exp', 'nonce')}
 
 
 async def get_app_channel_messages(

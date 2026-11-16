@@ -1,5 +1,7 @@
 import { get, readonly, writable } from 'svelte/store';
 import { getChatList, getPinnedChatList } from '$lib/apis/chats';
+import { markFolderChatsDirty, updateFolderChatLists } from './folderStates';
+import { renameChatTabs } from './chatViewStates';
 
 type ChatListItem = {
 	id: string;
@@ -62,7 +64,7 @@ export const refreshChatList = async (
 	return { accepted: true, allLoaded };
 };
 
-// The sidebar owns folder state. This bridge lets other components refresh it.
+// Retained data is updated even when no folder component is mounted.
 type FolderRefreshHandler = (folderId?: string | null, chat?: ChatListItem | null) => unknown;
 const folderRefreshHandlers = new Set<FolderRefreshHandler>();
 
@@ -77,7 +79,17 @@ export const refreshFolderChatLists = async (
 	folderId?: string | null,
 	chat?: ChatListItem | null
 ) => {
+	if (folderId !== null) {
+		if (folderId && chat) updateFolderChatLists(chat, folderId);
+		else markFolderChatsDirty(folderId);
+	}
 	await Promise.all([...folderRefreshHandlers].map((handler) => handler(folderId, chat)));
+};
+
+// Folder lists and open tabs keep their own copy of a chat's title.
+export const setChatTitle = (id: string, title: string) => {
+	updateFolderChatLists({ id, title });
+	renameChatTabs(id, title);
 };
 
 export const refreshSidebar = async (token: string = '') => {

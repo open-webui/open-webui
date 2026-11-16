@@ -9,6 +9,7 @@ import { type Writable, derived, get, writable } from 'svelte/store';
 import type { CommentTarget } from '$lib/apis/comments';
 import type { ModelConfig } from '$lib/apis';
 import type { Banner } from '$lib/types';
+import type { FolderDetails } from './folderStates';
 import type { Socket } from 'socket.io-client';
 import type { AudioQueue, NotificationSoundStyle } from '$lib/utils/audio';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
@@ -77,7 +78,7 @@ export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);
 
-export const selectedFolder = writable(null);
+export const selectedFolder = writable<FolderDetails | null>(null);
 
 export const models: Writable<Model[]> = writable([]);
 
@@ -100,20 +101,11 @@ export type WorkspaceAction = {
 	visible?: boolean;
 };
 
-export const workspaceCounts: Writable<Record<WorkspaceSection, number | null>> = writable({
-	models: null,
-	knowledge: null,
-	prompts: null,
-	skills: null,
-	tools: null
-});
-export const workspaceActions: Writable<WorkspaceAction[]> = writable([]);
 export const adminUserCount: Writable<number | null> = writable(null);
 export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
-export const toolServers = writable([]);
 export const terminalServers: Writable<any[] | null> = writable(null);
 
 // Persistent Pyodide worker for code interpreter FS
@@ -181,14 +173,13 @@ export const showChangelog = writable(false);
 export const showTabs = writable<
 	| boolean
 	| 'comments'
-	| 'side'
+	| 'chat'
 	| 'voice'
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
-export const showOverview = writable(false);
-export const showArtifacts = writable(false);
-export const showCallOverlay = writable(false);
+/** A voice call is open in the main chat's voice tab. */
+export const voiceCall = writable(false);
 export const showFileNav = writable<{
 	terminalId: string;
 	directory: string;
@@ -199,14 +190,12 @@ export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(nul
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedTerminalId: Writable<string | null> = writable(null);
 
-export const artifactCode = writable(null);
-export const artifactContents = writable(null);
-
 export const embed = writable(null);
 
-export const temporaryChatEnabled = writable(false);
-export const openSideChatIds = writable<Set<string>>(new Set());
-export const sideChatRequest = writable<{ parentId: string; prompt: string } | null>(null);
+/** Whether the main chat is temporary, or for a new chat, whether it starts as one. */
+export const temporaryChat = writable(false);
+export const openEmbeddedChatIds = writable<Set<string>>(new Set());
+export const chatTabRequest = writable<{ parentChatId: string; prompt: string } | null>(null);
 
 export type QueryData = {
 	query: string;
@@ -229,7 +218,8 @@ export interface AgentModel extends BaseModel {
 	owned_by: 'terminal';
 	agent: {
 		terminal_id: string;
-		provider: 'codex' | 'claude-code' | 'cursor' | 'grok' | 'opencode' | 'cline' | 'gemini' | 'pi';
+		// Built-in ids such as 'codex' or 'claude-code', or 'acp-<id>' for agents configured in Open Terminal.
+		provider: string;
 		model: string;
 	};
 }
@@ -245,6 +235,9 @@ export interface OpenAIModel extends BaseModel {
 	owned_by: 'openai';
 	external: boolean;
 	source?: string;
+	// Set on the user's own connections, which the server reaches through their Tether.
+	owner_id?: string;
+	base_url?: string;
 }
 
 export interface OllamaModel extends BaseModel {
@@ -284,7 +277,7 @@ type OllamaModelDetails = {
 
 type Settings = {
 	pinnedModels?: string[];
-	toolServers?: never[];
+	temporaryChatByDefault?: boolean;
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;
@@ -326,7 +319,6 @@ type Settings = {
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
 	terminalFileDisplay?: 'sidebar' | 'inline';
-	directConnections?: null;
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -456,13 +448,13 @@ type Config = {
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
 		enable_terminal_servers?: boolean;
+		// The user's own terminals, models and tool servers come from their Tether.
+		tether?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;
 		enable_title_generation: boolean;
 		enable_follow_up_generation: boolean;
 		enable_tags_generation: boolean;
-		enable_direct_connections: boolean;
-		enable_direct_integrations?: boolean;
 		enable_version_update_check: boolean;
 		enable_pyodide_file_persistence?: boolean;
 		folder_max_file_count?: number;

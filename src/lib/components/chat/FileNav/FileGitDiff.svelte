@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalConnection } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/terminal';
 	import { gitRequest, type GitFile } from '$lib/apis/terminal/git';
-	import GitDiff from '../ChatTabs/GitDiff.svelte';
+	import GitDiff from '../Tabs/GitDiff.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 
-	export let connection: TerminalConnection | null;
-	export let chatId: string | null;
+	export let target: TerminalTarget | null;
+
 	export let root: string;
 	export let file: GitFile | null;
 	export let active = true;
@@ -20,8 +20,7 @@
 	let generation = 0;
 
 	const load = async (
-		server: TerminalConnection | null,
-		session: string | null,
+		server: TerminalTarget | null,
 		directory: string,
 		entry: GitFile | null,
 		enabled: boolean,
@@ -38,7 +37,7 @@
 		}
 		loading = true;
 		try {
-			const result = await gitRequest<{ diff: string }>(server, session, directory, 'diff', {
+			const result = await gitRequest<{ diff: string }>(server, directory, 'diff', {
 				file: entry.path,
 				staged: String(entry.staged && !entry.unstaged),
 				untracked: String(entry.status === 'untracked'),
@@ -54,7 +53,7 @@
 			if (current === generation) loading = false;
 		}
 	};
-	$: void load(connection, chatId, root, file, active, hideWhitespace, resourceVersion);
+	$: void load(target, root, file, active, hideWhitespace, resourceVersion);
 	onDestroy(() => {
 		++generation;
 	});
@@ -73,7 +72,7 @@
 			{error}<button
 				class="underline"
 				on:click={() =>
-					load(connection, chatId, root, file, active, hideWhitespace, resourceVersion)}
+					load(target, root, file, active, hideWhitespace, resourceVersion)}
 				>{$i18n.t('Retry')}</button
 			>
 		</div>

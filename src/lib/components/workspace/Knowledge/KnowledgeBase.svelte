@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import Comments from '$lib/components/comments/Comments.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
 	let comments: CommentsRequest | null = null;
@@ -14,8 +17,6 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 	import { config, user, settings } from '$lib/stores';
 
 	import { uploadFile } from '$lib/apis/files';
@@ -81,7 +82,9 @@
 		meta?: any;
 	};
 
-	let id = null;
+	export let id = '';
+	let collection: HTMLDivElement;
+	let fileInput: HTMLInputElement;
 	let knowledge: Knowledge | null = null;
 	let isExternalKnowledge = false;
 
@@ -109,7 +112,7 @@
 		if (type === 'directory') uploadDirectoryHandler();
 		else if (type === 'web') showAddWebpageModal = true;
 		else if (type === 'text') showAddTextContentModal = true;
-		else document.getElementById('files-input')?.click();
+		else fileInput?.click();
 	};
 
 	const externalTestHandler = async () => {
@@ -859,7 +862,6 @@
 	};
 
 	onMount(async () => {
-		id = $page.params.id;
 		const res = await getKnowledgeById(localStorage.token, id).catch((e) => {
 			toast.error(`${e}`);
 			return null;
@@ -874,7 +876,7 @@
 			goto('/workspace/knowledge');
 		}
 
-		const dropZone = document.querySelector('body');
+		const dropZone = collection;
 		dropZone?.addEventListener('dragover', onDragOver);
 		dropZone?.addEventListener('drop', onDrop);
 		dropZone?.addEventListener('dragleave', onDragLeave);
@@ -882,7 +884,7 @@
 
 	onDestroy(() => {
 		clearTimeout(debounceTimeout);
-		const dropZone = document.querySelector('body');
+		const dropZone = collection;
 		dropZone?.removeEventListener('dragover', onDragOver);
 		dropZone?.removeEventListener('drop', onDrop);
 		dropZone?.removeEventListener('dragleave', onDragLeave);
@@ -921,6 +923,7 @@
 
 <input
 	id="files-input"
+	bind:this={fileInput}
 	bind:files={inputFiles}
 	type="file"
 	multiple
@@ -930,7 +933,7 @@
 			await uploadFiles(Array.from(inputFiles));
 
 			inputFiles = null;
-			const fileInputElement = document.getElementById('files-input');
+			const fileInputElement = fileInput;
 
 			if (fileInputElement) {
 				fileInputElement.value = '';
@@ -942,7 +945,11 @@
 />
 
 <Comments bind:view={comments} resourceType="knowledge">
-	<div class="flex h-full min-h-0 w-full flex-col overflow-hidden" id="collection-container">
+	<div
+		class="flex h-full min-h-0 w-full flex-col overflow-hidden"
+		id="collection-container"
+		bind:this={collection}
+	>
 		{#if id && knowledge}
 			<AccessControlModal
 				bind:show={showAccessControlModal}

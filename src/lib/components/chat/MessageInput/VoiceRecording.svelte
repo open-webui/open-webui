@@ -8,8 +8,6 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	import dayjs from 'dayjs';
-	import LocalizedFormat from 'dayjs/plugin/localizedFormat';
-	dayjs.extend(LocalizedFormat);
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -177,10 +175,7 @@
 		// Create a blob from the audio chunks
 
 		await tick();
-		const file = blobToFile(
-			audioBlob,
-			`Recording-${dayjs().locale($i18n.language).format('L LT')}.${ext}`
-		);
+		const file = blobToFile(audioBlob, `Recording-${dayjs().format('YYYY-MM-DD HH-mm-ss')}.${ext}`);
 
 		if (transcribe) {
 			if ($config.audio.stt.engine === 'web' || ($settings?.audio?.stt?.engine ?? '') === 'web') {
@@ -435,8 +430,9 @@
 	let maxVisibleItems = 300;
 	$: maxVisibleItems = Math.floor(containerWidth / 5); // 2px width + 0.5px gap
 
+	let containerElement: HTMLDivElement;
 	const handleKeyDown = (e) => {
-		if (recording && e.key === 'Escape') {
+		if (recording && e.key === 'Escape' && containerElement?.getClientRects().length) {
 			e.preventDefault();
 			cancelRecording();
 			onCancel();
@@ -480,6 +476,7 @@
 </script>
 
 <div
+	bind:this={containerElement}
 	bind:clientWidth={containerWidth}
 	class="{loading
 		? ' bg-gray-100/50 dark:bg-gray-850/50'

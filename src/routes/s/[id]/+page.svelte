@@ -101,12 +101,7 @@
 
 		await models.set(
 			token
-				? await getModels(
-						token,
-						$config?.features?.enable_direct_connections
-							? ($settings?.directConnections ?? null)
-							: null
-					).catch((error) => {
+				? await getModels(token).catch((error) => {
 						console.error(error);
 						return [];
 					})
@@ -115,7 +110,7 @@
 		await chatId.set(shareId);
 		chat = await getChatByShareId(token, shareId).catch(() => null);
 
-		if (chat?.chat?.share_mode === 'continue' && chat.id !== shareId) {
+		if (chat?.write_access && chat.id !== shareId) {
 			await goto(`/c/${chat.id}${$page.url.search}`, { replaceState: true });
 			return true;
 		}

@@ -13,6 +13,8 @@ export type InboxItem = {
 	preview: string;
 	data: {
 		message?: string;
+		message_id?: string;
+		model_name?: string;
 		parent_id?: string;
 		start_at?: number;
 		target_type?: string;
@@ -48,6 +50,7 @@ export async function inboxRequest<T>(path: string, method = 'GET'): Promise<T> 
 // t('{{name}} commented')
 // t('{{name}} replied')
 // t('{{name}} mentioned you')
+// t('{{modelName}} mentioned you')
 // t('Upcoming event')
 // t('Automation failed')
 // t('Announcement')
@@ -56,6 +59,7 @@ export const inboxLabels: Record<string, string> = {
 	'comment.replied': '{{name}} replied',
 	'comment.mentioned': '{{name}} mentioned you',
 	'channel.mentioned': '{{name}} mentioned you',
+	'chat.mentioned': '{{modelName}} mentioned you',
 	'channel.replied': '{{name}} replied',
 	'calendar.alert': 'Upcoming event',
 	'automation.run_failed': 'Automation failed',

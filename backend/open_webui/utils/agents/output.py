@@ -8,12 +8,16 @@ from uuid import uuid4
 
 from open_webui.models.chats import Chats
 from open_webui.socket.main import get_event_emitter
+from open_webui.tasks import clear_response_stream, save_response_stream
 from open_webui.utils.auth import create_token
+from open_webui.utils.misc import sanitize_data_for_db
+from open_webui.utils.redis import get_redis_client
 from open_webui.utils.tool_permissions import requires_tool_approval
+from redis.asyncio import Redis
 
 
 class Output:
-    """Use WebUI's persisted output cards; provider runners retain native item data."""
+    """Use WebUI's persisted output cards; each item keeps the provider's own event in provider_data."""
 
     def __init__(self, metadata, user, check_connection, form_data):
         self.metadata, self.user = metadata, user
@@ -26,19 +30,16 @@ class Output:
         self.emitter = None
         self.last_flush = 0
         self.last_save = 0
-        self.save_task = None
+        self.redis: Redis | None = get_redis_client(async_mode=True)
         self.lock = asyncio.Lock()
 
     async def flush(self, done=False, force=False, persist=False):
-        if self.save_task and self.save_task.done():
-            self.save_task.result()
         if not force and not done and time.monotonic() - self.last_flush < 0.05:
             return
         if persist or done:
             # Approval cards must exist in the DB before users can answer them.
-            if self.save_task:
-                await asyncio.shield(self.save_task)
             await self.save(done=done)
+            await clear_response_stream(self.redis, self.metadata.get('task_id'))
         if self.emitter is None:
             self.emitter = await get_event_emitter(self.metadata, update_db=False)
         await self.emitter(
@@ -54,8 +55,14 @@ class Output:
         )
         self.last_flush = time.monotonic()
         if not (persist or done) and time.monotonic() - self.last_save >= 1:
-            if self.save_task is None or self.save_task.done():
-                self.save_task = asyncio.create_task(self.save())
+            await save_response_stream(
+                self.redis,
+                self.metadata.get('task_id'),
+                self.metadata['chat_id'],
+                self.metadata['message_id'],
+                sanitize_data_for_db(self.items),
+            )
+            self.last_save = time.monotonic()
 
     async def save(self, done=False):
         async with self.lock:
@@ -75,8 +82,9 @@ class Output:
                 if self.usage is not None:
                     message['usage'] = self.usage
                 meta = dict(message.get('meta') or {})
+                meta['model_name'] = f'{self.state["provider"]}/{self.state["model"]}'
                 meta['agent'] = create_token(
-                    {'purpose': 'terminal-agent', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
+                    {'typ': 'agent_session', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
                 )
                 if done:
                     meta['response_ended_at'] = time.time()
@@ -102,13 +110,16 @@ class Output:
             self.content += text
         await self.flush()
 
-    async def tool(self, call_id, name, arguments, native=None, result=None, done=False):
+    async def tool(self, call_id, name, arguments, provider_data=None, result=None, done=False):
         item = next((i for i in self.items if i.get('call_id') == call_id and i['type'] == 'function_call'), None)
         if item is None:
             item = {'type': 'function_call', 'id': call_id, 'call_id': call_id}
             self.items.append(item)
         item.update(
-            name=name, arguments=json.dumps(arguments), status='completed' if done else 'in_progress', native=native
+            name=name,
+            arguments=json.dumps(arguments),
+            status='completed' if done else 'in_progress',
+            provider_data=provider_data,
         )
         if done:
             self.items[:] = [
@@ -127,7 +138,7 @@ class Output:
             )
         await self.flush(force=True)
 
-    async def approve(self, name, arguments, native, timeout=None):
+    async def approve(self, name, arguments, provider_data, timeout=None):
         call_id = f'approval_{uuid4().hex}'
         item = {
             'type': 'function_call',
@@ -136,7 +147,7 @@ class Output:
             'name': name,
             'arguments': json.dumps(arguments),
             'status': 'pending',
-            'native': native,
+            'provider_data': provider_data,
         }
         resolution = None
         # Questions need an answer even when tool execution has Full access.
@@ -156,6 +167,7 @@ class Output:
         ):
             resolution = {'action': 'approve'}
         self.items.append(item)
+        pending = resolution is None
         if resolution is None:
             await self.flush(force=True, persist=True)
         deadline = time.monotonic() + timeout if timeout is not None else None
@@ -184,6 +196,6 @@ class Output:
                         'status': 'completed',
                     }
                 )
-                await self.flush(force=True, persist=True)
+                await self.flush(force=True, persist=pending)
                 return resolution
             await asyncio.sleep(0.5)

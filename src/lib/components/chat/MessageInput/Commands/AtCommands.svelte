@@ -1,17 +1,10 @@
 <script lang="ts">
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
+	import type { Readable } from 'svelte/store';
 
-	import {
-		chatId as activeChatId,
-		folders,
-		models,
-		selectedTerminalId,
-		settings,
-		terminalServers,
-		temporaryChatEnabled,
-		user
-	} from '$lib/stores';
+	import { folders, settings, terminalServers, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
@@ -30,10 +23,15 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
 	import { toast } from 'svelte-sonner';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId: activeChatId, models, temporary } = getChatContext();
 
 	const i18n = getContext<any>('i18n');
 
 	export let query = '';
+	export let selectedTerminalId: Readable<string | null>;
+	export let modelId: string | null = null;
 	export let onSelect: (e: any) => void = () => {};
 	export let fileUploadEnabled: boolean = true;
 
@@ -121,10 +119,7 @@
 		getKnowledgeFileItems(signal);
 	};
 
-	const getFilesystemItems = async (
-		terminal: { url: string; key: string } | null,
-		signal: AbortSignal
-	) => {
+	const getFilesystemItems = async (terminal: TerminalTarget | null, signal: AbortSignal) => {
 		if (!terminal) {
 			filesystemItems = [];
 			return;
@@ -133,13 +128,11 @@
 		const terminalId = $selectedTerminalId;
 		const sessionId = $activeChatId;
 		const res = await searchFiles(
-			terminal.url,
-			terminal.key,
+			terminal,
 			query,
 			'.',
 			20,
 			'any',
-			sessionId || undefined,
 			localStorage.getItem('fileNav:showHidden') === 'true',
 			signal
 		).catch(() => null);
@@ -153,31 +146,20 @@
 		}));
 	};
 
-	const chatContext = (terminal: any) => terminal?.contexts?.chat ?? {};
-
-	const getSelectedTerminal = (): { url: string; key: string } | null => {
-		if (!$selectedTerminalId) return null;
-
-		const systemTerminal = ($terminalServers ?? []).find(
-			(t) => t.id && t.id === $selectedTerminalId
+	const getSelectedTerminal = (): TerminalTarget | null => {
+		const target = resolveTerminalTarget(
+			$selectedTerminalId,
+			$terminalServers ?? [],
+			localStorage.token,
+			{ chatId: $activeChatId || null, modelId: modelId }
 		);
-		const systemChatContext = chatContext(systemTerminal);
-		if (systemTerminal) {
-			if (
-				systemChatContext === false ||
-				(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) &&
-					systemChatContext?.context_id === 'chat_id')
-			) {
-				return null;
-			}
-
-			return { url: systemTerminal.url, key: localStorage.token };
-		}
-
-		const directTerminal = ($settings?.terminalServers ?? []).find(
-			(t: any) => t.url === $selectedTerminalId && t.enabled
-		);
-		return directTerminal?.url ? { url: directTerminal.url, key: directTerminal.key ?? '' } : null;
+		if (
+			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope ===
+				'chat' &&
+			($temporary || isTemporaryChatId($activeChatId))
+		)
+			return null;
+		return target;
 	};
 
 	$: folderItems = (($folders ?? []) as any[])
@@ -287,7 +269,7 @@
 				{#if item?.type === 'folder'}
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}
-					{$i18n.t('Collections')}
+					{$i18n.t('Knowledge')}
 				{:else if item?.type === 'file'}
 					{$i18n.t('Files')}
 				{:else if item?.type === 'filesystem'}
@@ -320,7 +302,7 @@
 							: item?.type === 'file'
 								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
-									? $i18n.t('Collection')
+									? $i18n.t('Knowledge Base')
 									: item?.type === 'youtube'
 										? $i18n.t('YouTube')
 										: item?.type === 'web'

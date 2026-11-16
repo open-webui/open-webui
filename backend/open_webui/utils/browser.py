@@ -2,7 +2,9 @@ from fastapi import HTTPException
 from open_webui.utils.auth import create_token, decode_token, get_verified_user_by_id
 
 
-def browser_ticket(server_id, user_id, chat_id, session, headers=None, cookies=None):
+def create_browser_token(
+    server_id, user_id, instance_user_id, chat_id, session, headers=None, cookies=None, *, resource='browser'
+):
     from open_webui.utils.oauth import encrypt_data
 
     relay = encrypt_data(
@@ -13,25 +15,23 @@ def browser_ticket(server_id, user_id, chat_id, session, headers=None, cookies=N
     )
     return create_token(
         {
-            'purpose': 'terminal-browser',
+            'typ': 'browser_view',
             'server': server_id,
             'user': user_id,
+            'instance_user': instance_user_id,
             'chat': chat_id,
             'session': session['id'],
+            'resource': resource,
+            'model': (headers or {}).get('X-Terminal-Model-Id'),
             'capability': session['token'],
             'relay': relay,
         },
     )
 
 
-async def browser_access(server_id, sid, ticket):
-    data = decode_token(ticket)
-    if (
-        not data
-        or data.get('purpose') != 'terminal-browser'
-        or data.get('server') != server_id
-        or data.get('session') != sid
-    ):
+async def browser_access(server_id, sid, browser_token):
+    data = decode_token(browser_token)
+    if not data or data.get('typ') != 'browser_view' or data.get('server') != server_id or data.get('session') != sid:
         raise HTTPException(401, 'Browser session expired')
     user = await get_verified_user_by_id(data.get('user'))
     if user is None:

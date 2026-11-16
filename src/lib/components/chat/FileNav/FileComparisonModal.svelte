@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget;
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { readComparisonSource } from '$lib/apis/terminal';
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
@@ -12,9 +14,7 @@
 		{ name: string; path: string; size?: number },
 		{ name: string; path: string; size?: number }
 	];
-	export let baseUrl: string;
-	export let apiKey: string;
-	export let chatId: string | null;
+
 	export let onClose: () => void;
 
 	const i18n = getContext<any>('i18n');
@@ -24,7 +24,7 @@
 			: null;
 	// The caller keys this controller by its captured comparison session.
 	const sourceFiles = files.map((file) => ({ ...file }));
-	const connection = { baseUrl, apiKey, chatId };
+	const capturedTarget = target;
 	const documentComparison = sourceFiles.some(({ path }) =>
 		/\.(pdf|docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i.test(path)
 	);
@@ -54,11 +54,9 @@
 				sourceFiles.map(async (file) => {
 					try {
 						return await readComparisonSource(
-							connection.baseUrl,
-							connection.apiKey,
+							capturedTarget,
 							file.path,
 							request.signal,
-							connection.chatId ?? undefined,
 							file.size
 						);
 					} catch (cause) {
@@ -134,9 +132,7 @@
 				<div class="h-full min-h-0">
 					<FileCompare
 						paths={[sourceFiles[0].path, sourceFiles[1].path]}
-						baseUrl={connection.baseUrl}
-						apiKey={connection.apiKey}
-						chatId={connection.chatId}
+						{target}
 						onClose={close}
 					/>
 				</div>

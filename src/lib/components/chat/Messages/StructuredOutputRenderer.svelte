@@ -5,6 +5,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import ToolOutputFile from './ToolOutputFile.svelte';
+	import VisualizationToolCall from './VisualizationToolCall.svelte';
 	import { resolveChatMessageToolCall } from '$lib/apis/chats';
 	import { settings } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
@@ -132,6 +133,20 @@
 				{displayItem.text}
 			</div>
 		{/if}
+	{:else if displayItem.type === 'visualization'}
+		<VisualizationToolCall
+			call={displayItem.call}
+			result={displayItem.result}
+			{chatId}
+			{messageId}
+			messageDone={done}
+			{allowEmbeds}
+			{compactPreview}
+			resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
+			resolving={resolvingCallId === (displayItem.call.call_id ?? displayItem.call.id)}
+			onResolve={(approved) =>
+				resolveToolCall(displayItem.call.call_id ?? displayItem.call.id ?? '', approved)}
+		/>
 	{:else if displayItem.type === 'image'}
 		<Image src={displayItem.src} alt={$i18n.t('Generated Image')} />
 	{:else if displayItem.type === 'detail_group'}
@@ -151,6 +166,7 @@
 						<ToolCallDisplay
 							id={`${id}-${displayItem.id}-${detailIndex}-tool-call`}
 							attributes={detailToken.attributes}
+							view={detailToken.view ?? null}
 							resultContent={detailToken.text}
 							grouped={true}
 							resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
@@ -203,16 +219,24 @@
 		</ConsecutiveDetailsGroup>
 	{:else if displayItem.type === 'file'}
 		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
-			<ToolOutputFile item={displayItem.item} {chatId} />
+			<ToolOutputFile item={displayItem.item} {chatId} modelId={model?.id ?? null} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}
-		<ContextCompactionLabel summary={displayItem.summary} {compactPreview} />
+		<!-- A finished reply can't still be compacting; its run was stopped first. -->
+		{#if displayItem.status !== 'in_progress' || !done}
+			<ContextCompactionLabel
+				summary={displayItem.summary}
+				status={displayItem.status}
+				{compactPreview}
+			/>
+		{/if}
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}
 			<ToolCallDisplay
 				id={`${id}-${displayItem.id}-tool-call`}
 				attributes={detailToken.attributes}
+				view={detailToken.view ?? null}
 				resultContent={detailToken.text}
 				{allowEmbeds}
 				resolvable={!!chatId && !!messageId && (save || allowToolApproval)}

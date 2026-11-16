@@ -1,7 +1,9 @@
 <script lang="ts">
+	import type { TerminalTarget } from '$lib/apis/terminal';
+	export let target: TerminalTarget | null = null;
 	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
-	import { getContext, tick } from 'svelte';
-	import { downloadFileBlob } from '$lib/apis/terminal';
+	import { getContext, tick, onDestroy } from 'svelte';
+	import { downloadFileBlob, terminalRequest } from '$lib/apis/terminal';
 	import MarkdownFileEditor from './MarkdownFileEditor.svelte';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
@@ -36,8 +38,6 @@
 	export let gitBaseContent: string | null = null;
 
 	// Terminal connection for notebook execution
-	export let baseUrl: string = '';
-	export let apiKey: string = '';
 	export let chatId: string | null = null;
 	export let resourceVersion = 0;
 	export let onLocalLink: (path: string) => void = () => {};
@@ -137,12 +137,42 @@
 	$: csvDelimiter = getExt(selectedFile) === 'tsv' ? '\t' : ',';
 	$: isPptx = getExt(selectedFile) === 'pptx';
 
-	// For HTML files on system terminals (proxy URL), use path-based serving
-	// so the iframe can resolve relative CSS/JS/image references via cookie auth.
-	$: serveUrl =
-		isHtml && selectedFile && baseUrl && baseUrl.includes('/api/v1/terminals/')
-			? `${baseUrl}/files/serve/${selectedFile.replace(/^\//, '')}`
-			: null;
+	let serveUrl: string | null = null;
+	let previewError = '';
+	let previewPending = false;
+	let previewGeneration = 0;
+	const configurePreview = async (_key: string) => {
+		const generation = ++previewGeneration;
+		serveUrl = null;
+		previewError = '';
+		previewPending = false;
+		if (!isHtml || !selectedFile || !target?.system) return;
+		const path = selectedFile.replace(/^\//, '').split('/').map(encodeURIComponent).join('/');
+		if (!target.selector.startsWith('template:')) {
+			serveUrl = `${target.baseUrl}${target.context.chatId ? `/chats/${encodeURIComponent(target.context.chatId)}` : ''}/files/serve/${path}`;
+			return;
+		}
+		previewPending = true;
+		try {
+			const result = await terminalRequest<{ url: string }>(target, '/files/preview', {
+				method: 'POST'
+			});
+			if (generation === previewGeneration) serveUrl = result.url + path;
+		} catch (error) {
+			if (generation === previewGeneration) previewError = String(error);
+		} finally {
+			if (generation === previewGeneration) previewPending = false;
+		}
+	};
+	$: void configurePreview(
+		JSON.stringify([
+			isHtml,
+			selectedFile,
+			target?.baseUrl,
+			target?.context
+		])
+	);
+	onDestroy(() => previewGeneration++);
 	// Simple CSV parser that handles quoted fields
 	const parseCsv = (text: string, delimiter: string): string[][] => {
 		const rows: string[][] = [];
@@ -302,13 +332,11 @@
 				<ModelPreview
 					data={fileModelData}
 					path={selectedFile ?? ''}
-					loadResource={baseUrl
+					loadResource={target?.baseUrl
 						? async (path, signal) => {
 								const result = await downloadFileBlob(
-									baseUrl,
-									apiKey,
+									target,
 									path,
-									chatId ?? undefined,
 									signal
 								);
 								if (!result) throw new Error('Could not load model resource.');
@@ -356,6 +384,8 @@
 					{searchTarget}
 				/>
 			</div>
+		{:else if isHtml && !showRaw && (previewPending || previewError)}
+			{#if previewError}<p role="alert">{previewError}</p>{:else}<Spinner />{/if}
 		{:else if isHtml && !showRaw && serveUrl}
 			{#if overlay}
 				<div class="absolute top-0 left-0 right-0 bottom-0 z-10"></div>
@@ -394,8 +424,7 @@
 					bind:this={markdownEditorRef}
 					bind:value={codeValue}
 					path={selectedFile ?? ''}
-					{baseUrl}
-					{apiKey}
+					{target}
 					{chatId}
 					{readOnly}
 					onSave={readOnly ? null : saveCodeFile}
@@ -407,8 +436,7 @@
 					content={codeValue}
 					id={`file-${selectedFile}`}
 					path={selectedFile ?? ''}
-					{baseUrl}
-					{apiKey}
+					{target}
 					{chatId}
 					{resourceVersion}
 					{onLocalLink}
@@ -446,8 +474,7 @@
 				<NotebookView
 					notebook={parsedNotebook}
 					filePath={selectedFile ?? ''}
-					{baseUrl}
-					{apiKey}
+					{target}
 					{readOnly}
 				/>
 			</div>

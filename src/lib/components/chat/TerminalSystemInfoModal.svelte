@@ -2,7 +2,7 @@
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import {
 		terminalRequest,
-		type TerminalConnection,
+		type TerminalTarget,
 		type TerminalSystemInfo
 	} from '$lib/apis/terminal';
 	import Icon from './FileNav/Icon.svelte';
@@ -11,8 +11,8 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	export let connection: TerminalConnection;
-	export let chatId: string | null = null;
+	export let target: TerminalTarget;
+
 	export let label: string;
 	export let onClose: () => void;
 	const i18n = getContext<any>('i18n');
@@ -32,7 +32,7 @@
 		controller = request;
 		loading = true;
 		try {
-			const next = await terminalRequest<TerminalSystemInfo>(connection, chatId, '/system/info', {
+			const next = await terminalRequest<TerminalSystemInfo>(target, '/system/info', {
 				signal: request.signal
 			});
 			if (request.signal.aborted || destroyed) return;
@@ -153,6 +153,19 @@
 			{#if !data && loading}<div class="flex justify-center py-4">
 					<Spinner className="size-4" />
 				</div>{/if}
+			{#if data?.setup && data.setup.status !== 'ok'}
+				<div role={data.setup.status === 'failed' ? 'alert' : 'status'} class="mb-4 text-xs">
+					<div class="text-gray-700 dark:text-gray-300">
+						{data.setup.status === 'failed'
+							? $i18n.t('Setup script failed (exit {{code}})', { code: data.setup.exit_code })
+							: $i18n.t('Setup script is running')}
+					</div>
+					{#if data.setup.log_tail}
+						<pre
+							class="mt-1.5 max-h-32 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-gray-50 p-2 font-mono text-[0.6875rem] text-gray-600 dark:bg-gray-850 dark:text-gray-400">{data.setup.log_tail.trim()}</pre>
+					{/if}
+				</div>
+			{/if}
 			{#if data}
 				<div class="flex flex-col gap-4">
 					{#each metrics as metric}
