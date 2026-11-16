@@ -1122,8 +1122,9 @@
 	/>
 {/if}
 
+<svelte:document on:click|capture={sidebarLinkClickHandler} />
+
 <svelte:window
-	on:click|capture={sidebarLinkClickHandler}
 	on:dragstart|capture={sidebarPageDragHandler}
 	bind:innerWidth={viewportWidth}
 	on:pointermove={(e) => {
