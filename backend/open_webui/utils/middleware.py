@@ -120,6 +120,7 @@ from open_webui.utils.misc import (
     get_reasoning_details,
     get_response_error_detail,
     get_system_message,
+    get_tool_call_arguments,
     get_tool_results,
     is_empty_reply,
     is_raster_image_content_type,
@@ -3040,13 +3041,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     return form_data, metadata, events, False
 
 
-async def preload_memory(sections: dict[str, list[str]], messages: list[dict]) -> list[dict]:
+async def preload_memory(sections: dict[str, list[dict]], messages: list[dict]) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
-    result = await render_memory_context(sections, messages)
-    return hidden_tool_result('recall_memories', result) if result else []
+    if not any(sections.values()):
+        return []
+    sent_ids = {
+        memory_id
+        for arguments in get_tool_call_arguments(messages, 'recall_memories')
+        for memory_id in arguments.get('ids') or []
+    }
+    unsent = {
+        key: [entry for entry in entries if f'{entry["id"]}:{entry["updated_at"]}' not in sent_ids]
+        for key, entries in sections.items()
+    }
+    result = await render_memory_context(unsent)
+    ids = [f'{entry["id"]}:{entry["updated_at"]}' for entries in unsent.values() for entry in entries if entry['id']]
+    return hidden_tool_result('recall_memories', result, JSONCodec.dumps({'ids': ids})) if result else []
 
 
-def hidden_tool_result(name: str, result: str) -> list[dict]:
+def hidden_tool_result(name: str, result: str, arguments: str = '{}') -> list[dict]:
     """Use ordinary saved tool output for internal context without displaying it in chat."""
     call_id = output_id('fc')
     return [
@@ -3056,7 +3069,7 @@ def hidden_tool_result(name: str, result: str) -> list[dict]:
             'call_id': call_id,
             'name': name,
             'hidden': True,
-            'arguments': '{}',
+            'arguments': arguments,
             'status': 'completed',
         },
         {

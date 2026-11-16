@@ -309,6 +309,23 @@ def get_tool_results(messages: list[dict], name: str) -> list[str]:
     ]
 
 
+def get_tool_call_arguments(messages: list[dict], name: str) -> list[dict]:
+    """The arguments the named tool was called with in these messages, oldest first."""
+    arguments = []
+    for message in messages:
+        for tool_call in message.get('tool_calls') or []:
+            function = tool_call.get('function') or {}
+            if function.get('name') != name:
+                continue
+            try:
+                parsed = JSONCodec.loads(function.get('arguments') or '{}')
+            except (TypeError, ValueError):
+                continue
+            if isinstance(parsed, dict):
+                arguments.append(parsed)
+    return arguments
+
+
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     """Drop unpaired tool_use / tool_result from a reconstructed conversation.
 
