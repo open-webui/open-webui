@@ -327,7 +327,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
         key=lambda item: (item.path or '', item.updated_at or 0, item.id or ''),
     ):
         seen_ids.add(memory.id)
-        sections['user'].append({'id': memory.id, 'updated_at': memory.updated_at, 'label': memory_label(memory)})
+        sections['user'].append({'version': f'{memory.id}:{memory.updated_at}', 'label': memory_label(memory)})
 
     for hint in memory_path_hints(query, all_memories):
         for memory in search_memory_rows(
@@ -340,7 +340,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
                 continue
             seen_ids.add(memory.id)
             sections['neighborhood'].append(
-                {'id': memory.id, 'updated_at': memory.updated_at, 'label': memory_label(memory)}
+                {'version': f'{memory.id}:{memory.updated_at}', 'label': memory_label(memory)}
             )
 
     if results and hasattr(results, 'documents') and results.documents:
@@ -365,27 +365,15 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
                 content = content[len(metadata.get('path')) + 1 :]
             label = f'{metadata.get("path")}: {content}' if metadata.get('path') else content
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(
-                {'id': memory_id, 'updated_at': metadata.get('updated_at'), 'label': label}
+                {'version': f'{memory_id}:{metadata.get("updated_at")}', 'label': label}
             )
 
     return sections
 
 
-async def render_memory_context(sections: dict[str, list[dict]]) -> str:
-    parts = []
-    for title, key in (
-        ('User Memory', 'user'),
-        ('Memory Neighborhood', 'neighborhood'),
-        ('Relevant Context', 'context'),
-    ):
-        if sections[key]:
-            ordered = sorted(
-                [entry['label'] for entry in sections[key]], key=lambda memory: (memory.casefold(), memory)
-            )
-            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
-    if not parts:
-        return ''
-
+async def format_memory_context(memories: dict[str, list[dict]]) -> tuple[str, list[dict]]:
+    """The memory context, and the memories whose text made it under the character limits."""
+    sections = {key: [entry['label'] for entry in entries] for key, entries in memories.items()}
     config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
     try:
         user_limit = max(250, int(config.get('memories.user_char_limit') or 2000))
@@ -396,6 +384,28 @@ async def render_memory_context(sections: dict[str, list[dict]]) -> str:
     except Exception:
         context_limit = 2000
 
+    limits = {'user': user_limit, 'context': context_limit}
+    char_count = {'user': 0, 'context': 0}
+    shown_labels = set()
+    parts = []
+    for title, key in (
+        ('User Memory', 'user'),
+        ('Memory Neighborhood', 'neighborhood'),
+        ('Relevant Context', 'context'),
+    ):
+        if sections[key]:
+            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
+            group = 'user' if key == 'user' else 'context'
+            char_count[group] += len(f'\n\n[{title}]') if char_count[group] else len(f'[{title}]')
+            for memory in ordered:
+                char_count[group] += len('\n- ')
+                if char_count[group] < limits[group]:
+                    shown_labels.add(memory)
+                char_count[group] += len(memory)
+            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
+    if not parts:
+        return '', []
+
     user_parts = [part for part in parts if part.startswith('[User Memory]')]
     context_parts = [part for part in parts if not part.startswith('[User Memory]')]
     rendered = '\n\n'.join(
@@ -405,13 +415,14 @@ async def render_memory_context(sections: dict[str, list[dict]]) -> str:
         ]
     ).strip()
     if not rendered:
-        return ''
+        return '', []
 
-    return f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
+    shown = [entry for entries in memories.values() for entry in entries if entry['label'] in shown_labels]
+    return f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}', shown
 
 
 async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
-    context = await render_memory_context(await recall_memories(request, form_data.get('messages', []), user, model))
+    context, _ = await format_memory_context(await recall_memories(request, form_data.get('messages', []), user, model))
     target = get_last_user_message_item(form_data.get('messages', []))
     if context and target is not None:
         content = target.get('content') or ''

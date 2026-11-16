@@ -104,7 +104,7 @@ from open_webui.utils.filter import (
 )
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
-from open_webui.utils.memory import add_memory_context, recall_memories, render_memory_context, review_memory_after_turn
+from open_webui.utils.memory import add_memory_context, format_memory_context, recall_memories, review_memory_after_turn
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -120,7 +120,6 @@ from open_webui.utils.misc import (
     get_reasoning_details,
     get_response_error_detail,
     get_system_message,
-    get_tool_call_arguments,
     get_tool_results,
     is_empty_reply,
     is_raster_image_content_type,
@@ -2366,7 +2365,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             raise Exception(f'{e}')
 
-    memory_sections = {}
+    memory_sections = {'user': [], 'neighborhood': [], 'context': []}
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
     if features:
@@ -3045,18 +3044,26 @@ async def preload_memory(sections: dict[str, list[dict]], messages: list[dict]) 
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
     if not any(sections.values()):
         return []
-    sent_ids = {
-        memory_id
-        for arguments in get_tool_call_arguments(messages, 'recall_memories')
-        for memory_id in arguments.get('ids') or []
+    completed = {
+        message.get('tool_call_id')
+        for message in messages
+        if message.get('role') == 'tool' and not _is_tool_result_error(message.get('content', ''))
     }
+    sent_versions = set()
+    for message in messages:
+        for call in message.get('tool_calls') or []:
+            function = call.get('function') or {}
+            if function.get('name') == 'recall_memories' and call.get('id') in completed:
+                try:
+                    sent_versions.update(JSONCodec.loads(function.get('arguments', '{}')).get('memories', []))
+                except (ValueError, TypeError, AttributeError):
+                    pass
     unsent = {
-        key: [entry for entry in entries if f'{entry["id"]}:{entry["updated_at"]}' not in sent_ids]
-        for key, entries in sections.items()
+        key: [entry for entry in entries if entry['version'] not in sent_versions] for key, entries in sections.items()
     }
-    result = await render_memory_context(unsent)
-    ids = [f'{entry["id"]}:{entry["updated_at"]}' for entries in unsent.values() for entry in entries if entry['id']]
-    return hidden_tool_result('recall_memories', result, JSONCodec.dumps({'ids': ids})) if result else []
+    result, shown = await format_memory_context(unsent)
+    arguments = JSONCodec.dumps({'memories': [entry['version'] for entry in shown]})
+    return hidden_tool_result('recall_memories', result, arguments) if result else []
 
 
 def hidden_tool_result(name: str, result: str, arguments: str = '{}') -> list[dict]:
