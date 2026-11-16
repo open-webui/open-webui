@@ -286,7 +286,7 @@
 									});
 								}
 
-								if (chat) {
+								if (chat && chat.folder_id !== folderId) {
 									// Move the chat
 									const res = await updateChatFolderIdById(
 										localStorage.token,
