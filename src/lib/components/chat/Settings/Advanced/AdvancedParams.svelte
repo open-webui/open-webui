@@ -72,6 +72,17 @@
 
 		params.top_k = value;
 	};
+
+	// Reject a fraction in a step="1" field instead of keeping or rounding it ("32.767" is usually 32767).
+	const setNumber = (key: RangeParamKey, event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		if (input.validity.stepMismatch || input.validity.badInput) {
+			input.value = `${params[key] ?? ''}`;
+			return;
+		}
+		params[key] = input.value === '' ? null : input.valueAsNumber;
+		onParamChange(key, params[key]);
+	};
 </script>
 
 {#snippet rangeParam(
@@ -98,8 +109,8 @@
 		</div>
 		<div>
 			<input
-				bind:value={params[key]}
-				on:change={() => onParamChange(key, params[key] ?? null)}
+				value={params[key]}
+				on:change={(event) => setNumber(key, event)}
 				type="number"
 				aria-label={label}
 				class=" bg-transparent text-center w-14"
@@ -197,7 +208,7 @@
 					1,
 					128,
 					1,
-					'any',
+					1,
 					undefined
 				)}
 			{/if}
@@ -250,9 +261,8 @@
 								'settings.personal.general.parameters.contextCompactionThreshold.label'
 							)}
 							placeholder={$i18n.t('Enter token threshold')}
-							bind:value={params.compact_token_threshold}
-							on:change={() =>
-								onParamChange('compact_token_threshold', params.compact_token_threshold ?? null)}
+							value={params.compact_token_threshold}
+							on:change={(event) => setNumber('compact_token_threshold', event)}
 							autocomplete="off"
 							min="1"
 							step="1"
@@ -418,8 +428,8 @@
 						type="number"
 						aria-label={$i18n.t('settings.personal.general.parameters.seed.label')}
 						placeholder={$i18n.t('Enter Seed')}
-						bind:value={params.seed}
-						on:change={() => onParamChange('seed', params.seed ?? null)}
+						value={params.seed}
+						on:change={(event) => setNumber('seed', event)}
 						autocomplete="off"
 						min="0"
 					/>
@@ -1550,7 +1560,7 @@
 				256,
 				8192,
 				256,
-				256,
+				1,
 				undefined
 			)}
 		{/if}
