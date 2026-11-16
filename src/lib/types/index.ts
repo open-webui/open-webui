@@ -26,6 +26,18 @@ export type AppLayoutContext = {
 	initNewChat?: (preserveTabs?: boolean, keepDraft?: boolean) => Promise<void>;
 };
 
+/** State of the chat a component is rendered in, so a side chat doesn't read the main chat's. */
+export type ChatContext = {
+	chatId: typeof import('$lib/stores').chatId;
+	models: typeof import('$lib/stores').models;
+	temporary: typeof import('$lib/stores').temporaryChatEnabled;
+	audioQueue: typeof import('$lib/stores').audioQueue;
+	contextCompactions?: import('svelte/store').Writable<
+		Record<string, 'in_progress' | { error: string }>
+	>;
+	submitPrompt?: (prompt: string) => void;
+};
+
 export type WorkspaceContext = {
 	workspaceActions: import('svelte/store').Writable<import('$lib/stores').WorkspaceAction[]>;
 	workspaceCounts: import('svelte/store').Writable<

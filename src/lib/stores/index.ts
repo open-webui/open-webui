@@ -178,7 +178,8 @@ export const showTabs = writable<
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
-export const showCallOverlay = writable(false);
+/** A voice call is open in the main chat's voice tab. */
+export const voiceCall = writable(false);
 export const showFileNav = writable<{
 	terminalId: string;
 	directory: string;

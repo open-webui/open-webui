@@ -37,7 +37,7 @@
 		chatTabRequest,
 		showSidebar,
 		mobile,
-		showCallOverlay,
+		voiceCall,
 		showEmbeds,
 		settings,
 		showFileNav,
@@ -159,8 +159,12 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
-	export let mainTabFolder: { id: string; name: string; icon?: string | null; canEdit?: boolean } | null =
-		null;
+	export let mainTabFolder: {
+		id: string;
+		name: string;
+		icon?: string | null;
+		canEdit?: boolean;
+	} | null = null;
 	/** Double-clicking the folder tab renames the folder inline. */
 	export let onRenameFolder: ((folderId: string, name: string) => Promise<void>) | null = null;
 	let isRenamingFolder = false;
@@ -419,11 +423,7 @@
 			void attachChatViewTo(id).catch(() => {});
 		else void restoreChatView(id);
 	}
-	const persistPanels = (
-		nextTabs: typeof tabs,
-		terminalId: string | null,
-		ready: boolean
-	) => {
+	const persistPanels = (nextTabs: typeof tabs, terminalId: string | null, ready: boolean) => {
 		if (!ready || !viewEntry || chatLoading || viewEntry.promoting) return;
 		// The Files tab follows the terminal picked for the chat and starts over there.
 		if (terminalId && terminalId !== viewEntry.state.selectedTerminalId) {
@@ -474,7 +474,8 @@
 		}
 		dirtyFiles = { ...dirtyFiles };
 	};
-	$: if (isMounted && viewReady) forgetDraftsForUnreachableTerminals($terminalServers, $settings, $config, $user);
+	$: if (isMounted && viewReady)
+		forgetDraftsForUnreachableTerminals($terminalServers, $settings, $config, $user);
 	const resolveTabConnection = (tab: Tab) => {
 		if (!tab.terminalId || !isTerminalReachable(tab.terminalId)) return null;
 		const target = resolveTerminalTarget(
@@ -817,7 +818,9 @@
 			target: { ...selectedConnection },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedConnection.selector ? activeFileContext : undefined
+				activeFileContext?.terminalId === selectedConnection.selector
+					? activeFileContext
+					: undefined
 		});
 	};
 	/** Opens the artifacts tab of the chat in `sourceTabId` beside that chat. */
@@ -1083,7 +1086,11 @@
 	const openDesktop = () => {
 		if (!selectedConnection) return askForTerminal(openDesktop);
 		openPanel({
-			id: JSON.stringify(['desktop', selectedConnection.baseUrl, selectedConnection.context.modelId]),
+			id: JSON.stringify([
+				'desktop',
+				selectedConnection.baseUrl,
+				selectedConnection.context.modelId
+			]),
 			kind: 'desktop',
 			label: $i18n.t('Desktop'),
 			terminalId: selectedConnection.selector,
@@ -1173,7 +1180,7 @@
 			}
 			if (tab.kind === 'voice') {
 				bridge?.end();
-				showCallOverlay.set(false);
+				voiceCall.set(false);
 			}
 			if (tab.kind === 'preview') showEmbeds.set(false);
 			chatView.drafts.delete(id);
@@ -1194,7 +1201,10 @@
 					delete chatArtifacts[id];
 					delete artifactSelections[`artifacts:${id}`];
 				}
-				if (!tabs.tabs.length || (!isLargeScreen && tabs.tabs.every((tab) => tab.id === mainChatTabId)))
+				if (
+					!tabs.tabs.length ||
+					(!isLargeScreen && tabs.tabs.every((tab) => tab.id === mainChatTabId))
+				)
 					showTabs.set(false);
 				await tick();
 				if (chatView === viewEntry) document.getElementById(toTabDomId(tabs.activeId))?.focus();
@@ -1418,7 +1428,7 @@
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
-		{ kind: 'voice', label: $i18n.t('Voice'), available: !!bridge && $showCallOverlay },
+		{ kind: 'voice', label: $i18n.t('Voice'), available: !!bridge && $voiceCall },
 		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
 	];
 
@@ -1426,7 +1436,11 @@
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
 	$: canOpenNewTab =
-		showFilesTab || supportsTerminalFiles || canSelectTerminal || newTabViews.length > 0 || hasMessages;
+		showFilesTab ||
+		supportsTerminalFiles ||
+		canSelectTerminal ||
+		newTabViews.length > 0 ||
+		hasMessages;
 
 	const splitWithSuggestedTab = () => {
 		if (tabs.tabs.length < 2) {
@@ -1479,13 +1493,16 @@
 				if (showCommentsTab) action = () => openFeatureTab('comments');
 				break;
 			case Shortcut.NEW_FILE:
-				if ((supportsTerminalFiles && selectedConnection) || canSelectTerminal) action = openNewFileTab;
+				if ((supportsTerminalFiles && selectedConnection) || canSelectTerminal)
+					action = openNewFileTab;
 				break;
 			case Shortcut.NEW_TERMINAL:
-				if ((supportsTerminal && selectedConnection) || canSelectTerminal) action = openNewTerminalTab;
+				if ((supportsTerminal && selectedConnection) || canSelectTerminal)
+					action = openNewTerminalTab;
 				break;
 			case Shortcut.NEW_BROWSER:
-				if ((supportsBrowser && selectedConnection) || canSelectTerminal) action = () => openBrowser();
+				if ((supportsBrowser && selectedConnection) || canSelectTerminal)
+					action = () => openBrowser();
 				break;
 			case Shortcut.CLOSE_TAB:
 				if (panelVisible && tabs.activeId)
@@ -1612,8 +1629,7 @@
 		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasExtraTabs = true;
 	}
-	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId)
-		chatTabRequest.set(null);
+	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId) chatTabRequest.set(null);
 	$: if (viewReady && $showTabs === 'chat') {
 		if (canOpenChatTab) openFeatureTab('chat', true);
 		else chatTabRequest.set(null);
@@ -1631,8 +1647,8 @@
 		openFeatureTab('preview');
 		showEmbeds.set(false);
 	}
-	$: if (viewReady && $showCallOverlay) openFeatureTab('voice');
-	$: if (viewReady && !$showCallOverlay && tabs.tabs.some((tab) => tab.kind === 'voice'))
+	$: if (viewReady && $voiceCall) openFeatureTab('voice');
+	$: if (viewReady && !$voiceCall && tabs.tabs.some((tab) => tab.kind === 'voice'))
 		closeTab('voice');
 	$: if (viewReady && $showTabs === 'voice') openFeatureTab('voice');
 	$: if (viewReady && $showFileNav) {
@@ -2031,7 +2047,9 @@
 						overlay={isDragging}
 						artifacts={getArtifactsStore(tab.sourceTabId)}
 						selection={artifactSelections[tab.id] ?? null}
-						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat' ? source.chatId : chatView.chatId) ?? ''}
+						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat'
+							? source.chatId
+							: chatView.chatId) ?? ''}
 					/>
 				{:else if tab.kind === 'overview'}
 					<Overview
@@ -2320,7 +2338,9 @@
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
 					{@const titleEditor =
 						tab.id === mainChatTabId
-							? mainTabFolder ? undefined : tabTitleEditor
+							? mainTabFolder
+								? undefined
+								: tabTitleEditor
 							: chatTitleEditors[tab.id]}
 					{@const PageIcon =
 						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
@@ -2343,7 +2363,9 @@
 							aria-controls={`${toTabDomId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.id === mainChatTabId ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
+							title={tab.id === mainChatTabId
+								? mainTabTitle
+								: (tab.directory ?? tab.path ?? tabLabel(tab))}
 							aria-label={tab.id === mainChatTabId ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 							on:dblclick={() => {
@@ -2366,7 +2388,10 @@
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'terminal'}
 								<Icon
-									name={terminalIconName(terminalProcesses[tab.sessionId ?? ''] ?? '', tabLabel(tab))}
+									name={terminalIconName(
+										terminalProcesses[tab.sessionId ?? ''] ?? '',
+										tabLabel(tab)
+									)}
 									size={14}
 								/>
 							{:else if tab.kind === 'comments'}
@@ -2415,8 +2440,8 @@
 							{/if}
 							{@render tabActions?.()}
 						{:else if !titleEditor}{#if chatTabActions[tab.id]}<span class="-me-1 flex"
-								>{@render chatTabActions[tab.id]?.()}</span
-							>{/if}<button
+									>{@render chatTabActions[tab.id]?.()}</span
+								>{/if}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[

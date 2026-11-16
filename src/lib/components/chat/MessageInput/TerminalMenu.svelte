@@ -11,15 +11,7 @@
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
 	import type { TerminalContext } from '$lib/types';
 
-	import {
-		chatId as activeChatId,
-		config,
-		settings,
-		showSettings,
-		terminalServers,
-		temporaryChatEnabled,
-		user
-	} from '$lib/stores';
+	import { config, settings, showSettings, terminalServers, user } from '$lib/stores';
 	import { selectTerminal } from '$lib/utils/terminal';
 	import { isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 
@@ -36,6 +28,9 @@
 	import TerminalItemMenu from './TerminalItemMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId: activeChatId, temporary } = getChatContext();
 
 	const i18n = getContext<any>('i18n');
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
@@ -121,8 +116,7 @@
 	};
 
 	$: systemTerminals = ($terminalServers ?? []).filter(
-		(t) =>
-			t.id && !(($temporaryChatEnabled || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
+		(t) => t.id && !(($temporary || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
 	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');

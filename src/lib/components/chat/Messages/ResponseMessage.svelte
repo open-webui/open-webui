@@ -13,8 +13,6 @@
 	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
-	const contextCompactions =
-		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 
 	const dispatch = createEventDispatcher();
 
@@ -22,15 +20,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import {
-		audioQueue,
-		config,
-		models,
-		settings,
-		TTSWorker,
-		user,
-		visibleControls
-	} from '$lib/stores';
+	import { config, settings, TTSWorker, user, visibleControls } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -75,6 +65,9 @@
 	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { audioQueue, models, contextCompactions } = getChatContext();
 
 	interface MessageType {
 		user_id?: string;

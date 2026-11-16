@@ -2,6 +2,7 @@
 	import { getTerminalServers } from '$lib/apis/terminal';
 	import { resolveToolApprovalMode } from '$lib/utils/toolPermissions';
 	import type { AppLayoutContext, TerminalContext } from '$lib/types';
+	import { setChatContext } from './context';
 	import {
 		estimateTokens,
 		estimateMessagesTokens,
@@ -11,7 +12,7 @@
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
-	import { getContext, setContext, onDestroy, onMount, tick } from 'svelte';
+	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import { fade } from 'svelte/transition';
 	const i18n: Writable<i18nType> = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -41,7 +42,7 @@
 		showTabs as _showTabs,
 		chatTabRequest,
 		openEmbeddedChatIds,
-		showCallOverlay as _showCallOverlay,
+		voiceCall as _voiceCall,
 		temporaryChatEnabled as _temporaryChatEnabled,
 		mobile,
 		chatTitle as _chatTitle,
@@ -183,12 +184,21 @@
 	const temporaryChatEnabled = embedded ? writable(false) : _temporaryChatEnabled;
 	const selectedFolder = embedded ? writable<FolderDetails | null>(null) : _selectedFolder;
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
-	const showCallOverlay = embedded ? writable(false) : _showCallOverlay;
+	// the call lives in the main chat's voice tab, so a side chat is never in it
+	const voiceCall = embedded ? writable(false) : _voiceCall;
 	const showEmbeds = embedded ? writable(false) : _showEmbeds;
 	const selectedTerminalId = tabbed ? writable(get(_selectedTerminalId)) : _selectedTerminalId;
 	const terminalSkills = tabbed ? writable<any[]>([]) : _terminalSkills;
 	const models = tabbed ? writable(get(_models)) : _models;
-	setContext('chatModels', models);
+	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
+	setChatContext({
+		chatId,
+		models,
+		temporary: temporaryChatEnabled,
+		audioQueue,
+		contextCompactions,
+		submitPrompt: (prompt) => submitHandler(prompt)
+	});
 	export let embeddedTitle = '';
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
@@ -489,8 +499,6 @@
 	let generating = false;
 	let dragged = false;
 	let generationController = null;
-	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
-	setContext('contextCompactions', contextCompactions);
 	const openArtifacts = (code?: string) => {
 		// the list is rebuilt after a debounce, so it can lag behind the block being opened
 		getContents();
@@ -510,7 +518,7 @@
 
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
 	$: isShared = chat != null && chat.user_id !== $user?.id;
-	$: if (isShared && $showCallOverlay) showCallOverlay.set(false);
+	$: if (isShared && $voiceCall) voiceCall.set(false);
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
 	$: canOpenChatTab =
 		$user?.role === 'admin' ||
@@ -606,7 +614,7 @@
 		if (fullWidthTabs) {
 			tabs?.focusMainChat();
 			await tick();
-			if (!$showCallOverlay) messageInput?.focus({ preventScroll: true });
+			if (!$voiceCall) messageInput?.focus({ preventScroll: true });
 		}
 		const last = history.currentId ? history.messages[history.currentId] : null;
 		if (last?.role === 'assistant' && !last.done) {
@@ -1700,7 +1708,7 @@
 		if (event?.data?.type === 'voice:play_animation') {
 			cb?.(
 				routeAvatarAnimation(eventTarget, event, {
-					active: $showCallOverlay && callMode === 'current' && selectedModelIds.length === 1,
+					active: $voiceCall && callMode === 'current' && selectedModelIds.length === 1,
 					chatId: $chatId,
 					modelId: selectedModelIds[0],
 					messageId: history.currentId,
@@ -2542,7 +2550,7 @@
 		releaseCallWakeLock = active ? acquireWakeLock() : () => {};
 	};
 	$: callInProgress =
-		($showCallOverlay && callMode === 'current') || !!(bridge?.connected || bridge?.connecting);
+		($voiceCall && callMode === 'current') || !!(bridge?.connected || bridge?.connecting);
 	$: updateCallWakeLock(callInProgress);
 	onDestroy(() => releaseCallWakeLock());
 
@@ -2758,7 +2766,7 @@
 	$: if (selectedModelIds && $models && $config) bridge?.syncModel();
 
 	const dispatchCallOverlayAudio = (message, final = false) => {
-		if (message.error || !$showCallOverlay || callMode !== 'current') {
+		if (message.error || !$voiceCall || callMode !== 'current') {
 			return;
 		}
 
@@ -2883,7 +2891,7 @@
 			return;
 		}
 
-		showCallOverlay.set(true);
+		voiceCall.set(true);
 		showTabs.set(true);
 	};
 
@@ -3050,7 +3058,7 @@
 		if ($mobile) {
 			await showTabs.set(false);
 		}
-		await showCallOverlay.set(false);
+		await voiceCall.set(false);
 
 		if (!embedded && !preserveTabs && $page.url.pathname.includes('/c/')) {
 			window.history.replaceState(window.history.state, '', `/`);
@@ -3159,7 +3167,7 @@
 			} else if (event.type === 'call' || event.type === 'voice') {
 				openCallOverlay();
 				event.handoff?.complete(
-					$showCallOverlay
+					$voiceCall
 						? undefined
 						: 'Voice mode is unavailable. Check your model, permissions and voice settings in WebUI.'
 				);
@@ -3949,7 +3957,7 @@
 				copyToClipboard(visibleContent);
 			}
 
-			if ($settings.responseAutoPlayback && !$showCallOverlay && !bridge?.connected) {
+			if ($settings.responseAutoPlayback && !$voiceCall && !bridge?.connected) {
 				await tick();
 				document.getElementById(`speak-button-${message.id}`)?.click();
 			}
@@ -4039,7 +4047,7 @@
 		history.currentId = userMessageId;
 
 		// focus on chat input (skip during voice call to avoid triggering mobile keyboard)
-		if (!$showCallOverlay) {
+		if (!$voiceCall) {
 			messageInput?.focus({ preventScroll: true });
 		}
 
@@ -4777,7 +4785,7 @@
 
 		if ($config?.features)
 			features = {
-				voice: ($showCallOverlay && callMode === 'current') || !!bridge?.connected,
+				voice: ($voiceCall && callMode === 'current') || !!bridge?.connected,
 				image_generation:
 					$config?.features?.enable_image_generation &&
 					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
@@ -5996,7 +6004,10 @@
 							}}
 						/>
 					{/if}
-					<div id="chat-pane" class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto">
+					<div
+						id="chat-pane"
+						class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto"
+					>
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
 						{#if (!tabbed && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
@@ -6018,7 +6029,6 @@
 									<Messages
 										{messagesContainerId}
 										{branchPointMessageId}
-										temporary={$temporaryChatEnabled}
 										bind:this={messagesRef}
 										chatId={$chatId}
 										user={chatOwner ?? (chat ? { id: chat.user_id } : $user)}
@@ -6077,7 +6087,6 @@
 										{terminalSkills}
 										{messagesContainerId}
 										{inputId}
-										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
 										{typingUsers}
@@ -6197,7 +6206,6 @@
 										{terminalSkills}
 										{messagesContainerId}
 										{inputId}
-										temporary={$temporaryChatEnabled}
 										{onTemporaryChange}
 										bind:terminalContext
 										{typingUsers}
@@ -6267,7 +6275,11 @@
 								</div>
 							</div>
 						{:else}
-							<div class="flex h-full {$selectedFolder ? 'min-h-0 flex-1 overflow-hidden' : 'items-center'}">
+							<div
+								class="flex h-full {$selectedFolder
+									? 'min-h-0 flex-1 overflow-hidden'
+									: 'items-center'}"
+							>
 								<Placeholder
 									bind:folderTabActions
 									{selectedTerminalId}
@@ -6343,11 +6355,25 @@
 					bind:mainChatStyle
 					bind:mainChatGroupId
 					title={$chatTitle || $i18n.t('New Chat')}
-					mainTabFolder={!$chatId && $selectedFolder ? { id: $selectedFolder.id, name: $selectedFolder.name, icon: $selectedFolder.meta?.icon, canEdit: $user?.role === 'admin' || $selectedFolder.user_id === $user?.id || $selectedFolder.write_access } : null}
+					mainTabFolder={!$chatId && $selectedFolder
+						? {
+								id: $selectedFolder.id,
+								name: $selectedFolder.name,
+								icon: $selectedFolder.meta?.icon,
+								canEdit:
+									$user?.role === 'admin' ||
+									$selectedFolder.user_id === $user?.id ||
+									$selectedFolder.write_access
+							}
+						: null}
 					tabTitleEditor={loading ? undefined : tabTitleEditor}
 					onRenameMainTab={startRename}
 					onRenameFolder={renameFolder}
-					tabActions={loading ? undefined : !$chatId && $selectedFolder ? folderTabActions : tabActions}
+					tabActions={loading
+						? undefined
+						: !$chatId && $selectedFolder
+							? folderTabActions
+							: tabActions}
 					tabBarActions={loading ? undefined : tabBarActions}
 					{terminalContext}
 					bind:chatHistory={history}

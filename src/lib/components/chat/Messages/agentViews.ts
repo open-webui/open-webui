@@ -271,6 +271,115 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 	return null;
 }
 
+const parseObject = (text: unknown): Data => {
+	try {
+		return obj(JSON.parse(str(text) || '{}'));
+	} catch {
+		return {};
+	}
+};
+
+const lines = (entries: Data[], line: (entry: Data) => string) =>
+	entries.map(line).filter(Boolean).join('\n');
+
+const pathOf = (entry: Data) => str(entry.relative_path ?? entry.path ?? entry.name ?? entry.file);
+
+// Open WebUI's own Open Terminal tools, by name. Each finished result must have the shape
+// Open Terminal returns, so a different tool with the same name keeps the generic card.
+export function terminalView(item: OutputItem, result: string): AgentView | null {
+	if (item.type !== 'function_call' || item.provider_data || item.native) return null;
+	const args = parseObject(item.arguments);
+	const data = parseObject(result);
+	const shaped = (...keys: string[]) => !result || keys.some((key) => key in data);
+	const path = str(args.path);
+
+	switch (item.name) {
+		case 'run_command':
+		case 'get_process_status': {
+			// A command still running when the call returns is followed by get_process_status,
+			// whose result names the command again.
+			const command = str(args.command ?? data.command);
+			if (!command || !shaped('status')) return null;
+			return {
+				kind: 'command',
+				command,
+				output: list(data.output)
+					.map((entry) => str(entry.data))
+					.join(''),
+				exitCode: exitCode(data.exit_code)
+			};
+		}
+		case 'read_file':
+			return path && shaped('content', 'path')
+				? { kind: 'read', paths: [path], output: str(data.content) }
+				: null;
+		case 'grep_search':
+			return args.query && shaped('matches')
+				? {
+						kind: 'search',
+						query: str(args.query),
+						output: lines(list(data.matches), (match) =>
+							match.line != null
+								? `${str(match.file)}:${str(match.line)}: ${str(match.content)}`
+								: str(match.file)
+						)
+					}
+				: null;
+		case 'glob_search':
+		case 'search_files':
+		case 'match_files': {
+			const query = str(args.pattern ?? args.query);
+			return query && shaped('matches', 'results')
+				? {
+						kind: 'search',
+						query,
+						output: lines(list(data.matches ?? data.results), pathOf)
+					}
+				: null;
+		}
+		case 'list_files':
+			return shaped('entries')
+				? {
+						kind: 'list',
+						path: str(args.directory) || '.',
+						output: lines(list(data.entries), (entry) =>
+							entry.type === 'directory' ? `${pathOf(entry)}/` : pathOf(entry)
+						)
+					}
+				: null;
+		case 'write_file': {
+			if (!path || !shaped('size')) return null;
+			const finished = str(data.patch);
+			// Without a patch, only a new file's diff is known: its content, numbered from 1.
+			const diff = isPatch(finished)
+				? finished
+				: data.created === false
+					? ''
+					: patch(path, '', str(args.content), true);
+			return { kind: 'edit', files: [{ path, diff }] };
+		}
+		case 'replace_file_content': {
+			if (!path || !shaped('size')) return null;
+			const finished = str(data.patch);
+			return {
+				kind: 'edit',
+				files: [
+					isPatch(finished)
+						? { path, diff: finished }
+						: editFile(
+								path,
+								list(args.replacements).map((chunk) => ({
+									oldText: chunk.target,
+									newText: chunk.replacement
+								}))
+							)
+				]
+			};
+		}
+	}
+	return null;
+}
+
 const fileName = (path: string) => path.split('/').filter(Boolean).pop() || path;
 
 export const agentViewName = (view: AgentView) => {

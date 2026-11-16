@@ -1,6 +1,6 @@
 import { encode } from 'html-entities';
 import { getDispatchedVisualizationPreviews } from '$lib/utils/visualizations/dispatch';
-import { agentView, type AgentView } from './agentViews';
+import { agentView, terminalView, type AgentView } from './agentViews';
 
 export type OutputContentPart = {
 	type?: string;
@@ -251,7 +251,7 @@ export function buildToolCallToken(
 					? 'Executing...'
 					: 'Preparing...',
 		text,
-		view: agentView(item, text),
+		view: agentView(item, text) ?? terminalView(item, text),
 		attributes: {
 			type: 'tool_calls',
 			id: callId,

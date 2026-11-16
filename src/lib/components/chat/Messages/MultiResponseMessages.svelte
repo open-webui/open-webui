@@ -2,7 +2,7 @@
 	import { onMount, tick, getContext } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile, models, settings, visibleControls } from '$lib/stores';
+	import { mobile, settings, visibleControls } from '$lib/stores';
 
 	import { generateMoACompletion } from '$lib/apis';
 	import { updateChatById } from '$lib/apis/chats';
@@ -24,6 +24,9 @@
 		formatMessageTimestampFull,
 		getDeepestChildId
 	} from '$lib/utils';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let chatId;
