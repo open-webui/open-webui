@@ -213,6 +213,7 @@
 	let gitViews: Record<string, GitBar> = {};
 	let chatViews: Record<string, ChatTab> = {};
 	let chatTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
+	let chatTabActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatStreamingStates: Record<string, boolean> = {};
 	// Each chat writes its artifacts here; its artifacts tab reads them.
 	const chatArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
@@ -291,6 +292,7 @@
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		queuedArtifactCode = null;
 	}
 	/** Starts a new chat that keeps the open pages; everything else stays with the chat being left. */
@@ -308,6 +310,7 @@
 		fileContexts = keep(fileContexts);
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		queuedArtifactCode = null;
 		const entry = chatViewEntry($user.id, null, $temporaryChatEnabled);
 		entry.state = {
@@ -375,6 +378,7 @@
 		terminalProcesses = {};
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		const entry = chatViewEntry($user.id, id, $temporaryChatEnabled);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
@@ -459,6 +463,7 @@
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		clearChatViews();
 	}
 	const forgetDraftsForUnreachableTerminals = (..._connections: unknown[]) => {
@@ -1183,6 +1188,7 @@
 				delete fileContexts[id];
 				delete chatStreamingStates[id];
 				delete chatTitleEditors[id];
+				delete chatTabActions[id];
 				delete artifactSelections[id];
 				if (tab.kind === 'chat') {
 					delete chatArtifacts[id];
@@ -2045,6 +2051,7 @@
 						bind:this={chatViews[tab.id]}
 						bind:streaming={chatStreamingStates[tab.id]}
 						bind:tabTitleEditor={chatTitleEditors[tab.id]}
+						bind:tabActions={chatTabActions[tab.id]}
 						artifacts={getChatArtifacts(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
 						initialView={chatView.transient[`chat:${tab.id}`]}
@@ -2407,7 +2414,9 @@
 								/>
 							{/if}
 							{@render tabActions?.()}
-						{:else}<button
+						{:else if !titleEditor}{#if chatTabActions[tab.id]}<span class="-me-1 flex"
+								>{@render chatTabActions[tab.id]?.()}</span
+							>{/if}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[

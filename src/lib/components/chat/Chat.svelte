@@ -166,6 +166,9 @@
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import EmbeddedChatHistoryDropdown from './EmbeddedChatHistoryDropdown.svelte';
+	import ChatMenu from '$lib/components/layout/Navbar/Menu.svelte';
+	import ShareChatModal from './ShareChatModal.svelte';
+	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import InputVariablesModal from './MessageInput/InputVariablesModal.svelte';
 
 	export let chatIdProp = '';
@@ -4235,6 +4238,20 @@
 	$: if (loading || !canRename || $temporaryChatEnabled || $chatId !== titleEditChatId)
 		editingTitle = false;
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
+	/** A chat's actions on its tab: the Navbar's for the main chat, the chat menu for a side chat. */
+	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	let showShareModal = false;
+	$: showChatMenu =
+		!loading &&
+		!!$chatId &&
+		!!history.currentId &&
+		(!isNearTop ||
+			(!isShared && !$temporaryChatEnabled) ||
+			$user?.role === 'admin' ||
+			($user?.permissions?.chat?.export ?? true));
+	// Renaming hides the menu, like the tab's close button.
+	$: chatMenu = showChatMenu && !editingTitle ? renderChatMenu : undefined;
+	$: if (embedded && tabbed) tabActions = chatMenu;
 
 	export const startRename = async () => {
 		if (
@@ -4304,7 +4321,6 @@
 		await editChatTitle();
 	};
 
-	let tabActions: import('svelte').Snippet | undefined;
 	let folderTabActions: import('svelte').Snippet | undefined;
 
 	// Renaming the folder from its tab saves like the Edit Folder modal.
@@ -5536,8 +5552,13 @@
 		try {
 			const res = await archiveChatById(localStorage.token, id);
 			updateFolderChatLists({ id }, undefined, true);
-			initNewChat();
-			await goto('/');
+			if (embedded) {
+				if (chat) chat.archived = !!res?.archived;
+				if (res?.archived) closeChatTabs(id);
+			} else {
+				initNewChat();
+				await goto('/');
+			}
 			await refreshChatList(localStorage.token, { refreshPinned: true });
 			await refreshFolderChatLists();
 			toast.success(res?.archived ? $i18n.t('Chat archived.') : $i18n.t('Chat unarchived.'));
@@ -5574,8 +5595,10 @@
 			if (res) {
 				updateFolderChatLists({ id }, undefined, true);
 				closeChatTabs(id);
-				initNewChat();
-				await goto('/');
+				if (!embedded) {
+					initNewChat();
+					await goto('/');
+				}
 				await refreshChatList(localStorage.token, { refreshPinned: true });
 				await refreshFolderChatLists();
 				allTags.set(await getAllTags(localStorage.token));
@@ -5587,6 +5610,48 @@
 		}
 	};
 </script>
+
+{#snippet renderChatMenu()}
+	<ChatMenu
+		chat={{
+			id: $chatId,
+			archived: chat?.archived ?? false,
+			folder_id: chat?.folder_id,
+			meta: chat?.meta,
+			chat: {
+				title: $chatTitle,
+				models: selectedModels,
+				system: $settings.system ?? undefined,
+				params: params,
+				history: history,
+				timestamp: Date.now()
+			}
+		}}
+		shareEnabled={!!history.currentId}
+		readOnly={isShared}
+		temporary={$temporaryChatEnabled}
+		scrollToTop={!isNearTop ? scrollToTop : null}
+		shareHandler={() => (showShareModal = true)}
+		renameHandler={startRename}
+		archiveChatHandler={() => archiveChatHandler($chatId)}
+		deleteChatHandler={() => deleteChatHandler($chatId)}
+		{moveChatHandler}
+	>
+		<button
+			type="button"
+			class="flex shrink-0 cursor-pointer items-center justify-center {tabbed || fullWidthTabs
+				? 'size-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white'
+				: 'size-6 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+			id={embedded ? undefined : 'chat-context-menu-button'}
+			aria-label={$i18n.t('Chat actions')}
+		>
+			<EllipsisHorizontal
+				className={tabbed || fullWidthTabs ? 'size-3' : 'size-4.5'}
+				strokeWidth="1.5"
+			/>
+		</button>
+	</ChatMenu>
+{/snippet}
 
 {#snippet renderTitleEditor()}
 	<input
@@ -5717,6 +5782,8 @@
 		pendingWebSearchPrompt = null;
 	}}
 />
+
+<ShareChatModal bind:show={showShareModal} chatId={$chatId} />
 
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
@@ -5863,11 +5930,10 @@
 						<Navbar
 							tabbed={fullWidthTabs}
 							{tabTitleEditor}
-							renameHandler={startRename}
+							{chatMenu}
 							bind:tabActions
 							bind:tabBarActions
 							{liveParticipants}
-							readOnly={isShared}
 							chat={{
 								id: $chatId,
 								archived: chat?.archived ?? false,
@@ -5883,12 +5949,8 @@
 							}}
 							{history}
 							title={$chatTitle}
-							shareEnabled={!!history.currentId}
 							{initNewChat}
-							scrollToTop={!isNearTop ? scrollToTop : null}
-							{archiveChatHandler}
 							{deleteChatHandler}
-							{moveChatHandler}
 							onSaveTempChat={async () => {
 								try {
 									if (!history?.currentId || !Object.keys(history.messages).length) {

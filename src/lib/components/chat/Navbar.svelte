@@ -20,9 +20,7 @@
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -42,11 +40,8 @@
 	const i18n: any = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let readOnly: boolean = false;
 	export let liveParticipants: { id: string; name: string }[] = [];
-	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
-	export let scrollToTop: (() => void) | null = null;
 
 	export let chat: any;
 	export let history: any;
@@ -55,13 +50,12 @@
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
 	export let tabBarActions: Snippet | undefined = undefined;
-	export let renameHandler: () => void;
+	/** The chat menu, owned by Chat so main and side chats share it. */
+	export let chatMenu: Snippet | undefined = undefined;
 	$: tabActions = renderChatActions;
 	$: tabBarActions = renderTabBarActions;
 	export let onSaveTempChat: () => {};
-	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
-	export let moveChatHandler: (id: string, folderId: string) => void;
 
 	let closedBannerIds = [];
 
@@ -72,9 +66,6 @@
 			return [];
 		}
 	};
-
-	let showShareChatModal = false;
-	let showDownloadChatModal = false;
 </script>
 
 {#snippet renderTemporaryChatToggle()}
@@ -166,38 +157,8 @@
 		</div>
 	{/if}
 
-	{#if shareEnabled && chat?.id && (scrollToTop || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
-		<Menu
-			{chat}
-			{shareEnabled}
-			{readOnly}
-			{scrollToTop}
-			shareHandler={() => {
-				showShareChatModal = !showShareChatModal;
-			}}
-			{renameHandler}
-			archiveChatHandler={() => {
-				archiveChatHandler(chat.id);
-			}}
-			deleteChatHandler={() => {
-				deleteChatHandler(chat.id);
-			}}
-			{moveChatHandler}
-		>
-			<button
-				class="flex shrink-0 cursor-pointer items-center justify-center {tabbed
-					? 'size-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white'
-					: 'size-6 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
-				id="chat-context-menu-button"
-				aria-label={$i18n.t('Chat actions')}
-			>
-				<EllipsisHorizontal className={tabbed ? 'size-3' : 'size-4.5'} strokeWidth="1.5" />
-			</button>
-		</Menu>
-	{/if}
+	{@render chatMenu?.()}
 {/snippet}
-
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
 <button
 	id="new-chat-button"
