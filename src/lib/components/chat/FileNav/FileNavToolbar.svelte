@@ -168,10 +168,12 @@
 	{#if typingPath}
 		<input
 			bind:this={pathInput}
-			value={breadcrumbs.at(-1)?.path ?? ''}
+			value={selectedFile ?? breadcrumbs.at(-1)?.path ?? ''}
+			readonly={!!selectedFile}
 			class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden dark:text-gray-200"
 			aria-label={$i18n.t('Path')}
 			on:keydown={(e) => {
+				if (selectedFile && e.key !== 'Escape') return;
 				if (e.key === 'Enter' && !e.isComposing) {
 					goToPath();
 				} else if (e.key === 'Tab' && listFolders) {
