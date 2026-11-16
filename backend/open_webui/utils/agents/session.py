@@ -76,7 +76,7 @@ async def get_resume_point(chat, message_id, exclude=None):
     """The native conversation to continue from `message_id`, and whether later turns were added to it.
 
     Regenerating or editing an earlier message reaches a reply whose native conversation already holds
-    the turns that came after it; that conversation is then forked at the reply instead of resumed.
+    the turns that came after it; that conversation then continues from the reply instead of its latest turn.
     """
     messages = await Chats.get_messages_map_by_chat_id(chat.id) or {}
     state, found_id = _find(chat, messages, message_id)
