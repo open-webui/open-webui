@@ -4,6 +4,7 @@ import copy
 
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.middleware import convert_url_images_to_base64
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.terminals import get_terminal_json, upload_files_to_terminal
 
@@ -135,6 +136,7 @@ async def run(request, form_data, user, metadata, model):
         prompt += f'\n\n{form_data["regeneration_prompt"]}'
     if paths:
         prompt += '\n\nAttached files in this environment:\n' + '\n'.join(paths)
+    await convert_url_images_to_base64(form_data, user=user)
     images = [
         p['image_url']['url']
         for m in [user_message, *messages[-1:]]
