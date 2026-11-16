@@ -89,7 +89,7 @@ from open_webui.utils.auth import get_verified_user_by_id
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.code_interpreter import execute_code_jupyter
-from open_webui.utils.context_compaction import apply_summary_checkpoint, compact_messages_for_request
+from open_webui.utils.context_compaction import apply_summary_checkpoint, compact_messages, split_messages
 from open_webui.utils.files import (
     convert_markdown_base64_images,
     get_file_url_from_base64,
@@ -120,6 +120,7 @@ from open_webui.utils.misc import (
     get_reasoning_details,
     get_response_error_detail,
     get_system_message,
+    is_empty_reply,
     is_raster_image_content_type,
     merge_system_messages,
     prepend_to_first_user_message_content,
@@ -1885,9 +1886,7 @@ async def load_messages_from_db(chat_id: str, message_id: str) -> Optional[list[
             set_last_user_message_content(skills_create['expanded_text'], [msg])
 
     return [
-        {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS}
-        for msg in db_messages
-        if not (msg.get('role') == 'assistant' and not msg.get('content') and not msg.get('output'))
+        {k: v for k, v in msg.items() if k in MESSAGE_REPLAY_KEYS} for msg in db_messages if not is_empty_reply(msg)
     ]
 
 
@@ -2149,6 +2148,35 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     filter_functions = (
         await get_filter_functions(request, model, metadata.get('filter_ids', [])) if ENABLE_FUNCTIONS else []
     )
+    event_emitter = await get_event_emitter(metadata)
+    initial_output = []
+
+    async def emit_initial_output():
+        await event_emitter({'type': 'chat:completion', 'data': {'output': initial_output}})
+
+    async def compact_history(messages: list[dict], summary_form_data: dict | None):
+        """Compact the history, shown in this response's output while it runs; only a failure stays."""
+        split = await split_messages(messages, metadata, chat_system_prompt)
+        item = None
+        # A continued reply keeps its own output, so only a new one shows the compaction.
+        if split.compacted and not metadata.get('assistant_message_id'):
+            item = {'type': 'open_webui:context_compaction', 'id': output_id('cc'), 'status': 'in_progress'}
+            initial_output.append(item)
+            await emit_initial_output()
+        try:
+            result = await compact_messages(
+                request, summary_form_data, user, split, metadata, form_data['model'], request.app.state.MODELS
+            )
+        except Exception:
+            if item:
+                item['status'] = 'failed'
+                await emit_initial_output()
+            raise
+        if item:
+            initial_output.remove(item)
+            await emit_initial_output()
+        return result
+
     compaction_messages = None
     context_summary = None
     if (is_saved_chat_id(chat_id) or is_temporary_chat_id(chat_id)) and user_message_id:
@@ -2165,16 +2193,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 or pending_assistant_message is not None
                 or metadata.get('params', {}).get('function_calling') == 'legacy'
             ):
-                form_data['messages'], context_summary, _ = await compact_messages_for_request(
-                    request,
-                    None,
-                    user,
-                    form_data.get('messages', []),
-                    metadata,
-                    form_data['model'],
-                    request.app.state.MODELS,
-                    chat_system_prompt,
-                )
+                form_data['messages'], context_summary, _ = await compact_history(form_data.get('messages', []), None)
                 if context_summary:
                     form_data['messages'] = add_or_update_system_message(
                         f'[CONVERSATION SUMMARY]\n{context_summary}', form_data['messages'], append=True
@@ -2221,7 +2240,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     form_data = await convert_url_images_to_base64(form_data, user=user)
 
-    event_emitter = await get_event_emitter(metadata)
     event_caller = await get_event_call(metadata)
 
     extra_params = {
@@ -2346,7 +2364,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             raise Exception(f'{e}')
 
-    initial_output = []
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
     if features:
@@ -2970,7 +2987,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         form_data['messages'].extend(
             convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
         )
-        metadata['initial_output'] = initial_output
+    # Compaction below can still add its item to the output this response starts with.
+    metadata['initial_output'] = initial_output
 
     form_data = normalize_messages_for_model(form_data)
 
@@ -2983,16 +3001,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 append=True,
             )
         try:
-            _, context_summary, compacted = await compact_messages_for_request(
-                request,
-                summary_form_data,
-                user,
-                compaction_messages,
-                metadata,
-                form_data['model'],
-                request.app.state.MODELS,
-                chat_system_prompt,
-            )
+            _, context_summary, compacted = await compact_history(compaction_messages, summary_form_data)
             if compacted:
                 # Compacted messages lead the history this request was built from.
                 compacted_count = len(
@@ -6147,6 +6156,7 @@ async def streaming_chat_response_handler(response, ctx):
                                 return request_messages
 
                             new_form_data['messages'] = get_request_messages(messages)
+                            item = None
                             try:
                                 user_messages = [
                                     (message, message.get('content'))
@@ -6167,11 +6177,20 @@ async def streaming_chat_response_handler(response, ctx):
                                         set_last_user_message_content(
                                             metadata.get('base_user_prompt') or user_message, [message]
                                         )
-                                    messages, context_summary, compacted = await compact_messages_for_request(
+                                    split = await split_messages(messages, metadata)
+                                    if split.compacted:
+                                        item = {
+                                            'type': 'open_webui:context_compaction',
+                                            'id': output_id('cc'),
+                                            'status': 'in_progress',
+                                        }
+                                        output.append(item)
+                                        await emit_output()
+                                    messages, context_summary, compacted = await compact_messages(
                                         request,
                                         summary_form_data,
                                         user,
-                                        messages,
+                                        split,
                                         metadata,
                                         form_data['model'],
                                         request.app.state.MODELS,
@@ -6192,20 +6211,21 @@ async def streaming_chat_response_handler(response, ctx):
                                     )
                                     messages[checkpoint] = {**messages[checkpoint], 'contextSummary': context_summary}
                                     new_form_data['messages'] = get_request_messages(messages)
-                                    output.append(
-                                        {
-                                            'type': 'open_webui:context_compaction',
-                                            'id': output_id('cc'),
-                                            'call_id': next(
-                                                message['tool_calls'][0]['id']
-                                                for message in messages
-                                                if message.get('tool_calls')
-                                            ),
-                                            'summary': context_summary,
-                                        }
+                                    # The progress item becomes the checkpoint later turns resume from.
+                                    item.update(
+                                        status='completed',
+                                        call_id=next(
+                                            message['tool_calls'][0]['id']
+                                            for message in messages
+                                            if message.get('tool_calls')
+                                        ),
+                                        summary=context_summary,
                                     )
                                     await emit_output()
                             except Exception:
+                                if item:
+                                    item['status'] = 'failed'
+                                    await emit_output()
                                 log.exception('Tool loop context compaction failed; keeping the current context')
 
                         new_form_data = await convert_url_images_to_base64(new_form_data, user=user)

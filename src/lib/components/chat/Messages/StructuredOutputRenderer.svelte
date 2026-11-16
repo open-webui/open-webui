@@ -166,6 +166,7 @@
 						<ToolCallDisplay
 							id={`${id}-${displayItem.id}-${detailIndex}-tool-call`}
 							attributes={detailToken.attributes}
+							view={detailToken.view ?? null}
 							resultContent={detailToken.text}
 							grouped={true}
 							resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
@@ -221,13 +222,21 @@
 			<ToolOutputFile item={displayItem.item} {chatId} modelId={model?.id ?? null} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}
-		<ContextCompactionLabel summary={displayItem.summary} {compactPreview} />
+		<!-- A finished reply can't still be compacting; its run was stopped first. -->
+		{#if displayItem.status !== 'in_progress' || !done}
+			<ContextCompactionLabel
+				summary={displayItem.summary}
+				status={displayItem.status}
+				{compactPreview}
+			/>
+		{/if}
 	{:else}
 		{@const detailToken = displayItem.token}
 		{#if detailToken.attributes?.type === 'tool_calls'}
 			<ToolCallDisplay
 				id={`${id}-${displayItem.id}-tool-call`}
 				attributes={detailToken.attributes}
+				view={detailToken.view ?? null}
 				resultContent={detailToken.text}
 				{allowEmbeds}
 				resolvable={!!chatId && !!messageId && (save || allowToolApproval)}

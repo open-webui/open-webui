@@ -6,6 +6,7 @@
 	import type { AppLayoutContext } from '$lib/types';
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 
 	const i18n = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -78,17 +79,14 @@
 	 * Handle link clicks - intercept same-origin app URLs for in-app navigation
 	 */
 	const handleLinkClick = (e: MouseEvent, href: string) => {
+		if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
 		try {
 			const url = new URL(href, window.location.origin);
+			const folderId = url.pathname.match(/^\/folders\/([^/]+)\/?$/)?.[1];
 			// Check if same origin and an in-app route
-			if (
-				url.origin === window.location.origin &&
-				(url.pathname.startsWith('/notes/') ||
-					url.pathname.startsWith('/c/') ||
-					url.pathname.startsWith('/channels/'))
-			) {
+			if (url.origin === window.location.origin && (folderId || pageTabKey(url))) {
 				e.preventDefault();
-				if (appLayout?.openPageTab && !url.pathname.startsWith('/c/'))
+				if (!folderId && appLayout?.openPageTab && !url.pathname.startsWith('/c/'))
 					appLayout.openPageTab({ href: url.pathname + url.search + url.hash, label: '' });
 				else goto(url.pathname + url.search + url.hash);
 			}

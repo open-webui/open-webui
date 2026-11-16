@@ -30,8 +30,8 @@
 		socketConnected,
 		chatId,
 		tags,
-		temporaryChatEnabled,
-		openSideChatIds,
+		temporaryChat,
+		openEmbeddedChatIds,
 		isLastActiveTab,
 		isApp,
 		appInfo,
@@ -41,18 +41,13 @@
 		pyodideWorker,
 		desktopEvent
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
-	import {
-		clearFolderStates,
-		updateFolderChatLists,
-		beginFolderOpening
-	} from '$lib/stores/folderStates';
+	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
+	import { clearFolderStates } from '$lib/stores/folderStates';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
-	beforeNavigate(() => beginFolderOpening());
 
 	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
 
@@ -476,7 +471,7 @@
 		// This prevents notifications from being sent to other tabs/devices
 		// for privacy, since temporary chats are not meant to be persisted or visible elsewhere.
 		const isTemporaryChat = isTemporaryChatId(event.chat_id);
-		if (isTemporaryChat && event.chat_id !== $chatId && !$openSideChatIds.has(event.chat_id)) {
+		if (isTemporaryChat && event.chat_id !== $chatId && !$openEmbeddedChatIds.has(event.chat_id)) {
 			return;
 		}
 
@@ -546,13 +541,10 @@
 			}
 		}
 
-		if (
-			!event?.internal &&
-			((event.chat_id !== $chatId &&
-				!$openSideChatIds.has(event.chat_id) &&
-				!$temporaryChatEnabled) ||
-				isInBackground)
-		) {
+		const isVisible = !!document
+			.querySelector(`[data-chat-id="${CSS.escape(event.chat_id)}"]`)
+			?.checkVisibility();
+		if (!event?.internal && ((!isVisible && !$temporaryChat) || isInBackground)) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');
@@ -597,7 +589,7 @@
 					});
 				}
 			} else if (type === 'chat:title') {
-				updateFolderChatLists({ id: event.chat_id, title: data });
+				setChatTitle(event.chat_id, data);
 				await refreshChatList(localStorage.token);
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));

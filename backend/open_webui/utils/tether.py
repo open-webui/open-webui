@@ -79,12 +79,21 @@ def get_connections(value):
     for item in value:
         if (
             not isinstance(item, dict)
-            or item.get('type') not in ('openai', 'openapi', 'terminal')
+            or item.get('type') not in ('openai', 'openapi', 'terminal', 'mcp')
             or not isinstance(item.get('name'), str)
         ):
             raise ValueError('Invalid Tether connection')
         service = get_services([item.get('service')])[0]
-        connections.append({'service': service, 'name': item['name'].strip()[:100] or service, 'type': item['type']})
+        connection = {'service': service, 'name': item['name'].strip()[:100] or service, 'type': item['type']}
+        if item['type'] == 'mcp':
+            if item.get('transport') not in ('stdio', 'streamable-http'):
+                raise ValueError('Invalid MCP transport')
+            connection['transport'] = item['transport']
+            revision = item.get('revision', '')
+            if not isinstance(revision, str) or len(revision) > 64:
+                raise ValueError('Invalid MCP revision')
+            connection['revision'] = revision
+        connections.append(connection)
     return connections
 
 
@@ -375,7 +384,7 @@ class Hub:
     async def deliver(self, connection, reply, header, data):
         """Accept a frame another worker sent to a Tether socket held here."""
         stream_id = header['stream']
-        if header['type'] in ('http-open', 'ws-open'):
+        if header['type'] in ('http-open', 'ws-open', 'stdio-open'):
             # This worker holds the socket, so its count is the device's true count.
             if connection.full():
                 await self.reject(reply, connection, stream_id, 'Tether has too many active operations.')
@@ -467,7 +476,7 @@ class Hub:
         if presence['worker'] == self.worker:
             if not connection:
                 raise ConnectionError('Tether disconnected')
-            if header['type'] in ('http-open', 'ws-open'):
+            if header['type'] in ('http-open', 'ws-open', 'stdio-open'):
                 if connection.full():
                     raise HTTPException(429, 'Tether has too many active operations.')
                 connection.routes[header['stream']] = self.worker
@@ -745,6 +754,9 @@ class RelayClient:
     def ws_connect(self, url, **kwargs):
         return Operation(self._request(None, url, **kwargs))
 
+    async def _open(self, device):
+        return await hub.open(self.user_id, device, self.service)
+
     def __getattr__(self, name):
         if name in ('get', 'post', 'put', 'patch', 'delete', 'head', 'options'):
             return lambda url, **kwargs: self.request(name.upper(), url, **kwargs)
@@ -777,7 +789,7 @@ class RelayClient:
         query = parsed.query
         if kwargs.get('params'):
             query += ('&' if query else '') + urlencode(kwargs['params'], doseq=True)
-        stream = await hub.open(self.user_id, device, self.service)
+        stream = await self._open(device)
         body = kwargs.get('data')
         if kwargs.get('json') is not None:
             body = json.dumps(kwargs['json']).encode()
@@ -799,6 +811,7 @@ class RelayClient:
                 path=path,
                 query=query,
                 headers=headers,
+                **({'revision': kwargs['revision']} if 'revision' in kwargs else {}),
             )
             if method:
 

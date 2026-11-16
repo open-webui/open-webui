@@ -73,6 +73,9 @@ async def run(transport, output, prompt, images, options):
             'approvalPolicy': 'untrusted',
             'sandbox': 'workspace-write',
         }
+        if options.get('approval_mode') == 'auto':
+            # Codex's own reviewer approves routine actions; only what it escalates reaches the user.
+            params.update(approvalPolicy='on-request', approvalsReviewer='auto_review')
         if options.get('instructions'):
             params['developerInstructions'] = options['instructions']
         if options.get('resume'):
@@ -143,7 +146,7 @@ async def run(transport, output, prompt, images, options):
                         item.get('id', params.get('itemId')),
                         item.get('type', 'agent_tool'),
                         item,
-                        native=item,
+                        provider_data=item,
                         result=item.get('aggregatedOutput', item),
                         done=method == 'item/completed',
                     )

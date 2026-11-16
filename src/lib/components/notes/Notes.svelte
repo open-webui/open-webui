@@ -6,6 +6,7 @@
 	let accessModal: WorkspaceAccessModal;
 	import { marked } from 'marked';
 	import { toast } from 'svelte-sonner';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 	import fileSaver from 'file-saver';
 
 	const { saveAs } = fileSaver;
@@ -112,6 +113,7 @@
 		});
 
 		if (res) {
+			closePageTabs(`/notes/${id}`);
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
 			init();
 		}

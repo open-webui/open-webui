@@ -19,7 +19,7 @@
 	export let readOnly = false;
 	export let connected = false;
 	export let connecting = false;
-	export let onTitleChange: (title: string) => void = () => {};
+	export let onTitleChange: (title: string, process: string) => void = () => {};
 
 	let terminalEl: HTMLDivElement;
 	let term: Terminal | null = null;
@@ -153,7 +153,7 @@
 								outputPending = outputBatch = outputPending.then(() => {
 									if (destroyed) return;
 									processName = message.name;
-									onTitleChange(processName);
+									onTitleChange(processName, processName);
 								});
 								outputBatchBytes = 0;
 							}
@@ -259,7 +259,7 @@
 			minimumContrastRatio: 4.5,
 			scrollback: 5000
 		});
-		term.onTitleChange((title) => onTitleChange(title.trim() || processName));
+		term.onTitleChange((title) => onTitleChange(title.trim() || processName, processName));
 		updateTheme();
 		themeObserver = new MutationObserver(updateTheme);
 		themeObserver.observe(document.documentElement, {

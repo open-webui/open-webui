@@ -13,8 +13,6 @@
 	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
-	const contextCompactions =
-		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 
 	const dispatch = createEventDispatcher();
 
@@ -22,15 +20,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import {
-		audioQueue,
-		config,
-		models,
-		settings,
-		TTSWorker,
-		user,
-		visibleControls
-	} from '$lib/stores';
+	import { config, settings, TTSWorker, user, visibleControls } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -75,6 +65,9 @@
 	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { audioQueue, models } = getChatContext();
 
 	interface MessageType {
 		user_id?: string;
@@ -135,7 +128,11 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
-	$: compactionStatus = $contextCompactions?.[messageId];
+	$: compacting =
+		!message.done &&
+		(message.output ?? []).some(
+			(item) => item?.type === 'open_webui:context_compaction' && item.status === 'in_progress'
+		);
 	export let selectedModels = [];
 
 	let messageSource = history.messages[messageId];
@@ -731,7 +728,7 @@
 				</Name>
 			{/if}
 
-			{#if message.contextSummary && !compactionStatus}
+			{#if message.contextSummary}
 				<ContextCompactionLabel summary={message.contextSummary} {compactPreview} />
 			{/if}
 
@@ -888,7 +885,8 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if hasResponseContent && message.error !== true}
+							{#if message.error !== true}
+								<!-- Mount before the first chunk so artifact detection can recognize new content. -->
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
@@ -896,7 +894,7 @@
 									{chatId}
 									{onOpenArtifacts}
 									messageId={message.id}
-									content={message.content}
+									content={message.content ?? ''}
 									output={message.output}
 									sources={message.sources}
 									floatingButtons={message?.done &&
@@ -953,11 +951,7 @@
 								/>
 							{/if}
 
-							{#if compactionStatus}
-								<ContextCompactionLabel status={compactionStatus} {compactPreview} />
-							{/if}
-
-							{#if !compactionStatus && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
+							{#if !compacting && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
 								<div class="text-[0.90625rem] leading-relaxed">
 									<span
 										class="inline-block w-[0.125rem] h-3.5 bg-gray-400 dark:bg-gray-500 ml-0.5 animate-cursor-pulse align-text-bottom"

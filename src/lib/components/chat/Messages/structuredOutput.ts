@@ -1,5 +1,6 @@
 import { encode } from 'html-entities';
 import { getDispatchedVisualizationPreviews } from '$lib/utils/visualizations/dispatch';
+import { agentView, terminalView, type AgentView } from './agentViews';
 
 export type OutputContentPart = {
 	type?: string;
@@ -37,6 +38,7 @@ export type OutputItem = {
 export type OutputDetailToken = {
 	summary: string;
 	text: string;
+	view?: AgentView | null;
 	attributes: {
 		type: string;
 		id?: string;
@@ -84,6 +86,7 @@ export type OutputDisplayItem =
 			type: 'context_compaction';
 			id: string;
 			summary: string;
+			status?: 'in_progress' | 'failed';
 	  };
 
 type ResponseStreamEvent = {
@@ -239,6 +242,7 @@ export function buildToolCallToken(
 		}
 	}
 
+	const text = getToolResultText(resultItem);
 	return {
 		summary: isPending
 			? 'Tool Approval Needed'
@@ -247,7 +251,8 @@ export function buildToolCallToken(
 				: isExecuting
 					? 'Executing...'
 					: 'Preparing...',
-		text: getToolResultText(resultItem),
+		text,
+		view: agentView(item, text) ?? terminalView(item, text),
 		attributes: {
 			type: 'tool_calls',
 			id: callId,
@@ -482,7 +487,8 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 			displayItems.push({
 				type: 'context_compaction',
 				id: item.id ?? `context-compaction-${index}`,
-				summary: typeof item.summary === 'string' ? item.summary : ''
+				summary: typeof item.summary === 'string' ? item.summary : '',
+				status: item.status === 'in_progress' || item.status === 'failed' ? item.status : undefined
 			});
 			return;
 		}
