@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { models, mobile, settings, user, type Model } from '$lib/stores';
+	import { mobile, settings, user, type Model } from '$lib/stores';
 	import Controls from '../Controls/Controls.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -16,6 +16,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Knobs from '$lib/components/icons/Knobs.svelte';
 	import { localizeModelControls, resolveLocalizedModelName } from '$lib/utils/localizedContent';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 	export let selectedModels: string[] = [];
@@ -43,7 +46,7 @@
 		.filter(
 			(model): model is Model =>
 				!!model &&
-				!('direct' in model && model.direct) &&
+				!('owner_id' in model && model.owner_id) &&
 				!('pipe' in model && model.pipe) &&
 				Object.keys(model.info?.params?.model_controls ?? {}).length > 0
 		);

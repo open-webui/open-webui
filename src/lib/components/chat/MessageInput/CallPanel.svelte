@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { config, showCallOverlay } from '$lib/stores';
+	import { config, voiceCall } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import CallOverlay from './CallOverlay.svelte';
 	import BridgeCallOverlay from './CallOverlay/BridgeCallOverlay.svelte';
@@ -19,7 +19,7 @@
 	const dispatch = createEventDispatcher();
 
 	const close = () => {
-		showCallOverlay.set(false);
+		voiceCall.set(false);
 		dispatch('close');
 	};
 

@@ -635,6 +635,7 @@ class ChatMessageTable:
 
             stmt = select(
                 ChatMessage.model_id,
+                func.max(ChatMessage.meta['model_name'].as_string()).label('model_name'),
                 func.count(ChatMessage.id).label('count'),
                 func.count(distinct(ChatMessage.user_id)).label('unique_users'),
                 func.count(distinct(ChatMessage.chat_id)).label('unique_chats'),
@@ -655,6 +656,7 @@ class ChatMessageTable:
             result = await db.execute(stmt)
             return {
                 row.model_id: {
+                    'name': row.model_name if isinstance(row.model_name, str) and row.model_name.strip() else None,
                     'count': row.count,
                     'unique_users': row.unique_users,
                     'unique_chats': row.unique_chats,

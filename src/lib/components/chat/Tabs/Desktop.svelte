@@ -20,6 +20,7 @@
 	let surface: HTMLDivElement;
 	let native: NativeDesktop;
 	let transport = 'vnc';
+	let clipboardAvailable = true;
 	let audioAvailable = false;
 	const send = (message: Record<string, unknown>) => {
 		if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
@@ -66,12 +67,14 @@
 		error = '';
 		status = $i18n.t('Connecting…');
 		try {
-			const info = await terminalRequest<{ transport?: string; audio?: boolean }>(
-				target,
-				'/desktop'
-			);
+			const info = await terminalRequest<{
+				transport?: string;
+				audio?: boolean;
+				clipboard?: boolean;
+			}>(target, '/desktop');
 			if (version !== generation) return;
 			transport = info.transport ?? 'vnc';
+			clipboardAvailable = info.clipboard !== false;
 			audioAvailable = info.audio === true;
 			await tick();
 			if (version !== generation) return;
@@ -143,7 +146,7 @@
 		}
 	};
 	const paste = (text: string, shift = false) => {
-		if (transport === 'frames') {
+		if (transport === 'frames' || !clipboardAvailable) {
 			send({ type: 'paste', text });
 			return;
 		}
@@ -211,7 +214,7 @@
 		</div>
 	{/if}
 	{#if audioAvailable && active && !status && !error}
-		<DesktopAudio {target}  {fullscreenEnabled} />
+		<DesktopAudio {target} {fullscreenEnabled} />
 	{/if}
 	{#if fullscreenEnabled}
 		<button

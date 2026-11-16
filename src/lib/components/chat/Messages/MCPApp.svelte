@@ -18,9 +18,11 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { injectCsp } from '$lib/utils/csp';
+	import { getChatContext } from '$lib/components/chat/context';
 
 	export let app: MCPAppEmbed;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const { submitPrompt } = getChatContext();
 	const lifetime = new AbortController();
 	let iframe: HTMLIFrameElement;
 	let bridge: AppBridge | undefined;
@@ -126,9 +128,13 @@
 				.flatMap((block) => (block.type === 'text' ? [block.text] : []))
 				.join('\n\n');
 			const signal = AbortSignal.any([lifetime.signal, extra.mcpReq.signal]);
-			if (!text || !(await requestConfirmation($i18n.t('Confirm Prompt from Embed'), text, signal)))
+			if (
+				!text ||
+				!submitPrompt ||
+				!(await requestConfirmation($i18n.t('Confirm Prompt from Embed'), text, signal))
+			)
 				throw new Error('Message cancelled');
-			window.postMessage({ type: 'input:prompt:submit', text }, window.origin);
+			submitPrompt(text);
 			return {};
 		};
 		bridge.onopenlink = async ({ url }) => {

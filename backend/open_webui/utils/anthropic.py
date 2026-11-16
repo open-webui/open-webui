@@ -364,7 +364,7 @@ def convert_anthropic_payload_to_chat_completions(
                 if openai_content:
                     msg_dict['content'] = _finalize_chat_completions_content(openai_content)
                 else:
-                    msg_dict['content'] = ''
+                    msg_dict['content'] = None
                 msg_dict['tool_calls'] = tool_calls
                 messages.append(msg_dict)
             elif openai_content or role == 'assistant':

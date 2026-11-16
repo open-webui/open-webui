@@ -19,6 +19,13 @@
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
 	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
+	import DiffBlock from '$lib/components/chat/Messages/DiffBlock.svelte';
+	import {
+		agentViewName,
+		agentViewOutput,
+		diffStats,
+		type AgentView
+	} from '$lib/components/chat/Messages/agentViews';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -36,6 +43,8 @@
 		status?: string;
 	} = {};
 
+	// Commands and file edits from terminal agents, drawn as a terminal block or a diff.
+	export let view: AgentView | null = null;
 	export let open = false;
 	export let grouped = false;
 	export let allowEmbeds = false;
@@ -158,15 +167,63 @@
 	$: isPreparing = !isDone && !isRejected && !needsApproval && !needsInput && !isExecuting;
 	$: isActive = isPreparing || isExecuting;
 	$: isError = attributes?.status === 'failed' || (isDone && isToolResultError(result));
+	$: toolName = view ? agentViewName(view) : attributes.name;
+	// Literal keys so the i18n parser picks them up.
+	const viewText = (kind: AgentView['kind'], done: boolean, NAME: string) => {
+		switch (kind) {
+			case 'command':
+				return done ? $i18n.t('Ran {{NAME}}', { NAME }) : $i18n.t('Running {{NAME}}', { NAME });
+			case 'edit':
+				return done ? $i18n.t('Edited {{NAME}}', { NAME }) : $i18n.t('Editing {{NAME}}', { NAME });
+			case 'read':
+				return done ? $i18n.t('Read {{NAME}}', { NAME }) : $i18n.t('Reading {{NAME}}', { NAME });
+			case 'search':
+				return done
+					? $i18n.t('Searched for {{NAME}}', { NAME })
+					: $i18n.t('Searching for {{NAME}}', { NAME });
+			case 'list':
+				return done ? $i18n.t('Listed {{NAME}}', { NAME }) : $i18n.t('Listing {{NAME}}', { NAME });
+			case 'web':
+				return done
+					? $i18n.t('Searched the web for {{NAME}}', { NAME })
+					: $i18n.t('Searching the web for {{NAME}}', { NAME });
+			case 'fetch':
+				return done
+					? $i18n.t('Fetched {{NAME}}', { NAME })
+					: $i18n.t('Fetching {{NAME}}', { NAME });
+		}
+	};
+	$: viewLabel =
+		view &&
+		toolName &&
+		!needsApproval &&
+		!isRejected &&
+		!['pending', 'queued'].includes(attributes.status ?? '')
+			? viewText(view.kind, isDone, toolName)
+			: '';
 	$: displayLabel =
-		!needsInput &&
+		viewLabel ||
+		(!needsInput &&
 		!isRejected &&
 		!isError &&
 		!['pending', 'queued', 'requires_approval', 'incomplete'].includes(attributes.status ?? '')
 			? isDone
 				? attributes.display_label
 				: attributes.running_label
-			: '';
+			: '');
+	$: viewOutput = view ? agentViewOutput(view) : '';
+	$: editStats =
+		view?.kind === 'edit'
+			? view.files
+					.map((file) => diffStats(file.diff))
+					.reduce(
+						(total, stats) => ({
+							additions: total.additions + stats.additions,
+							deletions: total.deletions + stats.deletions
+						}),
+						{ additions: 0, deletions: 0 }
+					)
+			: null;
 
 	$: parsedArgs = parseArguments(args);
 	$: parsedResult = parseJSONString(result);
@@ -248,35 +305,46 @@
 					</div>
 				{/if}
 
-				<!-- Label -->
-				<div class="flex-1 min-w-0 line-clamp-1">
-					<!-- Short label (below md) -->
-					<span
-						class="@md:hidden text-black dark:text-white"
-						title={displayLabel ? attributes.name : undefined}
-						>{displayLabel || attributes.name}</span
-					>
-					<!-- Full label (md and above) -->
-					<span
-						class="hidden @md:inline font-normal"
-						title={displayLabel ? attributes.name : undefined}
-					>
-						{#if isRejected}
-							{$i18n.t('Denied {{NAME}}', { NAME: attributes.name })}
-						{:else if displayLabel}
-							{displayLabel}
-						{:else if isDone}
-							{$i18n.t('View Result from {{NAME}}', { NAME: attributes.name })}
-						{:else if needsInput}
-							{$i18n.t('Input needed')}
-						{:else if needsApproval}
-							{$i18n.t('Allow {{NAME}}?', { NAME: attributes.name })}
-						{:else if isPreparing}
-							{$i18n.t('Preparing {{NAME}}...', { NAME: attributes.name })}
-						{:else}
-							{$i18n.t('Executing {{NAME}}...', { NAME: attributes.name })}
-						{/if}
-					</span>
+				<!-- Label, with an edit's line counts right after it -->
+				<div class="flex-1 min-w-0 flex items-baseline gap-1.5">
+					<div class="min-w-0 line-clamp-1">
+						<!-- Short label (below md) -->
+						<span
+							class="@md:hidden text-black dark:text-white"
+							title={displayLabel ? attributes.name : undefined}>{displayLabel || toolName}</span
+						>
+						<!-- Full label (md and above) -->
+						<span
+							class="hidden @md:inline font-normal"
+							title={displayLabel ? attributes.name : undefined}
+						>
+							{#if isRejected}
+								{$i18n.t('Denied {{NAME}}', { NAME: toolName })}
+							{:else if displayLabel}
+								{displayLabel}
+							{:else if isDone}
+								{$i18n.t('View Result from {{NAME}}', { NAME: toolName })}
+							{:else if needsInput}
+								{$i18n.t('Input needed')}
+							{:else if needsApproval}
+								{$i18n.t('Allow {{NAME}}?', { NAME: toolName })}
+							{:else if isPreparing}
+								{$i18n.t('Preparing {{NAME}}...', { NAME: toolName })}
+							{:else}
+								{$i18n.t('Executing {{NAME}}...', { NAME: toolName })}
+							{/if}
+						</span>
+					</div>
+					{#if editStats && !isRejected && (editStats.additions || editStats.deletions)}
+						<span class="shrink-0 flex gap-1 text-xs font-mono tabular-nums">
+							{#if editStats.additions}<span class="text-green-600 dark:text-green-400"
+									>+{editStats.additions}</span
+								>{/if}
+							{#if editStats.deletions}<span class="text-red-500 dark:text-red-400"
+									>−{editStats.deletions}</span
+								>{/if}
+						</span>
+					{/if}
 				</div>
 
 				{#if needsApproval && !isAskUser}
@@ -316,7 +384,61 @@
 				<div
 					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
 				>
-					{#if args}
+					{#if view && view.kind !== 'edit'}
+						{@const isTruncated = viewOutput.length > RESULT_PREVIEW_LIMIT && !expandedResult}
+						{#if view.kind === 'command' || viewOutput}
+							<pre
+								class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono max-h-80 overflow-y-auto">{#if view.kind === 'command'}<span
+										class="text-gray-400 dark:text-gray-500 select-none"
+										>$ </span><span class="text-gray-900 dark:text-gray-100">{view.command}</span
+									>{viewOutput ? '\n' : ''}{/if}{isTruncated
+									? viewOutput.slice(0, RESULT_PREVIEW_LIMIT)
+									: viewOutput}</pre>
+						{/if}
+						{#if isTruncated}
+							<button
+								class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								on:click|stopPropagation={() => {
+									expandedResult = true;
+								}}
+							>
+								{$i18n.t('Show all ({{COUNT}} characters)', {
+									COUNT: viewOutput.length.toLocaleString()
+								})}
+							</button>
+						{/if}
+						{#if view.kind === 'command' && view.exitCode != null && view.exitCode !== 0}
+							<div class="text-xs text-red-500 dark:text-red-400">
+								{$i18n.t('Exit code {{CODE}}', { CODE: view.exitCode })}
+							</div>
+						{/if}
+					{:else if view?.kind === 'edit'}
+						{#each view.files as file, idx (`${file.path}-${idx}`)}
+							{@const stats = diffStats(file.diff)}
+							<div>
+								<div class="flex items-baseline gap-1.5 text-xs mb-1 px-1 min-w-0">
+									<span class="font-mono text-gray-500 dark:text-gray-400 truncate"
+										>{file.path}</span
+									>
+									{#if stats.additions}<span class="shrink-0 text-green-600 dark:text-green-400"
+											>+{stats.additions}</span
+										>{/if}
+									{#if stats.deletions}<span class="shrink-0 text-red-500 dark:text-red-400"
+											>−{stats.deletions}</span
+										>{/if}
+								</div>
+								{#if file.diff}
+									<div class="max-h-80 overflow-y-auto">
+										<DiffBlock code={file.diff} compact />
+									</div>
+								{/if}
+							</div>
+						{/each}
+						{#if isError && result}
+							<pre
+								class="text-xs text-red-500 dark:text-red-400 whitespace-pre-wrap break-words font-mono">{result}</pre>
+						{/if}
+					{:else if args}
 						<!-- Input -->
 						<div>
 							<div
@@ -350,7 +472,7 @@
 					{/if}
 
 					<!-- Output -->
-					{#if isDone && result}
+					{#if !view && isDone && result}
 						<div>
 							<div
 								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"

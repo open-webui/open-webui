@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto } = getPageContext();
+	const { goto, active } = getPageContext();
 
 	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext } from 'svelte';
@@ -8,6 +8,7 @@
 	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import { toast } from 'svelte-sonner';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 
 	import { WEBUI_NAME, user, config, channels, folders } from '$lib/stores';
 	import { getFolders } from '$lib/apis/folders';
@@ -122,7 +123,7 @@
 	};
 
 	// Immediate response to page/filter changes (gate behind loaded)
-	$: if (loaded && page && statusFilter !== undefined) {
+	$: if (loaded && $active && page && statusFilter !== undefined) {
 		getAutomationList();
 	}
 
@@ -214,6 +215,7 @@
 			return null;
 		});
 		if (res) {
+			closePageTabs(`/automations/${automation.id}`);
 			toast.success($i18n.t(`Deleted {{name}}`, { name: automation.name }));
 		}
 

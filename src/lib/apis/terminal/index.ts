@@ -123,11 +123,9 @@ export async function getTerminalFeatures(
 	signal?: AbortSignal
 ): Promise<TerminalFeatures> {
 	try {
-		const result = await terminalRequest<{ features?: TerminalFeatures }>(
-			target,
-			'/api/config',
-			{ signal }
-		);
+		const result = await terminalRequest<{ features?: TerminalFeatures }>(target, '/api/config', {
+			signal
+		});
 		return result.features ?? {};
 	} catch {
 		return {};
@@ -163,7 +161,8 @@ export type TerminalTarget = {
 	baseUrl: string;
 	key: string;
 	system: boolean;
-	context: { chatId: string | null; modelId: string | null };
+	/** userId names another person's instance; only someone who manages the terminal may reach it. */
+	context: { userId?: string | null; chatId: string | null; modelId: string | null };
 };
 export type TerminalProcess = {
 	id: string;
@@ -180,7 +179,6 @@ export type TerminalProcessOutput = TerminalProcess & {
 export const resolveTerminalTarget = (
 	selector: string | null,
 	servers: any[],
-	directServers: any[],
 	token: string,
 	context: Partial<TerminalTarget['context']> = {}
 ): TerminalTarget | null => {
@@ -192,6 +190,7 @@ export const resolveTerminalTarget = (
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
 			context: {
+				userId: context.userId ?? null,
 				chatId: context.chatId ?? null,
 				modelId: server.scope === 'model' ? (context.modelId ?? null) : null
 			},
@@ -202,16 +201,7 @@ export const resolveTerminalTarget = (
 			system: true
 		};
 	}
-	const direct = directServers.find((server) => server.url === selector);
-	return direct
-		? {
-				selector,
-				baseUrl: direct.url.replace(/\/$/, ''),
-				key: direct.key ?? '',
-				system: false,
-				context: { chatId: context.chatId ?? null, modelId: null }
-			}
-		: null;
+	return null;
 };
 
 export class TerminalRequestError extends Error {
@@ -258,6 +248,7 @@ export const terminalHeaders = (
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	return {
 		Authorization: `Bearer ${target.key.trim()}`,
+		...(target.context.userId ? { 'X-Terminal-User-Id': target.context.userId } : {}),
 		...(target.context.chatId ? { 'X-Session-Id': target.context.chatId } : {}),
 		...(target.context.modelId ? { 'X-Terminal-Model-Id': target.context.modelId } : {})
 	};
@@ -447,10 +438,7 @@ export const readComparisonSource = async (
 	return readSourceResponse(response, signal);
 };
 
-export const readFile = async (
-	target: TerminalTarget,
-	path: string
-): Promise<string | null> => {
+export const readFile = async (target: TerminalTarget, path: string): Promise<string | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
 	const headers: Record<string, string> = terminalHeaders(target);
 
@@ -717,9 +705,7 @@ export const moveEntry = async (
 	return res;
 };
 
-export const getListeningPorts = async (
-	target: TerminalTarget
-): Promise<ListeningPort[]> => {
+export const getListeningPorts = async (target: TerminalTarget): Promise<ListeningPort[]> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/ports`;
 	const res = await fetch(url, {
 		headers: {

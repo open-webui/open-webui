@@ -15,7 +15,7 @@ import time
 from typing import Any, ClassVar
 
 from fastapi.encoders import jsonable_encoder
-from open_webui.internal.db import Base, get_async_db
+from open_webui.internal.db import Base, get_async_db, get_async_db_context
 from sqlalchemy import JSON, BigInteger, Column, Text, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -141,16 +141,16 @@ class Config(Base):
         return True
 
     @staticmethod
-    async def get(key: str, default: Any = None) -> Any:
+    async def get(key: str, default: Any = None, *, db: AsyncSession | None = None) -> Any:
         """Get a config value by key. Returns default if not set."""
         if not Config.persistent_enabled_for(key):
             return Config.default_value(key, default)
-        async with get_async_db() as db:
+        async with get_async_db_context(db) as db:
             row = await db.get(Config, key)
             return row.value if row else Config.default_value(key, default)
 
     @staticmethod
-    async def get_many(*keys: str) -> dict:
+    async def get_many(*keys: str, db: AsyncSession | None = None) -> dict:
         """Get multiple config values. Returns {key: value} for keys that exist."""
         disabled_values = {
             key: Config.default_value(key)
@@ -160,7 +160,7 @@ class Config(Base):
         enabled_keys = {key for key in keys if Config.persistent_enabled_for(key)}
         if not enabled_keys:
             return disabled_values
-        async with get_async_db() as db:
+        async with get_async_db_context(db) as db:
             result = await db.execute(select(Config).where(Config.key.in_(enabled_keys)))
             values = {row.key: row.value for row in result.scalars().all()}
             return {

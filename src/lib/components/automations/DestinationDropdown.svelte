@@ -24,6 +24,8 @@
 	export let channels: any[] = [];
 	export let side: 'top' | 'bottom' = 'top';
 	export let align: 'start' | 'end' = 'start';
+	/** Render the trigger as a bare value, for label | value rows. */
+	export let plain = false;
 	export let onChange: () => void = () => {};
 
 	let show = false;
@@ -125,9 +127,11 @@
 >
 	<button
 		type="button"
-		class="relative h-8 max-w-[11rem] flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent rounded-2xl text-xs font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+		class={plain
+			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
+			: 'relative h-8 max-w-[11rem] flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent rounded-2xl text-xs font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}
 	>
-		{#if target_type === 'channel'}
+		{#if plain}{:else if target_type === 'channel'}
 			<Hashtag className="size-3.5 shrink-0" />
 		{:else if folder_id}
 			<Folder className="size-3.5 shrink-0" />
@@ -135,7 +139,7 @@
 			<ChatBubble className="size-3.5 shrink-0" />
 		{/if}
 		<span class="min-w-0 truncate">{destinationLabel}</span>
-		<ChevronDown className="size-2.5 shrink-0" strokeWidth="2.5" />
+		{#if !plain}<ChevronDown className="size-2.5 shrink-0" strokeWidth="2.5" />{/if}
 	</button>
 
 	<div slot="content">

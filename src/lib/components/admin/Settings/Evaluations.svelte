@@ -30,14 +30,7 @@
 		if (result) {
 			evaluationConfig = result;
 			toast.success($i18n.t('Settings saved successfully!'));
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 		return !!result;
 	};
@@ -64,12 +57,7 @@
 		);
 
 		await submitHandler();
-		models.set(
-			await getModels(
-				localStorage.token,
-				$config?.features?.enable_direct_connections && ($settings?.directConnections ?? null)
-			)
-		);
+		models.set(await getModels(localStorage.token));
 	};
 
 	onMount(async () => {

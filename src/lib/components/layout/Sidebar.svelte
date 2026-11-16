@@ -21,7 +21,6 @@
 		mobile,
 		pinnedChats,
 		pinnedNotes,
-		temporaryChatEnabled,
 		channels,
 		socket,
 		config,
@@ -35,6 +34,7 @@
 		allLoaded,
 		loadNextChatListPage,
 		refreshChatList,
+		refreshFolderChatLists,
 		refreshSidebar,
 		registerFolderRefreshHandler,
 		setAllChatsRead,
@@ -46,7 +46,7 @@
 		markFolderChatsDirty,
 		updateFolderChatLists,
 		updateFolderDetails,
-		removeFolderState,
+		removeFolderState
 	} from '$lib/stores/folderStates';
 	import { onMount, getContext, setContext, tick, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
@@ -287,15 +287,24 @@
 		const details = $folderStates[id]?.details;
 		if (details) {
 			retainedFolderId = id;
-			const display = { name: details.name, meta: details.meta, write_access: details.write_access, access_grants: details.access_grants };
-			const current = { name: $selectedFolder.name, meta: $selectedFolder.meta, write_access: $selectedFolder.write_access, access_grants: $selectedFolder.access_grants };
+			const display = {
+				name: details.name,
+				meta: details.meta,
+				write_access: details.write_access,
+				access_grants: details.access_grants
+			};
+			const current = {
+				name: $selectedFolder.name,
+				meta: $selectedFolder.meta,
+				write_access: $selectedFolder.write_access,
+				access_grants: $selectedFolder.access_grants
+			};
 			if (!equal(display, current)) selectedFolder.set({ ...$selectedFolder, ...display });
 		} else if (!$folderStates[id] && retainedFolderId === id) {
 			selectedFolder.set(null);
 			if ($page.url.pathname.startsWith('/folders/')) void goto('/');
 		}
 	} else retainedFolderId = null;
-
 
 	const initSelectedFolderChats = (folder: SelectedSidebarFolder) => {
 		if (!folder?.id) {
@@ -946,8 +955,15 @@
 		};
 	}) => {
 		if (event.data?.type === 'chat:active') {
-			updateFolderChatLists({ id: event.chat_id, active: event.data.data?.active ?? false, pending_approval: event.data.data?.pending_approval ?? false });
+			updateFolderChatLists({
+				id: event.chat_id,
+				active: event.data.data?.active ?? false,
+				pending_approval: event.data.data?.pending_approval ?? false
+			});
 			const eventData = event.data.data ?? {};
+			if (eventData.folder_unread_counts) {
+				applyFolderUnreadCounts(eventData.folder_unread_counts);
+			}
 			const active = eventData.active ?? false;
 			const pendingApproval = eventData.pending_approval ?? false;
 			const found = setChatActive(event.chat_id, active, pendingApproval);
@@ -963,7 +979,8 @@
 				await refreshChatRows();
 			}
 		} else if (event.data?.type === 'chat:list') {
-			if (typeof event.data.data?.last_read_at === 'number') updateFolderChatLists({ id: event.chat_id, last_read_at: event.data.data.last_read_at });
+			if (typeof event.data.data?.last_read_at === 'number')
+				updateFolderChatLists({ id: event.chat_id, last_read_at: event.data.data.last_read_at });
 			const eventData = event.data.data ?? {};
 			const folderUnreadCounts = eventData.folder_unread_counts;
 			if (folderUnreadCounts) {
@@ -1040,12 +1057,7 @@
 		selectedFolder.set(null);
 		closeMobileSidebar();
 
-		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-			await temporaryChatEnabled.set(true);
-		} else {
-			await temporaryChatEnabled.set(false);
-		}
-		if (appLayout?.initNewChat) await appLayout.initNewChat(true);
+		if (appLayout?.initNewChat) await appLayout.initNewChat({ preserveTabs: true });
 		else await goto('/');
 	};
 
@@ -1108,16 +1120,19 @@
 	}}
 />
 
-<FolderModal
-	bind:show={showCreateFolderModal}
-	onSubmit={async (folder) => {
-		await createFolder(folder);
-		showCreateFolderModal = false;
-	}}
-/>
+{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
+	<FolderModal
+		bind:show={showCreateFolderModal}
+		onSubmit={async (folder) => {
+			await createFolder(folder);
+			showCreateFolderModal = false;
+		}}
+	/>
+{/if}
+
+<svelte:document on:click|capture={sidebarLinkClickHandler} />
 
 <svelte:window
-	on:click|capture={sidebarLinkClickHandler}
 	on:dragstart|capture={sidebarPageDragHandler}
 	bind:innerWidth={viewportWidth}
 	on:pointermove={(e) => {
@@ -1666,7 +1681,8 @@
 								onDelete={(folderId) => {
 									for (const childId of Object.keys(folders)) {
 										let parentId = childId;
-										while (parentId && parentId !== folderId) parentId = folders[parentId]?.parent_id;
+										while (parentId && parentId !== folderId)
+											parentId = folders[parentId]?.parent_id;
 										if (parentId) removeFolderState(childId);
 									}
 									let id = $selectedFolder?.id;
@@ -1750,7 +1766,8 @@
 										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
 									}
 
-									initChatList();
+									await initChatList();
+									void refreshFolderChatLists();
 								}
 							} else if (type === 'folder') {
 								if (folders[id].parent_id === null) {
@@ -1855,7 +1872,8 @@
 														);
 													}
 
-													initChatList();
+													await initChatList();
+													void refreshFolderChatLists();
 												}
 											}
 										}}

@@ -130,7 +130,25 @@ async def get_all_users(
     user=Depends(get_admin_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    return await Users.get_users(db=db)
+    result = await Users.get_users(db=db)
+    users = result['users']
+    total = result['total']
+
+    # Look up by group: binding one IN parameter per user breaks past ~32k users
+    groups = await Groups.get_all_groups(db=db)
+    group_user_ids = await Groups.get_group_user_ids_by_ids([group.id for group in groups], db=db)
+
+    groups_by_user = {}
+    for group in groups:
+        for user_id in group_user_ids[group.id]:
+            groups_by_user.setdefault(user_id, []).append({'id': group.id, 'name': group.name})
+
+    return {
+        'users': [
+            UserInfoResponse(**{**user.model_dump(), 'groups': groups_by_user.get(user.id, [])}) for user in users
+        ],
+        'total': total,
+    }
 
 
 @router.get('/search', response_model=UserInfoListResponse)
@@ -259,7 +277,6 @@ class FeaturesPermissions(BaseModel):
     channels: bool = True
     encrypted_channels: bool = False
     folders: bool = True
-    direct_tool_servers: bool = False
 
     web_search: bool = True
     image_generation: bool = True
@@ -509,18 +526,6 @@ async def update_user_settings_by_session_user(
             )
         ):
             ui_settings.pop('system', None)
-
-    if (
-        user.role != 'admin'
-        and ui_settings is not None
-        and 'toolServers' in ui_settings
-        and not await has_permission(
-            user.id,
-            'features.direct_tool_servers',
-            await Config.get('user.permissions'),
-        )
-    ):
-        ui_settings.pop('toolServers', None)
 
     ui_notifications = ui_settings.get('notifications') if isinstance(ui_settings, dict) else None
     if (
