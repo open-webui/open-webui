@@ -287,13 +287,14 @@ def model_allows_memory(model: dict | None) -> bool:
     return ((model or {}).get('info', {}).get('meta', {}).get('capabilities') or {}).get('memory', True)
 
 
-async def recall_memories(request, messages: list[dict], user, model: dict | None = None) -> str:
+async def recall_memories(request, messages: list[dict], user, model: dict | None = None) -> dict[str, list[str]]:
+    sections = {'user': [], 'neighborhood': [], 'context': []}
     if not model_allows_memory(model):
-        return ''
+        return sections
 
     target = get_last_user_message_item(messages)
     if target is None:
-        return ''
+        return sections
 
     user_messages = []
     for message in reversed(messages):
@@ -309,7 +310,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
 
     query = '\n\n'.join(reversed(user_messages))[-4000:]
     if not query:
-        return ''
+        return sections
 
     all_memories = await Memories.get_memories_by_user_id(user.id)
     results = None
@@ -320,7 +321,6 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     except Exception as e:
         log.debug(e)
 
-    sections = {'user': [], 'neighborhood': [], 'context': []}
     seen_ids = set()
     for memory in sorted(
         [memory for memory in (all_memories or []) if memory.type == 'user'],
@@ -364,16 +364,11 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
             label = f'{metadata.get("path")}: {content}' if metadata.get('path') else content
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(label)
 
-    parts = []
-    for title, key in (
-        ('User Memory', 'user'),
-        ('Memory Neighborhood', 'neighborhood'),
-        ('Relevant Context', 'context'),
-    ):
-        if sections[key]:
-            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
-            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
-    if not parts:
+    return sections
+
+
+async def render_memory_context(sections: dict[str, list[str]], prior_output: str = '') -> str:
+    if not any(sections.values()):
         return ''
 
     config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
@@ -386,14 +381,29 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     except Exception:
         context_limit = 2000
 
-    user_parts = [part for part in parts if part.startswith('[User Memory]')]
-    context_parts = [part for part in parts if not part.startswith('[User Memory]')]
-    rendered = '\n\n'.join(
-        [
-            '\n\n'.join(user_parts)[:user_limit],
-            '\n\n'.join(context_parts)[:context_limit],
-        ]
-    ).strip()
+    limits = {'user': user_limit, 'context': context_limit}
+    full_text = {'user': '', 'context': ''}
+    parts = {'user': [], 'context': []}
+    for title, key in (
+        ('User Memory', 'user'),
+        ('Memory Neighborhood', 'neighborhood'),
+        ('Relevant Context', 'context'),
+    ):
+        if not sections[key]:
+            continue
+        group = 'user' if key == 'user' else 'context'
+        full_text[group] += f'\n\n[{title}]' if full_text[group] else f'[{title}]'
+        lines = []
+        for memory in sorted(sections[key], key=lambda memory: (memory.casefold(), memory)):
+            full_text[group] += '\n- '
+            # Cut where the full text crosses the limit, so the cut stays the same every turn.
+            shown = memory[: max(0, limits[group] - len(full_text[group]))]
+            full_text[group] += memory
+            if shown and f'\n- {shown}\n' not in prior_output:
+                lines.append(f'- {shown}')
+        if lines:
+            parts[group].append(f'[{title}]\n' + '\n'.join(lines))
+    rendered = '\n\n'.join('\n\n'.join(group_parts) for group_parts in parts.values() if group_parts)
     if not rendered:
         return ''
 
@@ -401,7 +411,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
 
 
 async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
-    context = await recall_memories(request, form_data.get('messages', []), user, model)
+    context = await render_memory_context(await recall_memories(request, form_data.get('messages', []), user, model))
     target = get_last_user_message_item(form_data.get('messages', []))
     if context and target is not None:
         content = target.get('content') or ''
