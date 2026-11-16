@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte';
-import { chatId, models, temporaryChatEnabled, audioQueue } from '$lib/stores';
+import { chatId, models, temporaryChat, audioQueue } from '$lib/stores';
 import type { ChatContext } from '$lib/types';
 
 export const setChatContext = (context: ChatContext) => setContext('chat', context);
@@ -9,6 +9,6 @@ export const getChatContext = (): ChatContext =>
 	getContext<ChatContext | undefined>('chat') ?? {
 		chatId,
 		models,
-		temporary: temporaryChatEnabled,
+		temporary: temporaryChat,
 		audioQueue
 	};

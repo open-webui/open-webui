@@ -1285,7 +1285,9 @@
 		stopWatching?.();
 		stopWatching = undefined;
 		watcherConnected = false;
-		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
+		// A read-only view only proxies HTTP reads, so there's no live updates socket.
+		if (!terminal || terminal.readOnly || !folder || !(await getTerminalFeatures(terminal)).events)
+			return;
 		if (folder !== watchedFolder || disposed) return;
 		stopWatching = watchTerminalFiles(
 			terminal,

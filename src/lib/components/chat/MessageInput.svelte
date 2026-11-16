@@ -70,7 +70,12 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import { filesystemFile, getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import {
+		filesystemFile,
+		getCwd,
+		templatesApi,
+		uploadNewFileToTerminal
+	} from '$lib/apis/terminal';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -657,28 +662,8 @@
 		chatInputElement?.replaceCommandWithText(text);
 	};
 
-	const temporaryHandler = async () => {
-		if (!canToggleTemporary) return;
-		if (onTemporaryChange) {
-			onTemporaryChange(!$temporary);
-			return;
-		}
-
-		if (($settings?.temporaryChatByDefault ?? false) && $temporary) {
-			await temporary.set(null);
-		} else {
-			await temporary.set(!$temporary);
-		}
-
-		if (location.pathname !== '/' && !location.pathname.startsWith('/folders/')) {
-			await goto('/');
-		}
-
-		if ($temporary) {
-			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
-		} else {
-			window.history.replaceState(window.history.state, '', location.pathname);
-		}
+	const temporaryHandler = () => {
+		if (canToggleTemporary) onTemporaryChange?.(!$temporary);
 	};
 
 	const createSkillHandler = async () => {
@@ -927,8 +912,19 @@
 		modelCapabilitiesById
 	);
 
+	// With no terminal yet, the menu still shows when the user may create one: it holds New terminal.
+	let canCreateTerminal = false;
+	$: if (
+		$config?.features?.enable_tool_servers &&
+		$terminalServers &&
+		!$terminalServers.some((t) => t.id)
+	)
+		templatesApi('/connections')
+			.then((rows) => (canCreateTerminal = rows.length > 0))
+			.catch(() => (canCreateTerminal = false));
 	$: showTerminalSelector =
-		$config?.features?.enable_tool_servers && ($terminalServers ?? []).some((t) => t.id);
+		$config?.features?.enable_tool_servers &&
+		(($terminalServers ?? []).some((t) => t.id) || canCreateTerminal);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(

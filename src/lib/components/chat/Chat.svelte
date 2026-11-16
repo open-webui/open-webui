@@ -43,7 +43,7 @@
 		chatTabRequest,
 		openEmbeddedChatIds,
 		voiceCall as _voiceCall,
-		temporaryChatEnabled as _temporaryChatEnabled,
+		temporaryChat as _temporaryChat,
 		mobile,
 		chatTitle as _chatTitle,
 		tools,
@@ -60,7 +60,7 @@
 		chatRequestQueues,
 		desktopEvent
 	} from '$lib/stores';
-	import { refreshChatList, refreshFolderChatLists } from '$lib/stores/chatList';
+	import { refreshChatList, refreshFolderChatLists, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderById } from '$lib/apis/folders';
 	import {
 		getFolderAgentModels,
@@ -96,6 +96,7 @@
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 	import { resumeTemporaryChat } from '$lib/apis';
 	import {
 		applyResponseStreamEvent,
@@ -181,7 +182,7 @@
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
-	const temporaryChatEnabled = embedded ? writable(false) : _temporaryChatEnabled;
+	const temporaryChat = embedded ? writable(false) : _temporaryChat;
 	const selectedFolder = embedded ? writable<FolderDetails | null>(null) : _selectedFolder;
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
 	// the call lives in the main chat's voice tab, so a side chat is never in it
@@ -193,7 +194,7 @@
 	setChatContext({
 		chatId,
 		models,
-		temporary: temporaryChatEnabled,
+		temporary: temporaryChat,
 		audioQueue,
 		submitPrompt: (prompt) => submitHandler(prompt)
 	});
@@ -247,9 +248,24 @@
 	$: dropzoneId = tabbed ? chatContainerId : messageInputDropzoneId;
 	const onTemporaryChange = tabbed
 		? (value: boolean) => {
-				if (!processing) temporaryChatEnabled.set(value);
+				if (!processing) temporaryChat.set(value);
 			}
-		: null;
+		: embedded
+			? null
+			: async (value: boolean) => {
+					// The URL keeps a choice that differs from the default across reloads.
+					const search =
+						value === ($settings?.temporaryChatByDefault ?? false)
+							? ''
+							: `?temporary-chat=${value}`;
+					if (location.pathname !== '/' && !location.pathname.startsWith('/folders/')) {
+						await goto(`/${search}`);
+						return;
+					}
+					window.history.replaceState(window.history.state, '', `${location.pathname}${search}`);
+					if ($chatId) await initNewChat(false, false, value);
+					else temporaryChat.set(value);
+				};
 
 	const eventTarget = new EventTarget();
 
@@ -895,7 +911,7 @@
 		chatVariables = { ...chatVariables, ...values };
 		if (isShared) return;
 
-		if ($chatId && !$temporaryChatEnabled && !isTemporaryChatId($chatId)) {
+		if ($chatId && !$temporaryChat && !isTemporaryChatId($chatId)) {
 			const res = await updateChatById(localStorage.token, $chatId, {}, chatVariables).catch(
 				(err) => {
 					console.error('[chat variables save]', err);
@@ -925,7 +941,7 @@
 	};
 
 	const restoreChatInput = async (storageChatInput: string | null) => {
-		if (!storageChatInput || $temporaryChatEnabled) {
+		if (!storageChatInput || $temporaryChat) {
 			return false;
 		}
 
@@ -984,7 +1000,7 @@
 	}
 
 	let saveControlsTimer;
-	$: if (!loading && !$temporaryChatEnabled && $chatId && chatFiles) {
+	$: if (!loading && !$temporaryChat && $chatId && chatFiles) {
 		clearTimeout(saveControlsTimer);
 		saveControlsTimer = setTimeout(saveControls, 400);
 	}
@@ -1006,7 +1022,7 @@
 		noteChatDebug('navigateHandler start');
 		// Mark the outgoing chat as read before loading the new one.
 		// $chatId still holds the previous chat here — loadChat() updates it.
-		if ($chatId && $chatId !== chatIdProp && !$temporaryChatEnabled) {
+		if ($chatId && $chatId !== chatIdProp && !$temporaryChat) {
 			noteChatDebug('marking outgoing chat read', { outgoingChatId: $chatId });
 			updateLastReadAt($chatId);
 		}
@@ -1044,7 +1060,7 @@
 		clearTimeout(saveControlsTimer);
 		await saveControls();
 
-		if ($chatId && !$temporaryChatEnabled) {
+		if ($chatId && !$temporaryChat) {
 			updateLastReadAt($chatId);
 		}
 
@@ -1076,7 +1092,7 @@
 		if (embeddedDraft) {
 			({ selectedModels, params, history, chatFiles, prompt, files } = embeddedDraft);
 			branchPointMessageId = history.currentId;
-			await temporaryChatEnabled.set(embeddedDraft.temporary);
+			await temporaryChat.set(embeddedDraft.temporary);
 		}
 
 		await setDefaults();
@@ -1173,7 +1189,7 @@
 	};
 
 	$: if (
-		$temporaryChatEnabled &&
+		$temporaryChat &&
 		($terminalServers ?? []).some(
 			(t) => !!$selectedTerminalId && t.id === $selectedTerminalId && t.scope === 'chat'
 		)
@@ -1615,7 +1631,7 @@
 
 	const refreshChat = () => {
 		const id = $chatId;
-		if (!id || $temporaryChatEnabled) return Promise.resolve();
+		if (!id || $temporaryChat) return Promise.resolve();
 		if (chatRefresh?.id === id) return chatRefresh.promise;
 		const baseline = { ...history.messages };
 		const signal = chatLoadController.signal;
@@ -1657,7 +1673,7 @@
 				void refreshChat();
 			});
 	};
-	$: syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+	$: syncChatRoom($socket, $chatId, $temporaryChat);
 	let openEmbeddedChatId: string = '';
 	$: if (embedded && $chatId !== openEmbeddedChatId) {
 		openEmbeddedChatIds.update((ids) => {
@@ -1799,14 +1815,10 @@
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
 						taskIds = null;
-						if (
-							$chatId &&
-							!$temporaryChatEnabled &&
-							hasPendingAssistantLeaf(event?.message_id ?? null)
-						) {
+						if ($chatId && !$temporaryChat && hasPendingAssistantLeaf(event?.message_id ?? null)) {
 							await loadChat();
 						}
-						if ($chatId && !$temporaryChatEnabled) {
+						if ($chatId && !$temporaryChat) {
 							updateLastReadAt($chatId);
 						}
 					}
@@ -1900,7 +1912,7 @@
 					// Update message favorite status
 					message.favorite = data.favorite;
 				} else if (type === 'chat:title') {
-					updateFolderChatLists({ id: event.chat_id, title: data });
+					setChatTitle(event.chat_id, data);
 					chatTitle.set(data);
 					if (embedded && $chatId) {
 						await onEmbeddedChatTitle?.($chatId, data);
@@ -2124,7 +2136,7 @@
 			return;
 		}
 		joinedChatId = '';
-		syncChatRoom($socket, $chatId, $temporaryChatEnabled);
+		syncChatRoom($socket, $chatId, $temporaryChat);
 		const id = $chatId;
 		const tasks = await getTaskIdsByChatId(localStorage.token, id).catch(() => null);
 		if ($chatId !== id || !tasks) return;
@@ -2222,7 +2234,7 @@
 				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
 				saveControls();
-				if (chatIdProp && !$temporaryChatEnabled) {
+				if (chatIdProp && !$temporaryChat) {
 					updateLastReadAt(chatIdProp);
 				}
 				if (appLayout?.initNewChat === initNewChat) delete appLayout.initNewChat;
@@ -2237,8 +2249,7 @@
 					$socket.emit('events:chat', { chat_id: joinedChatId, data: { type: 'leave' } });
 				joinedChatId = '';
 				if (embedded && $chatId) {
-					if ($temporaryChatEnabled)
-						stopTasksByChatId(localStorage.token, $chatId).catch(console.error);
+					if ($temporaryChat) stopTasksByChatId(localStorage.token, $chatId).catch(console.error);
 					openEmbeddedChatIds.update((ids) => {
 						const next = new Set(ids);
 						next.delete($chatId);
@@ -2609,13 +2620,13 @@
 		if (!$chatId) {
 			const modelId = selectedModelIds[0];
 			const _chatId = await initChatHandler(history);
-			if (_chatId && !$temporaryChatEnabled) {
+			if (_chatId && !$temporaryChat) {
 				// Realtime replies need no chat completion; start metadata work at chat creation.
 				void generateVoiceChatMetadata(_chatId, modelId, content, chat.title).catch((error) => {
 					console.error('Could not save voice chat metadata', error);
 				});
 			}
-		} else if (!$temporaryChatEnabled) {
+		} else if (!$temporaryChat) {
 			// Patch only the new message, so a running backend turn keeps its current output.
 			await updateChatById(localStorage.token, $chatId, {
 				history: { currentId: history.currentId, messages: changedMessages }
@@ -2633,7 +2644,7 @@
 		const merged = { ...previous, ...voice, speech: [...speech.values()] };
 		message.meta = { ...message.meta, voice: merged };
 		history = history;
-		if ($chatId && !$temporaryChatEnabled) {
+		if ($chatId && !$temporaryChat) {
 			const response = await fetch(`${WEBUI_API_BASE_URL}/chats/${$chatId}/messages/${id}`, {
 				method: 'POST',
 				headers: {
@@ -2865,7 +2876,7 @@
 		showTabs.set(true);
 	};
 
-	const initNewChat = async (preserveTabs = false, keepDraft = false) => {
+	const initNewChat = async (preserveTabs = false, keepDraft = false, temporary?: boolean) => {
 		const destinationFolder = $selectedFolder
 			? (structuredClone($selectedFolder) as FolderDetails)
 			: null;
@@ -2905,30 +2916,16 @@
 
 		// Mark the outgoing chat as read before resetting; in-place created chats
 		// keep chatIdProp undefined, so navigateHandler never marks them read.
-		if ($chatId && !$temporaryChatEnabled) {
+		if ($chatId && !$temporaryChat) {
 			updateLastReadAt($chatId);
 		}
 
-		if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-			await temporaryChatEnabled.set(true);
-		}
-
-		if ($settings?.temporaryChatByDefault ?? false) {
-			if ($temporaryChatEnabled === false) {
-				await temporaryChatEnabled.set(true);
-			} else if ($temporaryChatEnabled === null) {
-				// if set to null set to false; refer to temp chat toggle click handler
-				await temporaryChatEnabled.set(false);
-			}
-		}
-
-		if (searchParams.get('temporary-chat') === 'true') {
-			await temporaryChatEnabled.set(true);
-		}
-
-		if ($user?.role !== 'admin' && !$user?.permissions?.chat?.temporary) {
-			await temporaryChatEnabled.set(false);
-		}
+		const param = searchParams.get('temporary-chat');
+		temporaryChat.set(
+			($user?.role !== 'admin' && !!$user?.permissions?.chat?.temporary_enforced) ||
+				(!!canUseTemporaryChats({ user: $user, config: $config }) &&
+					(temporary ?? (param ? param === 'true' : !!$settings?.temporaryChatByDefault)))
+		);
 
 		const availableModels = $models
 			.filter((m) => !(m?.info?.meta?.hidden ?? false))
@@ -3188,9 +3185,9 @@
 		chatId.set(chatIdProp || $chatId);
 		noteChatDebug('loadChat set active chat id');
 
-		if ($temporaryChatEnabled) {
+		if ($temporaryChat) {
 			noteChatDebug('loadChat disabling temporary chat');
-			temporaryChatEnabled.set(false);
+			temporaryChat.set(false);
 		}
 
 		const id = $chatId;
@@ -3383,7 +3380,7 @@
 
 				if (signal.aborted) return;
 				if (loading) {
-					if (chatIdProp && !$temporaryChatEnabled) updateLastReadAt(chatIdProp);
+					if (chatIdProp && !$temporaryChat) updateLastReadAt(chatIdProp);
 
 					const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 					if (!lastMessage || lastMessage.role !== 'assistant' || lastMessage.done) {
@@ -3601,7 +3598,7 @@
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
-		if ($chatId == _chatId && !$temporaryChatEnabled) {
+		if ($chatId == _chatId && !$temporaryChat) {
 			await refreshChatList(localStorage.token);
 		}
 	};
@@ -3656,7 +3653,7 @@
 			}
 		}
 
-		if (changed && !$temporaryChatEnabled) {
+		if (changed && !$temporaryChat) {
 			chat = await updateChatById(localStorage.token, _chatId, {
 				models: selectedModels,
 				messages: createMessagesList(history, responseMessageId),
@@ -4138,7 +4135,7 @@
 	};
 
 	const handleForkChat = async (messageId: string | null = null) => {
-		if (!$chatId || $temporaryChatEnabled || !history?.currentId) {
+		if (!$chatId || $temporaryChat || !history?.currentId) {
 			toast.message($i18n.t('No chat to fork'));
 			return;
 		}
@@ -4206,7 +4203,7 @@
 		!isShared ||
 		(!!chat?.folder_id &&
 			$_folders.find((folder) => folder.id === chat.folder_id)?.user_id === $user?.id);
-	$: if (loading || !canRename || $temporaryChatEnabled || $chatId !== titleEditChatId)
+	$: if (loading || !canRename || $temporaryChat || $chatId !== titleEditChatId)
 		editingTitle = false;
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
 	/** A chat's actions on its tab: the Navbar's for the main chat, the chat menu for a side chat. */
@@ -4217,7 +4214,7 @@
 		!!$chatId &&
 		!!history.currentId &&
 		(!isNearTop ||
-			(!isShared && !$temporaryChatEnabled) ||
+			(!isShared && !$temporaryChat) ||
 			$user?.role === 'admin' ||
 			($user?.permissions?.chat?.export ?? true));
 	// Renaming hides the menu, like the tab's close button.
@@ -4229,7 +4226,7 @@
 			loading ||
 			!canRename ||
 			!$chatId ||
-			$temporaryChatEnabled ||
+			$temporaryChat ||
 			isTemporaryChatId($chatId) ||
 			generatingTitle
 		)
@@ -4258,7 +4255,7 @@
 		try {
 			const updated = await updateChatById(localStorage.token, id, { title });
 			if (!updated) return;
-			updateFolderChatLists({ id, title });
+			setChatTitle(id, title);
 			if ($chatId === id) {
 				chatTitle.set(title);
 				if (embedded) await onEmbeddedChatTitle?.(id, title);
@@ -4344,7 +4341,7 @@
 				: null;
 		// Empty embedded drafts create their backing chat only when the first message is sent.
 		if (!_chatId) {
-			if (embedded && onCreateEmbeddedChat && !$temporaryChatEnabled) {
+			if (embedded && onCreateEmbeddedChat && !$temporaryChat) {
 				const createdChat = await onCreateEmbeddedChat({
 					models: selectedModels,
 					params,
@@ -4366,7 +4363,7 @@
 				delete params.note_id;
 				chatFiles = mergeFiles(chatFiles, createdChat?.chat?.files ?? []);
 				await onSelectEmbeddedChat?.(_chatId);
-			} else if ($temporaryChatEnabled) {
+			} else if ($temporaryChat) {
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
@@ -4865,7 +4862,7 @@
 				: undefined
 		].filter(Boolean);
 
-		if ($temporaryChatEnabled) {
+		if ($temporaryChat) {
 			messages = [
 				...messages,
 				..._messages.map((message) => ({
@@ -4935,8 +4932,7 @@
 		// Only send terminal_id if the model has terminal capability enabled
 		const terminalEnabled =
 			$config?.features?.enable_tool_servers && (model.info?.meta?.capabilities?.terminal ?? true);
-		const useChatVariablesFallback =
-			!_chatId || $temporaryChatEnabled || isTemporaryChatId(_chatId);
+		const useChatVariablesFallback = !_chatId || $temporaryChat || isTemporaryChatId(_chatId);
 
 		const res = await generateOpenAIChatCompletion(
 			localStorage.token,
@@ -4992,7 +4988,7 @@
 				...(continueResponse ? { assistant_message_id: responseMessageId } : {}),
 
 				background_tasks: {
-					...(!$temporaryChatEnabled &&
+					...(!$temporaryChat &&
 					(!_chatId ||
 						((userMessage?.parentId ?? null) === null &&
 							createMessagesList(_history, responseMessageId).length === 2) ||
@@ -5081,7 +5077,7 @@
 						if (file.type === 'filesystem' && file.session_id == null)
 							file.session_id = res.chat_id;
 					await chatId.set(res.chat_id);
-					if (!$temporaryChatEnabled && !embedded) {
+					if (!$temporaryChat && !embedded) {
 						// Carry the picks made on the new-chat page over to this chat
 						saveDraft(getChatInputDraft(), res.chat_id, false);
 						if (!initialPage)
@@ -5333,7 +5329,7 @@
 		const selectedFolderId = $selectedFolder?.id ?? draftFolderId;
 		const context = terminalContext;
 
-		if (!$temporaryChatEnabled) {
+		if (!$temporaryChat) {
 			const createdChat = await createNewChat(
 				localStorage.token,
 				{
@@ -5395,7 +5391,7 @@
 	const saveChatHandler = async (_chatId, history) => {
 		if (isShared) return;
 		if ($chatId == _chatId) {
-			if (!$temporaryChatEnabled) {
+			if (!$temporaryChat) {
 				chat = await updateChatById(localStorage.token, _chatId, {
 					models: selectedModels,
 					history: history,
@@ -5407,7 +5403,7 @@
 	};
 
 	const saveParam = async (key: string, value: unknown) => {
-		if (isShared || !$chatId || $temporaryChatEnabled || isTemporaryChatId($chatId)) return;
+		if (isShared || !$chatId || $temporaryChat || isTemporaryChatId($chatId)) return;
 		await updateChatParams(localStorage.token, $chatId, { [key]: value }).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -5415,7 +5411,7 @@
 
 	const saveControls = async (models: string[] | null = null) => {
 		if (isShared && !chat?.write_access) return;
-		if (!$chatId || $temporaryChatEnabled || chat?.id !== $chatId) return;
+		if (!$chatId || $temporaryChat || chat?.id !== $chatId) return;
 		// Model choices are passed explicitly; automatic fallbacks must not be saved.
 		if (!models?.length || !models.every(Boolean)) models = null;
 		if (isShared && !models) return;
@@ -5599,7 +5595,7 @@
 		}}
 		shareEnabled={!!history.currentId}
 		readOnly={isShared}
-		temporary={$temporaryChatEnabled}
+		temporary={$temporaryChat}
 		scrollToTop={!isNearTop ? scrollToTop : null}
 		shareHandler={() => (showShareModal = true)}
 		renameHandler={startRename}
@@ -5920,6 +5916,7 @@
 							{history}
 							title={$chatTitle}
 							{initNewChat}
+							{onTemporaryChange}
 							{deleteChatHandler}
 							onSaveTempChat={async () => {
 								try {
@@ -5952,7 +5949,7 @@
 									);
 
 									if (savedChat) {
-										temporaryChatEnabled.set(false);
+										temporaryChat.set(false);
 										chatId.set(savedChat.id);
 										await refreshChatList(localStorage.token);
 
@@ -6015,7 +6012,7 @@
 										{addMessages}
 										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
-										forkHandler={$temporaryChatEnabled ? null : handleForkChat}
+										forkHandler={$temporaryChat ? null : handleForkChat}
 										topPadding={!embedded && !fullWidthTabs}
 										bottomPadding={files.length > 0}
 										{onSelect}
@@ -6099,7 +6096,7 @@
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
 										onChange={(data: any) => {
-											if (!$temporaryChatEnabled) {
+											if (!$temporaryChat) {
 												saveDraft(data, getDraftChatId());
 											}
 										}}
@@ -6130,10 +6127,10 @@
 									<div class="flex flex-1 items-center justify-center px-6">
 										<div class="max-w-56 text-center">
 											<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
-												{$temporaryChatEnabled ? $i18n.t('Temporary chat') : $i18n.t('New Chat')}
+												{$temporaryChat ? $i18n.t('Temporary chat') : $i18n.t('New Chat')}
 											</p>
 											<p class="mt-1.5 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
-												{$temporaryChatEnabled
+												{$temporaryChat
 													? $i18n.t('Messages disappear when you close this tab.')
 													: $i18n.t('Messages are saved to your chats.')}
 											</p>
@@ -6218,7 +6215,7 @@
 										onQueueEdit={editQueuedMessage}
 										onQueueDelete={deleteQueuedMessage}
 										onChange={(data: any) => {
-											if (!$temporaryChatEnabled) {
+											if (!$temporaryChat) {
 												saveDraft(data, getDraftChatId());
 											}
 										}}
@@ -6289,7 +6286,7 @@
 										showChatVariablesModal = true;
 									}}
 									onChange={(data: any) => {
-										if (!$temporaryChatEnabled) {
+										if (!$temporaryChat) {
 											saveDraft(data, getDraftChatId());
 										}
 									}}

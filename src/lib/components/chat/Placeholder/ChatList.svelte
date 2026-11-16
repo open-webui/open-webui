@@ -3,8 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { chatId, chatTitle } from '$lib/stores';
 	import { updateChatById } from '$lib/apis/chats';
-	import { refreshChatList } from '$lib/stores/chatList';
-	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
 	import {
@@ -65,7 +64,7 @@
 		if (!title || title === chat.title) return;
 		try {
 			await updateChatById(localStorage.token, chat.id, { title });
-			updateFolderChatLists({ id: chat.id, title });
+			setChatTitle(chat.id, title);
 			if (chat.id === $chatId) chatTitle.set(title);
 			await Promise.all([
 				refreshChatList(localStorage.token, { refreshPinned: true }),

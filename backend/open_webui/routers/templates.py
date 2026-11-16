@@ -182,13 +182,44 @@ async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
             owner = await Users.get_user_by_id(chat.user_id) if chat else None
             row['label'] = chat.title if chat else None
             row['user_name'] = owner.name if owner else None
+            row['user_id'] = chat.user_id if chat else None
         elif kind == 'user':
             owner = await Users.get_user_by_id(value)
             row['label'] = owner.name if owner else None
+            row['user_id'] = value
         elif kind == 'model':
             model = await Models.get_model_by_id(value)
             row['label'] = model.name if model else value
     return rows
+
+
+@router.get('/{terminal_id}/instances/{context_id}/{path:path}')
+async def view_instance(
+    terminal_id: str, context_id: str, path: str, request: Request, user=Depends(get_verified_user)
+):
+    """Lets an admin read another person's instance, as admins can read their chats."""
+    from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS
+    from open_webui.models.chats import Chats
+    from open_webui.models.users import Users
+    from open_webui.routers.terminals import _proxy_terminal
+
+    if user.role != 'admin' or not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(403, 'Instance access denied')
+    await template_connection(user, terminal_id, 'write')
+    kind, _, value = context_id.partition(':')
+    chat = await Chats.get_chat_by_id(value) if kind == 'chat' else None
+    owner_id = chat.user_id if chat else value if kind == 'user' else None
+    owner = await Users.get_user_by_id(owner_id) if owner_id else None
+    if owner is None:
+        raise HTTPException(404, 'Instance not found')
+    # Reach the instance as its owner would, so the request lands on their instance.
+    return await _proxy_terminal(
+        terminal_id,
+        path,
+        request,
+        owner,
+        context={'chat_id': value if kind == 'chat' else None, 'model_id': None},
+    )
 
 
 async def instance_action(terminal_id, action, body, user):

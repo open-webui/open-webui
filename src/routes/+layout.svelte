@@ -30,7 +30,7 @@
 		socketConnected,
 		chatId,
 		tags,
-		temporaryChatEnabled,
+		temporaryChat,
 		openEmbeddedChatIds,
 		isLastActiveTab,
 		isApp,
@@ -41,12 +41,8 @@
 		pyodideWorker,
 		desktopEvent
 	} from '$lib/stores';
-	import { refreshChatList } from '$lib/stores/chatList';
-	import {
-		clearFolderStates,
-		updateFolderChatLists,
-		beginFolderOpening
-	} from '$lib/stores/folderStates';
+	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
+	import { clearFolderStates, beginFolderOpening } from '$lib/stores/folderStates';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -548,9 +544,7 @@
 
 		if (
 			!event?.internal &&
-			((event.chat_id !== $chatId &&
-				!$openEmbeddedChatIds.has(event.chat_id) &&
-				!$temporaryChatEnabled) ||
+			((event.chat_id !== $chatId && !$openEmbeddedChatIds.has(event.chat_id) && !$temporaryChat) ||
 				isInBackground)
 		) {
 			if (type === 'chat:completion') {
@@ -597,7 +591,7 @@
 					});
 				}
 			} else if (type === 'chat:title') {
-				updateFolderChatLists({ id: event.chat_id, title: data });
+				setChatTitle(event.chat_id, data);
 				await refreshChatList(localStorage.token);
 			} else if (type === 'chat:tags') {
 				tags.set(await getAllTags(localStorage.token));

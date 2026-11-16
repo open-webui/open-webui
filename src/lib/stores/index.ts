@@ -192,7 +192,8 @@ export const selectedTerminalId: Writable<string | null> = writable(null);
 
 export const embed = writable(null);
 
-export const temporaryChatEnabled = writable(false);
+/** Whether the main chat is temporary, or for a new chat, whether it starts as one. */
+export const temporaryChat = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
 export const chatTabRequest = writable<{ parentChatId: string; prompt: string } | null>(null);
 
@@ -276,6 +277,7 @@ type OllamaModelDetails = {
 
 type Settings = {
 	pinnedModels?: string[];
+	temporaryChatByDefault?: boolean;
 	detectArtifacts?: boolean;
 	showUpdateToast?: boolean;
 	showChangelog?: boolean;

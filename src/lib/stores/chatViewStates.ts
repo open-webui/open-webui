@@ -191,6 +191,15 @@ export function updateViewTab(entry: Entry, id: string, values: Partial<Tab>) {
 	);
 }
 
+export function renameChatTabs(chatId: string, label: string) {
+	for (const entry of entries.values()) {
+		const tabs = entry.state.panels.tabs.filter((t) => t.chatId === chatId && t.label !== label);
+		if (!tabs.length) continue;
+		for (const tab of tabs) tab.label = label;
+		changeChatView(entry);
+	}
+}
+
 export function closeChatTabs(chatId: string) {
 	for (const entry of entries.values()) {
 		const ids = entry.state.panels.tabs

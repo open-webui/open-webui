@@ -9,16 +9,13 @@
 		mobile,
 		selectedFolder,
 		selectedTerminalId,
-		settings,
 		showSidebar,
 		showTabs,
-		temporaryChatEnabled,
+		temporaryChat,
 		user
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 
 	import Tooltip from '../common/Tooltip.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
@@ -40,6 +37,7 @@
 	const i18n: any = getContext('i18n');
 
 	export let initNewChat: Function;
+	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	export let liveParticipants: { id: string; name: string }[] = [];
 	export let scrollTop = 0;
 
@@ -75,28 +73,10 @@
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 					id="temporary-chat-button"
-					on:click={async () => {
-						if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
-							// for proper initNewChat handling
-							await temporaryChatEnabled.set(null);
-						} else {
-							await temporaryChatEnabled.set(!$temporaryChatEnabled);
-						}
-
-						if ($page.url.pathname !== '/' && !$page.url.pathname.startsWith('/folders/')) {
-							await goto('/');
-						}
-
-						// add 'temporary-chat=true' to the URL
-						if ($temporaryChatEnabled) {
-							window.history.replaceState(window.history.state, '', '?temporary-chat=true');
-						} else {
-							window.history.replaceState(window.history.state, '', location.pathname);
-						}
-					}}
+					on:click={() => onTemporaryChange?.(!$temporaryChat)}
 					aria-label={$i18n.t(`Temporary Chat`)}
 				>
-					{#if $temporaryChatEnabled}
+					{#if $temporaryChat}
 						<ChatBubbleDottedChecked className="size-4" strokeWidth="1.5" />
 					{:else}
 						<ChatBubbleDotted className="size-4" strokeWidth="1.5" />
@@ -119,7 +99,7 @@
 {#snippet renderChatActions()}
 	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
-		{#if chat?.id && $temporaryChatEnabled}
+		{#if chat?.id && $temporaryChat}
 			<Tooltip content={$i18n.t(`Save Chat`)}>
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -135,7 +115,7 @@
 		{/if}
 	{/if}
 
-	{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
+	{#if $mobile && !$temporaryChat && chat && chat.id}
 		<Tooltip content={$i18n.t('New Chat')}>
 			<button
 				class="flex size-6 {$showSidebar
@@ -222,7 +202,7 @@
 								</h1>
 							{/if}
 
-							{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
+							{#if !$temporaryChat && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
 								<button
 									id="delete-chat-button"
 									aria-label={$i18n.t('Delete')}
@@ -269,7 +249,7 @@
 		</div>
 	</div>
 
-	{#if !tabbed && $temporaryChatEnabled && isTemporaryChatId($chatId)}
+	{#if !tabbed && $temporaryChat && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>

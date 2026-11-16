@@ -69,14 +69,14 @@
 	const canManage = (terminal: any, ids: Set<string>) =>
 		!!terminal.template_id && ids.has(connectionOf(terminal.id));
 
-	// Lifecycle actions act on this chat's machine of a terminal the user manages.
-	const machineContext = () => ({
+	// Lifecycle actions act on this chat's instance of a terminal the user manages.
+	const instanceContext = () => ({
 		chat_id: isSavedChatId($activeChatId) ? $activeChatId : null,
 		model_id: modelId
 	});
-	const machineStatus = async (id: string) => {
+	const instanceStatus = async (id: string) => {
 		const query = new URLSearchParams();
-		const context = machineContext();
+		const context = instanceContext();
 		if (context.chat_id) query.set('chat_id', context.chat_id);
 		if (context.model_id) query.set('model_id', context.model_id);
 		return (await templatesApi(`/${encodeURIComponent(id)}/instance?${query}`))?.status ?? null;
@@ -103,7 +103,7 @@
 	let showConfirm = false;
 	const runLifecycle = (id: string, name: string, action: 'restart' | 'stop' | 'start') => {
 		const copy = lifecycleCopy[action];
-		toast.promise(templatesApi(`/${encodeURIComponent(id)}/${action}`, 'POST', machineContext()), {
+		toast.promise(templatesApi(`/${encodeURIComponent(id)}/${action}`, 'POST', instanceContext()), {
 			loading: $i18n.t(copy.pending, { name }),
 			success: () => $i18n.t(copy.done, { name }),
 			error: (e) => (e instanceof Error ? e.message : String(e))
@@ -274,7 +274,7 @@
 				>
 					<TerminalItemMenu
 						{label}
-						loadStatus={owned && reachable ? () => machineStatus(terminal.id) : null}
+						loadStatus={owned && reachable ? () => instanceStatus(terminal.id) : null}
 						onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
 						onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
 						onStart={() => runLifecycle(terminal.id, label, 'start')}

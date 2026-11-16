@@ -34,7 +34,7 @@
 		banners,
 		showSettings,
 		showChangelog,
-		temporaryChatEnabled,
+		temporaryChat,
 		terminalServers,
 		selectedTerminalId,
 		showSearch,
@@ -58,7 +58,7 @@
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
 	const i18n = getContext('i18n');
-	setContext<AppLayoutContext>('appLayout', {});
+	const appLayout = setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
 	$: routeHasTabs = ['/(app)', '/(app)/c/[id]'].includes($page.route.id ?? '');
@@ -129,7 +129,7 @@
 		try {
 			user.set(await getSessionUser(localStorage.token));
 			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced && !$chatId) {
-				temporaryChatEnabled.set(true);
+				temporaryChat.set(true);
 			}
 			const results = await Promise.allSettled([
 				getBackendConfig().then((value) => config.set(value)),
@@ -339,15 +339,9 @@
 					if (!canUseTemporaryChats({ user: $user, config: null })) {
 						return;
 					}
-					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-						temporaryChatEnabled.set(true);
-					} else {
-						temporaryChatEnabled.set(!$temporaryChatEnabled);
-					}
+					const temporary = !$temporaryChat;
 					await goto('/');
-					setTimeout(() => {
-						document.getElementById('new-chat-button')?.click();
-					}, 0);
+					setTimeout(() => appLayout.initNewChat?.(false, false, temporary), 0);
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
@@ -384,16 +378,6 @@
 
 		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
 			showChangelog.set($settings?.version !== $config.version);
-		}
-
-		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
-				temporaryChatEnabled.set(true);
-			}
-
-			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-				temporaryChatEnabled.set(true);
-			}
 		}
 
 		// Check for version updates

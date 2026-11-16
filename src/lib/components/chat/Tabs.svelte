@@ -31,7 +31,7 @@
 	import {
 		config,
 		embed,
-		temporaryChatEnabled,
+		temporaryChat,
 		terminalServers,
 		showTabs,
 		chatTabRequest,
@@ -316,7 +316,7 @@
 		chatTitleEditors = {};
 		chatTabActions = {};
 		queuedArtifactCode = null;
-		const entry = chatViewEntry($user.id, null, $temporaryChatEnabled);
+		const entry = chatViewEntry($user.id, null, $temporaryChat);
 		entry.state = {
 			...entry.state,
 			panels: carried,
@@ -353,7 +353,7 @@
 					}
 				}
 			},
-			$temporaryChatEnabled
+			$temporaryChat
 		).then(
 			() => {
 				if (viewEntry === entry) setView({ status: 'ready', entry, chatId: id, error: '' });
@@ -383,7 +383,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
-		const entry = chatViewEntry($user.id, id, $temporaryChatEnabled);
+		const entry = chatViewEntry($user.id, id, $temporaryChat);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
 		try {
@@ -1372,7 +1372,7 @@
 		$config?.features?.enable_comments &&
 		$user &&
 		isSavedChatId(chatId) &&
-		!$temporaryChatEnabled
+		!$temporaryChat
 	);
 	let commentCount: number | null = null;
 	let commentCountRequestId = 0;
@@ -1763,7 +1763,8 @@
 			const url = new URL(href, location.origin);
 			if (active?.id === mainChatTabId && !chatId) {
 				// delete() re-encodes the other parameters even when it removes nothing.
-				if ($temporaryChatEnabled) url.searchParams.set('temporary-chat', 'true');
+				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
+					url.searchParams.set('temporary-chat', String($temporaryChat));
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
 			}
 			if (url.origin === location.origin && url.href !== location.href) {

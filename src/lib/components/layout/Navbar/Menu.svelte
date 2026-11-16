@@ -10,7 +10,7 @@
 
 	import {
 		mobile,
-		temporaryChatEnabled,
+		temporaryChat,
 		theme,
 		user,
 		settings,
@@ -55,7 +55,7 @@
 	export let scrollToTop: (() => void) | null = null;
 	/** Overrides the global temporary chat state for chats with their own (side chats). */
 	export let temporary: boolean | null = null;
-	$: isTemporary = temporary ?? $temporaryChatEnabled;
+	$: isTemporary = temporary ?? $temporaryChat;
 
 	let showFullMessages = false;
 	let show = false;
