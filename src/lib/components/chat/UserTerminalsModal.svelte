@@ -25,10 +25,9 @@
 		templatesApi,
 		getTerminalServers,
 		resolveTerminalTarget,
-		instanceViewTarget,
 		type TerminalTarget
 	} from '$lib/apis/terminal';
-	import { config, terminalServers, user } from '$lib/stores';
+	import { terminalServers } from '$lib/stores';
 	import TerminalSystemInfoModal from './TerminalSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -274,17 +273,13 @@
 
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
-	// Requests carry the viewer's identity, so another person's instance is only reachable read-only,
-	// by an admin who may read other people's chats.
+	// Listing instances takes write access to the terminal's connection, which also opens any of them.
 	// Only running instances offer System info and files: Terminals won't start one for System info.
 	function instanceTarget(instance: any) {
 		if (!terminalId || instance.status !== 'running') return null;
-		if (instance.user_id && instance.user_id !== $user?.id)
-			return $user?.role === 'admin' && $config?.features?.enable_admin_chat_access
-				? instanceViewTarget(terminalId, instance.context_id)
-				: null;
 		const context = instance.context ?? {};
 		return resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
+			userId: context.user_id ?? null,
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null
 		});

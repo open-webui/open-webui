@@ -55,7 +55,7 @@ async def run(request, form_data, user, metadata, model):
     output.state = {
         **{key: previous[key] for key in ('session_id', 'model_config') if previous and key in previous},
         **agent,
-        'terminal_user_id': (previous or {}).get('terminal_user_id') or (previous or {}).get('user') or user.id,
+        'instance_user_id': (previous or {}).get('instance_user_id') or (previous or {}).get('user') or user.id,
     }
     # Browsing files must not move an existing agent conversation's workspace.
     cwd = (previous or {}).get('cwd') or metadata.get('initial_terminal_cwd')

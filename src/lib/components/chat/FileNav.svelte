@@ -1285,9 +1285,7 @@
 		stopWatching?.();
 		stopWatching = undefined;
 		watcherConnected = false;
-		// A read-only view only proxies HTTP reads, so there's no live updates socket.
-		if (!terminal || terminal.readOnly || !folder || !(await getTerminalFeatures(terminal)).events)
-			return;
+		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
 		if (folder !== watchedFolder || disposed) return;
 		stopWatching = watchTerminalFiles(
 			terminal,
@@ -2552,6 +2550,14 @@
 			onGoBack={goBack}
 			onGoForward={goForward}
 			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
+			listFolders={async (path) => {
+				const terminal = selectedTerminal;
+				const entries =
+					treeCache.get(path) ?? (terminal ? (await listFiles(terminal, path))?.entries : null);
+				return (entries ?? [])
+					.filter((entry) => entry.type === 'directory')
+					.map((entry) => cleanEntryName(entry.name));
+			}}
 			onRefresh={async () => {
 				if (selectedFile) {
 					const fileName = selectedFile.split('/').pop() ?? '';

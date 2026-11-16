@@ -161,9 +161,8 @@ export type TerminalTarget = {
 	baseUrl: string;
 	key: string;
 	system: boolean;
-	context: { chatId: string | null; modelId: string | null };
-	/** An admin's view of another person's instance: the server refuses every write. */
-	readOnly?: boolean;
+	/** userId names another person's instance; only someone who manages the terminal may reach it. */
+	context: { userId?: string | null; chatId: string | null; modelId: string | null };
 };
 export type TerminalProcess = {
 	id: string;
@@ -191,6 +190,7 @@ export const resolveTerminalTarget = (
 			selector,
 			baseUrl: `${WEBUI_API_BASE_URL}/terminals/${encodeURIComponent(selector)}`,
 			context: {
+				userId: context.userId ?? null,
 				chatId: context.chatId ?? null,
 				modelId: server.scope === 'model' ? (context.modelId ?? null) : null
 			},
@@ -203,23 +203,6 @@ export const resolveTerminalTarget = (
 	}
 	return null;
 };
-
-// Reaches an instance as its owner would, read-only, for an admin looking at another person's instance.
-export const instanceViewTarget = (terminalId: string, contextId: string): TerminalTarget => ({
-	selector: terminalId,
-	baseUrl: `${WEBUI_API_BASE_URL}/terminals/templates/${encodeURIComponent(terminalId)}/instances/${encodeURIComponent(contextId)}`,
-	context: { chatId: null, modelId: null },
-	get key() {
-		return typeof localStorage === 'undefined' ? '' : (localStorage.getItem('token') ?? '');
-	},
-	system: true,
-	readOnly: true
-});
-
-const markReadOnly = <T extends { writable?: boolean }>(
-	target: TerminalTarget,
-	entries: T[]
-): T[] => (target.readOnly ? entries.map((entry) => ({ ...entry, writable: false })) : entries);
 
 export class TerminalRequestError extends Error {
 	constructor(
@@ -265,6 +248,7 @@ export const terminalHeaders = (
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	return {
 		Authorization: `Bearer ${target.key.trim()}`,
+		...(target.context.userId ? { 'X-Terminal-User-Id': target.context.userId } : {}),
 		...(target.context.chatId ? { 'X-Session-Id': target.context.chatId } : {}),
 		...(target.context.modelId ? { 'X-Terminal-Model-Id': target.context.modelId } : {})
 	};
@@ -340,12 +324,7 @@ export const listFiles = async (
 			console.error('open-terminal listFiles error:', err);
 			return null;
 		});
-	return res?.entries
-		? {
-				entries: markReadOnly(target, res.entries),
-				writable: target.readOnly ? false : res.writable
-			}
-		: null;
+	return res?.entries ? { entries: res.entries, writable: res.writable } : null;
 };
 
 export const searchFiles = async (
@@ -374,7 +353,7 @@ export const searchFiles = async (
 
 	if (searchRes?.ok) {
 		const json = await searchRes.json().catch(() => null);
-		if (Array.isArray(json?.results)) return { results: markReadOnly(target, json.results) };
+		if (Array.isArray(json?.results)) return { results: json.results };
 	}
 
 	if (signal?.aborted) return null;
@@ -397,18 +376,15 @@ export const searchFiles = async (
 	const json = await globRes.json().catch(() => null);
 	const root = json?.path ?? path;
 	return {
-		results: markReadOnly(
-			target,
-			(json?.matches ?? [])
-				.filter((item: FileEntry & { path: string }) => showHidden || !hasHiddenPathPart(item.path))
-				.map((item: FileEntry & { path: string }) => ({
-					path: joinTerminalPath(root, item.path),
-					name: basename(item.path),
-					type: item.type,
-					size: item.size,
-					modified: item.modified
-				}))
-		)
+		results: (json?.matches ?? [])
+			.filter((item: FileEntry & { path: string }) => showHidden || !hasHiddenPathPart(item.path))
+			.map((item: FileEntry & { path: string }) => ({
+				path: joinTerminalPath(root, item.path),
+				name: basename(item.path),
+				type: item.type,
+				size: item.size,
+				modified: item.modified
+			}))
 	};
 };
 
