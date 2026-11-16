@@ -531,7 +531,7 @@
 
 	export const setText = (text: string = '') => {
 		chatInputElement?.setText(text);
-		if (!$voiceCall) {
+		if (!$mobile && !$voiceCall) {
 			focus();
 		}
 	};
@@ -1875,7 +1875,7 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			if (!$voiceCall) {
+			if (!$mobile && !$voiceCall) {
 				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}

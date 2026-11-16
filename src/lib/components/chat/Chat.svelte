@@ -1104,7 +1104,7 @@
 			({ prompt, files } = embeddedDraft);
 			messageInput?.setText(prompt);
 		}
-		messageInput?.focus({ preventScroll: true });
+		if (!$mobile) messageInput?.focus({ preventScroll: true });
 		if (initialPrompt) {
 			await tick();
 			submitHandler(initialPrompt);
@@ -2217,7 +2217,7 @@
 				await restoreChatInput(storageChatInput);
 			}
 
-			messageInput?.focus({ preventScroll: true });
+			if (!$mobile) messageInput?.focus({ preventScroll: true });
 		};
 		if (embedded) init();
 		else
@@ -3173,7 +3173,7 @@
 
 		await tick();
 		if (preserveTabs) tabs?.focusMainChat();
-		messageInput?.focus({ preventScroll: true });
+		if (!$mobile) messageInput?.focus({ preventScroll: true });
 	};
 
 	const loadChat = async (signal = startChatLoad()) => {
@@ -3406,7 +3406,7 @@
 						({ prompt, files } = embeddedDraft);
 						messageInput?.setText(prompt);
 					}
-					messageInput?.focus({ preventScroll: true });
+					if (!$mobile) messageInput?.focus({ preventScroll: true });
 				}
 				return true;
 			} else {
