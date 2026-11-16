@@ -306,11 +306,15 @@ def _build_context_usage(tokens: int, threshold: int) -> dict:
     }
 
 
+def _get_context_summary_from_message(message: dict) -> str | None:
+    value = message.get('contextSummary') or message.get('context_summary')
+    return value if isinstance(value, str) and value.strip() else None
+
+
 def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
     for idx in range(len(messages) - 1, -1, -1):
         message = messages[idx]
-        value = message.get('contextSummary') or message.get('context_summary')
-        if isinstance(value, str) and value.strip():
+        if value := _get_context_summary_from_message(message):
             # Rerun without the summary so a tool-loop reply keeps its mid-turn trim.
             if message.get('output'):
                 [trimmed_message], _ = _apply_latest_summary_checkpoint(
@@ -341,7 +345,11 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
                 ),
                 None,
             )
-            if start is not None:
+            if start is None:
+                # A summary saved inside the retained rounds was written after this marker.
+                if cut_idx < idx and _get_context_summary_from_message(messages[cut_idx]):
+                    break
+            else:
                 while start and output[start - 1].get('type') != 'function_call_output':
                     start -= 1
                 return [
