@@ -2039,10 +2039,10 @@
 		}
 
 		const iframe = [...document.querySelectorAll('iframe')].find(
-			(iframe) => iframe.contentWindow === event.source
+			(frame) => frame.contentWindow === event.source
 		);
-		const chat = iframe?.closest('[data-chat]')?.getAttribute('data-chat') ?? 'main';
-		if (chat !== (embedded ? instanceId : 'main')) {
+		const sourceChat = iframe?.closest('[data-chat]')?.getAttribute('data-chat') ?? 'main';
+		if (sourceChat !== (embedded ? instanceId : 'main')) {
 			return;
 		}
 
