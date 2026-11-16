@@ -214,6 +214,7 @@
 		const chat =
 			document.activeElement?.closest('[data-chat]') ??
 			document.querySelector('[data-chat="main"]');
+		if (chat?.querySelector('[data-main-chat-pane]')?.classList.contains('hidden')) return [];
 		return [...document.querySelectorAll<T>(selector)].filter(
 			(el) => !chat || el.closest('[data-chat]') === chat
 		);
@@ -319,7 +320,7 @@
 				} else if (shortcut === Shortcut.DELETE_CHAT) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
-					document.getElementById('delete-chat-button')?.click();
+					chatElements('#delete-chat-button')[0]?.click();
 				} else if (shortcut === Shortcut.OPEN_SETTINGS) {
 					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
@@ -331,7 +332,7 @@
 				} else if (shortcut === Shortcut.OPEN_MODEL_SELECTOR) {
 					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
 					event.preventDefault();
-					document.getElementById('model-selector-model-button')?.click();
+					chatElements('#model-selector-model-button')[0]?.click();
 				} else if (shortcut === Shortcut.NEW_TEMPORARY_CHAT) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();
