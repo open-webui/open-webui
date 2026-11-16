@@ -165,7 +165,7 @@
 							{item.type === 'note'
 								? $i18n.t('Notes')
 								: item.type === 'collection'
-									? $i18n.t('Collections')
+									? $i18n.t('Knowledge')
 									: $i18n.t('Files')}
 						</div>
 					{/if}

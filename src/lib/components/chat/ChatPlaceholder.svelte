@@ -3,7 +3,7 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 
-	import { config, user, models as _models, temporaryChatEnabled } from '$lib/stores';
+	import { config, user } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
@@ -18,6 +18,9 @@
 	} from '$lib/utils/localizedContent';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models: _models, temporary } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 
@@ -101,7 +104,7 @@
 			</div>
 		</div>
 
-		{#if $temporaryChatEnabled}
+		{#if $temporary}
 			<Tooltip
 				content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 				className="w-full flex justify-start mb-0.5"

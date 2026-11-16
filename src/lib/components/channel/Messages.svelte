@@ -71,8 +71,7 @@
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
 		const element = listElement?.closest<HTMLElement>('[id="messages-container"]');
-		if (!element) return;
-		element.scrollTop = element.scrollTop + 100;
+		if (element) element.scrollTop = element.scrollTop + 100;
 
 		messagesLoading = true;
 

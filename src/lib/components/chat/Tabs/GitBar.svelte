@@ -20,12 +20,16 @@
 	import ConfirmDialog from '../../common/ConfirmDialog.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import GitPullRequests from './GitPullRequests.svelte';
+	import GitListDivider from './GitListDivider.svelte';
+	import GitIssues from './GitIssues.svelte';
+	import { relativeTime } from './gitPanel';
 
 	export let target: TerminalTarget | null = null;
 	export let directory = '.';
 	export let chatId: string | null = null;
 	export let active = false;
 	export let onOpenFile: (path: string) => void = () => {};
+	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let onOpenDirectory: (path: string) => void = () => {};
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
@@ -34,9 +38,17 @@
 	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
-	let view: 'changes' | 'history' | 'pull requests' = initialView?.view ?? 'changes';
-	let prCapabilities: { available: boolean; default_branch?: string } | null = null;
-	let prRoot = '';
+	let view: 'changes' | 'history' | 'pull requests' | 'issues' = initialView?.view ?? 'changes';
+	let github: {
+		available: boolean;
+		default_branch?: string;
+		issues?: boolean;
+		open_pull_requests?: number | null;
+		open_issues?: number | null;
+	} | null = null;
+	$: openPullRequests = github?.open_pull_requests ?? null;
+	$: openIssues = github?.issues ? (github.open_issues ?? null) : null;
+	let githubRoot = '';
 	let selected: { path: string; staged: boolean; untracked: boolean } | null = null;
 	let selectedCommit: GitCommit | null = null;
 	let diff = '';
@@ -72,16 +84,18 @@
 	let busy = false;
 	let loadingDiff = false;
 	let confirmDiscard = false;
-	let discardFile: GitFile | null = null;
+	let discardFiles: GitFile[] = [];
+	// Files picked with Cmd/Ctrl- or Shift-click, separate from staging and the open diff.
+	let picked = new Set<string>();
+	let pickAnchor: string | null = null;
+	$: pickedFiles = status?.files.filter((file) => picked.has(file.path)) ?? [];
+	let discarding: Set<string> | null = null;
 	let height = initialView?.height ?? 280;
 	let resizing = false;
 	let resizeY = 0;
 	let resizeHeight = 0;
 	let splitWidth = 0;
 	let listWidth: number | null = initialView?.listWidth ?? null;
-	let resizingList = false;
-	let resizeListX = 0;
-	let resizeListWidth = 0;
 	$: maxListWidth = Math.max(160, splitWidth - 220);
 	$: effectiveListWidth = Math.max(
 		160,
@@ -149,6 +163,7 @@
 	// $i18n.t('Fetching…')
 	// $i18n.t('Staging…')
 	// $i18n.t('Unstaging…')
+	// $i18n.t('Discarding…')
 	$: syncMessage = syncFeedback
 		? syncComplete
 			? { publish: 'Published', pull: 'Pulled', push: 'Pushed', fetch: 'Fetched' }[syncFeedback]
@@ -156,11 +171,13 @@
 					syncFeedback
 				]
 		: '';
-	$: feedbackMessage = pendingStaging
-		? pendingStaging.action === 'stage'
-			? 'Staging…'
-			: 'Unstaging…'
-		: syncMessage;
+	$: feedbackMessage = discarding
+		? 'Discarding…'
+		: pendingStaging
+			? pendingStaging.action === 'stage'
+				? 'Staging…'
+				: 'Unstaging…'
+			: syncMessage;
 	$: syncIcon = { publish: 'upload', pull: 'download', push: 'upload', fetch: 'refresh' }[
 		busy && syncFeedback ? syncFeedback : syncAction
 	];
@@ -170,24 +187,13 @@
 		syncComplete = false;
 	};
 
-	const relativeTime = (date: string) => {
-		const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
-		return seconds < 60
-			? 'now'
-			: seconds < 3600
-				? `${Math.floor(seconds / 60)}m`
-				: seconds < 86400
-					? `${Math.floor(seconds / 3600)}h`
-					: `${Math.floor(seconds / 86400)}d`;
-	};
 	const request = <T,>(
 		operation: string,
 		params: Record<string, string> = {},
 		body?: Record<string, unknown>
 	) => gitRequest<T>(target!, status?.root ?? directory, operation, params, body);
 	const refresh = (force = false): Promise<void> => {
-		if (!target || !active || !gitEnabled || (!force && document.hidden))
-			return Promise.resolve();
+		if (!target || !active || !gitEnabled || (!force && document.hidden)) return Promise.resolve();
 		if (pending) return pending;
 		const current = generation;
 		const task = gitRequest<GitStatus>(target, directory, 'status')
@@ -196,15 +202,10 @@
 				detectionError = '';
 				if (status?.root && status.root !== next.root) resetSelection();
 				status = next.is_repo ? next : null;
-				if (next.root && next.root !== prRoot) {
-					prRoot = next.root;
-					void request<{ available: boolean; default_branch?: string }>('pr/capabilities')
-						.then((data) => {
-							if (current === generation) prCapabilities = data;
-						})
-						.catch(() => {
-							if (current === generation) prCapabilities = null;
-						});
+				if (next.root && next.root !== githubRoot) {
+					githubRoot = next.root;
+					github = null;
+					void loadGitHub();
 				}
 				if (
 					selected &&
@@ -227,6 +228,18 @@
 		pending = task;
 		return task;
 	};
+	// What `gh` reports for this repo: availability, default branch, issues, and open counts.
+	// A refresh after a change keeps the last known values if it fails.
+	const loadGitHub = async (refreshing = false) => {
+		const current = generation;
+		const root = githubRoot;
+		try {
+			const data = await request<NonNullable<typeof github>>('pr/capabilities');
+			if (current === generation && root === githubRoot) github = data;
+		} catch {
+			if (!refreshing && current === generation && root === githubRoot) github = null;
+		}
+	};
 	const resetSelection = () => {
 		++diffGeneration;
 		selected = null;
@@ -244,6 +257,9 @@
 			const restoring = !context && initialView;
 			clearSyncFeedback();
 			pendingStaging = null;
+			discarding = null;
+			picked = new Set();
+			pickAnchor = null;
 			context = key;
 			++generation;
 			pending = null;
@@ -261,8 +277,8 @@
 			summary = restoring?.summary ?? '';
 			description = restoring?.description ?? '';
 			commits = [];
-			prCapabilities = null;
-			prRoot = '';
+			github = null;
+			githubRoot = '';
 			view = restoring?.view ?? 'changes';
 			resetSelection();
 		}
@@ -367,6 +383,7 @@
 			syncFeedback = action;
 		if (action === 'stage' || action === 'unstage')
 			pendingStaging = { action, paths: new Set(fields.paths as string[]) };
+		if (action === 'discard') discarding = new Set(fields.paths as string[]);
 		busy = true;
 		error = '';
 		try {
@@ -378,6 +395,10 @@
 			);
 			if (current !== generation) return;
 			if (action === 'commit') summary = description = '';
+			if (action === 'discard') {
+				picked = new Set();
+				pickAnchor = null;
+			}
 			showBranches = false;
 			showWorktrees = false;
 			resetSelection();
@@ -400,9 +421,49 @@
 				error = String(reason instanceof Error ? reason.message : reason);
 			}
 		} finally {
-			if (current === generation) pendingStaging = null;
+			if (current === generation) pendingStaging = discarding = null;
 			busy = false;
 		}
+	};
+	// Plain clicks keep their usual behavior and reset the pick; Cmd/Ctrl toggles, Shift extends.
+	const pick = (event: MouseEvent, file: GitFile) => {
+		if ((event.target as Element | null)?.closest('[data-no-pick]')) return;
+		const toggling = event.metaKey || event.ctrlKey;
+		if (!toggling && !event.shiftKey) {
+			picked = new Set();
+			pickAnchor = file.path;
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		const files = status?.files ?? [];
+		const anchor = pickAnchor ?? selected?.path;
+		if (event.shiftKey) {
+			const from = files.findIndex((entry) => entry.path === anchor);
+			const to = files.findIndex((entry) => entry.path === file.path);
+			const range = from < 0 ? [file] : files.slice(Math.min(from, to), Math.max(from, to) + 1);
+			picked = new Set([...(toggling ? picked : []), ...range.map((entry) => entry.path)]);
+			return;
+		}
+		const next = new Set(picked);
+		// Starting a pick while a diff is open includes the file being viewed.
+		if (
+			!next.size &&
+			anchor &&
+			anchor !== file.path &&
+			files.some((entry) => entry.path === anchor)
+		)
+			next.add(anchor);
+		if (next.has(file.path)) next.delete(file.path);
+		else next.add(file.path);
+		picked = next;
+		pickAnchor = file.path;
+	};
+	// Nested repositories cannot be discarded, so a bulk discard leaves them out.
+	const askDiscard = (files: GitFile[]) => {
+		const kept = files.filter((file) => !(file.status === 'untracked' && file.path.endsWith('/')));
+		discardFiles = kept.length ? kept : files;
+		if (discardFiles.length) confirmDiscard = true;
 	};
 	const paths = (files: GitFile[]) => [
 		...new Set(
@@ -436,7 +497,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="git-panel relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+		class="@container relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -728,7 +789,7 @@
 				<div
 					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
 				>
-					{#each ['changes', 'history', ...(prCapabilities?.available ? ['pull requests'] : [])] as section}<button
+					{#each ['changes', 'history', ...(github?.available ? [...(github.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
 								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
@@ -743,9 +804,15 @@
 									? 'Changes'
 									: section === 'history'
 										? 'History'
-										: 'Pull requests'
+										: section === 'issues'
+											? 'Issues'
+											: 'Pull requests'
 							)}{#if section === 'changes' && status.files.length}<span
 									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
+								>{:else if section === 'pull requests' && openPullRequests}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
+								>{:else if section === 'issues' && openIssues}<span
+									class="ml-1 text-gray-400 dark:text-gray-500">{openIssues}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -806,55 +873,114 @@
 						</div>
 					</Dropdown>
 				</div>
-				{#if view === 'pull requests' && target && status.root}
-					{#key status.root}<GitPullRequests
-							mode={diffMode}
-							{hideWhitespace}
-							{target}
-							directory={status.root}
-							branch={status.branch}
-							defaultBranch={prCapabilities?.default_branch ?? 'main'}
-							onChange={() => {
-								void refresh(true);
-							}}
-						/>{/key}
-				{:else}
-					<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
+				<div class="flex min-h-0 flex-1 overflow-hidden" bind:clientWidth={splitWidth}>
+					{#if view === 'pull requests' && target && status.root}
+						{#key status.root}<GitPullRequests
+								listWidth={effectiveListWidth}
+								{maxListWidth}
+								onResizeList={(width) => (listWidth = width)}
+								mode={diffMode}
+								{hideWhitespace}
+								{target}
+								directory={status.root}
+								branch={status.branch}
+								defaultBranch={github?.default_branch ?? 'main'}
+								onDraft={onDraftPrompt}
+								onChange={() => {
+									void refresh(true);
+									void loadGitHub(true);
+								}}
+							/>{/key}
+					{:else if view === 'issues' && target && status.root}
+						{#key status.root}<GitIssues
+								listWidth={effectiveListWidth}
+								{maxListWidth}
+								onResizeList={(width) => (listWidth = width)}
+								{target}
+								directory={status.root}
+								onDraft={onDraftPrompt}
+								onChange={() => void loadGitHub(true)}
+							/>{/key}
+					{:else}
 						<div
-							class="git-list min-w-0 flex-1 flex flex-col overflow-hidden"
-							class:showing-diff={!!(selected || selectedCommit)}
+							class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex @min-[560px]:flex-[0_0_var(--git-list-width)] {selected ||
+							selectedCommit
+								? 'hidden'
+								: 'flex'}"
 							style:--git-list-width={`${effectiveListWidth}px`}
 						>
 							{#if view === 'changes'}
 								{#if status.files.length}
-									<button
-										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100/50 dark:border-white/2 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
-										disabled={busy}
-										role="checkbox"
-										aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
-										aria-busy={!!pendingStaging}
-										aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
-										on:click={() =>
-											act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
+									<div
+										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-gray-100/50 dark:border-white/2 shrink-0"
 									>
-										<span
-											class:opacity-60={!!pendingStaging}
-											class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
-												? 'bg-gray-800 dark:bg-white'
-												: someStaged
-													? 'bg-gray-400 dark:bg-gray-500'
-													: ''}"
-											>{#if allStaged || someStaged}<Icon
-													name={allStaged ? 'check' : 'minus'}
-													size={7}
-													class="text-white dark:text-black"
-												/>{/if}</span
+										<button
+											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-gray-50 dark:hover:bg-white/3"
+											disabled={busy}
+											role="checkbox"
+											aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
+											aria-busy={!!pendingStaging}
+											aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
+											on:click={() =>
+												act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
 										>
-										<span class="min-w-0 truncate text-[0.6875rem] text-gray-600 dark:text-gray-400"
-											>{status.files.length}
-											{$i18n.t(status.files.length === 1 ? 'changed file' : 'changed files')}</span
-										>
-									</button>
+											<span
+												class:opacity-60={!!pendingStaging}
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
+													? 'bg-gray-800 dark:bg-white'
+													: someStaged
+														? 'bg-gray-400 dark:bg-gray-500'
+														: ''}"
+												>{#if allStaged || someStaged}<Icon
+														name={allStaged ? 'check' : 'minus'}
+														size={7}
+														class="text-white dark:text-black"
+													/>{/if}</span
+											>
+											<span
+												class="min-w-0 truncate text-[0.6875rem] text-gray-600 dark:text-gray-400"
+												>{status.files.length}
+												{$i18n.t(
+													status.files.length === 1 ? 'changed file' : 'changed files'
+												)}</span
+											>
+										</button>
+										{#if pickedFiles.length > 1}
+											<button
+												class="flex shrink-0 items-center gap-0.5 text-[0.625rem] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+												aria-label={$i18n.t('Clear selection')}
+												on:click={() => {
+													picked = new Set();
+													pickAnchor = null;
+												}}
+												>{$i18n.t('{{COUNT}} selected', { COUNT: pickedFiles.length })}<Icon
+													name="xmark"
+													size={10}
+												/></button
+											>
+										{/if}
+										<Dropdown align="end" closeOnSelect>
+											<button
+												class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+												aria-label={$i18n.t('More options')}
+												><Icon name="three-dots" size={12} /></button
+											>
+											<div slot="content">
+												<DropdownMenu className="w-48">
+													{#if pickedFiles.length > 1}<button
+															disabled={busy}
+															on:click={() => askDiscard(pickedFiles)}
+															>{$i18n.t('Discard changes to {{COUNT}} files', {
+																COUNT: pickedFiles.length
+															})}</button
+														>{/if}
+													<button disabled={busy} on:click={() => askDiscard(status?.files ?? [])}
+														>{$i18n.t('Discard all changes')}</button
+													>
+												</DropdownMenu>
+											</div>
+										</Dropdown>
+									</div>
 								{/if}
 								<div
 									class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hidden"
@@ -862,13 +988,18 @@
 									{#each status.files as file (file.path)}
 										{@const checked = stageStates.get(file.path) ?? false}
 										{@const staging = pendingStaging?.paths.has(file.path) ?? false}
+										{@const inPick = picked.has(file.path) && pickedFiles.length > 1}
+										<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 										<div
-											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left transition-colors duration-75 {selected?.path ===
-											file.path
+											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left select-none transition-colors duration-75 {selected?.path ===
+												file.path || picked.has(file.path)
 												? 'bg-gray-100/40 dark:bg-gray-800/25'
 												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
+											class:opacity-60={discarding?.has(file.path)}
+											on:click|capture={(event) => pick(event, file)}
 										>
 											<button
+												data-no-pick
 												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {checked
 													? 'bg-gray-800 dark:bg-white'
 													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
@@ -922,6 +1053,7 @@
 												>{/if}
 											<Dropdown side="top" align="end" closeOnSelect>
 												<button
+													data-no-pick
 													class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 													aria-label={`${$i18n.t('File actions')} ${file.path}`}
 													><Icon name="three-dots" size={12} /></button
@@ -941,10 +1073,12 @@
 															>{/if}
 														<button
 															disabled={busy}
-															on:click={() => {
-																discardFile = file;
-																confirmDiscard = true;
-															}}>{$i18n.t('Discard changes')}</button
+															on:click={() => askDiscard(inPick ? pickedFiles : [file])}
+															>{inPick
+																? $i18n.t('Discard changes to {{COUNT}} files', {
+																		COUNT: pickedFiles.length
+																	})
+																: $i18n.t('Discard changes')}</button
 														>
 													</DropdownMenu>
 												</div>
@@ -1053,63 +1187,23 @@
 								</div>
 							{/if}
 						</div>
-						<!-- svelte-ignore a11y_no_noninteractive_tabindex a11y_no_noninteractive_element_interactions (Focusable splitter supports pointer and keyboard resizing.) -->
+						<GitListDivider
+							width={effectiveListWidth}
+							max={maxListWidth}
+							onResize={(width) => (listWidth = width)}
+						/>
 						<div
-							tabindex="0"
-							role="separator"
-							aria-label={$i18n.t('Resize Git list')}
-							aria-orientation="vertical"
-							aria-valuemin={160}
-							aria-valuemax={maxListWidth}
-							aria-valuenow={Math.round(effectiveListWidth)}
-							class="git-list-divider relative z-10 shrink-0 touch-none cursor-col-resize border-l border-gray-100/50 dark:border-white/2 hover:border-gray-200 dark:hover:border-gray-800 transition"
-							on:pointerdown={(event) => {
-								if (event.button !== 0) return;
-								event.preventDefault();
-								event.currentTarget.setPointerCapture(event.pointerId);
-								resizingList = true;
-								resizeListX = event.clientX;
-								resizeListWidth = effectiveListWidth;
-							}}
-							on:pointermove={(event) => {
-								if (resizingList)
-									listWidth = Math.max(
-										160,
-										Math.min(maxListWidth, resizeListWidth + event.clientX - resizeListX)
-									);
-							}}
-							on:pointerup={() => (resizingList = false)}
-							on:pointercancel={() => (resizingList = false)}
-							on:lostpointercapture={() => (resizingList = false)}
-							on:keydown={(event) => {
-								if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
-									event.preventDefault();
-									listWidth = Math.max(
-										160,
-										Math.min(
-											maxListWidth,
-											event.key === 'Home'
-												? 160
-												: event.key === 'End'
-													? maxListWidth
-													: effectiveListWidth + (event.key === 'ArrowRight' ? 20 : -20)
-										)
-									);
-								}
-							}}
-						>
-							<span class="absolute inset-y-0 -left-1.5 -right-1.5 bg-transparent"></span>
-						</div>
-						<div
-							class="git-detail min-w-0 flex-1 flex-col overflow-hidden"
-							class:showing-diff={!!(selected || selectedCommit)}
+							class="min-w-0 flex-1 flex-col overflow-hidden @min-[560px]:flex {selected ||
+							selectedCommit
+								? 'flex'
+								: 'hidden'}"
 						>
 							{#if selected || selectedCommit}
 								<div
 									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
 								>
 									<button
-										class="git-back"
+										class="@min-[560px]:hidden"
 										aria-label={$i18n.t('Back to changes')}
 										on:click={resetSelection}><Icon name="chevron-left" size={12} /></button
 									><span class="min-w-0 flex-1 truncate"
@@ -1147,8 +1241,8 @@
 									)}
 								</div>{/if}
 						</div>
-					</div>
-				{/if}
+					{/if}
+				</div>
 			</div>
 		{/if}
 	</section>
@@ -1174,11 +1268,16 @@
 <ConfirmDialog
 	bind:show={confirmDiscard}
 	title={$i18n.t('Discard changes')}
-	message={$i18n.t(
-		'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
-	)}
+	message={discardFiles.length > 1
+		? $i18n.t(
+				'Discard all staged and unstaged changes to {{COUNT}} files? Files not in the last commit will be deleted. This cannot be undone.',
+				{ COUNT: discardFiles.length }
+			)
+		: $i18n.t(
+				'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
+			)}
 	on:confirm={() => {
-		if (discardFile) void act('discard', { paths: paths([discardFile]) });
+		if (discardFiles.length) void act('discard', { paths: paths(discardFiles) });
 	}}
 />
 
@@ -1238,34 +1337,6 @@
 		}
 		50% {
 			transform: translateY(var(--git-direction));
-		}
-	}
-	.git-panel {
-		container-type: inline-size;
-	}
-	.git-list.showing-diff,
-	.git-list-divider,
-	.git-detail {
-		display: none;
-	}
-	.git-detail.showing-diff {
-		display: flex;
-	}
-	@container (min-width: 560px) {
-		.git-list,
-		.git-list.showing-diff {
-			display: flex;
-			flex: 0 0 var(--git-list-width);
-		}
-		.git-list-divider {
-			display: block;
-			width: 1px;
-		}
-		.git-detail {
-			display: flex;
-		}
-		.git-back {
-			display: none;
 		}
 	}
 </style>
