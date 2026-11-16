@@ -2923,7 +2923,9 @@
 
 		const param = searchParams.get('temporary-chat');
 		temporaryChat.set(
-			($user?.role !== 'admin' && !!$user?.permissions?.chat?.temporary_enforced) ||
+			($user?.role !== 'admin' &&
+				!!$user?.permissions?.chat?.temporary &&
+				!!$user?.permissions?.chat?.temporary_enforced) ||
 				(!!canUseTemporaryChats({ user: $user, config: $config }) &&
 					(temporary ?? (param ? param === 'true' : !!$settings?.temporaryChatByDefault)))
 		);
