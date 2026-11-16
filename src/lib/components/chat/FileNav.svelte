@@ -652,7 +652,13 @@
 		await loadDir(entry.path);
 		if (entry.file) {
 			const fileName = entry.file.split('/').pop() ?? '';
-			await openEntry({ name: fileName, type: 'file', size: 0 });
+			await openEntry(
+				entries.find((item) => item.name === fileName) ?? {
+					name: fileName,
+					type: 'file',
+					writable: currentWritable
+				}
+			);
 		}
 		navigatingHistory = false;
 	};
@@ -665,7 +671,13 @@
 		await loadDir(entry.path);
 		if (entry.file) {
 			const fileName = entry.file.split('/').pop() ?? '';
-			await openEntry({ name: fileName, type: 'file', size: 0 });
+			await openEntry(
+				entries.find((item) => item.name === fileName) ?? {
+					name: fileName,
+					type: 'file',
+					writable: currentWritable
+				}
+			);
 		}
 		navigatingHistory = false;
 	};
@@ -2538,10 +2550,17 @@
 			onGoBack={goBack}
 			onGoForward={goForward}
 			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
-			onRefresh={() => {
+			onRefresh={async () => {
 				if (selectedFile) {
 					const fileName = selectedFile.split('/').pop() ?? '';
-					openEntry({ name: fileName, type: 'file', size: 0 });
+					await refreshBrowser();
+					openEntry(
+						entries.find((entry) => entry.name === fileName) ?? {
+							name: fileName,
+							type: 'file',
+							writable: currentWritable
+						}
+					);
 				} else {
 					refreshBrowser();
 				}
