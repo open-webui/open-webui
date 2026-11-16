@@ -44,6 +44,10 @@ def memory_label(memory) -> str:
     return f'{memory.path}: {memory.content}' if memory.path else memory.content
 
 
+def memory_version(memory) -> str:
+    return f'{memory.id}:{memory.updated_at}'
+
+
 def _path_parts(path: str | None) -> list[str]:
     return [part for part in (path or '').split('/') if part]
 
@@ -327,7 +331,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
         key=lambda item: (item.path or '', item.updated_at or 0, item.id or ''),
     ):
         seen_ids.add(memory.id)
-        sections['user'].append({'version': f'{memory.id}:{memory.updated_at}', 'label': memory_label(memory)})
+        sections['user'].append({'version': memory_version(memory), 'label': memory_label(memory)})
 
     for hint in memory_path_hints(query, all_memories):
         for memory in search_memory_rows(
@@ -339,10 +343,9 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
             if memory.id in seen_ids:
                 continue
             seen_ids.add(memory.id)
-            sections['neighborhood'].append(
-                {'version': f'{memory.id}:{memory.updated_at}', 'label': memory_label(memory)}
-            )
+            sections['neighborhood'].append({'version': memory_version(memory), 'label': memory_label(memory)})
 
+    memories_by_id = {memory.id: memory for memory in all_memories or []}
     if results and hasattr(results, 'documents') and results.documents:
         for doc_idx, doc in enumerate(results.documents[0]):
             if not doc:
@@ -364,16 +367,16 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
             if metadata.get('path') and content.startswith(f'{metadata.get("path")}\n'):
                 content = content[len(metadata.get('path')) + 1 :]
             label = f'{metadata.get("path")}: {content}' if metadata.get('path') else content
+            memory = memories_by_id.get(memory_id)
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(
-                {'version': f'{memory_id}:{metadata.get("updated_at")}', 'label': label}
+                {'version': memory_version(memory) if memory else None, 'label': label}
             )
 
     return sections
 
 
-async def format_memory_context(memories: dict[str, list[dict]]) -> tuple[str, list[dict]]:
+async def format_memory_context(sections: dict[str, list[dict]]) -> tuple[str, list[dict]]:
     """The memory context, and the memories whose text made it under the character limits."""
-    sections = {key: [entry['label'] for entry in entries] for key, entries in memories.items()}
     config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
     try:
         user_limit = max(250, int(config.get('memories.user_char_limit') or 2000))
@@ -384,40 +387,28 @@ async def format_memory_context(memories: dict[str, list[dict]]) -> tuple[str, l
     except Exception:
         context_limit = 2000
 
-    limits = {'user': user_limit, 'context': context_limit}
-    char_count = {'user': 0, 'context': 0}
-    shown_labels = set()
-    parts = []
+    texts = {'user': '', 'context': ''}
+    shown = []
     for title, key in (
         ('User Memory', 'user'),
         ('Memory Neighborhood', 'neighborhood'),
         ('Relevant Context', 'context'),
     ):
-        if sections[key]:
-            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
-            group = 'user' if key == 'user' else 'context'
-            char_count[group] += len(f'\n\n[{title}]') if char_count[group] else len(f'[{title}]')
-            for memory in ordered:
-                char_count[group] += len('\n- ')
-                if char_count[group] < limits[group]:
-                    shown_labels.add(memory)
-                char_count[group] += len(memory)
-            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
-    if not parts:
-        return '', []
+        if not sections[key]:
+            continue
+        group = 'user' if key == 'user' else 'context'
+        limit = user_limit if key == 'user' else context_limit
+        texts[group] += f'\n\n[{title}]' if texts[group] else f'[{title}]'
+        for entry in sorted(sections[key], key=lambda entry: (entry['label'].casefold(), entry['label'])):
+            texts[group] += '\n- '
+            if len(texts[group]) < limit:
+                shown.append(entry)
+            texts[group] += entry['label']
 
-    user_parts = [part for part in parts if part.startswith('[User Memory]')]
-    context_parts = [part for part in parts if not part.startswith('[User Memory]')]
-    rendered = '\n\n'.join(
-        [
-            '\n\n'.join(user_parts)[:user_limit],
-            '\n\n'.join(context_parts)[:context_limit],
-        ]
-    ).strip()
+    rendered = '\n\n'.join([texts['user'][:user_limit], texts['context'][:context_limit]]).strip()
     if not rendered:
         return '', []
 
-    shown = [entry for entries in memories.values() for entry in entries if entry['label'] in shown_labels]
     return f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}', shown
 
 

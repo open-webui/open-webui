@@ -2365,7 +2365,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
         except Exception as e:
             raise Exception(f'{e}')
 
-    memory_sections = {'user': [], 'neighborhood': [], 'context': []}
+    memory_sections = {}
     features = form_data.pop('features', None) or {}
     extra_params['__features__'] = features
     if features:
@@ -3062,7 +3062,7 @@ async def preload_memory(sections: dict[str, list[dict]], messages: list[dict]) 
         key: [entry for entry in entries if entry['version'] not in sent_versions] for key, entries in sections.items()
     }
     result, shown = await format_memory_context(unsent)
-    arguments = JSONCodec.dumps({'memories': [entry['version'] for entry in shown]})
+    arguments = JSONCodec.dumps({'memories': [entry['version'] for entry in shown if entry['version']]})
     return hidden_tool_result('recall_memories', result, arguments) if result else []
 
 
