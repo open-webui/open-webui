@@ -5,7 +5,12 @@ import type { OutputItem } from './structuredOutput';
 // Terminal agents (Claude Code, Codex, ACP, Pi) keep each tool's own event in `provider_data`.
 export type AgentView =
 	| { kind: 'command'; command: string; output: string; exitCode?: number | null }
-	| { kind: 'edit'; files: { path: string; diff: string }[] };
+	| { kind: 'edit'; files: { path: string; diff: string }[] }
+	| { kind: 'read'; paths: string[]; output: string }
+	| { kind: 'search'; query: string; output: string }
+	| { kind: 'list'; path: string; output: string }
+	| { kind: 'web'; query: string; output: string }
+	| { kind: 'fetch'; url: string; output: string };
 
 // Provider events are untyped JSON; read them through these.
 type Data = Record<string, unknown>;
@@ -135,15 +140,29 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 
 	// Codex app-server items
 	if (data.type === 'commandExecution') {
+		// Codex parses what a command does; a command that only reads, lists or searches reads as that.
+		const actions = list(data.commandActions);
+		const output = data.aggregatedOutput != null ? str(data.aggregatedOutput) : plain(result);
+		const only = (type: string) => actions.length > 0 && actions.every((a) => a.type === type);
+		if (!data.exitCode) {
+			if (only('read')) return { kind: 'read', paths: actions.map((a) => str(a.path)), output };
+			if (only('listFiles')) return { kind: 'list', path: str(actions[0].path) || '.', output };
+			if (only('search') && actions.length === 1) {
+				return { kind: 'search', query: str(actions[0].query ?? actions[0].command), output };
+			}
+		}
 		return {
 			kind: 'command',
 			command: str(data.command),
-			output: data.aggregatedOutput != null ? str(data.aggregatedOutput) : plain(result),
+			output,
 			exitCode: exitCode(data.exitCode)
 		};
 	}
 	if (data.type === 'fileChange') {
 		return { kind: 'edit', files: list(data.changes).map(codexFile) };
+	}
+	if (data.type === 'webSearch') {
+		return { kind: 'web', query: str(data.query), output: '' };
 	}
 
 	// ACP tool calls; permission requests carry the call in params.toolCall.
@@ -167,12 +186,29 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 			}))
 		};
 	}
-	if (call.kind === 'execute') {
-		return {
-			kind: 'command',
-			command: str(obj(call.rawInput).command ?? args.command ?? call.title),
-			output: plain(call.rawOutput ?? result)
-		};
+	const input = obj(call.rawInput);
+	const callOutput = plain(call.rawOutput ?? result);
+	switch (call.kind) {
+		case 'execute':
+			return {
+				kind: 'command',
+				command: str(input.command ?? args.command ?? call.title),
+				output: callOutput
+			};
+		case 'read': {
+			const located = list(call.locations).map((location) => str(location.path));
+			const inputPath = str(input.path ?? input.file_path ?? input.abs_path ?? input.AbsolutePath);
+			const paths = located.length ? located : inputPath ? [inputPath] : [];
+			return paths.length ? { kind: 'read', paths, output: callOutput } : null;
+		}
+		case 'search': {
+			const query = str(input.pattern ?? input.query ?? input.Query ?? input.Pattern ?? call.title);
+			return { kind: 'search', query, output: callOutput };
+		}
+		case 'fetch':
+			return input.url || input.Url
+				? { kind: 'fetch', url: str(input.url ?? input.Url), output: callOutput }
+				: { kind: 'web', query: str(input.query ?? input.Query ?? call.title), output: callOutput };
 	}
 
 	// Claude Code and Pi, read from the call's arguments: Claude's result event replaces its call.
@@ -190,14 +226,33 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 		: isPatch(piPatch)
 			? { path, diff: piPatch }
 			: null;
+	const output = plain(result);
 	switch (item.name) {
+		case 'Read':
+		case 'read':
+		case 'NotebookRead':
+			return path || args.notebook_path
+				? { kind: 'read', paths: [path || str(args.notebook_path)], output }
+				: null;
+		case 'Grep':
+		case 'grep':
+		case 'Glob':
+		case 'find':
+			return { kind: 'search', query: str(args.pattern), output };
+		case 'LS':
+		case 'ls':
+			return { kind: 'list', path: path || '.', output };
+		case 'WebSearch':
+			return { kind: 'web', query: str(args.query), output };
+		case 'WebFetch':
+			return { kind: 'fetch', url: str(args.url), output };
 		case 'Bash':
 		case 'bash': {
 			const details = obj(data.result);
 			return {
 				kind: 'command',
 				command: str(args.command),
-				output: plain(result),
+				output,
 				exitCode: exitCode(obj(details.details).exit_code ?? details.exit_code)
 			};
 		}
@@ -216,10 +271,28 @@ export function agentView(item: OutputItem, result: string): AgentView | null {
 	return null;
 }
 
-export const agentViewName = (view: AgentView) =>
-	view.kind === 'command'
-		? view.command.split('\n')[0]
-		: view.files.map((file) => file.path.split('/').pop() || file.path).join(', ');
+const fileName = (path: string) => path.split('/').filter(Boolean).pop() || path;
+
+export const agentViewName = (view: AgentView) => {
+	switch (view.kind) {
+		case 'command':
+			return view.command.split('\n')[0];
+		case 'edit':
+			return view.files.map((file) => fileName(file.path)).join(', ');
+		case 'read':
+			return view.paths.map(fileName).join(', ');
+		case 'search':
+		case 'web':
+			return view.query;
+		case 'list':
+			return view.path;
+		case 'fetch':
+			return view.url;
+	}
+};
+
+// The text a view shows when opened; edits show their diffs instead.
+export const agentViewOutput = (view: AgentView) => (view.kind === 'edit' ? '' : view.output);
 
 export const diffStats = (diff: string) => {
 	let additions = 0;

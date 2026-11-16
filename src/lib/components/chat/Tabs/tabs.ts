@@ -13,7 +13,8 @@ export type TabKind =
 	| 'artifacts'
 	| 'preview'
 	| 'voice'
-	| 'comments';
+	| 'comments'
+	| 'overview';
 export type Tab = {
 	id: string;
 	kind: TabKind;

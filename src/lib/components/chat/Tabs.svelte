@@ -35,7 +35,6 @@
 		terminalServers,
 		showTabs,
 		chatTabRequest,
-		showOverview,
 		showSidebar,
 		mobile,
 		showCallOverlay,
@@ -116,10 +115,8 @@
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
-	import Modal from '../common/Modal.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	let stopTerminalChoice: ((stop: boolean) => void) | null = null;
-	import XMark from '../icons/XMark.svelte';
 	import SplitPanel from '../icons/SplitPanel.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 
@@ -593,7 +590,8 @@
 			artifacts: 'code',
 			preview: 'browser',
 			voice: 'microphone',
-			comments: 'chat-bubble'
+			comments: 'chat-bubble',
+			overview: 'grid'
 		})[kind];
 	const toTabDomId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
@@ -833,6 +831,10 @@
 			inSplit,
 			sourceTabId
 		);
+	};
+	const openOverview = () => {
+		if (!hasMessages) return;
+		openPanel({ id: 'overview', kind: 'overview', label: $i18n.t('Overview') });
 	};
 	$: if (viewReady && queuedArtifactCode) {
 		const { code } = queuedArtifactCode;
@@ -1350,7 +1352,6 @@
 	$: showFilesTab =
 		supportsTerminalFiles ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
-	$: if (!hasMessages) showOverview.set(false);
 	$: showCommentsTab = !!(
 		$config?.features?.enable_comments &&
 		$user &&
@@ -1656,7 +1657,6 @@
 		setView({ status: 'idle' });
 		++commentCountRequestId;
 		++featureCheckRequestId;
-		showOverview.set(false);
 	});
 
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
@@ -1856,41 +1856,6 @@
 	/>
 {/if}
 
-<Modal
-	bind:show={$showOverview}
-	size="full"
-	ariaLabel={$i18n.t('Overview')}
-	containerClassName="p-2 sm:p-6"
-	className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden"
->
-	<div class="flex h-[calc(100dvh-1rem-2px)] sm:h-[calc(100dvh-3rem-2px)] flex-col">
-		<div class="flex items-center justify-between px-4 py-3 shrink-0">
-			<h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Overview')}</h2>
-			<button
-				class="rounded-lg p-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-				aria-label={$i18n.t('Close')}
-				on:click={() => showOverview.set(false)}
-			>
-				<XMark className="size-5" />
-			</button>
-		</div>
-		<div class="flex-1 min-h-0">
-			<Overview
-				history={chatHistory}
-				{chatUser}
-				onNodeClick={(e: any) => {
-					const { node } = e;
-					chatHistory.messages[node.data.message.id].favorite = node.data.message.favorite
-						? true
-						: null;
-					showOverview.set(false);
-					showMessage(node.data.message, true);
-				}}
-			/>
-		</div>
-	</div>
-</Modal>
-
 <div
 	role="presentation"
 	on:dragover|capture={handleChatDragOver}
@@ -2061,6 +2026,19 @@
 						artifacts={getArtifactsStore(tab.sourceTabId)}
 						selection={artifactSelections[tab.id] ?? null}
 						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat' ? source.chatId : chatView.chatId) ?? ''}
+					/>
+				{:else if tab.kind === 'overview'}
+					<Overview
+						history={chatHistory}
+						{chatUser}
+						onNodeClick={(e: any) => {
+							const { node } = e;
+							chatHistory.messages[node.data.message.id].favorite = node.data.message.favorite
+								? true
+								: null;
+							if (!visibleTabIds.has(mainChatTabId)) focusMainChat();
+							showMessage(node.data.message, true);
+						}}
 					/>
 				{:else if tab.kind === 'chat'}
 					<ChatTab
@@ -2386,6 +2364,8 @@
 								/>
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
+							{:else if tab.kind === 'overview'}
+								<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
 							{:else if PageIcon}
 								<svelte:component this={PageIcon} className="size-3.5 shrink-0" />
 							{:else}
@@ -2508,7 +2488,7 @@
 								</button>
 							{/each}
 							{#if hasMessages}
-								<button aria-haspopup="dialog" on:click={() => showOverview.set(true)}>
+								<button on:click={openOverview}>
 									<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
 									<span class="flex-1 text-start">{$i18n.t('Overview')}</span>
 								</button>

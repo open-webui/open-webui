@@ -178,7 +178,6 @@ export const showTabs = writable<
 	| (CommentTarget & { tab: 'comments'; comment_id?: string })
 >(false);
 export const showEmbeds = writable(false);
-export const showOverview = writable(false);
 export const showCallOverlay = writable(false);
 export const showFileNav = writable<{
 	terminalId: string;

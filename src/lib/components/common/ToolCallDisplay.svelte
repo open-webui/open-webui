@@ -22,6 +22,7 @@
 	import DiffBlock from '$lib/components/chat/Messages/DiffBlock.svelte';
 	import {
 		agentViewName,
+		agentViewOutput,
 		diffStats,
 		type AgentView
 	} from '$lib/components/chat/Messages/agentViews';
@@ -167,18 +168,38 @@
 	$: isActive = isPreparing || isExecuting;
 	$: isError = attributes?.status === 'failed' || (isDone && isToolResultError(result));
 	$: toolName = view ? agentViewName(view) : attributes.name;
+	// Literal keys so the i18n parser picks them up.
+	const viewText = (kind: AgentView['kind'], done: boolean, NAME: string) => {
+		switch (kind) {
+			case 'command':
+				return done ? $i18n.t('Ran {{NAME}}', { NAME }) : $i18n.t('Running {{NAME}}', { NAME });
+			case 'edit':
+				return done ? $i18n.t('Edited {{NAME}}', { NAME }) : $i18n.t('Editing {{NAME}}', { NAME });
+			case 'read':
+				return done ? $i18n.t('Read {{NAME}}', { NAME }) : $i18n.t('Reading {{NAME}}', { NAME });
+			case 'search':
+				return done
+					? $i18n.t('Searched for {{NAME}}', { NAME })
+					: $i18n.t('Searching for {{NAME}}', { NAME });
+			case 'list':
+				return done ? $i18n.t('Listed {{NAME}}', { NAME }) : $i18n.t('Listing {{NAME}}', { NAME });
+			case 'web':
+				return done
+					? $i18n.t('Searched the web for {{NAME}}', { NAME })
+					: $i18n.t('Searching the web for {{NAME}}', { NAME });
+			case 'fetch':
+				return done
+					? $i18n.t('Fetched {{NAME}}', { NAME })
+					: $i18n.t('Fetching {{NAME}}', { NAME });
+		}
+	};
 	$: viewLabel =
 		view &&
+		toolName &&
 		!needsApproval &&
 		!isRejected &&
 		!['pending', 'queued'].includes(attributes.status ?? '')
-			? view.kind === 'command'
-				? isDone
-					? $i18n.t('Ran {{COMMAND}}', { COMMAND: toolName })
-					: $i18n.t('Running {{COMMAND}}', { COMMAND: toolName })
-				: isDone
-					? $i18n.t('Edited {{FILES}}', { FILES: toolName })
-					: $i18n.t('Editing {{FILES}}', { FILES: toolName })
+			? viewText(view.kind, isDone, toolName)
 			: '';
 	$: displayLabel =
 		viewLabel ||
@@ -190,7 +211,7 @@
 				? attributes.display_label
 				: attributes.running_label
 			: '');
-	$: commandOutput = view?.kind === 'command' ? view.output : '';
+	$: viewOutput = view ? agentViewOutput(view) : '';
 	$: editStats =
 		view?.kind === 'edit'
 			? view.files
@@ -363,15 +384,17 @@
 				<div
 					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
 				>
-					{#if view?.kind === 'command'}
-						{@const isTruncated = commandOutput.length > RESULT_PREVIEW_LIMIT && !expandedResult}
-						<pre
-							class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono max-h-80 overflow-y-auto"><span
-								class="text-gray-400 dark:text-gray-500 select-none"
-								>$ </span><span class="text-gray-900 dark:text-gray-100">{view.command}</span
-							>{commandOutput
-								? `\n${isTruncated ? commandOutput.slice(0, RESULT_PREVIEW_LIMIT) : commandOutput}`
-								: ''}</pre>
+					{#if view && view.kind !== 'edit'}
+						{@const isTruncated = viewOutput.length > RESULT_PREVIEW_LIMIT && !expandedResult}
+						{#if view.kind === 'command' || viewOutput}
+							<pre
+								class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono max-h-80 overflow-y-auto">{#if view.kind === 'command'}<span
+										class="text-gray-400 dark:text-gray-500 select-none"
+										>$ </span><span class="text-gray-900 dark:text-gray-100">{view.command}</span
+									>{viewOutput ? '\n' : ''}{/if}{isTruncated
+									? viewOutput.slice(0, RESULT_PREVIEW_LIMIT)
+									: viewOutput}</pre>
+						{/if}
 						{#if isTruncated}
 							<button
 								class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
@@ -380,11 +403,11 @@
 								}}
 							>
 								{$i18n.t('Show all ({{COUNT}} characters)', {
-									COUNT: commandOutput.length.toLocaleString()
+									COUNT: viewOutput.length.toLocaleString()
 								})}
 							</button>
 						{/if}
-						{#if view.exitCode != null && view.exitCode !== 0}
+						{#if view.kind === 'command' && view.exitCode != null && view.exitCode !== 0}
 							<div class="text-xs text-red-500 dark:text-red-400">
 								{$i18n.t('Exit code {{CODE}}', { CODE: view.exitCode })}
 							</div>

@@ -152,32 +152,71 @@
 		return result;
 	})();
 
+	// Agent tool calls read as what they did ("Ran 2 commands, Read 3 files").
+	$: actionText = (() => {
+		const views = tokens.flatMap((t) => (t?.view ? [t.view] : []));
+		if (!views.length) return '';
+		const count = (kind: AgentView['kind']) => views.filter((view) => view.kind === kind).length;
+		const unique = (paths: string[]) => new Set(paths).size;
+		const commands = count('command');
+		const edited = unique(
+			views.flatMap((view) => (view.kind === 'edit' ? view.files.map((f) => f.path) : []))
+		);
+		const read = unique(views.flatMap((view) => (view.kind === 'read' ? view.paths : [])));
+		const searches = count('search');
+		const listed = count('list');
+		const webSearches = count('web');
+		const fetched = count('fetch');
+
+		const parts = [];
+		if (commands)
+			parts.push(
+				commands === 1
+					? $i18n.t('Ran 1 command')
+					: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
+			);
+		if (edited)
+			parts.push(
+				edited === 1
+					? $i18n.t('Edited 1 file')
+					: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
+			);
+		if (read)
+			parts.push(
+				read === 1 ? $i18n.t('Read 1 file') : $i18n.t('Read {{COUNT}} files', { COUNT: read })
+			);
+		if (searches)
+			parts.push(
+				searches === 1
+					? $i18n.t('Searched code')
+					: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
+			);
+		if (listed)
+			parts.push(
+				listed === 1
+					? $i18n.t('Listed 1 directory')
+					: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
+			);
+		if (webSearches)
+			parts.push(
+				webSearches === 1
+					? $i18n.t('Searched the web')
+					: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
+			);
+		if (fetched)
+			parts.push(
+				fetched === 1
+					? $i18n.t('Fetched 1 page')
+					: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
+			);
+		return parts.join(', ');
+	})();
+
 	$: summaryText = (() => {
 		const parts = [];
 
 		if (toolCallCount > 0) {
-			// Agent commands and edits read as actions; other tools are counted by name.
-			const commands = tokens.filter((t) => t?.view?.kind === 'command').length;
-			const editedFiles = new Set(
-				tokens.flatMap((t) =>
-					t?.view?.kind === 'edit' ? t.view.files.map((file) => file.path) : []
-				)
-			).size;
-			if (commands > 0) {
-				parts.push(
-					commands === 1
-						? $i18n.t('{{COUNT}} command', { COUNT: commands })
-						: $i18n.t('{{COUNT}} commands', { COUNT: commands })
-				);
-			}
-			if (editedFiles > 0) {
-				parts.push(
-					editedFiles === 1
-						? $i18n.t('{{COUNT}} edited file', { COUNT: editedFiles })
-						: $i18n.t('{{COUNT}} edited files', { COUNT: editedFiles })
-				);
-			}
-
+			// Other tools are counted by name.
 			const nameCounts: Record<string, number> = {};
 			tokens
 				.filter((t) => t?.attributes?.type === 'tool_calls' && !t?.view)
@@ -280,6 +319,13 @@
 							class="text-gray-400 dark:text-gray-500 {hasActiveDetails ? 'shimmer' : ''}"
 							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
 						>
+					{:else if actionText}
+						<span class="text-gray-500 dark:text-gray-400 {hasActiveDetails ? 'shimmer' : ''}"
+							>{actionText}</span
+						>
+						{#if summaryText}
+							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+						{/if}
 					{:else}
 						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
 							>{prefixText}</span
