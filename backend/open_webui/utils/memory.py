@@ -288,18 +288,12 @@ def model_allows_memory(model: dict | None) -> bool:
 
 
 async def recall_memories(request, messages: list[dict], user, model: dict | None = None) -> str:
-    return await render_memory_context(await recall_memory_sections(request, messages, user, model))
-
-
-async def recall_memory_sections(
-    request, messages: list[dict], user, model: dict | None = None
-) -> dict[str, list[str]]:
     if not model_allows_memory(model):
-        return {}
+        return ''
 
     target = get_last_user_message_item(messages)
     if target is None:
-        return {}
+        return ''
 
     user_messages = []
     for message in reversed(messages):
@@ -315,7 +309,7 @@ async def recall_memory_sections(
 
     query = '\n\n'.join(reversed(user_messages))[-4000:]
     if not query:
-        return {}
+        return ''
 
     all_memories = await Memories.get_memories_by_user_id(user.id)
     results = None
@@ -370,11 +364,16 @@ async def recall_memory_sections(
             label = f'{metadata.get("path")}: {content}' if metadata.get('path') else content
             sections[Memories.normalize_memory_type(metadata.get('type'))].append(label)
 
-    return sections
-
-
-async def render_memory_context(sections: dict[str, list[str]], earlier_context: str = '') -> str:
-    if not any(sections.values()):
+    parts = []
+    for title, key in (
+        ('User Memory', 'user'),
+        ('Memory Neighborhood', 'neighborhood'),
+        ('Relevant Context', 'context'),
+    ):
+        if sections[key]:
+            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
+            parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
+    if not parts:
         return ''
 
     config = await Config.get_many('memories.user_char_limit', 'memories.context_char_limit')
@@ -387,28 +386,14 @@ async def render_memory_context(sections: dict[str, list[str]], earlier_context:
     except Exception:
         context_limit = 2000
 
-    limits = {'user': user_limit, 'context': context_limit}
-    used = {'user': 0, 'context': 0}
-    parts = {'user': [], 'context': []}
-    for title, key in (
-        ('User Memory', 'user'),
-        ('Memory Neighborhood', 'neighborhood'),
-        ('Relevant Context', 'context'),
-    ):
-        if not sections[key]:
-            continue
-        group = 'user' if key == 'user' else 'context'
-        used[group] += len(f'\n\n[{title}]') if used[group] else len(f'[{title}]')
-        lines = []
-        for memory in sorted(sections[key], key=lambda memory: (memory.casefold(), memory)):
-            used[group] += len('\n- ')
-            shown = memory[: max(0, limits[group] - used[group])]
-            used[group] += len(memory)
-            if shown.strip() and f'\n- {shown}\n' not in earlier_context:
-                lines.append(f'- {shown}')
-        if lines:
-            parts[group].append(f'[{title}]\n' + '\n'.join(lines))
-    rendered = '\n\n'.join('\n\n'.join(group_parts) for group_parts in parts.values() if group_parts)
+    user_parts = [part for part in parts if part.startswith('[User Memory]')]
+    context_parts = [part for part in parts if not part.startswith('[User Memory]')]
+    rendered = '\n\n'.join(
+        [
+            '\n\n'.join(user_parts)[:user_limit],
+            '\n\n'.join(context_parts)[:context_limit],
+        ]
+    ).strip()
     if not rendered:
         return ''
 
