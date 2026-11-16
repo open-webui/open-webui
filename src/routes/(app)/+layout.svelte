@@ -126,6 +126,9 @@
 		if (!localStorage.token) return;
 		try {
 			user.set(await getSessionUser(localStorage.token));
+			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced && !$chatId) {
+				temporaryChatEnabled.set(true);
+			}
 			const results = await Promise.allSettled([
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
