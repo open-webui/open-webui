@@ -47,6 +47,7 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -3612,6 +3613,22 @@ async def background_tasks_handler(ctx):
     if not await get_verified_user_by_id(user.id):
         return
 
+    # Messages the user sent while this reply ran are answered now; follow-ups for it would go unused.
+    if (
+        is_saved_chat_id(metadata.get('chat_id'))
+        and not metadata.get('internal')
+        and await ChatMessages.has_queued_message(metadata['chat_id'], metadata['message_id'])
+    ):
+        from open_webui.utils.subagents import get_pending_run, process_pending_internal_messages
+
+        tasks = {key: value for key, value in (tasks or {}).items() if key != TASKS.FOLLOW_UP_GENERATION}
+        try:
+            await process_pending_internal_messages(
+                request, metadata['chat_id'], user.id, get_pending_run(metadata), reply_id=metadata['message_id']
+            )
+        except Exception:
+            log.exception('Failed to answer queued messages for chat %s', metadata['chat_id'])
+
     message = None
     messages = []
 
@@ -6080,6 +6097,11 @@ async def streaming_chat_response_handler(response, ctx):
                     await emit_output()
                     if final_answer_requested:
                         await emit_message_error(round_error or 'The provider requested tools after tool use stopped.')
+                        break
+                    # The user sent a message meanwhile: stop here, and it is answered next with these results.
+                    if is_saved_chat_id(metadata.get('chat_id')) and await ChatMessages.has_queued_message(
+                        metadata['chat_id'], metadata['message_id']
+                    ):
                         break
 
                     try:

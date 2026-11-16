@@ -578,6 +578,11 @@ class ChatTable:
                     and child.get('id') == child_id
                     and child.get('role')
                     and child.get('parentId') == message_id
+                    # A queued message waits in the queue, not on the branch shown.
+                    and not (
+                        (child.get('meta') or {}).get('status') == 'pending'
+                        and (child.get('meta') or {}).get('internal') is not True
+                    )
                 ),
                 None,
             )

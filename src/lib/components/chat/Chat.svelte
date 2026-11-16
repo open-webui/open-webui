@@ -111,6 +111,7 @@
 		compactChatById,
 		createNewChat,
 		deleteChatById,
+		deleteChatMessageById,
 		forkChatById,
 		getAllTags,
 		getChatById,
@@ -3496,7 +3497,9 @@
 		if (!queue || queue.length === 0 || queue[0].error) return;
 		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 		if (
-			(lastMessage && lastMessage.role === 'assistant' && !lastMessage.done) ||
+			(lastMessage?.role === 'assistant' &&
+				!lastMessage.done &&
+				!usesBackendQueue(queue.flatMap((m) => m.files ?? []))) ||
 			queue.some((m) =>
 				(m.files ?? []).some((file) => ['uploading', 'error'].includes(file.status))
 			)
@@ -3539,7 +3542,52 @@
 		}
 	};
 
+	// The backend queues messages sent to your own saved chat while a reply runs; the reply ends at its next
+	// step and they are answered next. Files on a terminal stay in this browser's queue.
+	const usesBackendQueue = (messageFiles: any[] = []) =>
+		($settings?.enableMessageQueue ?? true) &&
+		!$temporaryChat &&
+		!!$chatId &&
+		!isTemporaryChatId($chatId) &&
+		(chat?.user_id ?? $user?.id) === $user?.id &&
+		!messageFiles.some((file) => file.type === 'filesystem');
+
+	// Messages the backend queued under the reply shown, listed with the browser's queue.
+	$: backendQueue = (
+		(history.currentId ? history.messages[history.currentId]?.childrenIds : null) ?? []
+	)
+		.map((id: string) => history.messages[id])
+		.filter(
+			(message: any) =>
+				message?.role === 'user' &&
+				message.meta?.status === 'pending' &&
+				message.meta?.internal !== true
+		);
+	$: messageQueue = [
+		...backendQueue.map((message: any) => ({
+			id: message.id,
+			prompt: message.content,
+			files: message.files ?? []
+		})),
+		...($chatRequestQueues[$chatId] ?? [])
+	];
+
+	const removeFromBackendQueue = async (id: string) => {
+		const message = history.messages[id];
+		await deleteChatMessageById(localStorage.token, $chatId, id);
+		const parent = history.messages[message?.parentId];
+		if (parent) parent.childrenIds = parent.childrenIds.filter((childId: string) => childId !== id);
+		delete history.messages[id];
+		history = history;
+		return message;
+	};
+
 	const sendQueuedMessageNow = async (id) => {
+		if (history.messages[id]?.meta?.status === 'pending') {
+			// Stopping the reply answers its queued messages right away.
+			await stopResponse(false);
+			return;
+		}
 		if (processingQueueChats.has($chatId)) return;
 
 		const queue = $chatRequestQueues[$chatId] ?? [];
@@ -3574,6 +3622,16 @@
 	};
 
 	const editQueuedMessage = async (id) => {
+		if (history.messages[id]?.meta?.status === 'pending') {
+			const message = await removeFromBackendQueue(id).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
+			if (!message) return;
+			files = message.files ?? [];
+			messageInput?.setText(message.content);
+			return;
+		}
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		const item = queue.find((m) => m.id === id);
 		if (!item) return;
@@ -3589,6 +3647,10 @@
 	};
 
 	const deleteQueuedMessage = async (id) => {
+		if (history.messages[id]?.meta?.status === 'pending') {
+			await removeFromBackendQueue(id).catch((error) => toast.error(`${error}`));
+			return;
+		}
 		const queue = $chatRequestQueues[$chatId] ?? [];
 		chatRequestQueues.update((q) => ({
 			...q,
@@ -3987,6 +4049,13 @@
 			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
 		);
 
+		const runningReply = history.currentId ? history.messages[history.currentId] : null;
+		const queued =
+			!bridgeRequest &&
+			runningReply?.role === 'assistant' &&
+			runningReply.done === false &&
+			usesBackendQueue(_files);
+
 		// Create user message
 		let userMessageId = bridgeRequest?.userMessageId ?? uuidv4();
 		let userMessage = {
@@ -3999,7 +4068,8 @@
 			content: inputContent,
 			files: _files.length > 0 ? _files : undefined,
 			timestamp: Math.floor(Date.now() / 1000), // Unix epoch
-			models: selectedModels
+			models: selectedModels,
+			...(queued ? { meta: { status: 'pending' } } : {})
 		};
 
 		// A transcribed Bridge message already exists in the same history.
@@ -4012,7 +4082,9 @@
 			history.messages[history.currentId].childrenIds.push(userMessageId);
 		}
 
-		history.currentId = userMessageId;
+		// A queued message waits in the queue list; the running reply stays the end of the transcript.
+		if (!queued) history.currentId = userMessageId;
+		else history = history;
 
 		// focus on chat input (skip during voice call to avoid triggering mobile keyboard)
 		if (!$voiceCall) {
@@ -4549,7 +4621,7 @@
 				)
 			: lastMessage && lastMessage.role === 'assistant' && !lastMessage.done;
 
-		if (isGenerating) {
+		if (isGenerating && (bridgeRequest || !usesBackendQueue(files))) {
 			if (bridgeRequest) return { status: 'deferred' };
 			if ($settings?.enableMessageQueue ?? true) {
 				// Enqueue the request
@@ -4633,6 +4705,10 @@
 			history.messages[parentId].models = [...selectedModelIds];
 		}
 
+		// A queued message gets no reply on screen unless the backend answers it now.
+		const queued = history.messages[parentId]?.meta?.status === 'pending';
+		const target = queued ? structuredClone(history) : history;
+
 		// Use a message_ids array with modelIdx to preserve separate columns for duplicate models.
 		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
@@ -4655,13 +4731,13 @@
 				};
 
 				// Add message to history and Set currentId to messageId
-				history.messages[responseMessageId] = responseMessage;
-				history.currentId = responseMessageId;
+				target.messages[responseMessageId] = responseMessage;
+				target.currentId = responseMessageId;
 
 				// Append messageId to childrenIds of parent message
-				if (parentId !== null && history.messages[parentId]) {
-					history.messages[parentId].childrenIds = [
-						...history.messages[parentId].childrenIds,
+				if (parentId !== null && target.messages[parentId]) {
+					target.messages[parentId].childrenIds = [
+						...target.messages[parentId].childrenIds,
 						responseMessageId
 					];
 				}
@@ -4679,7 +4755,7 @@
 		await tick();
 
 		// Re-clone history so sendMessageSocket gets the response messages we just added
-		_history = structuredClone(history);
+		_history = structuredClone(target);
 
 		// Vision capability check
 		for (const mid of selectedModelIds) {
@@ -4988,7 +5064,11 @@
 				id: responseMessageId,
 				...(messageIdsList ? { message_ids: messageIdsList } : {}),
 				parent_id: userMessage?.parentId ?? null,
-				user_message: userMessage,
+				// Whether a message is queued is the backend's call, not a status the browser sends.
+				user_message:
+					userMessage?.meta?.status === 'pending'
+						? { ...userMessage, meta: { ...userMessage.meta, status: undefined } }
+						: userMessage,
 				...(regenerationPrompt ? { regeneration_prompt: regenerationPrompt } : {}),
 				...(regenerationMessageId ? { regeneration_message_id: regenerationMessageId } : {}),
 				...(continueResponse ? { assistant_message_id: responseMessageId } : {}),
@@ -5037,6 +5117,32 @@
 
 		if (filesystemAttachment && (!res || res.error))
 			throw new Error('File request failed. Retry from the message or queue.');
+		const placeholderIds = (messageIdsList ?? [{ message_id: responseMessageId }]).map(
+			({ message_id }) => message_id
+		);
+		const sentMessage = history.messages[userMessage.id];
+		if (res?.queued && sentMessage) {
+			// Queued for the running reply, which ends at its next step; the answer arrives with a chat reload.
+			for (const id of placeholderIds) delete history.messages[id];
+			sentMessage.childrenIds = sentMessage.childrenIds.filter(
+				(id: string) => !placeholderIds.includes(id)
+			);
+			sentMessage.meta = { ...(sentMessage.meta ?? {}), status: 'pending' };
+			if (placeholderIds.includes(history.currentId)) history.currentId = sentMessage.parentId;
+			history = history;
+			return res;
+		}
+		if (res && !res.error && sentMessage?.meta?.status === 'pending') {
+			// The reply had already finished, so the backend answered it as a normal turn.
+			sentMessage.meta = { ...sentMessage.meta, status: undefined };
+			for (const id of placeholderIds) {
+				if (!_history.messages[id]) continue;
+				history.messages[id] = _history.messages[id];
+				if (!sentMessage.childrenIds.includes(id)) sentMessage.childrenIds.push(id);
+			}
+			history.currentId = responseMessageId;
+			history = history;
+		}
 		if (res) {
 			if (res.error) {
 				await handleOpenAIError(res.error, responseMessage);
@@ -6100,7 +6206,7 @@
 										{createMessagePair}
 										{onUpload}
 										{onUpdate}
-										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										{messageQueue}
 										{chatTasks}
 										askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 										onQueueSendNow={sendQueuedMessageNow}
@@ -6219,7 +6325,7 @@
 										{createMessagePair}
 										{onUpload}
 										{onUpdate}
-										messageQueue={$chatRequestQueues[$chatId] ?? []}
+										{messageQueue}
 										{chatTasks}
 										askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 										onQueueSendNow={sendQueuedMessageNow}
@@ -6287,7 +6393,7 @@
 									{onSelect}
 									{onUpload}
 									{onUpdate}
-									messageQueue={$chatRequestQueues[$chatId] ?? []}
+									{messageQueue}
 									askUser={savedAskUserPrompt ?? socketAskUserPrompt}
 									onQueueSendNow={sendQueuedMessageNow}
 									onQueueEdit={editQueuedMessage}
