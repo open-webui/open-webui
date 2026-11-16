@@ -1309,16 +1309,10 @@
 	$: {
 		const terminalId = $selectedTerminalId;
 		void listTerminalSkills(
-			resolveTerminalTarget(
-				terminalId,
-				$terminalServers ?? [],
-				$settings?.terminalServers ?? [],
-				localStorage.token,
-				{
-					chatId: $chatId || null,
-					modelId: selectedModels[0] ?? null
-				}
-			)
+			resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token, {
+				chatId: $chatId || null,
+				modelId: selectedModels[0] ?? null
+			})
 		).then((items) => {
 			if (terminalId === $selectedTerminalId) terminalSkills.set(items);
 		});
