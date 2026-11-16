@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget } from '$lib/apis/terminal';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Terminal unavailable");
 	// $i18n.t("No preview available");
@@ -64,7 +64,14 @@
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
 	$: targetPage = normalizeDocumentTargetPage(item?.page);
 	$: selector = item?.terminal_selector;
-	$: terminal = resolveTerminal();
+	// Follows the Terminal menu: the card only reaches its file while that terminal is selected.
+	$: terminal =
+		selector && $selectedTerminalId === selector
+			? resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+					chatId,
+					modelId: item?.model_id ?? modelId
+				})
+			: null;
 	$: unavailable = !terminal && !fileId;
 	$: previewKey =
 		fileId || (terminal ? `${terminal.baseUrl}|${terminal.key}|${path}|${chatId}` : '');
@@ -92,17 +99,6 @@
 	const isOffice = (value: string) => OFFICE_EXTS.has(getExt(value));
 
 	const t = (key: string, vars?: Record<string, unknown>) => $i18n?.t?.(key, vars) ?? key;
-
-	function resolveTerminal(): TerminalTarget | null {
-		if (!selector || $selectedTerminalId !== selector) return null;
-		return resolveTerminalTarget(
-			selector,
-			$terminalServers ?? [],
-			(($settings as any)?.terminalServers ?? []).filter((server: any) => server.enabled),
-			localStorage.token,
-			{ chatId: chatId, modelId: item?.model_id ?? modelId }
-		);
-	}
 
 	function clearPreview() {
 		for (const url of objectUrls) URL.revokeObjectURL(url);
@@ -176,9 +172,7 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal, path)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -197,9 +191,7 @@
 						await loadExcelSheet(excelSheetNames[0]);
 					}
 				} else if (ext === 'pptx') {
-					const preview = terminal
-						? await downloadFilePreview(terminal, path)
-						: null;
+					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {

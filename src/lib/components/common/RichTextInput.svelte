@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
-	import { showCallOverlay, skills, terminalSkills } from '$lib/stores';
+	import { mobile, voiceCall, skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -424,8 +424,8 @@
 	export let insertPromptAsRichText = false;
 	export let floatingMenuPlacement = 'bottom-start';
 
-	// Keep focus off the chat input during a call so the call overlay's M shortcut works
-	$: suppressAutoFocus = messageInput && $showCallOverlay;
+	// Avoid opening the mobile keyboard or stealing focus from the call overlay.
+	$: suppressAutoFocus = messageInput && ($mobile || $voiceCall);
 
 	let content = null;
 	let htmlValue = '';
@@ -1100,7 +1100,7 @@
 			],
 			content: provider ? undefined : content,
 			editable,
-			autofocus: messageInput && !$showCallOverlay,
+			autofocus: messageInput && !$mobile && !$voiceCall,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 

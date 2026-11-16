@@ -193,7 +193,8 @@
 							class="min-w-0 flex-1 line-clamp-2 break-words text-xs leading-[1.125rem] text-gray-800 dark:text-gray-200"
 						>
 							{$i18n.t(inboxLabels[item.event_type] ?? 'Notification', {
-								name: item.actor?.name ?? $i18n.t('Unknown User')
+								name: item.actor?.name ?? $i18n.t('Unknown User'),
+								modelName: item.data.model_name ?? $i18n.t('Assistant')
 							})}
 						</span>
 						<time

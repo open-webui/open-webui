@@ -3,6 +3,7 @@
 	const { goto, tab: pageTab } = getPageContext();
 
 	import { getContext, onMount, setContext } from 'svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import { writable } from 'svelte/store';
 
 	import { config, mobile, showSidebar, user } from '$lib/stores';
@@ -75,9 +76,9 @@
 		: ''} max-w-full"
 >
 	<div class="flex h-full min-h-0 flex-col">
-		<div class="shrink-0 px-1.5 pt-1.5 pb-1 md:px-2.5 md:pt-2">
+		<div class="shrink-0 px-1.5 pb-1 md:px-2.5">
 			<div class="flex items-center gap-0.5 md:gap-1">
-				{#if $mobile}
+				{#if $mobile && !pageTab}
 					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
@@ -113,7 +114,10 @@
 							{$total === null ? '' : formatNumber($total)}
 						</span>
 						{#if itemName}
-							<span class="text-sm text-gray-300 dark:text-gray-800 px-2">/</span>
+							<ChevronRight
+								className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
+								strokeWidth="2"
+							/>
 							<span class="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-white">
 								{itemName}
 							</span>

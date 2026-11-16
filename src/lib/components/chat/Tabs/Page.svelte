@@ -122,6 +122,9 @@
 		(parts[1] !== 'calendar' ||
 			($config?.features?.enable_calendar &&
 				($user?.role === 'admin' || $user?.permissions?.features?.calendar))) &&
+		(parts[1] !== 'channels' ||
+			($config?.features?.enable_channels &&
+				($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)))) &&
 		(parts[1] !== 'playground' || $user?.role === 'admin') &&
 		(parts[1] !== 'workspace' ||
 			!parts[2] ||
