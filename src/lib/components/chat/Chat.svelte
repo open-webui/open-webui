@@ -51,6 +51,7 @@
 		terminalServers,
 		functions,
 		selectedFolder as _selectedFolder,
+		folders as _folders,
 		showEmbeds as _showEmbeds,
 		selectedTerminalId as _selectedTerminalId,
 		showFileNavPath,
@@ -4226,14 +4227,19 @@
 	let titleInput: HTMLInputElement;
 	let generatingTitle = false;
 	let titleEditChatId = '';
-	$: if (loading || isShared || $temporaryChatEnabled || $chatId !== titleEditChatId)
+	// Folder owners can rename chats others made in their folders.
+	$: canRename =
+		!isShared ||
+		(!!chat?.folder_id &&
+			$_folders.find((folder) => folder.id === chat.folder_id)?.user_id === $user?.id);
+	$: if (loading || !canRename || $temporaryChatEnabled || $chatId !== titleEditChatId)
 		editingTitle = false;
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
 
 	export const startRename = async () => {
 		if (
 			loading ||
-			isShared ||
+			!canRename ||
 			!$chatId ||
 			$temporaryChatEnabled ||
 			isTemporaryChatId($chatId) ||

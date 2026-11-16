@@ -36,7 +36,7 @@ def answer_value(value):
     return value
 
 
-async def elicit(output, params, native):
+async def elicit(output, params, request):
     """Present ACP's flat form schema through the existing ask-user card."""
     if params.get('mode') != 'form':
         return {'action': 'decline'}
@@ -65,7 +65,7 @@ async def elicit(output, params, native):
         )
     if not questions:
         return {'action': 'decline'}
-    resolution = await output.approve('ask_user', {'questions': questions}, native)
+    resolution = await output.approve('ask_user', {'questions': questions}, request)
     if resolution['action'] != 'answer' or resolution.get('timed_out'):
         return {'action': 'decline'}
     content = {}
@@ -141,7 +141,7 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
                     call_id,
                     tool.get('title') or tool.get('kind', 'agent_tool'),
                     tool.get('rawInput') or {},
-                    native=tool.copy(),
+                    provider_data=tool.copy(),
                     result=tool.get('rawOutput', tool.get('content', [])),
                     done=tool.get('status') in {'completed', 'failed'},
                 )
@@ -150,7 +150,7 @@ async def run(transport, output, prompt, images, options, *, auth_method=None):
                     'agent_plan',
                     'Plan',
                     {'entries': update.get('entries', [])},
-                    native=update,
+                    provider_data=update,
                     result=update.get('entries', []),
                     done=True,
                 )

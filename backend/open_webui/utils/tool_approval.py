@@ -102,7 +102,8 @@ async def resolve_tool_call_output(
         function_call.setdefault('call_id', form_data.call_id)
         tool_name = function_call.get('name')
 
-        if function_call.get('native') is not None:
+        # Terminal agent requests carry the provider's event; older saved messages call it 'native'.
+        if function_call.get('provider_data') is not None or function_call.get('native') is not None:
             from open_webui.utils.auth import decode_token
 
             token = (message.get('meta') or {}).get('agent')
@@ -122,7 +123,7 @@ async def resolve_tool_call_output(
                 raise HTTPException(400, 'Answers must be keyed by question')
             function_call['agent_resolution'] = form_data.model_dump()
             function_call['status'] = 'queued'
-            # The running native client consumes this persisted response. Do not start a model/tool loop.
+            # The running agent client consumes this persisted response. Do not start a model/tool loop.
             return {'chat': chat, 'output': output, 'resume': None}
 
         if (

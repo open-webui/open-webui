@@ -143,7 +143,7 @@ async def run(transport, output, prompt, images, options):
                         item.get('id', params.get('itemId')),
                         item.get('type', 'agent_tool'),
                         item,
-                        native=item,
+                        provider_data=item,
                         result=item.get('aggregatedOutput', item),
                         done=method == 'item/completed',
                     )
