@@ -179,7 +179,9 @@ async def tether_transport(user_id, device_id, service, transport):
         async with httpx2.AsyncClient(
             transport=TetherHTTPTransport(target), timeout=httpx2.Timeout(30, read=300)
         ) as http:
-            async with streamable_http_client('http://tether.invalid/', http_client=http) as streams:
+            async with streamable_http_client(
+                'http://tether.invalid/', http_client=http, max_sse_event_size=None
+            ) as streams:
                 yield streams
     else:
         raise ValueError('Unsupported MCP transport')
