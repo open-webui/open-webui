@@ -73,10 +73,12 @@
 		params.top_k = value;
 	};
 
-	const roundParam = (key: string) => {
+	const setWholeNumber = (key: RangeParamKey) => {
 		if ((params[key] ?? null) !== null) {
 			params[key] = Math.round(params[key]);
 		}
+
+		onParamChange(key, params[key] ?? null);
 	};
 </script>
 
@@ -105,12 +107,8 @@
 		<div>
 			<input
 				bind:value={params[key]}
-				on:change={() => {
-					if (numberStep !== 'any') {
-						roundParam(key);
-					}
-					onParamChange(key, params[key] ?? null);
-				}}
+				on:change={() =>
+					numberStep === 'any' ? onParamChange(key, params[key] ?? null) : setWholeNumber(key)}
 				type="number"
 				aria-label={label}
 				class=" bg-transparent text-center w-14"
@@ -262,10 +260,7 @@
 							)}
 							placeholder={$i18n.t('Enter token threshold')}
 							bind:value={params.compact_token_threshold}
-							on:change={() => {
-								roundParam('compact_token_threshold');
-								onParamChange('compact_token_threshold', params.compact_token_threshold ?? null);
-							}}
+							on:change={() => setWholeNumber('compact_token_threshold')}
 							autocomplete="off"
 							min="1"
 							step="1"
@@ -432,10 +427,7 @@
 						aria-label={$i18n.t('settings.personal.general.parameters.seed.label')}
 						placeholder={$i18n.t('Enter Seed')}
 						bind:value={params.seed}
-						on:change={() => {
-							roundParam('seed');
-							onParamChange('seed', params.seed ?? null);
-						}}
+						on:change={() => setWholeNumber('seed')}
 						autocomplete="off"
 						min="0"
 					/>
