@@ -21,6 +21,14 @@ export type CustomStatus = {
 };
 export type StatusDef = CustomStatus & { custom: boolean };
 
+// Ready-made statuses offered as suggestions when adding statuses; folders start with none.
+export const suggestedStatuses: CustomStatus[] = [
+	{ id: 'backlog', name: 'Backlog', glyph: 'backlog', color: 'gray' },
+	{ id: 'todo', name: 'To do', glyph: 'todo', color: 'gray' },
+	{ id: 'in_progress', name: 'In progress', glyph: 'in_progress', color: 'amber' },
+	{ id: 'waiting', name: 'Waiting', glyph: 'waiting', color: 'blue' },
+	{ id: 'done', name: 'Done', glyph: 'done', color: 'violet' }
+];
 export const customStatuses = (meta?: { statuses?: unknown } | null): CustomStatus[] => {
 	const seen = new Set<string>([NO_STATUS]);
 	return (Array.isArray(meta?.statuses) ? meta.statuses : [])
@@ -85,6 +93,8 @@ export type WorkspaceChat = {
 	active?: boolean;
 	pending_approval?: boolean;
 	search_snippet?: string | null;
+	/** Set when an automation made this chat. */
+	automation_id?: string | null;
 };
 export const statusKey = (status?: FolderStatus | null) => status ?? NO_STATUS;
 

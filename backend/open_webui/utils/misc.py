@@ -187,6 +187,11 @@ def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str] | No
     return any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list)
 
 
+def is_empty_reply(message: dict) -> bool:
+    """An assistant reply with nothing in it, such as a failed one. Requests leave these out."""
+    return message.get('role') == 'assistant' and not message.get('content') and not message.get('output')
+
+
 def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.

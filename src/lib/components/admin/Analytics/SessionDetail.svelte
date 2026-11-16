@@ -147,7 +147,7 @@
 		page = 0;
 	}
 
-	const label = (item: TraceItem) =>
+	$: label = (item: TraceItem) =>
 		item.type === 'response'
 			? modelNames[item.model_id || ''] || item.model_id || $i18n.t('Response')
 			: item.name ||
@@ -299,7 +299,7 @@
 				</p>
 			{/if}
 		{:else if !loading && !error}
-			<SessionWaterfall {items} {page} {label} {status} />
+			<SessionWaterfall {items} {page} {label} {status} {modelNames} />
 		{/if}
 		<div class="flex items-center gap-3 mb-2" aria-label={$i18n.t('Trace filter')}>
 			{#each [{ id: 'all', label: $i18n.t('All') }, { id: 'tools', label: $i18n.t('Tools') }, { id: 'errors', label: $i18n.t('Errors') }] as filter}

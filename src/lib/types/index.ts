@@ -23,7 +23,22 @@ export type TerminalContext = {
 
 export type AppLayoutContext = {
 	openPageTab?: (tab: { href: string; label: string }) => void;
-	initNewChat?: (preserveTabs?: boolean, keepDraft?: boolean) => Promise<void>;
+	initNewChat?: (options?: {
+		preserveTabs?: boolean;
+		temporary?: boolean;
+		url?: URL;
+	}) => Promise<void>;
+};
+
+/** State of the chat a component is rendered in, so a side chat doesn't read the main chat's. */
+export type ChatContext = {
+	chatId: typeof import('$lib/stores').chatId;
+	models: typeof import('$lib/stores').models;
+	temporary: typeof import('$lib/stores').temporaryChat;
+	audioQueue: typeof import('$lib/stores').audioQueue;
+	submitPrompt?: (prompt: string) => void;
+	/** The folder the chat's file panel shows on a terminal, if it shows one there. */
+	getCurrentDirectory?: (terminalId: string | null) => string | undefined;
 };
 
 export type WorkspaceContext = {

@@ -49,8 +49,9 @@
 		settings,
 		user
 	} from '$lib/stores';
-	import { refreshChatList, refreshSidebar } from '$lib/stores/chatList';
+	import { refreshSidebar, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -265,13 +266,13 @@
 				return null;
 			});
 			if (!res) return;
-			updateFolderChatLists({ id, title });
+			setChatTitle(id, title);
 
 			if (id === $chatId) {
 				_chatTitle.set(title);
 			}
 
-			await refreshChatList(localStorage.token, { refreshPinned: true });
+			await refreshSidebar(localStorage.token);
 
 			dispatch('change');
 		}
@@ -346,6 +347,7 @@
 
 		if (res) {
 			updateFolderChatLists({ id }, undefined, true);
+			closeChatTabs(id);
 			if ($chatId === id) {
 				await goto('/');
 

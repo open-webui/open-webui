@@ -7,7 +7,7 @@
 
 	const i18n = getContext<any>('i18n');
 
-	/** Browses one machine's files: the terminal, plus the chat or model it belongs to. */
+	/** Browses one instance's files: the terminal, plus the chat or model it belongs to. */
 	export let target: TerminalTarget;
 	export let label: string;
 	export let onClose: () => void;

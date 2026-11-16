@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { createEventDispatcher, getContext, onMount } from 'svelte';
-	import { models, showCallOverlay } from '$lib/stores';
+	import { voiceCall } from '$lib/stores';
 	import type { RealtimeCall } from '$lib/utils/realtime';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import VoiceOrb from './VoiceOrb.svelte';
 	import VoiceAvatar from './VoiceAvatar.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	export let bridge: RealtimeCall;
 	export let modelId = '';
@@ -31,7 +34,7 @@
 
 	const endCall = () => {
 		bridge.end();
-		showCallOverlay.set(false);
+		voiceCall.set(false);
 		dispatch('close');
 	};
 

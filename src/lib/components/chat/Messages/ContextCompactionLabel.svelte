@@ -6,7 +6,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let summary = '';
-	export let status: 'in_progress' | { error: string } | undefined = undefined;
+	export let status: 'in_progress' | 'failed' | undefined = undefined;
 	export let compactPreview = false;
 
 	$: rowClass = `flex w-full min-w-0 items-center gap-1.5 pt-0.5 pb-0.5 ${
@@ -20,7 +20,7 @@
 			<Spinner className="size-4 shrink-0" />
 			<span class="shimmer">{$i18n.t('Compacting context')}</span>
 		{:else}
-			<span>{status.error}</span>
+			<span>{$i18n.t('Context compaction failed')}</span>
 		{/if}
 	</div>
 {:else if summary.trim()}

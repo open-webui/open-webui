@@ -2717,6 +2717,7 @@ class ChatTable:
         self,
         folder_id: str,
         user_id: str,
+        folder_write_access: bool = False,
         skip: int = 0,
         limit: int = 50,
         search: str = '',
@@ -2879,7 +2880,10 @@ class ChatTable:
                 for key, value in (meta.get('folder_status_durations') or {}).items()
                 if key in valid_status_ids and (seconds := _as_seconds(value))
             }
-            chat['can_edit_tags'] = chat['can_edit_status'] = chat['user_id'] == user_id
+            # Folder editors may set tags (kept in the owner's tag records) and status on any chat here.
+            chat['can_edit_tags'] = folder_write_access or chat['user_id'] == user_id
+            chat['automation_id'] = meta.get('automation_id')
+            chat['can_edit_status'] = folder_write_access or chat['user_id'] == user_id
             # Only explain matches the title doesn't already show.
             chat['search_snippet'] = (
                 chat_search_snippet(bodies.get(chat['id']) or {}, search)
@@ -2914,12 +2918,14 @@ class ChatTable:
             if dialect_name == 'sqlite':
                 source = "json_each(chat.meta, '$.tags')"
                 internal = "COALESCE(json_extract(chat.meta, '$.internal'), 0) != 1"
+                color = "json_extract(label.meta, '$.color')"
             else:
                 source = "json_array_elements_text(chat.meta->'tags')"
                 internal = "COALESCE((chat.meta->>'internal')::boolean, false) = false"
+                color = "label.meta->>'color'"
             query = text(f"""
                 SELECT tag.value AS id, MIN(COALESCE(label.name, tag.value)) AS name,
-                    COUNT(DISTINCT chat.id) AS count
+                    MIN({color}) AS color, COUNT(DISTINCT chat.id) AS count
                 FROM chat CROSS JOIN {source} tag
                 LEFT JOIN tag label ON label.id = tag.value AND label.user_id = chat.user_id
                 WHERE chat.folder_id = :folder_id AND chat.archived = false AND {internal}
@@ -2928,17 +2934,20 @@ class ChatTable:
             result = await session.execute(query, {'folder_id': folder_id})
             return [dict(row) for row in result.mappings()]
 
-    async def update_chat_folder_status_by_id_and_user_id(
-        self, id: str, folder_id: str, user_id: str, status: str | None, db: AsyncSession | None = None
+    async def update_chat_folder_status_by_id(
+        self, id: str, folder_id: str, user_id: str | None, status: str | None, db: AsyncSession | None = None
     ) -> bool:
         """Set (or with None, clear) a chat's folder status, banking the time spent in its previous one.
 
         Time adds up per status, so moving away and coming back doesn't reset it.
+        A user_id limits this to that user's chats; None allows any chat in the folder.
         """
         async with get_async_db_context(db) as session:
             row = (
                 await session.execute(
-                    select(Chat.meta).filter_by(id=id, folder_id=folder_id, user_id=user_id)
+                    select(Chat.meta).filter_by(
+                        id=id, folder_id=folder_id, **({'user_id': user_id} if user_id else {})
+                    )
                 )
             ).one_or_none()
             if row is None:

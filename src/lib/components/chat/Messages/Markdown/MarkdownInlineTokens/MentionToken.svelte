@@ -23,8 +23,11 @@
 
 	import { goto } from '$app/navigation';
 	import type { AppLayoutContext } from '$lib/types';
-	import { channels, models } from '$lib/stores';
+	import { channels } from '$lib/stores';
 	import UserStatusLinkPreview from '$lib/components/channel/Messages/Message/UserStatusLinkPreview.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');

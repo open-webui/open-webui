@@ -12,13 +12,7 @@
 
 	import { updateFolderById } from '$lib/apis/folders';
 
-	import {
-		config,
-		user,
-		models as _models,
-		temporaryChatEnabled,
-		selectedFolder
-	} from '$lib/stores';
+	import { config, user, selectedFolder } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,
@@ -33,6 +27,9 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models: _models, temporary } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 
@@ -97,6 +94,8 @@
 
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
+	// The composer only belongs with the folder's chats, not its automations.
+	let folderSection: 'chats' | 'automations' = 'chats';
 
 	let models = [];
 	export let selectedModelIdx = 0;
@@ -185,7 +184,7 @@
 		: 'm-auto max-w-[58rem] px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
 >
 	<!-- In a folder, temporary mode shows on the composer alone. -->
-	{#if $temporaryChatEnabled && !$selectedFolder}
+	{#if $temporary && !$selectedFolder}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
@@ -200,12 +199,15 @@
 	{#if $selectedFolder}
 		<div
 			class="relative min-h-0 w-full flex-1"
-			style="--folder-composer-space: {folderReadOnly ? 0 : composerHeight}px"
+			style="--folder-composer-space: {folderReadOnly || folderSection !== 'chats'
+				? 0
+				: composerHeight}px"
 		>
 			<FolderPlaceholder
 				folder={$selectedFolder}
 				readOnly={folderReadOnly}
 				bind:folderTabActions
+				bind:folderSection
 				onNewChat={() => messageInput?.focus()}
 			/>
 
@@ -215,6 +217,7 @@
 					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-gray-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
+					class:hidden={folderSection !== 'chats'}
 					bind:clientHeight={composerHeight}
 				>
 					<div class="pointer-events-auto">

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onMount } from 'svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { tags as userTags } from '$lib/stores';
 	import {
@@ -56,6 +56,7 @@
 			toast.error(String(error));
 		} finally {
 			busy = false;
+			await tick();
 			input?.focus();
 		}
 	}

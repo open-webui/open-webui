@@ -2,10 +2,13 @@
 	import { toast } from 'svelte-sonner';
 
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
-	import { config, models, tags as _tags } from '$lib/stores';
+	import { config, tags as _tags } from '$lib/stores';
 	import Tags from '$lib/components/common/Tags.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const i18n = getContext('i18n');
 

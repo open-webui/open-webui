@@ -9,9 +9,12 @@
 		resolveTerminalTarget,
 		type TerminalSkill
 	} from '$lib/apis/terminal';
-	import { chatId, settings, terminalServers } from '$lib/stores';
+	import { settings, terminalServers } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId } = getChatContext();
 
 	const i18n = getContext('i18n');
 
