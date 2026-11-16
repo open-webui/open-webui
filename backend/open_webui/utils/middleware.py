@@ -3067,9 +3067,10 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # Checked after compaction, which can drop the only copy the model had.
     kept_output = []
     for call, result in zip(initial_output[::2], initial_output[1::2]):
-        if call['name'] in ('list_available_skills', 'list_attached_knowledge'):
-            if get_tool_results(form_data['messages'], call['name'])[-1:] == [result['output'][0]['text']]:
-                continue
+        if call['name'] in ('list_available_skills', 'list_attached_knowledge') and get_tool_results(
+            form_data['messages'], call['name']
+        )[-1:] == [result['output'][0]['text']]:
+            continue
         kept_output.extend([call, result])
     initial_output = [*await preload_memory(memory_sections, form_data['messages']), *kept_output]
     if initial_output:
