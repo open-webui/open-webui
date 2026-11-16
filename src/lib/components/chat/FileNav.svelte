@@ -84,10 +84,10 @@
 	export let onViewChange: ((view: any) => void) | null = null;
 	export let onFileSaved: ((content: string) => void) | null = null;
 	let viewRestored = !initialView;
-	let capturedView: any = null;
+	let lastView: any = null;
 	export const captureView = () => {
 		// The editor is gone after teardown; a fresh capture would drop its unsaved edit.
-		if (disposed) return capturedView;
+		if (disposed) return lastView;
 		const view =
 			!viewRestored && initialView
 				? initialView
@@ -99,11 +99,11 @@
 						dirty: dirty || saving,
 						scrollTop: viewerRoot?.scrollTop ?? 0
 					};
-		capturedView = {
+		lastView = {
 			...view,
 			isHome: homeDirectory !== null && asDirectoryPath(view.directory) === homeDirectory
 		};
-		return capturedView;
+		return lastView;
 	};
 	const restoreView = async () => {
 		if (disposed || viewRestored || !initialView) return;
