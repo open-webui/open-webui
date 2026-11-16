@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { chatId } from '$lib/stores';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 	import EmbeddedChatHistoryItem from './EmbeddedChatHistoryItem.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId } = getChatContext();
 
 	const i18n = getContext('i18n');
 

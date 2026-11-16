@@ -25,6 +25,7 @@ router = APIRouter()
 
 class ModelAnalyticsEntry(BaseModel):
     model_id: str
+    name: Optional[str] = None
     count: int
     unique_users: int = 0
     unique_chats: int = 0

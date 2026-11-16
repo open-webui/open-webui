@@ -187,6 +187,11 @@ def is_host_blocked(host: Union[str, Sequence[str]], filter_list: list[str] | No
     return any(_host_matches_pattern(h, blocked) for h in hosts for blocked in block_list)
 
 
+def is_empty_reply(message: dict) -> bool:
+    """An assistant reply with nothing in it, such as a failed one. Requests leave these out."""
+    return message.get('role') == 'assistant' and not message.get('content') and not message.get('output')
+
+
 def get_message_list(messages_map, message_id):
     """
     Reconstructs a list of messages in order up to the specified message_id.
@@ -223,7 +228,7 @@ def get_message_list(messages_map, message_id):
 
 
 def get_messages_content(messages: list[dict]) -> str:
-    return '\n'.join([f'{message["role"].upper()}: {get_content_from_message(message)}' for message in messages])
+    return '\n'.join([f'{message["role"].upper()}: {get_content_from_message(message) or ""}' for message in messages])
 
 
 def get_last_user_message_item(messages: list[dict]) -> dict | None:
@@ -477,7 +482,7 @@ def convert_output_to_messages(
 
         message = {
             'role': 'assistant',
-            'content': '\n'.join(pending_content) if pending_content else '',
+            'content': '\n'.join(pending_content) if pending_content else (None if pending_tool_calls else ''),
             **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
         }
 

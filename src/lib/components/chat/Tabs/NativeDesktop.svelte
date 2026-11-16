@@ -59,7 +59,7 @@
 
 <div
 	bind:this={surface}
-	class="flex h-full w-full touch-none items-start justify-center overflow-hidden outline-none"
+	class="flex h-full w-full touch-none items-center justify-center overflow-hidden outline-none"
 	role="application"
 	aria-label="Desktop screen"
 	tabindex="0"

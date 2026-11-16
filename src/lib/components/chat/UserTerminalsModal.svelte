@@ -9,6 +9,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 	import UserSettingSection from '$lib/components/chat/Settings/UserSettingSection.svelte';
 	import UserSettingRow from '$lib/components/chat/Settings/UserSettingRow.svelte';
 	import UserSettingField from '$lib/components/chat/Settings/UserSettingField.svelte';
@@ -26,7 +27,7 @@
 		resolveTerminalTarget,
 		type TerminalTarget
 	} from '$lib/apis/terminal';
-	import { terminalServers, user } from '$lib/stores';
+	import { terminalServers } from '$lib/stores';
 	import TerminalSystemInfoModal from './TerminalSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -45,12 +46,11 @@
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
 	const connectionOf = (id: string) => id.slice('template:'.length, id.lastIndexOf(':'));
 
-	// '' is no scope: one machine for everyone with access.
+	// '' is no scope (switch off): one instance for everyone with access.
 	const scopes = [
-		{ value: '', label: 'None', hint: 'All chats share one machine.' },
-		{ value: 'user', label: 'User', hint: 'Each person gets their own machine.' },
-		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own machine.' },
-		{ value: 'model', label: 'Model', hint: 'Each model gets its own machine.' }
+		{ value: 'user', label: 'User', hint: 'Each person gets their own instance.' },
+		{ value: 'chat', label: 'Chat', hint: 'Each chat gets its own instance.' },
+		{ value: 'model', label: 'Model', hint: 'Each model gets its own instance.' }
 	];
 	// Open Terminal reads these at start-up; the dialog gives them their own fields.
 	const START_DIR = 'OPEN_TERMINAL_START_DIR';
@@ -68,6 +68,8 @@
 	const item =
 		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition';
 
+	type InstanceAction = 'restart' | 'stop' | 'start' | 'delete';
+
 	let busy = false;
 	let loading = !!terminalId;
 	let error = '';
@@ -84,7 +86,7 @@
 	let setupScript = '';
 	let showAdvanced = false;
 	let status: any = null;
-	let machines: any[] = [];
+	let instances: any[] = [];
 	let accessGrants: any[] = [];
 	let showAccess = false;
 	let confirmation: {
@@ -94,6 +96,9 @@
 		run: () => Promise<void>;
 	} | null = null;
 	let showConfirm = false;
+	// Instance actions in flight, by instance id. Kept apart from `busy` so a restart shows on its
+	// own row instead of on Save, and doesn't lock the form or the other instances.
+	let pending: Record<string, InstanceAction> = {};
 
 	$: serverId = terminalId ? connectionOf(terminalId) : connectionId;
 	$: loadStatus(serverId);
@@ -101,7 +106,7 @@
 		.split(',')
 		.map((value: string) => value.trim())
 		.filter((value: string) => value && !value.includes('*'));
-	$: scopeLocked = !!terminalId && machines.length > 0;
+	$: scopeLocked = !!terminalId && instances.length > 0;
 	$: cpuMessage = cpuError(cpu, status?.max_cpu);
 	$: memoryMessage = sizeError(memory, status?.max_memory);
 	$: storageMessage = sizeError(storage, status?.max_storage);
@@ -171,17 +176,17 @@
 	const refreshServers = async () =>
 		terminalServers.set(await getTerminalServers(localStorage.token));
 
-	async function loadMachines() {
-		if (terminalId) machines = await templatesApi(`${path(terminalId)}/instances`);
+	async function loadInstances() {
+		if (terminalId) instances = await templatesApi(`${path(terminalId)}/instances`);
 	}
 
 	async function load() {
 		if (!terminalId) return;
-		// The form fills from the terminal alone; machines and access load beside it.
+		// The form fills from the terminal alone; instances and access load beside it.
 		const [template, grants] = await Promise.all([
 			templatesApi(path(terminalId)),
 			templatesApi(`${path(terminalId)}/access`).catch(() => []),
-			loadMachines().catch(() => (machines = []))
+			loadInstances().catch(() => (instances = []))
 		]);
 		const data = template?.data ?? {};
 		name = data.name ?? '';
@@ -258,78 +263,91 @@
 		showConfirm = true;
 	}
 
-	function machineName(machine: any) {
-		const kind = (machine.context_id ?? '').split(':')[0];
+	function instanceName(instance: any) {
+		const kind = (instance.context_id ?? '').split(':')[0];
 		if (kind === 'default') return name || $i18n.t('Terminal');
-		if (kind === 'chat') return machine.label ?? $i18n.t('Deleted chat');
-		if (kind === 'user') return machine.label ?? $i18n.t('Deleted user');
-		return machine.label ?? machine.context_id;
+		if (kind === 'chat') return instance.label ?? $i18n.t('Deleted chat');
+		if (kind === 'user') return instance.label ?? $i18n.t('Deleted user');
+		return instance.label ?? instance.context_id;
 	}
 
 	let info: { target: TerminalTarget; label: string } | null = null;
 	let files: { target: TerminalTarget; label: string } | null = null;
-	// Requests carry the viewer's identity, so another person's machine can't be reached this way.
-	// Only running machines offer System info and files: Terminals won't start one for System info.
-	function machineTarget(machine: any) {
-		if (!terminalId || machine.status !== 'running') return null;
-		const context = machine.context ?? {};
-		if (context.user_id && context.user_id !== $user?.id) return null;
-		return resolveTerminalTarget(terminalId, $terminalServers ?? [], [], localStorage.token ?? '', {
+	// Listing instances takes write access to the terminal's connection, which also opens any of them.
+	// Only running instances offer System info and files: Terminals won't start one for System info.
+	function instanceTarget(instance: any) {
+		if (!terminalId || instance.status !== 'running') return null;
+		const context = instance.context ?? {};
+		return resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
+			userId: context.user_id ?? null,
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null
 		});
 	}
 
-	const machineCopy = {
+	const instanceCopy = {
 		restart: [
 			'Restart {{name}}?',
-			'Running work stops and the machine starts again. Files are kept.',
+			'Running work stops and the instance starts again. Files are kept.',
 			'Restart'
 		],
 		stop: [
 			'Stop {{name}}?',
-			'Running work stops. Files are kept, and the machine starts again when it is next used.',
+			'Running work stops. Files are kept, and the instance starts again when it is next used.',
 			'Stop'
 		],
-		delete: ['Delete {{name}}?', 'The machine and its files are deleted.', 'Delete']
+		delete: ['Delete {{name}}?', 'The instance and its files are deleted.', 'Delete']
 	};
 
-	const sendMachineAction = async (
-		machine: any,
-		action: 'restart' | 'stop' | 'start' | 'delete'
-	) => {
-		await templatesApi(
-			`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
-			action === 'delete' ? 'DELETE' : 'POST',
-			machine.context ?? {}
-		);
-		await loadMachines();
+	const pendingCopy: Record<InstanceAction, string> = {
+		restart: 'Restarting...',
+		stop: 'Stopping...',
+		start: 'Starting...',
+		delete: 'Deleting...'
 	};
 
-	function machineAction(machine: any, action: 'restart' | 'stop' | 'start' | 'delete') {
+	async function sendInstanceAction(instance: any, action: InstanceAction) {
+		pending = { ...pending, [instance.id]: action };
+		try {
+			await templatesApi(
+				`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
+				action === 'delete' ? 'DELETE' : 'POST',
+				instance.context ?? {}
+			);
+		} catch (e) {
+			toast.error(`${instanceName(instance)}: ${e instanceof Error ? e.message : e}`);
+		} finally {
+			await loadInstances().catch(() => {});
+			const { [instance.id]: _, ...rest } = pending;
+			pending = rest;
+		}
+	}
+
+	function instanceAction(instance: any, action: InstanceAction) {
 		// Starting changes nothing that is running, so it needs no confirmation.
-		if (action === 'start') return run(() => sendMachineAction(machine, action));
-		const [heading, message, button] = machineCopy[action];
+		if (action === 'start') return sendInstanceAction(instance, action);
+		const [heading, message, button] = instanceCopy[action];
 		confirm(
-			$i18n.t(heading, { name: machineName(machine) }),
+			$i18n.t(heading, { name: instanceName(instance) }),
 			$i18n.t(message),
 			$i18n.t(button),
-			() => sendMachineAction(machine, action)
+			() => sendInstanceAction(instance, action)
 		);
 	}
 
 	function deleteTerminal() {
 		confirm(
 			$i18n.t('Delete {{name}}?', { name }),
-			machines.length
-				? $i18n.t('This deletes {{count}} machines and their files.', { count: machines.length })
+			instances.length
+				? $i18n.t('This deletes {{count}} instances and their files.', { count: instances.length })
 				: $i18n.t('This terminal is deleted.'),
 			$i18n.t('Delete'),
-			async () => {
-				await templatesApi(path(terminalId!), 'DELETE');
-				await refreshServers();
-				show = false;
-			}
+			() =>
+				run(async () => {
+					await templatesApi(path(terminalId!), 'DELETE');
+					await refreshServers();
+					show = false;
+				})
 		);
 	}
 
@@ -402,20 +420,42 @@
 					{/if}
 
 					<UserSettingRow
-						label={$i18n.t('Separate machine per')}
 						description={scopeLocked
-							? $i18n.t('Delete all machines to change this.')
-							: $i18n.t(scopes.find((option) => option.value === scope)?.hint ?? '')}
+							? $i18n.t('Delete all instances to change this.')
+							: $i18n.t(
+									scopes.find((option) => option.value === scope)?.hint ??
+										'All chats share one instance.'
+								)}
+						let:labelId
 					>
-						<SettingsSelect
-							bind:value={scope}
-							ariaLabel={$i18n.t('Separate machine per')}
-							disabled={scopeLocked || busy}
-						>
-							{#each scopes as option}
-								<option value={option.value}>{$i18n.t(option.label)}</option>
-							{/each}
-						</SettingsSelect>
+						<ModelSettingsLabel
+							slot="label"
+							label={$i18n.t('Separate instances')}
+							description={$i18n.t(
+								'Give each person, chat, or model its own instance, with its own files and running programs. When off, everyone with access shares one instance.'
+							)}
+						/>
+						<div class="flex items-center gap-2">
+							{#if scope}
+								<span class="-me-1 text-xs text-gray-400 dark:text-gray-500">{$i18n.t('per')}</span>
+								<SettingsSelect
+									bind:value={scope}
+									ariaLabel={$i18n.t('Separate instance per')}
+									disabled={scopeLocked || busy}
+									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-gray-900 dark:!bg-transparent dark:focus-visible:text-white"
+								>
+									{#each scopes as option}
+										<option value={option.value}>{$i18n.t(option.label)}</option>
+									{/each}
+								</SettingsSelect>
+							{/if}
+							<Switch
+								ariaLabelledbyId={labelId}
+								state={!!scope}
+								disabled={scopeLocked || busy}
+								on:change={(e) => (scope = e.detail ? 'user' : '')}
+							/>
+						</div>
 					</UserSettingRow>
 				</UserSettingSection>
 
@@ -465,7 +505,7 @@
 								label={$i18n.t('Setup script')}
 								forId="terminal-setup-script"
 								description={$i18n.t(
-									'Runs in the start directory each time the machine starts, before it is ready. Only the home folder is kept between restarts, so make it safe to run again.'
+									'Runs in the start directory each time the instance starts, before it is ready. Only the home folder is kept between restarts, so make it safe to run again.'
 								)}
 							>
 								<textarea
@@ -614,7 +654,7 @@
 									</div>
 								{/each}
 								<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-									{$i18n.t('Set when the machine starts.')}
+									{$i18n.t('Set when the instance starts.')}
 								</p>
 							</div>
 						</div>
@@ -624,32 +664,38 @@
 				{#if terminalId}
 					<section class="mt-4 w-full">
 						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-							{$i18n.t('Machines')}
-							<span class="text-gray-400 dark:text-gray-600">{machines.length}</span>
+							{$i18n.t('Instances')}
+							<span class="text-gray-400 dark:text-gray-600">{instances.length}</span>
 						</div>
 						<div class="flex flex-col gap-1 py-1">
-							{#each machines as machine (machine.id)}
-								{@const title = machineName(machine)}
+							{#each instances as instance (instance.id)}
+								{@const title = instanceName(instance)}
 								<div class="flex w-full items-center gap-1.5">
 									<div class="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-300">
-										{title}{#if machine.user_name}<span class="text-gray-400 dark:text-gray-600">
-												· {machine.user_name}</span
+										{title}{#if instance.user_name}<span class="text-gray-400 dark:text-gray-600">
+												· {instance.user_name}</span
 											>{/if}
 									</div>
-									<span class="shrink-0 text-xs text-gray-500">
-										{machine.status === 'running' ? $i18n.t('Running') : $i18n.t('Stopped')}
+									<span class="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
+										{#if pending[instance.id]}
+											{$i18n.t(pendingCopy[pending[instance.id]])}
+											<Spinner className="size-3" />
+										{:else}
+											{instance.status === 'running' ? $i18n.t('Running') : $i18n.t('Stopped')}
+										{/if}
 									</span>
 									<Dropdown align="end" closeOnSelect>
 										<button
 											type="button"
 											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
 											aria-label={$i18n.t('More options for {{name}}', { name: title })}
-											disabled={busy}><EllipsisHorizontal className="size-3.5" /></button
+											disabled={busy || !!pending[instance.id]}
+											><EllipsisHorizontal className="size-3.5" /></button
 										>
 										<div slot="content">
 											<DropdownMenu className="min-w-40">
-												{@const target = machineTarget(machine)}
-												{#if machine.status === 'running'}
+												{@const target = instanceTarget(instance)}
+												{#if instance.status === 'running'}
 													{#if target}
 														<button
 															type="button"
@@ -667,20 +713,20 @@
 													<button
 														type="button"
 														class={item}
-														on:click={() => machineAction(machine, 'restart')}
+														on:click={() => instanceAction(instance, 'restart')}
 														><ArrowPath className="size-3.5" />{$i18n.t('Restart')}</button
 													>
 													<button
 														type="button"
 														class={item}
-														on:click={() => machineAction(machine, 'stop')}
+														on:click={() => instanceAction(instance, 'stop')}
 														><Stop className="size-3.5" />{$i18n.t('Stop')}</button
 													>
 												{:else}
 													<button
 														type="button"
 														class={item}
-														on:click={() => machineAction(machine, 'start')}
+														on:click={() => instanceAction(instance, 'start')}
 														><Play className="size-3.5" />{$i18n.t('Start')}</button
 													>
 												{/if}
@@ -688,8 +734,8 @@
 												<button
 													type="button"
 													class={item}
-													on:click={() => machineAction(machine, 'delete')}
-													><GarbageBin className="size-3.5" />{$i18n.t('Delete machine')}</button
+													on:click={() => instanceAction(instance, 'delete')}
+													><GarbageBin className="size-3.5" />{$i18n.t('Delete instance')}</button
 												>
 											</DropdownMenu>
 										</div>
@@ -697,7 +743,7 @@
 								</div>
 							{:else}
 								<div class="text-xs text-gray-400 dark:text-gray-600">
-									{$i18n.t('No machines yet. One starts the first time the terminal is used.')}
+									{$i18n.t('No instances yet. One starts the first time the terminal is used.')}
 								</div>
 							{/each}
 						</div>
@@ -784,9 +830,5 @@
 	title={confirmation?.title ?? ''}
 	message={confirmation?.message ?? ''}
 	confirmLabel={confirmation?.label}
-	onConfirm={() =>
-		run(async () => {
-			await confirmation?.run();
-			showConfirm = false;
-		})}
+	onConfirm={() => confirmation?.run()}
 />

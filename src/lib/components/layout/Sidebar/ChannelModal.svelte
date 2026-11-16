@@ -3,8 +3,7 @@
 	const i18n = getContext<any>('i18n');
 
 	import { toast } from 'svelte-sonner';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
+	import { closePageTabs } from '$lib/stores/chatViewStates';
 
 	import {
 		createNewChannel,
@@ -126,9 +125,7 @@
 			toast.success($i18n.t('Channel deleted successfully'));
 			onUpdate();
 
-			if ($page.url.pathname === `/channels/${channelId}`) {
-				goto('/');
-			}
+			closePageTabs(`/channels/${channelId}`);
 		}
 
 		show = false;

@@ -20,7 +20,17 @@ PROVIDERS = {
     'cline': acp.run,
     'gemini': acp.run,
     'pi': pi.run,
+    'hermes': acp.run,
+    'antigravity': acp.run,
+    'copilot': acp.run,
+    'goose': acp.run,
+    'qwen': acp.run,
 }
+
+
+def provider_runner(provider):
+    # Agents configured in Open Terminal's OPEN_TERMINAL_ACP_AGENTS arrive as `acp-<id>`.
+    return PROVIDERS.get(provider) or (acp.run if provider.startswith('acp-') else None)
 
 
 async def run(request, form_data, user, metadata, model):
@@ -29,7 +39,8 @@ async def run(request, form_data, user, metadata, model):
     if metadata.get('regeneration_message_id') or metadata.get('assistant_message_id'):
         raise ValueError('Continue an agent conversation with a new message')
     agent = model['agent']
-    if agent['provider'] not in PROVIDERS:
+    run_provider = provider_runner(agent['provider'])
+    if run_provider is None:
         raise ValueError('Unsupported terminal agent')
     chat = await Chats.get_accessible_chat_by_id(metadata['chat_id'], user, permission='write')
     if chat is None:
@@ -44,7 +55,7 @@ async def run(request, form_data, user, metadata, model):
     output.state = {
         **{key: previous[key] for key in ('session_id', 'model_config') if previous and key in previous},
         **agent,
-        'terminal_user_id': (previous or {}).get('terminal_user_id') or (previous or {}).get('user') or user.id,
+        'instance_user_id': (previous or {}).get('instance_user_id') or (previous or {}).get('user') or user.id,
     }
     # Browsing files must not move an existing agent conversation's workspace.
     cwd = (previous or {}).get('cwd') or metadata.get('initial_terminal_cwd')
@@ -96,12 +107,14 @@ async def run(request, form_data, user, metadata, model):
         'model': agent['model'],
         'resume': (previous or {}).get('session_id'),
         'instructions': instructions,
+        # The chat's tool permission mode; agents with their own auto review use it for Auto.
+        'approval_mode': (metadata.get('params') or {}).get('tool_approval_mode', 'full'),
     }
     succeeded = False
     try:
         await transport.start(agent['provider'], options)
         extra = {'auth_method': 'cursor_login'} if agent['provider'] == 'cursor' else {}
-        await PROVIDERS[agent['provider']](
+        await run_provider(
             transport,
             output,
             prompt,

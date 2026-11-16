@@ -2,6 +2,7 @@ import asyncio
 import base64
 import logging
 import math
+from contextlib import AsyncExitStack
 from typing import Optional
 from urllib.parse import urlsplit
 
@@ -77,7 +78,7 @@ class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
         self.client: Optional[Client] = None
         self.session_task: Optional[asyncio.Task] = None
-        self.connect_args: Optional[tuple[str, Optional[dict], Optional[httpx2.Auth]]] = None
+        self.connect_args: Optional[tuple[str, Optional[dict], Optional[httpx2.Auth], Optional[dict]]] = None
         self.event_caller = event_caller
         self.server_name = server_name
         self.instructions: Optional[str] = None
@@ -118,11 +119,17 @@ class MCPClient:
             log.warning('MCP elicitation failed: %s', type(e).__name__)
             return ElicitResult(action='cancel')
 
-    async def connect(self, url: str, headers: Optional[dict] = None, auth: Optional[httpx2.Auth] = None):
-        self.connect_args = (url, headers, auth)
+    async def connect(
+        self,
+        url: str,
+        headers: Optional[dict] = None,
+        auth: Optional[httpx2.Auth] = None,
+        tether: Optional[dict] = None,
+    ):
+        self.connect_args = (url, headers, auth, tether)
         # A failed request makes the SDK cancel the task that opened the session, so it gets its own task.
         connected = asyncio.get_running_loop().create_future()
-        self.session_task = asyncio.create_task(self.run_session(url, headers, auth, connected))
+        self.session_task = asyncio.create_task(self.run_session(url, headers, auth, connected, tether))
         try:
             await connected
         except BaseException:
@@ -130,16 +137,28 @@ class MCPClient:
             raise
 
     async def run_session(
-        self, url: str, headers: Optional[dict], auth: Optional[httpx2.Auth], connected: asyncio.Future
+        self,
+        url: str,
+        headers: Optional[dict],
+        auth: Optional[httpx2.Auth],
+        connected: asyncio.Future,
+        tether: Optional[dict] = None,
     ) -> None:
         try:
-            async with create_httpx_client(headers=headers, auth=auth) as http_client:
+            async with AsyncExitStack() as stack:
+                if tether:
+                    from open_webui.utils.mcp.tether import tether_transport
+
+                    transport = tether_transport(**tether)
+                else:
+                    http_client = await stack.enter_async_context(create_httpx_client(headers=headers, auth=auth))
+                    transport = streamable_http_client(url, http_client=http_client)
                 # mode='auto' (the default) probes server/discover for the stateless
                 # 2026-07-28 protocol and falls back to the initialize handshake on
                 # legacy servers. The read timeout bounds that handshake and every
                 # later request that does not set its own; the SDK caps the probe itself.
                 async with Client(
-                    streamable_http_client(url, http_client=http_client),
+                    transport,
                     extensions=[advertise('io.modelcontextprotocol/ui', {'mimeTypes': ['text/html;profile=mcp-app']})],
                     read_timeout_seconds=MCP_INITIALIZE_TIMEOUT,
                     elicitation_callback=self.elicit if self.event_caller else None,

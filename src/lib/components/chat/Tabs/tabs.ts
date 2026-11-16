@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { TerminalContext } from '$lib/types';
 import type { TerminalTarget } from '$lib/apis/terminal';
 
-export type PanelTabKind =
+export type TabKind =
 	| 'chat'
 	| 'page'
 	| 'files'
@@ -14,16 +14,19 @@ export type PanelTabKind =
 	| 'preview'
 	| 'voice'
 	| 'comments'
-	| 'side';
-export type PanelTab = {
+	| 'overview';
+export type Tab = {
 	id: string;
-	kind: PanelTabKind;
+	kind: TabKind;
 	label: string;
 	href?: string;
 	initialPrompt?: string;
 	chatId?: string;
-	sideChatNumber?: number;
-	sideChat?: boolean;
+	chatNumber?: number;
+	/** Set only when a new conversation explicitly inherits another chat's context. */
+	parentChatId?: string;
+	/** For an artifacts tab: the tab of the chat whose artifacts it shows. */
+	sourceTabId?: string;
 	terminalId?: string;
 	terminalNumber?: number;
 	path?: string;
@@ -36,39 +39,39 @@ export type PanelTab = {
 	browserBaseUrl?: string;
 	context?: TerminalContext | null;
 };
-export type PanelGroup = { id: string; tabIds: string[]; activeId: string };
+export type TabGroup = { id: string; tabIds: string[]; activeId: string };
 export type SplitEdge = 'left' | 'right' | 'top' | 'bottom';
-export type PanelLayout =
+export type TabLayout =
 	| { type: 'group'; groupId: string }
 	| {
 			type: 'split';
 			id: string;
 			direction: 'horizontal' | 'vertical';
 			ratio: number;
-			first: PanelLayout;
-			second: PanelLayout;
+			first: TabLayout;
+			second: TabLayout;
 	  };
-export type PanelTabs = {
-	tabs: PanelTab[];
+export type TabsState = {
+	tabs: Tab[];
 	activeId: string;
 	history: string[];
-	groups: PanelGroup[];
+	groups: TabGroup[];
 	activeGroupId: string;
-	layout: PanelLayout;
+	layout: TabLayout;
 };
 export type ChatViewState = {
 	schemaVersion: 1;
 	selectedTerminalId: string | null;
-	panels: PanelTabs;
+	panels: TabsState;
 };
-export type PanelRect = { left: number; top: number; width: number; height: number };
-export type PanelDivider = PanelRect & {
+export type GroupRect = { left: number; top: number; width: number; height: number };
+export type SplitDivider = GroupRect & {
 	id: string;
 	direction: 'horizontal' | 'vertical';
 	ratio: number;
 };
 
-export const emptyTabs = (): PanelTabs => ({
+export const createTabsState = (): TabsState => ({
 	tabs: [],
 	activeId: '',
 	history: [],
@@ -78,7 +81,29 @@ export const emptyTabs = (): PanelTabs => ({
 });
 export const mainChatTabId = 'main-chat';
 
-export function setMainChatTab(state: PanelTabs, visible: boolean, label = 'Chat'): PanelTabs {
+/** Read layouts saved before all conversation tabs used kind: 'chat'. */
+export function normalizeChatTab(
+	tab: Omit<Tab, 'kind'> & {
+		kind: TabKind | 'side';
+		sideChatNumber?: number;
+		sideChat?: boolean;
+	},
+	parentChatId: string | null
+): Tab {
+	const { sideChatNumber, sideChat, ...current } = tab;
+	return {
+		...current,
+		kind: current.kind === 'side' ? 'chat' : current.kind,
+		chatNumber: current.chatNumber ?? sideChatNumber,
+		parentChatId:
+			current.parentChatId ??
+			(current.kind === 'side' && (sideChat ?? (!current.href && !!sideChatNumber))
+				? (parentChatId ?? undefined)
+				: undefined)
+	};
+}
+
+export function setMainChatTab(state: TabsState, visible: boolean, label = 'Chat'): TabsState {
 	if (!visible) {
 		return setSplitTabs(removeTab(state, mainChatTabId), false);
 	}
@@ -100,7 +125,7 @@ export function setMainChatTab(state: PanelTabs, visible: boolean, label = 'Chat
 	return activateTab(next, state.activeId || mainChatTabId);
 }
 
-export function setSplitTabs(state: PanelTabs, split: boolean): PanelTabs {
+export function setSplitTabs(state: TabsState, split: boolean): TabsState {
 	if (!split) {
 		if (state.groups.length === 1) return state;
 		return {
@@ -120,7 +145,7 @@ export function setSplitTabs(state: PanelTabs, split: boolean): PanelTabs {
 	return activateTab(splitTab(state, mainChatTabId, group.id, 'left'), state.activeId);
 }
 
-export function activateTab(state: PanelTabs, id: string): PanelTabs {
+export function activateTab(state: TabsState, id: string): TabsState {
 	const group = state.groups.find((group) => group.tabIds.includes(id));
 	if (!group || (state.activeId === id && group.activeId === id)) return state;
 	return {
@@ -135,7 +160,7 @@ export function activateTab(state: PanelTabs, id: string): PanelTabs {
 	};
 }
 
-export function openTab(state: PanelTabs, tab: PanelTab): PanelTabs {
+export function openTab(state: TabsState, tab: Tab): TabsState {
 	return activateTab(
 		state.tabs.some((item) => item.id === tab.id)
 			? state
@@ -152,28 +177,33 @@ export function openTab(state: PanelTabs, tab: PanelTab): PanelTabs {
 	);
 }
 
-export function openTabInSidePanel(state: PanelTabs, tab: PanelTab): PanelTabs {
-	const mainGroup = state.groups.find((group) => group.tabIds.includes(mainChatTabId));
-	if (!mainGroup) return openTab(state, tab);
-	if (state.tabs.some((item) => item.id === tab.id) && !mainGroup.tabIds.includes(tab.id))
+/** Opens `tab` in a group beside the one holding `besideId`, so both stay in view. */
+export function openTabInSplit(
+	state: TabsState,
+	tab: Tab,
+	besideId = mainChatTabId
+): TabsState {
+	const besideGroup = state.groups.find((group) => group.tabIds.includes(besideId));
+	if (!besideGroup) return openTab(state, tab);
+	if (state.tabs.some((item) => item.id === tab.id) && !besideGroup.tabIds.includes(tab.id))
 		return activateTab(state, tab.id);
 	const sideGroup =
-		state.groups.find((group) => group.id === state.activeGroupId && group.id !== mainGroup.id) ??
-		state.groups.find((group) => group.id !== mainGroup.id);
-	const next = openTab(activateTab(state, mainChatTabId), tab);
+		state.groups.find((group) => group.id === state.activeGroupId && group.id !== besideGroup.id) ??
+		state.groups.find((group) => group.id !== besideGroup.id);
+	const next = openTab(activateTab(state, besideId), tab);
 	return sideGroup
 		? moveTabToGroup(next, tab.id, sideGroup.id)
-		: splitTab(next, tab.id, mainGroup.id, 'right');
+		: splitTab(next, tab.id, besideGroup.id, 'right');
 }
 
-function removeLayoutGroup(layout: PanelLayout, groupId: string): PanelLayout | null {
+function removeLayoutGroup(layout: TabLayout, groupId: string): TabLayout | null {
 	if (layout.type === 'group') return layout.groupId === groupId ? null : layout;
 	const first = removeLayoutGroup(layout.first, groupId);
 	const second = removeLayoutGroup(layout.second, groupId);
 	return first && second ? { ...layout, first, second } : (first ?? second);
 }
 
-function removeFromGroup(state: PanelTabs, id: string): PanelTabs {
+function removeFromGroup(state: TabsState, id: string): TabsState {
 	const source = state.groups.find((group) => group.tabIds.includes(id));
 	if (!source) return state;
 	const tabIds = source.tabIds.filter((tabId) => tabId !== id);
@@ -202,12 +232,12 @@ function removeFromGroup(state: PanelTabs, id: string): PanelTabs {
 	};
 }
 
-export function removeTab(state: PanelTabs, id: string): PanelTabs {
+export function removeTab(state: TabsState, id: string): TabsState {
 	if (!state.tabs.some((tab) => tab.id === id)) return state;
 	return { ...removeFromGroup(state, id), tabs: state.tabs.filter((tab) => tab.id !== id) };
 }
 
-export function moveTab(state: PanelTabs, id: string, to: number): PanelTabs {
+export function moveTab(state: TabsState, id: string, to: number): TabsState {
 	const group = state.groups.find((group) => group.tabIds.includes(id));
 	if (!group) return state;
 	const from = group.tabIds.indexOf(id);
@@ -220,7 +250,7 @@ export function moveTab(state: PanelTabs, id: string, to: number): PanelTabs {
 	};
 }
 
-export function moveTabToGroup(state: PanelTabs, id: string, groupId: string): PanelTabs {
+export function moveTabToGroup(state: TabsState, id: string, groupId: string): TabsState {
 	const target = state.groups.find((group) => group.id === groupId);
 	if (!target || !state.tabs.some((tab) => tab.id === id)) return state;
 	if (target.tabIds.includes(id)) return activateTab(state, id);
@@ -237,20 +267,20 @@ export function moveTabToGroup(state: PanelTabs, id: string, groupId: string): P
 }
 
 export function splitTab(
-	state: PanelTabs,
+	state: TabsState,
 	id: string,
 	groupId: string,
 	edge: SplitEdge
-): PanelTabs {
+): TabsState {
 	const source = state.groups.find((group) => group.tabIds.includes(id));
 	if (!source || !state.groups.some((group) => group.id === groupId)) return state;
 	if (source.id === groupId && source.tabIds.length === 1) return state;
 	const next = removeFromGroup(state, id);
-	const newGroup: PanelGroup = { id: uuidv4(), tabIds: [id], activeId: id };
-	const replace = (layout: PanelLayout): PanelLayout => {
+	const newGroup: TabGroup = { id: uuidv4(), tabIds: [id], activeId: id };
+	const replace = (layout: TabLayout): TabLayout => {
 		if (layout.type === 'group') {
 			if (layout.groupId !== groupId) return layout;
-			const leaf: PanelLayout = { type: 'group', groupId: newGroup.id };
+			const leaf: TabLayout = { type: 'group', groupId: newGroup.id };
 			const before = edge === 'left' || edge === 'top';
 			return {
 				type: 'split',
@@ -269,7 +299,7 @@ export function splitTab(
 	);
 }
 
-export function resizeSplit(layout: PanelLayout, id: string, ratio: number): PanelLayout {
+export function resizeSplit(layout: TabLayout, id: string, ratio: number): TabLayout {
 	if (layout.type === 'group') return layout;
 	if (layout.id === id) return { ...layout, ratio: Math.max(0.2, Math.min(0.8, ratio)) };
 	return {
@@ -280,10 +310,10 @@ export function resizeSplit(layout: PanelLayout, id: string, ratio: number): Pan
 }
 
 // Flat positions keep every tab view mounted when the split tree changes.
-export function panelPositions(layout: PanelLayout) {
-	const groups: Record<string, PanelRect> = {};
-	const dividers: PanelDivider[] = [];
-	const visit = (node: PanelLayout, rect: PanelRect) => {
+export function getLayoutRects(layout: TabLayout) {
+	const groups: Record<string, GroupRect> = {};
+	const dividers: SplitDivider[] = [];
+	const visit = (node: TabLayout, rect: GroupRect) => {
 		if (node.type === 'group') {
 			groups[node.groupId] = rect;
 			return;

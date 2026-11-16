@@ -17,7 +17,7 @@ from redis.asyncio import Redis
 
 
 class Output:
-    """Use WebUI's persisted output cards; provider runners retain native item data."""
+    """Use WebUI's persisted output cards; each item keeps the provider's own event in provider_data."""
 
     def __init__(self, metadata, user, check_connection, form_data):
         self.metadata, self.user = metadata, user
@@ -82,8 +82,9 @@ class Output:
                 if self.usage is not None:
                     message['usage'] = self.usage
                 meta = dict(message.get('meta') or {})
+                meta['model_name'] = f'{self.state["provider"]}/{self.state["model"]}'
                 meta['agent'] = create_token(
-                    {'purpose': 'terminal-agent', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
+                    {'typ': 'agent_session', 'user': self.user.id, 'chat': self.metadata['chat_id'], **self.state}
                 )
                 if done:
                     meta['response_ended_at'] = time.time()
@@ -109,13 +110,16 @@ class Output:
             self.content += text
         await self.flush()
 
-    async def tool(self, call_id, name, arguments, native=None, result=None, done=False):
+    async def tool(self, call_id, name, arguments, provider_data=None, result=None, done=False):
         item = next((i for i in self.items if i.get('call_id') == call_id and i['type'] == 'function_call'), None)
         if item is None:
             item = {'type': 'function_call', 'id': call_id, 'call_id': call_id}
             self.items.append(item)
         item.update(
-            name=name, arguments=json.dumps(arguments), status='completed' if done else 'in_progress', native=native
+            name=name,
+            arguments=json.dumps(arguments),
+            status='completed' if done else 'in_progress',
+            provider_data=provider_data,
         )
         if done:
             self.items[:] = [
@@ -134,7 +138,7 @@ class Output:
             )
         await self.flush(force=True)
 
-    async def approve(self, name, arguments, native, timeout=None):
+    async def approve(self, name, arguments, provider_data, timeout=None):
         call_id = f'approval_{uuid4().hex}'
         item = {
             'type': 'function_call',
@@ -143,7 +147,7 @@ class Output:
             'name': name,
             'arguments': json.dumps(arguments),
             'status': 'pending',
-            'native': native,
+            'provider_data': provider_data,
         }
         resolution = None
         # Questions need an answer even when tool execution has Full access.

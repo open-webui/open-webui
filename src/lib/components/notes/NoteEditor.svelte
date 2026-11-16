@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { closeChatTabs } from '$lib/stores/chatViewStates';
 	import { getPageContext, onTabLeave } from '$lib/utils/page';
-	const { goto, url: pageUrl } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
 	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
@@ -903,6 +904,7 @@ ${content}
 
 		if (!deleted) return;
 		updateFolderChatLists({ id: chatId }, undefined, true);
+		closeChatTabs(chatId);
 
 		let chats =
 			(await getNoteChatsById(localStorage.token, note.id).catch((error) => {
@@ -1148,7 +1150,7 @@ ${content}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
 					<div class="shrink-0 w-full flex justify-between items-center px-1.5 md:px-3">
 						<div class="w-full min-w-0 flex items-center">
-							{#if $mobile}
+							{#if $mobile && !pageTab}
 								<Tooltip
 									content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								>
@@ -1169,7 +1171,7 @@ ${content}
 							{/if}
 
 							<input
-								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile
+								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile && !pageTab
 									? 'ml-1'
 									: ''}"
 								type="text"

@@ -9,12 +9,15 @@
 	} from '@xyflow/svelte';
 
 	import { writable } from 'svelte/store';
-	import { models, user } from '$lib/stores';
+	import { user } from '$lib/stores';
 
 	import '@xyflow/svelte/dist/style.css';
 
 	import CustomNode from './Node.svelte';
 	import Flow from './Flow.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const { width, height } = useStore();
 

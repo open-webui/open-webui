@@ -93,7 +93,11 @@
 			discard = true;
 		} else action();
 	};
-	onTabLeave(() => !dirty || window.confirm($i18n.t('Discard unsaved skill changes?')));
+	onTabLeave(async () => {
+		// a save right before leaving has not updated dirty yet
+		await tick();
+		return !dirty || window.confirm($i18n.t('Discard unsaved skill changes?'));
+	});
 	beforeNavigate(({ cancel }) => {
 		if (dirty && !window.confirm($i18n.t('Discard unsaved skill changes?'))) cancel();
 	});
