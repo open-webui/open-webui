@@ -418,6 +418,12 @@
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
+<svelte:document
+	on:visibilitychange={() => {
+		if (mounted && $active && id && document.visibilityState === 'visible') updateLastReadAt(id);
+	}}
+/>
+
 <!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
