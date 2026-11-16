@@ -551,6 +551,13 @@
 							aria-hidden="true"><circle cx="8" cy="8" r="5.75" /><path d="M8 5v3l2 1.5" /></svg
 						>{$i18n.t('Next run')}
 					</span>
+					<!-- localisation keys kept from the previous runs list (so they don't get automatically removed):
+						{$i18n.t('Runs')}
+						{$i18n.t('Last run')}
+						{$i18n.t('No runs yet')}
+						{$i18n.t('View chat')}
+						{$i18n.t('View channel')}
+					-->
 					<span
 						class="min-w-0 flex-1 truncate text-xs {is_active
 							? 'text-gray-700 dark:text-gray-300'

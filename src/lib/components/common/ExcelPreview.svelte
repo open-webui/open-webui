@@ -796,6 +796,7 @@
 		<p
 			class="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
 		>
+			<!-- {$i18n.t('This sheet is too large to preview. Download it to view all cells.')} -->
 			{t('This sheet is too large to preview. Download it to view all cells.')}
 		</p>
 	{/if}

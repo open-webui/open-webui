@@ -95,7 +95,7 @@
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
-	import { createTemporaryChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { createTemporaryChatId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 	import { resumeTemporaryChat } from '$lib/apis';
 	import {
@@ -177,7 +177,8 @@
 	export let chatIdProp = '';
 	export let initialPage = '';
 	let mainChatHref = '/';
-	$: if ($chatId) mainChatHref = `/c/${$chatId}`;
+	// Unsaved chats have no /c/ page, so they keep the new-chat address set by initNewChat.
+	$: if (isSavedChatId($chatId)) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
 	export let tabbed = false;
 	const chatId = embedded ? writable('') : _chatId;

@@ -138,6 +138,14 @@
 						type="button"
 					>
 						<svelte:component this={heading.icon} />
+						<!-- localisation keys for heading.label to be recognized from the i18next parser (so they don't get automatically removed):
+							{$i18n.t('Heading 1')}
+							{$i18n.t('Heading 2')}
+							{$i18n.t('Heading 3')}
+							{$i18n.t('H1')}
+							{$i18n.t('H2')}
+							{$i18n.t('H3')}
+						-->
 						{$i18n.t(heading.label)}
 					</button>
 				{/each}

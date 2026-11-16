@@ -187,6 +187,9 @@
 	$: canDeleteChats = $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true);
 	setContext('sidebar-chat-selection', chatSelection);
 
+	// Keeps the selection bar's aria-labels in the i18n catalogs; the parser misses them in the markup.
+	// $i18n.t('Archive selected chats')
+	// $i18n.t('Delete selected chats')
 	const applySelectedChatAction = async (action: 'archive' | 'delete', ids: string[]) => {
 		if ($selectionBusy || ids.length === 0 || (action === 'delete' && !canDeleteChats)) return;
 		selectionBusy.set(true);

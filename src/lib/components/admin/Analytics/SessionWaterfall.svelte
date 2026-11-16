@@ -70,6 +70,7 @@
 				<span></span>
 				<div class="flex justify-between">
 					{#if sequence}
+						<!-- {$i18n.t('Saved order')} -->
 						<span>1</span><span>{$i18n.t('Saved order')}</span><span>{bars.length}</span>
 					{:else}
 						<span>0s</span><span>{duration(span / 2)}</span><span>{duration(span)}</span>

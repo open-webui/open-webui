@@ -1768,7 +1768,7 @@
 						: null;
 		if (href) {
 			const url = new URL(href, location.origin);
-			if (active?.id === mainChatTabId && !chatId) {
+			if (active?.id === mainChatTabId && !isSavedChatId(chatId)) {
 				// delete() re-encodes the other parameters even when it removes nothing.
 				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
 					url.searchParams.set('temporary-chat', String($temporaryChat));
