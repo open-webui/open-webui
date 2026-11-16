@@ -2016,7 +2016,7 @@
 	const onMessageHandler = async (event: {
 		origin: string;
 		source: unknown;
-		data: { type: string; text?: string; toolId?: string; error?: string | null; chat?: string };
+		data: { type: string; text?: string; toolId?: string; error?: string | null };
 	}) => {
 		const isSameOrigin = event.origin === window.origin;
 		const type = event.data?.type;
@@ -2038,16 +2038,11 @@
 			return;
 		}
 
-		// A prompt goes to the chat that shows its embed, any other to the main chat.
-		let owner = event.data?.chat ?? 'main';
-		if (isOwnEmbed) {
-			const embed = [...document.querySelectorAll('iframe')].find(
-				(iframe) => iframe.contentWindow === event.source
-			);
-			owner = embed?.closest('[data-chat]')?.getAttribute('data-chat') ?? 'main';
-		}
-		const thisChat = embedded ? instanceId : 'main';
-		if (owner !== thisChat) {
+		const iframe = [...document.querySelectorAll('iframe')].find(
+			(iframe) => iframe.contentWindow === event.source
+		);
+		const chat = iframe?.closest('[data-chat]')?.getAttribute('data-chat') ?? 'main';
+		if (chat !== (embedded ? instanceId : 'main')) {
 			return;
 		}
 
