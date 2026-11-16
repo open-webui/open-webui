@@ -362,6 +362,7 @@ def verify_ssl_cert(url: str) -> bool:
         hostname = url.split('://')[-1].split('/')[0]
         context = ssl.create_default_context(cafile=certifi.where())
         with context.wrap_socket(ssl.socket(), server_hostname=hostname) as s:
+            s.settimeout(10)
             s.connect((hostname, 443))
         return True
     except ssl.SSLError:
