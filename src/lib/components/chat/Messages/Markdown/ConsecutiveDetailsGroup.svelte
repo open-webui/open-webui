@@ -14,6 +14,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
+	import { agentViewName, type AgentView } from '$lib/components/chat/Messages/agentViews';
 
 	import { settings } from '$lib/stores';
 
@@ -23,6 +24,7 @@
 	export let tokens: Array<{
 		summary?: string;
 		text?: string;
+		view?: AgentView | null;
 		attributes?: {
 			type?: string;
 			name?: string;
@@ -154,10 +156,31 @@
 		const parts = [];
 
 		if (toolCallCount > 0) {
-			// Group by tool name and show counts
+			// Agent commands and edits read as actions; other tools are counted by name.
+			const commands = tokens.filter((t) => t?.view?.kind === 'command').length;
+			const editedFiles = new Set(
+				tokens.flatMap((t) =>
+					t?.view?.kind === 'edit' ? t.view.files.map((file) => file.path) : []
+				)
+			).size;
+			if (commands > 0) {
+				parts.push(
+					commands === 1
+						? $i18n.t('{{COUNT}} command', { COUNT: commands })
+						: $i18n.t('{{COUNT}} commands', { COUNT: commands })
+				);
+			}
+			if (editedFiles > 0) {
+				parts.push(
+					editedFiles === 1
+						? $i18n.t('{{COUNT}} edited file', { COUNT: editedFiles })
+						: $i18n.t('{{COUNT}} edited files', { COUNT: editedFiles })
+				);
+			}
+
 			const nameCounts: Record<string, number> = {};
 			tokens
-				.filter((t) => t?.attributes?.type === 'tool_calls')
+				.filter((t) => t?.attributes?.type === 'tool_calls' && !t?.view)
 				.forEach((t) => {
 					const name = t?.attributes?.name ?? 'tool';
 					nameCounts[name] = (nameCounts[name] || 0) + 1;
@@ -195,7 +218,7 @@
 		);
 	$: toolNames = tokens
 		.filter((token) => token.attributes?.type === 'tool_calls')
-		.map((token) => token.attributes?.name ?? 'tool');
+		.map((token) => (token.view ? agentViewName(token.view) : (token.attributes?.name ?? 'tool')));
 	$: groupLabel =
 		!hasRejected &&
 		!hasError &&

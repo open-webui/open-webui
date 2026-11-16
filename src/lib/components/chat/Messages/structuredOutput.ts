@@ -1,5 +1,6 @@
 import { encode } from 'html-entities';
 import { getDispatchedVisualizationPreviews } from '$lib/utils/visualizations/dispatch';
+import { agentView, type AgentView } from './agentViews';
 
 export type OutputContentPart = {
 	type?: string;
@@ -37,6 +38,7 @@ export type OutputItem = {
 export type OutputDetailToken = {
 	summary: string;
 	text: string;
+	view?: AgentView | null;
 	attributes: {
 		type: string;
 		id?: string;
@@ -239,6 +241,7 @@ export function buildToolCallToken(
 		}
 	}
 
+	const text = getToolResultText(resultItem);
 	return {
 		summary: isPending
 			? 'Tool Approval Needed'
@@ -247,7 +250,8 @@ export function buildToolCallToken(
 				: isExecuting
 					? 'Executing...'
 					: 'Preparing...',
-		text: getToolResultText(resultItem),
+		text,
+		view: agentView(item, text),
 		attributes: {
 			type: 'tool_calls',
 			id: callId,

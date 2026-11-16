@@ -123,7 +123,8 @@ async def run(transport, output, prompt, images, options):
                             block['tool_use_id'],
                             previous.get('name', 'agent_tool'),
                             json.loads(previous.get('arguments', '{}')),
-                            provider_data=block,
+                            # The whole event: its tool_use_result has the edit's structuredPatch.
+                            provider_data=message,
                             result=block.get('content'),
                             done=True,
                         )

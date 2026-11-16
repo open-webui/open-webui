@@ -166,6 +166,7 @@
 						<ToolCallDisplay
 							id={`${id}-${displayItem.id}-${detailIndex}-tool-call`}
 							attributes={detailToken.attributes}
+							view={detailToken.view ?? null}
 							resultContent={detailToken.text}
 							grouped={true}
 							resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
@@ -228,6 +229,7 @@
 			<ToolCallDisplay
 				id={`${id}-${displayItem.id}-tool-call`}
 				attributes={detailToken.attributes}
+				view={detailToken.view ?? null}
 				resultContent={detailToken.text}
 				{allowEmbeds}
 				resolvable={!!chatId && !!messageId && (save || allowToolApproval)}
