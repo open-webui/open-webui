@@ -78,6 +78,7 @@ class MCPClient:
     def __init__(self, event_caller=None, server_name=''):
         self.client: Optional[Client] = None
         self.session_task: Optional[asyncio.Task] = None
+        self.connect_kwargs: Optional[dict] = None
         self.event_caller = event_caller
         self.server_name = server_name
         self.instructions: Optional[str] = None
@@ -125,13 +126,15 @@ class MCPClient:
         auth: Optional[httpx2.Auth] = None,
         tether: Optional[dict] = None,
     ):
+        self.connect_kwargs = {'url': url, 'headers': headers, 'auth': auth, 'tether': tether}
         # A failed request makes the SDK cancel the task that opened the session, so it gets its own task.
         connected = asyncio.get_running_loop().create_future()
         self.session_task = asyncio.create_task(self.run_session(url, headers, auth, connected, tether))
         try:
             await connected
         except BaseException:
-            await self.disconnect()
+            # Keep connect_kwargs so the next tool call can try again.
+            await self.close_session()
             raise
 
     async def run_session(
@@ -207,6 +210,9 @@ class MCPClient:
         return tool_specs
 
     async def call_tool_raw(self, function_name: str, function_args: dict) -> dict:
+        if not self.client and self.connect_kwargs:
+            # The session ends for good when the server drops it, e.g. on a restart.
+            await self.connect(**self.connect_kwargs)
         if not self.client:
             raise RuntimeError('MCP client is not connected.')
 
@@ -341,11 +347,15 @@ class MCPClient:
         return result_dict
 
     async def disconnect(self):
-        """Clean up and close the session.
+        """Clean up and close the session, and stop later tool calls from reconnecting.
 
         This method is idempotent — calling it multiple times or on a
         client that was never connected is safe.
         """
+        self.connect_kwargs = None
+        await self.close_session()
+
+    async def close_session(self):
         session_task = self.session_task
         if session_task is None:
             return
