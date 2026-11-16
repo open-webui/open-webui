@@ -1,15 +1,14 @@
 <script lang="ts" context="module">
 	import type { renderToString as katexRenderToString } from 'katex';
+	import 'katex/dist/katex.min.css';
 
 	// Module-level singleton: load katex once, share across all KatexRenderer instances
 	let katexRenderer: Promise<typeof katexRenderToString> | null = null;
 	function getKatexRenderer(): Promise<typeof katexRenderToString> {
 		if (!katexRenderer) {
-			katexRenderer = Promise.all([
-				import('katex'),
-				import('katex/contrib/mhchem'),
-				import('katex/dist/katex.min.css')
-			]).then(([katex]) => katex.renderToString);
+			katexRenderer = Promise.all([import('katex'), import('katex/contrib/mhchem')]).then(
+				([katex]) => katex.renderToString
+			);
 		}
 		return katexRenderer;
 	}
@@ -52,7 +51,8 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<svelte:element
 		this={displayMode ? 'div' : 'span'}
-		class="cursor-pointer"
+		class="katex-container cursor-pointer"
+		dir="ltr"
 		on:click={() => {
 			copyToClipboard(content);
 			toast.success($i18n.t('Copied to clipboard'));

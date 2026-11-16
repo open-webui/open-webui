@@ -287,8 +287,12 @@ select {
 	animation: fade-in-token 100ms ease-out;
 }
 
-.katex-mathml {
-	display: none;
+/* Keep equations LTR and isolated from surrounding Persian/Arabic prose.
+   KaTeX's own stylesheet visually clips MathML while keeping it accessible. */
+.katex,
+.katex-container {
+	direction: ltr;
+	unicode-bidi: isolate;
 }
 
 /* Hide leaked Mermaid temp containers if render cleanup misses.

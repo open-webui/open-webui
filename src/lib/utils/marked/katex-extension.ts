@@ -9,8 +9,9 @@ const DELIMITER_LIST = [
 ];
 
 // Defines characters that are allowed to immediately precede or follow a math delimiter.
+// Persian/Arabic punctuation, letters and joining/bidi marks must not prevent math recognition.
 const ALLOWED_SURROUNDING_CHARS =
-	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯–—:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
+	'\\s。，、､;；„“‘’“”（）「」『』［］《》【】‹›«»…⋯–—:：？！～⇒?!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}\\p{Script=Arabic}\\u200c\\u200d\\u200e\\u200f\\u061c،؛؟';
 // Modified to fit more formats in different languages. Originally: '\\s?。，、；!-\\/:-@\\[-`{-~\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Hangul}';
 
 // Pre-compile the surrounding character regex once at module load time.
@@ -129,8 +130,8 @@ function katexStart(src, displayMode: boolean) {
 				// Display: \[ or \begin{equation}
 				if (next !== '[' && next !== 'b') continue;
 			} else {
-				// Inline: \( or \ce{ or \pu{
-				if (next !== '(' && next !== 'c' && next !== 'p') continue;
+				// Inline math, plus display delimiters embedded in paragraphs.
+				if (next !== '(' && next !== '[' && next !== 'b' && next !== 'c' && next !== 'p') continue;
 			}
 			if (i === 0 || ALLOWED_SURROUNDING_CHARS_REGEX.test(src.charAt(i - 1))) {
 				return i;
@@ -166,7 +167,10 @@ function katexTokenizer(src, tokens, displayMode: boolean) {
 			type,
 			raw: match[0],
 			text: text,
-			displayMode
+			// Display delimiters can also occur inside a Markdown paragraph.
+			displayMode:
+				displayMode ||
+				DELIMITER_LIST.some((delimiter) => delimiter.display && match[0].startsWith(delimiter.left))
 		};
 	}
 }
