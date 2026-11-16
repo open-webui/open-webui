@@ -22,53 +22,110 @@
 
 	import EmojiPicker from '../EmojiPicker.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import { shortCodesToEmojis } from '$lib/stores';
+
+	const headings = [
+		{ level: 1, label: 'Heading 1', icon: H1 },
+		{ level: 2, label: 'Heading 2', icon: H2 },
+		{ level: 3, label: 'Heading 3', icon: H3 }
+	];
+
+	let showHeadingMenu = false;
+	let headingMenuElement = null;
+
+	// Re-evaluated on every editor transaction, since the parent re-renders with the new editor state.
+	$: activeHeading = editor
+		? (headings.find((heading) => editor.isActive('heading', { level: heading.level })) ?? null)
+		: null;
 </script>
+
+<svelte:window
+	on:mousedown={(event) => {
+		if (
+			showHeadingMenu &&
+			event.target instanceof Node &&
+			!headingMenuElement?.contains(event.target)
+		) {
+			showHeadingMenu = false;
+		}
+	}}
+	on:keydown={(event) => {
+		if (event.key === 'Escape' && showHeadingMenu) showHeadingMenu = false;
+	}}
+/>
 
 <div
 	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 min-w-fit border border-gray-100 dark:border-gray-800"
 >
-	<Tooltip placement="top" content={$i18n.t('H1')}>
-		<button
-			aria-label={$i18n.t('H1')}
-			aria-pressed={editor?.isActive('heading', { level: 1 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-			class="{editor?.isActive('heading', { level: 1 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H1 />
-		</button>
-	</Tooltip>
+	<div class="relative flex" bind:this={headingMenuElement}>
+		<Tooltip placement="top" content={$i18n.t('Heading')}>
+			<button
+				aria-label={$i18n.t('Heading')}
+				aria-haspopup="menu"
+				aria-expanded={showHeadingMenu}
+				on:mousedown|preventDefault
+				on:click={() => (showHeadingMenu = !showHeadingMenu)}
+				class="{activeHeading || showHeadingMenu
+					? 'bg-gray-50 dark:bg-gray-700'
+					: ''} flex items-center gap-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				{#if activeHeading}
+					<svelte:component this={activeHeading.icon} />
+				{:else}
+					<span class="flex size-4 items-center justify-center text-sm font-medium leading-none"
+						>T</span
+					>
+				{/if}
+				<ChevronDown className="size-3" strokeWidth="2" />
+			</button>
+		</Tooltip>
 
-	<Tooltip placement="top" content={$i18n.t('H2')}>
-		<button
-			aria-label={$i18n.t('H2')}
-			aria-pressed={editor?.isActive('heading', { level: 2 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-			class="{editor?.isActive('heading', { level: 2 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H2 />
-		</button>
-	</Tooltip>
-
-	<Tooltip placement="top" content={$i18n.t('H3')}>
-		<button
-			aria-label={$i18n.t('H3')}
-			aria-pressed={editor?.isActive('heading', { level: 3 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-			class="{editor?.isActive('heading', { level: 3 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H3 />
-		</button>
-	</Tooltip>
+		{#if showHeadingMenu}
+			<div
+				role="menu"
+				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
+			>
+				<button
+					role="menuitemradio"
+					aria-checked={!activeHeading}
+					on:mousedown|preventDefault
+					on:click={() => {
+						editor?.chain().focus().setParagraph().run();
+						showHeadingMenu = false;
+					}}
+					class="{!activeHeading
+						? 'bg-gray-50 dark:bg-gray-700'
+						: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+					type="button"
+				>
+					<span class="flex size-4 items-center justify-center text-sm font-medium leading-none"
+						>T</span
+					>
+					{$i18n.t('Text')}
+				</button>
+				{#each headings as heading}
+					<button
+						role="menuitemradio"
+						aria-checked={activeHeading?.level === heading.level}
+						on:mousedown|preventDefault
+						on:click={() => {
+							editor?.chain().focus().toggleHeading({ level: heading.level }).run();
+							showHeadingMenu = false;
+						}}
+						class="{activeHeading?.level === heading.level
+							? 'bg-gray-50 dark:bg-gray-700'
+							: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+						type="button"
+					>
+						<svelte:component this={heading.icon} />
+						{$i18n.t(heading.label)}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	{#if editor?.isActive('bulletList') || editor?.isActive('orderedList') || editor?.isActive('taskList')}
 		<Tooltip placement="top" content={$i18n.t('Lift List')}>

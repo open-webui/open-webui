@@ -493,7 +493,7 @@
 				{#if channel && messages !== null}
 					<div class="flex-1 overflow-y-auto">
 						<div
-							class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full pt-6 flex-1 flex flex-col-reverse overflow-auto"
+							class=" pb-2.5 max-w-full z-10 scrollbar-hidden w-full h-full flex-1 flex flex-col-reverse overflow-auto"
 							id="messages-container"
 							bind:this={messagesContainerElement}
 							on:scroll={(e) => {

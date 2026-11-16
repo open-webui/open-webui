@@ -162,7 +162,7 @@
 	{:else}
 		<div
 			bind:this={list}
-			class="flex-1 min-h-0 overflow-y-auto pt-14 pb-2.5"
+			class="flex-1 min-h-0 overflow-y-auto pt-6 pb-2.5"
 			role="log"
 			aria-label={$i18n.t('Encrypted messages')}
 			aria-live="polite"

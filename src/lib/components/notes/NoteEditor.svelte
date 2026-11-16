@@ -1282,6 +1282,12 @@ ${content}
 									</button>
 								</Tooltip>
 
+								<CommentButton
+									className="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+									onComment={(request) => (currentNoteComments = request)}
+									resource={{ resource_type: 'note', resource_id: note.id }}
+								/>
+
 								{#if note?.write_access}
 									<RecordMenu
 										onRecord={async () => {
@@ -1390,14 +1396,6 @@ ${content}
 									>
 										<EllipsisHorizontal className="size-5" />
 									</button>
-									<svelte:fragment slot="actions" let:close>
-										<CommentButton
-											menu
-											onOpen={close}
-											onComment={(request) => (currentNoteComments = request)}
-											resource={{ resource_type: 'note', resource_id: note.id }}
-										/>
-									</svelte:fragment>
 								</NoteMenu>
 
 								{#if liveParticipants.length > 0}

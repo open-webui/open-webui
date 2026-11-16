@@ -137,8 +137,10 @@
 
 	let messageSource = history.messages[messageId];
 	let message: MessageType = structuredClone(messageSource);
-	$: canBranch =
-		!message.model?.startsWith('agent:') && !selectedModels.some((id) => id.startsWith('agent:'));
+	$: isAgent =
+		message.model?.startsWith('agent:') || selectedModels.some((id) => id.startsWith('agent:'));
+	// Agents regenerate on a fork of their own conversation; continuing or copying a reply has no turn to fork.
+	$: canBranch = !isAgent;
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
@@ -1470,7 +1472,7 @@
 								{/if}
 
 								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || writeAccess}
-									{#if canBranch && ($user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true))}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1511,7 +1513,12 @@
 													});
 												}}
 											>
-												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
+												<Tooltip
+													content={isAgent
+														? $i18n.t('Regenerate (file changes are not undone)')
+														: $i18n.t('Regenerate')}
+													placement="bottom"
+												>
 													<button
 														type="button"
 														aria-label={$i18n.t('Regenerate')}
@@ -1556,7 +1563,12 @@
 												</Tooltip>
 											</RegenerateMenu>
 										{:else}
-											<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
+											<Tooltip
+												content={isAgent
+													? $i18n.t('Regenerate (file changes are not undone)')
+													: $i18n.t('Regenerate')}
+												placement="bottom"
+											>
 												<button
 													type="button"
 													aria-label={$i18n.t('Regenerate')}

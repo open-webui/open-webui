@@ -4,9 +4,10 @@ import copy
 
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.misc import get_message_list
 from open_webui.utils.terminals import get_terminal_json, upload_files_to_terminal
 
-from .session import get_session
+from .session import get_resume_point
 from .output import Output
 from .transport import TerminalTransport
 from . import acp, codex, claude_code, pi
@@ -28,6 +29,10 @@ PROVIDERS = {
 }
 
 
+# Providers that can copy their native conversation up to an earlier turn.
+FORKABLE = {'codex', 'claude-code'}
+
+
 def provider_runner(provider):
     # Agents configured in Open Terminal's OPEN_TERMINAL_ACP_AGENTS arrive as `acp-<id>`.
     return PROVIDERS.get(provider) or (acp.run if provider.startswith('acp-') else None)
@@ -36,7 +41,7 @@ def provider_runner(provider):
 async def run(request, form_data, user, metadata, model):
     if not is_saved_chat_id(metadata.get('chat_id')):
         raise ValueError('Agent conversations require a saved chat')
-    if metadata.get('regeneration_message_id') or metadata.get('assistant_message_id'):
+    if metadata.get('assistant_message_id'):
         raise ValueError('Continue an agent conversation with a new message')
     agent = model['agent']
     run_provider = provider_runner(agent['provider'])
@@ -46,14 +51,29 @@ async def run(request, form_data, user, metadata, model):
     if chat is None:
         raise ValueError('Chat reply access denied')
     parent = (metadata.get('user_message') or {}).get('parentId')
-    previous = await get_session(chat, parent) if parent else None
+    previous, branched = (
+        await get_resume_point(chat, parent, exclude=metadata.get('message_id')) if parent else (None, False)
+    )
     if previous and any(previous.get(key) != agent[key] for key in ('terminal_id', 'provider')):
         previous = None
+    # Regenerated and edited messages branch off a reply whose native conversation went on without them.
+    resume_at = None
+    if previous and branched:
+        if agent['provider'] in FORKABLE and previous.get('turn'):
+            resume_at = previous['turn']
+        else:
+            # The agent can't copy part of its conversation: start a new one from the transcript.
+            previous = {key: value for key, value in previous.items() if key != 'session_id'}
     metadata['terminal_id'] = agent['terminal_id']
     transport = await TerminalTransport.resolve(request, user, metadata)
     output = Output(metadata, user, transport.raise_if_failed, form_data)
     output.state = {
-        **{key: previous[key] for key in ('session_id', 'model_config') if previous and key in previous},
+        # A fork is a new native conversation, which records its own id once the agent reports it.
+        **{
+            key: previous[key]
+            for key in ('model_config', *(() if resume_at else ('session_id',)))
+            if previous and key in previous
+        },
         **agent,
         'instance_user_id': (previous or {}).get('instance_user_id') or (previous or {}).get('user') or user.id,
     }
@@ -88,9 +108,23 @@ async def run(request, form_data, user, metadata, model):
 
     prompt = text(user_message.get('content', ''))
     if not previous or not previous.get('session_id'):
-        history = [m for m in messages if m.get('role') in {'user', 'assistant'}]
+        # A new native conversation starts from this branch's transcript. Saved chats send only
+        # the system prompt, so the branch is read from the stored messages.
+        stored = get_message_list(await Chats.get_messages_map_by_chat_id(chat.id) or {}, parent) if parent else []
+        history = [m for m in stored or messages if m.get('role') in {'user', 'assistant'}]
+        if stored:
+            history.append(user_message)
+        elif metadata.get('regeneration_message_id') and history and history[-1].get('role') == 'assistant':
+            history = history[:-1]  # Guided regeneration sends the reply being revised; it's quoted below.
         if len(history) > 1:
             prompt = '\n\n'.join(f'{m["role"]}: {text(m.get("content", ""))}' for m in history)
+    if metadata.get('regeneration_message_id') and form_data.get('regeneration_prompt'):
+        # Guided regeneration: the agent revises a reply its forked conversation no longer holds.
+        regenerated = await Chats.get_message_by_id_and_message_id(chat.id, metadata['regeneration_message_id'])
+        earlier = text((regenerated or {}).get('content', ''))
+        if earlier:
+            prompt += f'\n\nYour previous reply to this was:\n<previous_reply>\n{earlier}\n</previous_reply>'
+        prompt += f'\n\n{form_data["regeneration_prompt"]}'
     if paths:
         prompt += '\n\nAttached files in this environment:\n' + '\n'.join(paths)
     images = [
@@ -106,13 +140,23 @@ async def run(request, form_data, user, metadata, model):
         'cwd': cwd,
         'model': agent['model'],
         'resume': (previous or {}).get('session_id'),
+        # A fork keeps the original conversation as it was for the reply that branched off it.
+        'resume_at': resume_at,
+        'fork': bool(resume_at),
         'instructions': instructions,
         # The chat's tool permission mode; agents with their own auto review use it for Auto.
         'approval_mode': (metadata.get('params') or {}).get('tool_approval_mode', 'full'),
     }
     succeeded = False
     try:
-        await transport.start(agent['provider'], options)
+        session = await transport.start(agent['provider'], options)
+        if (
+            resume_at
+            and agent['provider'] == 'claude-code'
+            and (session.get('resume_at') != resume_at or not session.get('fork'))
+        ):
+            # An older Open Terminal would resume the original conversation instead of forking it.
+            raise ValueError('Update Open Terminal to regenerate or edit earlier messages in this chat')
         extra = {'auth_method': 'cursor_login'} if agent['provider'] == 'cursor' else {}
         await run_provider(
             transport,

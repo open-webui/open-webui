@@ -2234,7 +2234,7 @@
 								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
 								: ' border-gray-200 dark:border-gray-850'} {($settings?.highContrastMode ?? false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								: ''}  transition px-0.5 bg-white/60 dark:bg-gray-900/50 backdrop-blur-md dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
