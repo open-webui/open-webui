@@ -179,7 +179,7 @@
 		await tick();
 		const file = blobToFile(
 			audioBlob,
-			`Recording-${dayjs().locale($i18n.language).format('L LT')}.${ext}`
+			`Recording-${dayjs().format('YYYY-MM-DD_HH-mm-ss')}.${ext}`
 		);
 
 		if (transcribe) {
