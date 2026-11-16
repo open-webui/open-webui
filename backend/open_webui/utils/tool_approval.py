@@ -110,7 +110,7 @@ async def resolve_tool_call_output(
             binding = decode_token(token) if isinstance(token, str) else None
             if (
                 not binding
-                or binding.get('purpose') != 'terminal-agent'
+                or binding.get('purpose') not in ('agent-session', 'terminal-agent')
                 or binding.get('user') != user.id
                 or binding.get('chat') != chat_id
             ):

@@ -52,7 +52,8 @@ async def get_session(chat, message_id=None):
         token = (message.get('meta') or {}).get('agent')
         if token:
             state = decode_token(token) if isinstance(token, str) else None
-            if state and state.get('purpose') == 'terminal-agent':
+            # Accept pre-rename tokens so saved conversations still resume.
+            if state and state.get('purpose') in ('agent-session', 'terminal-agent'):
                 if state.get('chat') != chat.id:
                     return None  # Forks and clones start independent native conversations.
                 if all(
