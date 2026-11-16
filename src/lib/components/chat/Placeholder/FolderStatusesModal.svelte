@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { newStatusId, statusGlyphs, type CustomStatus, type StatusDef } from '$lib/utils/folders';
+	import {
+		newStatusId,
+		statusGlyphs,
+		suggestedStatuses,
+		type CustomStatus,
+		type StatusDef
+	} from '$lib/utils/folders';
 	import { colorDot, tagColors } from '$lib/utils/tags';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -52,6 +58,19 @@
 			.at(-1)
 			?.focus();
 	}
+
+	// Preset statuses, offered only while the folder has none of its own; ones already in the draft are hidden.
+	$: suggestions = statuses.some((item) => item.custom)
+		? []
+		: suggestedStatuses
+				.map((item) => ({ ...item, name: $i18n.t(item.name) }))
+				.filter(
+					(item) =>
+						!draft.some((entry) => entry.name.trim().toLowerCase() === item.name.toLowerCase())
+				);
+
+	const addSuggestion = (item: CustomStatus) =>
+		(draft = [...draft, { ...item, id: newStatusId() }]);
 
 	function reorder(overId: string) {
 		if (!dragId || dragId === overId) return;
@@ -240,6 +259,29 @@
 					<span class="flex size-6 items-center justify-center"><Plus className="size-3.5" /></span>
 					{$i18n.t('Add status')}
 				</button>
+
+				{#if suggestions.length}
+					<div class="px-1 pt-2 pb-1 text-xs text-gray-400 dark:text-gray-500">
+						{$i18n.t('Suggestions')}
+					</div>
+					{#each suggestions as item (item.name)}
+						<button
+							type="button"
+							class="group flex h-8 w-full items-center gap-2 rounded-lg px-1 text-sm text-gray-500 transition hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+							on:click={() => addSuggestion(item)}
+						>
+							<span class="w-3 shrink-0"></span>
+							<span
+								class="flex size-6 items-center justify-center opacity-60 transition group-hover:opacity-100"
+								><StatusIcon glyph={item.glyph} color={item.color} /></span
+							>
+							<span class="flex-1 text-left">{item.name}</span>
+							<Plus
+								className="size-3.5 opacity-0 transition group-hover:opacity-100 group-focus-visible:opacity-100"
+							/>
+						</button>
+					{/each}
+				{/if}
 			</div>
 
 			<p class="mt-2 text-xs text-gray-400 dark:text-gray-500">
