@@ -6,6 +6,7 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { getPageContext } from '$lib/utils/page';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -24,6 +25,7 @@
 	import ChannelMenu from './ChannelMenu.svelte';
 
 	const i18n: any = getContext('i18n');
+	const { tab: pageTab } = getPageContext();
 
 	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
@@ -76,7 +78,7 @@
 
 	<div class=" flex max-w-full w-full mx-auto pt-0.5 bg-transparent">
 		<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center w-full max-w-full">
-			{#if $mobile}
+			{#if $mobile && !pageTab}
 				<div
 					class="{$showSidebar
 						? 'md:hidden'

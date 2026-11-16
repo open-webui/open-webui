@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { get } from 'svelte/store';
-	import { chatId as activeChatId, config, settings } from '$lib/stores';
+	import { config, settings } from '$lib/stores';
+	import { getChatContext } from '../context';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ToolCallDisplay from '$lib/components/common/ToolCallDisplay.svelte';
 	import { buildToolCallToken, getToolResultText, type OutputItem } from './structuredOutput';
@@ -27,6 +28,7 @@
 	export let resolving = false;
 	export let onResolve: (approved: boolean) => void = () => {};
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const { chatId: activeChatId, submitPrompt } = getChatContext();
 	const decoder = createVisualizationArgumentDecoder();
 	let ready = false,
 		initialized = false;
@@ -155,6 +157,7 @@
 		if (
 			!initialized ||
 			!execute ||
+			!submitPrompt ||
 			confirmCall ||
 			get(activeChatId) !== chatId ||
 			typeof data.requestId !== 'string' ||
@@ -172,7 +175,7 @@
 			showConfirmation = false;
 			confirmCall = undefined;
 			const sent = accept && current === generation && get(activeChatId) === chatId;
-			if (sent) window.postMessage({ type: 'input:prompt:submit', text: data.text }, window.origin);
+			if (sent) submitPrompt?.(data.text);
 			reply(sent);
 		};
 	}

@@ -306,7 +306,7 @@
 						>
 							<DocumentDuplicate />
 							<div class="flex items-center w-full justify-between">
-								<div>{$i18n.t('Add Context')}</div>
+								<div>{$i18n.t('Attachments')}</div>
 								<div class="text-gray-500"><ChevronRight /></div>
 							</div>
 						</button>
@@ -323,7 +323,7 @@
 						}}
 					>
 						<ChevronLeft />
-						<div>{$i18n.t('Add Context')}</div>
+						<div>{$i18n.t('Attachments')}</div>
 					</button>
 
 					{#if $visibleControls['chat.attach_webpage']}

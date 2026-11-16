@@ -103,6 +103,14 @@ def template_terminal_id(connection_id, template_id):
     return f'template:{connection_id}:{quote(template_id, safe="")}'
 
 
+async def has_terminal_write_access(user, terminal_id):
+    """Write access to a terminal's connection, the right that lists, restarts and deletes its instances."""
+    if not terminal_id.startswith('template:'):
+        return False
+    connection_id, _ = split_template_id(terminal_id)
+    return await has_connection_write_access(user, await get_connection(user, connection_id))
+
+
 def split_template_id(terminal_id):
     if not terminal_id.startswith('template:'):
         raise HTTPException(400, 'Invalid template terminal ID')
@@ -269,6 +277,20 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
     if not isinstance(user, UserModel):
         user = UserModel(**user)
     metadata = dict(metadata or {})
+
+    async def find_instance_user_connection(instance_user_id):
+        # Another person's instance is reached as they would reach it, by whoever manages the terminal.
+        instance_user = (
+            await Users.get_user_by_id(instance_user_id) if await has_terminal_write_access(user, terminal_id) else None
+        )
+        if instance_user is None:
+            raise HTTPException(403, 'Instance access denied')
+        connection = await find_terminal_connection(instance_user, terminal_id, metadata, request=request)
+        return connection and {'instance_user_id': instance_user.id, **connection}
+
+    instance_user_id = metadata.pop('instance_user_id', None)
+    if instance_user_id and instance_user_id != user.id:
+        return await find_instance_user_connection(instance_user_id)
     chat = None
     shared_session = None
     instance_user = user
@@ -276,9 +298,12 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
     if chat_id and is_saved_chat_id(chat_id):
         chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
         if chat is None:
-            raise HTTPException(403, 'Chat access denied')
+            other = await Chats.get_chat_by_id(chat_id)
+            if other is None or not await has_terminal_write_access(user, terminal_id):
+                raise HTTPException(403, 'Chat access denied')
+            return await find_instance_user_connection(other.user_id)
         if chat.meta.get('internal') is True and chat.meta.get('type') == 'subagent':
-            # A sub-agent shares the machine and files of its parent chat.
+            # A sub-agent shares the instance and files of its parent chat.
             metadata['chat_id'] = chat.meta.get('parent_chat_id')
             return await find_terminal_connection(user, terminal_id, metadata, request=request)
         from open_webui.utils.agents.session import get_session, model_id
@@ -288,7 +313,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
             shared_session = None
         if shared_session:
             metadata['model_id'] = model_id(shared_session)
-            instance_user_id = shared_session.get('terminal_user_id') or shared_session['user']
+            instance_user_id = shared_session.get('instance_user_id') or shared_session['user']
             instance_user = user if instance_user_id == user.id else await Users.get_user_by_id(instance_user_id)
             if instance_user is None:
                 raise HTTPException(403, 'Agent terminal owner is unavailable')
@@ -351,6 +376,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
         {
             **connection,
             'id': terminal_id,
+            'name': (template.get('data') or {}).get('name') or template_id,
             'template_id': template_id,
             'scope': scope,
             'auth_type': 'bearer',

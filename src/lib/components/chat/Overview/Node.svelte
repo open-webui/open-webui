@@ -20,7 +20,9 @@
 	$: messageContent = getMessageContent(data);
 	$: isCompacted =
 		data?.message?.contextSummary ||
-		data?.message?.output?.some((item) => item?.type === 'open_webui:context_compaction');
+		data?.message?.output?.some(
+			(item) => item?.type === 'open_webui:context_compaction' && item?.summary
+		);
 	$: previewClass = `text-xs mt-0.5 ${isCompacted ? 'line-clamp-1' : 'line-clamp-2'}`;
 	$: modelName = data?.model
 		? resolveLocalizedModelName(data.model, $i18n.language)

@@ -5,6 +5,7 @@
 	import type { TerminalContext } from '$lib/types';
 	import type { TerminalTarget } from '$lib/apis/terminal';
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
+	import { watchTerminalFiles } from '$lib/apis/terminal/events';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import CloneRepository from './FileNav/CloneRepository.svelte';
@@ -50,6 +51,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
@@ -651,7 +653,13 @@
 		await loadDir(entry.path);
 		if (entry.file) {
 			const fileName = entry.file.split('/').pop() ?? '';
-			await openEntry({ name: fileName, type: 'file', size: 0 });
+			await openEntry(
+				entries.find((item) => item.name === fileName) ?? {
+					name: fileName,
+					type: 'file',
+					writable: currentWritable
+				}
+			);
 		}
 		navigatingHistory = false;
 	};
@@ -664,7 +672,13 @@
 		await loadDir(entry.path);
 		if (entry.file) {
 			const fileName = entry.file.split('/').pop() ?? '';
-			await openEntry({ name: fileName, type: 'file', size: 0 });
+			await openEntry(
+				entries.find((item) => item.name === fileName) ?? {
+					name: fileName,
+					type: 'file',
+					writable: currentWritable
+				}
+			);
 		}
 		navigatingHistory = false;
 	};
@@ -954,6 +968,21 @@
 		directoryMenu = null;
 	};
 
+	const positionDirectoryMenu = (node: HTMLElement, point: { x: number; y: number }) => {
+		const update = (point: { x: number; y: number }) => {
+			computePosition({ getBoundingClientRect: () => new DOMRect(point.x, point.y) }, node, {
+				strategy: 'fixed',
+				placement: 'bottom-start',
+				middleware: [flip(), shift({ padding: 8 })]
+			}).then(({ x, y }) => {
+				node.style.left = `${x}px`;
+				node.style.top = `${y}px`;
+			});
+		};
+		update(point);
+		return { update };
+	};
+
 	const parentDirectoryPath = (path: string) => {
 		const normalized = normalizePath(path);
 		const slash = normalized.lastIndexOf('/');
@@ -1238,16 +1267,54 @@
 		return normalizedEntries;
 	};
 
-	const refreshExpandedDirs = async () => {
-		for (const directory of [...expandedDirs]) {
-			await fetchExpandedDir(directory);
+	// Re-lists the shown folders in place: no spinner, and selection and preview stay put.
+	let refreshes = 0;
+	const refreshBrowser = async () => {
+		const terminal = selectedTerminal;
+		if (!terminal || loading) return;
+		const refresh = ++refreshes;
+		const generation = loadGeneration;
+		const paths = [currentPath, ...expandedDirs];
+		const listings = await Promise.all(paths.map((path) => listFiles(terminal, path)));
+		if (refresh !== refreshes || generation !== loadGeneration || loading) return;
+		if (listings[0]) {
+			error = null;
+			currentWritable = listings[0].writable !== false;
+			entries = normalizeEntries(listings[0].entries);
 		}
+		const cache = new Map(treeCache);
+		paths.forEach(
+			(path, i) => listings[i] && cache.set(path, normalizeEntries(listings[i].entries))
+		);
+		treeCache = cache;
+		saveTreeState();
 	};
 
-	const refreshBrowser = async () => {
-		await loadDir(currentPath, { preserveTree: true });
-		await refreshExpandedDirs();
+	// The terminal's watcher reports real changes, including ones made outside the chat.
+	let watchedFolder = '';
+	let stopWatching: (() => void) | undefined;
+	let watcherConnected = false;
+	const watchFolder = async (terminal: TerminalTarget | null, directory: string, on: boolean) => {
+		const folder = on && terminal ? `${terminal.baseUrl}:${directory}` : '';
+		if (folder === watchedFolder) return;
+		watchedFolder = folder;
+		stopWatching?.();
+		stopWatching = undefined;
+		watcherConnected = false;
+		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
+		if (folder !== watchedFolder || disposed) return;
+		stopWatching = watchTerminalFiles(
+			terminal,
+			directory,
+			() => !selectedFile && refreshBrowser(),
+			(message) => (watcherConnected = !message)
+		);
 	};
+	$: void watchFolder(
+		selectedTerminal,
+		currentPath,
+		mounted && active && savedPathLoaded && !onSelectDirectory
+	);
 
 	const toggleExpand = async (path: string) => {
 		const directory = asDirectoryPath(path);
@@ -2227,7 +2294,9 @@
 
 			const lastSlash = filePath.lastIndexOf('/');
 			const dir = lastSlash > 0 ? filePath.substring(0, lastSlash + 1) : '/';
-			invalidateTreeCache(dir);
+			// '/' means a command ran, so anything shown may have changed.
+			const dirShown = filePath === '/' || dir === currentPath || expandedDirs.has(dir);
+			if (!dirShown) invalidateTreeCache(dir);
 			if (comparison) return;
 
 			if (selectedFile) {
@@ -2235,10 +2304,8 @@
 					const fileName = selectedFile.split('/').pop() ?? '';
 					await openEntry({ name: fileName, type: 'file', size: 0 }, { refresh: true });
 				}
-			} else {
-				if (currentPath.startsWith(dir) || dir.startsWith(currentPath)) {
-					await refreshBrowser();
-				}
+			} else if (dirShown && !watcherConnected) {
+				await refreshBrowser();
 			}
 		});
 
@@ -2316,6 +2383,7 @@
 	});
 
 	onDestroy(() => {
+		stopWatching?.();
 		++gitBaseGeneration;
 		overwriteChoice?.(false);
 		disposed = true;
@@ -2498,10 +2566,25 @@
 			onGoBack={goBack}
 			onGoForward={goForward}
 			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
-			onRefresh={() => {
+			listFolders={async (path) => {
+				const terminal = selectedTerminal;
+				const entries =
+					treeCache.get(path) ?? (terminal ? (await listFiles(terminal, path))?.entries : null);
+				return (entries ?? [])
+					.filter((entry) => entry.type === 'directory')
+					.map((entry) => cleanEntryName(entry.name));
+			}}
+			onRefresh={async () => {
 				if (selectedFile) {
 					const fileName = selectedFile.split('/').pop() ?? '';
-					openEntry({ name: fileName, type: 'file', size: 0 });
+					await refreshBrowser();
+					openEntry(
+						entries.find((entry) => entry.name === fileName) ?? {
+							name: fileName,
+							type: 'file',
+							writable: currentWritable
+						}
+					);
 				} else {
 					refreshBrowser();
 				}
@@ -2530,6 +2613,43 @@
 						</button>
 					</Tooltip>
 				{/each}
+				{#if !showRaw && !fileSearchTarget && !showGitDiff}
+					<Dropdown align="end" sideOffset={4} closeOnSelect>
+						<Tooltip content={$i18n.t('Outline')}>
+							<button
+								type="button"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+								aria-label={$i18n.t('Outline')}
+							>
+								<Icon name="list" size={11} strokeWidth={1.4} />
+							</button>
+						</Tooltip>
+
+						<div slot="content">
+							<DropdownMenu
+								className="min-w-[9.375rem] max-w-72 max-h-80 overflow-y-auto z-[9999999]"
+							>
+								{#each viewerRoot.querySelectorAll('h1, h2, h3, h4, h5, h6') as heading}
+									<button
+										type="button"
+										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+										on:click={() => heading.scrollIntoView()}
+									>
+										<span
+											class="truncate"
+											style:padding-left={`${(Number(heading.tagName.slice(1)) - 1) * 12}px`}
+											>{heading.textContent}</span
+										>
+									</button>
+								{:else}
+									<div class="px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+										{$i18n.t('No results')}
+									</div>
+								{/each}
+							</DropdownMenu>
+						</div>
+					</Dropdown>
+				{/if}
 			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
@@ -3210,8 +3330,8 @@
 
 		{#if directoryMenu}
 			<div
+				use:positionDirectoryMenu={directoryMenu}
 				class="fixed z-[9999999]"
-				style="left: {directoryMenu.x}px; top: {directoryMenu.y}px;"
 				on:click|stopPropagation
 			>
 				<DropdownMenu className="min-w-[9.375rem]">

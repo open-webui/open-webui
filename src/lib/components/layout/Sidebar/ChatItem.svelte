@@ -49,7 +49,7 @@
 		settings,
 		user
 	} from '$lib/stores';
-	import { refreshSidebar } from '$lib/stores/chatList';
+	import { refreshSidebar, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
@@ -266,7 +266,7 @@
 				return null;
 			});
 			if (!res) return;
-			updateFolderChatLists({ id, title });
+			setChatTitle(id, title);
 
 			if (id === $chatId) {
 				_chatTitle.set(title);

@@ -9,20 +9,15 @@
 		mobile,
 		selectedFolder,
 		selectedTerminalId,
-		settings,
 		showSidebar,
 		showTabs,
-		temporaryChatEnabled,
+		temporaryChat,
 		user
 	} from '$lib/stores';
 
 	import { slide } from 'svelte/transition';
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 
-	import ShareChatModal from '../chat/ShareChatModal.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
-	import Menu from '$lib/components/layout/Navbar/Menu.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 
 	import PencilSquare from '../icons/PencilSquare.svelte';
@@ -42,11 +37,9 @@
 	const i18n: any = getContext('i18n');
 
 	export let initNewChat: Function;
-	export let readOnly: boolean = false;
+	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	export let liveParticipants: { id: string; name: string }[] = [];
-	export let shareEnabled: boolean = false;
 	export let scrollTop = 0;
-	export let scrollToTop: (() => void) | null = null;
 
 	export let chat: any;
 	export let history: any;
@@ -55,13 +48,12 @@
 	export let tabTitleEditor: Snippet | undefined = undefined;
 	export let tabActions: Snippet | undefined = undefined;
 	export let tabBarActions: Snippet | undefined = undefined;
-	export let renameHandler: () => void;
+	/** The chat menu, owned by Chat so main and side chats share it. */
+	export let chatMenu: Snippet | undefined = undefined;
 	$: tabActions = renderChatActions;
 	$: tabBarActions = renderTabBarActions;
 	export let onSaveTempChat: () => {};
-	export let archiveChatHandler: (id: string) => void;
 	export let deleteChatHandler: (id: string) => void;
-	export let moveChatHandler: (id: string, folderId: string) => void;
 
 	let closedBannerIds = [];
 
@@ -72,9 +64,6 @@
 			return [];
 		}
 	};
-
-	let showShareChatModal = false;
-	let showDownloadChatModal = false;
 </script>
 
 {#snippet renderTemporaryChatToggle()}
@@ -84,28 +73,10 @@
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 					id="temporary-chat-button"
-					on:click={async () => {
-						if (($settings?.temporaryChatByDefault ?? false) && $temporaryChatEnabled) {
-							// for proper initNewChat handling
-							await temporaryChatEnabled.set(null);
-						} else {
-							await temporaryChatEnabled.set(!$temporaryChatEnabled);
-						}
-
-						if ($page.url.pathname !== '/' && !$page.url.pathname.startsWith('/folders/')) {
-							await goto('/');
-						}
-
-						// add 'temporary-chat=true' to the URL
-						if ($temporaryChatEnabled) {
-							window.history.replaceState(window.history.state, '', '?temporary-chat=true');
-						} else {
-							window.history.replaceState(window.history.state, '', location.pathname);
-						}
-					}}
+					on:click={() => onTemporaryChange?.(!$temporaryChat)}
 					aria-label={$i18n.t(`Temporary Chat`)}
 				>
-					{#if $temporaryChatEnabled}
+					{#if $temporaryChat}
 						<ChatBubbleDottedChecked className="size-4" strokeWidth="1.5" />
 					{:else}
 						<ChatBubbleDotted className="size-4" strokeWidth="1.5" />
@@ -128,7 +99,7 @@
 {#snippet renderChatActions()}
 	{#if !tabbed}{@render renderTemporaryChatToggle()}{/if}
 	{#if $user?.role === 'user' ? ($user?.permissions?.chat?.temporary ?? true) && !($user?.permissions?.chat?.temporary_enforced ?? false) : true}
-		{#if chat?.id && $temporaryChatEnabled}
+		{#if chat?.id && $temporaryChat}
 			<Tooltip content={$i18n.t(`Save Chat`)}>
 				<button
 					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
@@ -144,7 +115,7 @@
 		{/if}
 	{/if}
 
-	{#if $mobile && !$temporaryChatEnabled && chat && chat.id}
+	{#if $mobile && !$temporaryChat && chat && chat.id}
 		<Tooltip content={$i18n.t('New Chat')}>
 			<button
 				class="flex size-6 {$showSidebar
@@ -166,38 +137,8 @@
 		</div>
 	{/if}
 
-	{#if shareEnabled && chat?.id && (scrollToTop || (!readOnly && !$temporaryChatEnabled) || $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true))}
-		<Menu
-			{chat}
-			{shareEnabled}
-			{readOnly}
-			{scrollToTop}
-			shareHandler={() => {
-				showShareChatModal = !showShareChatModal;
-			}}
-			{renameHandler}
-			archiveChatHandler={() => {
-				archiveChatHandler(chat.id);
-			}}
-			deleteChatHandler={() => {
-				deleteChatHandler(chat.id);
-			}}
-			{moveChatHandler}
-		>
-			<button
-				class="flex shrink-0 cursor-pointer items-center justify-center {tabbed
-					? 'size-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white'
-					: 'size-6 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
-				id="chat-context-menu-button"
-				aria-label={$i18n.t('Chat actions')}
-			>
-				<EllipsisHorizontal className={tabbed ? 'size-3' : 'size-4.5'} strokeWidth="1.5" />
-			</button>
-		</Menu>
-	{/if}
+	{@render chatMenu?.()}
 {/snippet}
-
-<ShareChatModal bind:show={showShareChatModal} chatId={$chatId} />
 
 <button
 	id="new-chat-button"
@@ -261,7 +202,7 @@
 								</h1>
 							{/if}
 
-							{#if !$temporaryChatEnabled && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
+							{#if !$temporaryChat && ($user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true))}
 								<button
 									id="delete-chat-button"
 									aria-label={$i18n.t('Delete')}
@@ -308,7 +249,7 @@
 		</div>
 	</div>
 
-	{#if !tabbed && $temporaryChatEnabled && isTemporaryChatId($chatId)}
+	{#if !tabbed && $temporaryChat && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
 			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
 		</div>

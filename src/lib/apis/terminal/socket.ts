@@ -50,6 +50,7 @@ export function openTerminalSocket(
 			JSON.stringify({
 				...resume,
 				type: 'auth',
+				...(target.context.userId ? { instance_user_id: target.context.userId } : {}),
 				...(target.context.modelId ? { model_id: target.context.modelId } : {}),
 				token: target.key.trim(),
 				chat_id: target.context.chatId ?? ''

@@ -10,6 +10,7 @@
 	import { getBackendConfig, getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
+	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
@@ -33,7 +34,7 @@
 		banners,
 		showSettings,
 		showChangelog,
-		temporaryChatEnabled,
+		temporaryChat,
 		terminalServers,
 		selectedTerminalId,
 		showSearch,
@@ -41,7 +42,8 @@
 		showTabs,
 		mobile,
 		chatId,
-		chats
+		chats,
+		folders
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -56,10 +58,12 @@
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
 	const i18n = getContext('i18n');
-	setContext<AppLayoutContext>('appLayout', {});
+	const appLayout = setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
-	$: routeHasTabs = ['/(app)', '/(app)/c/[id]'].includes($page.route.id ?? '');
+	$: routeHasTabs = ['/(app)', '/(app)/c/[id]', '/(app)/folders/[folderId]'].includes(
+		$page.route.id ?? ''
+	);
 	$: usePageTabs = !routeHasTabs && !!pageTabKey($page.url);
 
 	let version;
@@ -126,12 +130,23 @@
 		if (!localStorage.token) return;
 		try {
 			user.set(await getSessionUser(localStorage.token));
+			if (
+				$user?.role !== 'admin' &&
+				$user?.permissions?.chat?.temporary &&
+				$user?.permissions?.chat?.temporary_enforced &&
+				!$chatId
+			) {
+				temporaryChat.set(true);
+			}
 			const results = await Promise.allSettled([
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
 				refreshTerminalServers(),
-				getSkills(localStorage.token).then((value) => skills.set(value))
+				getSkills(localStorage.token).then((value) => skills.set(value)),
+				getFolders(localStorage.token)
+					.catch(() => [])
+					.then((value) => folders.set(value))
 			]);
 			for (const result of results) {
 				if (result.status === 'rejected') console.error('Unable to refresh access', result.reason);
@@ -200,12 +215,13 @@
 		await goto(`/auth?redirect=${encodeURIComponent(currentUrl)}`);
 	};
 
-	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Side chats sit
+	// Chat shortcuts act on the chat that has focus, otherwise the main chat. Chat tabs sit
 	// inside the main chat, so an element belongs to the nearest [data-chat] around it.
 	const chatElements = <T extends HTMLElement = HTMLElement>(selector: string): T[] => {
 		const chat =
 			document.activeElement?.closest('[data-chat]') ??
 			document.querySelector('[data-chat="main"]');
+		if (chat?.querySelector('[data-main-chat-pane]')?.classList.contains('hidden')) return [];
 		return [...document.querySelectorAll<T>(selector)].filter(
 			(el) => !chat || el.closest('[data-chat]') === chat
 		);
@@ -311,7 +327,7 @@
 				} else if (shortcut === Shortcut.DELETE_CHAT) {
 					console.log('Shortcut triggered: DELETE_CHAT');
 					event.preventDefault();
-					document.getElementById('delete-chat-button')?.click();
+					chatElements('#delete-chat-button')[0]?.click();
 				} else if (shortcut === Shortcut.OPEN_SETTINGS) {
 					console.log('Shortcut triggered: OPEN_SETTINGS');
 					event.preventDefault();
@@ -323,22 +339,16 @@
 				} else if (shortcut === Shortcut.OPEN_MODEL_SELECTOR) {
 					console.log('Shortcut triggered: OPEN_MODEL_SELECTOR');
 					event.preventDefault();
-					document.getElementById('model-selector-model-button')?.click();
+					chatElements('#model-selector-model-button')[0]?.click();
 				} else if (shortcut === Shortcut.NEW_TEMPORARY_CHAT) {
 					console.log('Shortcut triggered: NEW_TEMPORARY_CHAT');
 					event.preventDefault();
 					if (!canUseTemporaryChats({ user: $user, config: null })) {
 						return;
 					}
-					if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-						temporaryChatEnabled.set(true);
-					} else {
-						temporaryChatEnabled.set(!$temporaryChatEnabled);
-					}
+					const temporary = !$temporaryChat;
 					await goto('/');
-					setTimeout(() => {
-						document.getElementById('new-chat-button')?.click();
-					}, 0);
+					setTimeout(() => appLayout.initNewChat?.({ temporary }), 0);
 				} else if (shortcut === Shortcut.GENERATE_MESSAGE_PAIR) {
 					console.log('Shortcut triggered: GENERATE_MESSAGE_PAIR');
 					event.preventDefault();
@@ -375,16 +385,6 @@
 
 		if ($user?.role === 'admin' && ($settings?.showChangelog ?? true)) {
 			showChangelog.set($settings?.version !== $config.version);
-		}
-
-		if ($user?.role === 'admin' || ($user?.permissions?.chat?.temporary ?? true)) {
-			if ($page.url.searchParams.get('temporary-chat') === 'true') {
-				temporaryChatEnabled.set(true);
-			}
-
-			if ($user?.role !== 'admin' && $user?.permissions?.chat?.temporary_enforced) {
-				temporaryChatEnabled.set(true);
-			}
 		}
 
 		// Check for version updates
@@ -485,9 +485,12 @@
 				{#if loaded}
 					<main class="contents">
 						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
-						{#if usePageTabs}
-							<Chat initialPage={$page.url.pathname + $page.url.search + $page.url.hash} />
-						{:else}<slot />{/if}
+						{#if routeHasTabs || usePageTabs}
+							<Chat
+								initialPage={usePageTabs ? $page.url.pathname + $page.url.search + $page.url.hash : ''}
+							/>
+						{/if}
+						{#if !usePageTabs}<slot />{/if}
 					</main>
 				{:else}
 					<div

@@ -109,7 +109,7 @@
 </DeleteConfirmDialog>
 
 <ChatMenu
-	readonly={!chat.can_edit_tags}
+	readonly={chat.user_id !== $user?.id}
 	chatId={chat.id}
 	cloneChatHandler={clone}
 	shareHandler={() => (showShare = true)}

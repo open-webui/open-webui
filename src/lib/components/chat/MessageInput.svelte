@@ -35,9 +35,8 @@
 		type Model,
 		mobile,
 		settings,
-		models as _models,
 		config,
-		showCallOverlay,
+		voiceCall,
 		tools,
 		skills,
 		terminalServers,
@@ -46,8 +45,7 @@
 		showSettings,
 		showFileNavDir,
 		TTSWorker,
-		temporaryChatEnabled,
-		sideChatRequest,
+		chatTabRequest,
 		visibleControls
 	} from '$lib/stores';
 
@@ -72,7 +70,12 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import { filesystemFile, getCwd, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import {
+		filesystemFile,
+		getCwd,
+		templatesApi,
+		uploadNewFileToTerminal
+	} from '$lib/apis/terminal';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -131,8 +134,9 @@
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
 
-	const models = getContext<typeof _models>('chatModels') ?? _models;
+	const { models, temporary, getCurrentDirectory } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
@@ -166,9 +170,7 @@
 	export let chatId = '';
 	export let inputId = 'chat-input';
 	export let messagesContainerId = 'messages-container';
-	export let temporary: boolean | undefined = undefined;
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
-	$: isTemporary = temporary ?? $temporaryChatEnabled;
 	export let terminalContext: TerminalContext | null = null;
 	export let terminalSelectionEnabled = true;
 	export let contextUsage = null;
@@ -226,7 +228,7 @@
 		$config?.features?.enable_comments &&
 		$_user &&
 		isSavedChatId(chatId) &&
-		!isTemporary
+		!$temporary
 	);
 	export const openComments = () => {
 		if (canComments) showTabs.set('comments');
@@ -529,7 +531,7 @@
 
 	export const setText = (text: string = '') => {
 		chatInputElement?.setText(text);
-		if (!$showCallOverlay) {
+		if (!$voiceCall) {
 			focus();
 		}
 	};
@@ -660,28 +662,8 @@
 		chatInputElement?.replaceCommandWithText(text);
 	};
 
-	const temporaryHandler = async () => {
-		if (!canToggleTemporary) return;
-		if (onTemporaryChange) {
-			onTemporaryChange(!isTemporary);
-			return;
-		}
-
-		if (($settings?.temporaryChatByDefault ?? false) && isTemporary) {
-			await temporaryChatEnabled.set(null);
-		} else {
-			await temporaryChatEnabled.set(!isTemporary);
-		}
-
-		if (location.pathname !== '/' && !location.pathname.startsWith('/folders/')) {
-			await goto('/');
-		}
-
-		if (isTemporary) {
-			window.history.replaceState(window.history.state, '', '?temporary-chat=true');
-		} else {
-			window.history.replaceState(window.history.state, '', location.pathname);
-		}
+	const temporaryHandler = () => {
+		if (canToggleTemporary) onTemporaryChange?.(!$temporary);
 	};
 
 	const createSkillHandler = async () => {
@@ -930,9 +912,19 @@
 		modelCapabilitiesById
 	);
 
+	// With no terminal yet, the menu still shows when the user may create one: it holds New terminal.
+	let canCreateTerminal = false;
+	$: if (
+		$config?.features?.enable_tool_servers &&
+		$terminalServers &&
+		!$terminalServers.some((t) => t.id)
+	)
+		templatesApi('/connections')
+			.then((rows) => (canCreateTerminal = rows.length > 0))
+			.catch(() => (canCreateTerminal = false));
 	$: showTerminalSelector =
 		$config?.features?.enable_tool_servers &&
-		($terminalServers ?? []).some((t) => t.id);
+		(($terminalServers ?? []).some((t) => t.id) || canCreateTerminal);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(
@@ -1077,6 +1069,7 @@
 				throw new Error('A saved chat is required for this terminal');
 
 			const cwd =
+				getCurrentDirectory?.(fileItem.terminal_id) ||
 				(terminalContext?.terminalId === fileItem.terminal_id
 					? terminalContext?.currentDirectory
 					: null) || (await getCwd(terminal))?.cwd;
@@ -1175,7 +1168,7 @@
 			return;
 		}
 
-		if (!isTemporary) {
+		if (!$temporary) {
 			try {
 				// If the file is an audio file, provide the language for STT.
 				let metadata = null;
@@ -1351,7 +1344,7 @@
 					// Compress the image if settings or config require it
 					imageUrl = await compressImageHandler(imageUrl, $settings, $config);
 
-					if (isTemporary) {
+					if ($temporary) {
 						files = [
 							...files,
 							{
@@ -1740,21 +1733,21 @@
 					canSide: () => canSide,
 					canFork: () =>
 						!!history?.currentId &&
-						!isTemporary &&
+						!$temporary &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
 					forkDisabled: () => isActive,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
 					canCreateSkill: () => canCreateSkill,
-					temporaryEnabled: () => isTemporary === true,
+					temporaryEnabled: () => $temporary === true,
 					contextUsage: () => statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onComments: openComments,
 					onSide: () => {
 						if (!canSide) return;
-						sideChatRequest.set({ parentId: chatId, prompt: '' });
-						showTabs.set('side');
+						chatTabRequest.set({ parentChatId: chatId, prompt: '' });
+						showTabs.set('chat');
 					},
 					onFork: forkHandler,
 					onModel: () => modelSelector?.open(),
@@ -1882,7 +1875,7 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			if (!$showCallOverlay) {
+			if (!$voiceCall) {
 				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}
@@ -1988,7 +1981,7 @@
 	<div class="w-full">
 		<div class=" mx-auto inset-x-0 bg-transparent flex justify-center">
 			<div
-				class="flex flex-col px-3 {$settings?.widescreenMode ?? null
+				class="flex flex-col px-3 {($settings?.widescreenMode ?? null)
 					? 'max-w-full'
 					: 'max-w-[58rem]'} w-full"
 			>
@@ -2041,7 +2034,7 @@
 
 		<div class="bg-transparent">
 			<div
-				class="{$settings?.widescreenMode ?? null
+				class="{($settings?.widescreenMode ?? null)
 					? 'max-w-full'
 					: 'max-w-[58rem]'} px-2 mx-auto inset-x-0"
 			>
@@ -2235,10 +2228,9 @@
 						<div
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
 							data-composer-id={inputId}
-							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {isTemporary
+							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
 								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
-								: ' border-gray-200 dark:border-gray-850'} {($settings?.highContrastMode ??
-							false)
+								: ' border-gray-200 dark:border-gray-850'} {($settings?.highContrastMode ?? false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
@@ -3059,7 +3051,7 @@
 														type="button"
 														on:click={async () => {
 															if (callActive) {
-																showCallOverlay.set(true);
+																voiceCall.set(true);
 																showTabs.set('voice');
 																return;
 															}
@@ -3070,7 +3062,7 @@
 															}
 
 															if ($config?.audio?.realtime?.enabled) {
-																showCallOverlay.set(true);
+																voiceCall.set(true);
 																showTabs.set(true);
 																return;
 															}
@@ -3102,7 +3094,7 @@
 																	}
 																}
 
-																showCallOverlay.set(true);
+																voiceCall.set(true);
 																showTabs.set(true);
 															} catch (err) {
 																// If the user denies the permission or an error occurs, show an error message

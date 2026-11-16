@@ -16,7 +16,7 @@
 	const i18n = getContext<any>('i18n');
 
 	export let label = '';
-	/** Reads this chat's machine status when the menu opens; enables Restart, Stop, and Start. */
+	/** Reads this chat's instance status when the menu opens; enables Restart, Stop, and Start. */
 	export let loadStatus: (() => Promise<string | null>) | null = null;
 	export let onRestart: (() => void) | null = null;
 	export let onStop: (() => void) | null = null;

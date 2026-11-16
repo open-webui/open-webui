@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 import logging
 import re
+from dataclasses import dataclass
+from itertools import takewhile
 from typing import Any
 
 from fastapi.responses import JSONResponse
@@ -15,6 +17,7 @@ from open_webui.utils.misc import (
     get_content_from_message,
     get_last_user_message,
     get_message_list,
+    is_empty_reply,
 )
 from open_webui.utils.payload import apply_params_to_form_data
 from open_webui.utils.task import (
@@ -48,94 +51,75 @@ Summarize the conversation history that will be compacted out of the active chat
 {{RECENT_MESSAGES}}"""
 
 
-async def compact_messages_for_request(
-    request,
-    form_data: dict | None,
-    user,
-    messages: list[dict],
-    metadata: dict,
-    model_id: str,
-    models: dict,
-    system_prompt: str = '',
-    bypass_system_prompt: bool = False,
-) -> tuple[list[dict], str | None, list[dict]]:
+@dataclass(frozen=True)
+class MessageSplit:
+    """A request's messages divided at the compaction boundary."""
+
+    system_messages: list[dict]
+    summary: str | None
+    compacted: list[dict]
+    messages: list[dict]
+
+
+async def split_messages(messages: list[dict], metadata: dict, system_prompt: str = '') -> MessageSplit:
+    """Divide messages at the compaction boundary; under the threshold nothing is compacted."""
     config = await _load_config()
     if not config['enable']:
-        return messages, None, []
+        return MessageSplit([], None, [], messages)
 
     system_messages = [messages[0]] if messages and messages[0].get('role') == 'system' else []
     messages = messages[1:] if system_messages else messages
 
-    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
+    messages, summary = _apply_latest_summary_checkpoint(messages)
     system_prompt = system_prompt or (get_content_from_message(system_messages[0]) if system_messages else '')
     token_threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], metadata)
-    if not _exceeds_token_threshold(messages, system_prompt, previous_summary, token_threshold):
-        return [*system_messages, *messages], previous_summary, []
+    if token_threshold <= 0 or _estimate_request_tokens(messages, system_prompt, summary) <= token_threshold:
+        return MessageSplit(system_messages, summary, [], messages)
 
     # A tool loop's messages carry the turn's summary only in the system message.
-    previous_summary = previous_summary or metadata.get('context_summary')
+    summary = summary or metadata.get('context_summary')
     boundary = _find_compaction_boundary(messages, config['retention_percentage'])
-    compacted_messages = messages[:boundary]
-    recent_messages = messages[boundary:]
-    if not compacted_messages or not recent_messages:
-        return [*system_messages, *messages], previous_summary, []
+    if not messages[:boundary] or not messages[boundary:]:
+        return MessageSplit(system_messages, summary, [], messages)
+    return MessageSplit(system_messages, summary, messages[:boundary], messages[boundary:])
 
-    event_emitter = None
-    if metadata.get('chat_id') and metadata.get('message_id'):
-        from open_webui.socket.main import get_event_emitter
 
-        event_emitter = await get_event_emitter(metadata)
+async def compact_messages(
+    request,
+    form_data: dict | None,
+    user,
+    split: MessageSplit,
+    metadata: dict,
+    model_id: str,
+    models: dict,
+    bypass_system_prompt: bool = False,
+) -> tuple[list[dict], str | None, list[dict]]:
+    """Fold the split's compacted messages into its summary."""
+    if not split.compacted:
+        return [*split.system_messages, *split.messages], split.summary, []
 
-    if event_emitter:
-        await event_emitter(
-            {
-                'type': 'context_compaction',
-                'data': {
-                    'action': 'context_compaction',
-                    'description': 'Compacting context',
-                    'done': False,
-                },
-            }
-        )
-
-    try:
-        summary = await _generate_summary(
-            request,
-            form_data,
-            user,
-            model_id,
-            models,
-            compacted_messages,
-            recent_messages,
-            previous_summary,
-            config['prompt_template'],
-            bypass_system_prompt,
-        )
-    except Exception:
-        if event_emitter:
-            await event_emitter(
-                {
-                    'type': 'context_compaction',
-                    'data': {
-                        'action': 'context_compaction',
-                        'description': 'Context compaction failed',
-                        'done': True,
-                        'error': True,
-                    },
-                }
-            )
-        raise
+    new_summary = await _generate_summary(
+        request,
+        form_data,
+        user,
+        model_id,
+        models,
+        split.compacted,
+        split.messages,
+        split.summary,
+        (await _load_config())['prompt_template'],
+        bypass_system_prompt,
+    )
 
     chat_id = metadata.get('chat_id')
-    checkpoint_message_id = (
-        recent_messages[0].get('id') or metadata.get('user_message_id') or metadata.get('message_id')
-    )
+    checkpoint = split.messages[0]
+    checkpoint_message_id = checkpoint.get('id') or metadata.get('user_message_id') or metadata.get('message_id')
     # Only whole-turn user boundaries correspond to persisted chat checkpoints.
-    if recent_messages[0].get('role') == 'user' and is_saved_chat_id(chat_id) and checkpoint_message_id:
+    if checkpoint.get('role') == 'user' and is_saved_chat_id(chat_id) and checkpoint_message_id:
         await Chats.upsert_message_to_chat_by_id_and_message_id(
             chat_id,
             checkpoint_message_id,
-            {'contextSummary': summary},
+            {'contextSummary': new_summary},
             touch=False,
         )
 
@@ -144,28 +128,23 @@ async def compact_messages_for_request(
         chat_id,
         checkpoint_message_id,
         metadata.get('message_id'),
-        len(compacted_messages),
-        len(recent_messages),
-        len(summary),
+        len(split.compacted),
+        len(split.messages),
+        len(new_summary),
     )
 
-    if event_emitter:
+    if chat_id and metadata.get('message_id') and checkpoint.get('role') == 'user':
+        from open_webui.socket.main import get_event_emitter
+
+        event_emitter = await get_event_emitter(metadata)
         await event_emitter(
             {
                 'type': 'context_compaction',
-                'data': {
-                    'action': 'context_compaction',
-                    'description': 'Context compacted',
-                    'done': True,
-                    'checkpoint_message_id': (
-                        recent_messages[0].get('id') if recent_messages[0].get('role') == 'user' else None
-                    ),
-                    'context_summary': summary,
-                },
+                'data': {'checkpoint_message_id': checkpoint.get('id'), 'context_summary': new_summary},
             }
         )
 
-    return [*system_messages, *recent_messages], summary, compacted_messages
+    return [*split.system_messages, *split.messages], new_summary, split.compacted
 
 
 async def apply_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], str | None]:
@@ -198,33 +177,38 @@ async def compact_chat_branch(request, user, chat: Any, model_id: str, models: d
     if not messages_map:
         messages_map = history.get('messages') or {}
 
-    messages, previous_summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
-    compacted_messages = messages[:-1]
-    recent_messages = messages[-1:]
-    if not compacted_messages or not recent_messages:
+    # A summary on an empty reply would be left out of the next request along with the reply.
+    while current_id and is_empty_reply(messages_map.get(current_id) or {}):
+        current_id = messages_map[current_id].get('parentId')
+    if not current_id:
+        return {'ok': True, 'compacted': False, 'reason': 'empty'}
+
+    history, summary = _apply_latest_summary_checkpoint(get_message_list(messages_map, current_id))
+    compacted, messages = history[:-1], history[-1:]
+    if not compacted:
         return {'ok': True, 'compacted': False, 'reason': 'too_short'}
 
-    summary = await _generate_summary(
+    new_summary = await _generate_summary(
         request,
         None,
         user,
         model_id,
         models,
-        compacted_messages,
-        recent_messages,
-        previous_summary,
+        compacted,
+        messages,
+        summary,
         config['prompt_template'],
     )
     await Chats.upsert_message_to_chat_by_id_and_message_id(
-        chat.id, current_id, {'contextSummary': summary}, touch=False
+        chat.id, current_id, {'contextSummary': new_summary}, touch=False
     )
 
     return {
         'ok': True,
         'compacted': True,
-        'dropped_messages': len(compacted_messages),
-        'kept_messages': len(recent_messages),
-        'summary_chars': len(summary),
+        'dropped_messages': len(compacted),
+        'kept_messages': len(messages),
+        'summary_chars': len(new_summary),
     }
 
 
@@ -308,16 +292,8 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     if model_id:
         params['model'] = model_id
     threshold = _resolve_token_threshold(config['token_threshold'], config['token_cap'], {'params': params})
-    messages, previous_summary = _apply_latest_summary_checkpoint(messages)
-
-    for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-            tokens += _estimate_messages_tokens(messages[idx + 1 :])
-            return _build_context_usage(tokens, threshold)
-
-    tokens = _estimate_tokens(previous_summary or '') + _estimate_messages_tokens(messages)
-    return _build_context_usage(tokens, threshold)
+    messages, summary = _apply_latest_summary_checkpoint(messages)
+    return _build_context_usage(_estimate_request_tokens(messages, '', summary), threshold)
 
 
 def _build_context_usage(tokens: int, threshold: int) -> dict:
@@ -347,7 +323,7 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
             (
                 item
                 for item in reversed(message.get('output') or [])
-                if item.get('type') == 'open_webui:context_compaction'
+                if item.get('type') == 'open_webui:context_compaction' and item.get('summary')
             ),
             None,
         )
@@ -382,17 +358,22 @@ def _apply_latest_summary_checkpoint(messages: list[dict]) -> tuple[list[dict], 
     return messages, None
 
 
-def _exceeds_token_threshold(messages: list[dict], system_prompt: str, summary: str | None, threshold: int) -> bool:
-    if threshold <= 0:
-        return False
-
+def _estimate_request_tokens(messages: list[dict], system_prompt: str, summary: str | None) -> int:
+    """Tokens a request with these messages takes, counted from the latest reply that reports its usage."""
     for idx in range(len(messages) - 1, -1, -1):
-        usage = messages[idx].get('usage') or (messages[idx].get('info') or {}).get('usage')
-        if isinstance(usage, dict) and (tokens := _usage_token_count(usage)):
-            return tokens + _estimate_messages_tokens(messages[idx + 1 :]) > threshold
+        if tokens := _reported_tokens(messages[idx]):
+            return tokens + _estimate_messages_tokens(messages[idx + 1 :])
+    return _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
 
-    estimated = _estimate_tokens(system_prompt) + _estimate_tokens(summary or '') + _estimate_messages_tokens(messages)
-    return estimated > threshold
+
+def _reported_tokens(message: dict) -> int:
+    """Tokens the provider reported for this reply, or 0 when it reported none."""
+    usage = message.get('usage') or (message.get('info') or {}).get('usage')
+    if not isinstance(usage, dict) or not (tokens := _usage_token_count(usage)):
+        return 0
+    # Tool results that end the reply came back after the report, e.g. ones too long for the model to answer.
+    outputs = takewhile(lambda item: item.get('type') == 'function_call_output', reversed(message.get('output') or []))
+    return tokens + sum(_estimate_tokens(item) for item in outputs)
 
 
 def _find_compaction_boundary(messages: list[dict], retention_percentage: int = 40) -> int:
@@ -419,9 +400,9 @@ async def _generate_summary(
     user,
     model_id: str,
     models: dict,
-    compacted_messages: list[dict],
-    recent_messages: list[dict],
-    previous_summary: str | None,
+    compacted: list[dict],
+    messages: list[dict],
+    summary: str | None,
     summary_prompt_template: str,
     bypass_system_prompt: bool = False,
 ) -> str:
@@ -440,35 +421,31 @@ async def _generate_summary(
         raise ValueError('No available model for context compaction')
 
     summary_prompt_template = summary_prompt_template.strip() or DEFAULT_CONTEXT_COMPACTION_PROMPT
-    recent_message_prefix = _message_prefix(recent_messages[0])
+    boundary_prefix = _message_prefix(messages[0])
     has_unique_prefix = (
-        recent_message_prefix
-        and sum(
-            _message_prefix(message) == recent_message_prefix for message in [*compacted_messages, *recent_messages]
-        )
-        == 1
+        boundary_prefix and sum(_message_prefix(message) == boundary_prefix for message in [*compacted, *messages]) == 1
     )
     # The text-only prompt formatter otherwise omits tool names and arguments.
-    compacted_messages, recent_messages = list(compacted_messages), list(recent_messages)
-    for messages in (compacted_messages, recent_messages):
-        for idx, message in enumerate(messages):
+    compacted, messages = list(compacted), list(messages)
+    for group in (compacted, messages):
+        for idx, message in enumerate(group):
             # Saved replies keep their tool calls as output items.
             tool_calls = message.get('tool_calls') or [
                 call for m in convert_output_to_messages(message.get('output')) for call in m.get('tool_calls', [])
             ]
             if tool_calls:
-                messages[idx] = {
+                group[idx] = {
                     **message,
                     'content': f'{get_content_from_message(message) or ""}\n[TOOL CALLS] {JSONCodec.dumps(tool_calls)}',
                 }
 
     async def render_prompt(template: str) -> str:
-        all_messages = [*compacted_messages, *recent_messages]
+        all_messages = [*compacted, *messages]
         prompt = replace_prompt_variable(template, get_last_user_message(all_messages) or '')
         prompt = replace_messages_variable(prompt, all_messages)
-        prompt = replace_messages_variable(prompt, compacted_messages, 'COMPACTED_MESSAGES')
-        prompt = replace_messages_variable(prompt, recent_messages, 'RECENT_MESSAGES')
-        prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': previous_summary or ''})
+        prompt = replace_messages_variable(prompt, compacted, 'COMPACTED_MESSAGES')
+        prompt = replace_messages_variable(prompt, messages, 'RECENT_MESSAGES')
+        prompt = prompt_variables_template(prompt, {'{{PREVIOUS_SUMMARY}}': summary or ''})
         return await prompt_template(prompt, user)
 
     task_model_params = task_config.get('task.model.params') or {}
@@ -487,7 +464,7 @@ async def _generate_summary(
         form_data
         and task_model_id == model_id
         and has_unique_prefix
-        and sum(_message_prefix(message) == recent_message_prefix for message in form_data['messages']) == 1
+        and sum(_message_prefix(message) == boundary_prefix for message in form_data['messages']) == 1
     ):
         prompt = await render_prompt(
             prompt_variables_template(
@@ -495,10 +472,10 @@ async def _generate_summary(
                 {
                     '{{COMPACTED_MESSAGES}}': (
                         'Every non-system message above before (excluding) the message beginning with '
-                        f'"{recent_message_prefix}".'
+                        f'"{boundary_prefix}".'
                     ),
                     '{{RECENT_MESSAGES}}': (
-                        f'The message above beginning with "{recent_message_prefix}" and every message after it.'
+                        f'The message above beginning with "{boundary_prefix}" and every message after it.'
                     ),
                 },
             )
@@ -520,9 +497,9 @@ async def _generate_summary(
             )
         except Exception:
             response = None
-        summary = _response_text(response).strip()
-        if summary:
-            return summary
+        text = _response_text(response).strip()
+        if text:
+            return text
 
     prompt = await render_prompt(summary_prompt_template)
     payload = {
@@ -534,12 +511,12 @@ async def _generate_summary(
 
     payload = apply_params_to_form_data(payload, models[task_model_id], task_model_params)
     response = await generate_chat_completion(request, form_data=payload, user=user)
-    summary = _response_text(response).strip()
-    if summary:
-        return summary
+    text = _response_text(response).strip()
+    if text:
+        return text
 
-    parts = [previous_summary] if previous_summary else []
-    for message in compacted_messages:
+    parts = [summary] if summary else []
+    for message in compacted:
         content = get_content_from_message(message)
         if content:
             parts.append(f'- {message.get("role", "unknown")}: {content[:500]}')

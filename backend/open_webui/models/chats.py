@@ -2880,8 +2880,8 @@ class ChatTable:
                 for key, value in (meta.get('folder_status_durations') or {}).items()
                 if key in valid_status_ids and (seconds := _as_seconds(value))
             }
-            # Tags are the owner's own records; status is folder workflow, so folder editors may set it.
-            chat['can_edit_tags'] = chat['user_id'] == user_id
+            # Folder editors may set tags (kept in the owner's tag records) and status on any chat here.
+            chat['can_edit_tags'] = folder_write_access or chat['user_id'] == user_id
             chat['automation_id'] = meta.get('automation_id')
             chat['can_edit_status'] = folder_write_access or chat['user_id'] == user_id
             # Only explain matches the title doesn't already show.

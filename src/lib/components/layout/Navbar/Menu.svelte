@@ -10,7 +10,7 @@
 
 	import {
 		mobile,
-		temporaryChatEnabled,
+		temporaryChat,
 		theme,
 		user,
 		settings,
@@ -53,6 +53,9 @@
 	export let chat;
 	export let onClose: Function = () => {};
 	export let scrollToTop: (() => void) | null = null;
+	/** Overrides the global temporary chat state for chats with their own (side chats). */
+	export let temporary: boolean | null = null;
+	$: isTemporary = temporary ?? $temporaryChat;
 
 	let showFullMessages = false;
 	let show = false;
@@ -284,7 +287,7 @@
 		if (chat.id) {
 			let chatObj = null;
 
-			if ((chat?.id ?? '').startsWith('local') || $temporaryChatEnabled) {
+			if ((chat?.id ?? '').startsWith('local') || isTemporary) {
 				chatObj = chat;
 			} else {
 				chatObj = await getChatById(localStorage.token, chat.id);
@@ -393,7 +396,7 @@
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 			{/if}
 
-			{#if !readOnly && !$temporaryChatEnabled && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
+			{#if !readOnly && !isTemporary && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -451,7 +454,7 @@
 				</DropdownSub>
 			{/if}
 
-			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !$temporaryChatEnabled && chat?.id}
+			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !isTemporary && chat?.id}
 				<button
 					draggable="false"
 					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
@@ -484,7 +487,7 @@
 				</button>
 			{/if}
 
-			{#if !readOnly && !$temporaryChatEnabled && chat?.id}
+			{#if !readOnly && !isTemporary && chat?.id}
 				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
 
 				{#if $folders.length > 0}

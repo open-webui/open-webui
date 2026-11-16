@@ -3,8 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { chatId, chatTitle } from '$lib/stores';
 	import { updateChatById } from '$lib/apis/chats';
-	import { refreshChatList } from '$lib/stores/chatList';
-	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
 	import {
@@ -42,6 +41,7 @@
 	export let onMore: (id: string) => Promise<void>;
 	export let onMove: (chat: WorkspaceChat, status: FolderStatus) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
+	export let ownsFolder = false;
 
 	let collapsed: Record<string, boolean> = {};
 	let menuOpen: Record<string, boolean> = {};
@@ -64,7 +64,7 @@
 		if (!title || title === chat.title) return;
 		try {
 			await updateChatById(localStorage.token, chat.id, { title });
-			updateFolderChatLists({ id: chat.id, title });
+			setChatTitle(chat.id, title);
 			if (chat.id === $chatId) chatTitle.set(title);
 			await Promise.all([
 				refreshChatList(localStorage.token, { refreshPinned: true }),
@@ -276,7 +276,9 @@
 							</div>
 							<!-- The menu takes the date's place on hover, so nothing shifts. -->
 							<div
-								class="date-slot relative flex w-14 shrink-0 items-center justify-end"
+								class="{ownsFolder || chat.can_edit_tags
+									? 'date-slot'
+									: ''} relative flex w-14 shrink-0 items-center justify-end"
 								class:open={menuOpen[chat.id]}
 							>
 								<Tooltip
@@ -291,14 +293,16 @@
 										>{formatShortDate(chat.updated_at, $i18n.language)}</time
 									>
 								</Tooltip>
-								<div class="chat-menu absolute inset-y-0 right-0 flex items-center">
-									<FolderChatMenu
-										{chat}
-										bind:open={menuOpen[chat.id]}
-										onRename={() => startRename(chat)}
-										onChange={onTagsChange}
-									/>
-								</div>
+								{#if ownsFolder || chat.can_edit_tags}
+									<div class="chat-menu absolute inset-y-0 right-0 flex items-center">
+										<FolderChatMenu
+											{chat}
+											bind:open={menuOpen[chat.id]}
+											onRename={() => startRename(chat)}
+											onChange={onTagsChange}
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 					</li>

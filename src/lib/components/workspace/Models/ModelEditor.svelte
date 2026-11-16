@@ -124,7 +124,7 @@
 	};
 	let cancelDiscard: (() => void) | null = null;
 	onTabLeave(() => {
-		if (readOnly || !dirty) return true;
+		if (readOnly || !dirty || allowNavigation) return true;
 		return new Promise<boolean>((resolve) => {
 			cancelDiscard = () => resolve(false);
 			discardThen(() => resolve(true));

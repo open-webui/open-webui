@@ -12,13 +12,7 @@
 
 	import { updateFolderById } from '$lib/apis/folders';
 
-	import {
-		config,
-		user,
-		models as _models,
-		temporaryChatEnabled,
-		selectedFolder
-	} from '$lib/stores';
+	import { config, user, selectedFolder } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,
@@ -33,6 +27,9 @@
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
 	import FolderPlaceholder from './Placeholder/FolderPlaceholder.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models: _models, temporary } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 
@@ -187,7 +184,7 @@
 		: 'm-auto max-w-[58rem] px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
 >
 	<!-- In a folder, temporary mode shows on the composer alone. -->
-	{#if $temporaryChatEnabled && !$selectedFolder}
+	{#if $temporary && !$selectedFolder}
 		<Tooltip
 			content={$i18n.t("This chat won't appear in history and your messages will not be saved.")}
 			className="w-full flex justify-center mb-0.5"
@@ -202,7 +199,9 @@
 	{#if $selectedFolder}
 		<div
 			class="relative min-h-0 w-full flex-1"
-			style="--folder-composer-space: {folderReadOnly || folderSection !== 'chats' ? 0 : composerHeight}px"
+			style="--folder-composer-space: {folderReadOnly || folderSection !== 'chats'
+				? 0
+				: composerHeight}px"
 		>
 			<FolderPlaceholder
 				folder={$selectedFolder}
