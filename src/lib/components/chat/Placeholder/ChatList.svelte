@@ -134,9 +134,9 @@
 	{#each groups as group (group.id)}
 		{@const chats = group.page?.chats ?? []}
 		{#if group.label}
-			<!-- An opaque strip behind the header hides rows above it and behind its rounded corners. -->
-			<div class="sticky top-0 z-[1] mt-1 bg-white pt-0.5 first:mt-0 dark:bg-gray-900">
-				<div class="group-header flex h-8 items-center gap-2 rounded-xl pl-2 pr-3">
+			<!-- The header itself is frosted, so rows scrolling under it blur and a chat background image still shows around it. -->
+			<div class="sticky top-0 z-[1] mt-1 pt-0.5 first:mt-0">
+				<div class="group-header flex h-8 items-center gap-2 rounded-xl pl-2 pr-3 backdrop-blur-md">
 					<button
 						type="button"
 						class="flex size-5 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
@@ -334,12 +334,12 @@
 </div>
 
 <style>
-	/* A soft, opaque band: the old tint mixed into the page background, so rows never show through. */
+	/* A translucent tint, so the frosted header picks up the page background. */
 	.group-header {
-		background: color-mix(in oklab, var(--color-gray-50) 60%, var(--color-white));
+		background: color-mix(in oklab, var(--color-gray-50) 80%, transparent);
 	}
 	:global(.dark) .group-header {
-		background: color-mix(in oklab, var(--color-gray-850) 30%, var(--color-gray-900));
+		background: color-mix(in oklab, var(--color-gray-850) 60%, transparent);
 	}
 
 	/* The menu replaces the date on hover, focus, or while open; touch shows the menu. */

@@ -47,6 +47,7 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.models.access_grants import AccessGrants
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
@@ -112,6 +113,7 @@ from open_webui.utils.misc import (
     extract_urls,
     get_content_from_message,
     get_last_assistant_message,
+    get_last_tool_result,
     get_last_user_message,
     get_last_user_message_item,
     get_message_list,
@@ -2150,6 +2152,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     )
     event_emitter = await get_event_emitter(metadata)
     initial_output = []
+    # What the model is told is available, by the hidden tool that reports it; added after compaction, and only
+    # when the history the model sees does not already end with the same manifest.
+    manifests: dict[str, str] = {}
 
     async def emit_initial_output():
         await event_emitter({'type': 'chat:completion', 'data': {'output': initial_output}})
@@ -2624,11 +2629,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
         if skill_tools_enabled and skill_manifest:
             if not metadata.get('assistant_message_id'):
-                initial_output.extend(
-                    hidden_tool_result(
-                        'list_available_skills', f'<available_skills>\n{skill_manifest}</available_skills>'
-                    )
-                )
+                manifests['list_available_skills'] = f'<available_skills>\n{skill_manifest}</available_skills>'
         elif skill_manifest:
             form_data['messages'] = add_or_update_system_message(
                 f'<available_skills>\n{skill_manifest}</available_skills>',
@@ -2832,11 +2833,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     knowledge_tags.append(f'<knowledge {attrs}/>')
 
                 if knowledge_tags and not metadata.get('assistant_message_id'):
-                    initial_output.extend(
-                        hidden_tool_result(
-                            'list_attached_knowledge',
-                            '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>',
-                        )
+                    manifests['list_attached_knowledge'] = (
+                        '<attached_knowledge>\n' + '\n'.join(knowledge_tags) + '\n</attached_knowledge>'
                     )
 
             builtin_tools = await get_builtin_tools(
@@ -2975,21 +2973,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             raise Exception(f'{e}')
 
     metadata.pop('initial_output', None)
-    if skill_tools_enabled and not metadata.get('assistant_message_id'):
-        initial_output.extend(
-            await preload_skills(
-                form_data['messages'],
-                activated_skill_ids & resolved_skill_ids,
-                metadata.get('tools', {}).get('view_skill'),
-            )
-        )
-    if initial_output:
-        form_data['messages'].extend(
-            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
-        )
-    # Compaction below can still add its item to the output this response starts with.
-    metadata['initial_output'] = initial_output
-
     form_data = normalize_messages_for_model(form_data)
 
     if compaction_messages is not None:
@@ -3025,6 +3008,25 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             form_data['messages'] = add_or_update_system_message(summary_content, form_data['messages'], append=True)
 
     metadata['context_summary'] = context_summary
+
+    # Added after compaction: it can summarize away the copy the model had, and it should not summarize this turn's.
+    for name, manifest in manifests.items():
+        if get_last_tool_result(form_data['messages'], name) != manifest:
+            initial_output.extend(hidden_tool_result(name, manifest))
+    if skill_tools_enabled and not metadata.get('assistant_message_id'):
+        initial_output.extend(
+            await preload_skills(
+                form_data['messages'],
+                activated_skill_ids & resolved_skill_ids,
+                metadata.get('tools', {}).get('view_skill'),
+            )
+        )
+    if initial_output:
+        form_data['messages'].extend(
+            convert_output_to_messages(initial_output, raw=True, reasoning_format=get_reasoning_format(model))
+        )
+    metadata['initial_output'] = initial_output
+
     return form_data, metadata, events, False
 
 
@@ -3610,6 +3612,22 @@ async def background_tasks_handler(ctx):
 
     if not await get_verified_user_by_id(user.id):
         return
+
+    # Messages the user sent while this reply ran are answered now; follow-ups for it would go unused.
+    if (
+        is_saved_chat_id(metadata.get('chat_id'))
+        and not metadata.get('internal')
+        and await ChatMessages.has_queued_message(metadata['chat_id'], metadata['message_id'])
+    ):
+        from open_webui.utils.subagents import get_pending_run, process_pending_internal_messages
+
+        tasks = {key: value for key, value in (tasks or {}).items() if key != TASKS.FOLLOW_UP_GENERATION}
+        try:
+            await process_pending_internal_messages(
+                request, metadata['chat_id'], user.id, get_pending_run(metadata), reply_id=metadata['message_id']
+            )
+        except Exception:
+            log.exception('Failed to answer queued messages for chat %s', metadata['chat_id'])
 
     message = None
     messages = []
@@ -6079,6 +6097,11 @@ async def streaming_chat_response_handler(response, ctx):
                     await emit_output()
                     if final_answer_requested:
                         await emit_message_error(round_error or 'The provider requested tools after tool use stopped.')
+                        break
+                    # The user sent a message meanwhile: stop here, and it is answered next with these results.
+                    if is_saved_chat_id(metadata.get('chat_id')) and await ChatMessages.has_queued_message(
+                        metadata['chat_id'], metadata['message_id']
+                    ):
                         break
 
                     try:

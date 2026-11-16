@@ -1990,7 +1990,7 @@
 				}}
 			>
 				<div
-					class="absolute bg-gray-50 dark:bg-gray-850/30 group-hover:bg-gray-200 dark:group-hover:bg-gray-800 transition-colors {divider.direction ===
+					class="absolute bg-gray-200/40 dark:bg-gray-850/20 group-hover:bg-gray-300/60 dark:group-hover:bg-gray-800 transition-colors {divider.direction ===
 					'horizontal'
 						? 'inset-y-0 left-1/2 w-px'
 						: 'inset-x-0 top-1/2 h-px'}"

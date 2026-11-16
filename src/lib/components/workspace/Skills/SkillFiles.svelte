@@ -32,6 +32,8 @@
 		type SkillFileOperation
 	} from '$lib/apis/skills';
 	import type { FileEntry } from '$lib/apis/terminal';
+	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
+	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 
 	export let version: Snippet;
 	export let exports: Snippet;
@@ -415,14 +417,16 @@
 		dirty = true;
 		if (!files.some((f) => f.path === selected)) open('SKILL.md');
 	};
-	const upload = async (uploads: File[]) => {
+	/** Adds files at their paths under the open folder; a folder without `file` is kept even if empty. */
+	const upload = async (uploads: DroppedEntry[]) => {
 		if (readOnly) return;
 		flush();
 		try {
 			const drafts: Draft[] = [];
-			for (const file of uploads) {
+			for (const { path: relativePath, file } of uploads) {
+				if (!file) continue;
 				if (file.size > 10 * 1024 * 1024) throw new Error('Files must be at most 10 MiB');
-				const path = currentPath + (file.webkitRelativePath || file.name);
+				const path = currentPath + relativePath;
 				const bytes = new Uint8Array(await file.arrayBuffer());
 				let text: string | undefined;
 				try {
@@ -440,12 +444,53 @@
 				});
 			}
 			validatePaths([...files.map((f) => f.path), ...drafts.map((f) => f.path)]);
+			// Only dropped folders that end up empty need keeping; the rest show through their files.
+			const dropped = uploads
+				.filter((entry) => !entry.file)
+				.map((entry) => currentPath + entry.path);
+			const paths = [...files, ...drafts].map((f) => f.path).concat(dropped, emptyFolders);
+			const folders = dropped.filter(
+				(folder) => !emptyFolders.includes(folder) && !paths.some((p) => p.startsWith(folder + '/'))
+			);
+			if (!drafts.length && !folders.length) return;
 			files = [...files, ...drafts];
+			emptyFolders = [...emptyFolders, ...folders];
 			dirty = true;
 		} catch (error) {
 			toast.error(skillError(error));
 		}
 	};
+	const fromInput = (list: FileList | null): DroppedEntry[] =>
+		Array.from(list ?? []).map((file) => ({ path: file.webkitRelativePath || file.name, file }));
+
+	// Files and folders dropped anywhere on the skill upload into the open folder, like the buttons.
+	let dragging = false;
+	const isFileDrag = (event: DragEvent) =>
+		!readOnly && (event.dataTransfer?.types.includes('Files') ?? false);
+	const dragOver = (event: DragEvent) => {
+		if (!isFileDrag(event)) return;
+		// Capture phase, so the code editor doesn't paste the file's text instead.
+		event.preventDefault();
+		event.stopPropagation();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+		dragging = true;
+	};
+	const dragLeave = (event: DragEvent) => {
+		if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node))
+			dragging = false;
+	};
+	const drop = async (event: DragEvent) => {
+		dragging = false;
+		if (!isFileDrag(event) || !event.dataTransfer) return;
+		event.preventDefault();
+		event.stopPropagation();
+		try {
+			await upload(await readDroppedFiles(event.dataTransfer));
+		} catch (error) {
+			toast.error(skillError(error));
+		}
+	};
+
 	const download = async (path: string) => {
 		flush();
 		const file = files.find((f) => f.path === path);
@@ -523,7 +568,7 @@
 	bind:this={folderInput}
 	hidden
 	on:change={() => {
-		upload(Array.from(folderInput.files || []));
+		upload(fromInput(folderInput.files));
 		folderInput.value = '';
 	}}
 />
@@ -533,11 +578,19 @@
 	hidden
 	bind:this={uploadInput}
 	on:change={() => {
-		if (!readOnly) upload(Array.from(uploadInput.files || []));
+		if (!readOnly) upload(fromInput(uploadInput.files));
 		uploadInput.value = '';
 	}}
 />
-<div class="flex h-full min-h-0 flex-col">
+<div
+	class="relative flex h-full min-h-0 flex-col"
+	role="region"
+	aria-label={$i18n.t('Files')}
+	on:dragover|capture={dragOver}
+	on:dragleave={dragLeave}
+	on:drop|capture={drop}
+>
+	<FilesOverlay show={dragging} />
 	<div class="flex min-h-0 flex-1 flex-col md:flex-row">
 		{#if $mobile}
 			{@render fileList()}

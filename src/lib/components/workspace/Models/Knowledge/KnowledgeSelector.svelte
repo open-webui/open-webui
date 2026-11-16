@@ -18,6 +18,7 @@
 
 	export let show = false;
 	export let anchorElement: HTMLElement | null = null;
+	export let align: 'start' | 'end' = 'start';
 	export let selectedItems = [];
 	let dropdown: Dropdown;
 	export const close = () => dropdown.close();
@@ -112,6 +113,7 @@
 <Dropdown
 	bind:this={dropdown}
 	{anchorElement}
+	{align}
 	bind:show
 	onOpenChange={async (state) => {
 		if (disabled) {
@@ -145,13 +147,13 @@
 			/>
 		</div>
 		<div class="max-h-72 overflow-y-auto">
-			{#if selectedItems.length}
+			{#if selectedItems.length && $$slots.selected}
 				<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
 					{$i18n.t('Selected')}
 				</div>
 				<slot name="selected" />
 			{/if}
-			{#if items.length === 0 && (query || !selectedItems.length)}
+			{#if items.length === 0 && (query || !selectedItems.length || !$$slots.selected)}
 				<div class="px-3 py-4 text-xs leading-5 text-gray-500 dark:text-gray-400">
 					{$i18n.t('No knowledge found')}
 					{#if !query}<p>

@@ -2,6 +2,7 @@
 	export let modelId: string | null = null;
 	export let target: TerminalTarget | null | undefined = undefined;
 	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
 	import type { TerminalContext } from '$lib/types';
 	import type { TerminalTarget } from '$lib/apis/terminal';
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
@@ -86,7 +87,10 @@
 	export let onViewChange: ((view: any) => void) | null = null;
 	export let onFileSaved: ((content: string) => void) | null = null;
 	let viewRestored = !initialView;
+	let lastView: any = null;
 	export const captureView = () => {
+		// The editor is gone after teardown; a fresh capture would drop its unsaved edit.
+		if (disposed) return lastView;
 		const view =
 			!viewRestored && initialView
 				? initialView
@@ -98,10 +102,11 @@
 						dirty: dirty || saving,
 						scrollTop: viewerRoot?.scrollTop ?? 0
 					};
-		return {
+		lastView = {
 			...view,
 			isHome: homeDirectory !== null && asDirectoryPath(view.directory) === homeDirectory
 		};
+		return lastView;
 	};
 	const restoreView = async () => {
 		if (disposed || viewRestored || !initialView) return;
@@ -1615,41 +1620,7 @@
 	]);
 
 	// Drag-and-drop upload
-	type UploadEntry = { path: string; file?: File };
-
-	async function readDroppedFiles(data: DataTransfer): Promise<UploadEntry[]> {
-		// Capture all roots before the browser locks the drag data after this event.
-		const items = Array.from(data.items ?? []).filter((item) => item.kind === 'file');
-		const roots = items.map((item) => item.webkitGetAsEntry?.() ?? item.getAsFile());
-		if (!items.length) roots.push(...Array.from(data.files));
-		const entries: UploadEntry[] = [];
-		async function visit(entry: FileSystemEntry | File, parent = ''): Promise<void> {
-			const path = parent + entry.name;
-			if (!('isDirectory' in entry)) {
-				entries.push({ path, file: entry });
-			} else if (entry.isDirectory) {
-				entries.push({ path });
-				const reader = (entry as FileSystemDirectoryEntry).createReader();
-				while (true) {
-					const children = await new Promise<FileSystemEntry[]>((resolve, reject) =>
-						reader.readEntries(resolve, reject)
-					);
-					if (!children.length) break;
-					for (const child of children) await visit(child, `${path}/`);
-				}
-			} else {
-				const file = await new Promise<File>((resolve, reject) =>
-					(entry as FileSystemFileEntry).file(resolve, reject)
-				);
-				entries.push({ path, file });
-			}
-		}
-		for (const root of roots) {
-			if (!root) throw new Error('Unable to read a dropped file or folder.');
-			await visit(root);
-		}
-		return entries;
-	}
+	type UploadEntry = DroppedEntry;
 
 	const handleDragOver = (e: DragEvent) => {
 		if (selectedFile) return;
@@ -2768,7 +2739,7 @@
 
 		{#if !selectedFile && showSearch}
 			<div
-				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-50 px-3 dark:border-gray-850/30"
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-200/40 px-3 dark:border-gray-850/20"
 			>
 				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
 				<input
@@ -3237,7 +3208,7 @@
 		{/if}
 
 		{#if onSelectDirectory}
-			<div class="shrink-0 border-t border-gray-50 pt-3 dark:border-gray-850/30">
+			<div class="shrink-0 border-t border-gray-200/40 pt-3 dark:border-gray-850/20">
 				{#if gitAvailable && showCloneRepository && selectedTerminal}
 					{#key `${effectiveTerminalId}:${chatId}`}
 						<CloneRepository
@@ -3288,7 +3259,7 @@
 		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
-				class="shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+				class="shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
 			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->

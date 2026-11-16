@@ -80,7 +80,14 @@ async def run(transport, output, prompt, images, options):
             params['developerInstructions'] = options['instructions']
         if options.get('resume'):
             params['threadId'] = options['resume']
-        result = await client.request('thread/resume' if options.get('resume') else 'thread/start', params)
+        if options.get('resume') and options.get('fork'):
+            # A regenerated or edited message: copy the thread through the turn it follows.
+            result = await client.request('thread/fork', {**params, 'lastTurnId': options['resume_at']})
+            turns = result['thread'].get('turns') or []
+            if options.get('resume_at') and (not turns or turns[-1].get('id') != options['resume_at']):
+                raise ValueError('Update Codex to regenerate or edit earlier messages in this chat')
+        else:
+            result = await client.request('thread/resume' if options.get('resume') else 'thread/start', params)
         thread_id = result['thread']['id']
         output.state['session_id'] = thread_id
         await output.flush(force=True, persist=True)
@@ -103,6 +110,8 @@ async def run(transport, output, prompt, images, options):
             },
         )
         turn_id = result['turn']['id']
+        # Later regenerations and edits fork the thread through this turn.
+        output.state['turn'] = turn_id
         while True:
             event = await client.events.get()
             if isinstance(event, Exception):

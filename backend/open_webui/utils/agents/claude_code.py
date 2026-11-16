@@ -107,6 +107,9 @@ async def run(transport, output, prompt, images, options):
                         streamed_thinking = True
                         await output.text(delta.get('thinking', ''), reasoning=True)
             elif kind == 'assistant':
+                if message.get('uuid') and not message.get('parent_tool_use_id'):
+                    # Later regenerations and edits resume the conversation at this turn's last reply.
+                    output.state['turn'] = message['uuid']
                 for block in message.get('message', {}).get('content', []):
                     if block['type'] == 'text' and not streamed_text:
                         await output.text(block['text'])

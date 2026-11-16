@@ -5,7 +5,13 @@
 	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
 	import CommentButton from '$lib/components/comments/CommentButton.svelte';
-	import { commentSurface, contentHash, noteCommentText } from '$lib/components/comments/anchors';
+	import {
+		commentSelectionDraft,
+		commentSurface,
+		contentHash,
+		noteCommentText,
+		selectedComment
+	} from '$lib/components/comments/anchors';
 	import {
 		baseModels,
 		config,
@@ -368,6 +374,23 @@
 		};
 	});
 	let noteCommentCount = 0;
+	// Editable notes comment from the formatting toolbar instead of the floating selection button.
+	$: selectionCommentsEnabled = commentsEnabled && versionIdx === null && !!note?.write_access;
+	const commentOnSelection = async () => {
+		const selected = selectedComment();
+		if (!selected) {
+			currentNoteComments = { resource_type: 'note', resource_id: note.id };
+			return;
+		}
+		try {
+			await selected.options.prepare?.();
+		} catch (e) {
+			toast.error(e instanceof Error ? e.message : String(e));
+			return;
+		}
+		commentSelectionDraft.set(selected);
+		window.getSelection()?.removeAllRanges();
+	};
 	$: if (currentNoteComments) showNoteChat = true;
 	const closeNotePanel = async () => {
 		currentNoteComments = null;
@@ -1282,6 +1305,12 @@ ${content}
 									</button>
 								</Tooltip>
 
+								<CommentButton
+									className="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+									onComment={(request) => (currentNoteComments = request)}
+									resource={{ resource_type: 'note', resource_id: note.id }}
+								/>
+
 								{#if note?.write_access}
 									<RecordMenu
 										onRecord={async () => {
@@ -1390,14 +1419,6 @@ ${content}
 									>
 										<EllipsisHorizontal className="size-5" />
 									</button>
-									<svelte:fragment slot="actions" let:close>
-										<CommentButton
-											menu
-											onOpen={close}
-											onComment={(request) => (currentNoteComments = request)}
-											resource={{ resource_type: 'note', resource_id: note.id }}
-										/>
-									</svelte:fragment>
 								</NoteMenu>
 
 								{#if liveParticipants.length > 0}
@@ -1596,6 +1617,7 @@ ${content}
 										? contentHash(noteCommentText(activePage.content))
 										: savedCommentHashes[activePageId],
 									enabled: versionIdx === null,
+									toolbar_id: selectionCommentsEnabled ? `note-${note.id}-formatting` : undefined,
 									prepare: flushActivePage,
 									onComment: (target) =>
 										(currentNoteComments = {
@@ -1626,6 +1648,7 @@ ${content}
 										attachments={true}
 										placeholder={$i18n.t('Write something...')}
 										editable={versionIdx === null && note?.write_access}
+										onComment={selectionCommentsEnabled ? commentOnSelection : null}
 										onSelectionUpdate={({ editor }) => {
 											const { from, to } = editor.state.selection;
 											const selectedText = editor.state.doc.textBetween(from, to, ' ');

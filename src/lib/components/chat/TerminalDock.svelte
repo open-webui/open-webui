@@ -285,7 +285,7 @@
 	</div>
 	<div
 		style:height={`${height}px`}
-		class="flex min-h-0 flex-col bg-white dark:bg-transparent"
+		class="flex min-h-0 flex-col bg-transparent"
 		class:hidden={!expanded}
 	>
 		{#if error}<div

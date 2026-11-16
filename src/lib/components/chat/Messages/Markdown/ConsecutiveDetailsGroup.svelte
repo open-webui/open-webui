@@ -260,7 +260,6 @@
 		.map((token) => (token.view ? agentViewName(token.view) : (token.attributes?.name ?? 'tool')));
 	$: groupLabel =
 		!hasRejected &&
-		!hasError &&
 		pendingToolTokens.length === 0 &&
 		codeInterpreterCount === 0 &&
 		toolLabels.some(Boolean)

@@ -497,7 +497,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="@container relative shrink-0 border-t border-gray-50 dark:border-gray-850/30"
+		class="@container relative shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -507,7 +507,7 @@
 				aria-orientation="horizontal"
 				aria-valuenow={height}
 				tabindex="0"
-				class="absolute inset-x-0 -top-px h-px z-20 cursor-row-resize touch-none border-t border-transparent hover:border-gray-200 dark:hover:border-gray-800 transition"
+				class="absolute inset-x-0 -top-px h-px z-20 cursor-row-resize touch-none border-t border-transparent hover:border-gray-300/60 dark:hover:border-gray-800 transition"
 				on:pointerdown={(event) => {
 					event.preventDefault();
 					(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);

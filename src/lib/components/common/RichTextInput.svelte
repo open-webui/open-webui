@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
-	import { voiceCall, skills, terminalSkills } from '$lib/stores';
+	import { mobile, voiceCall, skills, terminalSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -408,6 +408,8 @@
 	export let collaboration = false;
 
 	export let showFormattingToolbar = true;
+	/** Adds a comment action to the selection toolbar. */
+	export let onComment: (() => void) | null = null;
 
 	export let preserveBreaks = false;
 	export let generateAutoCompletion: Function = async () => null;
@@ -424,8 +426,8 @@
 	export let insertPromptAsRichText = false;
 	export let floatingMenuPlacement = 'bottom-start';
 
-	// Keep focus off the chat input during a call so the call overlay's M shortcut works
-	$: suppressAutoFocus = messageInput && $voiceCall;
+	// Avoid opening the mobile keyboard or stealing focus from the call overlay.
+	$: suppressAutoFocus = messageInput && ($mobile || $voiceCall);
 
 	let content = null;
 	let htmlValue = '';
@@ -1100,7 +1102,7 @@
 			],
 			content: provider ? undefined : content,
 			editable,
-			autofocus: messageInput && !$voiceCall,
+			autofocus: messageInput && !$mobile && !$voiceCall,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 
@@ -1590,7 +1592,7 @@
 		class="p-0"
 		style="visibility: hidden; opacity: 0; position: absolute; z-index: 9999;"
 	>
-		<FormattingButtons {editor} />
+		<FormattingButtons {editor} {onComment} />
 	</div>
 
 	<div

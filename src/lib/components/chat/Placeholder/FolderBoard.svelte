@@ -310,7 +310,9 @@
 		aria-label={$i18n.t('Conversation board')}
 	>
 		<div class="inline-flex min-w-full flex-col">
-			<div class="sticky top-0 z-[2] flex gap-2 bg-white pb-1 dark:bg-gray-900">
+			<div
+				class="sticky top-0 z-[2] flex gap-2 bg-white/80 pb-1 backdrop-blur-md dark:bg-gray-900/80"
+			>
 				{#each columns as column (column.id)}
 					<div class="w-72 shrink-0 rounded-2xl bg-gray-50/80 dark:bg-gray-850/40">
 						{@render columnHeader(column)}

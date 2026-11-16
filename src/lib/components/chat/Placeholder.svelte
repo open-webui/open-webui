@@ -95,7 +95,7 @@
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
 	// The composer only belongs with the folder's chats, not its automations.
-	let folderSection: 'chats' | 'automations' = 'chats';
+	let folderSection: 'chats' | 'automations' | 'knowledge' = 'chats';
 
 	let models = [];
 	export let selectedModelIdx = 0;
@@ -337,11 +337,18 @@
 		</div>
 
 		<div
-			class="text-base font-normal mx-auto @md:max-w-3xl py-3 w-full {atSelectedModel
+			class="relative text-base font-normal mx-auto @md:max-w-3xl py-3 w-full {atSelectedModel
 				? 'mt-2'
 				: ''}"
 		>
-			{@render composer($i18n.t('How can I help you today?'))}
+			<!-- Soft halo, like the denser fade around the in-chat composer, so it doesn't float on a vivid background. -->
+			<div
+				aria-hidden="true"
+				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-white/40 blur-2xl dark:bg-gray-900/40"
+			></div>
+			<div class="relative">
+				{@render composer($i18n.t('How can I help you today?'))}
+			</div>
 		</div>
 
 		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>

@@ -1549,6 +1549,14 @@ async def chat_completion(
 
                     user_message = metadata.get('user_message') or {}
                     assistant_message_id = metadata.get('assistant_message_id')
+                    if parent_id and not (
+                        assistant_message_id or metadata.get('regeneration_message_id') or metadata['internal']
+                    ):
+                        from open_webui.utils.subagents import queue_user_message
+
+                        # A reply in this chat is still running: it takes this message at its next step.
+                        if await queue_user_message(request, chat_id, user, user_message, parent_id):
+                            return {'status': True, 'queued': True, 'chat_id': chat_id}
                     if assistant_message_id:
                         message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                         if not message or (message.get('user_id') or chat.user_id) != user.id:
@@ -1804,23 +1812,10 @@ async def chat_completion(
                     and getattr(request.state, 'internal', False) is not True
                     and not await has_active_tasks(request.app.state.redis, chat_id)
                 ):
-                    from open_webui.utils.subagents import process_pending_internal_messages
+                    from open_webui.utils.subagents import get_pending_run, process_pending_internal_messages
 
                     await process_pending_internal_messages(
-                        request,
-                        chat_id,
-                        user.id,
-                        {
-                            'model_id': metadata.get('model_id') or form_data.get('model'),
-                            'session_id': metadata.get('session_id'),
-                            'tool_ids': metadata.get('tool_ids') or [],
-                            'skill_ids': metadata.get('skill_ids') or [],
-                            'chat_context': metadata.get('chat_context'),
-                            'filter_ids': metadata.get('filter_ids') or [],
-                            'terminal_id': metadata.get('terminal_id'),
-                            'features': metadata.get('features') or {},
-                            'variables': metadata.get('variables') or {},
-                        },
+                        request, chat_id, user.id, get_pending_run(metadata, form_data.get('model'))
                     )
             except Exception:
                 log.exception('Failed to process pending internal messages for chat %s', metadata.get('chat_id'))

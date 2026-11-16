@@ -294,6 +294,20 @@ def get_paired_tool_call_ids(messages: list[dict]) -> list[set[str]]:
     return paired_ids_by_message
 
 
+def get_last_tool_result(messages: list[dict], name: str) -> str | None:
+    """What the named tool last returned in these messages, or None if it never did."""
+    call_ids = {
+        tool_call.get('id')
+        for message in messages
+        for tool_call in message.get('tool_calls') or []
+        if (tool_call.get('function') or {}).get('name') == name
+    }
+    for message in reversed(messages):
+        if message.get('role') == 'tool' and message.get('tool_call_id') in call_ids:
+            return get_content_from_message(message) or ''
+    return None
+
+
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
     """Drop unpaired tool_use / tool_result from a reconstructed conversation.
 

@@ -64,6 +64,8 @@
 	import MentionList from './MessageInput/MentionList.svelte';
 	import Skeleton from '../chat/Messages/Skeleton.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import Mic from '../icons/Mic.svelte';
+	import PlusAlt from '../icons/PlusAlt.svelte';
 
 	export let placeholder: string | undefined = undefined;
 	export let chatInputElement: any;
@@ -1236,8 +1238,8 @@
 								</div>
 							</div>
 
-							<div class=" flex items-center justify-between gap-2 p-1.5 pt-0.5 max-w-full">
-								<div class="flex items-center flex-1 min-w-0">
+							<div class="flex items-center justify-between gap-2 mt-0.5 mb-2 mx-0.5 max-w-full">
+								<div class="ml-1 flex items-center flex-1 min-w-0">
 									<slot name="menu">
 										{#if acceptFiles}
 											<InputMenu
@@ -1248,32 +1250,23 @@
 											>
 												<button
 													id="input-menu-button"
-													class="bg-transparent hover:bg-gray-100 text-gray-500 dark:text-gray-400 dark:hover:bg-gray-800 rounded-lg size-7 flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+													class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 													type="button"
 													aria-label={$i18n.t('More')}
 												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														viewBox="0 0 20 20"
-														fill="currentColor"
-														class="size-4"
-													>
-														<path
-															d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"
-														/>
-													</svg>
+													<PlusAlt className="size-5" />
 												</button>
 											</InputMenu>
 										{/if}
 									</slot>
 								</div>
 
-								<div class="flex items-center gap-1 shrink-0">
+								<div class="mr-1 flex items-center gap-1 shrink-0">
 									{#if content === ''}
 										<Tooltip content={$i18n.t('Record voice')}>
 											<button
 												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-lg size-7 flex items-center justify-center"
+												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
 												type="button"
 												on:click={async () => {
 													try {
@@ -1303,17 +1296,7 @@
 												}}
 												aria-label={$i18n.t('Voice Input')}
 											>
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="size-4"
-												>
-													<path d="M7 4a3 3 0 016 0v6a3 3 0 11-6 0V4z" />
-													<path
-														d="M5.5 9.643a.75.75 0 00-1.5 0V10c0 3.06 2.29 5.585 5.25 5.954V17.5h-1.5a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-1.5v-1.546A6.001 6.001 0 0016 10v-.357a.75.75 0 00-1.5 0V10a4.5 4.5 0 01-9 0v-.357z"
-													/>
-												</svg>
+												<Mic className="size-[1.125rem]" />
 											</button>
 										</Tooltip>
 									{/if}
@@ -1324,7 +1307,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														aria-label={$i18n.t('Stop')}
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full size-7 flex items-center justify-center"
+														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-[0.3125rem]"
 														on:click={() => {
 															onStop();
 														}}
@@ -1333,7 +1316,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 24 24"
 															fill="currentColor"
-															class="size-4"
+															class="size-5"
 														>
 															<path
 																fill-rule="evenodd"
@@ -1352,7 +1335,7 @@
 														aria-label={$i18n.t('Send message')}
 														class="{content !== '' || files.length !== 0
 															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
+															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
 														disabled={content === '' && files.length === 0}
 													>
@@ -1360,7 +1343,7 @@
 															xmlns="http://www.w3.org/2000/svg"
 															viewBox="0 0 16 16"
 															fill="currentColor"
-															class="size-4"
+															class="size-5"
 														>
 															<path
 																fill-rule="evenodd"

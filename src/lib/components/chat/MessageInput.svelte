@@ -531,7 +531,7 @@
 
 	export const setText = (text: string = '') => {
 		chatInputElement?.setText(text);
-		if (!$voiceCall) {
+		if (!$mobile && !$voiceCall) {
 			focus();
 		}
 	};
@@ -1388,6 +1388,8 @@
 
 	const isAttachmentDrop = (event: DragEvent) => {
 		if (!(event.target instanceof Element)) return false;
+		// Areas with their own file drop, like a folder's Knowledge list, keep what lands on them.
+		if (event.target.closest('[data-file-drop-target]')) return false;
 		const composer = event.target.closest('[data-composer-id]');
 		if (composer) return composer.getAttribute('data-composer-id') === inputId;
 		// Files can land anywhere in this chat's dropzone. Sidebar items still target
@@ -1875,7 +1877,7 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			if (!$voiceCall) {
+			if (!$mobile && !$voiceCall) {
 				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}
@@ -2230,9 +2232,9 @@
 							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
 								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
-								: ' border-gray-200 dark:border-gray-850'} {($settings?.highContrastMode ?? false)
+								: ' border-gray-200/60 dark:border-gray-800/40'} {($settings?.highContrastMode ?? false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-white/5 dark:bg-gray-500/5 backdrop-blur-sm dark:text-gray-100"
+								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
