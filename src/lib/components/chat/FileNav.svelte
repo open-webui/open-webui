@@ -788,12 +788,9 @@
 	let documentTargetPage: number | null = null;
 
 	// Office preview state
-	let fileOfficeHtml: string | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let currentSlide = 0;
-	let excelSheetNames: string[] = [];
 	let selectedExcelSheet = '';
-	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	// File preview toolbar state (bound from FilePreview)
 	let showRaw = false;
@@ -1193,12 +1190,9 @@
 		fileSqliteData = null;
 		fileModelData = null;
 		fileDocxData = null;
-		fileOfficeHtml = null;
 		fileOfficeSlides = null;
 		currentSlide = 0;
-		excelSheetNames = [];
 		selectedExcelSheet = '';
-		excelWorkbook = null;
 	};
 
 	// Directory operations
@@ -1427,11 +1421,7 @@
 			fileSqliteData: null,
 			fileModelData: null,
 			fileDocxData: null,
-			fileOfficeHtml: null,
 			fileOfficeSlides: null,
-			excelWorkbook: null,
-			excelSheetNames: [],
-			selectedExcelSheet: '',
 			currentSlide: 0,
 			fileContent: null
 		} as any;
@@ -1471,21 +1461,6 @@
 						const arrayBuffer = await result.blob.arrayBuffer();
 						next.fileDocxData = arrayBuffer;
 					}
-				} else if (ext === 'xlsx') {
-					const result = await downloadFileBlob(terminal, filePath);
-					if (result) {
-						const arrayBuffer = await result.blob.arrayBuffer();
-						const { readExcelWorkbook, excelToTable } = await import('$lib/utils/excelToTable');
-						const wb = await readExcelWorkbook(arrayBuffer);
-						next.excelWorkbook = wb;
-						next.excelSheetNames = wb.SheetNames;
-						if (next.excelSheetNames.length > 0) {
-							next.selectedExcelSheet = next.excelSheetNames[0];
-							const result = await excelToTable(wb.Sheets[next.selectedExcelSheet]);
-							const DOMPurify = (await import('dompurify')).default;
-							next.fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
-						}
-					}
 				} else if (ext === 'pptx') {
 					const preview = await downloadFilePreview(terminal, filePath);
 					if (preview) {
@@ -1522,11 +1497,7 @@
 		fileSqliteData = next.fileSqliteData;
 		fileModelData = next.fileModelData;
 		fileDocxData = next.fileDocxData;
-		fileOfficeHtml = next.fileOfficeHtml;
 		fileOfficeSlides = next.fileOfficeSlides;
-		excelWorkbook = next.excelWorkbook;
-		excelSheetNames = next.excelSheetNames;
-		selectedExcelSheet = next.selectedExcelSheet;
 		currentSlide = next.currentSlide;
 		fileContent = next.fileContent;
 		fileLoading = false;
@@ -1540,7 +1511,6 @@
 				next.fileSqliteData,
 				next.fileModelData,
 				next.fileDocxData,
-				next.fileOfficeHtml,
 				next.fileOfficeSlides
 			].some(Boolean)
 		) {
@@ -2891,20 +2861,9 @@
 							{fileModelData}
 							{fileDocxData}
 							{fileContent}
-							{fileOfficeHtml}
 							{fileOfficeSlides}
 							targetPage={documentTargetPage}
-							{excelSheetNames}
-							{selectedExcelSheet}
 							searchTarget={fileSearchTarget}
-							onSheetChange={async (sheet) => {
-								if (!excelWorkbook) return;
-								selectedExcelSheet = sheet;
-								const { excelToTable } = await import('$lib/utils/excelToTable');
-								const result = await excelToTable(excelWorkbook.Sheets[sheet]);
-								const DOMPurify = (await import('dompurify')).default;
-								fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
-							}}
 							target={selectedTerminal}
 							overlay={overlay || isDraggingHandle}
 							onSave={saveFile}

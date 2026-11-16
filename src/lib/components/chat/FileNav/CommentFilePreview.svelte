@@ -55,7 +55,7 @@
 		editor = await ExcelWorkbookEditor.open(workbook, view.original);
 		editor.restore(view);
 		dirty = editor.dirty;
-		await setSheet(workbook.Sheets[view.sheet] ? view.sheet : workbook.SheetNames[0]);
+		setSheet(workbook.Sheets[view.sheet] ? view.sheet : workbook.SheetNames[0]);
 		await tick();
 		await excelPreview?.restoreEdit(view.draft);
 	}
@@ -101,7 +101,7 @@
 		if (!alive) return;
 		workbook = fresh;
 		editor = await ExcelWorkbookEditor.open(fresh, original);
-		await setSheet(sheet);
+		setSheet(sheet);
 	}
 
 	let comments: FileComment[] = [];
@@ -121,11 +121,9 @@
 	let slides: string[] = [];
 	let workbook: WorkBook | null = null;
 	export let sheet = '';
-	let table: string | null = null;
 	let root: HTMLDivElement;
 	let popover: HTMLDivElement;
 	let alive = true;
-	let sheetToken = 0;
 	let anchoredIds: string[] = [];
 	const abort = new AbortController();
 	const ext = path.split('.').pop()!.toLowerCase();
@@ -145,18 +143,12 @@
 		warnings = result.warnings;
 		commentState = warnings.length ? 'partial' : 'ready';
 	};
-	const setSheet = async (name: string) => {
+	const setSheet = (name: string) => {
 		if (!workbook?.Sheets[name]) return;
-		const token = ++sheetToken;
 		sheet = name;
-		const { excelToTable } = await import('$lib/utils/excelToTable');
-		const result = await excelToTable(workbook.Sheets[name]);
-		if (alive && token === sheetToken) {
-			table = result.html;
-			anchoredIds = comments
-				.filter((c) => c.location?.kind === 'cell' && c.location.sheet === sheet)
-				.map((c) => c.id);
-		}
+		anchoredIds = comments
+			.filter((c) => c.location?.kind === 'cell' && c.location.sheet === sheet)
+			.map((c) => c.id);
 	};
 	const keepOpen = () => clearTimeout(closeTimer);
 	const closeLater = (event?: MouseEvent | FocusEvent) => {
@@ -287,7 +279,7 @@
 						editingError = String(error).replace(/^Error: /, '');
 					}
 				}
-				await setSheet(workbook.Sheets[initialSheet] ? initialSheet : workbook.SheetNames[0]);
+				setSheet(workbook.Sheets[initialSheet] ? initialSheet : workbook.SheetNames[0]);
 				loading = false;
 			}
 			void readOfficeComments(bytes, ext, workbook ?? undefined)
@@ -390,14 +382,13 @@
 		/>
 	{:else if ext === 'pptx' && slides.length}
 		<PptxPreview bind:currentSlide {slides} {targetPage} className="h-full" {comments} />
-	{:else if table !== null}
+	{:else if workbook}
 		{#if editingError}<p role="status" class="px-2 py-1 text-xs text-gray-500">
 				{editingError}
 			</p>{/if}
 		<ExcelPreview
 			bind:this={excelPreview}
-			html={table}
-			sheetNames={workbook?.SheetNames ?? []}
+			{workbook}
 			selectedSheet={sheet}
 			onSheetChange={setSheet}
 			editor={readOnly ? null : editor}

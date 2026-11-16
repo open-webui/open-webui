@@ -42,12 +42,10 @@
 	let fileModelData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileContent: string | null = null;
-	let fileOfficeHtml: string | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let currentSlide = 0;
-	let excelSheetNames: string[] = [];
 	let selectedExcelSheet = '';
-	let excelWorkbook: any = null;
+	let excelWorkbook: import('xlsx').WorkBook | null = null;
 
 	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
 	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
@@ -111,10 +109,8 @@
 		fileModelData = null;
 		fileDocxData = null;
 		fileContent = null;
-		fileOfficeHtml = null;
 		fileOfficeSlides = null;
 		currentSlide = 0;
-		excelSheetNames = [];
 		selectedExcelSheet = '';
 		excelWorkbook = null;
 	}
@@ -128,15 +124,6 @@
 		}
 		if (!terminal) return null;
 		return downloadFileBlob(terminal, path);
-	}
-
-	async function loadExcelSheet(sheet: string) {
-		if (!excelWorkbook) return;
-		selectedExcelSheet = sheet;
-		const { excelToTable } = await import('$lib/utils/excelToTable');
-		const result = await excelToTable(excelWorkbook.Sheets[selectedExcelSheet]);
-		const DOMPurify = (await import('dompurify')).default;
-		fileOfficeHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
 	}
 
 	async function loadPreview(key: string) {
@@ -185,10 +172,10 @@
 					if (!result) throw new Error(t('Preview failed'));
 					const arrayBuffer = await result.blob.arrayBuffer();
 					const { readExcelWorkbook } = await import('$lib/utils/excelToTable');
-					excelWorkbook = await readExcelWorkbook(arrayBuffer);
-					excelSheetNames = excelWorkbook.SheetNames;
-					if (excelSheetNames.length > 0) {
-						await loadExcelSheet(excelSheetNames[0]);
+					const workbook = await readExcelWorkbook(arrayBuffer);
+					if (workbook.SheetNames.length > 0) {
+						selectedExcelSheet = workbook.SheetNames[0];
+						excelWorkbook = workbook;
 					}
 				} else if (ext === 'pptx') {
 					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
@@ -310,16 +297,14 @@
 					{fileContent}
 					target={fileId ? null : terminal}
 					{chatId}
-					{fileOfficeHtml}
+					{excelWorkbook}
 					{fileOfficeSlides}
 					{currentSlide}
 					{targetPage}
-					{excelSheetNames}
-					{selectedExcelSheet}
-					onSheetChange={loadExcelSheet}
+					bind:selectedExcelSheet
 					readOnly={true}
 				/>
-				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileModelData === null && fileDocxData === null && fileContent === null && fileOfficeHtml === null && fileOfficeSlides === null}
+				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileModelData === null && fileDocxData === null && fileContent === null && excelWorkbook === null && fileOfficeSlides === null}
 					<div
 						class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400"
 					>

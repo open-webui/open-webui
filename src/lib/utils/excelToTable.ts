@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import DOMPurify from 'dompurify';
 import { OfficePackage, attr, children, elements } from './comments/package';
 import type { CellObject, Range, WorkBook, WorkSheet } from 'xlsx';
 
@@ -239,6 +240,16 @@ const esc = (value: unknown): string =>
 		(c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!
 	);
 
+/** The preview grid is bounded; a sheet past that bound is previewed as a notice, not an error. */
+export class SheetTooLargeError extends Error {
+	constructor(
+		public usedRange: string,
+		public rowCount: number
+	) {
+		super('This sheet is too large to preview. Download it to view all cells.');
+	}
+}
+
 export interface ExcelTableResult {
 	html: string;
 	rowCount: number;
@@ -246,7 +257,7 @@ export interface ExcelTableResult {
 }
 
 /** Render from cells, not sheet_to_json: formatted text, formulas and coordinates matter. */
-export async function excelToTable(worksheet: PreviewSheet): Promise<ExcelTableResult> {
+export function excelToTable(worksheet: PreviewSheet): ExcelTableResult {
 	const range = XLSX.utils.decode_range(worksheet['!ref'] ?? 'A1');
 	const merges = worksheet['!merges'] ?? [];
 	for (const merge of merges) {
@@ -261,8 +272,7 @@ export async function excelToTable(worksheet: PreviewSheet): Promise<ExcelTableR
 	const lastRow = range.e.r,
 		lastCol = range.e.c;
 	// shortcut: bounded HTML grid; use virtualization before supporting larger used ranges.
-	if (rowCount * colCount > 200000)
-		throw new Error('This sheet is too large to preview. Download it to view all cells.');
+	if (rowCount * colCount > 200000) throw new SheetTooLargeError(usedRange, rowCount);
 	// A worksheet continues past its populated range; the viewer grows these blank margins on scroll.
 	range.e.r = Math.min(1048575, Math.max(59, range.e.r + 20));
 	range.e.c = Math.min(16383, Math.max(19, range.e.c + 4));
@@ -341,7 +351,6 @@ export async function excelToTable(worksheet: PreviewSheet): Promise<ExcelTableR
 		parts.push('</tr>');
 	}
 	parts.push('</tbody></table>');
-	const DOMPurify = (await import('dompurify')).default;
 	return { html: DOMPurify.sanitize(parts.join(''), { ADD_ATTR: ['target'] }), rowCount, colCount };
 }
 
