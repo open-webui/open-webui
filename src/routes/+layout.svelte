@@ -541,11 +541,10 @@
 			}
 		}
 
-		if (
-			!event?.internal &&
-			((event.chat_id !== $chatId && !$openEmbeddedChatIds.has(event.chat_id) && !$temporaryChat) ||
-				isInBackground)
-		) {
+		const isVisible = !!document
+			.querySelector(`[data-chat-id="${CSS.escape(event.chat_id)}"]`)
+			?.checkVisibility();
+		if (!event?.internal && ((!isVisible && !$temporaryChat) || isInBackground)) {
 			if (type === 'chat:completion') {
 				const { done, content, output, title } = data;
 				const displayTitle = title || $i18n.t('New Chat');

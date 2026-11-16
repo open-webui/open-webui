@@ -1667,7 +1667,14 @@
 	}
 
 	beforeNavigate(({ from, to, cancel, willUnload }) => {
-		if (from?.url.pathname === to?.url.pathname) return;
+		if (from?.url.pathname === to?.url.pathname) {
+			// The router stays on the main chat while other tabs are in front; going there uncovers it.
+			if (to && location.pathname !== to.url.pathname) {
+				focusMainChat();
+				if (!isLargeScreen) showTabs.set(false);
+			}
+			return;
+		}
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		if (willUnload && hasChatViewDrafts()) cancel();

@@ -4505,13 +4505,16 @@
 		const currentHistory = history;
 		processing = 'uploading';
 		try {
-			if (files.some((file) => file.status === 'pending' && file.file instanceof File)) {
-				const _chatId = await getChatId(currentHistory);
-				if (_chatId === null) return { status: 'rejected' };
-				if (history !== currentHistory) return { status: 'rejected' };
-				if (!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history)))))
-					return { status: 'rejected' };
-			}
+			// Set up the chat before the message is posted and the input cleared, so a refusal
+			// (e.g. a missing working directory) leaves the draft in place.
+			const _chatId = await getChatId(currentHistory);
+			if (_chatId === null) return { status: 'rejected' };
+			if (history !== currentHistory) return { status: 'rejected' };
+			if (
+				files.some((file) => file.status === 'pending' && file.file instanceof File) &&
+				!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history))))
+			)
+				return { status: 'rejected' };
 			if (history !== currentHistory) return { status: 'rejected' };
 		} catch (error) {
 			toast.error(`${error}`);
@@ -5857,6 +5860,7 @@
 				class:hidden={fullWidthTabs && !mainChatActive}
 				style={fullWidthTabs ? mainChatStyle : undefined}
 				data-main-chat-pane
+				data-chat-id={$chatId}
 				data-panel-group={fullWidthTabs ? mainChatGroupId : undefined}
 				on:focusin={() => fullWidthTabs && tabs?.focusMainChat()}
 				on:pointerdown={() => fullWidthTabs && tabs?.focusMainChat()}
