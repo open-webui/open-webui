@@ -521,7 +521,7 @@
 			delete modelInfo.meta.i18n;
 		}
 
-		if (terminalId) {
+		if (terminalId || defaultMeta.terminalId) {
 			modelInfo.meta.terminalId = terminalId;
 		} else {
 			if (modelInfo.meta.terminalId) {
@@ -760,7 +760,7 @@
 			};
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultMeta.defaultFeatureIds ?? [];
 			builtinTools = model?.meta?.builtinTools ?? defaultMeta.builtinTools ?? {};
-			terminalId = model?.meta?.terminalId ?? '';
+			terminalId = model?.meta?.terminalId ?? defaultMeta.terminalId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 			voice = { voice: model?.meta?.voice?.voice ?? '' };
 
@@ -807,6 +807,7 @@
 		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
 		builtinTools = defaultMeta.builtinTools ?? {};
 		toolIds = defaultMeta.toolIds ?? [];
+		terminalId = defaultMeta.terminalId ?? '';
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
