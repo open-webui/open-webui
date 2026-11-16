@@ -86,6 +86,7 @@ export type OutputDisplayItem =
 			type: 'context_compaction';
 			id: string;
 			summary: string;
+			status?: 'in_progress' | 'failed';
 	  };
 
 type ResponseStreamEvent = {
@@ -486,7 +487,8 @@ export function buildOutputDisplayItems(output: OutputItem[] = []): OutputDispla
 			displayItems.push({
 				type: 'context_compaction',
 				id: item.id ?? `context-compaction-${index}`,
-				summary: typeof item.summary === 'string' ? item.summary : ''
+				summary: typeof item.summary === 'string' ? item.summary : '',
+				status: item.status === 'in_progress' || item.status === 'failed' ? item.status : undefined
 			});
 			return;
 		}

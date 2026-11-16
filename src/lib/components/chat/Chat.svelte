@@ -190,13 +190,11 @@
 	const selectedTerminalId = tabbed ? writable(get(_selectedTerminalId)) : _selectedTerminalId;
 	const terminalSkills = tabbed ? writable<any[]>([]) : _terminalSkills;
 	const models = tabbed ? writable(get(_models)) : _models;
-	const contextCompactions = writable<Record<string, 'in_progress' | { error: string }>>({});
 	setChatContext({
 		chatId,
 		models,
 		temporary: temporaryChatEnabled,
 		audioQueue,
-		contextCompactions,
 		submitPrompt: (prompt) => submitHandler(prompt)
 	});
 	export let embeddedTitle = '';
@@ -507,11 +505,6 @@
 	};
 	// a notes chat has nowhere to show them
 	$: canOpenArtifacts = !embedded || !!onOpenArtifacts;
-	let compactionChatId = '';
-	$: if (compactionChatId !== $chatId) {
-		contextCompactions.set({});
-		compactionChatId = $chatId;
-	}
 
 	let chat: any = null;
 	let tags = [];
@@ -1525,24 +1518,6 @@
 		}
 	};
 
-	const clearContextCompaction = (messageId: string) => {
-		const next = { ...$contextCompactions };
-		delete next[messageId];
-		contextCompactions.set(next);
-	};
-
-	const handleContextCompactionStatus = (status, messageId: string) => {
-		if (status?.action !== 'context_compaction') return;
-		if (status.done && !status.error) {
-			clearContextCompaction(messageId);
-		} else {
-			$contextCompactions = {
-				...$contextCompactions,
-				[messageId]: status.error ? { error: $i18n.t('Context compaction failed') } : 'in_progress'
-			};
-		}
-	};
-
 	let joinedChatId = '';
 	let liveParticipants: { id: string; name: string }[] = [];
 	const clearPresence = () => (liveParticipants = []);
@@ -1820,7 +1795,6 @@
 					if (data?.checkpoint_message_id && history.messages[data.checkpoint_message_id]) {
 						history.messages[data.checkpoint_message_id].contextSummary = data.context_summary;
 					}
-					handleContextCompactionStatus(data, event.message_id);
 					autoScrollToBottom();
 				} else if (type === 'chat:active') {
 					if (!data?.active) {
@@ -1851,7 +1825,6 @@
 					}
 					message.bridgeCancelled = true;
 					bridgeCancellations.get(event.message_id)?.();
-					clearContextCompaction(event.message_id);
 					if (data?.output) {
 						message.output = data.output;
 					}
@@ -1860,7 +1833,6 @@
 						// Set all response messages to done
 						for (const messageId of history.messages[message.parentId].childrenIds) {
 							history.messages[messageId].done = true;
-							clearContextCompaction(messageId);
 						}
 						message.done = true;
 						await processNextInQueue($chatId);
@@ -1897,7 +1869,6 @@
 						message.done = true;
 					} else handleOpenAIError(data.error, message);
 					if (!event.shared && !responseCompleted) {
-						clearContextCompaction(message.id);
 						if (event.message_id === history.currentId) {
 							await processNextInQueue(event.chat_id);
 						}
@@ -2283,7 +2254,6 @@
 				$socket?.off('disconnect', clearTyping);
 				$socket?.off('disconnect', clearPresence);
 				$socket?.off('disconnect', cancelBrowserInteractions);
-				contextCompactions.set({});
 				audioQueueInstance?.destroy();
 				audioQueue.set(null);
 			} catch (e) {
@@ -3942,10 +3912,8 @@
 		if (done) {
 			message.done = true;
 			message.meta = { ...message.meta, response_ended_at: Date.now() / 1000 };
-			if ($contextCompactions[message.id] === 'in_progress') clearContextCompaction(message.id);
 			if (shared) return;
 			if (message.error) {
-				clearContextCompaction(message.id);
 				bridge?.update();
 				await processNextInQueue(chatId);
 				return;
@@ -4072,6 +4040,7 @@
 		});
 	};
 
+	let compacting = false;
 	const handleManualCompact = async () => {
 		if (!contextCompactionEnabled) {
 			toast.message($i18n.t('Context compaction is disabled'));
@@ -4093,19 +4062,14 @@
 			return;
 		}
 
+		if (compacting) return;
+		compacting = true;
 		const model = atSelectedModel?.id ?? selectedModels.find((modelId) => modelId);
-		// Preserve the former toast translation for i18n extraction.
-		// const toastId = toast.loading($i18n.t('Compacting context...'));
 		const compactChatId = $chatId;
-		const compactMessageId = history.currentId;
-		if ($contextCompactions[compactMessageId] === 'in_progress') return;
-		$contextCompactions = { ...$contextCompactions, [compactMessageId]: 'in_progress' };
+		const toastId = toast.loading($i18n.t('Compacting context...'));
 
 		try {
 			const result = await compactChatById(localStorage.token, compactChatId, model);
-			if ($chatId !== compactChatId) return;
-			serverContextUsage = result?.context_usage ?? serverContextUsage;
-
 			if (!result?.compacted) {
 				const skippedReason =
 					result?.reason === 'too_short'
@@ -4115,21 +4079,20 @@
 							: result?.reason === 'disabled'
 								? $i18n.t('Context compaction is disabled')
 								: $i18n.t('Nothing to compact');
-				toast.message(skippedReason);
+				toast.message(skippedReason, { id: toastId });
+			} else {
+				toast.success($i18n.t('Context compacted'), { id: toastId });
 			}
+			if ($chatId !== compactChatId) return;
 
+			serverContextUsage = result?.context_usage ?? serverContextUsage;
 			await loadChat();
-			clearContextCompaction(compactMessageId);
 		} catch (error) {
-			if ($chatId === compactChatId) {
-				$contextCompactions = {
-					...$contextCompactions,
-					[compactMessageId]: {
-						error: String(error?.detail ?? error?.message ?? $i18n.t('Context compaction failed'))
-					}
-				};
-			}
+			toast.error(String(error?.detail ?? error?.message ?? $i18n.t('Context compaction failed')), {
+				id: toastId
+			});
 		} finally {
+			compacting = false;
 			messageInput?.focus({ preventScroll: true });
 		}
 	};
@@ -5189,7 +5152,6 @@
 			if (responseMessage?.parentId && history.messages[responseMessage.parentId]) {
 				for (const messageId of history.messages[responseMessage.parentId].childrenIds) {
 					history.messages[messageId].done = true;
-					clearContextCompaction(messageId);
 				}
 			}
 

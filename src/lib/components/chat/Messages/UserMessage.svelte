@@ -30,7 +30,7 @@
 	import SubagentResultRow from './SubagentResultRow.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
-	const { models, contextCompactions } = getChatContext();
+	const { models } = getChatContext();
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	export let user;
@@ -205,12 +205,8 @@
 			</div>
 		{/if}
 
-		{#if message.contextSummary || $contextCompactions?.[messageId]}
-			<ContextCompactionLabel
-				summary={message.contextSummary}
-				status={$contextCompactions?.[messageId]}
-				{compactPreview}
-			/>
+		{#if message.contextSummary}
+			<ContextCompactionLabel summary={message.contextSummary} {compactPreview} />
 		{/if}
 
 		<div class="chat-{message.role} w-full min-w-full">

@@ -32,9 +32,6 @@ export type ChatContext = {
 	models: typeof import('$lib/stores').models;
 	temporary: typeof import('$lib/stores').temporaryChatEnabled;
 	audioQueue: typeof import('$lib/stores').audioQueue;
-	contextCompactions?: import('svelte/store').Writable<
-		Record<string, 'in_progress' | { error: string }>
-	>;
 	submitPrompt?: (prompt: string) => void;
 };
 

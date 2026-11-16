@@ -84,7 +84,12 @@
 	let busy = false;
 	let loadingDiff = false;
 	let confirmDiscard = false;
-	let discardFile: GitFile | null = null;
+	let discardFiles: GitFile[] = [];
+	// Files picked with Cmd/Ctrl- or Shift-click, separate from staging and the open diff.
+	let picked = new Set<string>();
+	let pickAnchor: string | null = null;
+	$: pickedFiles = status?.files.filter((file) => picked.has(file.path)) ?? [];
+	let discarding: Set<string> | null = null;
 	let height = initialView?.height ?? 280;
 	let resizing = false;
 	let resizeY = 0;
@@ -158,6 +163,7 @@
 	// $i18n.t('Fetching…')
 	// $i18n.t('Staging…')
 	// $i18n.t('Unstaging…')
+	// $i18n.t('Discarding…')
 	$: syncMessage = syncFeedback
 		? syncComplete
 			? { publish: 'Published', pull: 'Pulled', push: 'Pushed', fetch: 'Fetched' }[syncFeedback]
@@ -165,11 +171,13 @@
 					syncFeedback
 				]
 		: '';
-	$: feedbackMessage = pendingStaging
-		? pendingStaging.action === 'stage'
-			? 'Staging…'
-			: 'Unstaging…'
-		: syncMessage;
+	$: feedbackMessage = discarding
+		? 'Discarding…'
+		: pendingStaging
+			? pendingStaging.action === 'stage'
+				? 'Staging…'
+				: 'Unstaging…'
+			: syncMessage;
 	$: syncIcon = { publish: 'upload', pull: 'download', push: 'upload', fetch: 'refresh' }[
 		busy && syncFeedback ? syncFeedback : syncAction
 	];
@@ -249,6 +257,9 @@
 			const restoring = !context && initialView;
 			clearSyncFeedback();
 			pendingStaging = null;
+			discarding = null;
+			picked = new Set();
+			pickAnchor = null;
 			context = key;
 			++generation;
 			pending = null;
@@ -372,6 +383,7 @@
 			syncFeedback = action;
 		if (action === 'stage' || action === 'unstage')
 			pendingStaging = { action, paths: new Set(fields.paths as string[]) };
+		if (action === 'discard') discarding = new Set(fields.paths as string[]);
 		busy = true;
 		error = '';
 		try {
@@ -383,6 +395,10 @@
 			);
 			if (current !== generation) return;
 			if (action === 'commit') summary = description = '';
+			if (action === 'discard') {
+				picked = new Set();
+				pickAnchor = null;
+			}
 			showBranches = false;
 			showWorktrees = false;
 			resetSelection();
@@ -405,9 +421,49 @@
 				error = String(reason instanceof Error ? reason.message : reason);
 			}
 		} finally {
-			if (current === generation) pendingStaging = null;
+			if (current === generation) pendingStaging = discarding = null;
 			busy = false;
 		}
+	};
+	// Plain clicks keep their usual behavior and reset the pick; Cmd/Ctrl toggles, Shift extends.
+	const pick = (event: MouseEvent, file: GitFile) => {
+		if ((event.target as Element | null)?.closest('[data-no-pick]')) return;
+		const toggling = event.metaKey || event.ctrlKey;
+		if (!toggling && !event.shiftKey) {
+			picked = new Set();
+			pickAnchor = file.path;
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+		const files = status?.files ?? [];
+		const anchor = pickAnchor ?? selected?.path;
+		if (event.shiftKey) {
+			const from = files.findIndex((entry) => entry.path === anchor);
+			const to = files.findIndex((entry) => entry.path === file.path);
+			const range = from < 0 ? [file] : files.slice(Math.min(from, to), Math.max(from, to) + 1);
+			picked = new Set([...(toggling ? picked : []), ...range.map((entry) => entry.path)]);
+			return;
+		}
+		const next = new Set(picked);
+		// Starting a pick while a diff is open includes the file being viewed.
+		if (
+			!next.size &&
+			anchor &&
+			anchor !== file.path &&
+			files.some((entry) => entry.path === anchor)
+		)
+			next.add(anchor);
+		if (next.has(file.path)) next.delete(file.path);
+		else next.add(file.path);
+		picked = next;
+		pickAnchor = file.path;
+	};
+	// Nested repositories cannot be discarded, so a bulk discard leaves them out.
+	const askDiscard = (files: GitFile[]) => {
+		const kept = files.filter((file) => !(file.status === 'untracked' && file.path.endsWith('/')));
+		discardFiles = kept.length ? kept : files;
+		if (discardFiles.length) confirmDiscard = true;
 	};
 	const paths = (files: GitFile[]) => [
 		...new Set(
@@ -855,34 +911,76 @@
 						>
 							{#if view === 'changes'}
 								{#if status.files.length}
-									<button
-										class="flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-100/50 dark:border-white/2 hover:bg-gray-50 dark:hover:bg-white/3 shrink-0"
-										disabled={busy}
-										role="checkbox"
-										aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
-										aria-busy={!!pendingStaging}
-										aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
-										on:click={() =>
-											act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
+									<div
+										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-gray-100/50 dark:border-white/2 shrink-0"
 									>
-										<span
-											class:opacity-60={!!pendingStaging}
-											class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
-												? 'bg-gray-800 dark:bg-white'
-												: someStaged
-													? 'bg-gray-400 dark:bg-gray-500'
-													: ''}"
-											>{#if allStaged || someStaged}<Icon
-													name={allStaged ? 'check' : 'minus'}
-													size={7}
-													class="text-white dark:text-black"
-												/>{/if}</span
+										<button
+											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-gray-50 dark:hover:bg-white/3"
+											disabled={busy}
+											role="checkbox"
+											aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
+											aria-busy={!!pendingStaging}
+											aria-label={$i18n.t(allStaged ? 'Unstage all' : 'Stage all')}
+											on:click={() =>
+												act(allStaged ? 'unstage' : 'stage', { paths: paths(status?.files ?? []) })}
 										>
-										<span class="min-w-0 truncate text-[0.6875rem] text-gray-600 dark:text-gray-400"
-											>{status.files.length}
-											{$i18n.t(status.files.length === 1 ? 'changed file' : 'changed files')}</span
-										>
-									</button>
+											<span
+												class:opacity-60={!!pendingStaging}
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
+													? 'bg-gray-800 dark:bg-white'
+													: someStaged
+														? 'bg-gray-400 dark:bg-gray-500'
+														: ''}"
+												>{#if allStaged || someStaged}<Icon
+														name={allStaged ? 'check' : 'minus'}
+														size={7}
+														class="text-white dark:text-black"
+													/>{/if}</span
+											>
+											<span
+												class="min-w-0 truncate text-[0.6875rem] text-gray-600 dark:text-gray-400"
+												>{status.files.length}
+												{$i18n.t(
+													status.files.length === 1 ? 'changed file' : 'changed files'
+												)}</span
+											>
+										</button>
+										{#if pickedFiles.length > 1}
+											<button
+												class="flex shrink-0 items-center gap-0.5 text-[0.625rem] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+												aria-label={$i18n.t('Clear selection')}
+												on:click={() => {
+													picked = new Set();
+													pickAnchor = null;
+												}}
+												>{$i18n.t('{{COUNT}} selected', { COUNT: pickedFiles.length })}<Icon
+													name="xmark"
+													size={10}
+												/></button
+											>
+										{/if}
+										<Dropdown align="end" closeOnSelect>
+											<button
+												class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+												aria-label={$i18n.t('More options')}
+												><Icon name="three-dots" size={12} /></button
+											>
+											<div slot="content">
+												<DropdownMenu className="w-48">
+													{#if pickedFiles.length > 1}<button
+															disabled={busy}
+															on:click={() => askDiscard(pickedFiles)}
+															>{$i18n.t('Discard changes to {{COUNT}} files', {
+																COUNT: pickedFiles.length
+															})}</button
+														>{/if}
+													<button disabled={busy} on:click={() => askDiscard(status?.files ?? [])}
+														>{$i18n.t('Discard all changes')}</button
+													>
+												</DropdownMenu>
+											</div>
+										</Dropdown>
+									</div>
 								{/if}
 								<div
 									class="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto scrollbar-hidden"
@@ -890,13 +988,18 @@
 									{#each status.files as file (file.path)}
 										{@const checked = stageStates.get(file.path) ?? false}
 										{@const staging = pendingStaging?.paths.has(file.path) ?? false}
+										{@const inPick = picked.has(file.path) && pickedFiles.length > 1}
+										<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 										<div
-											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left transition-colors duration-75 {selected?.path ===
-											file.path
+											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left select-none transition-colors duration-75 {selected?.path ===
+												file.path || picked.has(file.path)
 												? 'bg-gray-100/40 dark:bg-gray-800/25'
 												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
+											class:opacity-60={discarding?.has(file.path)}
+											on:click|capture={(event) => pick(event, file)}
 										>
 											<button
+												data-no-pick
 												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {checked
 													? 'bg-gray-800 dark:bg-white'
 													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
@@ -950,6 +1053,7 @@
 												>{/if}
 											<Dropdown side="top" align="end" closeOnSelect>
 												<button
+													data-no-pick
 													class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
 													aria-label={`${$i18n.t('File actions')} ${file.path}`}
 													><Icon name="three-dots" size={12} /></button
@@ -969,10 +1073,12 @@
 															>{/if}
 														<button
 															disabled={busy}
-															on:click={() => {
-																discardFile = file;
-																confirmDiscard = true;
-															}}>{$i18n.t('Discard changes')}</button
+															on:click={() => askDiscard(inPick ? pickedFiles : [file])}
+															>{inPick
+																? $i18n.t('Discard changes to {{COUNT}} files', {
+																		COUNT: pickedFiles.length
+																	})
+																: $i18n.t('Discard changes')}</button
 														>
 													</DropdownMenu>
 												</div>
@@ -1162,11 +1268,16 @@
 <ConfirmDialog
 	bind:show={confirmDiscard}
 	title={$i18n.t('Discard changes')}
-	message={$i18n.t(
-		'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
-	)}
+	message={discardFiles.length > 1
+		? $i18n.t(
+				'Discard all staged and unstaged changes to {{COUNT}} files? Files not in the last commit will be deleted. This cannot be undone.',
+				{ COUNT: discardFiles.length }
+			)
+		: $i18n.t(
+				'Discard all staged and unstaged changes to this file? Files not in the last commit will be deleted. This cannot be undone.'
+			)}
 	on:confirm={() => {
-		if (discardFile) void act('discard', { paths: paths([discardFile]) });
+		if (discardFiles.length) void act('discard', { paths: paths(discardFiles) });
 	}}
 />
 
