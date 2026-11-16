@@ -64,9 +64,9 @@ router = APIRouter()
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.json_codec import JSONCodec
 
-# Leave half of the default executor free while knowledge base syncs queue up.
+# Leave half of the worker threads free for uploads while knowledge base syncs queue up.
 _knowledge_processing_semaphore: asyncio.Semaphore = asyncio.Semaphore(
-    max((THREAD_POOL_SIZE or min(32, (os.cpu_count() or 1) + 4)) // 2, 1)
+    max((THREAD_POOL_SIZE if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0 else min(32, (os.cpu_count() or 1) + 4)) // 2, 1)
 )
 
 # Upload File
