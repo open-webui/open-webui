@@ -4,15 +4,7 @@
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
 
-	import {
-		chatId as activeChatId,
-		folders,
-		models,
-		settings,
-		terminalServers,
-		temporaryChatEnabled,
-		user
-	} from '$lib/stores';
+	import { folders, settings, terminalServers, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
@@ -31,6 +23,9 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Youtube from '$lib/components/icons/Youtube.svelte';
 	import { toast } from 'svelte-sonner';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { chatId: activeChatId, models, temporary } = getChatContext();
 
 	const i18n = getContext<any>('i18n');
 
@@ -161,7 +156,7 @@
 		if (
 			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope ===
 				'chat' &&
-			($temporaryChatEnabled || isTemporaryChatId($activeChatId))
+			($temporary || isTemporaryChatId($activeChatId))
 		)
 			return null;
 		return target;
@@ -274,7 +269,7 @@
 				{#if item?.type === 'folder'}
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}
-					{$i18n.t('Collections')}
+					{$i18n.t('Knowledge')}
 				{:else if item?.type === 'file'}
 					{$i18n.t('Files')}
 				{:else if item?.type === 'filesystem'}
@@ -307,7 +302,7 @@
 							: item?.type === 'file'
 								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
-									? $i18n.t('Collection')
+									? $i18n.t('Knowledge Base')
 									: item?.type === 'youtube'
 										? $i18n.t('YouTube')
 										: item?.type === 'web'

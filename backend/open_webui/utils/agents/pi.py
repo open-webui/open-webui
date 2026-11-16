@@ -94,7 +94,7 @@ async def run(transport, output, prompt, images, options):
                 call_id,
                 tool.get('toolName', 'agent_tool'),
                 tool.get('args', {}),
-                native=tool.copy(),
+                provider_data=tool.copy(),
                 result=tool.get('result', tool.get('partialResult')),
                 done=kind == 'tool_execution_end',
             )

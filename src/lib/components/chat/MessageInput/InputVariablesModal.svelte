@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onMount, tick } from 'svelte';
-	import { models, config } from '$lib/stores';
+	import { config } from '$lib/stores';
 
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
@@ -9,6 +9,9 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import MapSelector from '$lib/components/common/Valves/MapSelector.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 

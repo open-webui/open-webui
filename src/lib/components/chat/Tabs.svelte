@@ -31,14 +31,13 @@
 	import {
 		config,
 		embed,
-		temporaryChatEnabled,
+		temporaryChat,
 		terminalServers,
 		showTabs,
 		chatTabRequest,
-		showOverview,
 		showSidebar,
 		mobile,
-		showCallOverlay,
+		voiceCall,
 		showEmbeds,
 		settings,
 		showFileNav,
@@ -116,10 +115,8 @@
 	import FileNav from './FileNav.svelte';
 	import PyodideFileNav from './PyodideFileNav.svelte';
 	import Overview from './Overview.svelte';
-	import Modal from '../common/Modal.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	let stopTerminalChoice: ((stop: boolean) => void) | null = null;
-	import XMark from '../icons/XMark.svelte';
 	import SplitPanel from '../icons/SplitPanel.svelte';
 	import { isSavedChatId } from '$lib/utils/chatId';
 
@@ -162,8 +159,12 @@
 	export let mainChatGroupId = '';
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
-	export let mainTabFolder: { id: string; name: string; icon?: string | null; canEdit?: boolean } | null =
-		null;
+	export let mainTabFolder: {
+		id: string;
+		name: string;
+		icon?: string | null;
+		canEdit?: boolean;
+	} | null = null;
 	/** Double-clicking the folder tab renames the folder inline. */
 	export let onRenameFolder: ((folderId: string, name: string) => Promise<void>) | null = null;
 	let isRenamingFolder = false;
@@ -216,6 +217,7 @@
 	let gitViews: Record<string, GitBar> = {};
 	let chatViews: Record<string, ChatTab> = {};
 	let chatTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
+	let chatTabActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatStreamingStates: Record<string, boolean> = {};
 	// Each chat writes its artifacts here; its artifacts tab reads them.
 	const chatArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
@@ -294,6 +296,7 @@
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		queuedArtifactCode = null;
 	}
 	/** Starts a new chat that keeps the open pages; everything else stays with the chat being left. */
@@ -311,8 +314,9 @@
 		fileContexts = keep(fileContexts);
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		queuedArtifactCode = null;
-		const entry = chatViewEntry($user.id, null, $temporaryChatEnabled);
+		const entry = chatViewEntry($user.id, null, $temporaryChat);
 		entry.state = {
 			...entry.state,
 			panels: carried,
@@ -349,7 +353,7 @@
 					}
 				}
 			},
-			$temporaryChatEnabled
+			$temporaryChat
 		).then(
 			() => {
 				if (viewEntry === entry) setView({ status: 'ready', entry, chatId: id, error: '' });
@@ -378,7 +382,8 @@
 		terminalProcesses = {};
 		chatStreamingStates = {};
 		chatTitleEditors = {};
-		const entry = chatViewEntry($user.id, id, $temporaryChatEnabled);
+		chatTabActions = {};
+		const entry = chatViewEntry($user.id, id, $temporaryChat);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
 		try {
@@ -418,11 +423,7 @@
 			void attachChatViewTo(id).catch(() => {});
 		else void restoreChatView(id);
 	}
-	const persistPanels = (
-		nextTabs: typeof tabs,
-		terminalId: string | null,
-		ready: boolean
-	) => {
+	const persistPanels = (nextTabs: typeof tabs, terminalId: string | null, ready: boolean) => {
 		if (!ready || !viewEntry || chatLoading || viewEntry.promoting) return;
 		// The Files tab follows the terminal picked for the chat and starts over there.
 		if (terminalId && terminalId !== viewEntry.state.selectedTerminalId) {
@@ -462,6 +463,7 @@
 		tabs = createTabsState();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
+		chatTabActions = {};
 		clearChatViews();
 	}
 	const forgetDraftsForUnreachableTerminals = (..._connections: unknown[]) => {
@@ -472,7 +474,8 @@
 		}
 		dirtyFiles = { ...dirtyFiles };
 	};
-	$: if (isMounted && viewReady) forgetDraftsForUnreachableTerminals($terminalServers, $settings, $config, $user);
+	$: if (isMounted && viewReady)
+		forgetDraftsForUnreachableTerminals($terminalServers, $settings, $config, $user);
 	const resolveTabConnection = (tab: Tab) => {
 		if (!tab.terminalId || !isTerminalReachable(tab.terminalId)) return null;
 		const target = resolveTerminalTarget(
@@ -529,10 +532,7 @@
 		voiceNoteDestination = {
 			target: selectedConnection,
 			chatId,
-			directory:
-				activeFileContext?.terminalId === selectedConnection.selector
-					? activeFileContext.currentDirectory
-					: undefined
+			directory: getCurrentDirectory(selectedConnection.selector)
 		};
 	};
 	$: if (!supportsTerminalFiles) showQuickOpen = false;
@@ -593,7 +593,8 @@
 			artifacts: 'code',
 			preview: 'browser',
 			voice: 'microphone',
-			comments: 'chat-bubble'
+			comments: 'chat-bubble',
+			overview: 'grid'
 		})[kind];
 	const toTabDomId = (id: string) => `chat-panel-${encodeURIComponent(id)}`;
 	$: activeTabId = tabs.activeId;
@@ -603,6 +604,9 @@
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
 	$: activeFileContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
+	/** The folder the active file panel shows on `terminalId`, if it shows one there. */
+	export const getCurrentDirectory = (terminalId: string | null) =>
+		activeFileContext?.terminalId === terminalId ? activeFileContext.currentDirectory : undefined;
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -814,7 +818,9 @@
 			target: { ...selectedConnection },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedConnection.selector ? activeFileContext : undefined
+				activeFileContext?.terminalId === selectedConnection.selector
+					? activeFileContext
+					: undefined
 		});
 	};
 	/** Opens the artifacts tab of the chat in `sourceTabId` beside that chat. */
@@ -833,6 +839,10 @@
 			inSplit,
 			sourceTabId
 		);
+	};
+	const openOverview = () => {
+		if (!hasMessages) return;
+		openPanel({ id: 'overview', kind: 'overview', label: $i18n.t('Overview') });
 	};
 	$: if (viewReady && queuedArtifactCode) {
 		const { code } = queuedArtifactCode;
@@ -1076,7 +1086,11 @@
 	const openDesktop = () => {
 		if (!selectedConnection) return askForTerminal(openDesktop);
 		openPanel({
-			id: JSON.stringify(['desktop', selectedConnection.baseUrl, selectedConnection.context.modelId]),
+			id: JSON.stringify([
+				'desktop',
+				selectedConnection.baseUrl,
+				selectedConnection.context.modelId
+			]),
 			kind: 'desktop',
 			label: $i18n.t('Desktop'),
 			terminalId: selectedConnection.selector,
@@ -1166,7 +1180,7 @@
 			}
 			if (tab.kind === 'voice') {
 				bridge?.end();
-				showCallOverlay.set(false);
+				voiceCall.set(false);
 			}
 			if (tab.kind === 'preview') showEmbeds.set(false);
 			chatView.drafts.delete(id);
@@ -1181,12 +1195,16 @@
 				delete fileContexts[id];
 				delete chatStreamingStates[id];
 				delete chatTitleEditors[id];
+				delete chatTabActions[id];
 				delete artifactSelections[id];
 				if (tab.kind === 'chat') {
 					delete chatArtifacts[id];
 					delete artifactSelections[`artifacts:${id}`];
 				}
-				if (!tabs.tabs.length || (!isLargeScreen && tabs.tabs.every((tab) => tab.id === mainChatTabId)))
+				if (
+					!tabs.tabs.length ||
+					(!isLargeScreen && tabs.tabs.every((tab) => tab.id === mainChatTabId))
+				)
 					showTabs.set(false);
 				await tick();
 				if (chatView === viewEntry) document.getElementById(toTabDomId(tabs.activeId))?.focus();
@@ -1350,12 +1368,11 @@
 	$: showFilesTab =
 		supportsTerminalFiles ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
-	$: if (!hasMessages) showOverview.set(false);
 	$: showCommentsTab = !!(
 		$config?.features?.enable_comments &&
 		$user &&
 		isSavedChatId(chatId) &&
-		!$temporaryChatEnabled
+		!$temporaryChat
 	);
 	let commentCount: number | null = null;
 	let commentCountRequestId = 0;
@@ -1411,7 +1428,7 @@
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
-		{ kind: 'voice', label: $i18n.t('Voice'), available: !!bridge && $showCallOverlay },
+		{ kind: 'voice', label: $i18n.t('Voice'), available: !!bridge && $voiceCall },
 		{ kind: 'comments', label: $i18n.t('Comments'), available: showCommentsTab }
 	];
 
@@ -1419,7 +1436,11 @@
 		(view) => view.kind !== 'files' && view.kind !== 'voice' && view.available
 	);
 	$: canOpenNewTab =
-		showFilesTab || supportsTerminalFiles || canSelectTerminal || newTabViews.length > 0 || hasMessages;
+		showFilesTab ||
+		supportsTerminalFiles ||
+		canSelectTerminal ||
+		newTabViews.length > 0 ||
+		hasMessages;
 
 	const splitWithSuggestedTab = () => {
 		if (tabs.tabs.length < 2) {
@@ -1472,13 +1493,16 @@
 				if (showCommentsTab) action = () => openFeatureTab('comments');
 				break;
 			case Shortcut.NEW_FILE:
-				if ((supportsTerminalFiles && selectedConnection) || canSelectTerminal) action = openNewFileTab;
+				if ((supportsTerminalFiles && selectedConnection) || canSelectTerminal)
+					action = openNewFileTab;
 				break;
 			case Shortcut.NEW_TERMINAL:
-				if ((supportsTerminal && selectedConnection) || canSelectTerminal) action = openNewTerminalTab;
+				if ((supportsTerminal && selectedConnection) || canSelectTerminal)
+					action = openNewTerminalTab;
 				break;
 			case Shortcut.NEW_BROWSER:
-				if ((supportsBrowser && selectedConnection) || canSelectTerminal) action = () => openBrowser();
+				if ((supportsBrowser && selectedConnection) || canSelectTerminal)
+					action = () => openBrowser();
 				break;
 			case Shortcut.CLOSE_TAB:
 				if (panelVisible && tabs.activeId)
@@ -1605,8 +1629,7 @@
 		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasExtraTabs = true;
 	}
-	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId)
-		chatTabRequest.set(null);
+	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId) chatTabRequest.set(null);
 	$: if (viewReady && $showTabs === 'chat') {
 		if (canOpenChatTab) openFeatureTab('chat', true);
 		else chatTabRequest.set(null);
@@ -1624,8 +1647,8 @@
 		openFeatureTab('preview');
 		showEmbeds.set(false);
 	}
-	$: if (viewReady && $showCallOverlay) openFeatureTab('voice');
-	$: if (viewReady && !$showCallOverlay && tabs.tabs.some((tab) => tab.kind === 'voice'))
+	$: if (viewReady && $voiceCall) openFeatureTab('voice');
+	$: if (viewReady && !$voiceCall && tabs.tabs.some((tab) => tab.kind === 'voice'))
 		closeTab('voice');
 	$: if (viewReady && $showTabs === 'voice') openFeatureTab('voice');
 	$: if (viewReady && $showFileNav) {
@@ -1644,7 +1667,14 @@
 	}
 
 	beforeNavigate(({ from, to, cancel, willUnload }) => {
-		if (from?.url.pathname === to?.url.pathname) return;
+		if (from?.url.pathname === to?.url.pathname) {
+			// The router stays on the main chat while other tabs are in front; going there uncovers it.
+			if (to && location.pathname !== to.url.pathname) {
+				focusMainChat();
+				if (!isLargeScreen) showTabs.set(false);
+			}
+			return;
+		}
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		if (willUnload && hasChatViewDrafts()) cancel();
@@ -1656,7 +1686,6 @@
 		setView({ status: 'idle' });
 		++commentCountRequestId;
 		++featureCheckRequestId;
-		showOverview.set(false);
 	});
 
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
@@ -1741,7 +1770,8 @@
 			const url = new URL(href, location.origin);
 			if (active?.id === mainChatTabId && !chatId) {
 				// delete() re-encodes the other parameters even when it removes nothing.
-				if ($temporaryChatEnabled) url.searchParams.set('temporary-chat', 'true');
+				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
+					url.searchParams.set('temporary-chat', String($temporaryChat));
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
 			}
 			if (url.origin === location.origin && url.href !== location.href) {
@@ -1778,7 +1808,10 @@
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
 	https://docs.openwebui.com/license. -->
 	<title
-		>{activeTab?.kind === 'page' || (activeTab?.kind === 'chat' && activeTab.id !== mainChatTabId)
+		>{activeTab?.kind === 'page' ||
+		(activeTab?.kind === 'chat' &&
+			activeTab.id !== mainChatTabId &&
+			$settings.showChatTitleInTab !== false)
 			? `${activeTab.label} / ${$WEBUI_NAME}`
 			: $settings.showChatTitleInTab !== false && chatId && title
 				? `${title.length > 30 ? `${title.slice(0, 30)}...` : title} / ${$WEBUI_NAME}`
@@ -1852,41 +1885,6 @@
 		onselect={runWithTerminal}
 	/>
 {/if}
-
-<Modal
-	bind:show={$showOverview}
-	size="full"
-	ariaLabel={$i18n.t('Overview')}
-	containerClassName="p-2 sm:p-6"
-	className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden"
->
-	<div class="flex h-[calc(100dvh-1rem-2px)] sm:h-[calc(100dvh-3rem-2px)] flex-col">
-		<div class="flex items-center justify-between px-4 py-3 shrink-0">
-			<h2 class="text-sm font-medium text-gray-700 dark:text-gray-200">{$i18n.t('Overview')}</h2>
-			<button
-				class="rounded-lg p-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-				aria-label={$i18n.t('Close')}
-				on:click={() => showOverview.set(false)}
-			>
-				<XMark className="size-5" />
-			</button>
-		</div>
-		<div class="flex-1 min-h-0">
-			<Overview
-				history={chatHistory}
-				{chatUser}
-				onNodeClick={(e: any) => {
-					const { node } = e;
-					chatHistory.messages[node.data.message.id].favorite = node.data.message.favorite
-						? true
-						: null;
-					showOverview.set(false);
-					showMessage(node.data.message, true);
-				}}
-			/>
-		</div>
-	</div>
-</Modal>
 
 <div
 	role="presentation"
@@ -1999,7 +1997,7 @@
 				></div>
 			</div>
 		{/each}
-		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (`${viewEntry?.instanceId}:${tab.id}`)}
+		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (tab.kind === 'page' ? tab.id : `${viewEntry?.instanceId}:${tab.id}`)}
 			{@const chatView = viewEntry!}
 			{@const target =
 				isMounted && $config && $user && $settings && $terminalServers !== null
@@ -2057,13 +2055,29 @@
 						overlay={isDragging}
 						artifacts={getArtifactsStore(tab.sourceTabId)}
 						selection={artifactSelections[tab.id] ?? null}
-						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat' ? source.chatId : chatView.chatId) ?? ''}
+						chatId={(source?.id !== mainChatTabId && source?.kind === 'chat'
+							? source.chatId
+							: chatView.chatId) ?? ''}
+					/>
+				{:else if tab.kind === 'overview'}
+					<Overview
+						history={chatHistory}
+						{chatUser}
+						onNodeClick={(e: any) => {
+							const { node } = e;
+							chatHistory.messages[node.data.message.id].favorite = node.data.message.favorite
+								? true
+								: null;
+							if (!visibleTabIds.has(mainChatTabId)) focusMainChat();
+							showMessage(node.data.message, true);
+						}}
 					/>
 				{:else if tab.kind === 'chat'}
 					<ChatTab
 						bind:this={chatViews[tab.id]}
 						bind:streaming={chatStreamingStates[tab.id]}
 						bind:tabTitleEditor={chatTitleEditors[tab.id]}
+						bind:tabActions={chatTabActions[tab.id]}
 						artifacts={getChatArtifacts(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
 						initialView={chatView.transient[`chat:${tab.id}`]}
@@ -2332,7 +2346,9 @@
 				{#each group.tabIds.map((id) => tabs.tabs.find((tab) => tab.id === id)!) as tab (tab.id)}
 					{@const titleEditor =
 						tab.id === mainChatTabId
-							? mainTabFolder ? undefined : tabTitleEditor
+							? mainTabFolder
+								? undefined
+								: tabTitleEditor
 							: chatTitleEditors[tab.id]}
 					{@const PageIcon =
 						tab.kind === 'page' ? pageIcons[tab.href?.split(/[/?#]/)[1] ?? ''] : null}
@@ -2355,7 +2371,9 @@
 							aria-controls={`${toTabDomId(tab.id)}-view`}
 							aria-selected={group.activeId === tab.id}
 							tabindex={group.activeId === tab.id ? 0 : -1}
-							title={tab.id === mainChatTabId ? mainTabTitle : (tab.directory ?? tab.path ?? tabLabel(tab))}
+							title={tab.id === mainChatTabId
+								? mainTabTitle
+								: (tab.directory ?? tab.path ?? tabLabel(tab))}
 							aria-label={tab.id === mainChatTabId ? mainTabTitle : undefined}
 							class="flex h-full items-center gap-1.5 min-w-0"
 							on:dblclick={() => {
@@ -2378,11 +2396,16 @@
 								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'terminal'}
 								<Icon
-									name={terminalIconName(terminalProcesses[tab.sessionId ?? ''] ?? '', tabLabel(tab))}
+									name={terminalIconName(
+										terminalProcesses[tab.sessionId ?? ''] ?? '',
+										tabLabel(tab)
+									)}
 									size={14}
 								/>
 							{:else if tab.kind === 'comments'}
 								<Annotation className="size-3.5 shrink-0" />
+							{:else if tab.kind === 'overview'}
+								<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
 							{:else if PageIcon}
 								<svelte:component this={PageIcon} className="size-3.5 shrink-0" />
 							{:else}
@@ -2424,7 +2447,9 @@
 								/>
 							{/if}
 							{@render tabActions?.()}
-						{:else}<button
+						{:else if !titleEditor}{#if chatTabActions[tab.id]}<span class="-me-1 flex"
+									>{@render chatTabActions[tab.id]?.()}</span
+								>{/if}<button
 								type="button"
 								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[
@@ -2505,7 +2530,7 @@
 								</button>
 							{/each}
 							{#if hasMessages}
-								<button aria-haspopup="dialog" on:click={() => showOverview.set(true)}>
+								<button on:click={openOverview}>
 									<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
 									<span class="flex-1 text-start">{$i18n.t('Overview')}</span>
 								</button>

@@ -213,10 +213,32 @@ async def connect_mcp_server(
         return None
 
     mcp_server_connection = None
-    for server_connection in await Config.get('tool_server.connections', []):
-        if server_connection.get('type', '') == 'mcp' and (server_connection.get('info') or {}).get('id') == server_id:
-            mcp_server_connection = server_connection
-            break
+    if server_id.startswith('tether:'):
+        server = next(
+            (item for item in await get_tether_tool_servers(user, 'mcp') if 'tether:' + item['id'] == server_id), None
+        )
+        if server:
+            mcp_server_connection = {
+                'auth_type': 'none',
+                'config': {
+                    'enable': True,
+                    'access_grants': [{'principal_type': 'user', 'principal_id': user.id, 'permission': 'read'}],
+                },
+                'tether': {
+                    'user_id': user.id,
+                    'device_id': server['device_id'],
+                    'service': server['service'],
+                    'transport': server['transport'],
+                },
+            }
+    else:
+        for server_connection in await Config.get('tool_server.connections', []):
+            if (
+                server_connection.get('type', '') == 'mcp'
+                and (server_connection.get('info') or {}).get('id') == server_id
+            ):
+                mcp_server_connection = server_connection
+                break
 
     if not mcp_server_connection or not (mcp_server_connection.get('config') or {}).get('enable'):
         log.error(f'MCP server with id {server_id} not found')
@@ -249,6 +271,7 @@ async def connect_mcp_server(
             url=mcp_server_connection.get('url', ''),
             headers=headers if headers else None,
             auth=auth,
+            **({'tether': mcp_server_connection['tether']} if mcp_server_connection.get('tether') else {}),
         )
         function_name_filter_list = (mcp_server_connection.get('config') or {}).get('function_name_filter_list', '')
         if isinstance(function_name_filter_list, str):
@@ -1752,8 +1775,8 @@ async def get_tool_server_data(
     return res
 
 
-async def get_tether_tool_servers(user) -> list[dict]:
-    """OpenAPI tool servers the user added in Tether, by id (`<device>:<connection>`)."""
+async def get_tether_tool_servers(user, type='openapi') -> list[dict]:
+    """Personal tool servers, scoped to the requesting user and device."""
     if not ENABLE_TOOL_SERVERS:
         return []
     return [
@@ -1762,8 +1785,10 @@ async def get_tether_tool_servers(user) -> list[dict]:
             'name': f'{presence["name"]} · {item["name"]}',
             'url': f'tether://{presence["connection_id"]}',
             'service': item['service'],
+            'device_id': presence['connection_id'],
+            'transport': item.get('transport'),
         }
-        for presence, item in await get_tether_connections(user.id, 'openapi')
+        for presence, item in await get_tether_connections(user.id, type)
     ]
 
 

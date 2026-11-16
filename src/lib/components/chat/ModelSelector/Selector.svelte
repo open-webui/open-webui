@@ -30,8 +30,6 @@
 		user,
 		MODEL_DOWNLOAD_POOL,
 		mobile,
-		models as _models,
-		temporaryChatEnabled,
 		settings,
 		config,
 		showSettings,
@@ -56,8 +54,9 @@
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
 	import ModelItem from './ModelItem.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
 
-	const models = getContext<typeof _models>('chatModels') ?? _models;
+	const { models, temporary } = getChatContext();
 
 	const i18n: any = getContext('i18n');
 
@@ -423,6 +422,8 @@
 			onModelSelect(values);
 		}
 	};
+
+	$: if (!multipleEnabled && compareEnabled) setCompareEnabled(false);
 
 	const selectItem = (item, index: number) => {
 		selectedModelIdx = index;

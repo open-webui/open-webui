@@ -37,6 +37,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Calendar from '$lib/components/icons/Calendar.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -66,6 +67,8 @@
 	// The page is the editor: fields start from the saved automation, Save appears once they differ.
 	let name = '';
 	let prompt = '';
+	// Like the model editor's system prompt: a saved prompt starts collapsed.
+	let showPrompt = true;
 	let model_id = '';
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
@@ -257,16 +260,6 @@
 		if (copied) toast.success($i18n.t('Copied link to clipboard'));
 	};
 
-	// The prompt grows with its text instead of scrolling inside a box.
-	const autosize = (node: HTMLTextAreaElement, _value: string) => {
-		const fit = () => {
-			node.style.height = 'auto';
-			node.style.height = `${node.scrollHeight}px`;
-		};
-		fit();
-		return { update: fit };
-	};
-
 	const toggleHandler = async () => {
 		const previousState = automation.is_active;
 		const res = await toggleAutomationById(localStorage.token, automation.id).catch((err) => {
@@ -362,6 +355,7 @@
 		is_active = automation.is_active;
 
 		await resetFields(automation);
+		showPrompt = !prompt.trim();
 		await ensureFolders();
 		await ensureChannels();
 		terminalServers = await getTerminalServers(localStorage.token).catch(() => []);
@@ -424,14 +418,39 @@
 				aria-label={$i18n.t('Name')}
 				placeholder={$i18n.t('Automation name')}
 			/>
-			<textarea
-				class="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-gray-500 outline-hidden placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-500"
-				bind:value={prompt}
-				use:autosize={prompt}
-				rows={1}
-				aria-label={$i18n.t('Instructions')}
-				placeholder={$i18n.t('Enter prompt here.')}
-			></textarea>
+			{#if showPrompt || !prompt.trim()}
+				<Textarea
+					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-gray-500 outline-hidden placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-500"
+					bind:value={prompt}
+					rows={1}
+					ariaLabel={$i18n.t('Instructions')}
+					placeholder={$i18n.t('Enter prompt here.')}
+				/>
+			{:else}
+				<button
+					type="button"
+					aria-label={$i18n.t('Instructions')}
+					aria-expanded={false}
+					on:click={() => {
+						showPrompt = true;
+					}}
+					class="mt-1 w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400"
+				>
+					{prompt}
+				</button>
+			{/if}
+			{#if prompt.trim()}
+				<button
+					class="mt-1 block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+					type="button"
+					aria-expanded={showPrompt}
+					on:click={() => {
+						showPrompt = !showPrompt;
+					}}
+				>
+					{showPrompt ? $i18n.t('Show less') : $i18n.t('Show more')}
+				</button>
+			{/if}
 
 			<div class="mt-6 mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
 				{$i18n.t('Properties')}

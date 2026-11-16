@@ -8,6 +8,7 @@
 	let chatView: Chat | undefined;
 	export const startRename = () => chatView?.startRename();
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	export let tabActions: import('svelte').Snippet | undefined = undefined;
 
 	export let initialPrompt = '';
 	export let initialView: any = null;
@@ -106,6 +107,7 @@
 	<Chat
 		bind:this={chatView}
 		bind:tabTitleEditor
+		bind:tabActions
 		embedded={true}
 		tabbed={true}
 		{parentChatId}

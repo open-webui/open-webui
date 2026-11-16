@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { v4 as uuidv4 } from 'uuid';
-	import { config, settings, user as _user, mobile, temporaryChatEnabled } from '$lib/stores';
+	import { config, settings, user as _user, mobile } from '$lib/stores';
 	import { refreshChatList } from '$lib/stores/chatList';
 	import { tick, getContext, onMount, onDestroy, createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
@@ -15,13 +15,14 @@
 	import Spinner from '../common/Spinner.svelte';
 
 	import ChatPlaceholder from './ChatPlaceholder.svelte';
+	import { getChatContext } from './context';
 
 	const i18n = getContext('i18n');
 
 	export let className = 'h-full flex pt-18';
 
 	export let chatId = '';
-	export let temporary = $temporaryChatEnabled;
+	const { temporary } = getChatContext();
 	export let user = $_user;
 
 	export let prompt;
@@ -197,7 +198,7 @@
 	};
 
 	const updateChat = async () => {
-		if (!temporary) {
+		if (!$temporary) {
 			history = history;
 			await tick();
 			const res = await updateChatById(localStorage.token, chatId, {
@@ -491,7 +492,7 @@
 		history.currentId = getDeepestChildId(history, parentMessageId);
 		history = history;
 
-		if (!temporary) {
+		if (!$temporary) {
 			const res = await deleteChatMessageById(localStorage.token, chatId, messageId);
 			if (res?.chat?.history) {
 				history = res.chat.history;
