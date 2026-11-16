@@ -153,7 +153,7 @@ class MCPClient:
                     transport = tether_transport(**tether)
                 else:
                     http_client = await stack.enter_async_context(create_httpx_client(headers=headers, auth=auth))
-                    transport = streamable_http_client(url, http_client=http_client)
+                    transport = streamable_http_client(url, http_client=http_client, max_sse_event_size=None)
                 # mode='auto' (the default) probes server/discover for the stateless
                 # 2026-07-28 protocol and falls back to the initialize handshake on
                 # legacy servers. The read timeout bounds that handshake and every
