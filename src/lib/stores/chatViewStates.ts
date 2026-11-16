@@ -169,10 +169,9 @@ export async function flushChatView(entry: Entry): Promise<void> {
 		} catch (error) {
 			entry.error = `Layout changes not saved. ${String(error)}`;
 		} finally {
-			entry.write = undefined;
 			notify();
 		}
-	})();
+	})().finally(() => (entry.write = undefined));
 	return entry.write;
 }
 
