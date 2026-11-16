@@ -10,6 +10,7 @@
 	import { getBackendConfig, getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
+	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
 	import { getTerminalServers } from '$lib/apis/terminal';
@@ -41,7 +42,8 @@
 		showTabs,
 		mobile,
 		chatId,
-		chats
+		chats,
+		folders
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -134,7 +136,10 @@
 				setModels(),
 				setTools(),
 				refreshTerminalServers(),
-				getSkills(localStorage.token).then((value) => skills.set(value))
+				getSkills(localStorage.token).then((value) => skills.set(value)),
+				getFolders(localStorage.token)
+					.catch(() => [])
+					.then((value) => folders.set(value))
 			]);
 			for (const result of results) {
 				if (result.status === 'rejected') console.error('Unable to refresh access', result.reason);
