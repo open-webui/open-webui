@@ -274,7 +274,7 @@
 				{#if item?.type === 'folder'}
 					{$i18n.t('Folders')}
 				{:else if item?.type === 'collection'}
-					{$i18n.t('Collections')}
+					{$i18n.t('Knowledge')}
 				{:else if item?.type === 'file'}
 					{$i18n.t('Files')}
 				{:else if item?.type === 'filesystem'}
@@ -307,7 +307,7 @@
 							: item?.type === 'file'
 								? `${item?.collection?.name} > ${$i18n.t('File')}`
 								: item?.type === 'collection'
-									? $i18n.t('Collection')
+									? $i18n.t('Knowledge Base')
 									: item?.type === 'youtube'
 										? $i18n.t('YouTube')
 										: item?.type === 'web'
