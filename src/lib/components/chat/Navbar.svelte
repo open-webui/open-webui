@@ -129,7 +129,7 @@
 		);
 		if (!res) return;
 		updateFolderChatLists({ id: chat.id, title: newTitle });
-		onRename(res.id, newTitle);
+		onRename(chat.id, newTitle);
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 		await refreshFolderChatLists();
 	};
@@ -332,11 +332,13 @@
 {/if}
 
 <nav
-	class="sticky top-0 z-30 w-full {$mobile ? 'pt-1.5' : ''} {tabbed
-		? 'pb-0.5'
-		: $selectedFolder && !history.currentId
-			? 'shrink-0 pb-1'
-			: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
+	class="sticky top-0 z-30 w-full {$mobile && !side ? 'pt-1.5' : ''} {side
+		? ''
+		: tabbed
+			? 'pb-0.5'
+			: $selectedFolder && !history.currentId
+				? 'shrink-0 pb-1'
+				: 'pb-1 -mb-12'} flex flex-col items-center drag-region"
 >
 	<div class:hidden={tabbed} class="flex items-center w-full {$mobile ? 'px-1.5' : 'pl-1.5 pr-1'}">
 		<div

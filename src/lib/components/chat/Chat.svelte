@@ -570,10 +570,6 @@
 	let taskIds = null;
 	let liveStatus = '';
 	export let streaming = false;
-	export let embeddedTabTitleEditor: import('svelte').Snippet | undefined = undefined;
-	export let embeddedTabActions: import('svelte').Snippet | undefined = undefined;
-	$: embeddedTabTitleEditor = loading ? undefined : tabTitleEditor;
-	$: embeddedTabActions = loading ? undefined : tabActions;
 
 	$: streaming =
 		!loading &&
@@ -4225,6 +4221,10 @@
 	let mainChatGroupId = '';
 	let tabTitleEditor: import('svelte').Snippet | undefined;
 	let tabActions: import('svelte').Snippet | undefined;
+	export let embeddedTabTitleEditor: import('svelte').Snippet | undefined = undefined;
+	export let embeddedTabActions: import('svelte').Snippet | undefined = undefined;
+	$: embeddedTabTitleEditor = loading ? undefined : tabTitleEditor;
+	$: embeddedTabActions = loading ? undefined : tabActions;
 	let folderTabActions: import('svelte').Snippet | undefined;
 
 	// Renaming the folder from its tab saves like the Edit Folder modal.
