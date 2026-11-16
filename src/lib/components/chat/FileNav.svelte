@@ -86,7 +86,7 @@
 	let viewRestored = !initialView;
 	let capturedView: any = null;
 	export const captureView = () => {
-		// Captured again after teardown, when the editor is gone.
+		// The editor is gone after teardown; a fresh capture would drop its unsaved edit.
 		if (disposed) return capturedView;
 		const view =
 			!viewRestored && initialView
