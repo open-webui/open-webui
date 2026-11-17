@@ -563,7 +563,9 @@ class ExternalKnowledgeConnectionListResponse(BaseModel):
 
 
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
-EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector'}
+EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector', 'openai'}
+# Providers that search server-side by text, so a source needs no field mapping.
+EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS = {'openai'}
 
 
 def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeConnectionForm) -> tuple[str, dict]:
@@ -602,6 +604,10 @@ def _get_normalized_external_source(source: ExternalKnowledgeSourceForm, provide
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Only collection sources are supported.')
     if not source.name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Collection name is required.')
+
+    if provider in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS:
+        source.config = {}
+        return source
 
     config = source.config or {}
     allowed_keys = {'content_field', 'metadata_field', 'document_id_field'}
@@ -828,17 +834,7 @@ async def _get_external_source_test_result(
         user_id=user.id,
         name=connection.get('name'),
         description='',
-        meta={
-            'source': 'external',
-            'read_only': True,
-            'external': {
-                'connection_id': connection.get('id'),
-                'source': source.model_dump(),
-                'provider': connection.get('provider'),
-                'auth_mode': 'service_account',
-                'capabilities': {'retrieve': True},
-            },
-        },
+        meta=_get_external_knowledge_meta(connection, source),
         access_grants=[],
         created_at=int(time.time()),
         updated_at=int(time.time()),
@@ -897,6 +893,20 @@ async def test_external_knowledge_retrieval(
     return await _get_external_source_test_result(request, connection, source, form_data.query, form_data.count, user)
 
 
+def _get_external_knowledge_meta(connection: dict, source: ExternalKnowledgeSourceForm) -> dict:
+    return {
+        'source': 'external',
+        'read_only': True,
+        'external': {
+            'connection_id': connection.get('id'),
+            'source': source.model_dump(),
+            'provider': connection.get('provider'),
+            'auth_mode': 'service_account',
+            'capabilities': {'retrieve': True},
+        },
+    }
+
+
 @router.post('/external/knowledge/create', response_model=KnowledgeResponse | None)
 async def create_external_knowledge(
     request: Request,
@@ -931,17 +941,7 @@ async def create_external_knowledge(
     if not knowledge:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.FILE_EXISTS)
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': form_data.connection_id,
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     knowledge = await Knowledges.update_knowledge_meta_by_id(knowledge.id, meta, db=db)
     await embed_knowledge_base_metadata(request, knowledge.id, knowledge.name, knowledge.description)
     return knowledge
@@ -996,17 +996,7 @@ async def create_external_knowledge_source(
         await _set_external_connections(connections)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.FILE_EXISTS)
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': connection.get('id'),
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     knowledge = await Knowledges.update_knowledge_meta_by_id(knowledge.id, meta, db=db)
     await embed_knowledge_base_metadata(request, knowledge.id, knowledge.name, knowledge.description)
     return knowledge
@@ -1063,17 +1053,7 @@ async def update_external_knowledge_source(
         await _set_external_connections(connections)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': connection.get('id'),
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     updated = await Knowledges.update_knowledge_meta_by_id(id, meta, db=db)
     if not updated:
         connections[idx] = existing_connection

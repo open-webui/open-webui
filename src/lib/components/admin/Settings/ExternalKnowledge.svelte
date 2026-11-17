@@ -55,6 +55,10 @@
 		};
 	};
 
+	// Providers that search by text server-side, so sources need no field mapping.
+	const TEXT_SEARCH_PROVIDERS = ['openai'];
+	const DEFAULT_PROVIDER = 'openai';
+
 	let loading = false;
 	let testing = false;
 	let creating = false;
@@ -73,7 +77,7 @@
 	let sourceForm = {
 		name: '',
 		description: '',
-		provider: 'qdrant',
+		provider: DEFAULT_PROVIDER,
 		endpoint: '',
 		apiKey: '',
 		timeout: 30,
@@ -87,6 +91,8 @@
 		collectionField: 'collection_name',
 		testQuery: ''
 	};
+
+	$: textSearch = TEXT_SEARCH_PROVIDERS.includes(sourceForm.provider);
 
 	const schemaDefaults = (provider = sourceForm.provider) => {
 		if (provider === 'milvus') {
@@ -123,14 +129,14 @@
 		sourceForm = {
 			name: '',
 			description: '',
-			provider: 'qdrant',
+			provider: DEFAULT_PROVIDER,
 			endpoint: '',
 			apiKey: '',
 			timeout: 30,
 			dbName: '',
 			sourceName: '',
 			testQuery: '',
-			...schemaDefaults('qdrant')
+			...schemaDefaults(DEFAULT_PROVIDER)
 		};
 		accessGrants = [];
 		testResult = null;
@@ -200,6 +206,9 @@
 	};
 
 	const endpointPlaceholder = () => {
+		if (sourceForm.provider === 'openai') {
+			return 'http://litellm:4000/v1';
+		}
 		if (sourceForm.provider === 'pgvector') {
 			return 'postgresql://user:password@host:5432/db';
 		}
@@ -238,6 +247,10 @@
 	});
 
 	const sourcePayload = () => {
+		if (textSearch) {
+			return { type: 'collection', name: sourceForm.sourceName.trim(), config: {} };
+		}
+
 		const config: Record<string, string> = {
 			content_field: sourceForm.contentField.trim(),
 			...(sourceForm.vectorField.trim() ? { vector_field: sourceForm.vectorField.trim() } : {}),
@@ -264,10 +277,11 @@
 	const testFormIsValid = () =>
 		!!sourceForm.endpoint.trim() &&
 		!!sourceForm.sourceName.trim() &&
-		!!sourceForm.contentField.trim() &&
-		(sourceForm.provider === 'qdrant' || !!sourceForm.vectorField.trim()) &&
-		(sourceForm.provider !== 'pgvector' ||
-			(!!sourceForm.tableName.trim() && !!sourceForm.collectionField.trim())) &&
+		(textSearch ||
+			(!!sourceForm.contentField.trim() &&
+				(sourceForm.provider === 'qdrant' || !!sourceForm.vectorField.trim()) &&
+				(sourceForm.provider !== 'pgvector' ||
+					(!!sourceForm.tableName.trim() && !!sourceForm.collectionField.trim())))) &&
 		!!sourceForm.testQuery.trim();
 
 	const sourceFormIsValid = () => !!sourceForm.name.trim() && testFormIsValid();
@@ -480,6 +494,7 @@
 										on:change={updateProvider}
 										selectClassName="text-sm"
 									>
+										<option value="openai">{$i18n.t('OpenAI-compatible')}</option>
 										<option value="qdrant">Qdrant</option>
 										<option value="milvus">Milvus</option>
 										<option value="pgvector">pgvector</option>
@@ -586,7 +601,7 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
 									<label class="text-xs text-gray-500" for="external-source-collection"
-										>{$i18n.t('Collection')}</label
+										>{textSearch ? $i18n.t('Vector Store ID') : $i18n.t('Collection')}</label
 									>
 								</div>
 								<div class="flex flex-1 items-center">
@@ -595,7 +610,7 @@
 										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
 										bind:value={sourceForm.sourceName}
 										on:input={markUntested}
-										placeholder="research-docs"
+										placeholder={textSearch ? 'vs_abc123' : 'research-docs'}
 										required
 									/>
 								</div>
@@ -642,81 +657,83 @@
 							</div>
 						{/if}
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-content-field"
-										>{$i18n.t('Content Field')}</label
-									>
+						{#if !textSearch}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-content-field"
+											>{$i18n.t('Content Field')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-content-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.contentField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
+											required
+										/>
+									</div>
 								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-content-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.contentField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
-										required
-									/>
+
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-vector-field">
+											{$i18n.t('Vector Field')}
+										</label>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-vector-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.vectorField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
+											required={sourceForm.provider !== 'qdrant'}
+										/>
+									</div>
 								</div>
 							</div>
 
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-vector-field">
-										{$i18n.t('Vector Field')}
-									</label>
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-metadata-field"
+											>{$i18n.t('Metadata Field')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-metadata-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.metadataField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'pgvector'
+												? 'vmetadata'
+												: 'payload.metadata'}
+										/>
+									</div>
 								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-vector-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.vectorField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
-										required={sourceForm.provider !== 'qdrant'}
-									/>
-								</div>
-							</div>
-						</div>
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-metadata-field"
-										>{$i18n.t('Metadata Field')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-metadata-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.metadataField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'pgvector'
-											? 'vmetadata'
-											: 'payload.metadata'}
-									/>
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-document-id-field"
+											>{$i18n.t('Document ID Field')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-document-id-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.documentIdField}
+											on:input={markUntested}
+											placeholder="id"
+										/>
+									</div>
 								</div>
 							</div>
-
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-document-id-field"
-										>{$i18n.t('Document ID Field')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-document-id-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.documentIdField}
-										on:input={markUntested}
-										placeholder="id"
-									/>
-								</div>
-							</div>
-						</div>
+						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
@@ -767,14 +784,16 @@
 									</Tooltip>
 								</div>
 
-								<div class="text-xs text-gray-500 mt-1">
-									<!-- LICENSE covers this Open WebUI wordmark.
+								{#if !textSearch}
+									<div class="text-xs text-gray-500 mt-1">
+										<!-- LICENSE covers this Open WebUI wordmark.
 										Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										https://docs.openwebui.com/license. -->
-									{$i18n.t(
-										'External vectors must be generated with the same embedding model configured in Open WebUI.'
-									)}
-								</div>
+										{$i18n.t(
+											'External vectors must be generated with the same embedding model configured in Open WebUI.'
+										)}
+									</div>
+								{/if}
 							</div>
 						</div>
 

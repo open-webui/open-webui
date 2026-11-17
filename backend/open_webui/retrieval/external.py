@@ -4,14 +4,21 @@ import re
 import time
 from itertools import zip_longest
 from typing import Any, Optional
+from urllib.parse import quote
 
+import aiohttp
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.config import Config
 from open_webui.models.knowledge import KnowledgeModel
+from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
 
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+# OpenAI caps vector store search at 50 results per request.
+OPENAI_VECTOR_STORE_MAX_RESULTS = 50
 
 
 async def _get_external_connection(connection_id: str) -> Optional[dict]:
@@ -291,6 +298,93 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
     return [_normalize_result(row, mapping, knowledge, distance=row.get('distance')) for row in rows]
 
 
+async def _openai_vector_store_request(
+    connection: dict,
+    auth_config: Optional[dict],
+    method: str,
+    path: str,
+    json: Optional[dict] = None,
+) -> dict:
+    """Call an OpenAI-compatible vector store API (OpenAI, Azure OpenAI, LiteLLM)."""
+    base_url = (connection.get('endpoint') or '').strip().rstrip('/')
+    if not base_url:
+        raise RuntimeError('Endpoint is not configured')
+
+    headers = {'Accept': 'application/json'}
+    api_key = (auth_config or {}).get('api_key')
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+
+    timeout = aiohttp.ClientTimeout(total=(connection.get('config') or {}).get('timeout') or 30)
+    session = await get_session()
+    try:
+        async with session.request(
+            method,
+            f'{base_url}{path}',
+            headers=headers,
+            json=json,
+            timeout=timeout,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            if r.status >= 400:
+                detail = (await r.text())[:500]
+                raise RuntimeError(f'Vector store request failed ({r.status}): {detail}')
+            try:
+                data = await r.json(content_type=None)
+            except ValueError as exc:
+                raise RuntimeError(f'Vector store endpoint returned a non-JSON response ({r.status})') from exc
+    except aiohttp.ClientError as exc:
+        raise RuntimeError(f'Vector store request failed: {exc}') from exc
+
+    if not isinstance(data, dict):
+        raise RuntimeError('Vector store endpoint returned an unexpected response')
+    return data
+
+
+async def _retrieve_openai(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
+    # The server embeds the query, so the Open WebUI embedding model is not involved.
+    external = (knowledge.meta or {}).get('external', {})
+    source = external.get('source') or {}
+    vector_store_id = source.get('name')
+    if not vector_store_id:
+        raise RuntimeError('Vector store ID is not configured')
+
+    data = await _openai_vector_store_request(
+        connection,
+        auth_config,
+        'POST',
+        f'/vector_stores/{quote(vector_store_id, safe="")}/search',
+        json={
+            'query': query,
+            'max_num_results': max(1, min(count, OPENAI_VECTOR_STORE_MAX_RESULTS)),
+        },
+    )
+
+    normalized = []
+    for item in data.get('data') or []:
+        if not isinstance(item, dict):
+            continue
+        content = '\n'.join(
+            part['text']
+            for part in item.get('content') or []
+            if isinstance(part, dict) and isinstance(part.get('text'), str) and part['text']
+        )
+        if not content:
+            continue
+        attributes = item.get('attributes') if isinstance(item.get('attributes'), dict) else {}
+        result = {
+            'content': content,
+            'title': item.get('filename'),
+            # Kept from the file's attributes, which _normalize_result would otherwise overwrite.
+            'url': attributes.get('url'),
+            'document_id': item.get('file_id'),
+            'metadata': attributes,
+            'score': item.get('score'),
+        }
+        normalized.append(_normalize_result(result, {}, knowledge, distance=item.get('score')))
+    return normalized[:count]
+
+
 async def retrieve_external_knowledge(
     request,
     knowledge: KnowledgeModel,
@@ -330,6 +424,7 @@ async def retrieve_external_knowledge_for_connection(
         'qdrant': _retrieve_qdrant,
         'milvus': _retrieve_milvus,
         'pgvector': _retrieve_pgvector,
+        'openai': _retrieve_openai,
     }.get(provider)
     if not retrieve:
         raise RuntimeError(f'Unsupported external knowledge provider: {connection.get("provider")}')
