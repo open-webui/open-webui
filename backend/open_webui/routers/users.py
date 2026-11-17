@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import base64
-import io
 import logging
 import time
 from collections import Counter
@@ -10,7 +9,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, Response
 from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -850,14 +849,13 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
                 try:
                     header, base64_data = user.profile_image_url.split(',', 1)
                     image_data = base64.b64decode(base64_data)
-                    image_buffer = io.BytesIO(image_data)
                     media_type = header.split(';')[0].lstrip('data:').lower()
 
                     if media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
                         return FileResponse(f'{STATIC_DIR}/user.png')
 
-                    return StreamingResponse(
-                        image_buffer,
+                    return Response(
+                        content=image_data,
                         media_type=media_type,
                         headers={
                             'Content-Disposition': 'inline',
