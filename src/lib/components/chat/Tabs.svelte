@@ -706,7 +706,11 @@
 		const existing = findPageTab(url);
 		if (existing) {
 			selectTab(existing.id);
-			if (existing.href !== request.href && url.pathname !== '/workspace')
+			if (
+				existing.kind === 'page' &&
+				existing.href !== request.href &&
+				url.pathname !== '/workspace'
+			)
 				void navigatePageTab(existing.id, request.href);
 		} else openPanel(createPageTab(request));
 	};
