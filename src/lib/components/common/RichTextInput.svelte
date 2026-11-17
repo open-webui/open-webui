@@ -990,7 +990,11 @@
 				...(richText
 					? [
 							CopyableCodeBlock.configure({
-								lowlight
+								// Auto-detecting the language freezes long documents.
+								lowlight: {
+									...lowlight,
+									highlightAuto: (code: string) => lowlight.highlight('plaintext', code)
+								}
 							}),
 							Typography,
 							TableKit.configure({
