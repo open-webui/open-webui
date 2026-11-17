@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Initialize device type args
 # use build args in the docker build command with --build-arg="BUILDARG=true"
 ARG USE_CUDA=false
@@ -32,8 +31,8 @@ ARG USE_SLIM
 ARG UID
 ARG GID
 
-# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Cap Node heap for Railway/small builders (JS heap OOM during vite build)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
@@ -159,8 +158,11 @@ COPY --chown=$UID:$GID ./backend/requirements*.txt ./
 # Set UV_LINK_MODE to copy to prevent 0-byte file corruption in QEMU arm64 cross-builds
 ENV UV_LINK_MODE=copy
 
-RUN --mount=from=ghcr.io/astral-sh/uv:0.12.10,source=/uv,target=/bin/uv \
-    set -e; \
+# Railway does not support RUN --mount=from=...; copy uv from the official image instead.
+COPY --from=ghcr.io/astral-sh/uv:0.12.10 /uv /bin/uv
+RUN chmod +x /bin/uv
+
+RUN set -e; \
     if [ "$USE_SLIM" = "true" ]; then \
     uv pip install --system -r requirements-slim.txt --no-cache-dir; \
     elif [ "$USE_CUDA" = "true" ]; then \
