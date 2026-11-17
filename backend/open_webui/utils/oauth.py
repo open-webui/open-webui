@@ -578,7 +578,7 @@ async def get_oauth_client_info_with_dynamic_client_registration(
             # LICENSE covers this Open WebUI OAuth client identifier.
             # Do not alter, remove, obscure, or replace it except as LICENSE permits:
             # https://docs.openwebui.com/license.
-            client_name='Open WebUI',
+            client_name='Nebulon AI',
             redirect_uris=[f'{redirect_base_url}/oauth/clients/{client_id}/callback'],
             grant_types=['authorization_code', 'refresh_token'],
             response_types=['code'],
@@ -1810,7 +1810,7 @@ class OAuthManager:
         log.debug('Oauth Groups claim: %s', oauth_claim)
         log.debug('User oauth groups: %s', user_oauth_groups)
         log.debug("User's current groups: %s", [g.name for g in user_current_groups])
-        log.debug('All groups available in OpenWebUI: %s', [g.name for g in all_available_groups])
+        log.debug('All groups available in Nebulon AI: %s', [g.name for g in all_available_groups])
 
         # Remove groups that user is no longer a part of
         for group_model in user_current_groups:

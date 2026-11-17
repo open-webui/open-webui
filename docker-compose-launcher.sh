@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Interactive docker compose launcher for Open WebUI.
+# Interactive docker compose launcher for Nebulon AI.
 # Supports GPU auto-detection, configurable ports, data mounts, and Playwright.
 
 readonly BOLD='\033[1m'

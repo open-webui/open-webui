@@ -220,7 +220,7 @@ async def test_notification_target(request: Request, target_id: str, user=Depend
         # LICENSE covers this Open WebUI notification identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
-        app_name = getattr(request.app.state, 'WEBUI_NAME', 'Open WebUI')
+        app_name = getattr(request.app.state, 'WEBUI_NAME', 'Nebulon AI')
         return await test_target(user.id, target_id, app_name)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

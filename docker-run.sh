@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build and run the Open WebUI Docker container locally.
+# Build and run the Nebulon AI Docker container locally.
 
 readonly IMAGE="open-webui"
 readonly CONTAINER="open-webui"
@@ -27,4 +27,4 @@ docker run -d \
 echo "Cleaning up dangling images..."
 docker image prune -f
 
-echo "Open WebUI is running at http://localhost:${HOST_PORT}"
+echo "Nebulon AI is running at http://localhost:${HOST_PORT}"

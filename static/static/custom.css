@@ -1,0 +1,14 @@
+/* Nebulon AI accent — minimal override of default blue focus/checked states */
+:root {
+	--nebulon-indigo: #3341c9;
+	--nebulon-violet: #7b5cff;
+}
+
+input[type='checkbox']:focus {
+	--tw-ring-color: var(--nebulon-violet);
+}
+
+input[type='checkbox']:checked {
+	background-color: var(--nebulon-violet) !important;
+	border-color: var(--nebulon-violet) !important;
+}

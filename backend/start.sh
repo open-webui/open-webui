@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Container entry point for Open WebUI.
+# Container entry point for Nebulon AI.
 # Handles secret key generation, optional Ollama/CUDA/Playwright setup,
 # HuggingFace Space deployment, and launches the uvicorn server.
 

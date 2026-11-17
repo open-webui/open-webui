@@ -1,7 +1,7 @@
 """
 Async facade over the synchronous VECTOR_DB_CLIENT.
 
-The vector DB backends bundled with Open WebUI (Chroma, pgvector, Qdrant,
+The vector DB backends bundled with Nebulon AI (Chroma, pgvector, Qdrant,
 Milvus, OpenSearch, Pinecone, Weaviate, …) all expose a uniformly
 synchronous API. Each method performs blocking network or disk I/O — and
 some, like `insert`/`upsert`, can run for several seconds.

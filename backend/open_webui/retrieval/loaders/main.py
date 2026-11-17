@@ -274,7 +274,7 @@ class DoclingLoader:
                     'md_page_break_placeholder': page_break_marker,
                     'to_formats': ['md', 'json'],
                     # Keep Docling params as user-provided form values. Encoding nested
-                    # values here would make Open WebUI responsible for Docling's API
+                    # values here would make Nebulon AI responsible for Docling's API
                     # quirks and could break when Docling changes its form contract.
                     **self.params,
                 },

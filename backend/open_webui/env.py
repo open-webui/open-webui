@@ -542,7 +542,7 @@ import ssl as _ssl
 # to a path directly) take precedence over this global fallback.
 #
 # This follows the industry convention of ``SSL_CERT_FILE`` / ``REQUESTS_CA_BUNDLE``
-# but is scoped to Open WebUI to avoid interfering with system-level settings.
+# but is scoped to Nebulon AI to avoid interfering with system-level settings.
 AIOHTTP_CLIENT_SSL_CERT_FILE = os.getenv('AIOHTTP_CLIENT_SSL_CERT_FILE', '').strip()
 
 
@@ -574,7 +574,7 @@ def _parse_ssl_env(value: str) -> 'bool | _ssl.SSLContext':
     - ``"/path/to/ca-bundle.crt"`` → ``SSLContext`` loading that CA file
       (takes precedence over ``AIOHTTP_CLIENT_SSL_CERT_FILE``)
 
-    This allows users with corporate or internal CAs to point Open WebUI
+    This allows users with corporate or internal CAs to point Nebulon AI
     at a custom CA bundle without disabling verification entirely.
     """
     lower = value.strip().lower()
@@ -815,9 +815,9 @@ WEBUI_AUTH_TRUSTED_GROUPS_HEADER = os.getenv('WEBUI_AUTH_TRUSTED_GROUPS_HEADER',
 WEBUI_AUTH_TRUSTED_ROLE_HEADER = os.getenv('WEBUI_AUTH_TRUSTED_ROLE_HEADER', None)
 
 # Custom header name for API key authentication.  Defaults to 'x-api-key'.
-# Useful when Open WebUI sits behind a reverse proxy / API gateway that
+# Useful when Nebulon AI sits behind a reverse proxy / API gateway that
 # already uses the Authorization header for its own authentication — set
-# this to a unique header (e.g. 'X-OpenWebUI-Key') so the middleware
+# this to a unique header (e.g. 'X-Nebulon AI-Key') so the middleware
 # checks the custom header instead and avoids the 401 short-circuit.
 CUSTOM_API_KEY_HEADER = os.getenv('CUSTOM_API_KEY_HEADER', 'x-api-key')
 
@@ -878,7 +878,7 @@ BYPASS_PYDUB_PREPROCESSING = USE_SLIM or os.getenv('BYPASS_PYDUB_PREPROCESSING',
 
 # When disabled (default), the OpenAI catch-all proxy endpoint (/{path:path})
 # is blocked. Enable only if you need direct passthrough to upstream OpenAI-
-# compatible APIs for endpoints not natively handled by Open WebUI.
+# compatible APIs for endpoints not natively handled by Nebulon AI.
 ENABLE_OPENAI_API_PASSTHROUGH = os.getenv('ENABLE_OPENAI_API_PASSTHROUGH', 'False').lower() == 'true'
 
 WEBUI_AUTH_SIGNOUT_REDIRECT_URL = os.getenv('WEBUI_AUTH_SIGNOUT_REDIRECT_URL', None)
@@ -897,7 +897,7 @@ OAUTH_SESSION_TOKEN_ENCRYPTION_KEY = os.getenv('OAUTH_SESSION_TOKEN_ENCRYPTION_K
 OAUTH_MAX_SESSIONS_PER_USER = int(os.getenv('OAUTH_MAX_SESSIONS_PER_USER', '10'))
 
 # Token Exchange Configuration
-# Allows external apps to exchange OAuth tokens for OpenWebUI tokens
+# Allows external apps to exchange OAuth tokens for Nebulon AI tokens
 ENABLE_OAUTH_TOKEN_EXCHANGE = os.getenv('ENABLE_OAUTH_TOKEN_EXCHANGE', 'False').lower() == 'true'
 _oauth_token_exchange_rate_limit = (os.getenv('OAUTH_TOKEN_EXCHANGE_RATE_LIMIT') or '').strip()
 OAUTH_TOKEN_EXCHANGE_RATE_LIMIT = (
@@ -960,15 +960,13 @@ if LICENSE_PUBLIC_KEY:
 # visual, textual, symbolic identifiers, metadata, and surrounding UI.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
-WEBUI_NAME = os.getenv('WEBUI_NAME', 'Open WebUI')
-if WEBUI_NAME != 'Open WebUI':
-    WEBUI_NAME += ' (Open WebUI)'
+WEBUI_NAME = os.getenv('WEBUI_NAME', 'Nebulon AI')
 
 # LICENSE covers this Open WebUI branding surface, including this favicon
 # and any visual, textual, or symbolic identifiers it preserves.
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
-WEBUI_FAVICON_URL = 'https://openwebui.com/favicon.png'
+WEBUI_FAVICON_URL = '/static/favicon.png'
 WEBUI_BUILD_HASH = os.getenv('WEBUI_BUILD_HASH', 'dev-build')
 TRUSTED_SIGNATURE_KEY = os.getenv('TRUSTED_SIGNATURE_KEY', '')
 
@@ -1195,7 +1193,7 @@ PIP_PACKAGE_INDEX_OPTIONS = os.getenv('PIP_PACKAGE_INDEX_OPTIONS', '').split()
 
 # OFFLINE_MODE
 
-ENABLE_VERSION_UPDATE_CHECK = os.getenv('ENABLE_VERSION_UPDATE_CHECK', 'true').lower() == 'true'
+ENABLE_VERSION_UPDATE_CHECK = os.getenv('ENABLE_VERSION_UPDATE_CHECK', 'false').lower() == 'true'
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', 'false').lower() == 'true'
 
 if OFFLINE_MODE:

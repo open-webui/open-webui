@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Nebulon AI">
+  <rect width="64" height="64" rx="12" fill="#0B1E3F"/>
+  <text x="32" y="46" text-anchor="middle" font-family="system-ui,Segoe UI,Helvetica,Arial,sans-serif"
+    font-size="40" font-weight="700" fill="#22D3EE">N</text>
+</svg>

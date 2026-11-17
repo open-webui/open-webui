@@ -3,7 +3,7 @@
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { get } from 'svelte/store';
-	import { socket, user, config, showSidebar, channels, settings, mobile } from '$lib/stores';
+	import { socket, user, config, showSidebar, channels, settings, mobile, WEBUI_NAME } from '$lib/stores';
 	import { canUseEncryption, consumeEntry, Conversation, type State } from '$lib/encryption/client';
 
 	import Navbar from '$lib/components/channel/Navbar.svelte';
@@ -110,7 +110,7 @@
 	}
 </script>
 
-<svelte:head><title>{$i18n.t('Encrypted chat')} · Open WebUI</title></svelte:head>
+<svelte:head><title>{$i18n.t('Encrypted chat')} · {$WEBUI_NAME}</title></svelte:head>
 <div
 	class="h-screen max-h-[100dvh] w-full min-w-0 flex flex-col {$showSidebar
 		? 'md:max-w-[calc(100%-var(--sidebar-width))]'

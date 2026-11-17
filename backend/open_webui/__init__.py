@@ -23,7 +23,7 @@ def version_callback(value: bool) -> None:
         # LICENSE covers this Open WebUI CLI identifier.
         # Do not alter, remove, obscure, or replace it except as LICENSE permits:
         # https://docs.openwebui.com/license.
-        typer.echo(f'Open WebUI version: {VERSION}')
+        typer.echo(f'Nebulon AI version: {VERSION}')
         raise typer.Exit()
 
 

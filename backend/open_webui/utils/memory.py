@@ -580,7 +580,7 @@ Conversation:
                     # LICENSE covers this Open WebUI system identifier.
                     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                     # https://docs.openwebui.com/license.
-                    'content': "You are Open WebUI's private memory reviewer. Return only valid JSON.",
+                    'content': "You are Nebulon AI's private memory reviewer. Return only valid JSON.",
                 },
                 {'role': 'user', 'content': review_prompt},
             ],

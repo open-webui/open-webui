@@ -155,13 +155,13 @@ def apply_params_to_form_data(form_data: dict, model: dict, params: dict | None 
 
 def remove_open_webui_params(params: dict) -> dict:
     """
-    Removes OpenWebUI specific parameters from the provided dictionary.
+    Removes Nebulon AI specific parameters from the provided dictionary.
 
     Args:
         params (dict): The dictionary containing parameters.
 
     Returns:
-        dict: The modified dictionary with OpenWebUI parameters removed.
+        dict: The modified dictionary with Nebulon AI parameters removed.
     """
     open_webui_params = {
         'stream_response': bool,

@@ -1276,7 +1276,7 @@ def get_reranking_function(reranking_engine, reranking_model, reranking_function
 
 
 # UUIDs, SHA-256 digests, and prefixed variants thereof all fit [A-Za-z0-9_-].
-# Anything else cannot be a real Open WebUI collection and could break out of
+# Anything else cannot be a real Nebulon AI collection and could break out of
 # a Milvus expression literal.
 _SAFE_COLLECTION_NAME_RE = re.compile(r'^[A-Za-z0-9_-]{1,255}$')
 

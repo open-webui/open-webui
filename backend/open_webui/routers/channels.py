@@ -1123,7 +1123,7 @@ async def send_notification(request, channel, message, active_user_ids, db=None)
                 await notify(
                     u.id,
                     f'channel:{channel.id}:{message.id}',
-                    f'{channel.name} / Open WebUI',
+                    f'{channel.name} / Nebulon AI',
                     message.content,
                     '/channels/' + quote(channel.id, safe=''),
                 )

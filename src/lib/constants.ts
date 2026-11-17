@@ -4,7 +4,7 @@
 // visual, textual, symbolic identifiers, metadata, and surrounding UI.
 // Do not alter, remove, obscure, or replace it except as LICENSE permits:
 // https://docs.openwebui.com/license.
-export const APP_NAME = 'Open WebUI';
+export const APP_NAME = 'Nebulon AI';
 
 export const WEBUI_HOSTNAME = '';
 export const WEBUI_BASE_URL = '';
@@ -16,11 +16,7 @@ export const AUDIO_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/audio`;
 export const IMAGES_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/images`;
 export const RETRIEVAL_API_BASE_URL = `${WEBUI_BASE_URL}/api/v1/retrieval`;
 
-export const COMMUNITY_ORIGINS = [
-	'https://openwebui.com',
-	'https://www.openwebui.com',
-	'http://localhost:9999'
-];
+export const COMMUNITY_ORIGINS: string[] = [];
 
 // The version changes, but the promise must not. Let what
 // was built here keep its word across every release.

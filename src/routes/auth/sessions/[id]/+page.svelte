@@ -7,6 +7,7 @@
 	import { user, config, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import BrandMark from '$lib/components/common/BrandMark.svelte';
 
 	const i18n = getContext<Readable<I18n>>('i18n');
 
@@ -67,10 +68,9 @@
 		<div class="my-auto w-full sm:max-w-md py-20 sm:pb-10 sm:pt-0 dark:text-gray-100">
 			{#if $config?.metadata?.auth_logo_position === 'center'}
 				<div class="flex justify-center mb-6">
-					<img
-						crossorigin="anonymous"
-						src="{WEBUI_BASE_URL}/static/favicon.png"
-						class="size-24 rounded-full"
+					<BrandMark
+						variant="lockup"
+						className="h-12 w-auto max-w-[min(18rem,80vw)]"
 						alt="{$WEBUI_NAME} logo"
 					/>
 				</div>
@@ -99,12 +99,7 @@
 			class:left-0={!$config?.metadata?.auth_logo_position}
 			class:right-0={$config?.metadata?.auth_logo_position === 'top-right'}
 		>
-			<img
-				crossorigin="anonymous"
-				src="{WEBUI_BASE_URL}/static/favicon.png"
-				class="w-6 rounded-full"
-				alt="{$WEBUI_NAME} logo"
-			/>
+			<BrandMark variant="mark" markSize={32} className="size-8" alt="{$WEBUI_NAME} logo" />
 		</div>
 	{/if}
 </div>

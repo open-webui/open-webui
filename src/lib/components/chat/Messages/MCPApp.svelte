@@ -85,7 +85,7 @@
 		if (closing) return;
 		bridge = new AppBridge(
 			null,
-			{ name: 'Open WebUI', version: WEBUI_VERSION },
+			{ name: 'Nebulon AI', version: WEBUI_VERSION },
 			{
 				openLinks: {},
 				message: { text: {} },

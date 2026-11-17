@@ -1134,7 +1134,12 @@
 							https://docs.openwebui.com/license. -->
 								<img
 									src="{WEBUI_BASE_URL}/static/favicon.png"
-									class="sidebar-new-chat-icon size-5 rounded-full group-hover:hidden"
+									class="sidebar-new-chat-icon size-5 group-hover:hidden dark:hidden"
+									alt=""
+								/>
+								<img
+									src="{WEBUI_BASE_URL}/static/favicon-dark.png"
+									class="sidebar-new-chat-icon size-5 group-hover:hidden hidden dark:block"
 									alt=""
 								/>
 
@@ -1323,7 +1328,13 @@
 						<img
 							crossorigin="anonymous"
 							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class="sidebar-new-chat-icon size-5 rounded-full"
+							class="sidebar-new-chat-icon size-5 dark:hidden"
+							alt=""
+						/>
+						<img
+							crossorigin="anonymous"
+							src="{WEBUI_BASE_URL}/static/favicon-dark.png"
+							class="sidebar-new-chat-icon size-5 hidden dark:block"
 							alt=""
 						/>
 					</a>

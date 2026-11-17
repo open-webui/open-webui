@@ -554,7 +554,7 @@ apply_orjson_http_json()
 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
 # https://docs.openwebui.com/license.
 app = FastAPI(
-    title='Open WebUI',
+    title=WEBUI_NAME,
     docs_url='/docs' if ENV == 'dev' else None,
     openapi_url='/openapi.json' if ENV == 'dev' else None,
     redoc_url=None,
@@ -570,7 +570,7 @@ async def recurrence_timeout_handler(request: Request, exc: RecurrenceEvaluation
 # Used by readiness checks to gate traffic until startup work is done.
 app.state.startup_complete = False
 
-# For Open WebUI OIDC/OAuth2
+# For Nebulon AI OIDC/OAuth2
 oauth_manager = OAuthManager(app)
 app.state.oauth_manager = oauth_manager
 
@@ -2087,7 +2087,7 @@ async def generate_messages(
     pipeline, then converts the response back to Anthropic Messages format.
 
     Supports both streaming and non-streaming requests.
-    All models configured in Open WebUI are accessible via this endpoint.
+    All models configured in Nebulon AI are accessible via this endpoint.
 
     Authentication: Supports both standard Authorization header and
     Anthropic's x-api-key header (via middleware translation).
@@ -2804,7 +2804,7 @@ async def get_app_changelog():
 @app.get('/api/usage')
 async def get_current_usage(user=Depends(get_verified_user)):
     """
-    Get current usage statistics for Open WebUI.
+    Get current usage statistics for Nebulon AI.
     This is an experimental endpoint and subject to change.
     """
     try:
@@ -3081,21 +3081,25 @@ async def get_manifest_json():
             'description': f'{app.state.WEBUI_NAME} is an open, extensible, user-friendly interface for AI that adapts to your workflow.',
             'start_url': '/',
             'display': 'standalone',
-            'background_color': '#343541',
+            'theme_color': '#0d1120',
+            'background_color': '#0d1120',
             'icons': [
-                # LICENSE covers this Open WebUI install icon.
-                # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-                # https://docs.openwebui.com/license.
                 {
-                    'src': '/static/logo.png',
+                    'src': '/static/web-app-manifest-192x192.png',
                     'type': 'image/png',
-                    'sizes': '500x500',
+                    'sizes': '192x192',
                     'purpose': 'any',
                 },
                 {
-                    'src': '/static/logo.png',
+                    'src': '/static/web-app-manifest-512x512.png',
                     'type': 'image/png',
-                    'sizes': '500x500',
+                    'sizes': '512x512',
+                    'purpose': 'any',
+                },
+                {
+                    'src': '/static/web-app-manifest-512x512.png',
+                    'type': 'image/png',
+                    'sizes': '512x512',
                     'purpose': 'maskable',
                 },
             ],

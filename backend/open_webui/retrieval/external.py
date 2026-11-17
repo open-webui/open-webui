@@ -55,7 +55,7 @@ def _normalize_result(result: dict, mapping: dict, knowledge: KnowledgeModel, di
             'external': True,
         }
     )
-    # external results are not Open WebUI files, even when the payload carries a file_id
+    # external results are not Nebulon AI files, even when the payload carries a file_id
     metadata.pop('file_id', None)
     if page is not None:
         metadata['page'] = page

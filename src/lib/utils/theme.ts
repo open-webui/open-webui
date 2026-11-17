@@ -27,7 +27,10 @@ export function setTheme(value: string): void {
 		.querySelector('meta[name="theme-color"]')
 		?.setAttribute(
 			'content',
-			value === 'her' ? '#983724' : value === 'oled-dark' ? '#000000' : dark ? '#171717' : '#ffffff'
+			value === 'her' ? '#983724' : value === 'oled-dark' ? '#0d1120' : dark ? '#0d1120' : '#ffffff'
 		);
+	(window as unknown as { nebulonSyncFavicon?: (dark: boolean) => void }).nebulonSyncFavicon?.(
+		value === 'her' ? true : dark
+	);
 	window.applyTheme?.();
 }

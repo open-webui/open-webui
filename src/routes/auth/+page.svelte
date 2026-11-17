@@ -29,6 +29,7 @@
 	import { generateInitialsImage, canvasPixelTest, getUserTimezone } from '$lib/utils';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import BrandMark from '$lib/components/common/BrandMark.svelte';
 	import OnBoarding from '$lib/components/OnBoarding.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import { redirect } from '@sveltejs/kit';
@@ -317,11 +318,9 @@
 									<!-- LICENSE covers this Open WebUI sign-in logo.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
-									<img
-										id="logo"
-										crossorigin="anonymous"
-										src="{WEBUI_BASE_URL}/static/favicon.png"
-										class="size-24 rounded-full"
+									<BrandMark
+										variant="lockup"
+										className="h-12 w-auto max-w-[min(18rem,80vw)]"
 										alt="{$WEBUI_NAME} logo"
 									/>
 								</div>
@@ -701,13 +700,7 @@
 						<!-- LICENSE covers this Open WebUI sign-in logo.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
-						<img
-							id="logo"
-							crossorigin="anonymous"
-							src="{WEBUI_BASE_URL}/static/favicon.png"
-							class=" w-6 rounded-full"
-							alt=""
-						/>
+						<BrandMark variant="mark" markSize={32} className="size-8" alt="" />
 					</div>
 				</div>
 			</div>

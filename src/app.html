@@ -6,21 +6,29 @@
 		visual, textual, symbolic identifiers, metadata, and surrounding UI.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<link rel="icon" type="image/png" href="/static/favicon.png" crossorigin="use-credentials" />
+		<link
+			id="favicon-png"
+			rel="icon"
+			type="image/png"
+			href="/static/favicon.png"
+			sizes="32x32"
+			crossorigin="use-credentials"
+		/>
 		<link
 			rel="icon"
 			type="image/png"
 			href="/static/favicon-96x96.png"
-			sizes="96x96"
+			sizes="128x128"
 			crossorigin="use-credentials"
 		/>
 		<link
+			id="favicon-svg"
 			rel="icon"
 			type="image/svg+xml"
 			href="/static/favicon.svg"
 			crossorigin="use-credentials"
 		/>
-		<link rel="shortcut icon" href="/static/favicon.ico" crossorigin="use-credentials" />
+		<link id="favicon-ico" rel="shortcut icon" href="/static/favicon.ico" crossorigin="use-credentials" />
 		<link
 			rel="apple-touch-icon"
 			sizes="180x180"
@@ -32,7 +40,7 @@
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
 		/>
-		<meta name="theme-color" content="#171717" />
+		<meta name="theme-color" content="#0d1120" />
 		<meta name="robots" content="noindex,nofollow" />
 
 		<script src="/static/loader.js" defer crossorigin="use-credentials"></script>
@@ -61,25 +69,40 @@
 					localStorage.theme = 'system';
 				}
 
+				const syncFavicon = (dark) => {
+					const png = document.getElementById('favicon-png');
+					const svg = document.getElementById('favicon-svg');
+					const ico = document.getElementById('favicon-ico');
+					if (png) png.setAttribute('href', dark ? '/static/favicon-dark.png' : '/static/favicon.png');
+					if (svg) svg.setAttribute('href', dark ? '/static/favicon-dark.svg' : '/static/favicon.svg');
+					if (ico) ico.setAttribute('href', dark ? '/static/favicon-dark.ico' : '/static/favicon.ico');
+				};
+				window.nebulonSyncFavicon = syncFavicon;
+
 				if (localStorage.theme === 'system') {
 					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
-					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
+					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#0d1120' : '#ffffff');
+					syncFavicon(prefersDarkTheme);
 				} else if (localStorage.theme === 'oled-dark') {
 					document.documentElement.style.setProperty('--color-gray-800', '#101010');
 					document.documentElement.style.setProperty('--color-gray-850', '#050505');
 					document.documentElement.style.setProperty('--color-gray-900', '#000000');
 					document.documentElement.style.setProperty('--color-gray-950', '#000000');
 					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#000000');
+					metaThemeColorTag.setAttribute('content', '#0d1120');
+					syncFavicon(true);
 				} else if (localStorage.theme === 'light') {
 					document.documentElement.classList.add('light');
 					metaThemeColorTag.setAttribute('content', '#ffffff');
+					syncFavicon(false);
 				} else if (localStorage.theme === 'her') {
 					document.documentElement.classList.add('her');
 					metaThemeColorTag.setAttribute('content', '#983724');
+					syncFavicon(true);
 				} else {
 					document.documentElement.classList.add('dark');
-					metaThemeColorTag.setAttribute('content', '#171717');
+					metaThemeColorTag.setAttribute('content', '#0d1120');
+					syncFavicon(true);
 				}
 
 				// LICENSE covers these Open WebUI splash logo assets.
@@ -100,11 +123,17 @@
 						if (e.matches) {
 							document.documentElement.classList.add('dark');
 							document.documentElement.classList.remove('light');
-							metaThemeColorTag.setAttribute('content', '#171717');
+							metaThemeColorTag.setAttribute('content', '#0d1120');
+							syncFavicon(true);
 						} else {
 							document.documentElement.classList.add('light');
 							document.documentElement.classList.remove('dark');
 							metaThemeColorTag.setAttribute('content', '#ffffff');
+							syncFavicon(false);
+						}
+						const splashLogo = document.getElementById('logo-her');
+						if (splashLogo) {
+							splashLogo.src = e.matches ? '/static/splash-dark.png' : '/static/splash.png';
 						}
 					}
 				});
@@ -113,7 +142,7 @@
 				const logo = document.createElement('img');
 				logo.id = 'logo';
 				logo.style =
-					'position: absolute; width: auto; height: 6rem; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
+					'position: absolute; width: min(20rem, 80vw); height: auto; top: 44%; left: 50%; transform: translateX(-50%); display:block;';
 				logo.loading = 'eager';
 				logo.fetchPriority = 'high';
 				// LICENSE covers this Open WebUI splash logo.
@@ -124,6 +153,10 @@
 
 				document.addEventListener('DOMContentLoaded', function () {
 					const splash = document.getElementById('splash-screen');
+					const splashLogo = document.getElementById('logo-her');
+					if (splashLogo) {
+						splashLogo.src = isDarkMode ? '/static/splash-dark.png' : '/static/splash.png';
+					}
 					if (document.documentElement.classList.contains('her')) {
 						return;
 					}
@@ -133,7 +166,7 @@
 			})();
 		</script>
 
-		<title>Open WebUI</title>
+		<title>Nebulon AI</title>
 
 		%sveltekit.head%
 	</head>
@@ -171,7 +204,7 @@
 				<img
 					id="logo-her"
 					alt=""
-					style="width: auto; height: 13rem"
+					style="width: min(20rem, 85vw); height: auto"
 					src="/static/splash.png"
 					loading="eager"
 					fetchpriority="high"
@@ -222,7 +255,7 @@
 		}
 
 		html.dark #splash-screen {
-			background: #000;
+			background: #0d1120;
 		}
 
 		html.her #splash-screen {

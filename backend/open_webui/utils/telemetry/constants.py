@@ -36,7 +36,7 @@ class SpanAttributes:
     DB_STATEMENT = _db.DB_STATEMENT  # 'db.statement'
     DB_OPERATION = _db.DB_OPERATION  # 'db.operation'
 
-    # Open WebUI custom keys (not part of semconv)
+    # Nebulon AI custom keys (not part of semconv)
     DB_INSTANCE = 'db.instance'
     DB_TYPE = 'db.type'
     DB_IP = 'db.ip'

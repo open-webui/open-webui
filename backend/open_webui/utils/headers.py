@@ -57,7 +57,7 @@ def include_user_info_headers(headers: dict, user: Optional[Any] = None, *, requ
     """
     Forward user identity to external backends: signed JWT in
     FORWARD_USER_INFO_HEADER_JWT if FORWARD_USER_INFO_HEADER_JWT_SECRET is set;
-    otherwise the legacy X-OpenWebUI-User-* headers.
+    otherwise the legacy X-Nebulon AI-User-* headers.
     Include the verified incoming auth type when a request provides it.
     """
     if user is None:
@@ -190,7 +190,7 @@ async def get_headers_and_cookies(
                 # Do not alter, remove, obscure, or replace it except as LICENSE permits:
                 # https://docs.openwebui.com/license.
                 'HTTP-Referer': 'https://openwebui.com/',
-                'X-Title': 'Open WebUI',
+                'X-Title': 'Nebulon AI',
             }
             if 'openrouter.ai' in url
             else {}

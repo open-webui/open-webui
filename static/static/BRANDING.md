@@ -1,9 +1,12 @@
-# Open WebUI Branding Assets
+# Nebulon AI branding assets (this directory)
 
-This directory contains Open WebUI branding assets, including favicons, logos, splash images, app icons, and web app manifest icons.
+Placeholder Nebulon AI icons and splash images live here with the same filenames Open WebUI expects. Drop final brand files here without renaming:
 
-Open WebUI branding in this directory includes assets, filenames, metadata, manifests, references, and surrounding UI that present or preserve the Open WebUI name, logo, visual, textual, or symbolic identifiers.
+- `favicon.svg`, `favicon.png`, `favicon-96x96.png`, `favicon.ico`
+- `logo.png`, `splash.png`, `splash-dark.png`
+- `apple-touch-icon.png`, `web-app-manifest-192x192.png`, `web-app-manifest-512x512.png`
+- `site.webmanifest` (`name` / `short_name`)
 
-Do not alter, remove, obscure, or replace Open WebUI branding except as permitted by `LICENSE`.
+Mirror the same files to `backend/open_webui/static/` for Docker builds.
 
-See also: https://docs.openwebui.com/license.
+Upstream Open WebUI copyright and `LICENSE` requirements are documented in the repository root `NEBULON.md`.
