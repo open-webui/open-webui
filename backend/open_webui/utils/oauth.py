@@ -1272,6 +1272,8 @@ class OAuthClientManager:
                 )
             # Keep the URL out of the session cookie; long scope lists push it past the browser size limit
             authorization_url = auth_data.pop('url')
+            # Without a stored nonce authlib skips verifying the id_token, which MCP never uses (#34504)
+            auth_data.pop('nonce', None)
             auth_data['user_id'] = user_id
             await client.save_authorize_data(request, redirect_uri=redirect_uri_str, **auth_data)
             return RedirectResponse(authorization_url, status_code=302)
