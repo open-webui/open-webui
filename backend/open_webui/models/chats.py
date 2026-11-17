@@ -1655,8 +1655,6 @@ class ChatTable:
             async with get_async_db_context(db) as session:
                 chat = await session.get(Chat, id)
                 chat.pinned = not chat.pinned
-                chat.updated_at = int(time.time())
-                chat.last_read_at = int(time.time())
                 await session.commit()
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -1668,8 +1666,6 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.archived = not chat.archived
                 chat.folder_id = None
-                chat.updated_at = int(time.time())
-                chat.last_read_at = int(time.time())
                 await session.commit()
                 return ChatModel.model_validate(chat)
         except Exception:
@@ -3022,7 +3018,6 @@ class ChatTable:
                 chat = await session.get(Chat, id)
                 chat.folder_id = folder_id
                 if chat.user_id == user_id:
-                    chat.last_read_at = int(time.time())
                     chat.pinned = False
                 if folder_id is not None:
                     # Folder listings only show unarchived chats, so moving an archived
