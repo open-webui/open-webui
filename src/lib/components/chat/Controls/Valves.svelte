@@ -94,6 +94,11 @@
 					} else if (valves[property] == null) {
 						valves[property] = null;
 					}
+				} else if (valves[property] === '') {
+					const types = (valvesSpec.properties[property]?.anyOf ?? []).map((inner) => inner.type);
+					if (types.includes('null') && !types.includes('string')) {
+						valves[property] = null;
+					}
 				}
 			}
 
