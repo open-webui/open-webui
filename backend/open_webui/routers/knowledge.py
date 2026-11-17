@@ -34,6 +34,7 @@ from open_webui.models.knowledge import (
 )
 from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.external import (
+    get_vector_store_ids,
     list_openai_vector_stores,
     retrieve_external_knowledge,
     retrieve_external_knowledge_for_connection,
@@ -615,7 +616,11 @@ def _get_normalized_external_source(source: ExternalKnowledgeSourceForm, provide
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Collection name is required.')
 
     if provider in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS:
-        source.config = {}
+        vector_store_ids = get_vector_store_ids(source.model_dump())
+        if not vector_store_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Vector store ID is required.')
+        source.name = ', '.join(vector_store_ids)
+        source.config = {'vector_store_ids': vector_store_ids}
         return source
 
     config = source.config or {}

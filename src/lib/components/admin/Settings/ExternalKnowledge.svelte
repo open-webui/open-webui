@@ -65,6 +65,9 @@
 	let verifying = false;
 	// Stores the connection can search, offered as suggestions for the Vector Store ID.
 	let storeOptions: { id: string; name: string }[] = [];
+	// A text-search knowledge base can cover several stores; results are merged.
+	let storeIds: string[] = [];
+	let storeIdInput = '';
 	let creating = false;
 	let showSourceModal = false;
 	let connections: ExternalKnowledgeConnection[] = [];
@@ -145,6 +148,8 @@
 		accessGrants = [];
 		testResult = null;
 		storeOptions = [];
+		storeIds = [];
+		storeIdInput = '';
 		editingItem = null;
 		editingConnection = null;
 	};
@@ -185,6 +190,12 @@
 			tableName: sourceConfig.table_name ?? defaults.tableName,
 			collectionField: sourceConfig.collection_field ?? defaults.collectionField
 		};
+		storeIds = Array.isArray(sourceConfig.vector_store_ids)
+			? sourceConfig.vector_store_ids
+			: (source?.name ?? '')
+					.split(',')
+					.map((id: string) => id.trim())
+					.filter(Boolean);
 		accessGrants = structuredClone(item.access_grants ?? []);
 		showSourceModal = true;
 	};
@@ -253,7 +264,11 @@
 
 	const sourcePayload = () => {
 		if (textSearch) {
-			return { type: 'collection', name: sourceForm.sourceName.trim(), config: {} };
+			return {
+				type: 'collection',
+				name: storeIds.join(', '),
+				config: { vector_store_ids: storeIds }
+			};
 		}
 
 		const config: Record<string, string> = {
@@ -281,7 +296,7 @@
 
 	const testFormIsValid = () =>
 		!!sourceForm.endpoint.trim() &&
-		!!sourceForm.sourceName.trim() &&
+		(textSearch ? storeIds.length > 0 : !!sourceForm.sourceName.trim()) &&
 		(textSearch ||
 			(!!sourceForm.contentField.trim() &&
 				(sourceForm.provider === 'qdrant' || !!sourceForm.vectorField.trim()) &&
@@ -317,7 +332,25 @@
 		verifying = false;
 	};
 
+	const addStoreIds = (value: string) => {
+		const ids = value
+			.split(',')
+			.map((id) => id.trim())
+			.filter((id) => id && !storeIds.includes(id));
+		if (ids.length) {
+			storeIds = [...storeIds, ...ids];
+			markUntested();
+		}
+		storeIdInput = '';
+	};
+
+	const removeStoreId = (id: string) => {
+		storeIds = storeIds.filter((item) => item !== id);
+		markUntested();
+	};
+
 	const testSource = async () => {
+		addStoreIds(storeIdInput);
 		if (!testFormIsValid()) {
 			toast.error($i18n.t('Fill the source fields and test query first.'));
 			return;
@@ -416,6 +449,7 @@
 
 	const submitSource = async () => {
 		if (creating) return;
+		addStoreIds(storeIdInput);
 		if (editingItem) {
 			await updateSource();
 		} else {
@@ -666,28 +700,63 @@
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
 									<label class="text-xs text-gray-500" for="external-source-collection"
-										>{textSearch ? $i18n.t('Vector Store ID') : $i18n.t('Collection')}</label
+										>{textSearch ? $i18n.t('Vector Stores') : $i18n.t('Collection')}</label
 									>
 								</div>
-								<div class="flex flex-1 items-center">
+								{#if textSearch}
+									{#if storeIds.length > 0}
+										<div class="flex flex-wrap gap-1 mb-1">
+											{#each storeIds as id (id)}
+												<div
+													class="flex items-center gap-1 rounded-lg bg-gray-50 dark:bg-gray-850 px-2 py-0.5 text-xs"
+												>
+													<span class="line-clamp-1"
+														>{storeOptions.find((store) => store.id === id)?.name ?? id}</span
+													>
+													<button
+														class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+														type="button"
+														aria-label={$i18n.t('Remove')}
+														on:click={() => removeStoreId(id)}
+													>
+														<XMark className="size-3" />
+													</button>
+												</div>
+											{/each}
+										</div>
+									{/if}
 									<input
 										id="external-source-collection"
 										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.sourceName}
-										on:input={markUntested}
-										placeholder={textSearch ? 'vs_abc123' : 'research-docs'}
-										list={textSearch ? 'external-source-stores' : undefined}
+										bind:value={storeIdInput}
+										on:change={() => addStoreIds(storeIdInput)}
+										on:keydown={(e) => {
+											if (e.key === 'Enter' || e.key === ',') {
+												e.preventDefault();
+												addStoreIds(storeIdInput);
+											}
+										}}
+										placeholder={$i18n.t('Add a vector store ID')}
+										list="external-source-stores"
 										autocomplete="off"
-										required
 									/>
-									{#if textSearch}
-										<datalist id="external-source-stores">
-											{#each storeOptions as store (store.id)}
-												<option value={store.id}>{store.name}</option>
-											{/each}
-										</datalist>
-									{/if}
-								</div>
+									<datalist id="external-source-stores">
+										{#each storeOptions.filter((store) => !storeIds.includes(store.id)) as store (store.id)}
+											<option value={store.id}>{store.name}</option>
+										{/each}
+									</datalist>
+								{:else}
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-collection"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.sourceName}
+											on:input={markUntested}
+											placeholder="research-docs"
+											required
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 

@@ -346,14 +346,15 @@ async def _openai_vector_store_request(
     return data
 
 
-async def _retrieve_openai(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
-    # The server embeds the query, so the Open WebUI embedding model is not involved.
-    external = (knowledge.meta or {}).get('external', {})
-    source = external.get('source') or {}
-    vector_store_id = source.get('name')
-    if not vector_store_id:
-        raise RuntimeError('Vector store ID is not configured')
+def get_vector_store_ids(source: dict) -> list[str]:
+    """Store IDs a text-search source covers; older sources keep a single ID in `name`."""
+    ids = (source.get('config') or {}).get('vector_store_ids')
+    if not isinstance(ids, list):
+        ids = (source.get('name') or '').split(',')
+    return list(dict.fromkeys(str(store_id).strip() for store_id in ids if str(store_id).strip()))
 
+
+async def _search_openai_vector_store(connection, auth_config, knowledge, vector_store_id, query, count) -> list[dict]:
     data = await _openai_vector_store_request(
         connection,
         auth_config,
@@ -388,6 +389,38 @@ async def _retrieve_openai(connection, auth_config, knowledge, query, count, emb
         }
         normalized.append(_normalize_result(result, {}, knowledge, distance=item.get('score')))
     return normalized[:count]
+
+
+async def _retrieve_openai(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
+    # The server embeds the query, so the Open WebUI embedding model is not involved.
+    source = (knowledge.meta or {}).get('external', {}).get('source') or {}
+    vector_store_ids = get_vector_store_ids(source)
+    if not vector_store_ids:
+        raise RuntimeError('Vector store ID is not configured')
+
+    results = await asyncio.gather(
+        *(
+            _search_openai_vector_store(connection, auth_config, knowledge, store_id, query, count)
+            for store_id in vector_store_ids
+        ),
+        return_exceptions=True,
+    )
+    # One unreachable store should not hide the others; fail only when every store failed.
+    failures = [result for result in results if isinstance(result, BaseException)]
+    for store_id, result in zip(vector_store_ids, results):
+        if isinstance(result, BaseException):
+            log.warning('Vector store %s search failed: %s', store_id, result)
+    if len(failures) == len(results):
+        raise failures[0]
+
+    # Stores may sit on different backends with incomparable scores, so interleave by rank.
+    merged = [
+        chunk
+        for chunks_at_rank in zip_longest(*(result for result in results if not isinstance(result, BaseException)))
+        for chunk in chunks_at_rank
+        if chunk
+    ]
+    return merged[:count]
 
 
 async def list_openai_vector_stores(connection: dict) -> list[dict]:
