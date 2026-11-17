@@ -596,8 +596,16 @@ def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeCon
     allowed_config_keys = {'timeout'}
     if provider == 'milvus':
         allowed_config_keys.add('db_name')
+    normalized = {key: value for key, value in config.items() if key in allowed_config_keys}
 
-    return provider, {key: value for key, value in config.items() if key in allowed_config_keys}
+    # Like model_ids on provider connections: a store_ids list (empty means all) lists the stores as
+    # knowledge bases, readable by whoever access_grants allows.
+    if provider in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS and isinstance(config.get('store_ids'), list):
+        normalized['store_ids'] = list(dict.fromkeys(str(i).strip() for i in config['store_ids'] if str(i).strip()))
+        access_grants = config.get('access_grants')
+        normalized['access_grants'] = access_grants if isinstance(access_grants, list) else []
+
+    return provider, normalized
 
 
 def _get_external_auth_config(provider: str, incoming: Optional[dict], existing: Optional[dict] = None) -> dict:

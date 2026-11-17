@@ -15,7 +15,9 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import {
+		createExternalKnowledgeConnection,
 		createExternalKnowledgeSource,
+		deleteExternalKnowledgeConnection,
 		getExternalKnowledgeConnections,
 		searchKnowledgeBases,
 		listExternalKnowledgeStores,
@@ -68,6 +70,8 @@
 	// A text-search knowledge base can cover several stores; results are merged.
 	let storeIds: string[] = [];
 	let storeIdInput = '';
+	// Save a connection whose stores are listed as knowledge bases, live, instead of one knowledge base.
+	let listStores = false;
 	let creating = false;
 	let showSourceModal = false;
 	let connections: ExternalKnowledgeConnection[] = [];
@@ -100,6 +104,11 @@
 	};
 
 	$: textSearch = TEXT_SEARCH_PROVIDERS.includes(sourceForm.provider);
+	$: connectionMode = listStores && textSearch && !editingItem;
+
+	// Like model_ids on provider connections: a store_ids list (empty means all) lists the stores.
+	const hasStoreIds = (connection?: ExternalKnowledgeConnection) =>
+		Array.isArray(connection?.config?.store_ids);
 
 	const schemaDefaults = (provider = sourceForm.provider) => {
 		if (provider === 'milvus') {
@@ -150,8 +159,25 @@
 		storeOptions = [];
 		storeIds = [];
 		storeIdInput = '';
+		listStores = false;
 		editingItem = null;
 		editingConnection = null;
+	};
+
+	const openEditConnection = (connection: ExternalKnowledgeConnection) => {
+		resetForm();
+		editingConnection = connection;
+		listStores = true;
+		sourceForm = {
+			...sourceForm,
+			name: connection.name ?? '',
+			provider: connection.provider,
+			endpoint: connection.endpoint ?? '',
+			timeout: connection.config?.timeout ?? 30
+		};
+		storeIds = connection.config?.store_ids ?? [];
+		accessGrants = structuredClone(connection.config?.access_grants ?? []);
+		showSourceModal = true;
 	};
 
 	const openCreateSource = () => {
@@ -217,7 +243,10 @@
 			})
 		]);
 		connections = connectionRes?.items ?? [];
-		items = knowledgeRes?.items ?? [];
+		// Stores a connection lists are managed through that connection's row.
+		items = (knowledgeRes?.items ?? []).filter(
+			(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
+		);
 		loading = false;
 	};
 
@@ -447,18 +476,70 @@
 		creating = false;
 	};
 
+	const saveConnection = async () => {
+		if (!sourceForm.name.trim() || !sourceForm.endpoint.trim()) {
+			toast.error($i18n.t('Fill the required fields first.'));
+			return;
+		}
+
+		creating = true;
+		const payload = connectionPayload();
+		const connection = {
+			...payload,
+			config: { ...payload.config, store_ids: storeIds, access_grants: accessGrants }
+		};
+		const res = await (
+			editingConnection
+				? updateExternalKnowledgeConnection(localStorage.token, editingConnection.id, connection)
+				: createExternalKnowledgeConnection(localStorage.token, connection)
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Saved'));
+			showSourceModal = false;
+			resetForm();
+			await refresh();
+		}
+		creating = false;
+	};
+
+	const deleteConnection = async () => {
+		if (!editingConnection) return;
+
+		creating = true;
+		const res = await deleteExternalKnowledgeConnection(
+			localStorage.token,
+			editingConnection.id
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Deleted'));
+			showSourceModal = false;
+			resetForm();
+			await refresh();
+		}
+		creating = false;
+	};
+
 	const submitSource = async () => {
 		if (creating) return;
 		addStoreIds(storeIdInput);
-		if (editingItem) {
+		if (connectionMode) {
+			await saveConnection();
+		} else if (editingItem) {
 			await updateSource();
 		} else {
 			await createSource();
 		}
 	};
 
-	const toggleSource = async (item: ExternalKnowledgeItem) => {
-		const connection = connectionForItem(item);
+	const toggleConnection = async (connection?: ExternalKnowledgeConnection) => {
 		if (!connection) return;
 
 		const res = await updateExternalKnowledgeConnection(localStorage.token, connection.id, {
@@ -492,7 +573,7 @@
 </script>
 
 <Modal
-	ariaLabel={editingItem
+	ariaLabel={editingItem || editingConnection
 		? $i18n.t('Edit Knowledge Connection')
 		: $i18n.t('Add Knowledge Connection')}
 	bind:show={showSourceModal}
@@ -502,7 +583,9 @@
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
-				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
+				{editingItem || editingConnection
+					? $i18n.t('Edit Knowledge Connection')
+					: $i18n.t('Add Knowledge Connection')}
 			</h1>
 
 			<button
@@ -569,17 +652,19 @@
 							</div>
 						</div>
 
-						<div class="flex flex-col w-full mt-2">
-							<label class="text-xs text-gray-500 mb-0.5" for="external-source-description"
-								>{$i18n.t('Description')}</label
-							>
-							<textarea
-								id="external-source-description"
-								class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
-								rows="2"
-								bind:value={sourceForm.description}
-							></textarea>
-						</div>
+						{#if !connectionMode}
+							<div class="flex flex-col w-full mt-2">
+								<label class="text-xs text-gray-500 mb-0.5" for="external-source-description"
+									>{$i18n.t('Description')}</label
+								>
+								<textarea
+									id="external-source-description"
+									class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+									rows="2"
+									bind:value={sourceForm.description}
+								></textarea>
+							</div>
+						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col flex-1">
@@ -696,11 +781,28 @@
 
 						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
+						{#if textSearch && !editingItem}
+							<div class="flex justify-between items-center mb-2">
+								<label class="text-xs text-gray-500" for="external-source-stores-as-knowledge-bases"
+									>{$i18n.t('List stores as knowledge bases')}</label
+								>
+								<Switch
+									id="external-source-stores-as-knowledge-bases"
+									bind:state={listStores}
+									disabled={!!editingConnection}
+								/>
+							</div>
+						{/if}
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
 									<label class="text-xs text-gray-500" for="external-source-collection"
-										>{textSearch ? $i18n.t('Vector Stores') : $i18n.t('Collection')}</label
+										>{connectionMode
+											? $i18n.t('Store IDs')
+											: textSearch
+												? $i18n.t('Vector Stores')
+												: $i18n.t('Collection')}</label
 									>
 								</div>
 								{#if textSearch}
@@ -736,7 +838,9 @@
 												addStoreIds(storeIdInput);
 											}
 										}}
-										placeholder={$i18n.t('Add a vector store ID')}
+										placeholder={connectionMode
+											? $i18n.t('Leave empty to include all stores')
+											: $i18n.t('Add a vector store ID')}
 										list="external-source-stores"
 										autocomplete="off"
 									/>
@@ -878,67 +982,75 @@
 							</div>
 						{/if}
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col w-full">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-test-query"
-										>{$i18n.t('Test Query')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-test-query"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.testQuery}
-										on:input={markUntested}
-										placeholder={$i18n.t('Ask a test question')}
-										required
-									/>
-
-									<Tooltip
-										content={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
-										className="shrink-0 flex items-center mr-1"
-									>
-										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
-											type="button"
-											on:click={testSource}
-											disabled={testing}
-											aria-label={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
+						{#if connectionMode}
+							<div class="text-xs text-gray-500 mt-2">
+								{$i18n.t(
+									'Each store this connection lists appears as a knowledge base, read live from the endpoint. Access below applies to all of them.'
+								)}
+							</div>
+						{:else}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-test-query"
+											>{$i18n.t('Test Query')}</label
 										>
-											{#if testing}
-												<Spinner />
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
-													aria-hidden="true"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											{/if}
-										</button>
-									</Tooltip>
-								</div>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-test-query"
+											class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.testQuery}
+											on:input={markUntested}
+											placeholder={$i18n.t('Ask a test question')}
+											required
+										/>
 
-								{#if !textSearch}
-									<div class="text-xs text-gray-500 mt-1">
-										<!-- LICENSE covers this Open WebUI wordmark.
+										<Tooltip
+											content={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
+											className="shrink-0 flex items-center mr-1"
+										>
+											<button
+												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												type="button"
+												on:click={testSource}
+												disabled={testing}
+												aria-label={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
+											>
+												{#if testing}
+													<Spinner />
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+														aria-hidden="true"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												{/if}
+											</button>
+										</Tooltip>
+									</div>
+
+									{#if !textSearch}
+										<div class="text-xs text-gray-500 mt-1">
+											<!-- LICENSE covers this Open WebUI wordmark.
 										Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										https://docs.openwebui.com/license. -->
-										{$i18n.t(
-											'External vectors must be generated with the same embedding model configured in Open WebUI.'
-										)}
-									</div>
-								{/if}
+											{$i18n.t(
+												'External vectors must be generated with the same embedding model configured in Open WebUI.'
+											)}
+										</div>
+									{/if}
+								</div>
 							</div>
-						</div>
+						{/if}
 
 						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
@@ -969,14 +1081,27 @@
 						/>
 
 						<div class="flex justify-between items-center pt-3 text-sm font-normal">
-							<div></div>
+							{#if connectionMode && editingConnection}
+								<button
+									class="text-xs text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
+									type="button"
+									on:click={deleteConnection}
+								>
+									{$i18n.t('Delete')}
+								</button>
+							{:else}
+								<div></div>
+							{/if}
 
 							<button
 								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 								type="submit"
-								disabled={creating || !sourceFormIsValid() || !testResult?.documents?.length}
+								disabled={creating ||
+									(connectionMode
+										? !sourceForm.name.trim() || !sourceForm.endpoint.trim()
+										: !sourceFormIsValid() || !testResult?.documents?.length)}
 							>
-								{editingItem ? $i18n.t('Save') : $i18n.t('Create')}
+								{editingItem || editingConnection ? $i18n.t('Save') : $i18n.t('Create')}
 								{#if creating}<Spinner className="size-3" />{/if}
 							</button>
 						</div>
@@ -1007,6 +1132,57 @@
 	</div>
 
 	<div class="flex flex-col gap-1.5">
+		{#each connections.filter(hasStoreIds) as connection (connection.id)}
+			<div class="group/setting-row flex w-full gap-2 items-center">
+				<div
+					class="flex-1 relative flex gap-1.5 items-center min-w-0 {connection.enabled === false
+						? 'opacity-50'
+						: ''}"
+				>
+					<Tooltip content={$i18n.t('Knowledge')}>
+						<DatabaseSettings className="size-4" strokeWidth="1.5" />
+					</Tooltip>
+					<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
+						<label
+							for={`knowledge-connection-${connection.id}-control`}
+							class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 dark:group-hover/setting-row:text-white"
+							>{connection.name}</label
+						>
+						{' '}
+						<span class="text-gray-500">
+							{connection.provider} ·
+							{connection.config?.store_ids?.length
+								? $i18n.t('{{COUNT}} stores', { COUNT: connection.config.store_ids.length })
+								: $i18n.t('All stores')}
+						</span>
+					</div>
+				</div>
+
+				<div class="flex gap-1 items-center">
+					<Tooltip content={$i18n.t('Configure')}>
+						<button
+							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+							type="button"
+							aria-label={$i18n.t('Configure')}
+							on:click={() => openEditConnection(connection)}
+						>
+							<Cog6 />
+						</button>
+					</Tooltip>
+
+					<Tooltip
+						content={connection.enabled !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+					>
+						<Switch
+							id={`knowledge-connection-${connection.id}-control`}
+							state={connection.enabled !== false}
+							on:change={() => toggleConnection(connection)}
+						/>
+					</Tooltip>
+				</div>
+			</div>
+		{/each}
+
 		{#each items as item}
 			{@const connection = connectionForItem(item)}
 			<div class="group/setting-row flex w-full gap-2 items-center">
@@ -1060,7 +1236,7 @@
 							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
 							on:change={() => {
-								toggleSource(item);
+								toggleConnection(connection);
 							}}
 						/>
 					</Tooltip>
@@ -1073,13 +1249,13 @@
 		<div class="py-2">
 			<Spinner />
 		</div>
-	{:else if items.length === 0}
+	{:else if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 
-	{#if items.length === 0}
+	{#if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('Test must pass before a source is created.')}
 		</div>
