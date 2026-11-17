@@ -267,11 +267,7 @@
 			try {
 				for (const file of files) {
 					if (current !== generation || currentEditor.isDestroyed || readOnly) break;
-					const result = await uploadNewFileToTerminal(
-						capturedTarget!,
-						directory,
-						file
-					);
+					const result = await uploadNewFileToTerminal(capturedTarget!, directory, file);
 					if (current !== generation || currentEditor.isDestroyed || readOnly) break;
 					if (!result) throw new Error($i18n.t('Failed to upload file.'));
 					const name = result.path.split('/').pop()!;

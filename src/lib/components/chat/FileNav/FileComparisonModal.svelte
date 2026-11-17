@@ -53,12 +53,7 @@
 			const texts = await Promise.all(
 				sourceFiles.map(async (file) => {
 					try {
-						return await readComparisonSource(
-							capturedTarget,
-							file.path,
-							request.signal,
-							file.size
-						);
+						return await readComparisonSource(capturedTarget, file.path, request.signal, file.size);
 					} catch (cause) {
 						request.signal.throwIfAborted();
 						throw new Error(

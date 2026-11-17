@@ -636,12 +636,7 @@
 							<FileTypeIcon name={entry.name} type={entry.type} size={14} />
 						{:else}
 							{#key JSON.stringify( [target?.baseUrl, target?.key, terminalSessionId, entryPath, entry.modified, entry.size] )}
-								<FileGridIcon
-									{entry}
-									path={entryPath}
-									{target}
-									itemCount={folderItemCount}
-								/>
+								<FileGridIcon {entry} path={entryPath} {target} itemCount={folderItemCount} />
 							{/key}
 						{/if}
 						{#if renaming}

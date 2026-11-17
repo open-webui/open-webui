@@ -18,9 +18,15 @@
 
 	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 	import {
-		folderStates, folderChatPageKey, loadFolderChatPage,
-		loadFolderDetails, setFolderSidebarPage, updateFolderChatLists, markFolderRead,
-		updateFolderDetails, removeFolderState,
+		folderStates,
+		folderChatPageKey,
+		loadFolderChatPage,
+		loadFolderDetails,
+		setFolderSidebarPage,
+		updateFolderChatLists,
+		markFolderRead,
+		updateFolderDetails,
+		removeFolderState,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
@@ -474,10 +480,12 @@
 			toast.success($i18n.t('Folder updated successfully'));
 
 			if ($selectedFolder?.id === folderId) {
-				const folder = await loadFolderDetails(localStorage.token, folderId, true).catch((error) => {
-					toast.error(`${error}`);
-					return null;
-				});
+				const folder = await loadFolderDetails(localStorage.token, folderId, true).catch(
+					(error) => {
+						toast.error(`${error}`);
+						return null;
+					}
+				);
 
 				if (folder) {
 					await selectedFolder.set(folder);
@@ -516,10 +524,16 @@
 	$: {
 		const retained = $folderStates[folderId];
 		chatsPage = retained?.sidebarPage ?? 1;
-		const pages = Array.from({ length: chatsPage }, (_, index) =>
-			retained?.chatPages[folderChatPageKey({ page: index + 1 })]
+		const pages = Array.from(
+			{ length: chatsPage },
+			(_, index) => retained?.chatPages[folderChatPageKey({ page: index + 1 })]
 		);
-		chats = pages.some(Boolean) ? mergeFolderChats([], pages.flatMap((page) => page?.chats ?? [])) : null;
+		chats = pages.some(Boolean)
+			? mergeFolderChats(
+					[],
+					pages.flatMap((page) => page?.chats ?? [])
+				)
+			: null;
 		hasMoreChats = pages.at(-1)?.has_more ?? false;
 	}
 
@@ -532,9 +546,16 @@
 		chatsLoading = true;
 		try {
 			const nextPage = append ? chatsPage + 1 : chatsPage;
-			await Promise.all(Array.from({ length: append ? 1 : nextPage }, (_, index) =>
-				loadFolderChatPage(localStorage.token, folderId, { page: append ? nextPage : index + 1 }, !append && refresh)
-			));
+			await Promise.all(
+				Array.from({ length: append ? 1 : nextPage }, (_, index) =>
+					loadFolderChatPage(
+						localStorage.token,
+						folderId,
+						{ page: append ? nextPage : index + 1 },
+						!append && refresh
+					)
+				)
+			);
 			if (append) setFolderSidebarPage(folderId, nextPage);
 		} catch (error) {
 			if (!isCancelledFolderRequest(error)) toast.error(`${error}`);
@@ -860,7 +881,8 @@
 								showCreateSubFolderModal = true;
 							}}
 							onMarkAllRead={markAllReadHandler}
-							onShare={($user?.role === 'admin' || (folders[folderId]?.user_id === $user?.id && $user?.permissions?.sharing?.folders))
+							onShare={$user?.role === 'admin' ||
+							(folders[folderId]?.user_id === $user?.id && $user?.permissions?.sharing?.folders)
 								? () => (showShareModal = true)
 								: null}
 						>

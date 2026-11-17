@@ -222,7 +222,8 @@
 		player?.pause();
 		try {
 			if (!draft.audioPath) {
-				const result = await uploadNewFileToTerminal(target,
+				const result = await uploadNewFileToTerminal(
+					target,
 					draft.directory,
 					new File([draft.audio], `${draft.name.trim()}.${voiceNoteExtension(draft.audio.type)}`, {
 						type: draft.audio.type
@@ -231,7 +232,8 @@
 				if (!result?.path) throw new Error();
 				draft.audioPath = result.path;
 			}
-			const note = await uploadNewFileToTerminal(target,
+			const note = await uploadNewFileToTerminal(
+				target,
 				draft.directory,
 				new File([voiceNoteMarkdown(draft)], `${draft.name.trim()}.md`, { type: 'text/markdown' })
 			);

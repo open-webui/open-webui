@@ -2394,8 +2394,10 @@ async def get_chat_with_tag_access(id: str, user, db: AsyncSession):
     if chat:
         return chat
     chat = await Chats.get_chat_by_id(id, db=db)
-    if chat and chat.folder_id and (
-        user.role == 'admin' or await has_folder_write_access(user.id, chat.folder_id, db=db)
+    if (
+        chat
+        and chat.folder_id
+        and (user.role == 'admin' or await has_folder_write_access(user.id, chat.folder_id, db=db))
     ):
         return chat
     return None
@@ -2478,8 +2480,13 @@ class TagColorForm(BaseModel):
 
 
 @router.patch('/{id}/tags', response_model=list[TagModel])
-async def update_chat_tag_color(request: Request, id: str, form_data: TagColorForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def update_chat_tag_color(
+    request: Request,
+    id: str,
+    form_data: TagColorForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     tag_id = form_data.name.replace(' ', '_').lower()
     chat = await get_chat_with_tag_access(id, user, db)
     if not chat or tag_id not in (chat.meta or {}).get('tags', []):

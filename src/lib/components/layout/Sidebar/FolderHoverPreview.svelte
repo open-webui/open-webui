@@ -6,7 +6,7 @@
 		folderChatPageKey,
 		loadFolderDetails,
 		loadFolderChatPage,
-		type FolderDetails,
+		type FolderDetails
 	} from '$lib/stores/folderStates';
 	import { models } from '$lib/stores';
 	import Emoji from '$lib/components/common/Emoji.svelte';
@@ -72,7 +72,10 @@
 				{/if}
 				{#if !folder.shared && (folder.unread_count ?? 0) > 0}
 					<span>·</span>
-					<span>{folder.unread_count.toLocaleString()} {$i18n.t('Unread or waiting for approval')}</span>
+					<span
+						>{folder.unread_count.toLocaleString()}
+						{$i18n.t('Unread or waiting for approval')}</span
+					>
 				{/if}
 			</div>
 		</div>

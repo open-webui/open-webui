@@ -105,9 +105,7 @@
 		saving = true;
 		error = '';
 		try {
-			const listing = await listFiles(target,
-				directory
-			);
+			const listing = await listFiles(target, directory);
 			if (!listing || listing.writable === false) throw new Error($i18n.t('File is not writable.'));
 			const existing = listing.entries.find((entry) => entry.name === name);
 			if (existing?.type === 'directory' || existing?.writable === false)
@@ -117,7 +115,8 @@
 				error = $i18n.t('A file with this name already exists. Replace it?');
 				return;
 			}
-			const result = await uploadToTerminal(target,
+			const result = await uploadToTerminal(
+				target,
 				directory,
 				new File([value], name, { type: 'text/plain' })
 			);

@@ -11,11 +11,7 @@
 		browserFrameUrl,
 		type BrowserSession
 	} from '$lib/apis/terminal/browser';
-	import {
-		getPortProxyUrl,
-		TerminalRequestError,
-		type TerminalTarget
-	} from '$lib/apis/terminal';
+	import { getPortProxyUrl, TerminalRequestError, type TerminalTarget } from '$lib/apis/terminal';
 	import PortList from '../FileNav/PortList.svelte';
 	import { settings } from '$lib/stores';
 	import Icon from '../FileNav/Icon.svelte';
@@ -54,16 +50,12 @@
 	let frameReady = false;
 	$: viewUrl = session && sessionTarget ? browserViewUrl(sessionTarget, session) : '';
 	$: if (session && sessionTarget) {
-		void updateBrowserSession(sessionTarget, session.id, { active }).catch(
-			() => {}
-		);
+		void updateBrowserSession(sessionTarget, session.id, { active }).catch(() => {});
 	}
 
 	const persist = (url: string, title: string) => {
 		if (session && sessionTarget)
-			void updateBrowserSession(sessionTarget, session.id, { url, title }).catch(
-				() => {}
-			);
+			void updateBrowserSession(sessionTarget, session.id, { url, title }).catch(() => {});
 	};
 	const switchMode = async (mode: 'proxy' | 'chrome', force = false) => {
 		if (!session || !sessionTarget || switching || (!force && session.mode === mode)) return;

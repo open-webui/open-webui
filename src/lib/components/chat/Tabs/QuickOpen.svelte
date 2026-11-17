@@ -37,7 +37,8 @@
 		timer = setTimeout(async () => {
 			const path = query.trim().replace(/\\/g, '/');
 			const slash = path.lastIndexOf('/');
-			const response = await searchFiles(target,
+			const response = await searchFiles(
+				target,
 				path.slice(slash + 1),
 				slash < 0 ? '.' : path.slice(0, slash) || '/',
 				50,

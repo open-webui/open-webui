@@ -163,12 +163,7 @@
 		}
 	};
 	$: void configurePreview(
-		JSON.stringify([
-			isHtml,
-			selectedFile,
-			target?.baseUrl,
-			target?.context
-		])
+		JSON.stringify([isHtml, selectedFile, target?.baseUrl, target?.context])
 	);
 	onDestroy(() => previewGeneration++);
 	// Simple CSV parser that handles quoted fields
@@ -332,11 +327,7 @@
 					path={selectedFile ?? ''}
 					loadResource={target?.baseUrl
 						? async (path, signal) => {
-								const result = await downloadFileBlob(
-									target,
-									path,
-									signal
-								);
+								const result = await downloadFileBlob(target, path, signal);
 								if (!result) throw new Error('Could not load model resource.');
 								return result.blob;
 							}
@@ -464,12 +455,7 @@
 			</div>
 		{:else if isNotebook && !showRaw && parsedNotebook}
 			<div class="overflow-auto h-full">
-				<NotebookView
-					notebook={parsedNotebook}
-					filePath={selectedFile ?? ''}
-					{target}
-					{readOnly}
-				/>
+				<NotebookView notebook={parsedNotebook} filePath={selectedFile ?? ''} {target} {readOnly} />
 			</div>
 		{:else if isJson && !showRaw && parsedJson !== undefined}
 			<div class="overflow-auto h-full">

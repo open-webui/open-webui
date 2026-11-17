@@ -178,11 +178,7 @@ export function openTab(state: TabsState, tab: Tab): TabsState {
 }
 
 /** Opens `tab` in a group beside the one holding `besideId`, so both stay in view. */
-export function openTabInSplit(
-	state: TabsState,
-	tab: Tab,
-	besideId = mainChatTabId
-): TabsState {
+export function openTabInSplit(state: TabsState, tab: Tab, besideId = mainChatTabId): TabsState {
 	const besideGroup = state.groups.find((group) => group.tabIds.includes(besideId));
 	if (!besideGroup) return openTab(state, tab);
 	if (state.tabs.some((item) => item.id === tab.id) && !besideGroup.tabIds.includes(tab.id))

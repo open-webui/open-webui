@@ -36,8 +36,9 @@
 	let saving = false;
 
 	export let accessRoles = ['read'];
-	export let labels: Partial<Record<'title' | 'public' | 'private' | 'read' | 'write' | 'empty', string>> =
-		{};
+	export let labels: Partial<
+		Record<'title' | 'public' | 'private' | 'read' | 'write' | 'empty', string>
+	> = {};
 	export let accessGrants: AccessGrant[] | any = [];
 	export let accessControl: any = undefined;
 

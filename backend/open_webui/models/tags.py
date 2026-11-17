@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
 
+
 class Tag(Base):  # database table mapping for tag entity
     __tablename__ = 'tag'
     id = Column(String)
@@ -98,7 +99,9 @@ class TagTable:
             meta = (await db.execute(select(Tag.meta).filter_by(id=id, user_id=user_id))).one_or_none()
             if meta is None:
                 return False
-            await db.execute(update(Tag).filter_by(id=id, user_id=user_id).values(meta={**(meta[0] or {}), 'color': color}))
+            await db.execute(
+                update(Tag).filter_by(id=id, user_id=user_id).values(meta={**(meta[0] or {}), 'color': color})
+            )
             await db.commit()
             return True
 

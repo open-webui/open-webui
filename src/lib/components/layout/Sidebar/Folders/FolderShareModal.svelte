@@ -13,7 +13,7 @@
 	import {
 		loadFolderDetails,
 		updateFolderDetails,
-		markFolderChatsDirty,
+		markFolderChatsDirty
 	} from '$lib/stores/folderStates';
 
 	type AccessGrant = {

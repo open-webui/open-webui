@@ -135,8 +135,7 @@
 	}
 
 	const isTextField = (element: EventTarget | null) =>
-		element instanceof HTMLElement &&
-		element.matches('input, textarea, [contenteditable="true"]');
+		element instanceof HTMLElement && element.matches('input, textarea, [contenteditable="true"]');
 
 	function handleContentKeydown(event: KeyboardEvent) {
 		if (['ArrowLeft', 'Home', 'End'].includes(event.key) && isTextField(event.target)) return;

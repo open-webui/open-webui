@@ -14,7 +14,6 @@
 	export let active = true;
 	export let previewBaseUrl: string | null = null;
 
-
 	let ports: ListeningPort[] = [];
 	let loading = false;
 	let mounted = false;

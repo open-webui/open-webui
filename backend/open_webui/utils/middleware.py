@@ -3002,11 +3002,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['context_summary'] = context_summary
 
     # Added after compaction: it can summarize away the copy the model had, and it should not summarize this turn's.
-    if (
-        use_builtin_tools
-        and not metadata.get('assistant_message_id')
-        and await memory_context_enabled(user, features)
-    ):
+    if use_builtin_tools and not metadata.get('assistant_message_id') and await memory_context_enabled(user, features):
         initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
     for name, manifest in manifests.items():
         if get_last_tool_result(form_data['messages'], name) != manifest:

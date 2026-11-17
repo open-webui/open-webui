@@ -754,7 +754,9 @@ async def get_folder_automations(
         return []
     latest = await AutomationRuns.get_latest_batch([item.id for item in automations], db=db)
     creators = {u.id: u.name for u in await Users.get_users_by_user_ids(list({a.user_id for a in automations}), db=db)}
-    has_write = user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    has_write = (
+        user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    )
     return [
         {
             **AutomationResponse(**item.model_dump(), last_run=latest.get(item.id)).model_dump(),
@@ -767,7 +769,9 @@ async def get_folder_automations(
 
 
 @router.get('/{id}/users')
-async def get_folder_users(request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_folder_users(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     await check_folder_read_access(request, id, user, db)
     counts = await Chats.get_participant_counts_by_folder_id(id, db=db)
     users = await Users.get_users_by_user_ids(list(counts), db=db) if counts else []
@@ -779,7 +783,9 @@ async def get_folder_users(request: Request, id: str, user=Depends(get_verified_
 
 
 @router.get('/{id}/tags')
-async def get_folder_tags(request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def get_folder_tags(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
     await check_folder_read_access(request, id, user, db)
     return await Chats.get_tag_counts_by_folder_id(id, db=db)
 
@@ -790,19 +796,32 @@ class FolderChatStatusForm(BaseModel):
 
 
 @router.patch('/{id}/chats/{chat_id}/status')
-async def update_folder_chat_status(request: Request, id: str, chat_id: str, form_data: FolderChatStatusForm,
-    user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
+async def update_folder_chat_status(
+    request: Request,
+    id: str,
+    chat_id: str,
+    form_data: FolderChatStatusForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
     folder = await check_folder_read_access(request, id, user, db)
     if form_data.status is not None and form_data.status not in folder_status_ids(folder.meta):
         raise HTTPException(status_code=422, detail='Invalid status')
     # Folder editors may set status on any chat in the folder; others only on their own.
-    has_write = user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    has_write = (
+        user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    )
     if not await Chats.update_chat_folder_status_by_id(
         chat_id, id, None if has_write else user.id, form_data.status, db=db
     ):
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    await publish_event(request, EVENTS.CHAT_UPDATED, actor=user, subject_id=chat_id,
-        data={'folder_id': id, 'folder_status': form_data.status})
+    await publish_event(
+        request,
+        EVENTS.CHAT_UPDATED,
+        actor=user,
+        subject_id=chat_id,
+        data={'folder_id': id, 'folder_status': form_data.status},
+    )
     return {'id': chat_id, 'status': form_data.status}
 
 

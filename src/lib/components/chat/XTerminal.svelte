@@ -5,11 +5,7 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
-	import {
-		terminalRequest,
-		TerminalRequestError,
-		type TerminalTarget
-	} from '$lib/apis/terminal';
+	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/terminal';
 	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
 
 	export let target: TerminalTarget;
@@ -114,10 +110,7 @@
 		connecting = true;
 		try {
 			if (!sessionId) throw new Error('Session no longer available');
-			await terminalRequest(
-				target,
-				`/api/terminals/${encodeURIComponent(sessionId)}`
-			);
+			await terminalRequest(target, `/api/terminals/${encodeURIComponent(sessionId)}`);
 			if (destroyed) return;
 			ws = openTerminalSocket(
 				target,

@@ -71,8 +71,7 @@
 		>
 			{error}<button
 				class="underline"
-				on:click={() =>
-					load(target, root, file, active, hideWhitespace, resourceVersion)}
+				on:click={() => load(target, root, file, active, hideWhitespace, resourceVersion)}
 				>{$i18n.t('Retry')}</button
 			>
 		</div>

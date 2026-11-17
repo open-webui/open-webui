@@ -467,8 +467,7 @@
 			workspace: true,
 			search: appliedSearch,
 			userIds: selectedUsers,
-			tagIds:
-				activeBy() === 'tags' && key !== 'all' ? [key] : selectedTags,
+			tagIds: activeBy() === 'tags' && key !== 'all' ? [key] : selectedTags,
 			activity: activeBy() === 'activity' && key !== 'all' ? (key as FolderActivity) : activity,
 			updatedAtGte,
 			status:

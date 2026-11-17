@@ -251,7 +251,9 @@
 							<EmojiPicker
 								side="bottom"
 								selected={meta.icon || null}
-								onSubmit={(icon: string | null) => { meta = { ...meta, icon: icon ?? '' }; }}
+								onSubmit={(icon: string | null) => {
+									meta = { ...meta, icon: icon ?? '' };
+								}}
 							>
 								<button
 									type="button"

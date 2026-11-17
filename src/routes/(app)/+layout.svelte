@@ -487,7 +487,9 @@
 						<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
 						{#if routeHasTabs || usePageTabs}
 							<Chat
-								initialPage={usePageTabs ? $page.url.pathname + $page.url.search + $page.url.hash : ''}
+								initialPage={usePageTabs
+									? $page.url.pathname + $page.url.search + $page.url.hash
+									: ''}
 							/>
 						{/if}
 						{#if !usePageTabs}<slot />{/if}
