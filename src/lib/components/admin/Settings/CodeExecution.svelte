@@ -303,6 +303,7 @@
 							id="code-interpreter-prompt-template"
 							className={textareaClass}
 							bind:value={config.CODE_INTERPRETER_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}

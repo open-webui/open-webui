@@ -41,7 +41,6 @@ from open_webui.models.tags import TagModel, Tags
 from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
-from open_webui.tools.visualizations import DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
 from open_webui.utils.access_control import has_permission, validate_access_grants
 from open_webui.utils.access_control.folders import has_chat_move_access, has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
@@ -288,7 +287,6 @@ class ChatConfigForm(BaseModel):
 class ChatConfigResponse(ChatConfigForm):
     DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT: str = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
     DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT: str = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
-    DEFAULT_VISUALIZATION_PROMPT_TEMPLATE: str = DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
     TOOL_SEARCH_EMBEDDING_MODEL: str = ''
 
 
@@ -311,7 +309,6 @@ async def get_chat_config_values() -> dict:
         config[f'TOOL_PERMISSIONS_AUTO_DECISIONS_{key.upper()}'] = auto_config[key]
     config['DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT'] = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT
     config['DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT'] = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT
-    config['DEFAULT_VISUALIZATION_PROMPT_TEMPLATE'] = DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
     config['TOOL_SEARCH_EMBEDDING_MODEL'] = values.get('rag.embedding_model') or ''
     return config
 

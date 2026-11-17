@@ -802,6 +802,7 @@
 													id="image-connection-headers"
 													className="w-full text-sm outline-hidden"
 													bind:value={headers}
+													maxSize={200}
 													placeholder={$i18n.t('Enter additional headers in JSON format')}
 													required={false}
 													minSize={30}
@@ -824,6 +825,7 @@
 												id="image-connection-params"
 												className="w-full text-sm outline-hidden"
 												bind:value={params}
+												maxSize={200}
 												placeholder={$i18n.t('Enter additional parameters in JSON format')}
 												required={false}
 												minSize={30}

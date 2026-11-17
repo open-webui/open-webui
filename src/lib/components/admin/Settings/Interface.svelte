@@ -78,24 +78,20 @@
 	let toolSearchAlwaysLoaded = '';
 	let defaultDecisionsPrompt = '';
 	let defaultPermissionsPrompt = '';
-	let defaultVisualizationPrompt = '';
 	let toolSearchEmbeddingModel = '';
 	const readChatConfigMetadata = () => {
 		const {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = '',
 			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT = '',
-			DEFAULT_VISUALIZATION_PROMPT_TEMPLATE = '',
 			TOOL_SEARCH_EMBEDDING_MODEL = '',
 			...settings
 		} = chatConfig as typeof chatConfig & {
 			DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT?: string;
 			DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT?: string;
-			DEFAULT_VISUALIZATION_PROMPT_TEMPLATE?: string;
 			TOOL_SEARCH_EMBEDDING_MODEL?: string;
 		};
 		defaultDecisionsPrompt = DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT;
 		defaultPermissionsPrompt = DEFAULT_TOOL_PERMISSIONS_AUTO_PROMPT;
-		defaultVisualizationPrompt = DEFAULT_VISUALIZATION_PROMPT_TEMPLATE;
 		toolSearchEmbeddingModel = TOOL_SEARCH_EMBEDDING_MODEL;
 		chatConfig = settings;
 	};
@@ -428,6 +424,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={chatConfig.CONTEXT_COMPACTION_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -563,6 +560,7 @@
 								id="tool-permissions-auto-prompt"
 								className={textareaClass}
 								bind:value={chatConfig.TOOL_PERMISSIONS_AUTO_PROMPT}
+								maxSize={300}
 								placeholder={defaultPermissionsPrompt}
 							/>
 						</AdminSettingField>
@@ -674,6 +672,7 @@
 								id="tool-search-decisions-prompt"
 								className={textareaClass}
 								bind:value={chatConfig.TOOL_SEARCH_DECISIONS_PROMPT}
+								maxSize={300}
 								placeholder={defaultDecisionsPrompt}
 							/>
 						</AdminSettingField>
@@ -734,7 +733,8 @@
 						id="visualization-prompt"
 						className={textareaClass}
 						bind:value={chatConfig.VISUALIZATION_PROMPT_TEMPLATE}
-						placeholder={defaultVisualizationPrompt}
+						maxSize={300}
+						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>
 			</AdminSettingSection>
@@ -756,6 +756,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.TITLE_GENERATION_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -779,6 +780,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.VOICE_MODE_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -802,6 +804,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.FOLLOW_UP_GENERATION_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -825,6 +828,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.TAGS_GENERATION_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -863,6 +867,7 @@
 					<Textarea
 						className={textareaClass}
 						bind:value={taskConfig.QUERY_GENERATION_PROMPT_TEMPLATE}
+						maxSize={300}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>
@@ -906,6 +911,7 @@
 						<Textarea
 							className={textareaClass}
 							bind:value={taskConfig.AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -920,6 +926,7 @@
 					<Textarea
 						className={textareaClass}
 						bind:value={taskConfig.IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE}
+						maxSize={300}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>
@@ -931,6 +938,7 @@
 					<Textarea
 						className={textareaClass}
 						bind:value={taskConfig.TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE}
+						maxSize={300}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>

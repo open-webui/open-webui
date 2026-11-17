@@ -209,6 +209,7 @@
 									'Your query will be sent to the configured web search provider.'
 								)}
 								bind:value={webConfig.WEB_SEARCH_CONFIRMATION_CONTENT}
+								maxSize={200}
 							/>
 						</AdminSettingField>
 					{/if}
@@ -1143,6 +1144,7 @@
 									<Textarea
 										className={textareaClass}
 										bind:value={webConfig.YANDEX_WEB_SEARCH_CONFIG}
+										maxSize={200}
 										placeholder={$i18n.t(
 											'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
 										)}
@@ -1186,6 +1188,7 @@
 								<Textarea
 									className={textareaClass}
 									bind:value={webConfig.LINKUP_SEARCH_PARAMS}
+									maxSize={200}
 									placeholder={`{\n  "depth": "standard",\n  "outputType": "sourcedAnswer"\n}`}
 								/>
 							</div>

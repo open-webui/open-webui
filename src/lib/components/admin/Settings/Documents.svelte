@@ -565,6 +565,7 @@
 								id="datalab-marker-additional-config"
 								className={textareaClass}
 								bind:value={RAGConfig.DATALAB_MARKER_ADDITIONAL_CONFIG}
+								maxSize={200}
 								placeholder={$i18n.t('Enter JSON config (e.g., {"disable_links": true})')}
 							/>
 						</Tooltip>
@@ -682,6 +683,7 @@
 								id="external-document-loader-headers"
 								className={textareaClass}
 								bind:value={RAGConfig.EXTERNAL_DOCUMENT_LOADER_HEADERS}
+								maxSize={200}
 								placeholder={$i18n.t('Enter additional headers in JSON format')}
 								required={false}
 							/>
@@ -773,6 +775,7 @@
 							id="docling-params"
 							className={textareaClass}
 							bind:value={RAGConfig.DOCLING_PARAMS}
+							maxSize={200}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
 							minSize={100}
 						/>
@@ -857,6 +860,7 @@
 							id="mistral-ocr-params"
 							className={textareaClass}
 							bind:value={RAGConfig.MISTRAL_OCR_PARAMS}
+							maxSize={200}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
 							minSize={100}
 						/>
@@ -967,6 +971,7 @@
 							id="mineru-params"
 							className={textareaClass}
 							bind:value={RAGConfig.MINERU_PARAMS}
+							maxSize={200}
 							placeholder={`{\n  "enable_ocr": false,\n  "enable_formula": true,\n  "enable_table": true,\n  "language": "en",\n  "model_version": "pipeline",\n  "page_ranges": ""\n}`}
 							minSize={100}
 						/>
@@ -1615,6 +1620,7 @@
 							id="rag-template"
 							className={textareaClass}
 							bind:value={RAGConfig.RAG_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
