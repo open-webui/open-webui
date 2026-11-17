@@ -892,6 +892,8 @@
 
 		if (mounted && terminal) {
 			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
+				if (selectedFileLocation)
+					selectedFileLocation = { ...terminal, path: selectedFileLocation.path };
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
