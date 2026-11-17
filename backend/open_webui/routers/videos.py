@@ -208,9 +208,8 @@ async def video_generations(
     metadata: dict | None = None,
     user=None,
     strict: bool = False,
-    event_emitter=None,
 ):
-    """Start a video job, wait for it while reporting progress, and save the finished video as a file.
+    """Start a video job, wait for it to finish, and save the finished video as a file.
 
     Video models take minutes, so the provider runs each request as a job: create it with
     ``POST /videos``, check ``GET /videos/{id}`` until it is done, then download ``/videos/{id}/content``.
@@ -221,10 +220,6 @@ async def video_generations(
     seconds = form_data.seconds or connection_config.get('seconds')
     size = form_data.size or connection_config.get('size')
     metadata = metadata or {}
-
-    async def emit_status(description: str):
-        if event_emitter:
-            await event_emitter({'type': 'status', 'data': {'description': description, 'done': False}})
 
     try:
         headers, cookies = await get_headers_and_cookies(
@@ -281,7 +276,6 @@ async def video_generations(
             await raise_for_provider_status(r)
             job = await r.json(content_type=None)
 
-        await emit_status('Generating video')
         deadline = time.monotonic() + VIDEO_GENERATION_TIMEOUT
         # Providers name the waiting states differently (queued, pending, in_progress), so wait for the end.
         while job.get('status') not in ('completed', 'failed'):
@@ -296,9 +290,6 @@ async def video_generations(
             ) as r:
                 await raise_for_provider_status(r)
                 job = await r.json(content_type=None)
-
-            if isinstance(job.get('progress'), (int, float)):
-                await emit_status(f'Generating video ({round(job["progress"])}%)')
 
         if job.get('status') != 'completed':
             error = job.get('error')

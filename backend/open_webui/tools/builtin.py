@@ -559,7 +559,7 @@ async def generate_video(
     __event_call__: callable = None,
 ) -> str:
     """
-    Generate a video based on a text prompt. Videos take minutes; progress is shown in chat while it runs.
+    Generate a video based on a text prompt.
 
     :param prompt: A detailed description of the video to generate
     :param seconds: Optional length in seconds (e.g. 8), supported by the configured video model.
@@ -594,7 +594,6 @@ async def generate_video(
                 else None
             ),
             user=user,
-            event_emitter=__event_emitter__,
         )
 
         await upload_files_to_terminal(
@@ -616,7 +615,6 @@ async def generate_video(
 
         # Emit the videos to the UI if event emitter is available
         if __event_emitter__ and video_files:
-            await __event_emitter__({'type': 'status', 'data': {'description': 'Video created', 'done': True}})
             await __event_emitter__(
                 {
                     'type': 'chat:message:files',
