@@ -926,6 +926,11 @@ async def signout(request: Request, response: Response, db: AsyncSession = Depen
             from open_webui.models.auth_sessions import AuthSessions
 
             await AuthSessions.revoke(data['sid'], data['id'])
+        if session and data and session.user_id == data.get('id'):
+            sessions = await OAuthSessions.get_sessions_by_user_id(session.user_id, db=db)
+            # Keep the only session for this provider: automations and API key calls use it
+            if any(other.provider == session.provider and other.id != session.id for other in sessions):
+                await OAuthSessions.delete_session_by_id(session.id, db=db)
         await invalidate_token(request, token)
         await publish_event(
             request,

@@ -2279,7 +2279,7 @@ class OAuthManager:
             sessions = await OAuthSessions.get_sessions_by_user_id(user.id, db=db)
             provider_sessions = sorted(
                 [session for session in sessions if session.provider == provider],
-                key=lambda session: session.created_at,
+                key=lambda session: session.updated_at,
                 reverse=True,
             )
             # Keep the newest sessions up to the limit, prune the rest
