@@ -1,10 +1,11 @@
 """Permission-scoped workspace search. Shared snapshots never read the live chat."""
 
+import logging
 from typing import Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Query
-from open_webui.internal.db import get_async_session
+from open_webui.internal.db import get_async_session, strip_nul_from_json
 from open_webui.models.access_grants import AccessGrant, AccessGrants
 from open_webui.models.channels import ChannelMember, Channels
 from open_webui.models.chat_messages import ChatMessage
@@ -20,8 +21,10 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
 from pydantic import BaseModel, Field
 from sqlalchemy import BigInteger, and_, case, cast, func, literal, or_, select, text, union_all
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+log = logging.getLogger(__name__)
 router = APIRouter()
 PAGE_SIZE = 24
 
@@ -493,4 +496,13 @@ async def search(
             user.role == 'admin' or await has_permission(user.id, 'features.' + feature, permissions, db=db)
         ):
             enabled.append(result_kind)
-    return await search_workspace(db, user, q, kind, sharing, scope, page, tuple(enabled))
+    try:
+        return await search_workspace(db, user, q, kind, sharing, scope, page, tuple(enabled))
+    except DBAPIError as e:
+        # PostgreSQL can't read \u0000 out of json; rows stored before writes stripped it get cleaned once.
+        if getattr(e.orig, 'sqlstate', None) != '22P05':
+            raise
+        log.warning('Stripping \\u0000 from stored JSON so search can read it')
+        await db.rollback()
+        await strip_nul_from_json(db)
+        return await search_workspace(db, user, q, kind, sharing, scope, page, tuple(enabled))

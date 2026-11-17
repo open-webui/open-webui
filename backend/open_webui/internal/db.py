@@ -31,7 +31,7 @@ from open_webui.env import (
     USE_SLIM,
 )
 from open_webui.utils.json_codec import JSONCodec
-from sqlalchemy import Dialect, MetaData, create_engine, event, types
+from sqlalchemy import Dialect, MetaData, create_engine, event, text, types
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -113,6 +113,62 @@ extract_ssl_mode_from_url = extract_ssl_params_from_url
 reattach_ssl_mode_to_url = reattach_ssl_params_to_url
 
 
+_SURROGATES = re.compile('[\ud800-\udfff]')
+
+
+def strip_unstorable_json(value):
+    """Drop U+0000 and lone surrogates from every string, keys included."""
+    if isinstance(value, str):
+        return _SURROGATES.sub('', value.replace('\x00', ''))
+    if isinstance(value, dict):
+        return {strip_unstorable_json(k): strip_unstorable_json(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [strip_unstorable_json(v) for v in value]
+    return value
+
+
+def dumps_json_for_db(value) -> str:
+    """Serialize JSON for storage.
+
+    PostgreSQL's json type stores the ``\\u0000`` escape but every ``->``, ``->>`` and ``#>>``
+    that reaches it fails, so one such row breaks any query navigating the column; lone
+    surrogates are rejected outright. Both are stripped here, the single path every JSON
+    write takes, so no model has to remember to.
+    """
+    serialized = JSONCodec.dumps(value, ensure_ascii=False)
+    # A literally typed backslash-u0000 also matches; the re-dump then leaves it as is.
+    if '\\u0000' in serialized or (not serialized.isascii() and _SURROGATES.search(serialized)):
+        serialized = JSONCodec.dumps(strip_unstorable_json(value), ensure_ascii=False)
+    return serialized
+
+
+async def strip_nul_from_json(db: AsyncSession) -> None:
+    """Rewrite PostgreSQL json values still holding ``\\u0000`` from before ``dumps_json_for_db`` stripped it."""
+    quote = db.get_bind().dialect.identifier_preparer.quote
+    columns = await db.execute(
+        text(
+            'SELECT table_name, column_name FROM information_schema.columns '
+            "WHERE table_schema = current_schema() AND data_type = 'json'"
+        )
+    )
+    for table, column in columns.all():
+        table, column = quote(table), quote(column)
+        # json keeps its input text verbatim, so the escape is findable without parsing every row.
+        rows = await db.execute(
+            text(f'SELECT ctid::text, {column}::text FROM {table} WHERE strpos({column}::text, :escape) > 0'),
+            {'escape': '\\u0000'},
+        )
+        for ctid, raw in rows.all():
+            value = JSONCodec.loads(raw)
+            cleaned = strip_unstorable_json(value)
+            if cleaned != value:
+                await db.execute(
+                    text(f'UPDATE {table} SET {column} = CAST(:value AS json) WHERE ctid = CAST(:ctid AS tid)'),
+                    {'value': dumps_json_for_db(cleaned), 'ctid': ctid},
+                )
+    await db.commit()
+
+
 class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
     """Store arbitrary Python objects as JSON-encoded TEXT.
 
@@ -125,7 +181,7 @@ class JSONField(types.TypeDecorator):  # TEXT-backed JSON storage
     cache_ok = True
 
     def process_bind_param(self, value: _T | None, dialect: Dialect) -> Any:
-        return JSONCodec.dumps(value, ensure_ascii=False) if value is not None else None
+        return dumps_json_for_db(value) if value is not None else None
 
     def process_result_value(self, value: _T | None, dialect: Dialect) -> Any:
         return JSONCodec.loads(value) if value is not None else None
@@ -256,7 +312,7 @@ def _json_codec_kwargs(kwargs: dict) -> dict:
     Unlike ``JSONField``, those serialize through the engine, which otherwise uses
     stdlib ``json``. With ``ENABLE_ORJSON`` off JSONCodec is stdlib ``json`` anyway.
     """
-    kwargs.setdefault('json_serializer', lambda value: JSONCodec.dumps(value, ensure_ascii=False))
+    kwargs.setdefault('json_serializer', dumps_json_for_db)
     kwargs.setdefault('json_deserializer', JSONCodec.loads)
     return kwargs
 
