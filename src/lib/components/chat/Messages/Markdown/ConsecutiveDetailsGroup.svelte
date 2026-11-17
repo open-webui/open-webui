@@ -167,48 +167,90 @@
 		const listed = count('list');
 		const webSearches = count('web');
 		const fetched = count('fetch');
+		const running = new Set(
+			tokens.flatMap((t) =>
+				t?.view &&
+				t.attributes?.done !== 'true' &&
+				!['rejected', 'failed', 'incomplete', 'pending', 'queued'].includes(
+					t.attributes?.status ?? ''
+				)
+					? [t.view.kind]
+					: []
+			)
+		);
 
 		const parts = [];
 		if (commands)
 			parts.push(
-				commands === 1
-					? $i18n.t('Ran 1 command')
-					: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
+				running.has('command')
+					? commands === 1
+						? $i18n.t('Running 1 command')
+						: $i18n.t('Running {{COUNT}} commands', { COUNT: commands })
+					: commands === 1
+						? $i18n.t('Ran 1 command')
+						: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
 			);
 		if (edited)
 			parts.push(
-				edited === 1
-					? $i18n.t('Edited 1 file')
-					: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
+				running.has('edit')
+					? edited === 1
+						? $i18n.t('Editing 1 file')
+						: $i18n.t('Editing {{COUNT}} files', { COUNT: edited })
+					: edited === 1
+						? $i18n.t('Edited 1 file')
+						: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
 			);
 		if (read)
 			parts.push(
-				read === 1 ? $i18n.t('Read 1 file') : $i18n.t('Read {{COUNT}} files', { COUNT: read })
+				running.has('read')
+					? read === 1
+						? $i18n.t('Reading 1 file')
+						: $i18n.t('Reading {{COUNT}} files', { COUNT: read })
+					: read === 1
+						? $i18n.t('Read 1 file')
+						: $i18n.t('Read {{COUNT}} files', { COUNT: read })
 			);
 		if (searches)
 			parts.push(
-				searches === 1
-					? $i18n.t('Searched code')
-					: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
+				running.has('search')
+					? searches === 1
+						? $i18n.t('Searching code')
+						: $i18n.t('Searching code {{COUNT}} times', { COUNT: searches })
+					: searches === 1
+						? $i18n.t('Searched code')
+						: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
 			);
 		if (listed)
 			parts.push(
-				listed === 1
-					? $i18n.t('Listed 1 directory')
-					: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
+				running.has('list')
+					? listed === 1
+						? $i18n.t('Listing 1 directory')
+						: $i18n.t('Listing {{COUNT}} directories', { COUNT: listed })
+					: listed === 1
+						? $i18n.t('Listed 1 directory')
+						: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
 			);
 		if (webSearches)
 			parts.push(
-				webSearches === 1
-					? $i18n.t('Searched the web')
-					: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
+				running.has('web')
+					? webSearches === 1
+						? $i18n.t('Searching the web')
+						: $i18n.t('Searching the web {{COUNT}} times', { COUNT: webSearches })
+					: webSearches === 1
+						? $i18n.t('Searched the web')
+						: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
 			);
 		if (fetched)
 			parts.push(
-				fetched === 1
-					? $i18n.t('Fetched 1 page')
-					: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
+				running.has('fetch')
+					? fetched === 1
+						? $i18n.t('Fetching 1 page')
+						: $i18n.t('Fetching {{COUNT}} pages', { COUNT: fetched })
+					: fetched === 1
+						? $i18n.t('Fetched 1 page')
+						: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
 			);
+
 		return parts.join(', ');
 	})();
 
