@@ -93,6 +93,7 @@
 
 				await page.render({ canvas, canvasContext: ctx, viewport }).promise;
 				rendered.push(canvas.toDataURL('image/png'));
+				page.cleanup();
 			}
 
 			if (token === loadToken) thumbnails = rendered;
