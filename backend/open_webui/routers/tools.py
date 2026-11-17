@@ -43,6 +43,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.mcp.apps import app_csp, ui_resource_uri, verify_app_binding
 from open_webui.utils.mcp.client import tool_visible_to
 from open_webui.utils.misc import is_string_allowed
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
     get_tool_module_from_cache,
@@ -116,6 +117,17 @@ async def get_tools(
                 )
             )
 
+    # Only a browser signed in through SSO can get the token back by signing in again
+    system_oauth_token_missing = (
+        ENABLE_TOOL_SERVERS
+        and request.cookies.get('oauth_session_id') is not None
+        and any(
+            connection.get('auth_type') == 'system_oauth' and (connection.get('config') or {}).get('enable')
+            for connection in await Config.get('tool_server.connections', [])
+        )
+        and await get_system_oauth_token(request, user) is None
+    )
+
     # OpenAPI Tool Servers
     server_connections = {}
     for server in await get_tool_servers(request):
@@ -151,6 +163,11 @@ async def get_tools(
                     ],
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
+                    **(
+                        {'authenticated': False, 'auth_type': 'system_oauth'}
+                        if connection.get('auth_type') == 'system_oauth' and system_oauth_token_missing
+                        else {}
+                    ),
                 }
             )
         )
@@ -190,6 +207,11 @@ async def get_tools(
                                 'authenticated': session_token is not None,
                             }
                             if auth_type in ('oauth_2.1', 'oauth_2.1_static')
+                            else {}
+                        ),
+                        **(
+                            {'authenticated': False, 'auth_type': 'system_oauth'}
+                            if auth_type == 'system_oauth' and system_oauth_token_missing
                             else {}
                         ),
                     }
