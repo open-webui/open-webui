@@ -60,7 +60,20 @@
 		}
 	}
 
-	$: if (selectedModels.length > 1 && !compareModels) {
+	$: canCompare =
+		multipleEnabled &&
+		($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true));
+
+	$: if (!canCompare && (compareModels || selectedModels.length > 1)) {
+		compareModels = false;
+
+		if (selectedModels.length > 1) {
+			selectedModels = [selectedModels[0]];
+			onModelSelect(selectedModels);
+		}
+	}
+
+	$: if (canCompare && selectedModels.length > 1 && !compareModels) {
 		compareModels = true;
 	}
 </script>
@@ -85,8 +98,7 @@
 					{align}
 					{showSetDefault}
 					onSetDefault={saveDefaultModel}
-					multipleEnabled={multipleEnabled &&
-						($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))}
+					multipleEnabled={canCompare}
 					{disabled}
 					bind:compareEnabled={compareModels}
 					bind:values={selectedModels}

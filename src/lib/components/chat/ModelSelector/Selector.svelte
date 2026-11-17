@@ -423,8 +423,6 @@
 		}
 	};
 
-	$: if (!multipleEnabled && compareEnabled) setCompareEnabled(false);
-
 	const selectItem = (item, index: number) => {
 		selectedModelIdx = index;
 
