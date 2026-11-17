@@ -327,6 +327,14 @@
 			}
 		}
 	};
+	// The Android keyboard resizes the window (interactive-widget=resizes-content) when the composer focuses.
+	const resize = () => {
+		if ($commentSelectionDraft || preview?.contains(document.activeElement)) {
+			void popup?.popperInstance?.update();
+			return;
+		}
+		hide();
+	};
 	const scroll = (event: Event) => {
 		if ($commentSelectionDraft || preview?.contains(document.activeElement)) {
 			void popup?.popperInstance?.update();
@@ -358,7 +366,7 @@
 		document.addEventListener('focusin', focus);
 		document.addEventListener('keydown', keydown);
 		document.addEventListener('scroll', scroll, true);
-		window.addEventListener('resize', hide);
+		window.addEventListener('resize', resize);
 		window.addEventListener('focus', refresh);
 		window.addEventListener('comments:updated', refresh);
 		return () => {
@@ -374,7 +382,7 @@
 			document.removeEventListener('focusin', focus);
 			document.removeEventListener('keydown', keydown);
 			document.removeEventListener('scroll', scroll, true);
-			window.removeEventListener('resize', hide);
+			window.removeEventListener('resize', resize);
 			window.removeEventListener('focus', refresh);
 			window.removeEventListener('comments:updated', refresh);
 			restoreFocus();
