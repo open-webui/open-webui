@@ -4,6 +4,7 @@ import hashlib
 import logging
 import os
 import uuid
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
@@ -21,7 +22,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import FileResponse, StreamingResponse
-from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, STORAGE_LOCAL_CACHE, STORAGE_PROVIDER, UPLOAD_DIR
+from open_webui.config import (
+    BYPASS_ADMIN_ACCESS_CONTROL,
+    STORAGE_LOCAL_CACHE,
+    STORAGE_PROVIDER,
+    THREAD_POOL_SIZE,
+    UPLOAD_DIR,
+)
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_db_context, get_async_session
@@ -56,6 +63,11 @@ router = APIRouter()
 
 from open_webui.utils.access_control.files import has_access_to_file
 from open_webui.utils.json_codec import JSONCodec
+
+# Leave half of the worker threads free for uploads while knowledge base syncs queue up.
+_knowledge_processing_semaphore: asyncio.Semaphore = asyncio.Semaphore(
+    max((THREAD_POOL_SIZE if THREAD_POOL_SIZE and THREAD_POOL_SIZE > 0 else min(32, (os.cpu_count() or 1) + 4)) // 2, 1)
+)
 
 # Upload File
 # What was entrusted here was given in good faith. Let it
@@ -458,15 +470,19 @@ async def upload_file_handler(
 
         if process:
             if background_tasks and process_in_background:
-                background_tasks.add_task(
-                    process_uploaded_file,
-                    request,
-                    file,
-                    file_path,
-                    file_item,
-                    file_metadata,
-                    user,
-                )
+
+                async def _background_handler():
+                    async with _knowledge_processing_semaphore if knowledge_id else nullcontext():
+                        await process_uploaded_file(
+                            request,
+                            file,
+                            file_path,
+                            file_item,
+                            file_metadata,
+                            user,
+                        )
+
+                background_tasks.add_task(_background_handler)
                 return {'status': True, **file_item.model_dump()}
             else:
                 await process_uploaded_file(
