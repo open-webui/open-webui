@@ -2301,15 +2301,19 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
 
     # Create zip file in memory
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for file in files:
-            content = file.data.get('content', '') if file.data else ''
-            if content:
-                # Use original filename with .txt extension
-                filename = file.filename
-                if not filename.endswith('.txt'):
-                    filename = f'{filename}.txt'
-                zf.writestr(filename, content)
+
+    def write_zip():
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for file in files:
+                content = file.data.get('content', '') if file.data else ''
+                if content:
+                    # Use original filename with .txt extension
+                    filename = file.filename
+                    if not filename.endswith('.txt'):
+                        filename = f'{filename}.txt'
+                    zf.writestr(filename, content)
+
+    await asyncio.to_thread(write_zip)
 
     # Sanitize knowledge name for filename
     safe_name = ''.join(c if c.isalnum() or c in ' -_' else '_' for c in knowledge.name)
