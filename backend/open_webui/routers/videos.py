@@ -20,11 +20,12 @@ from open_webui.routers.images import (
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_headers_and_cookies
-from open_webui.utils.images.connections import get_openai_connection_models
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.videos.connections import (
     VIDEO_CONNECTIONS_CONFIG_KEY,
     VIDEO_GENERATION_DEFAULT_MODEL_CONFIG_KEY,
+    get_video_connection_models,
+    get_video_connection_provider,
     get_video_models,
     normalize_video_connection,
     resolve_video_model,
@@ -123,7 +124,7 @@ async def verify_video_connection(request: Request, form_data: VideoConnection, 
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
     try:
-        return await get_openai_connection_models(request, connection, user)
+        return await get_video_connection_models(request, connection, user)
     except Exception as e:
         log.error(
             f'Failed to verify video connection {connection["url"]}: {str(e) or type(e).__name__}',
@@ -213,6 +214,7 @@ async def video_generations(
 
     Video models take minutes, so the provider runs each request as a job: create it with
     ``POST /videos``, check ``GET /videos/{id}`` until it is done, then download ``/videos/{id}/content``.
+    OpenAI's API (which LiteLLM follows) takes a multipart form; OpenRouter's takes JSON.
     """
     connection, model = await resolve_video_model(request, user, form_data.model, strict=strict)
     connection_config = connection.get('config') or {}
@@ -228,40 +230,61 @@ async def video_generations(
         headers, cookies = await get_headers_and_cookies(
             request, connection['url'], connection['key'], connection_config, metadata, user=user
         )
-        # The create request is multipart, so the connection's JSON content type does not apply.
-        headers.pop('Content-Type', None)
 
         api_version = connection_config.get('api_version')
         query = f'?api-version={api_version}' if api_version else ''
         base_url = f'{connection["url"]}/videos'
+        image = await load_url_image(form_data.image, user) if form_data.image else None
+        params = connection_config.get('params') or {}
 
-        form = aiohttp.FormData()
-        if model:
-            form.add_field('model', model)
-        form.add_field('prompt', form_data.prompt)
-        if seconds:
-            form.add_field('seconds', str(seconds))
-        if size:
-            form.add_field('size', size)
-        if form_data.image:
-            name, (filename, file, content_type) = get_image_file_item(
-                await load_url_image(form_data.image, user), 'input_reference'
-            )
-            form.add_field(name, file, filename=filename, content_type=content_type)
-        for key, value in (connection_config.get('params') or {}).items():
-            form.add_field(key, value if isinstance(value, str) else str(value))
+        if get_video_connection_provider(connection) == 'openrouter':
+            body = {
+                'json': {
+                    'model': model,
+                    'prompt': form_data.prompt,
+                    **({'duration': seconds} if seconds else {}),
+                    **({'size': size} if size else {}),
+                    **(
+                        {
+                            'frame_images': [
+                                {'type': 'image_url', 'image_url': {'url': image}, 'frame_type': 'first_frame'}
+                            ]
+                        }
+                        if image
+                        else {}
+                    ),
+                    **params,
+                }
+            }
+        else:
+            # The create request is multipart, so the connection's JSON content type does not apply.
+            headers.pop('Content-Type', None)
+            form = aiohttp.FormData()
+            if model:
+                form.add_field('model', model)
+            form.add_field('prompt', form_data.prompt)
+            if seconds:
+                form.add_field('seconds', str(seconds))
+            if size:
+                form.add_field('size', size)
+            if image:
+                name, (filename, file, content_type) = get_image_file_item(image, 'input_reference')
+                form.add_field(name, file, filename=filename, content_type=content_type)
+            for key, value in params.items():
+                form.add_field(key, value if isinstance(value, str) else str(value))
+            body = {'data': form}
 
         session = await get_session()
         async with session.post(
-            url=f'{base_url}{query}', data=form, headers=headers, cookies=cookies, ssl=AIOHTTP_CLIENT_SESSION_SSL
+            url=f'{base_url}{query}', headers=headers, cookies=cookies, ssl=AIOHTTP_CLIENT_SESSION_SSL, **body
         ) as r:
             await raise_for_provider_status(r)
             job = await r.json(content_type=None)
 
         await emit_status('Generating video')
         deadline = time.monotonic() + VIDEO_GENERATION_TIMEOUT
-        # OpenAI's video API (and LiteLLM's, which follows it) reports queued, in_progress, completed or failed.
-        while job.get('status') in ('queued', 'in_progress'):
+        # Providers name the waiting states differently (queued, pending, in_progress), so wait for the end.
+        while job.get('status') not in ('completed', 'failed'):
             if time.monotonic() > deadline:
                 raise HTTPException(
                     status_code=400, detail=f'The video was not ready after {VIDEO_GENERATION_TIMEOUT} seconds'

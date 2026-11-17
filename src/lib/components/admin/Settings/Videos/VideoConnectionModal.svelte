@@ -40,6 +40,7 @@
 	let size = '';
 	let seconds = '';
 	let apiVersion = '';
+	let provider = '';
 	let params = '';
 	let headers = '';
 
@@ -110,6 +111,7 @@
 			size: size.trim(),
 			seconds: seconds === '' ? null : Number(seconds),
 			api_version: apiVersion.trim(),
+			provider,
 			auth_type,
 			headers: headers.trim() ? JSON.parse(headers) : {},
 			params: params.trim() ? JSON.parse(params) : {}
@@ -192,6 +194,7 @@
 		size = config.size ?? '';
 		seconds = config.seconds === null || config.seconds === undefined ? '' : `${config.seconds}`;
 		apiVersion = config.api_version ?? '';
+		provider = config.provider ?? '';
 		params = formatJSON(config.params);
 		headers = formatJSON(config.headers);
 	};
@@ -279,6 +282,7 @@
 
 									<datalist id="video-connection-openai-urls">
 										<option value="https://api.openai.com/v1" />
+										<option value="https://openrouter.ai/api/v1" />
 									</datalist>
 								</div>
 							</div>
@@ -507,21 +511,40 @@
 								</div>
 							</div>
 
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label for="video-connection-api-version" class="mb-0.5 text-xs text-gray-500"
-										>{$i18n.t('API Version')}</label
+							<div class="flex flex-row justify-between items-center w-full mt-2">
+								<label for="video-connection-provider" class="mb-0.5 text-xs text-gray-500"
+									>{$i18n.t('Provider')}</label
+								>
+
+								<div>
+									<select
+										id="video-connection-provider"
+										bind:value={provider}
+										class="text-xs text-gray-700 dark:text-gray-300 bg-transparent pr-5 outline-hidden"
 									>
-									<input
-										id="video-connection-api-version"
-										class={`w-full text-sm ${inputClass}`}
-										type="text"
-										bind:value={apiVersion}
-										placeholder={$i18n.t('API Version')}
-										autocomplete="off"
-									/>
+										<option value="">{$i18n.t('Default')}</option>
+										<option value="openrouter">{$i18n.t('OpenRouter')}</option>
+									</select>
 								</div>
 							</div>
+
+							{#if provider !== 'openrouter' && !url.includes('openrouter.ai')}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label for="video-connection-api-version" class="mb-0.5 text-xs text-gray-500"
+											>{$i18n.t('API Version')}</label
+										>
+										<input
+											id="video-connection-api-version"
+											class={`w-full text-sm ${inputClass}`}
+											type="text"
+											bind:value={apiVersion}
+											placeholder={$i18n.t('API Version')}
+											autocomplete="off"
+										/>
+									</div>
+								</div>
+							{/if}
 
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
