@@ -3391,7 +3391,10 @@
 									message?.role === 'assistant' &&
 									(message.user_id ?? chat?.user_id) === $user?.id &&
 									!message.done &&
-									!messageHasPendingAskUser(message)
+									!messageHasPendingAskUser(message) &&
+									!message.output?.some(
+										(item) => item?.type === 'function_call' && item?.status === 'pending'
+									)
 								) {
 									message.done = true;
 									history = history;
