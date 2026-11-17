@@ -105,14 +105,12 @@
 				</div>
 				<div class="flex items-start gap-2 text-xs">
 					<div
-						class="min-w-0 flex-1 rounded-lg bg-red-500/10 px-2 py-1 text-red-700 dark:text-red-300"
+						class="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 text-gray-500 dark:bg-gray-850 dark:text-gray-400"
 					>
 						{@render settingValue(key, savedConfig?.[key])}
 					</div>
 					<ArrowRight className="mt-1.5 size-3 shrink-0 text-gray-400" />
-					<div
-						class="min-w-0 flex-1 rounded-lg bg-green-500/10 px-2 py-1 text-green-700 dark:text-green-300"
-					>
+					<div class="min-w-0 flex-1 rounded-lg bg-gray-50 px-2 py-1 dark:bg-gray-850">
 						{@render settingValue(key, settings?.[key])}
 					</div>
 				</div>
