@@ -1861,6 +1861,7 @@
 	"Leave empty for no compression": "Biarkan kosong untuk tanpa kompresi",
 	"Leave empty for unlimited": "Biarkan kosong untuk tanpa batas",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Biarkan kosong untuk menyertakan semua model dari endpoint \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Biarkan kosong untuk menyertakan semua model dari endpoint \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Biarkan kosong untuk menyertakan semua model dari endpoint \"{{url}}/models\"",

@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "சுருக்கம் இல்லாமல் காலியாக விடவும்",
 	"Leave empty for unlimited": "வரம்பற்ற காலத்திற்கு காலியாக விடவும்",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" இறுதிப் புள்ளியிலிருந்து அனைத்து மாடல்களையும் சேர்க்க காலியாக விடவும்",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" இறுதிப் புள்ளியிலிருந்து அனைத்து மாடல்களையும் சேர்க்க காலியாக விடவும்",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" இறுதிப் புள்ளியிலிருந்து அனைத்து மாடல்களையும் சேர்க்க காலியாக விடவும்",

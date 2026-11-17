@@ -1849,6 +1849,7 @@
 	"Leave empty for no compression": "เว้นว่างไว้หากไม่ต้องการบีบอัด",
 	"Leave empty for unlimited": "เว้นว่างไว้เพื่อไม่จำกัด",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "ปล่อยว่างไว้เพื่อรวมโมเดลทั้งหมดจาก Endpoint \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "เว้นว่างไว้เพื่อรวมโมเดลทั้งหมดจาก Endpoint \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "เว้นว่างไว้เพื่อรวมโมเดลทั้งหมดจาก Endpoint \"{{url}}/models\"",

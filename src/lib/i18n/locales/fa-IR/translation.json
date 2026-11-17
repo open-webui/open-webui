@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "برای عدم فشرده\u200cسازی خالی بگذارید",
 	"Leave empty for unlimited": "برای نامحدود خالی بگذارید",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "برای گنجاندن همه مدل\u200cها از نقطه پایانی \"{{url}}\" خالی بگذارید",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "برای شامل شدن همه مدل\u200cها از نقطه پایانی \"{{url}}/api/tags\" خالی بگذارید",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "برای شامل شدن همه مدل\u200cها از نقطه پایانی \"{{url}}/models\" خالی بگذارید",

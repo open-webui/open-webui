@@ -1849,6 +1849,7 @@
 	"Leave empty for no compression": "སྡུད་བཅུག་མི་བྱེད་ན་སྟོང་པ་འཇོག་པ།",
 	"Leave empty for unlimited": "ཚད་མེད་པའི་ཆེད་དུ་སྟོང་པ་བཞག་པ།",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" མཇུག་མཐུད་ནས་དཔེ་དབྱིབས་ཚང་མ་འཇུག་པར་སྟོང་པ་འཇོག་པ།",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" མཇུག་མཐུད་ནས་དཔེ་དབྱིབས་ཡོངས་རྫོགས་ཚུད་པར་སྟོང་པ་བཞག་པ།",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" མཇུག་མཐུད་ནས་དཔེ་དབྱིབས་ཡོངས་རྫོགས་ཚུད་པར་སྟོང་པ་བཞག་པ།",

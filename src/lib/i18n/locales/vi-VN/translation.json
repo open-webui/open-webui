@@ -1849,6 +1849,7 @@
 	"Leave empty for no compression": "Để trống để không nén",
 	"Leave empty for unlimited": "Để trống nếu không giới hạn",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Để trống để bao gồm tất cả các mô hình từ endpoint \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Để trống để bao gồm tất cả các mô hình từ điểm cuối \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Để trống để bao gồm tất cả các mô hình từ điểm cuối \"{{url}}/models\"",

@@ -1859,6 +1859,7 @@
 	"Leave empty for no compression": "留空则不压缩",
 	"Leave empty for unlimited": "留空则无限制",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "留空以包含来自 \"{{url}}\" 端点的所有模型",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "留空以包含来自 \"{{url}}/api/tags\" 端点的所有模型",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "留空以包含来自 \"{{url}}/models\" 端点的所有模型",

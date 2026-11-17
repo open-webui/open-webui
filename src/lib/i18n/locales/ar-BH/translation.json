@@ -1949,6 +1949,7 @@
 	"Leave empty for no compression": "اتركه فارغًا لعدم الضغط",
 	"Leave empty for unlimited": "اتركه فارغًا لعدم وجود حد",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "اتركه فارغًا لتضمين جميع النماذج من نقطة النهاية \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "اتركه فارغًا لتضمين جميع النماذج من نقطة النهاية \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "اتركه فارغًا لتضمين جميع النماذج من نقطة النهاية \"{{url}}/models\"",

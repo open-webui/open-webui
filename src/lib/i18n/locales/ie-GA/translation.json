@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Fág folamh le haghaidh gan comhbhrú",
 	"Leave empty for unlimited": "Fág folamh le haghaidh neamhtheoranta",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Fág folamh chun gach samhail ó chríochphointe \"{{url}}\" a áireamh",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Fág folamh chun gach samhail ó chríochphointe \"{{url}}/api/tags\" a chur san áireamh",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Fág folamh chun gach samhail ón gcríochphointe \"{{url}}/models\" a chur san áireamh",

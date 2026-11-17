@@ -1889,6 +1889,7 @@
 	"Leave empty for no compression": "Atstājiet tukšu, lai nesaspiestu",
 	"Leave empty for unlimited": "Atstājiet tukšu, lai nebūtu ierobežojuma",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Atstājiet tukšu, lai iekļautu visus modeļus no \"{{url}}\" galapunkta",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Atstājiet tukšu, lai iekļautu visus modeļus no \"{{url}}/api/tags\" galapunkta",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Atstājiet tukšu, lai iekļautu visus modeļus no \"{{url}}/models\" galapunkta",

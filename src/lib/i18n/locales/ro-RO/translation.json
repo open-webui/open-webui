@@ -1889,6 +1889,7 @@
 	"Leave empty for no compression": "Lăsați gol pentru a nu comprima",
 	"Leave empty for unlimited": "Lăsați gol pentru nelimitat",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Lăsați gol pentru a include toate modelele de la endpoint-ul \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Lăsați gol pentru a include toate modelele de la endpoint-ul \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Lăsați gol pentru a include toate modelele de la endpoint-ul \"{{url}}/models\"",

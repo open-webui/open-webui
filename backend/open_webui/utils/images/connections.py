@@ -11,13 +11,17 @@ import logging
 import uuid
 from typing import Any, Literal
 
-from fastapi import HTTPException
+from aiocache import cached
+from fastapi import HTTPException, Request
 from open_webui.constants import ERROR_MESSAGES
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, MODELS_CACHE_TTL
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
 
@@ -26,6 +30,9 @@ IMAGE_GENERATION_DEFAULT_MODEL_CONFIG_KEY = 'image_generation.default_model'
 IMAGE_EDIT_DEFAULT_MODEL_CONFIG_KEY = 'images.edit.default_model'
 
 IMAGE_CONNECTION_TYPES = ('openai', 'gemini', 'comfyui', 'automatic1111')
+
+# The auth types chat model connections offer; only OpenAI compatible image connections use more than a key.
+IMAGE_CONNECTION_AUTH_TYPES = ('none', 'bearer', 'session', 'system_oauth', 'microsoft_entra_id')
 
 DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2'
 DEFAULT_GEMINI_IMAGE_MODEL = 'imagen-3.0-generate-002'
@@ -39,14 +46,6 @@ PUBLIC_ACCESS_GRANTS = [{'principal_type': 'user', 'principal_id': '*', 'permiss
 
 def get_image_model_ref(connection_id: str, model_id: str) -> str:
     return f'{connection_id}:{model_id}'
-
-
-def parse_image_model_ref(ref: str) -> tuple[str, str] | None:
-    """Split a ``{connection_id}:{model_id}`` reference. Model ids may contain colons; connection ids never do."""
-    if not ref or ':' not in ref:
-        return None
-    connection_id, model_id = ref.split(':', 1)
-    return connection_id, model_id
 
 
 def _json_object(value: Any, label: str) -> dict:
@@ -116,6 +115,12 @@ def normalize_image_connection(connection: dict[str, Any]) -> dict[str, Any]:
         if model_id and model_id not in model_ids:
             model_ids.append(model_id)
 
+    auth_type = str(config.get('auth_type') or 'bearer')
+    if auth_type not in IMAGE_CONNECTION_AUTH_TYPES:
+        raise ValueError(f'Unsupported auth type: {auth_type}')
+    if connection_type != 'openai' and auth_type not in ('none', 'bearer'):
+        raise ValueError(f'{connection_type} connections support no auth or a key')
+
     steps = config.get('steps')
     if steps not in (None, ''):
         steps = int(steps)
@@ -138,6 +143,8 @@ def normalize_image_connection(connection: dict[str, Any]) -> dict[str, Any]:
             },
             'model_ids': model_ids,
             'access_grants': list(config.get('access_grants') or []),
+            'auth_type': auth_type,
+            'headers': _json_object(config.get('headers'), 'headers'),
             'size': _size(config.get('size')),
             'edit_size': _size(config.get('edit_size')),
             'steps': steps,
@@ -167,17 +174,90 @@ def get_image_connection_capabilities(connection: dict) -> dict[str, bool]:
     return {capability: supported[capability] and bool(enabled.get(capability, True)) for capability in supported}
 
 
-async def get_image_connections() -> list[dict]:
-    return await Config.get(IMAGE_CONNECTIONS_CONFIG_KEY) or []
+async def get_openai_connection_models(request: Request, connection: dict, user: UserModel | None = None) -> list[dict]:
+    """The models an OpenAI compatible connection serves. LiteLLM also reports each one's mode and endpoints,
+    which mark its image models (``image``) and what they can do."""
+    from open_webui.routers.images import raise_for_provider_status
+
+    headers, cookies = await get_headers_and_cookies(
+        request, connection['url'], connection.get('key'), connection.get('config') or {}, user=user
+    )
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/models', headers=headers, cookies=cookies, ssl=AIOHTTP_CLIENT_SESSION_SSL
+    ) as r:
+        await raise_for_provider_status(r)
+        res = await r.json(content_type=None)
+
+    models = [
+        {'id': model['id'], 'name': model['id']}
+        for model in (res.get('data') or [])
+        if isinstance(model, dict) and model.get('id')
+    ]
+
+    try:
+        async with session.get(
+            url=f'{connection["url"]}/model/info', headers=headers, cookies=cookies, ssl=AIOHTTP_CLIENT_SESSION_SSL
+        ) as r:
+            info = await r.json(content_type=None) if r.ok else {}
+    except Exception as e:
+        log.debug('No model info at %s: %s', connection['url'], e)
+        return models
+
+    model_infos = {
+        entry.get('model_name'): entry.get('model_info') or {}
+        for entry in (info.get('data') or [])
+        if isinstance(entry, dict)
+    }
+    if not any(model_info.get('mode') for model_info in model_infos.values()):
+        return models
+
+    for model in models:
+        model_info = model_infos.get(model['id']) or {}
+        endpoints = [str(endpoint) for endpoint in model_info.get('supported_endpoints') or []]
+        if endpoints:
+            capabilities = {
+                'image_generation': any(endpoint.endswith('/images/generations') for endpoint in endpoints),
+                'image_edit': any(endpoint.endswith('/images/edits') for endpoint in endpoints),
+            }
+        else:
+            capabilities = {capability: model_info.get('mode') == capability for capability in IMAGE_CAPABILITIES}
+        model['image'] = any(capabilities.values())
+        if model['image']:
+            model.update(capabilities)
+    return models
 
 
-async def get_image_models(user: UserModel) -> list[dict]:
+@cached(
+    ttl=MODELS_CACHE_TTL,
+    key_builder=lambda _func, request, connection, user=None: (
+        f'image_connection_models_{connection["id"]}_{user.id}'
+        if user
+        else f'image_connection_models_{connection["id"]}'
+    ),
+)
+async def get_synced_image_models(request: Request, connection: dict, user: UserModel | None = None) -> list[dict]:
+    """The image models an OpenAI compatible connection with no model IDs offers, listed live so new ones
+    appear on their own. Servers that do not label image models (plain OpenAI, Azure) offer the default model."""
+    try:
+        models = await get_openai_connection_models(request, connection, user)
+    except Exception as e:
+        log.warning('Could not list image models from %s: %s', connection.get('url'), e)
+        return []
+
+    if not any('image' in model for model in models):
+        return [{'id': ''}]
+    return [model for model in models if model['image']]
+
+
+async def get_image_models(request: Request, user: UserModel, *, bypass_access: bool = False) -> list[dict]:
     """Image models the user may use, across enabled connections. Each carries its connection for internal use.
 
-    A connection without model IDs offers one model, its default: the engine's default model,
-    the model a ComfyUI workflow sets, or the checkpoint AUTOMATIC1111 has loaded.
+    A connection without model IDs offers its default: every image model an OpenAI compatible server
+    labels (LiteLLM), else the engine's default model, the model a ComfyUI workflow sets, or the
+    checkpoint AUTOMATIC1111 has loaded.
     """
-    connections = await get_image_connections()
+    connections = await Config.get(IMAGE_CONNECTIONS_CONFIG_KEY) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
 
     models = []
@@ -185,10 +265,19 @@ async def get_image_models(user: UserModel) -> list[dict]:
         config = connection.get('config') or {}
         if not config.get('enable', True):
             continue
-        if not await has_connection_access(user, connection, user_group_ids):
+        if not bypass_access and not await has_connection_access(user, connection, user_group_ids):
             continue
         capabilities = get_image_connection_capabilities(connection)
-        for model_id in config.get('model_ids') or ['']:
+
+        if config.get('model_ids'):
+            entries = [{'id': model_id} for model_id in config['model_ids']]
+        elif connection.get('type') == 'openai':
+            entries = await get_synced_image_models(request, connection, user)
+        else:
+            entries = [{'id': ''}]
+
+        for entry in entries:
+            model_id = entry['id']
             models.append(
                 {
                     'id': get_image_model_ref(connection['id'], model_id),
@@ -196,7 +285,11 @@ async def get_image_models(user: UserModel) -> list[dict]:
                     'model': model_id,
                     'connection_id': connection['id'],
                     'connection_name': connection.get('name') or connection['id'],
-                    **capabilities,
+                    # A synced model can do only what both the connection allows and the server says it does.
+                    **{
+                        capability: capabilities[capability] and entry.get(capability, True)
+                        for capability in IMAGE_CAPABILITIES
+                    },
                     'connection': connection,
                 }
             )
@@ -219,6 +312,7 @@ def get_requested_image_model(metadata: dict | None) -> str | None:
 
 
 async def resolve_image_model(
+    request: Request,
     user: UserModel,
     capability: ImageCapability,
     model: str | None = None,
@@ -232,7 +326,7 @@ async def resolve_image_model(
     cannot use, or one that cannot do the capability (an edit sent to a generation-only model),
     falls back to the default unless ``strict`` is set, as on the direct API routes.
     """
-    models = await get_image_models(user)
+    models = await get_image_models(request, user)
 
     def find(value: str | None) -> dict | None:
         if not value:

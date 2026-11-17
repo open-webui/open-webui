@@ -1850,6 +1850,7 @@
 	"Leave empty for no compression": "압축하지 않으려면 비워 두세요",
 	"Leave empty for unlimited": "제한하지 않으려면 비워 두세요",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" 엔드포인트의 모든 모델을 포함하려면 비워 두세요",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" 엔드포인트의 모든 모델을 포함하려면 비워 두세요",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" 엔드포인트의 모든 모델을 포함하려면 비워 두세요",

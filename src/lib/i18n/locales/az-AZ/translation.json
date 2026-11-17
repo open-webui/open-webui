@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Sıxılma olmaması üçün boş saxlayın",
 	"Leave empty for unlimited": "Limitsiz olması üçün boş saxlayın",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" son nöqtəsindəki bütün modelləri daxil etmək üçün boş saxlayın",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" son nöqtəsindəki bütün modelləri daxil etmək üçün boş saxlayın",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" son nöqtəsindəki bütün modelləri daxil etmək üçün boş saxlayın",

@@ -1889,6 +1889,7 @@
 	"Leave empty for no compression": "Deixar-ho buit per no comprimir",
 	"Leave empty for unlimited": "Deixar-ho buit per il·limitat",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Deixar-ho buit per incloure tots els models del punt de connexió \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Deixar-ho buit per incloure tots els models del punt de connexió \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Deixar-ho buit per incloure tots els models del punt de connexió \"{{url}}/models\"",

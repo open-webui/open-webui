@@ -1909,6 +1909,7 @@
 	"Leave empty for no compression": "Pro žádnou kompresi ponechte prázdné",
 	"Leave empty for unlimited": "Pro neomezeně ponechte prázdné",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Ponechte prázdné pro zahrnutí všech modelů z koncového bodu \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Ponechte prázdné pro zahrnutí všech modelů z koncového bodu \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Ponechte prázdné pro zahrnutí všech modelů z koncového bodu \"{{url}}/models\"",

@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Lat standa tómt fyri onga týsting",
 	"Leave empty for unlimited": "Lat standa tómt fyri óavmarkað",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Lat standa tómt fyri at taka øll modell frá \"{{url}}\"-endapunktinum við",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Lat standa tómt fyri at taka øll modell frá \"{{url}}/api/tags\"-endapunktinum við",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Lat standa tómt fyri at taka øll modell frá \"{{url}}/models\"-endapunktinum við",

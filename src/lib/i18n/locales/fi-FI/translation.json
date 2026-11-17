@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Jätä tyhjäksi, jos et halua pakkausta",
 	"Leave empty for unlimited": "Rajaton tyhjänä",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Jätä tyhjäksi sisällyttääksesi \"{{url}}\" päätepisteen mallit",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Jätä tyhjäksi sisällyttääksesi \"{{url}}/api/tags\" päätepisteen mallit",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Jätä tyhjäksi sisällyttääksesi \"{{url}}/models\" päätepisteen mallit",

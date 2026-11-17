@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "ਕੰਪ੍ਰੈਸ਼ਨ ਨਾ ਕਰਨ ਲਈ ਖਾਲੀ ਛੱਡੋ",
 	"Leave empty for unlimited": "ਕੋਈ ਸੀਮਾ ਨਾ ਰੱਖਣ ਲਈ ਖਾਲੀ ਛੱਡੋ",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" ਐਂਡਪੁਆਇੰਟ ਦੇ ਸਾਰੇ ਮਾਡਲ ਸ਼ਾਮਲ ਕਰਨ ਲਈ ਖਾਲੀ ਛੱਡੋ",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" ਐਂਡਪੁਆਇੰਟ ਦੇ ਸਾਰੇ ਮਾਡਲ ਸ਼ਾਮਲ ਕਰਨ ਲਈ ਖਾਲੀ ਛੱਡੋ",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" ਐਂਡਪੁਆਇੰਟ ਦੇ ਸਾਰੇ ਮਾਡਲ ਸ਼ਾਮਲ ਕਰਨ ਲਈ ਖਾਲੀ ਛੱਡੋ",

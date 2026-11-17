@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "",
 	"Leave empty for unlimited": "Чексиз учун бўш қолдиринг",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "“{{url}}” сўнгги нуқтасидаги барча моделларни киритиш учун бўш қолдиринг",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "“{{url}}/api/тагс” сўнгги нуқтасидаги барча моделларни киритиш учун бўш қолдиринг",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "“{{url}}/моделс” сўнгги нуқтасидаги барча моделларни киритиш учун бўш қолдиринг",

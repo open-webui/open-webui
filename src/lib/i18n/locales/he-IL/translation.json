@@ -1889,6 +1889,7 @@
 	"Leave empty for no compression": "השאר ריק כדי לא לדחוס",
 	"Leave empty for unlimited": "השאר ריק כדי לא להגביל",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "השאר ריק כדי לכלול את כל המודלים מנקודת הקצה \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "השאר ריק כדי לכלול את כל המודלים מנקודת הקצה \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "השאר ריק כדי לכלול את כל המודלים מנקודת הקצה \"{{url}}/models\"",

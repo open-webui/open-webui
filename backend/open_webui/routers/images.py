@@ -24,7 +24,7 @@ from open_webui.config import (
     IMAGE_URL_RESPONSE_MODELS_REGEX_PATTERN,
 )
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL, ENABLE_FORWARD_USER_INFO_HEADERS
+from open_webui.env import AIOHTTP_CLIENT_ALLOW_REDIRECTS, AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.chats import Chats
@@ -33,7 +33,7 @@ from open_webui.retrieval.web.utils import assert_identity_encoding, get_ssrf_sa
 from open_webui.routers.files import get_file_content_by_id, upload_file_handler
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from open_webui.utils.headers import include_user_info_headers
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.images.comfyui import (
     ComfyUICreateImageForm,
     ComfyUIEditImageForm,
@@ -49,6 +49,7 @@ from open_webui.utils.images.connections import (
     IMAGE_EDIT_DEFAULT_MODEL_CONFIG_KEY,
     IMAGE_GENERATION_DEFAULT_MODEL_CONFIG_KEY,
     get_image_models,
+    get_openai_connection_models,
     normalize_image_connection,
     resolve_image_model,
 )
@@ -260,39 +261,6 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
     return {**values, 'IMAGE_CONNECTIONS': connections}
 
 
-async def get_openai_connection_models(connection: dict) -> list[dict]:
-    headers = {'Authorization': f'Bearer {connection.get("key", "")}'} if connection.get('key') else {}
-    session = await get_session()
-    async with session.get(url=f'{connection["url"]}/models', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
-        await raise_for_provider_status(r)
-        res = await r.json(content_type=None)
-
-    models = [
-        {'id': model['id'], 'name': model['id']}
-        for model in (res.get('data') or [])
-        if isinstance(model, dict) and model.get('id')
-    ]
-
-    # LiteLLM labels each model with its mode, which tells image models apart from chat models.
-    try:
-        async with session.get(
-            url=f'{connection["url"]}/model/info', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
-        ) as r:
-            info = await r.json(content_type=None) if r.ok else {}
-        modes = {
-            entry.get('model_name'): (entry.get('model_info') or {}).get('mode')
-            for entry in (info.get('data') or [])
-            if isinstance(entry, dict)
-        }
-        if any(modes.values()):
-            for model in models:
-                model['image'] = modes.get(model['id']) in ('image_generation', 'image_edit')
-    except Exception as e:
-        log.debug('No model info at %s: %s', connection['url'], e)
-
-    return models
-
-
 async def get_gemini_connection_models(connection: dict) -> list[dict]:
     session = await get_session()
     async with session.get(
@@ -362,7 +330,7 @@ async def get_automatic1111_connection_models(connection: dict) -> list[dict]:
 
 
 @router.post('/connections/verify')
-async def verify_image_connection(form_data: ImageConnection, user=Depends(get_admin_user)):
+async def verify_image_connection(request: Request, form_data: ImageConnection, user=Depends(get_admin_user)):
     """Reach a connection before saving it and list the models it serves."""
     try:
         connection = normalize_image_connection(form_data.model_dump())
@@ -374,7 +342,7 @@ async def verify_image_connection(form_data: ImageConnection, user=Depends(get_a
 
     try:
         if connection['type'] == 'openai':
-            return await get_openai_connection_models(connection)
+            return await get_openai_connection_models(request, connection, user)
         if connection['type'] == 'gemini':
             return await get_gemini_connection_models(connection)
         if connection['type'] == 'comfyui':
@@ -405,7 +373,17 @@ async def get_models(request: Request, user=Depends(get_verified_user)):
         return []
 
     return [
-        {key: value for key, value in model.items() if key != 'connection'} for model in await get_image_models(user)
+        {key: value for key, value in model.items() if key != 'connection'}
+        for model in await get_image_models(request, user)
+    ]
+
+
+@router.get('/connections/models')
+async def get_connection_models(request: Request, user=Depends(get_admin_user)):
+    """Every model the enabled connections offer, whoever may use them, for choosing the default models."""
+    return [
+        {key: value for key, value in model.items() if key != 'connection'}
+        for model in await get_image_models(request, user, bypass_access=True)
     ]
 
 
@@ -602,7 +580,7 @@ async def image_generations(
     user=None,
     strict: bool = False,
 ):
-    connection, model = await resolve_image_model(user, 'image_generation', form_data.model, strict=strict)
+    connection, model = await resolve_image_model(request, user, 'image_generation', form_data.model, strict=strict)
     connection_config = connection.get('config') or {}
     connection_size = connection_config.get('size') or ''
     connection_steps = connection_config.get('steps')
@@ -622,13 +600,9 @@ async def image_generations(
     try:
         if connection['type'] == 'openai':
             model = model or DEFAULT_OPENAI_IMAGE_MODEL
-            headers = {
-                **({'Authorization': f'Bearer {connection["key"]}'} if connection['key'] else {}),
-                'Content-Type': 'application/json',
-            }
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
+            headers, cookies = await get_headers_and_cookies(
+                request, connection['url'], connection['key'], connection['config'], metadata, user=user
+            )
 
             url = f'{connection["url"]}/images/generations'
             openai_size = form_data.size or connection_size
@@ -664,6 +638,7 @@ async def image_generations(
                 url=url,
                 json=data,
                 headers=headers,
+                cookies=cookies,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 await raise_for_provider_status(r)
@@ -904,7 +879,7 @@ async def image_edits(
     user=Depends(get_verified_user),
     strict: bool = False,
 ):
-    connection, model = await resolve_image_model(user, 'image_edit', form_data.model, strict=strict)
+    connection, model = await resolve_image_model(request, user, 'image_edit', form_data.model, strict=strict)
     connection_config = connection.get('config') or {}
     connection_size = connection_config.get('edit_size') or ''
     size = None
@@ -984,10 +959,11 @@ async def image_edits(
     try:
         if connection['type'] == 'openai':
             model = model or DEFAULT_OPENAI_IMAGE_MODEL
-            headers = {'Authorization': f'Bearer {connection["key"]}'} if connection['key'] else {}
-
-            if ENABLE_FORWARD_USER_INFO_HEADERS:
-                headers = include_user_info_headers(headers, user)
+            headers, cookies = await get_headers_and_cookies(
+                request, connection['url'], connection['key'], connection['config'], metadata, user=user
+            )
+            # The edit is a multipart upload; aiohttp sets its own content type and boundary.
+            headers.pop('Content-Type', None)
 
             data = {
                 'model': model,
@@ -1040,6 +1016,7 @@ async def image_edits(
             async with session.post(
                 url=f'{connection["url"]}/images/edits{url_search_params}',
                 headers=headers,
+                cookies=cookies,
                 data=form,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:

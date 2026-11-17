@@ -1861,6 +1861,7 @@
 	"Leave empty for no compression": "空欄で圧縮を無効化",
 	"Leave empty for unlimited": "空欄で無制限",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "空欄にすると \"{{url}}\" エンドポイントからすべてのモデルを読み込みます",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "空欄にすると \"{{url}}/api/tags\" エンドポイントからすべてのモデルを読み込みます",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "空欄にすると \"{{url}}/models\" エンドポイントからすべてのモデルを読み込みます",

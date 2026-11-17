@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Deixe en branco para non comprimir",
 	"Leave empty for unlimited": "Deje vacío para ilimitado",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Deixe en branco para incluír todos os modelos do punto final \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Deixe en branco para incluír todos os modelos do punto final \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Deixe en branco para incluír todos os modelos do punto final \"{{url}}/models\"",

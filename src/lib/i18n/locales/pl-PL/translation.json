@@ -1909,6 +1909,7 @@
 	"Leave empty for no compression": "Zostaw puste dla braku kompresji",
 	"Leave empty for unlimited": "Zostaw puste dla braku limitu",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Zostaw puste, aby dołączyć wszystkie modele z endpointu \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Zostaw puste, aby dołączyć wszystkie modele z \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Zostaw puste, aby dołączyć wszystkie modele z \"{{url}}/models\"",

@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "پرىسلاش بولمىسا بوش قالدۇرۇڭ",
 	"Leave empty for unlimited": "چەكلىمە بولمىسا بوش قالدۇرۇڭ",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "\"{{url}}\" ئۇلانمىسىدىكى بارلىق مودېللارغا بوش قالدۇرۇڭ",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "\"{{url}}/api/tags\" ئۇلانمىسىدىكى بارلىق مودېللارغا بوش قالدۇرۇڭ",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "\"{{url}}/models\" ئۇلانمىسىدىكى بارلىق مودېللارغا بوش قالدۇرۇڭ",

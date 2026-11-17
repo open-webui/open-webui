@@ -2,10 +2,10 @@
 	import { toast } from 'svelte-sonner';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 
-	import { config as backendConfig, imageModels, user } from '$lib/stores';
+	import { config as backendConfig, imageModels, user, type ImageModel } from '$lib/stores';
 	import { getBackendConfig } from '$lib/apis';
-	import { getConfig, updateConfig } from '$lib/apis/images';
-	import { getImageConnectionCapabilities, type ImageCapability } from '$lib/utils/images';
+	import { getConfig, getImageConnectionModels, updateConfig } from '$lib/apis/images';
+	import type { ImageCapability } from '$lib/utils/images';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -34,21 +34,23 @@
 	let savedConfig: ImagesConfig | null = null;
 	let showAddConnectionModal = false;
 
-	// Mirrors the backend: a connection without model IDs offers its default model.
-	const getModelOptions = (connections: any[], capability: ImageCapability) =>
-		connections.flatMap((connection) => {
-			const settings = connection.config ?? {};
-			if (!getImageConnectionCapabilities(connection)[capability]) return [];
+	let connectionModels: ImageModel[] = [];
 
-			const modelIds: string[] = settings.model_ids?.length ? settings.model_ids : [''];
-			return modelIds.map((modelId) => ({
-				value: `${connection.id}:${modelId}`,
-				label: modelId ? `${connection.name} / ${modelId}` : connection.name
+	// Every model the connections offer, synced ones included, as the backend lists them.
+	const loadConnectionModels = async () => {
+		connectionModels = (await getImageConnectionModels(localStorage.token).catch(() => [])) ?? [];
+	};
+
+	const getModelOptions = (models: ImageModel[], capability: ImageCapability) =>
+		models
+			.filter((model) => model[capability])
+			.map((model) => ({
+				value: model.id,
+				label: model.model ? `${model.connection_name} / ${model.name}` : model.connection_name
 			}));
-		});
 
-	$: generationModelOptions = getModelOptions(config?.IMAGE_CONNECTIONS ?? [], 'image_generation');
-	$: editModelOptions = getModelOptions(config?.IMAGE_CONNECTIONS ?? [], 'image_edit');
+	$: generationModelOptions = getModelOptions(connectionModels, 'image_generation');
+	$: editModelOptions = getModelOptions(connectionModels, 'image_edit');
 
 	const save = async (next: ImagesConfig) => {
 		const res = await updateConfig(localStorage.token, next).catch((error) => {
@@ -59,6 +61,7 @@
 		if (res) {
 			savedConfig = structuredClone(res);
 			imageModels.set(null);
+			loadConnectionModels();
 			backendConfig.set(await getBackendConfig());
 		}
 		return res;
@@ -99,6 +102,7 @@
 		if (res) {
 			config = res;
 			savedConfig = structuredClone(res);
+			loadConnectionModels();
 		}
 	});
 </script>

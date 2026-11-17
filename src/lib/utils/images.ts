@@ -12,13 +12,3 @@ export const getSupportedImageCapabilities = (
 	}
 	return { image_generation: true, image_edit: true };
 };
-
-/** Mirrors the backend: what the type supports, narrowed by the capabilities the admin turned on. */
-export const getImageConnectionCapabilities = (connection: any): ImageCapabilities => {
-	const config = connection?.config ?? {};
-	const supported = getSupportedImageCapabilities(connection?.type, config);
-	return {
-		image_generation: supported.image_generation && (config.capabilities?.image_generation ?? true),
-		image_edit: supported.image_edit && (config.capabilities?.image_edit ?? true)
-	};
-};

@@ -1889,6 +1889,7 @@
 	"Leave empty for no compression": "Оставите празно ако не желите компресију",
 	"Leave empty for unlimited": "Оставите празно за неограничено",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Оставите празно да бисте укључили све моделе са крајње тачке „{{url}}“",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Оставите празно да бисте укључили све моделе са крајње тачке „{{url}}/api/tags“",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Оставите празно да бисте укључили све моделе са крајње тачке „{{url}}/models“",

@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Utzi hutsik konpresiorik ez egiteko",
 	"Leave empty for unlimited": "Utzi hutsik mugarik ez jartzeko",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Utzi hutsik \"{{url}}\" amaiera-puntuko modelo guztiak sartzeko",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Utzi hutsik \"{{url}}/api/tags\" amaiera-puntuko modelo guztiak sartzeko",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Utzi hutsik \"{{url}}/models\" amaiera-puntuko modelo guztiak sartzeko",

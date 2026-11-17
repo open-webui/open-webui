@@ -1870,6 +1870,7 @@
 	"Leave empty for no compression": "Iwanang blangko para walang compression",
 	"Leave empty for unlimited": "Iwanang blangko para walang limitasyon",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Iwanang blangko para isama ang lahat ng modelo mula sa endpoint na \"{{url}}\"",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Iwanang blangko para isama ang lahat ng modelo mula sa endpoint na \"{{url}}/api/tags\"",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Iwanang blangko para isama ang lahat ng modelo mula sa endpoint na \"{{url}}/models\"",

@@ -1869,6 +1869,7 @@
 	"Leave empty for no compression": "Biyai nga walay sulod aron dili i-compress",
 	"Leave empty for unlimited": "Biyai nga walay sulod aron walay limitasyon",
 	"Leave empty if this server does not edit images.": "",
+	"Leave empty to include all image models from \"{{url}}/models\" endpoint, or {{model}} if it does not mark which models make images": "",
 	"Leave empty to include all models from \"{{url}}\" endpoint": "Biyai nga walay sulod aron ilakip ang tanang modelo gikan sa \"{{url}}\" nga endpoint",
 	"Leave empty to include all models from \"{{url}}/api/tags\" endpoint": "Biyai nga walay sulod aron ilakip ang tanang modelo gikan sa \"{{url}}/api/tags\" nga endpoint",
 	"Leave empty to include all models from \"{{url}}/models\" endpoint": "Biyai nga walay sulod aron ilakip ang tanang modelo gikan sa \"{{url}}/models\" nga endpoint",

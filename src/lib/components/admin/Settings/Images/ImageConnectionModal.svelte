@@ -69,6 +69,7 @@
 	let steps = '';
 	let apiVersion = '';
 	let params = '';
+	let headers = '';
 	let endpointMethod = '';
 	let workflow = '';
 	let nodes: WorkflowNode[] = [];
@@ -91,6 +92,11 @@
 		comfyui: $i18n.t('ComfyUI'),
 		automatic1111: $i18n.t('AUTOMATIC1111')
 	}[connectionType];
+
+	// Only OpenAI compatible connections authenticate the way chat model connections do.
+	$: if (connectionType !== 'openai' && !['none', 'bearer'].includes(auth_type)) {
+		auth_type = 'bearer';
+	}
 
 	$: supportedCapabilities = getSupportedImageCapabilities(connectionType, {
 		workflow,
@@ -154,6 +160,11 @@
 			toast.error($i18n.t('URL is required'));
 			return false;
 		}
+		if (headers.trim() && !isJSONObject(headers)) {
+			showAdvanced = true;
+			toast.error($i18n.t('Headers must be a valid JSON object'));
+			return false;
+		}
 		if (params.trim() && !isJSONObject(params)) {
 			showAdvanced = true;
 			toast.error($i18n.t('Invalid JSON format for Parameters'));
@@ -180,7 +191,7 @@
 		name: name.trim() || typeLabel,
 		type: connectionType,
 		url,
-		key: auth_type === 'none' ? '' : key,
+		key: connectionType !== 'openai' && auth_type === 'none' ? '' : key,
 		config: {
 			enable,
 			capabilities,
@@ -190,6 +201,8 @@
 			edit_size: editSize.trim(),
 			steps: steps === '' ? null : Number(steps),
 			api_version: apiVersion.trim(),
+			auth_type,
+			headers: connectionType === 'openai' && headers.trim() ? JSON.parse(headers) : {},
 			params: params.trim() ? JSON.parse(params) : {},
 			endpoint_method: endpointMethod,
 			workflow: workflow.trim(),
@@ -268,7 +281,7 @@
 		name = connection?.name ?? '';
 		url = connection?.url ?? '';
 		key = connection?.key ?? '';
-		auth_type = connection && !connection.key ? 'none' : 'bearer';
+		auth_type = config.auth_type ?? (connection && !connection.key ? 'none' : 'bearer');
 		enable = config.enable ?? true;
 		capabilities = {
 			image_generation: config.capabilities?.image_generation ?? true,
@@ -282,6 +295,7 @@
 		steps = config.steps === null || config.steps === undefined ? '' : `${config.steps}`;
 		apiVersion = config.api_version ?? '';
 		params = formatJSON(config.params);
+		headers = formatJSON(config.headers);
 		endpointMethod = config.endpoint_method ?? '';
 		workflow = formatJSON(config.workflow);
 		nodes = mapNodes(GENERATION_WORKFLOW_NODES, config.nodes);
@@ -497,6 +511,12 @@
 											<option value="bearer">
 												{connectionType === 'automatic1111' ? $i18n.t('Basic') : $i18n.t('Bearer')}
 											</option>
+
+											{#if connectionType === 'openai'}
+												<option value="session">{$i18n.t('Session')}</option>
+												<option value="system_oauth">{$i18n.t('OAuth')}</option>
+												<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+											{/if}
 										</select>
 									</div>
 
@@ -509,9 +529,21 @@
 													: $i18n.t('API Key')}
 												required={false}
 											/>
-										{:else}
+										{:else if auth_type === 'none'}
 											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
 												{$i18n.t('No authentication')}
+											</div>
+										{:else if auth_type === 'session'}
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+												{$i18n.t('Forwards system user session credentials to authenticate')}
+											</div>
+										{:else if auth_type === 'system_oauth'}
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+												{$i18n.t('Forwards system user OAuth access token to authenticate')}
+											</div>
+										{:else if auth_type === 'microsoft_entra_id'}
+											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
 											</div>
 										{/if}
 									</div>
@@ -560,7 +592,10 @@
 							{:else}
 								<div class={`text-gray-500 text-xs text-center py-2 px-10`}>
 									{#if connectionType === 'openai'}
-										{$i18n.t('Leave empty to use {{model}}', { model: 'gpt-image-2' })}
+										{$i18n.t(
+											'Leave empty to include all image models from "{{url}}/models" endpoint, or {{model}} if it does not mark which models make images',
+											{ url, model: 'gpt-image-2' }
+										)}
 									{:else if connectionType === 'gemini'}
 										{$i18n.t('Leave empty to use {{model}}', { model: 'imagen-3.0-generate-002' })}
 									{:else if connectionType === 'comfyui'}
@@ -746,6 +781,33 @@
 											<option value="">predict</option>
 											<option value="generateContent">generateContent</option>
 										</select>
+									</div>
+								</div>
+							{/if}
+
+							{#if connectionType === 'openai'}
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label for="image-connection-headers" class="mb-0.5 text-xs text-gray-500"
+											>{$i18n.t('Headers')}</label
+										>
+
+										<div class="flex-1">
+											<Tooltip
+												content={$i18n.t(
+													'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
+												)}
+											>
+												<Textarea
+													id="image-connection-headers"
+													className="w-full text-sm outline-hidden"
+													bind:value={headers}
+													placeholder={$i18n.t('Enter additional headers in JSON format')}
+													required={false}
+													minSize={30}
+												/>
+											</Tooltip>
+										</div>
 									</div>
 								</div>
 							{/if}
