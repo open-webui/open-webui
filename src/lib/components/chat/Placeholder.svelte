@@ -78,6 +78,7 @@
 	export let onUpload: Function = (e) => {};
 	export let onUpdate: (data?: { file?: any }) => void = () => {};
 	export let onSelect = (e) => {};
+	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	export let onChange = (e) => {};
 	export let onWebSearchToggle: Function = () => {};
 	export let messageQueue: { id: string; prompt: string; files: any[] }[] = [];
@@ -136,6 +137,7 @@
 		{selectedTerminalId}
 		{terminalSkills}
 		{chatId}
+		{onTemporaryChange}
 		bind:terminalContext
 		{callActive}
 		{callEnabled}
