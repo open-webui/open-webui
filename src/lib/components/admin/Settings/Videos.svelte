@@ -6,13 +6,13 @@
 	import { getBackendConfig } from '$lib/apis';
 	import { getConfig, getVideoConnectionModels, updateConfig } from '$lib/apis/videos';
 
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import VideoConnection from './Videos/VideoConnection.svelte';
 	import VideoConnectionModal from './Videos/VideoConnectionModal.svelte';
 
@@ -29,6 +29,11 @@
 	let config: VideosConfig | null = null;
 	let savedConfig: VideosConfig | null = null;
 	let showAddConnectionModal = false;
+
+	$: settingLabels = {
+		ENABLE_VIDEO_GENERATION: $i18n.t('settings.admin.videos.videoGeneration.label'),
+		VIDEO_GENERATION_DEFAULT_MODEL: $i18n.t('settings.admin.videos.defaultVideoModel.label')
+	};
 
 	let connectionModels: VideoModel[] = [];
 
@@ -189,18 +194,12 @@
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
-			type="submit"
+		<AdminSettingSaveButton
+			settings={config}
+			{savedConfig}
+			labels={settingLabels}
 			disabled={loading}
-		>
-			{$i18n.t('Save')}
-
-			{#if loading}
-				<span class="shrink-0">
-					<Spinner className="size-3" />
-				</span>
-			{/if}
-		</button>
+			{loading}
+		/>
 	</div>
 </form>
