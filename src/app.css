@@ -218,45 +218,33 @@ select {
 
 @keyframes shimmer {
 	0% {
-		background-position: 100% 0;
+		transform: translateX(-50%);
 	}
 	100% {
-		background-position: -100% 0;
+		transform: translateX(50%);
 	}
 }
 
 .shimmer {
-	background: linear-gradient(
-		110deg,
-		#b4b4b4 0%,
-		#b4b4b4 43%,
-		#e8e8e8 50%,
-		#b4b4b4 57%,
-		#b4b4b4 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
+	position: relative;
+	overflow: hidden;
+	clip-path: inset(0);
+	-webkit-text-fill-color: #b4b4b4;
 	color: #b4b4b4;
 }
 
-:global(.dark) .shimmer {
-	background: linear-gradient(
-		110deg,
-		#9a9a9a 0%,
-		#9a9a9a 43%,
-		#5e5e5e 50%,
-		#9a9a9a 57%,
-		#9a9a9a 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
+/* Brightens #b4b4b4 text to #e8e8e8. */
+.shimmer::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 200%;
+	pointer-events: none;
+	backdrop-filter: brightness(1.256) contrast(1.06);
+	mask-image: linear-gradient(110deg, transparent 43%, #000 50%, transparent 57%);
 	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
-	color: #9a9a9a;
 }
 
 @keyframes smoothFadeIn {
@@ -1117,12 +1105,14 @@ html.high-contrast:not(.dark) .ai-autocompletion::after {
 	color: var(--color-gray-700);
 }
 
-/* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
-   solid colour to raise; render it as flat text instead. */
+/* The shimmer text is 2.10:1 in light; render it as flat text instead. */
 html.high-contrast:not(.dark) .shimmer {
-	background: none;
 	color: var(--color-gray-800);
 	-webkit-text-fill-color: var(--color-gray-800);
+}
+
+html.high-contrast:not(.dark) .shimmer::after {
+	display: none;
 }
 
 /* Shared by file previews and the attachment modal. */
