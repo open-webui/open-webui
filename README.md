@@ -186,6 +186,13 @@ npx playwright test playwright/tests/e2e/accessibility --project=chromium-en --n
 The frontend CI workflow runs both suites. Browser coverage includes rendered navigation
 structure, image alternatives, shared text/placeholder contrast, keyboard focus indicators,
 border styling, upload error associations in both locales, and required rating feedback.
+Message reflow tests cover English and French at 320 and 1280 CSS pixels, including
+action visibility and regeneration, message editing, and stacked multi-model replies
+on narrow screens. To check reflow manually, use a 320 CSS-pixel viewport (or a
+1280-pixel browser viewport at 400% zoom), then confirm all message actions remain
+visible and usable without horizontal scrolling. Repeat with multiple models and
+chat bubbles enabled and disabled. Tables and code blocks may scroll within their
+own containers without making the page scroll horizontally.
 These focused checks do not replace a full-page accessibility audit.
 
 ---

@@ -5,8 +5,6 @@
 	import { onMount, tick } from 'svelte';
 	import { createEventDispatcher } from 'svelte';
 
-	import { mobile } from '$lib/stores';
-
 	import ResponseMessage from './ResponseMessage.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Merge from '$lib/components/icons/Merge.svelte';
@@ -179,7 +177,7 @@
 {#if parentMessage}
 	<div>
 		<div
-			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
+			class="flex flex-col gap-2 sm:flex-row sm:gap-0 sm:snap-x sm:snap-mandatory sm:overflow-x-auto scrollbar-hidden"
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
 			{#each Object.keys(groupedMessageIds) as modelIdx}
@@ -190,14 +188,10 @@
 						groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
 					<div
-						class=" snap-center w-full max-w-full m-1 border {history.messages[messageId]
-							?.modelIdx == modelIdx
-							? `border-gray-100 dark:border-gray-800 border-[1.5px] ${
-									$mobile ? 'min-w-full' : 'min-w-80'
-								}`
-							: `border-gray-50 dark:border-gray-850 border-dashed ${
-									$mobile ? 'min-w-full' : 'min-w-80'
-								}`} transition-all p-5 rounded-2xl"
+						class="sm:snap-center w-full min-w-0 max-w-full sm:m-1 sm:min-w-full md:min-w-80 border {history
+							.messages[messageId]?.modelIdx == modelIdx
+							? 'border-gray-100 dark:border-gray-800 border-[1.5px]'
+							: 'border-gray-50 dark:border-gray-850 border-dashed'} transition-all p-3 sm:p-5 rounded-2xl"
 						on:click={async () => {
 							if (messageId != _messageId) {
 								let currentMessageId = _messageId;
@@ -247,7 +241,7 @@
 			{#if !Object.keys(groupedMessageIds).find((modelIdx) => {
 				const { messageIds } = groupedMessageIds[modelIdx];
 				const _messageId = messageIds[groupedMessageIdsIdx[modelIdx]];
-				return !history.messages[_messageId]?.done ?? false;
+				return !history.messages[_messageId]?.done;
 			})}
 				<div class="flex justify-end">
 					<div class="w-full">

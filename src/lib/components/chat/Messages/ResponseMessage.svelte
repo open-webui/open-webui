@@ -959,7 +959,7 @@
 					{#if message.done || siblings.length > 1}
 						<div
 							data-message-actions
-							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
+							class="flex flex-wrap justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}
 								<div class="flex self-center min-w-fit">
@@ -1534,14 +1534,3 @@
 {#if showSuggestionModal}
 	<SuggestionModal bind:show={showSuggestionModal} />
 {/if}
-
-<style>
-	.buttons::-webkit-scrollbar {
-		display: none; /* for Chrome, Safari and Opera */
-	}
-
-	.buttons {
-		-ms-overflow-style: none; /* IE and Edge */
-		scrollbar-width: none; /* Firefox */
-	}
-</style>
