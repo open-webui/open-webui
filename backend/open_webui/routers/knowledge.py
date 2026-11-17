@@ -10,7 +10,7 @@ from typing import List, Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_KNOWLEDGE_FILE_RETENTION,
@@ -2311,14 +2311,12 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
                     filename = f'{filename}.txt'
                 zf.writestr(filename, content)
 
-    zip_buffer.seek(0)
-
     # Sanitize knowledge name for filename
     safe_name = ''.join(c if c.isalnum() or c in ' -_' else '_' for c in knowledge.name)
     zip_filename = f'{safe_name}.zip'
 
-    return StreamingResponse(
-        zip_buffer,
+    return Response(
+        content=zip_buffer.getvalue(),
         media_type='application/zip',
         headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(zip_filename, safe='')}"},
     )

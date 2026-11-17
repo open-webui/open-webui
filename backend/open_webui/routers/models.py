@@ -18,7 +18,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import RedirectResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -1020,7 +1020,6 @@ async def get_model_profile_image(
             try:
                 header, base64_data = profile_image_url.split(',', 1)
                 image_data = base64.b64decode(base64_data)
-                image_buffer = io.BytesIO(image_data)
                 media_type = header.split(';')[0].lstrip('data:').lower()
 
                 # only serve known-safe raster types inline; reject SVG/unknown (can run script on our origin)
@@ -1040,8 +1039,8 @@ async def get_model_profile_image(
                 if updated_at:
                     headers['ETag'] = f'"{updated_at}"'
 
-                return StreamingResponse(
-                    image_buffer,
+                return Response(
+                    content=image_data,
                     media_type=media_type,
                     headers=headers,
                 )
