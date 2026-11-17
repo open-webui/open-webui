@@ -3645,6 +3645,8 @@
 	"settings.admin.models.builtinTools.tools.label": "יצירת כלים",
 	"settings.admin.models.builtinTools.userInput.description": "השהיית התגובה כדי לשאול את המשתמש שאלת הבהרה",
 	"settings.admin.models.builtinTools.userInput.label": "שאלה למשתמש",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "הצגת תרשימים, גרפים והסברים אינטראקטיביים בתוך הצ'אט",

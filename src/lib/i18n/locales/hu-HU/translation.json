@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Eszközök létrehozása",
 	"settings.admin.models.builtinTools.userInput.description": "A válasz szüneteltetése, hogy a modell pontosító kérdést tegyen fel a felhasználónak",
 	"settings.admin.models.builtinTools.userInput.label": "Kérdés a felhasználónak",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Interaktív diagramok, grafikonok és magyarázó ábrák megjelenítése a beszélgetésben",

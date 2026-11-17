@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Oppretting av verktøy",
 	"settings.admin.models.builtinTools.userInput.description": "Sett et svar på pause for å stille brukeren et oppklarende spørsmål",
 	"settings.admin.models.builtinTools.userInput.label": "Spør brukeren",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Създаване на инструменти",
 	"settings.admin.models.builtinTools.userInput.description": "Поставяне на отговора на пауза за уточняващ въпрос към потребителя",
 	"settings.admin.models.builtinTools.userInput.label": "Попитай потребителя",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Изобразяване на интерактивни диаграми, графики и обяснения в чата",

@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Stovnan av amboðum",
 	"settings.admin.models.builtinTools.userInput.description": "Steðga einum svari fyribils fyri at seta brúkaranum ein greiðandi spurning",
 	"settings.admin.models.builtinTools.userInput.label": "Spyr brúkaran",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Vís samvirkandi diagramm, ritmyndir og frágreiðingar inni í kjatti",

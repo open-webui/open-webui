@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Oprettelse af værktøjer",
 	"settings.admin.models.builtinTools.userInput.description": "Sæt et svar på pause for at stille brugeren et afklarende spørgsmål",
 	"settings.admin.models.builtinTools.userInput.label": "Spørg brugeren",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Vis interaktive diagrammer, grafer og forklaringer i chatten",

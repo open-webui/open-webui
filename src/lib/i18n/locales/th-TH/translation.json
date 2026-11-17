@@ -3597,6 +3597,8 @@
 	"settings.admin.models.builtinTools.tools.label": "การสร้างเครื่องมือ",
 	"settings.admin.models.builtinTools.userInput.description": "หยุดคำตอบชั่วคราวเพื่อถามคำถามให้ผู้ใช้ชี้แจง",
 	"settings.admin.models.builtinTools.userInput.label": "ถามผู้ใช้",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "แสดงแผนภาพ แผนภูมิ และสื่ออธิบายแบบโต้ตอบในแชท",

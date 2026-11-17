@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Alət yaradılması",
 	"settings.admin.models.builtinTools.userInput.description": "İstifadəçiyə dəqiqləşdirici sual vermək üçün cavabı müvəqqəti dayandır",
 	"settings.admin.models.builtinTools.userInput.label": "İstifadəçidən soruş",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

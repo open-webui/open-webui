@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "",
 	"settings.admin.models.builtinTools.userInput.description": "Pause such response to ask the user a clarifying question, so curious",
 	"settings.admin.models.builtinTools.userInput.label": "Ask Such User",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

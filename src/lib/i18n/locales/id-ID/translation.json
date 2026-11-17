@@ -3612,6 +3612,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Pembuatan Alat",
 	"settings.admin.models.builtinTools.userInput.description": "Jeda respons untuk mengajukan pertanyaan klarifikasi kepada pengguna",
 	"settings.admin.models.builtinTools.userInput.label": "Tanya Pengguna",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Tampilkan diagram, bagan, dan penjelasan interaktif di dalam obrolan",

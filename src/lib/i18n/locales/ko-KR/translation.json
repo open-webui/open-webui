@@ -3599,6 +3599,8 @@
 	"settings.admin.models.builtinTools.tools.label": "도구 생성",
 	"settings.admin.models.builtinTools.userInput.description": "응답을 일시 중지하고 사용자에게 확인 질문",
 	"settings.admin.models.builtinTools.userInput.label": "사용자에게 질문",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "채팅 내 대화형 다이어그램, 차트 및 설명 자료 렌더링",

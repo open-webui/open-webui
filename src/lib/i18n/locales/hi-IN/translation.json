@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "टूल बनाना",
 	"settings.admin.models.builtinTools.userInput.description": "उपयोगकर्ता से स्पष्टीकरण माँगने के लिए उत्तर रोकें",
 	"settings.admin.models.builtinTools.userInput.label": "उपयोगकर्ता से पूछें",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "चैट में इंटरैक्टिव आरेख, चार्ट और व्याख्याएँ रेंडर करें",

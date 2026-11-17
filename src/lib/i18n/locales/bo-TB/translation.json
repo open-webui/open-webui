@@ -3597,6 +3597,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ལག་ཆ་གསར་བཟོ།",
 	"settings.admin.models.builtinTools.userInput.description": "བེད་སྤྱོད་མཁན་ལ་གསལ་བཤད་འདྲི་བ་འདྲི་བར་ལན་གནས་སྐབས་མཚམས་འཇོག་པ།",
 	"settings.admin.models.builtinTools.userInput.label": "བེད་སྤྱོད་མཁན་ལ་དྲིས།",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

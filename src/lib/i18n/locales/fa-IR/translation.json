@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ایجاد ابزار",
 	"settings.admin.models.builtinTools.userInput.description": "توقف موقت پاسخ برای پرسیدن یک سؤال توضیحی از کاربر",
 	"settings.admin.models.builtinTools.userInput.label": "پرسش از کاربر",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "رندر دیاگرام\u200cها، نمودارها و محتوای توضیحی تعاملی درون گفتگو",

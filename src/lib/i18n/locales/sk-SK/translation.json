@@ -3669,6 +3669,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Vytváranie nástrojov",
 	"settings.admin.models.builtinTools.userInput.description": "Pozastaviť odpoveď a položiť používateľovi spresňujúcu otázku",
 	"settings.admin.models.builtinTools.userInput.label": "Opýtať sa používateľa",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

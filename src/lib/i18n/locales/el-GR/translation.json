@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Δημιουργία εργαλείων",
 	"settings.admin.models.builtinTools.userInput.description": "Παύση μιας απάντησης για να τεθεί στον χρήστη μια διευκρινιστική ερώτηση",
 	"settings.admin.models.builtinTools.userInput.label": "Ερώτηση στον χρήστη",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

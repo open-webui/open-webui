@@ -3717,6 +3717,8 @@
 	"settings.admin.models.builtinTools.tools.label": "",
 	"settings.admin.models.builtinTools.userInput.description": "إيقاف الرد مؤقتًا لطرح سؤال توضيحي على المستخدم",
 	"settings.admin.models.builtinTools.userInput.label": "سؤال المستخدم",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

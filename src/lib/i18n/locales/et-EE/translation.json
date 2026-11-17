@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Tööriistade loomine",
 	"settings.admin.models.builtinTools.userInput.description": "Peata vastus, et esitada kasutajale täpsustav küsimus",
 	"settings.admin.models.builtinTools.userInput.label": "Küsi kasutajalt",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Renderda vestluses interaktiivseid diagramme, graafikuid ja selgitusi",

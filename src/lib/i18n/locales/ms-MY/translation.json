@@ -3612,6 +3612,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Penciptaan Alat",
 	"settings.admin.models.builtinTools.userInput.description": "Jeda jawapan untuk bertanya kepada pengguna soalan penjelasan",
 	"settings.admin.models.builtinTools.userInput.label": "Tanya Pengguna",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Paparkan rajah, carta dan penerangan interaktif dalam chat",

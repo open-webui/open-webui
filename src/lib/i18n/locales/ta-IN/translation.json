@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "கருவி உருவாக்கம்",
 	"settings.admin.models.builtinTools.userInput.description": "பயனரிடம் விளக்கம் கேட்கும் கேள்வியைக் கேட்கப் பதிலை இடைநிறுத்தவும்",
 	"settings.admin.models.builtinTools.userInput.label": "பயனரைக் கேட்கவும்",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "அரட்டைக்குள் ஊடாடும் வரைபடங்கள், விளக்கப்படங்கள் மற்றும் விளக்கங்களைக் காட்டவும்",

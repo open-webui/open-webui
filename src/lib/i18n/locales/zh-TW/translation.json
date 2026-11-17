@@ -3597,6 +3597,8 @@
 	"settings.admin.models.builtinTools.tools.label": "",
 	"settings.admin.models.builtinTools.userInput.description": "暫停回答以向使用者詢問釐清問題",
 	"settings.admin.models.builtinTools.userInput.label": "詢問使用者",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

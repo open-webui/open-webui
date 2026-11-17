@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Asnulfu n yifecka",
 	"settings.admin.models.builtinTools.userInput.description": "Sgunfu tiririt i usteqsi n useqdac s usteqsi n usegzi",
 	"settings.admin.models.builtinTools.userInput.label": "Steqsi aseqdac",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

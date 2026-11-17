@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Tresnak sortzea",
 	"settings.admin.models.builtinTools.userInput.description": "Pausatu erantzuna erabiltzaileari argibideak eskatzeko",
 	"settings.admin.models.builtinTools.userInput.label": "Galdetu erabiltzaileari",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Errendatu diagrama, grafiko eta azalpen interaktiboak txataren barruan",

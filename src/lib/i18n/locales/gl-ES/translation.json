@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Creación de ferramentas",
 	"settings.admin.models.builtinTools.userInput.description": "Pausar unha resposta para facerlle ao usuario unha pregunta aclaratoria",
 	"settings.admin.models.builtinTools.userInput.label": "Preguntar ao usuario",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Renderizar diagramas interactivos, gráficos e explicacións dentro do chat",

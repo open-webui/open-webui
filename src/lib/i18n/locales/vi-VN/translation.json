@@ -3597,6 +3597,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Tạo tool",
 	"settings.admin.models.builtinTools.userInput.description": "Tạm dừng phản hồi để hỏi người dùng một câu hỏi làm rõ",
 	"settings.admin.models.builtinTools.userInput.label": "Hỏi người dùng",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

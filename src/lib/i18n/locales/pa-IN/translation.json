@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ਟੂਲ ਬਣਾਉਣਾ",
 	"settings.admin.models.builtinTools.userInput.description": "ਉਪਭੋਗਤਾ ਨੂੰ ਸਪਸ਼ਟੀਕਰਨ ਲਈ ਸਵਾਲ ਪੁੱਛਣ ਵਾਸਤੇ ਜਵਾਬ ਰੋਕੋ",
 	"settings.admin.models.builtinTools.userInput.label": "ਉਪਭੋਗਤਾ ਨੂੰ ਪੁੱਛੋ",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "ਗੱਲਬਾਤ ਵਿੱਚ ਇੰਟਰਐਕਟਿਵ ਰੇਖਾ ਚਿੱਤਰ, ਚਾਰਟ ਅਤੇ ਵਿਆਖਿਆਵਾਂ ਰੈਂਡਰ ਕਰੋ",

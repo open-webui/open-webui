@@ -3623,6 +3623,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Paggawa ng Tool",
 	"settings.admin.models.builtinTools.userInput.description": "I-pause ang tugon para humingi ng paglilinaw sa gumagamit",
 	"settings.admin.models.builtinTools.userInput.label": "Magtanong sa Gumagamit",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Mag-render ng mga interactive na diagram, chart, at paliwanag sa loob ng chat",

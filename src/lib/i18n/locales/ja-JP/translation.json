@@ -3612,6 +3612,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ツールの作成",
 	"settings.admin.models.builtinTools.userInput.description": "応答を一時停止してユーザーに確認の質問をする",
 	"settings.admin.models.builtinTools.userInput.label": "ユーザーに質問",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

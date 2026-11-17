@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "টুল তৈরি",
 	"settings.admin.models.builtinTools.userInput.description": "ব্যবহারকারীর কাছে স্পষ্টীকরণমূলক প্রশ্ন করতে উত্তর সাময়িকভাবে থামান",
 	"settings.admin.models.builtinTools.userInput.label": "ব্যবহারকারীকে জিজ্ঞাসা করুন",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "চ্যাটের মধ্যে ইন্টারঅ্যাকটিভ ডায়াগ্রাম, চার্ট ও ব্যাখ্যা রেন্ডার করুন",

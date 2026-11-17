@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ٹول بنانا",
 	"settings.admin.models.builtinTools.userInput.description": "صارف سے وضاحتی سوال پوچھنے کے لیے جواب روکیں",
 	"settings.admin.models.builtinTools.userInput.label": "صارف سے پوچھیں",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "چیٹ میں انٹرایکٹو خاکے، چارٹس اور وضاحتی مواد رینڈر کریں",

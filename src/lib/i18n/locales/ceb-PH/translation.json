@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Paghimo og himan",
 	"settings.admin.models.builtinTools.userInput.description": "Hunonga kadiyot ang tubag aron mangutana sa tiggamit alang sa pagpatin-aw",
 	"settings.admin.models.builtinTools.userInput.label": "Pangutan-a ang tiggamit",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Ipakita ang mga interaktibong diyagram, tsart, ug pagpasabot sulod sa panaghisgot",

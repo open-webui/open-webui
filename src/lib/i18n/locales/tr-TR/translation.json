@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Araç Oluşturma",
 	"settings.admin.models.builtinTools.userInput.description": "Kullanıcıya açıklayıcı bir soru sormak için yanıtı duraklat",
 	"settings.admin.models.builtinTools.userInput.label": "Kullanıcıya Sor",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

@@ -3669,6 +3669,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Vytváření nástrojů",
 	"settings.admin.models.builtinTools.userInput.description": "Pozastavit odpověď a položit uživateli upřesňující otázku",
 	"settings.admin.models.builtinTools.userInput.label": "Zeptat se uživatele",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Vykreslovat interaktivní diagramy, grafy a vysvětlení v konverzaci",

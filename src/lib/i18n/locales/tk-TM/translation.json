@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Gural Döretme",
 	"settings.admin.models.builtinTools.userInput.description": "Ulanyja anyklaýjy sorag bermek üçin jogaby duruzyň",
 	"settings.admin.models.builtinTools.userInput.label": "Ulanyjydan Sora",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

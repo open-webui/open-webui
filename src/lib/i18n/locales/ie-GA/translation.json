@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Cruthú Uirlisí",
 	"settings.admin.models.builtinTools.userInput.description": "Cuir sos ar fhreagra chun ceist shoiléirithe a chur ar an úsáideoir",
 	"settings.admin.models.builtinTools.userInput.label": "Iarr ar an Úsáideoir",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Rindreáil léaráidí, cairteacha agus mínithe idirghníomhacha sa chomhrá",

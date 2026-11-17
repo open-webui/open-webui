@@ -3645,6 +3645,8 @@
 	"settings.admin.models.builtinTools.tools.label": "",
 	"settings.admin.models.builtinTools.userInput.description": "Pausar uma resposta para fazer uma pergunta de esclarecimento ao utilizador",
 	"settings.admin.models.builtinTools.userInput.label": "Perguntar ao Utilizador",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "",

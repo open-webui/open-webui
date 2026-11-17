@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "ხელსაწყოების შექმნა",
 	"settings.admin.models.builtinTools.userInput.description": "დროებით აჩერებს პასუხს, რათა მომხმარებელს დამაზუსტებელი კითხვა დაუსვას",
 	"settings.admin.models.builtinTools.userInput.label": "მომხმარებლისთვის კითხვის დასმა",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "ჩატში ასახავს ინტერაქტიულ დიაგრამებს, გრაფიკებსა და განმარტებებს",

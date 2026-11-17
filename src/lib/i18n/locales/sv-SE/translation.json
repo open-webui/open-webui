@@ -3621,6 +3621,8 @@
 	"settings.admin.models.builtinTools.tools.label": "Skapande av verktyg",
 	"settings.admin.models.builtinTools.userInput.description": "Pausa ett svar för att ställa en förtydligande fråga till användaren",
 	"settings.admin.models.builtinTools.userInput.label": "Fråga användaren",
+	"settings.admin.models.builtinTools.users.description": "",
+	"settings.admin.models.builtinTools.users.label": "",
 	"settings.admin.models.builtinTools.videoGeneration.description": "",
 	"settings.admin.models.builtinTools.videoGeneration.label": "",
 	"settings.admin.models.builtinTools.visualizations.description": "Rendera interaktiva diagram, grafer och förklaringar i chatten",
