@@ -1,7 +1,7 @@
 """Video connections: the configured backends that built-in video generation runs on.
 
-A connection is one OpenAI compatible server with a video API (``/videos``), such as LiteLLM or
-OpenAI, with the video models it exposes. Users pick a model by its reference,
+A connection is one OpenAI compatible server with a video API (``/videos``), such as LiteLLM,
+OpenAI or OpenRouter, with the video models it exposes. Users pick a model by its reference,
 ``{connection_id}:{model_id}``, and only see models their access grants allow.
 """
 
@@ -14,11 +14,12 @@ from typing import Any
 from aiocache import cached
 from fastapi import HTTPException, Request
 from open_webui.constants import ERROR_MESSAGES
-from open_webui.env import MODELS_CACHE_TTL
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, MODELS_CACHE_TTL
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import has_connection_access
+from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.images.connections import (
     IMAGE_CONNECTION_AUTH_TYPES,
     _json_object,
@@ -27,6 +28,7 @@ from open_webui.utils.images.connections import (
     get_openai_connection_models,
     get_requested_model,
 )
+from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +37,17 @@ VIDEO_GENERATION_DEFAULT_MODEL_CONFIG_KEY = 'video_generation.default_model'
 
 VIDEO_CONNECTION_TYPES = ('openai',)
 VIDEO_CONNECTION_AUTH_TYPES = IMAGE_CONNECTION_AUTH_TYPES
+
+# Like chat model connections: '' is the OpenAI video API (OpenAI, LiteLLM); OpenRouter has its own.
+VIDEO_CONNECTION_PROVIDERS = ('', 'openrouter')
+
+
+def get_video_connection_provider(connection: dict) -> str:
+    """The API a connection speaks: the admin's choice, else OpenRouter when the URL is OpenRouter's."""
+    provider = (connection.get('config') or {}).get('provider') or ''
+    if not provider and 'openrouter.ai' in (connection.get('url') or ''):
+        return 'openrouter'
+    return provider
 
 
 def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
@@ -59,6 +72,10 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
     if auth_type not in VIDEO_CONNECTION_AUTH_TYPES:
         raise ValueError(f'Unsupported auth type: {auth_type}')
 
+    provider = str(config.get('provider') or '')
+    if provider not in VIDEO_CONNECTION_PROVIDERS:
+        raise ValueError(f'Unsupported video provider: {provider}')
+
     seconds = config.get('seconds')
     if seconds not in (None, ''):
         seconds = int(seconds)
@@ -77,6 +94,7 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
             'enable': bool(config.get('enable', True)),
             'model_ids': model_ids,
             'access_grants': list(config.get('access_grants') or []),
+            'provider': provider,
             'auth_type': auth_type,
             'headers': _json_object(config.get('headers'), 'headers'),
             'size': _size(config.get('size')),
@@ -85,6 +103,33 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
             'params': _json_object(config.get('params'), 'additional parameters'),
         },
     }
+
+
+async def get_video_connection_models(request: Request, connection: dict, user: UserModel | None = None) -> list[dict]:
+    """The models a connection serves, with video models marked (``video``). OpenRouter lists its video
+    models on their own at ``/videos/models``; other servers list everything at ``/models``, and LiteLLM
+    marks which ones make video."""
+    if get_video_connection_provider(connection) != 'openrouter':
+        return await get_openai_connection_models(request, connection, user)
+
+    from open_webui.routers.images import raise_for_provider_status
+
+    headers, cookies = await get_headers_and_cookies(
+        request, connection['url'], connection.get('key'), connection.get('config') or {}, user=user
+    )
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/videos/models', headers=headers, cookies=cookies, ssl=AIOHTTP_CLIENT_SESSION_SSL
+    ) as r:
+        await raise_for_provider_status(r)
+        res = await r.json(content_type=None)
+
+    entries = res.get('data') if isinstance(res, dict) else res
+    return [
+        {'id': entry['id'], 'name': entry.get('name') or entry['id'], 'video': True}
+        for entry in entries or []
+        if isinstance(entry, dict) and entry.get('id')
+    ]
 
 
 @cached(
@@ -99,7 +144,7 @@ async def get_synced_video_models(request: Request, connection: dict, user: User
     """The video models a connection with no model IDs offers, listed live so new ones appear on their own.
     Servers that do not label video models (plain OpenAI) offer their default model."""
     try:
-        models = await get_openai_connection_models(request, connection, user)
+        models = await get_video_connection_models(request, connection, user)
     except Exception as e:
         log.warning('Could not list video models from %s: %s', connection.get('url'), e)
         return []
