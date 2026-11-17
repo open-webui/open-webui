@@ -39,7 +39,7 @@
 	"devDependencies": {
 		"@axe-core/playwright": "^4.10.2",
 		"@istanbuljs/nyc-config-typescript": "^1.0.2",
-		"@playwright/test": "^1.56.1",
+		"@playwright/test": "^1.65.1",
 		"@sveltejs/adapter-auto": "3.2.2",
 		"@sveltejs/adapter-static": "^3.0.2",
 		"@sveltejs/kit": "2.70.2",
@@ -117,7 +117,7 @@
 		"openai": "^6.9.1",
 		"paneforge": "^0.0.6",
 		"panzoom": "^9.4.3",
-		"playwright": "^1.56.1",
+		"playwright": "^1.65.1",
 		"prosemirror-commands": "^1.6.0",
 		"prosemirror-example-setup": "^1.2.3",
 		"prosemirror-history": "^1.4.1",
