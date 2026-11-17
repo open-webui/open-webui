@@ -60,7 +60,6 @@ from open_webui.routers.images import (
     image_edits,
     image_generations,
 )
-from open_webui.routers.videos import CreateVideoForm, video_generations
 from open_webui.routers.pipelines import (
     get_sorted_filters,
     process_pipeline_inlet_filter,
@@ -105,7 +104,6 @@ from open_webui.utils.filter import (
     process_filter_functions,
 )
 from open_webui.utils.images.connections import get_requested_image_model
-from open_webui.utils.videos.connections import get_requested_video_model
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
 from open_webui.utils.memory import add_memory_context, recall_memories, review_memory_after_turn
@@ -1696,117 +1694,6 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
     return form_data
 
 
-async def chat_video_generation_handler(request: Request, form_data: dict, extra_params: dict, user):
-    metadata = extra_params.get('__metadata__', {})
-    chat_id = metadata.get('chat_id', None)
-    __event_emitter__ = extra_params.get('__event_emitter__', None)
-
-    if not chat_id or not isinstance(chat_id, str) or not __event_emitter__:
-        return form_data
-
-    is_channel_chat = chat_id.startswith('channel:')
-    video_metadata = {
-        'message_id': metadata.get('message_id', None),
-        **({'channel_id': chat_id.removeprefix('channel:')} if is_channel_chat else {'chat_id': chat_id}),
-    }
-    terminal_metadata = {**metadata, 'terminal_id': form_data.get('terminal_id')}
-
-    if not is_saved_chat_id(chat_id):
-        message_list = form_data.get('messages', [])
-    else:
-        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
-
-        messages_map = chat.chat.get('history', {}).get('messages', {})
-        message_id = metadata.get('user_message_id') or chat.chat.get('history', {}).get('currentId')
-        message_list = get_message_list(messages_map, message_id)
-
-    prompt = get_last_user_message(message_list)
-    # An image in the latest messages becomes the video's first frame.
-    starting_image = next(
-        iter(image for images in get_images_from_messages(message_list)[:2] for image in images), None
-    )
-
-    system_message_content = ''
-
-    if not await Config.get('video_generation.enable'):
-        await __event_emitter__(
-            {
-                'type': 'status',
-                'data': {
-                    'description': 'Video generation is disabled',
-                    'done': True,
-                },
-            }
-        )
-
-        system_message_content = '<context>Video generation was requested but the feature is currently disabled by the administrator, so no video was created. Let the user know that video generation is currently unavailable.</context>'
-    else:
-        try:
-            videos = await video_generations(
-                request=request,
-                form_data=CreateVideoForm(
-                    prompt=prompt, image=starting_image, model=get_requested_video_model(metadata)
-                ),
-                metadata=video_metadata,
-                user=user,
-                event_emitter=__event_emitter__,
-            )
-            await upload_files_to_terminal(request, user, videos, terminal_metadata, extra_params)
-
-            await __event_emitter__(
-                {
-                    'type': 'status',
-                    'data': {'description': 'Video created', 'done': True},
-                }
-            )
-
-            await __event_emitter__(
-                {
-                    'type': 'files',
-                    'data': {
-                        'files': [
-                            {
-                                'type': 'video',
-                                **video,
-                            }
-                            for video in videos
-                        ]
-                    },
-                }
-            )
-
-            system_message_content = (
-                '<context>The generated videos are shown in chat. Use terminal_path with terminal tools or '
-                f'display_file when available. Videos: {JSONCodec.dumps(videos)}</context>'
-            )
-        except Exception as e:
-            log.debug(e)
-
-            error_message = ''
-            if isinstance(e, HTTPException):
-                if e.detail and isinstance(e.detail, dict):
-                    error_message = e.detail.get('message', str(e.detail))
-                else:
-                    error_message = str(e.detail)
-
-            await __event_emitter__(
-                {
-                    'type': 'status',
-                    'data': {
-                        'description': 'An error occurred while generating a video',
-                        'done': True,
-                    },
-                }
-            )
-
-            system_message_content = f'<context>Video generation was attempted but failed because of an error. The system is currently unable to generate the video. Tell the user that the following error occurred: {error_message}</context>'
-
-    if system_message_content:
-        form_data['messages'] = add_or_update_system_message(system_message_content, form_data['messages'])
-
-    return form_data
-
-
 async def chat_completion_files_handler(
     request: Request, body: dict, extra_params: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
@@ -2536,17 +2423,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 # Skip forced image generation when native FC is enabled - model can use generate_image tool
                 if metadata.get('params', {}).get('function_calling') == 'legacy':
                     form_data = await chat_image_generation_handler(request, form_data, extra_params, user)
-
-        if 'video_generation' in features and features['video_generation']:
-            # features is client-supplied; re-check the permission the direct /videos routes enforce.
-            if getattr(user, 'role', None) == 'admin' or await has_permission(
-                getattr(user, 'id', ''),
-                'features.video_generation',
-                await Config.get('user.permissions'),
-            ):
-                # Skip forced video generation when native FC is enabled - model can use generate_video tool
-                if metadata.get('params', {}).get('function_calling') == 'legacy':
-                    form_data = await chat_video_generation_handler(request, form_data, extra_params, user)
 
         if 'code_interpreter' in features and features['code_interpreter']:
             engine = await Config.get('code_interpreter.engine', 'pyodide')
