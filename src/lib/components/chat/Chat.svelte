@@ -1839,6 +1839,8 @@
 						taskIds = null;
 						if ($chatId && !$temporaryChat && hasPendingAssistantLeaf(event?.message_id ?? null)) {
 							await loadChat();
+							// The message copy is stale after the reload.
+							message = history.messages[event.message_id];
 						}
 						if ($chatId && !$temporaryChat) {
 							updateLastReadAt($chatId);
@@ -3359,7 +3361,6 @@
 				// If the response is already done, remaining tasks are just background
 				// work (follow-ups, title gen) that shouldn't block the input.
 				const activeTaskIds = taskIds;
-				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, id, signal)
 					.then((res) => res?.task_ids ?? [])
 					.catch((error) => {
@@ -3371,6 +3372,7 @@
 						return [];
 					});
 				if (signal.aborted) return;
+				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				noteChatDebug('task reconciliation completed', {
 					pendingTaskCount: pendingTaskIds.length,
 					hasCurrentMessage: !!currentMessage
