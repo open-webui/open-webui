@@ -827,9 +827,13 @@ async def get_builtin_tools(
                 ]
             )
 
-    # Chats tools - search chat history and the user directory
+    # Chats tools - search chat history
     if is_builtin_tool_enabled('chats'):
-        builtin_functions.extend([search_chats, view_chat, search_users])
+        builtin_functions.extend([search_chats, view_chat])
+
+    # Users tools - search the user directory (e.g. to resolve @mentions)
+    if is_builtin_tool_enabled('users'):
+        builtin_functions.append(search_users)
 
     if (
         is_builtin_tool_enabled('subagents')

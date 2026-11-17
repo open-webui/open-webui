@@ -31,6 +31,10 @@
 			label: $i18n.t('settings.admin.models.builtinTools.chats.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.chats.description')
 		},
+		users: {
+			label: $i18n.t('settings.admin.models.builtinTools.users.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.users.description')
+		},
 		notes: {
 			label: $i18n.t('settings.admin.models.builtinTools.notes.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.notes.description'),

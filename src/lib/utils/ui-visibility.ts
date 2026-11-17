@@ -29,6 +29,7 @@ export const CONTROL_LABELS = {
 	'model_editor.tools.user_input': 'settings.admin.models.builtinTools.userInput.label',
 	'model_editor.tools.memory': 'settings.admin.models.builtinTools.memory.label',
 	'model_editor.tools.chats': 'settings.admin.models.builtinTools.chats.label',
+	'model_editor.tools.users': 'settings.admin.models.builtinTools.users.label',
 	'model_editor.tools.notes': 'settings.admin.models.builtinTools.notes.label',
 	'model_editor.tools.knowledge': 'settings.admin.models.builtinTools.knowledge.label',
 	'model_editor.tools.files': 'settings.admin.models.builtinTools.files.label',
