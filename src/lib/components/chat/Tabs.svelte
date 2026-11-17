@@ -717,6 +717,12 @@
 			focusMainChat();
 			return;
 		}
+		const existing = findPageTab(url);
+		if (existing?.kind === 'page' && existing.id !== id) {
+			await closeTab(id);
+			if (!tabs.tabs.some((tab) => tab.id === id)) openPageTab({ href, label: '' });
+			return;
+		}
 		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
 			openPageTab({ href, label: '' });
