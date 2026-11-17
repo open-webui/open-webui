@@ -190,6 +190,11 @@
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
 	const temporaryChat = embedded ? writable(false) : _temporaryChat;
+	export const isTemporary = () => get(temporaryChat);
+	const isTemporaryEnforced = () =>
+		$user?.role !== 'admin' &&
+		!!$user?.permissions?.chat?.temporary &&
+		!!$user?.permissions?.chat?.temporary_enforced;
 	const selectedFolder = embedded ? writable<FolderDetails | null>(null) : _selectedFolder;
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
 	// the call lives in the main chat's voice tab, so a side chat is never in it
@@ -1113,7 +1118,7 @@
 		if (embeddedDraft) {
 			({ selectedModels, params, history, chatFiles, prompt, files } = embeddedDraft);
 			branchPointMessageId = history.currentId;
-			await temporaryChat.set(embeddedDraft.temporary);
+			await temporaryChat.set(isTemporaryEnforced() || embeddedDraft.temporary);
 		}
 
 		await setDefaults();
@@ -2989,9 +2994,7 @@
 
 		const param = searchParams.get('temporary-chat');
 		temporaryChat.set(
-			($user?.role !== 'admin' &&
-				!!$user?.permissions?.chat?.temporary &&
-				!!$user?.permissions?.chat?.temporary_enforced) ||
+			isTemporaryEnforced() ||
 				(!!canUseTemporaryChats({ user: $user, config: $config }) &&
 					(temporary ?? (param ? param === 'true' : !!$settings?.temporaryChatByDefault)))
 		);
