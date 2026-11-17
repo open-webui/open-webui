@@ -69,6 +69,7 @@ export const DEFAULT_PERMISSIONS = {
 		folders: true,
 		web_search: true,
 		image_generation: true,
+		video_generation: false,
 		code_interpreter: true,
 		memories: true,
 		subagents: true,

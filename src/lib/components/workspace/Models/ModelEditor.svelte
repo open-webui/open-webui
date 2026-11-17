@@ -66,6 +66,7 @@
 	import PromptSuggestions from './PromptSuggestions.svelte';
 	import TerminalSelector from './TerminalSelector.svelte';
 	import ImageModelSelector from './ImageModelSelector.svelte';
+	import VideoModelSelector from './VideoModelSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
 	import VoiceAvatarSettings from './VoiceAvatarSettings.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
@@ -270,6 +271,7 @@
 	let accessGrants: any[] = [];
 	let terminalId = '';
 	let imageModelId = '';
+	let videoModelId = '';
 	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
 	let tts = { voice: '' };
 	let voice = { voice: '' };
@@ -537,6 +539,12 @@
 			delete modelInfo.meta.imageModelId;
 		}
 
+		if (videoModelId || defaultMeta.videoModelId) {
+			modelInfo.meta.videoModelId = videoModelId;
+		} else if (modelInfo.meta.videoModelId) {
+			delete modelInfo.meta.videoModelId;
+		}
+
 		if (voice.voice.trim()) modelInfo.meta.voice = { voice: voice.voice.trim() };
 		else delete modelInfo.meta.voice;
 
@@ -770,6 +778,7 @@
 			builtinTools = model?.meta?.builtinTools ?? defaultMeta.builtinTools ?? {};
 			terminalId = model?.meta?.terminalId ?? defaultMeta.terminalId ?? '';
 			imageModelId = model?.meta?.imageModelId ?? defaultMeta.imageModelId ?? '';
+			videoModelId = model?.meta?.videoModelId ?? defaultMeta.videoModelId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
 			voice = { voice: model?.meta?.voice?.voice ?? '' };
 
@@ -818,6 +827,7 @@
 		toolIds = defaultMeta.toolIds ?? [];
 		terminalId = defaultMeta.terminalId ?? '';
 		imageModelId = defaultMeta.imageModelId ?? '';
+		videoModelId = defaultMeta.videoModelId ?? '';
 
 		// Scroll to top 'workspace-container' element
 		const workspaceContainer = document.getElementById('workspace-container');
@@ -1872,6 +1882,9 @@
 										{/if}
 										{#if capabilities.image_generation && $config?.features?.enable_image_generation}
 											<ImageModelSelector bind:imageModelId />
+										{/if}
+										{#if capabilities.video_generation && $config?.features?.enable_video_generation}
+											<VideoModelSelector bind:videoModelId />
 										{/if}
 									</div>
 								</fieldset>

@@ -6,6 +6,8 @@ export const CONTROL_LABELS = {
 	'model_editor.capabilities.web_search': 'settings.admin.models.capabilities.webSearch.label',
 	'model_editor.capabilities.image_generation':
 		'settings.admin.models.capabilities.imageGeneration.label',
+	'model_editor.capabilities.video_generation':
+		'settings.admin.models.capabilities.videoGeneration.label',
 	'model_editor.capabilities.code_interpreter':
 		'settings.admin.models.capabilities.codeInterpreter.label',
 	'model_editor.capabilities.terminal': 'settings.admin.models.capabilities.terminal.label',
@@ -19,6 +21,8 @@ export const CONTROL_LABELS = {
 	'model_editor.defaults.web_search': 'settings.admin.models.capabilities.webSearch.label',
 	'model_editor.defaults.image_generation':
 		'settings.admin.models.capabilities.imageGeneration.label',
+	'model_editor.defaults.video_generation':
+		'settings.admin.models.capabilities.videoGeneration.label',
 	'model_editor.defaults.code_interpreter':
 		'settings.admin.models.capabilities.codeInterpreter.label',
 	'model_editor.tools.time': 'settings.admin.models.builtinTools.time.label',
@@ -32,6 +36,7 @@ export const CONTROL_LABELS = {
 	'model_editor.tools.notifications': 'settings.admin.models.builtinTools.notifications.label',
 	'model_editor.tools.web_search': 'settings.admin.models.builtinTools.webSearch.label',
 	'model_editor.tools.image_generation': 'settings.admin.models.builtinTools.imageGeneration.label',
+	'model_editor.tools.video_generation': 'settings.admin.models.builtinTools.videoGeneration.label',
 	'model_editor.tools.code_interpreter': 'settings.admin.models.builtinTools.codeInterpreter.label',
 	'model_editor.tools.tasks': 'settings.admin.models.builtinTools.tasks.label',
 	'model_editor.tools.automations': 'settings.admin.models.builtinTools.automations.label',
@@ -53,6 +58,7 @@ export const CONTROL_LABELS = {
 	// t('settings.admin.interface.visibility.selectedFilters.label')
 	// t('settings.admin.interface.visibility.selectedWebSearch.label')
 	// t('settings.admin.interface.visibility.selectedImageGeneration.label')
+	// t('settings.admin.interface.visibility.selectedVideoGeneration.label')
 	// t('settings.admin.interface.visibility.selectedCodeInterpreter.label')
 	'chat.selected_tools': 'settings.admin.interface.visibility.selectedTools.label',
 	'chat.selected_skills': 'settings.admin.interface.visibility.selectedSkills.label',
@@ -60,6 +66,8 @@ export const CONTROL_LABELS = {
 	'chat.selected_web_search': 'settings.admin.interface.visibility.selectedWebSearch.label',
 	'chat.selected_image_generation':
 		'settings.admin.interface.visibility.selectedImageGeneration.label',
+	'chat.selected_video_generation':
+		'settings.admin.interface.visibility.selectedVideoGeneration.label',
 	'chat.selected_code_interpreter':
 		'settings.admin.interface.visibility.selectedCodeInterpreter.label',
 	'chat.status': '/status',

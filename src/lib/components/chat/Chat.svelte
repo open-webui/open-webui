@@ -466,6 +466,8 @@
 
 	let imageGenerationEnabled = false;
 	let selectedImageModelId = '';
+	let videoGenerationEnabled = false;
+	let selectedVideoModelId = '';
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 	let webSearchActive = false;
@@ -965,6 +967,8 @@
 			webSearchEnabled = input.webSearchEnabled ?? false;
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
 			selectedImageModelId = input.selectedImageModelId ?? '';
+			videoGenerationEnabled = input.videoGenerationEnabled ?? false;
+			selectedVideoModelId = input.selectedVideoModelId ?? '';
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
 			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
 			// parameters or invoke the change handler, which can save settings and approve tools.
@@ -1055,6 +1059,8 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		selectedImageModelId = '';
+		videoGenerationEnabled = false;
+		selectedVideoModelId = '';
 
 		if (chatIdProp) {
 			await loadChat(signal);
@@ -1098,6 +1104,8 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		selectedImageModelId = '';
+		videoGenerationEnabled = false;
+		selectedVideoModelId = '';
 		prompt = '';
 		messageInput?.setText('');
 		await chatId.set('');
@@ -1188,6 +1196,8 @@
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
 		selectedImageModelId = '';
+		videoGenerationEnabled = false;
+		selectedVideoModelId = '';
 
 		if (selectedModelIds.filter((id) => id).length > 0) {
 			await setDefaults();
@@ -1360,11 +1370,15 @@
 			if (!currentModels.length || currentModels.some((model) => !model)) return;
 			const supports = (feature: string) =>
 				currentModels.every((model) => model.info?.meta?.capabilities?.[feature] ?? true);
-			const featureAvailable = (feature: 'web_search' | 'image_generation' | 'code_interpreter') =>
+			const featureAvailable = (
+				feature: 'web_search' | 'image_generation' | 'video_generation' | 'code_interpreter'
+			) =>
 				supports(feature) &&
 				$config?.features?.[`enable_${feature}`] &&
 				($user?.role === 'admin' || $user?.permissions?.features?.[feature]);
-			const defaultFeature = (feature: 'web_search' | 'image_generation' | 'code_interpreter') =>
+			const defaultFeature = (
+				feature: 'web_search' | 'image_generation' | 'video_generation' | 'code_interpreter'
+			) =>
 				featureAvailable(feature) &&
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
 			// Loading a saved chat must preserve its terminal, including an explicit deselection.
@@ -1398,6 +1412,7 @@
 				],
 				webSearchEnabled: !!defaultFeature('web_search'),
 				imageGenerationEnabled: !!defaultFeature('image_generation'),
+				videoGenerationEnabled: !!defaultFeature('video_generation'),
 				codeInterpreterEnabled: !!defaultFeature('code_interpreter'),
 				selectedImageModelId: currentModels.every(
 					(model) =>
@@ -1405,6 +1420,13 @@
 						(currentModels[0]?.info?.meta?.imageModelId ?? '')
 				)
 					? (currentModels[0]?.info?.meta?.imageModelId ?? '')
+					: '',
+				selectedVideoModelId: currentModels.every(
+					(model) =>
+						(model.info?.meta?.videoModelId ?? '') ===
+						(currentModels[0]?.info?.meta?.videoModelId ?? '')
+				)
+					? (currentModels[0]?.info?.meta?.videoModelId ?? '')
 					: '',
 				terminalId:
 					terminalId &&
@@ -1421,8 +1443,10 @@
 					selectedFilterIds,
 					webSearchEnabled,
 					imageGenerationEnabled,
+					videoGenerationEnabled,
 					codeInterpreterEnabled,
 					selectedImageModelId,
+					selectedVideoModelId,
 					terminalId: $selectedTerminalId
 				};
 				if (!modelDefaults) {
@@ -1461,6 +1485,7 @@
 			);
 			defaults.webSearchEnabled &&= !!featureAvailable('web_search');
 			defaults.imageGenerationEnabled &&= !!featureAvailable('image_generation');
+			defaults.videoGenerationEnabled &&= !!featureAvailable('video_generation');
 			defaults.codeInterpreterEnabled &&= !!featureAvailable('code_interpreter');
 			if (!currentModels.some((model) => model.info?.meta?.capabilities?.terminal ?? true)) {
 				defaults.terminalId = null;
@@ -1473,8 +1498,10 @@
 				selectedFilterIds,
 				webSearchEnabled,
 				imageGenerationEnabled,
+				videoGenerationEnabled,
 				codeInterpreterEnabled,
-				selectedImageModelId
+				selectedImageModelId,
+				selectedVideoModelId
 			} = defaults);
 			selectedTerminalId.set(defaults.terminalId);
 
@@ -2250,6 +2277,8 @@
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
 				selectedImageModelId = '';
+				videoGenerationEnabled = false;
+				selectedVideoModelId = '';
 
 				await restoreChatInput(storageChatInput);
 			}
@@ -3127,6 +3156,10 @@
 
 		if (searchParams.get('image-generation') === 'true') {
 			imageGenerationEnabled = true;
+		}
+
+		if (searchParams.get('video-generation') === 'true') {
+			videoGenerationEnabled = true;
 		}
 
 		if (searchParams.get('code-interpreter') === 'true') {
@@ -4809,7 +4842,8 @@
 				if (
 					hasImages &&
 					!(model.info?.meta?.capabilities?.vision ?? true) &&
-					!imageGenerationEnabled
+					!imageGenerationEnabled &&
+					!videoGenerationEnabled
 				) {
 					toast.error(
 						$i18n.t('Model {{modelName}} is not vision capable', {
@@ -4874,6 +4908,14 @@
 					imageGenerationEnabled
 						? selectedImageModelId
 							? { model: selectedImageModelId }
+							: true
+						: false,
+				video_generation:
+					$config?.features?.enable_video_generation &&
+					($user?.role === 'admin' || $user?.permissions?.features?.video_generation) &&
+					videoGenerationEnabled
+						? selectedVideoModelId
+							? { model: selectedVideoModelId }
 							: true
 						: false,
 				code_interpreter:
@@ -5616,6 +5658,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		selectedImageModelId,
+		videoGenerationEnabled,
+		selectedVideoModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
@@ -6236,6 +6280,8 @@
 										bind:selectedFilterIds
 										bind:imageGenerationEnabled
 										bind:selectedImageModelId
+										bind:videoGenerationEnabled
+										bind:selectedVideoModelId
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
 										{oauthRedirectHandler}
@@ -6356,6 +6402,8 @@
 										bind:selectedFilterIds
 										bind:imageGenerationEnabled
 										bind:selectedImageModelId
+										bind:videoGenerationEnabled
+										bind:selectedVideoModelId
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
 										{oauthRedirectHandler}
@@ -6433,6 +6481,8 @@
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
 									bind:selectedImageModelId
+									bind:videoGenerationEnabled
+									bind:selectedVideoModelId
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel

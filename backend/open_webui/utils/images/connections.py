@@ -176,7 +176,7 @@ def get_image_connection_capabilities(connection: dict) -> dict[str, bool]:
 
 async def get_openai_connection_models(request: Request, connection: dict, user: UserModel | None = None) -> list[dict]:
     """The models an OpenAI compatible connection serves. LiteLLM also reports each one's mode and endpoints,
-    which mark its image models (``image``) and what they can do."""
+    which mark its image models (``image``) and what they can do, and its video models (``video``)."""
     from open_webui.routers.images import raise_for_provider_status
 
     headers, cookies = await get_headers_and_cookies(
@@ -220,8 +220,10 @@ async def get_openai_connection_models(request: Request, connection: dict, user:
                 'image_generation': any(endpoint.endswith('/images/generations') for endpoint in endpoints),
                 'image_edit': any(endpoint.endswith('/images/edits') for endpoint in endpoints),
             }
+            model['video'] = any(endpoint.endswith('/videos') for endpoint in endpoints)
         else:
             capabilities = {capability: model_info.get('mode') == capability for capability in IMAGE_CAPABILITIES}
+            model['video'] = model_info.get('mode') == 'video_generation'
         model['image'] = any(capabilities.values())
         if model['image']:
             model.update(capabilities)
@@ -296,19 +298,21 @@ async def get_image_models(request: Request, user: UserModel, *, bypass_access: 
     return models
 
 
-def get_requested_image_model(metadata: dict | None) -> str | None:
-    """The image model a chat asked for: the user's pick, else the chat model's default.
+def get_requested_model(metadata: dict | None, feature: str, meta_key: str) -> str | None:
+    """The model a chat asked for: the user's pick, else the chat model's default.
 
-    The pick rides on the image feature itself, ``features.image_generation = {'model': ref}``;
-    plain ``true`` means no pick.
+    The pick rides on the feature itself, ``features.<feature> = {'model': ref}``; plain ``true`` means no pick.
     """
     metadata = metadata or {}
-    image_generation = (metadata.get('features') or {}).get('image_generation')
-    if isinstance(image_generation, dict) and isinstance(image_generation.get('model'), str):
-        if image_generation['model']:
-            return image_generation['model']
+    requested = (metadata.get('features') or {}).get(feature)
+    if isinstance(requested, dict) and isinstance(requested.get('model'), str) and requested['model']:
+        return requested['model']
     model = metadata.get('model') or {}
-    return ((model.get('info') or {}).get('meta') or {}).get('imageModelId') or None
+    return ((model.get('info') or {}).get('meta') or {}).get(meta_key) or None
+
+
+def get_requested_image_model(metadata: dict | None) -> str | None:
+    return get_requested_model(metadata, 'image_generation', 'imageModelId')
 
 
 async def resolve_image_model(

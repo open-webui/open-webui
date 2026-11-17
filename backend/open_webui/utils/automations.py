@@ -185,6 +185,7 @@ async def _resolve_model_defaults(app, model_id: str) -> dict:
     feature_checks = {
         'web_search': await Config.get('web.search.enable'),
         'image_generation': await Config.get('image_generation.enable'),
+        'video_generation': await Config.get('video_generation.enable'),
     }
 
     for feature_id in default_feature_ids:

@@ -1122,6 +1122,27 @@
 			</div>
 		{/if}
 
+		{#if $config?.features?.enable_video_generation}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-normal">
+						{$i18n.t('Video Generation')}
+					</div>
+					<Switch
+						bind:state={permissions.features.video_generation}
+						ariaLabel={$i18n.t('Video Generation')}
+					/>
+				</div>
+				{#if defaultPermissions?.features?.video_generation && !permissions.features.video_generation}
+					<div>
+						<div class="text-xs text-gray-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		{#if $config?.features?.enable_code_interpreter}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">

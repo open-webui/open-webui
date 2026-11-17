@@ -47,7 +47,8 @@
 		TTSWorker,
 		chatTabRequest,
 		visibleControls,
-		imageModels
+		imageModels,
+		videoModels
 	} from '$lib/stores';
 
 	import {
@@ -109,6 +110,7 @@
 	import XMark from '../icons/XMark.svelte';
 	import GlobeAlt from '../icons/GlobeAlt.svelte';
 	import Photo from '../icons/Photo.svelte';
+	import VideoCamera from '../icons/VideoCamera.svelte';
 	import Wrench from '../icons/Wrench.svelte';
 	import ArrowUpLeft from '../icons/ArrowUpLeft.svelte';
 	import Cube from '../icons/Cube.svelte';
@@ -257,6 +259,8 @@
 
 	export let imageGenerationEnabled = false;
 	export let selectedImageModelId = '';
+	export let videoGenerationEnabled = false;
+	export let selectedVideoModelId = '';
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let toolApprovalMode = 'full';
@@ -357,6 +361,8 @@
 		selectedFilterIds,
 		imageGenerationEnabled,
 		selectedImageModelId,
+		videoGenerationEnabled,
+		selectedVideoModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
 	};
@@ -862,6 +868,7 @@
 		| 'file_upload'
 		| 'web_search'
 		| 'image_generation'
+		| 'video_generation'
 		| 'code_interpreter'
 		| 'terminal'
 		| 'builtin_tools';
@@ -905,6 +912,13 @@
 	$: imageGenerationCapableModels = getCapableModelIds(
 		selectedModelIds,
 		'image_generation',
+		modelCapabilitiesById
+	);
+
+	let videoGenerationCapableModels = [];
+	$: videoGenerationCapableModels = getCapableModelIds(
+		selectedModelIds,
+		'video_generation',
 		modelCapabilitiesById
 	);
 
@@ -963,6 +977,12 @@
 		$config?.features?.enable_image_generation &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.image_generation);
 
+	let showVideoGenerationButton = false;
+	$: showVideoGenerationButton =
+		selectedModelIds.length === videoGenerationCapableModels.length &&
+		$config?.features?.enable_video_generation &&
+		($_user.role === 'admin' || $_user?.permissions?.features?.video_generation);
+
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
 		!$selectedTerminalId &&
@@ -981,6 +1001,8 @@
 	$: if (webSearchCapableModels.length < selectedModelIds.length) webSearchEnabled = false;
 	$: if (imageGenerationCapableModels.length < selectedModelIds.length)
 		imageGenerationEnabled = false;
+	$: if (videoGenerationCapableModels.length < selectedModelIds.length)
+		videoGenerationEnabled = false;
 	$: if (codeInterpreterCapableModels.length < selectedModelIds.length)
 		codeInterpreterEnabled = false;
 	$: {
@@ -2527,6 +2549,7 @@
 
 															webSearchEnabled = false;
 															imageGenerationEnabled = false;
+															videoGenerationEnabled = false;
 															codeInterpreterEnabled = false;
 														}
 													}}
@@ -2669,7 +2692,7 @@
 
 										<!-- Retired menu label: keep its translation. {$i18n.t('Integrations')} -->
 										<svelte:fragment slot="integrations">
-											{#if showWebSearchButton || showImageGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
+											{#if showWebSearchButton || showImageGenerationButton || showVideoGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 												<IntegrationsMenu
 													{selectedTerminalId}
 													{terminalSkills}
@@ -2679,6 +2702,7 @@
 													{toggleFilters}
 													{showWebSearchButton}
 													{showImageGenerationButton}
+													{showVideoGenerationButton}
 													{showCodeInterpreterButton}
 													bind:selectedToolIds
 													bind:selectedSkillIds
@@ -2686,6 +2710,8 @@
 													bind:webSearchEnabled
 													bind:imageGenerationEnabled
 													bind:selectedImageModelId
+													bind:videoGenerationEnabled
+													bind:selectedVideoModelId
 													bind:codeInterpreterEnabled
 													oauthRedirectHandler={(tool: {
 														id: string;
@@ -2903,6 +2929,27 @@
 														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
 												>
 													<Photo className="size-4" strokeWidth="1.75" />
+												</button>
+											</Tooltip>
+										{/if}
+
+										{#if showInputSelections && videoGenerationEnabled && showVideoGenerationButton && $visibleControls['chat.selected_video_generation']}
+											<Tooltip
+												content={$videoModels?.find((model) => model.id === selectedVideoModelId)
+													?.name ?? $i18n.t('Video')}
+												placement="top"
+											>
+												<button
+													aria-label={$i18n.t('Video')}
+													aria-pressed={videoGenerationEnabled}
+													on:click|preventDefault={() =>
+														(videoGenerationEnabled = !videoGenerationEnabled)}
+													type="button"
+													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {videoGenerationEnabled
+														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
+														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+												>
+													<VideoCamera className="size-4" strokeWidth="1.75" />
 												</button>
 											</Tooltip>
 										{/if}

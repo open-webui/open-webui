@@ -12,13 +12,15 @@
 		user,
 		tools as _tools,
 		skills as _skills,
-		imageModels as _imageModels
+		imageModels as _imageModels,
+		videoModels as _videoModels
 	} from '$lib/stores';
 
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
 	import { getImageModels } from '$lib/apis/images';
+	import { getVideoModels } from '$lib/apis/videos';
 	import {
 		listTerminalSkills,
 		resolveTerminalTarget,
@@ -37,6 +39,7 @@
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
+	import VideoCamera from '$lib/components/icons/VideoCamera.svelte';
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
@@ -82,6 +85,9 @@
 	export let showImageGenerationButton = false;
 	export let imageGenerationEnabled = false;
 	export let selectedImageModelId = '';
+	export let showVideoGenerationButton = false;
+	export let videoGenerationEnabled = false;
+	export let selectedVideoModelId = '';
 	export let showCodeInterpreterButton = false;
 	export let codeInterpreterEnabled = false;
 
@@ -102,6 +108,7 @@
 	let toolRequestId = 0;
 	let skillRequestId = 0;
 	let imageModelQuery = '';
+	let videoModelQuery = '';
 
 	$: toolIds = Object.keys(tools ?? {});
 	$: toolGroups = [
@@ -131,6 +138,20 @@
 	}
 
 	$: imageModelOptions = $_imageModels ?? [];
+	$: videoModelOptions = $_videoModels ?? [];
+	$: selectedVideoModel = videoModelOptions.find((model) => model.id === selectedVideoModelId);
+	$: videoModelGroups = Object.entries(
+		videoModelOptions
+			.filter((model) =>
+				`${model.name} ${model.model} ${model.connection_name}`
+					.toLowerCase()
+					.includes(videoModelQuery.trim().toLowerCase())
+			)
+			.reduce<Record<string, typeof videoModelOptions>>((groups, model) => {
+				(groups[model.connection_name] ??= []).push(model);
+				return groups;
+			}, {})
+	);
 	$: selectedImageModel = imageModelOptions.find((model) => model.id === selectedImageModelId);
 	$: imageModelGroups = Object.entries(
 		imageModelOptions
@@ -156,7 +177,7 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		await Promise.all([loadTools(), loadSkills(), loadImageModels()]);
+		await Promise.all([loadTools(), loadSkills(), loadImageModels(), loadVideoModels()]);
 	};
 
 	const loadImageModels = async () => {
@@ -167,6 +188,17 @@
 		// A pick the user can no longer use (removed or restricted by an admin) falls back to the default.
 		if (selectedImageModelId && !($_imageModels ?? []).some((m) => m.id === selectedImageModelId)) {
 			selectedImageModelId = '';
+		}
+	};
+
+	const loadVideoModels = async () => {
+		if (!showVideoGenerationButton) return;
+		if ($_videoModels === null) {
+			_videoModels.set(await getVideoModels(localStorage.token).catch(() => []));
+		}
+		// A pick the user can no longer use (removed or restricted by an admin) falls back to the default.
+		if (selectedVideoModelId && !($_videoModels ?? []).some((m) => m.id === selectedVideoModelId)) {
+			selectedVideoModelId = '';
 		}
 	};
 
@@ -514,6 +546,61 @@
 
 						<div inert>
 							<Switch state={imageGenerationEnabled} />
+						</div>
+					</div>
+				</div>
+			</Tooltip>
+		{/if}
+
+		{#if showVideoGenerationButton}
+			<Tooltip content={$i18n.t('Generate a video')} placement="top-start">
+				<div
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+					role="presentation"
+					on:click={() => {
+						videoGenerationEnabled = !videoGenerationEnabled;
+					}}
+				>
+					<button
+						type="button"
+						class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+						role="menuitemcheckbox"
+						aria-checked={videoGenerationEnabled}
+					>
+						<div class="flex flex-1 gap-2 items-center">
+							<div class="shrink-0">
+								<VideoCamera className="size-3.5" strokeWidth="1.5" />
+							</div>
+
+							<div class=" truncate">
+								{$i18n.t('Video')}
+								{#if videoModelOptions.length > 1}
+									<span class="ml-0.5 text-xs text-gray-500">
+										{selectedVideoModel?.name ?? $i18n.t('Default')}
+									</span>
+								{/if}
+							</div>
+						</div>
+					</button>
+
+					<div class="flex shrink-0 items-center gap-1.5">
+						{#if videoModelOptions.length > 1}
+							<button
+								type="button"
+								role="menuitem"
+								class="flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								aria-label={$i18n.t('Choose video model')}
+								on:click={(e) => {
+									e.stopPropagation();
+									tab = 'video';
+								}}
+							>
+								<ChevronRight />
+							</button>
+						{/if}
+
+						<div inert>
+							<Switch state={videoGenerationEnabled} />
 						</div>
 					</div>
 				</div>
@@ -883,6 +970,88 @@
 				{:else}
 					<div class="text-center text-xs text-gray-500 py-3">
 						{$i18n.t('No image models found')}
+					</div>
+				{/each}
+			</div>
+		</div>
+	</div>
+{:else if tab === 'video'}
+	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+		<button
+			role="menuitem"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			on:click={() => {
+				videoModelQuery = '';
+				tab = '';
+			}}
+		>
+			<ChevronLeft />
+
+			<div class="flex items-center w-full justify-between">
+				<div>
+					{$i18n.t('Video model')}
+					<span class="ml-0.5 text-gray-500">{videoModelOptions.length}</span>
+				</div>
+			</div>
+		</button>
+
+		{#if videoModelOptions.length > 6}
+			<SearchInput bind:value={videoModelQuery} placeholder={$i18n.t('Search video models')} />
+		{/if}
+
+		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+			<div class="flex flex-col gap-0.5" role="group" aria-label={$i18n.t('Video model')}>
+				{#if !videoModelQuery.trim()}
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked={!selectedVideoModelId}
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						on:click={() => {
+							selectedVideoModelId = '';
+							videoGenerationEnabled = true;
+							tab = '';
+						}}
+					>
+						<div class="truncate">{$i18n.t('Default')}</div>
+						{#if !selectedVideoModelId}
+							<Check className="size-3.5 shrink-0" strokeWidth="2" />
+						{/if}
+					</button>
+				{/if}
+
+				{#each videoModelGroups as [label, models] (label)}
+					{#if videoModelGroups.length > 1}
+						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+							{label}
+						</div>
+					{/if}
+
+					{#each models as model (model.id)}
+						<button
+							type="button"
+							role="menuitemradio"
+							aria-checked={selectedVideoModelId === model.id}
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							on:click={() => {
+								selectedVideoModelId = model.id;
+								videoGenerationEnabled = true;
+								videoModelQuery = '';
+								tab = '';
+							}}
+						>
+							<div class="flex min-w-0 items-center gap-2">
+								<div class="truncate">{model.name}</div>
+							</div>
+
+							{#if selectedVideoModelId === model.id}
+								<Check className="size-3.5 shrink-0" strokeWidth="2" />
+							{/if}
+						</button>
+					{/each}
+				{:else}
+					<div class="text-center text-xs text-gray-500 py-3">
+						{$i18n.t('No video models found')}
 					</div>
 				{/each}
 			</div>

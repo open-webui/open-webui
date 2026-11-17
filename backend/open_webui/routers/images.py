@@ -497,13 +497,13 @@ async def get_image_data(data: str, headers=None, trusted_base_url: str | None =
         return None, None
 
 
-async def upload_image(request, image_data, content_type, metadata, user, db=None):
+async def upload_image(request, image_data, content_type, metadata, user, db=None, name='generated-image'):
     if image_data is None or content_type is None:
         raise ValueError('Failed to retrieve image data from the generation backend')
     image_format = IMAGE_FILE_EXTENSIONS.get(content_type.lower()) or mimetypes.guess_extension(content_type) or '.png'
     file = UploadFile(
         file=io.BytesIO(image_data),
-        filename=f'generated-image{image_format}',  # will be converted to a unique ID on upload_file
+        filename=f'{name}{image_format}',  # will be converted to a unique ID on upload_file
         headers={
             'content-type': content_type,
         },
@@ -824,6 +824,58 @@ async def image_generations(
         raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
 
 
+async def load_url_image(data: str, user) -> str:
+    """An image as a data URL, from a data URL, a web URL (SSRF-checked) or an Open WebUI file."""
+    if data.startswith('data:'):
+        return data
+
+    if data.startswith('http://') or data.startswith('https://'):
+        parsed = urlparse(data)
+        # Fetching /api/v1/files/{id}/content over the network would be unauthenticated.
+        if parsed.path.startswith('/api/v1/files/') and '/content' in parsed.path:
+            return await load_url_image(parsed.path, user)
+
+        # Validate URL to prevent SSRF attacks against local/private networks.
+        # allow_redirects=False prevents redirect-based SSRF: validate_url() is
+        # called only on the originally-submitted URL; following 3xx redirects
+        # without re-validation would let an attacker reach private IPs via a
+        # public host that redirects internally (e.g. cloud-metadata exfil).
+        await asyncio.to_thread(validate_url, data)
+        # SSRF-safe session: re-checks the connect-time IP so a rebinding DNS answer
+        # that passed validate_url cannot reach an internal address.
+        async with get_ssrf_safe_session() as session:
+            async with session.get(
+                data,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+                allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
+                headers={'Accept-Encoding': 'identity'},
+            ) as r:
+                r.raise_for_status()
+                assert_identity_encoding(r.headers.getall('Content-Encoding', ()))
+
+                image_data = base64.b64encode(await r.read()).decode('utf-8')
+                return f'data:{r.headers["content-type"]};base64,{image_data}'
+
+    else:
+        file_id = None
+        if data.startswith('/api/v1/files'):
+            file_id = data.split('/api/v1/files/')[1].split('/content')[0]
+        else:
+            file_id = data
+
+        file_response = await get_file_content_by_id(file_id, user)
+        if isinstance(file_response, FileResponse):
+            file_path = file_response.path
+
+            async with aiofiles.open(file_path, 'rb') as f:
+                file_bytes = await f.read()
+            image_data = base64.b64encode(file_bytes).decode('utf-8')
+            mime_type, _ = mimetypes.guess_type(file_path)
+
+            return f'data:{mime_type};base64,{image_data}'
+    return data
+
+
 class EditImageForm(BaseModel):
     image: str | list[str]  # base64-encoded image(s) or URL(s)
     prompt: str
@@ -891,63 +943,12 @@ async def image_edits(
         width, height = tuple(map(int, size.split('x')))
 
     try:
-
-        async def load_url_image(data):
-            if data.startswith('data:'):
-                return data
-
-            if data.startswith('http://') or data.startswith('https://'):
-                parsed = urlparse(data)
-                # Fetching /api/v1/files/{id}/content over the network would be unauthenticated.
-                if parsed.path.startswith('/api/v1/files/') and '/content' in parsed.path:
-                    return await load_url_image(parsed.path)
-
-                # Validate URL to prevent SSRF attacks against local/private networks.
-                # allow_redirects=False prevents redirect-based SSRF: validate_url() is
-                # called only on the originally-submitted URL; following 3xx redirects
-                # without re-validation would let an attacker reach private IPs via a
-                # public host that redirects internally (e.g. cloud-metadata exfil).
-                await asyncio.to_thread(validate_url, data)
-                # SSRF-safe session: re-checks the connect-time IP so a rebinding DNS answer
-                # that passed validate_url cannot reach an internal address.
-                async with get_ssrf_safe_session() as session:
-                    async with session.get(
-                        data,
-                        ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                        allow_redirects=AIOHTTP_CLIENT_ALLOW_REDIRECTS,
-                        headers={'Accept-Encoding': 'identity'},
-                    ) as r:
-                        r.raise_for_status()
-                        assert_identity_encoding(r.headers.getall('Content-Encoding', ()))
-
-                        image_data = base64.b64encode(await r.read()).decode('utf-8')
-                        return f'data:{r.headers["content-type"]};base64,{image_data}'
-
-            else:
-                file_id = None
-                if data.startswith('/api/v1/files'):
-                    file_id = data.split('/api/v1/files/')[1].split('/content')[0]
-                else:
-                    file_id = data
-
-                file_response = await get_file_content_by_id(file_id, user)
-                if isinstance(file_response, FileResponse):
-                    file_path = file_response.path
-
-                    async with aiofiles.open(file_path, 'rb') as f:
-                        file_bytes = await f.read()
-                    image_data = base64.b64encode(file_bytes).decode('utf-8')
-                    mime_type, _ = mimetypes.guess_type(file_path)
-
-                    return f'data:{mime_type};base64,{image_data}'
-            return data
-
         # Load image(s) from URL(s) if necessary
         if isinstance(form_data.image, str):
-            form_data.image = await load_url_image(form_data.image)
+            form_data.image = await load_url_image(form_data.image, user)
         elif isinstance(form_data.image, list):
             # Load all images in parallel for better performance
-            form_data.image = list(await asyncio.gather(*[load_url_image(img) for img in form_data.image]))
+            form_data.image = list(await asyncio.gather(*[load_url_image(img, user) for img in form_data.image]))
     except HTTPException:
         raise
     except Exception as e:

@@ -1557,6 +1557,14 @@ except JSONCodec.JSONDecodeError:
 
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
 
+# Videos
+
+ENABLE_VIDEO_GENERATION = os.getenv('ENABLE_VIDEO_GENERATION', '').lower() == 'true'
+
+# How long to wait for a video job to finish, and how often to check on it.
+VIDEO_GENERATION_TIMEOUT = int(os.getenv('VIDEO_GENERATION_TIMEOUT', '900'))
+VIDEO_GENERATION_POLL_INTERVAL = float(os.getenv('VIDEO_GENERATION_POLL_INTERVAL', '5'))
+
 # Audio
 
 # Transcription
@@ -1937,6 +1945,11 @@ USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
     os.getenv('USER_PERMISSIONS_FEATURES_IMAGE_GENERATION', 'True').lower() == 'true'
 )
 
+# Off by default: video costs far more per request than images.
+USER_PERMISSIONS_FEATURES_VIDEO_GENERATION = (
+    os.getenv('USER_PERMISSIONS_FEATURES_VIDEO_GENERATION', 'False').lower() == 'true'
+)
+
 USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
     os.getenv('USER_PERMISSIONS_FEATURES_CODE_INTERPRETER', 'True').lower() == 'true'
 )
@@ -2042,6 +2055,7 @@ DEFAULT_USER_PERMISSIONS = {
         # Chat features
         'web_search': USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         'image_generation': USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
+        'video_generation': USER_PERMISSIONS_FEATURES_VIDEO_GENERATION,
         'code_interpreter': USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
         'subagents': USER_PERMISSIONS_FEATURES_SUBAGENTS,
@@ -3185,6 +3199,8 @@ DEFAULT_CONFIG = {
     'images.edit.engine': IMAGE_EDIT_ENGINE,
     'images.edit.model': IMAGE_EDIT_MODEL,
     'images.edit.default_model': '',
+    'video_generation.enable': ENABLE_VIDEO_GENERATION,
+    'video_generation.default_model': '',
     'images.edit.size': IMAGE_EDIT_SIZE,
     'images.edit.openai.api_base_url': IMAGES_EDIT_OPENAI_API_BASE_URL,
     'images.edit.openai.api_version': IMAGES_EDIT_OPENAI_API_VERSION,

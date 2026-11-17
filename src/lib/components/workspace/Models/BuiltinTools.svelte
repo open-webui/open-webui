@@ -64,6 +64,11 @@
 			description: $i18n.t('settings.admin.models.builtinTools.imageGeneration.description'),
 			enabled: $config?.features?.enable_image_generation
 		},
+		video_generation: {
+			label: $i18n.t('settings.admin.models.builtinTools.videoGeneration.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.videoGeneration.description'),
+			enabled: $config?.features?.enable_video_generation
+		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.builtinTools.codeInterpreter.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.codeInterpreter.description'),

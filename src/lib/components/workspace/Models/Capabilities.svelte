@@ -33,6 +33,11 @@
 			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description'),
 			enabled: $config?.features?.enable_image_generation
 		},
+		video_generation: {
+			label: $i18n.t('settings.admin.models.capabilities.videoGeneration.label'),
+			description: $i18n.t('settings.admin.models.capabilities.videoGeneration.description'),
+			enabled: $config?.features?.enable_video_generation
+		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.capabilities.codeInterpreter.label'),
 			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description'),
@@ -77,7 +82,12 @@
 	export let defaultFeatureIds: string[] = [];
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
-	const featureKeys = ['web_search', 'image_generation', 'code_interpreter'] as const;
+	const featureKeys = [
+		'web_search',
+		'image_generation',
+		'video_generation',
+		'code_interpreter'
+	] as const;
 	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
 	$: availableCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
 		(key) =>

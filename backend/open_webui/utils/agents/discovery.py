@@ -65,6 +65,7 @@ async def get_models(request, user, metadata, *, provider=None, cwd=None):
                         'file_upload': True,
                         'web_search': False,
                         'image_generation': False,
+                        'video_generation': False,
                         'code_interpreter': False,
                         'builtin_tools': False,
                     }
