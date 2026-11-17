@@ -1,8 +1,10 @@
-<script>
+<script lang="ts">
 	import { getContext } from 'svelte';
-	const i18n = getContext('i18n');
+	import type { Editor } from '@tiptap/core';
+	const i18n = getContext<any>('i18n');
 
-	export let editor = null;
+	export let editor: Editor | null = null;
+	export let onComment: (() => void) | null = null;
 
 	import Bold from '$lib/components/icons/Bold.svelte';
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
@@ -22,53 +24,134 @@
 
 	import EmojiPicker from '../EmojiPicker.svelte';
 	import FaceSmile from '$lib/components/icons/FaceSmile.svelte';
+	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
+	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import { shortCodesToEmojis } from '$lib/stores';
+
+	const headings = [
+		{ level: 1 as const, label: 'Heading 1', icon: H1 },
+		{ level: 2 as const, label: 'Heading 2', icon: H2 },
+		{ level: 3 as const, label: 'Heading 3', icon: H3 }
+	];
+
+	let showHeadingMenu = false;
+	let headingMenuElement: HTMLElement | null = null;
+
+	// Re-evaluated on every editor transaction, since the parent re-renders with the new editor state.
+	$: activeHeading = editor
+		? (headings.find((heading) => editor.isActive('heading', { level: heading.level })) ?? null)
+		: null;
 </script>
+
+<svelte:window
+	on:mousedown={(event) => {
+		if (
+			showHeadingMenu &&
+			event.target instanceof Node &&
+			!headingMenuElement?.contains(event.target)
+		) {
+			showHeadingMenu = false;
+		}
+	}}
+	on:keydown={(event) => {
+		if (event.key === 'Escape' && showHeadingMenu) showHeadingMenu = false;
+	}}
+/>
 
 <div
 	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 min-w-fit border border-gray-100 dark:border-gray-800"
 >
-	<Tooltip placement="top" content={$i18n.t('H1')}>
-		<button
-			aria-label={$i18n.t('H1')}
-			aria-pressed={editor?.isActive('heading', { level: 1 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-			class="{editor?.isActive('heading', { level: 1 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H1 />
-		</button>
-	</Tooltip>
+	{#if onComment}
+		<Tooltip placement="top" content={$i18n.t('Comment')}>
+			<button
+				aria-label={$i18n.t('Comment')}
+				on:mousedown|preventDefault
+				on:click={() => onComment?.()}
+				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				<Annotation className="size-4" />
+			</button>
+		</Tooltip>
+		<div class="my-1 w-px bg-gray-100 dark:bg-gray-800" aria-hidden="true"></div>
+	{/if}
 
-	<Tooltip placement="top" content={$i18n.t('H2')}>
-		<button
-			aria-label={$i18n.t('H2')}
-			aria-pressed={editor?.isActive('heading', { level: 2 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-			class="{editor?.isActive('heading', { level: 2 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H2 />
-		</button>
-	</Tooltip>
+	<div class="relative flex" bind:this={headingMenuElement}>
+		<Tooltip placement="top" content={$i18n.t('Heading')}>
+			<button
+				aria-label={$i18n.t('Heading')}
+				aria-haspopup="menu"
+				aria-expanded={showHeadingMenu}
+				on:mousedown|preventDefault
+				on:click={() => (showHeadingMenu = !showHeadingMenu)}
+				class="{activeHeading || showHeadingMenu
+					? 'bg-gray-50 dark:bg-gray-700'
+					: ''} flex items-center gap-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				type="button"
+			>
+				{#if activeHeading}
+					<svelte:component this={activeHeading.icon} />
+				{:else}
+					<span class="flex size-4 items-center justify-center text-sm font-medium leading-none"
+						>T</span
+					>
+				{/if}
+				<ChevronDown className="size-3" strokeWidth="2" />
+			</button>
+		</Tooltip>
 
-	<Tooltip placement="top" content={$i18n.t('H3')}>
-		<button
-			aria-label={$i18n.t('H3')}
-			aria-pressed={editor?.isActive('heading', { level: 3 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-			class="{editor?.isActive('heading', { level: 3 })
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
-			type="button"
-		>
-			<H3 />
-		</button>
-	</Tooltip>
+		{#if showHeadingMenu}
+			<div
+				role="menu"
+				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
+			>
+				<button
+					role="menuitemradio"
+					aria-checked={!activeHeading}
+					on:mousedown|preventDefault
+					on:click={() => {
+						editor?.chain().focus().setParagraph().run();
+						showHeadingMenu = false;
+					}}
+					class="{!activeHeading
+						? 'bg-gray-50 dark:bg-gray-700'
+						: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+					type="button"
+				>
+					<span class="flex size-4 items-center justify-center text-sm font-medium leading-none"
+						>T</span
+					>
+					{$i18n.t('Text')}
+				</button>
+				{#each headings as heading}
+					<button
+						role="menuitemradio"
+						aria-checked={activeHeading?.level === heading.level}
+						on:mousedown|preventDefault
+						on:click={() => {
+							editor?.chain().focus().toggleHeading({ level: heading.level }).run();
+							showHeadingMenu = false;
+						}}
+						class="{activeHeading?.level === heading.level
+							? 'bg-gray-50 dark:bg-gray-700'
+							: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+						type="button"
+					>
+						<svelte:component this={heading.icon} />
+						<!-- localisation keys for heading.label to be recognized from the i18next parser (so they don't get automatically removed):
+							{$i18n.t('Heading 1')}
+							{$i18n.t('Heading 2')}
+							{$i18n.t('Heading 3')}
+							{$i18n.t('H1')}
+							{$i18n.t('H2')}
+							{$i18n.t('H3')}
+						-->
+						{$i18n.t(heading.label)}
+					</button>
+				{/each}
+			</div>
+		{/if}
+	</div>
 
 	{#if editor?.isActive('bulletList') || editor?.isActive('orderedList') || editor?.isActive('taskList')}
 		<Tooltip placement="top" content={$i18n.t('Lift List')}>
@@ -210,11 +293,13 @@
 
 	<EmojiPicker
 		onSubmit={(shortCode) => {
-			const codepoint = $shortCodesToEmojis[shortCode];
+			const codepoint: string | undefined = ($shortCodesToEmojis as Record<string, string>)[
+				shortCode
+			];
 			if (codepoint) {
 				const emoji = codepoint
 					.split('-')
-					.map((cp) => String.fromCodePoint(parseInt(cp, 16)))
+					.map((cp: string) => String.fromCodePoint(parseInt(cp, 16)))
 					.join('');
 				editor?.chain().focus().insertContent(emoji).run();
 			}

@@ -44,8 +44,13 @@ async def changed(resource_type, resource_id):
     # No comment text, author, or activity IDs are sent to possibly stale subscribers.
     try:
         await sio.emit(
-            'comments:changed',
-            {'resource_type': resource_type, 'resource_id': resource_id},
+            'events',
+            {
+                'data': {
+                    'type': 'comments:changed',
+                    'data': {'resource_type': resource_type, 'resource_id': resource_id},
+                }
+            },
             room=comment_room(resource_type, resource_id),
         )
     except Exception:

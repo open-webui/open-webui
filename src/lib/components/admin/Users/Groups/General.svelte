@@ -204,6 +204,7 @@
 					id="group-defaults"
 					items={modelItems}
 					bind:values={data.config.default_models}
+					multipleEnabled={true}
 					compareEnabled={true}
 					selectionOnly={true}
 					includeHidden={true}

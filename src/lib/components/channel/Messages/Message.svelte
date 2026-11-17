@@ -109,6 +109,20 @@
 	let edit = false;
 	let editButtonElement: HTMLButtonElement;
 	let editedContent = null;
+
+	const editMessageConfirmHandler = () => {
+		onEdit(editedContent);
+		edit = false;
+		editedContent = null;
+	};
+
+	const cancelEditMessage = async () => {
+		edit = false;
+		editedContent = null;
+		await tick();
+		editButtonElement?.focus();
+	};
+
 	let showDeleteConfirmDialog = false;
 	$: renderedMessageId = message ? (id ? `${id}-${message.id}` : message.id) : null;
 	$: contentId = message?.client_id
@@ -610,14 +624,14 @@
 								ariaLabel={$i18n.t('Message')}
 								onKeydown={(e) => {
 									if (e.key === 'Escape') {
-										document.getElementById('close-edit-message-button')?.click();
+										cancelEditMessage();
 									}
 
 									const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 									const isEnterPressed = e.key === 'Enter';
 
 									if (isCmdOrCtrlPressed && isEnterPressed) {
-										document.getElementById('confirm-edit-message-button')?.click();
+										editMessageConfirmHandler();
 									}
 								}}
 							/>
@@ -626,11 +640,8 @@
 									<button
 										id="close-edit-message-button"
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
-										on:click={async () => {
-											edit = false;
-											editedContent = null;
-											await tick();
-											editButtonElement?.focus();
+										on:click={() => {
+											cancelEditMessage();
 										}}
 									>
 										{$i18n.t('Cancel')}
@@ -639,10 +650,8 @@
 									<button
 										id="confirm-edit-message-button"
 										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-										on:click={async () => {
-											onEdit(editedContent);
-											edit = false;
-											editedContent = null;
+										on:click={() => {
+											editMessageConfirmHandler();
 										}}
 									>
 										{$i18n.t('Save')}

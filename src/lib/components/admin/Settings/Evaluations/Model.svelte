@@ -5,12 +5,16 @@
 	const i18n = getContext('i18n');
 
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
+	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ArenaModelModal from './ArenaModelModal.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	export let model;
 	export let onEdit = async (_model) => true;
+	export let onClone = async (_model) => true;
 
 	let showModel = false;
+	let showCloneModel = false;
 </script>
 
 <ArenaModelModal
@@ -21,6 +25,16 @@
 	on:delete={async () => {
 		dispatch('delete');
 	}}
+/>
+
+<ArenaModelModal
+	bind:show={showCloneModel}
+	model={{
+		...structuredClone(model),
+		id: `${model.id}-clone`,
+		name: `${model.name} (Clone)`
+	}}
+	onSubmit={onClone}
 />
 
 <div class="py-0.5">
@@ -50,6 +64,19 @@
 		</div>
 
 		<div class="flex items-center">
+			<Tooltip content={$i18n.t('Clone')}>
+				<button
+					aria-label={$i18n.t('Clone')}
+					class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+					type="button"
+					on:click={() => {
+						showCloneModel = true;
+					}}
+				>
+					<DocumentDuplicate />
+				</button>
+			</Tooltip>
+
 			<button
 				aria-label={$i18n.t('Configure')}
 				class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"

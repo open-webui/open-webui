@@ -23,11 +23,14 @@
 		clearTimeout(timer);
 		timer = setTimeout(refresh, 150);
 	};
+	const eventHandler = (event: { data?: { type?: string } }) => {
+		if (event?.data?.type === 'notifications:changed') changed();
+	};
 	$: if ($socket !== connection) {
-		connection?.off('notifications:changed', changed);
+		connection?.off('events', eventHandler);
 		connection?.off('connect', changed);
 		connection = $socket;
-		connection?.on('notifications:changed', changed);
+		connection?.on('events', eventHandler);
 		connection?.on('connect', changed);
 	}
 	export const close = () => {
@@ -61,6 +64,9 @@
 				resource_id: current.resource_id!,
 				comment_id: current.object_id!
 			};
+		} else if (current.object_type === 'chat_message' && current.resource_type === 'chat') {
+			const query = new URLSearchParams({ message: current.data.message_id! });
+			await goto(`/c/${encodeURIComponent(current.resource_id!)}?${query}`, { state });
 		} else if (current.resource_type === 'channel') {
 			const query = new URLSearchParams({
 				message: current.object_id!,
@@ -84,7 +90,7 @@
 	onDestroy(() => {
 		alive = false;
 		clearTimeout(timer);
-		connection?.off('notifications:changed', changed);
+		connection?.off('events', eventHandler);
 		connection?.off('connect', changed);
 		setInboxCount(0);
 	});

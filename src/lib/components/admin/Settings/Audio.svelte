@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext } from 'svelte';
+	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { getBackendConfig } from '$lib/apis';
@@ -27,6 +27,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
@@ -85,6 +86,112 @@
 	let STT_MISTRAL_USE_CHAT_COMPLETIONS = false;
 
 	let STT_WHISPER_MODEL_LOADING = false;
+
+	let savedConfig: Record<string, any> | null = null;
+	$: settings = {
+		AUDIO_REALTIME_ENABLED: realtime.ENABLED,
+		AUDIO_REALTIME_PROVIDER: realtime.PROVIDER,
+		AUDIO_REALTIME_AUTH_TYPE: realtime.AUTH_TYPE,
+		AUDIO_REALTIME_OPENAI_API_BASE_URL: realtime.OPENAI_API_BASE_URL,
+		AUDIO_REALTIME_OPENAI_API_KEY: realtime.OPENAI_API_KEY,
+		AUDIO_REALTIME_MODEL: realtime.MODEL,
+		AUDIO_REALTIME_VOICE: realtime.VOICE,
+		AUDIO_REALTIME_TRANSCRIPTION_MODEL: realtime.TRANSCRIPTION_MODEL,
+		AUDIO_REALTIME_INPUT_PARAMS: REALTIME_INPUT_PARAMS,
+		REALTIME_CALL_PROMPT_TEMPLATE: realtime.REALTIME_CALL_PROMPT_TEMPLATE,
+		AUDIO_TTS_OPENAI_API_BASE_URL: TTS_OPENAI_API_BASE_URL,
+		AUDIO_TTS_OPENAI_API_KEY: TTS_OPENAI_API_KEY,
+		AUDIO_TTS_API_KEY: TTS_API_KEY,
+		AUDIO_TTS_ENGINE: TTS_ENGINE,
+		AUDIO_TTS_MODEL: TTS_MODEL,
+		AUDIO_TTS_VOICE: TTS_VOICE,
+		REALTIME_TTS_PROMPT_TEMPLATE,
+		AUDIO_TTS_OPENAI_PARAMS: TTS_OPENAI_PARAMS,
+		AUDIO_TTS_SPLIT_ON: TTS_SPLIT_ON,
+		AUDIO_TTS_AZURE_SPEECH_REGION: TTS_AZURE_SPEECH_REGION,
+		AUDIO_TTS_AZURE_SPEECH_BASE_URL: TTS_AZURE_SPEECH_BASE_URL,
+		AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT: TTS_AZURE_SPEECH_OUTPUT_FORMAT,
+		AUDIO_TTS_MISTRAL_API_KEY: TTS_MISTRAL_API_KEY,
+		AUDIO_TTS_MISTRAL_API_BASE_URL: TTS_MISTRAL_API_BASE_URL,
+		AUDIO_STT_OPENAI_API_BASE_URL: STT_OPENAI_API_BASE_URL,
+		AUDIO_STT_OPENAI_API_KEY: STT_OPENAI_API_KEY,
+		AUDIO_STT_OPENAI_API_REQUEST_FORMAT: STT_OPENAI_API_REQUEST_FORMAT,
+		AUDIO_STT_ENGINE: STT_ENGINE,
+		AUDIO_STT_MODEL: STT_MODEL,
+		AUDIO_STT_SUPPORTED_CONTENT_TYPES: STT_SUPPORTED_CONTENT_TYPES,
+		WHISPER_MODEL: STT_WHISPER_MODEL,
+		AUDIO_STT_AZURE_API_KEY: STT_AZURE_API_KEY,
+		AUDIO_STT_AZURE_REGION: STT_AZURE_REGION,
+		AUDIO_STT_AZURE_LOCALES: STT_AZURE_LOCALES,
+		AUDIO_STT_AZURE_BASE_URL: STT_AZURE_BASE_URL,
+		AUDIO_STT_AZURE_MAX_SPEAKERS: STT_AZURE_MAX_SPEAKERS,
+		DEEPGRAM_API_KEY: STT_DEEPGRAM_API_KEY,
+		AUDIO_STT_MISTRAL_API_KEY: STT_MISTRAL_API_KEY,
+		AUDIO_STT_MISTRAL_API_BASE_URL: STT_MISTRAL_API_BASE_URL,
+		AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS: STT_MISTRAL_USE_CHAT_COMPLETIONS
+	};
+	$: settingLabels = {
+		AUDIO_REALTIME_ENABLED: $i18n.t('Call mode'),
+		AUDIO_REALTIME_PROVIDER: $i18n.t('Provider'),
+		AUDIO_REALTIME_AUTH_TYPE: $i18n.t('Authentication'),
+		AUDIO_REALTIME_OPENAI_API_BASE_URL: $i18n.t(
+			realtime.PROVIDER === 'azure' ? 'settings.audio.realtime.azureUrl' : 'API Base URL'
+		),
+		AUDIO_REALTIME_OPENAI_API_KEY: $i18n.t('API Key'),
+		AUDIO_REALTIME_MODEL: $i18n.t(
+			realtime.PROVIDER === 'azure' ? 'settings.audio.realtime.deployment' : 'Voice Model'
+		),
+		AUDIO_REALTIME_VOICE: $i18n.t('Voice'),
+		AUDIO_REALTIME_TRANSCRIPTION_MODEL: $i18n.t('Input Transcription Model'),
+		AUDIO_REALTIME_INPUT_PARAMS: $i18n.t('settings.audio.realtime.inputParams'),
+		REALTIME_CALL_PROMPT_TEMPLATE: $i18n.t('Prompt Template'),
+		AUDIO_STT_ENGINE: $i18n.t('settings.admin.audio.speechToTextEngine.label'),
+		AUDIO_STT_SUPPORTED_CONTENT_TYPES: $i18n.t('settings.admin.audio.supportedMimeTypes.label'),
+		AUDIO_STT_OPENAI_API_BASE_URL: $i18n.t('settings.admin.audio.sttOpenaiApiBaseUrl.label'),
+		AUDIO_STT_OPENAI_API_KEY: $i18n.t('settings.admin.audio.sttOpenaiApiKey.label'),
+		AUDIO_STT_OPENAI_API_REQUEST_FORMAT: $i18n.t('settings.admin.audio.requestFormat.label'),
+		AUDIO_STT_MODEL: $i18n.t(
+			STT_ENGINE === 'mistral'
+				? 'settings.admin.audio.mistralSttModel.label'
+				: 'settings.admin.audio.sttModel.label'
+		),
+		DEEPGRAM_API_KEY: $i18n.t('settings.admin.audio.sttDeepgramApiKey.label'),
+		AUDIO_STT_AZURE_API_KEY: $i18n.t('settings.admin.audio.sttAzureApiKey.label'),
+		AUDIO_STT_AZURE_REGION: $i18n.t('settings.admin.audio.sttAzureRegion.label'),
+		AUDIO_STT_AZURE_LOCALES: $i18n.t('settings.admin.audio.languageLocales.label'),
+		AUDIO_STT_AZURE_BASE_URL: $i18n.t('settings.admin.audio.sttAzureBaseUrl.label'),
+		AUDIO_STT_AZURE_MAX_SPEAKERS: $i18n.t('settings.admin.audio.maxSpeakers.label'),
+		AUDIO_STT_MISTRAL_API_BASE_URL: $i18n.t('settings.admin.audio.sttMistralApiBaseUrl.label'),
+		AUDIO_STT_MISTRAL_API_KEY: $i18n.t('settings.admin.audio.sttMistralApiKey.label'),
+		AUDIO_STT_MISTRAL_USE_CHAT_COMPLETIONS: $i18n.t(
+			'settings.admin.audio.useChatCompletionsApi.label'
+		),
+		WHISPER_MODEL: $i18n.t('settings.admin.audio.sttWhisperModel.label'),
+		AUDIO_TTS_ENGINE: $i18n.t('settings.admin.audio.textToSpeechEngine.label'),
+		AUDIO_TTS_OPENAI_API_BASE_URL: $i18n.t('settings.admin.audio.ttsOpenaiApiBaseUrl.label'),
+		AUDIO_TTS_OPENAI_API_KEY: $i18n.t('settings.admin.audio.ttsOpenaiApiKey.label'),
+		AUDIO_TTS_API_KEY: $i18n.t('settings.admin.audio.ttsApiKey.label'),
+		AUDIO_TTS_AZURE_SPEECH_REGION: $i18n.t('settings.admin.audio.ttsAzureSpeechRegion.label'),
+		AUDIO_TTS_AZURE_SPEECH_BASE_URL: $i18n.t('settings.admin.audio.ttsAzureSpeechBaseUrl.label'),
+		AUDIO_TTS_MISTRAL_API_BASE_URL: $i18n.t('settings.admin.audio.ttsMistralApiBaseUrl.label'),
+		AUDIO_TTS_MISTRAL_API_KEY: $i18n.t('settings.admin.audio.ttsMistralApiKey.label'),
+		AUDIO_TTS_VOICE: $i18n.t('settings.admin.audio.ttsVoice.label'),
+		AUDIO_TTS_MODEL: $i18n.t('settings.admin.audio.ttsModel.label'),
+		AUDIO_TTS_OPENAI_PARAMS: $i18n.t('settings.admin.audio.additionalParameters.label'),
+		REALTIME_TTS_PROMPT_TEMPLATE: $i18n.t('Prompt Template'),
+		AUDIO_TTS_AZURE_SPEECH_OUTPUT_FORMAT: $i18n.t('settings.admin.audio.outputFormat.label'),
+		AUDIO_TTS_SPLIT_ON: $i18n.t('settings.admin.audio.responseSplitting.label')
+	};
+	const sensitiveKeys = [
+		'AUDIO_REALTIME_OPENAI_API_KEY',
+		'AUDIO_STT_OPENAI_API_KEY',
+		'DEEPGRAM_API_KEY',
+		'AUDIO_STT_AZURE_API_KEY',
+		'AUDIO_STT_MISTRAL_API_KEY',
+		'AUDIO_TTS_OPENAI_API_KEY',
+		'AUDIO_TTS_API_KEY',
+		'AUDIO_TTS_MISTRAL_API_KEY'
+	];
 
 	type Voice = {
 		id: string;
@@ -218,6 +325,7 @@
 		});
 
 		if (res) {
+			savedConfig = structuredClone(settings);
 			saveHandler();
 			config.set(await getBackendConfig());
 		}
@@ -279,6 +387,9 @@
 			STT_MISTRAL_API_BASE_URL = res.stt.MISTRAL_API_BASE_URL;
 			STT_MISTRAL_USE_CHAT_COMPLETIONS = res.stt.MISTRAL_USE_CHAT_COMPLETIONS;
 		}
+
+		await tick();
+		savedConfig = structuredClone(settings);
 
 		await getVoices();
 		await getModels();
@@ -406,6 +517,7 @@
 						id="realtime-input-params"
 						className={textareaClass}
 						bind:value={REALTIME_INPUT_PARAMS}
+						maxSize={200}
 						placeholder={$i18n.t('Enter additional parameters in JSON format')}
 					/>
 				</AdminSettingField>
@@ -414,6 +526,7 @@
 						id="realtime-prompt-template"
 						className={textareaClass}
 						bind:value={realtime.REALTIME_CALL_PROMPT_TEMPLATE}
+						maxSize={300}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>
@@ -903,6 +1016,7 @@
 							id="tts-openai-params"
 							className={textareaClass}
 							bind:value={TTS_OPENAI_PARAMS}
+							maxSize={200}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
 						/>
 					</AdminSettingField>
@@ -915,6 +1029,7 @@
 							id="realtime-tts-prompt-template"
 							className={textareaClass}
 							bind:value={REALTIME_TTS_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
@@ -1004,11 +1119,6 @@
 		</AdminSettingSection>
 	</div>
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+		<AdminSettingSaveButton {settings} {savedConfig} labels={settingLabels} {sensitiveKeys} />
 	</div>
 </form>

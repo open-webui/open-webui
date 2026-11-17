@@ -219,11 +219,6 @@ if CUSTOM_NAME:
         pass
 
 
-# Direct connections
-
-ENABLE_DIRECT_CONNECTIONS = os.getenv('ENABLE_DIRECT_CONNECTIONS', 'False').lower() == 'true'
-ENABLE_DIRECT_INTEGRATIONS = os.getenv('ENABLE_DIRECT_INTEGRATIONS', 'False').lower() == 'true'
-
 # OLLAMA_BASE_URL
 
 ENABLE_OLLAMA_API = os.getenv('ENABLE_OLLAMA_API', 'True').lower() == 'true'
@@ -1562,6 +1557,14 @@ except JSONCodec.JSONDecodeError:
 
 IMAGES_EDIT_COMFYUI_WORKFLOW_NODES = images_edit_comfyui_workflow_nodes
 
+# Videos
+
+ENABLE_VIDEO_GENERATION = os.getenv('ENABLE_VIDEO_GENERATION', '').lower() == 'true'
+
+# How long to wait for a video job to finish, and how often to check on it.
+VIDEO_GENERATION_TIMEOUT = int(os.getenv('VIDEO_GENERATION_TIMEOUT', '900'))
+VIDEO_GENERATION_POLL_INTERVAL = float(os.getenv('VIDEO_GENERATION_POLL_INTERVAL', '5'))
+
 # Audio
 
 # Transcription
@@ -1936,14 +1939,15 @@ USER_PERMISSIONS_CHAT_TEMPORARY_ENFORCED = (
 )
 
 
-USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS = (
-    os.getenv('USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS', 'False').lower() == 'true'
-)
-
 USER_PERMISSIONS_FEATURES_WEB_SEARCH = os.getenv('USER_PERMISSIONS_FEATURES_WEB_SEARCH', 'True').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_IMAGE_GENERATION = (
     os.getenv('USER_PERMISSIONS_FEATURES_IMAGE_GENERATION', 'True').lower() == 'true'
+)
+
+# Off by default: video costs far more per request than images.
+USER_PERMISSIONS_FEATURES_VIDEO_GENERATION = (
+    os.getenv('USER_PERMISSIONS_FEATURES_VIDEO_GENERATION', 'False').lower() == 'true'
 )
 
 USER_PERMISSIONS_FEATURES_CODE_INTERPRETER = (
@@ -1963,6 +1967,8 @@ USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS = (
 USER_PERMISSIONS_FEATURES_API_KEYS = os.getenv('USER_PERMISSIONS_FEATURES_API_KEYS', 'False').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_MEMORIES = os.getenv('USER_PERMISSIONS_FEATURES_MEMORIES', 'True').lower() == 'true'
+
+USER_PERMISSIONS_FEATURES_SUBAGENTS = os.getenv('USER_PERMISSIONS_FEATURES_SUBAGENTS', 'True').lower() == 'true'
 
 USER_PERMISSIONS_FEATURES_AUTOMATIONS = os.getenv('USER_PERMISSIONS_FEATURES_AUTOMATIONS', 'False').lower() == 'true'
 
@@ -2046,12 +2052,13 @@ DEFAULT_USER_PERMISSIONS = {
         'folders': USER_PERMISSIONS_FEATURES_FOLDERS,
         'channels': USER_PERMISSIONS_FEATURES_CHANNELS,
         'encrypted_channels': USER_PERMISSIONS_FEATURES_ENCRYPTED_CHANNELS,
-        'direct_tool_servers': USER_PERMISSIONS_FEATURES_DIRECT_TOOL_SERVERS,
         # Chat features
         'web_search': USER_PERMISSIONS_FEATURES_WEB_SEARCH,
         'image_generation': USER_PERMISSIONS_FEATURES_IMAGE_GENERATION,
+        'video_generation': USER_PERMISSIONS_FEATURES_VIDEO_GENERATION,
         'code_interpreter': USER_PERMISSIONS_FEATURES_CODE_INTERPRETER,
         'memories': USER_PERMISSIONS_FEATURES_MEMORIES,
+        'subagents': USER_PERMISSIONS_FEATURES_SUBAGENTS,
         'automations': USER_PERMISSIONS_FEATURES_AUTOMATIONS,
         'calendar': USER_PERMISSIONS_FEATURES_CALENDAR,
         'webhooks': USER_PERMISSIONS_FEATURES_USER_WEBHOOKS,
@@ -2282,6 +2289,8 @@ CONTEXT_COMPACTION_RETENTION_PERCENTAGE = min(
 )
 
 CONTEXT_COMPACTION_PROMPT_TEMPLATE = os.getenv('CONTEXT_COMPACTION_PROMPT_TEMPLATE', '')
+
+VISUALIZATION_PROMPT_TEMPLATE = os.getenv('VISUALIZATION_PROMPT_TEMPLATE', '')
 
 ENABLE_TOOL_SEARCH = os.getenv('ENABLE_TOOL_SEARCH', 'False').lower() == 'true'
 TOOL_SEARCH_ENGINE = os.getenv('TOOL_SEARCH_ENGINE', 'bm25')
@@ -2962,8 +2971,6 @@ DEFAULT_CONFIG = {
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
-    'direct.enable': ENABLE_DIRECT_CONNECTIONS,
-    'direct.integrations.enable': ENABLE_DIRECT_INTEGRATIONS,
     'ollama.enable': ENABLE_OLLAMA_API,
     'ollama.base_urls': OLLAMA_BASE_URLS,
     'ollama.api_configs': OLLAMA_API_CONFIGS,
@@ -3173,6 +3180,7 @@ DEFAULT_CONFIG = {
     'image_generation.size': IMAGE_SIZE,
     'image_generation.steps': IMAGE_STEPS,
     'image_generation.prompt.enable': ENABLE_IMAGE_PROMPT_GENERATION,
+    'image_generation.default_model': '',
     'image_generation.automatic1111.base_url': AUTOMATIC1111_BASE_URL,
     'image_generation.automatic1111.api_auth': AUTOMATIC1111_API_AUTH,
     'image_generation.automatic1111.api_params': AUTOMATIC1111_PARAMS,
@@ -3190,6 +3198,9 @@ DEFAULT_CONFIG = {
     'images.edit.enable': ENABLE_IMAGE_EDIT,
     'images.edit.engine': IMAGE_EDIT_ENGINE,
     'images.edit.model': IMAGE_EDIT_MODEL,
+    'images.edit.default_model': '',
+    'video_generation.enable': ENABLE_VIDEO_GENERATION,
+    'video_generation.default_model': '',
     'images.edit.size': IMAGE_EDIT_SIZE,
     'images.edit.openai.api_base_url': IMAGES_EDIT_OPENAI_API_BASE_URL,
     'images.edit.openai.api_version': IMAGES_EDIT_OPENAI_API_VERSION,
@@ -3302,6 +3313,7 @@ DEFAULT_CONFIG = {
     'chat.context_compaction.token_cap': CONTEXT_COMPACTION_TOKEN_CAP,
     'chat.context_compaction.retention_percentage': CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     'chat.context_compaction.prompt_template': CONTEXT_COMPACTION_PROMPT_TEMPLATE,
+    'chat.visualizations.prompt_template': VISUALIZATION_PROMPT_TEMPLATE,
     'chat.tool_permissions.enable': ENABLE_TOOL_PERMISSIONS,
     'chat.tool_call_labels.enable': ENABLE_TOOL_CALL_LABELS,
     'chat.tool_permissions.auto.enable': ENABLE_TOOL_PERMISSIONS_AUTO,

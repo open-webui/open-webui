@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, afterUpdate } from 'svelte';
+	import { getContext, afterUpdate, tick } from 'svelte';
 	import type { GitFile } from '$lib/apis/terminal/git';
 	export let gitFile: GitFile | null = null;
 	export let gitDiffOpen = false;
@@ -25,6 +25,7 @@
 	export let onViewModeChange: (mode: 'grid' | 'list') => void = () => {};
 
 	export let onNavigate: (path: string) => void = () => {};
+	export let listFolders: ((path: string) => Promise<string[]>) | null = null;
 	export let onRefresh: () => void = () => {};
 	export let showSearch = false;
 	export let onToggleSearch: (() => void) | null = null;
@@ -56,6 +57,63 @@
 	let uploadInput: HTMLInputElement;
 	let breadcrumbEl: HTMLDivElement;
 
+	let typingPath = false;
+	let pathInput: HTMLInputElement;
+
+	const openPathInput = async () => {
+		typingPath = true;
+		completions = null;
+		await tick();
+		pathInput?.select();
+	};
+
+	// Absolute folder path for typed text: relative to the current folder, '..' and '.' collapsed
+	const resolve = (text: string) => {
+		let path = text.trim().replace(/\\/g, '/');
+		if (!/^([a-z]:|\/)/i.test(path)) path = breadcrumbs.at(-1)?.path + path;
+
+		const drive = path.match(/^[a-z]:/i)?.[0] ?? '';
+		const parts: string[] = [];
+		for (const part of path.slice(drive.length).split('/')) {
+			if (part === '..') parts.pop();
+			else if (part && part !== '.') parts.push(part);
+		}
+		return `${drive}/${parts.map((part) => `${part}/`).join('')}`;
+	};
+
+	const goToPath = () => {
+		typingPath = false;
+		if (pathInput.value.trim()) onNavigate(resolve(pathInput.value));
+	};
+
+	// Tab / Shift+Tab cycle through the folders matching the last name typed
+	let completions: { dir: string; names: string[]; index: number } | null = null;
+
+	const completePath = async (step: 1 | -1) => {
+		if (!listFolders) return;
+		const text = pathInput.value;
+
+		if (completions && text === completions.dir + completions.names[completions.index]) {
+			const count = completions.names.length;
+			completions.index = (completions.index + step + count) % count;
+		} else {
+			const split = Math.max(text.lastIndexOf('/'), text.lastIndexOf('\\')) + 1;
+			const dir = text.slice(0, split);
+			const typed = text.slice(split).toLowerCase();
+
+			const names = (await listFolders(resolve(dir)))
+				.filter(
+					(name) =>
+						name.toLowerCase().startsWith(typed) && (typed.startsWith('.') || !name.startsWith('.'))
+				)
+				.sort((a, b) => a.localeCompare(b));
+			if (!typingPath || pathInput.value !== text || !names.length) return;
+
+			completions = { dir, names, index: step === 1 ? 0 : names.length - 1 };
+		}
+		pathInput.value = completions.dir + completions.names[completions.index];
+	};
+
 	const showSeparator = (index: number) =>
 		index > 0 && (breadcrumbs[0]?.label !== '/' || index > 1);
 
@@ -65,8 +123,15 @@
 	});
 </script>
 
+<!-- Close on any press outside: the file list cancels pointerdown, so blur alone never fires there -->
+<svelte:window
+	on:pointerdown|capture={(e) => {
+		if (typingPath && e.target !== pathInput) typingPath = false;
+	}}
+/>
+
 <div
-	class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-50 dark:border-gray-850/30"
+	class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-200/40 dark:border-gray-850/20"
 >
 	<div class="flex shrink-0 items-center gap-0.5 px-1">
 		<!-- Back -->
@@ -100,9 +165,45 @@
 		</Tooltip>
 	</div>
 
+	{#if typingPath}
+		<input
+			bind:this={pathInput}
+			value={selectedFile ?? breadcrumbs.at(-1)?.path ?? ''}
+			readonly={!!selectedFile}
+			class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden dark:text-gray-200"
+			aria-label={$i18n.t('Path')}
+			on:keydown={(e) => {
+				if (selectedFile && e.key !== 'Escape') return;
+				if (e.key === 'Enter' && !e.isComposing) {
+					goToPath();
+				} else if (e.key === 'Tab' && listFolders) {
+					e.preventDefault();
+					completePath(e.shiftKey ? -1 : 1);
+				} else if (e.key === 'Escape') {
+					e.preventDefault();
+					e.stopPropagation();
+					typingPath = false;
+				}
+			}}
+			on:blur={() => (typingPath = false)}
+		/>
+	{/if}
 	<div
 		bind:this={breadcrumbEl}
-		class="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-none"
+		class="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-none cursor-text"
+		class:hidden={typingPath}
+		role="textbox"
+		tabindex="0"
+		aria-label={$i18n.t('Path')}
+		on:click={(e) => {
+			if (!(e.target as Element).closest('button')) openPathInput();
+		}}
+		on:keydown={(e) => {
+			if (e.target === e.currentTarget && e.key === 'Enter') {
+				e.preventDefault();
+				openPathInput();
+			}
+		}}
 	>
 		{#each breadcrumbs as crumb, i}
 			{#if showSeparator(i)}

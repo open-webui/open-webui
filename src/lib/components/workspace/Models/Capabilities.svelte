@@ -33,6 +33,11 @@
 			description: $i18n.t('settings.admin.models.capabilities.imageGeneration.description'),
 			enabled: $config?.features?.enable_image_generation
 		},
+		video_generation: {
+			label: $i18n.t('settings.admin.models.capabilities.videoGeneration.label'),
+			description: $i18n.t('settings.admin.models.capabilities.videoGeneration.description'),
+			enabled: $config?.features?.enable_video_generation
+		},
 		code_interpreter: {
 			label: $i18n.t('settings.admin.models.capabilities.codeInterpreter.label'),
 			description: $i18n.t('settings.admin.models.capabilities.codeInterpreter.description'),
@@ -77,9 +82,13 @@
 	export let defaultFeatureIds: string[] = [];
 	export let builtinTools: Record<string, boolean> = {};
 	export let disabled = false;
-	const featureKeys = ['web_search', 'image_generation', 'code_interpreter'] as const;
-	$: hasTerminal =
-		$config?.features?.enable_terminal_servers || $config?.features?.enable_direct_integrations;
+	const featureKeys = [
+		'web_search',
+		'image_generation',
+		'video_generation',
+		'code_interpreter'
+	] as const;
+	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
 	$: availableCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
 		(key) =>
 			(key !== 'file_context' || capabilities.file_upload) &&
@@ -100,9 +109,7 @@
 	{#if availableCapabilities.some((key) => $visibleControls[`model_editor.capabilities.${key}`])}
 		<ModelSettingsSection
 			label={$i18n.t('settings.admin.models.capabilities.title')}
-			description={$i18n.t(
-				'Choose which features are available for this model. The connected model and provider must support them.'
-			)}
+			description={$i18n.t('Choose which features are available for this model.')}
 		>
 			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
 				<span class="min-w-0 truncate"

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { models, pinnedModels, settings, user } from '$lib/stores';
+	import { pinnedModels, settings, user } from '$lib/stores';
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Selector from './ModelSelector/Selector.svelte';
@@ -7,6 +7,9 @@
 	import { updateUserSettings } from '$lib/apis/users';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 	import equal from 'fast-deep-equal';
+	import { getChatContext } from '$lib/components/chat/context';
+	const { models } = getChatContext();
+
 	const i18n = getContext('i18n');
 
 	export let selectedModels = [''];
@@ -57,7 +60,20 @@
 		}
 	}
 
-	$: if (selectedModels.length > 1 && !compareModels) {
+	$: canCompare =
+		multipleEnabled &&
+		($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true));
+
+	$: if (!canCompare && (compareModels || selectedModels.length > 1)) {
+		compareModels = false;
+
+		if (selectedModels.length > 1) {
+			selectedModels = [selectedModels[0]];
+			onModelSelect(selectedModels);
+		}
+	}
+
+	$: if (canCompare && selectedModels.length > 1 && !compareModels) {
 		compareModels = true;
 	}
 </script>
@@ -82,8 +98,7 @@
 					{align}
 					{showSetDefault}
 					onSetDefault={saveDefaultModel}
-					multipleEnabled={multipleEnabled &&
-						($user?.role === 'admin' || ($user?.permissions?.chat?.multiple_models ?? true))}
+					multipleEnabled={canCompare}
 					{disabled}
 					bind:compareEnabled={compareModels}
 					bind:values={selectedModels}

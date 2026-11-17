@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
+	import type { WorkBook } from 'xlsx';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import {
 		excelToTable,
+		SheetTooLargeError,
 		parseSpreadsheetPaste,
 		type ExcelWorkbookEditor,
 		type CellEdit,
@@ -14,9 +16,9 @@
 	} from '$lib/utils/excelToTable';
 	import { copyToClipboard } from '$lib/utils';
 
-	export let html: string;
-	export let sheetNames: string[] = [];
+	export let workbook: WorkBook;
 	export let selectedSheet = '';
+	export let rowCount = 0;
 	export let onSheetChange: ((sheet: string) => void) | null = null;
 	export let editor: ExcelWorkbookEditor | null = null;
 	export let onDirtyChange: (dirty: boolean) => void = () => {};
@@ -30,7 +32,10 @@
 	let editStart = '';
 	let renderedSheet = '';
 	let restoreAddress = '';
-	let renderVersion = 0;
+	let html = '';
+	let refreshedHtml: string | null = null;
+	let oversizedRange: string | null = null;
+	let pendingDraft: { address: string; text: string } | null = null;
 	const i18n: any = getContext('i18n');
 	const t = (value: string) => $i18n.t(value);
 	type Cell = GridCell & { element: HTMLTableCellElement };
@@ -103,10 +108,15 @@
 	$: (editor, saving, notifyChange());
 	export const captureEdit = () =>
 		input && editingCell ? { address: editingCell.address, text: input.value } : null;
-	export async function restoreEdit(draft: { address: string; text: string } | null) {
-		await tick();
-		if (!draft) return;
-		const cell = cells.find((cell) => cell.address === draft.address);
+	export function restoreEdit(draft: { address: string; text: string } | null) {
+		pendingDraft = draft;
+		// Otherwise the pending grid refresh applies it once the new cells exist.
+		if (refreshedHtml === html) applyPendingDraft();
+	}
+	function applyPendingDraft() {
+		const draft = pendingDraft;
+		pendingDraft = null;
+		const cell = draft && cells.find((cell) => cell.address === draft.address);
 		if (cell) startEdit(cell, draft.text);
 	}
 	function notifyChange() {
@@ -115,27 +125,36 @@
 		canRedo = !!editor?.canRedo;
 		onDirtyChange(changed);
 	}
-	async function renderEdits() {
-		if (!editor) return;
-		const version = ++renderVersion;
-		const sheet = selectedSheet;
-		let result;
+	$: renderSheet(editor?.workbook ?? workbook, selectedSheet);
+	function renderSheet(book: WorkBook, sheet: string) {
+		const worksheet = book.Sheets[sheet];
 		try {
-			result = await excelToTable(editor.workbook.Sheets[sheet]);
+			const result = worksheet ? excelToTable(worksheet) : { html: '', rowCount: 0 };
+			html = result.html;
+			rowCount = result.rowCount;
+			oversizedRange = null;
 		} catch (error) {
-			status = String(error);
-			return;
+			html = '';
+			rowCount = error instanceof SheetTooLargeError ? error.rowCount : 0;
+			oversizedRange = error instanceof SheetTooLargeError ? error.usedRange : null;
+			if (oversizedRange === null) status = String(error).replace(/^Error: /, '');
 		}
-		if (version !== renderVersion || sheet !== selectedSheet) return;
+	}
+	function renderEdits() {
+		if (!editor) return;
 		restoreAddress = focus?.address ?? '';
-		html = result.html;
+		renderSheet(editor.workbook, selectedSheet);
+	}
+	function changeSheet(sheet: string) {
+		selectedSheet = sheet;
+		onSheetChange?.(sheet);
 	}
 	function applyEdits(edits: CellEdit[]) {
 		if (!editor || saving) return false;
 		try {
 			editor.apply(selectedSheet, edits);
 			notifyChange();
-			void renderEdits();
+			renderEdits();
 			return true;
 		} catch (error) {
 			status = String(error).replace(/^Error: /, '');
@@ -225,7 +244,7 @@
 		if (redo) editor.redo();
 		else editor.undo();
 		notifyChange();
-		void renderEdits();
+		renderEdits();
 	}
 	async function saveWorkbook() {
 		if (!flushEdit() || !onSave || saving) return;
@@ -520,9 +539,9 @@
 		}
 		const sheet = (match[1]?.replace(/''/g, "'") ?? match[2]) || selectedSheet;
 		const target = `${match[3].toUpperCase()}${match[4]}`;
-		if (sheet !== selectedSheet && sheetNames.includes(sheet)) {
+		if (sheet !== selectedSheet && workbook.SheetNames.includes(sheet)) {
 			pendingLink = target;
-			onSheetChange?.(sheet);
+			changeSheet(sheet);
 		} else {
 			const cell = cells.find((c) => c.address === target);
 			if (cell) select(cell);
@@ -674,7 +693,9 @@
 			pendingLink = '';
 			restoreAddress = '';
 			renderedSheet = selectedSheet;
+			refreshedHtml = html;
 			notifyChange();
+			applyPendingDraft();
 		}
 		node.addEventListener('scroll', scroll, { passive: true });
 		node.addEventListener('pointerdown', pointerDown);
@@ -771,10 +792,25 @@
 			>
 		</div>
 	{/if}
-	<div bind:this={viewport} use:grid={html} class="excel-viewport">{@html html}</div>
+	{#if oversizedRange !== null}
+		<p
+			class="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+		>
+			<!-- {$i18n.t('This sheet is too large to preview. Download it to view all cells.')} -->
+			{t('This sheet is too large to preview. Download it to view all cells.')}
+		</p>
+	{/if}
+	<div
+		bind:this={viewport}
+		use:grid={html}
+		class="excel-viewport"
+		style:display={oversizedRange === null ? null : 'none'}
+	>
+		{@html html}
+	</div>
 	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
 		<div class="excel-tabs scrollbar-none" role="tablist" aria-label={t('Worksheets')}>
-			{#each sheetNames as name}<button
+			{#each workbook.SheetNames as name}<button
 					type="button"
 					role="tab"
 					aria-selected={selectedSheet === name}
@@ -783,7 +819,7 @@
 						: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
 					disabled={saving}
 					on:click={() => {
-						if (flushEdit()) onSheetChange?.(name);
+						if (flushEdit()) changeSheet(name);
 					}}>{name}</button
 				>{/each}
 		</div>
@@ -792,7 +828,10 @@
 			role="status"
 			title={status}
 			aria-live="polite"
-			>{status || (usedRange ? `${t('Used range')}: ${usedRange}` : t('Empty sheet'))}</span
+			>{status ||
+				((oversizedRange ?? usedRange)
+					? `${t('Used range')}: ${oversizedRange ?? usedRange}`
+					: t('Empty sheet'))}</span
 		>
 		<div class="flex shrink-0 items-center gap-0.5 text-gray-500 dark:text-gray-400">
 			{#if editor}

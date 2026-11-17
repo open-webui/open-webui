@@ -10,7 +10,7 @@ from typing import List, Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_KNOWLEDGE_FILE_RETENTION,
@@ -33,7 +33,12 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.models import ModelForm, Models
-from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.external import (
+    get_vector_store_ids,
+    list_openai_vector_stores,
+    retrieve_external_knowledge,
+    retrieve_external_knowledge_for_connection,
+)
 from open_webui.retrieval.utils import is_media_content_type
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
@@ -562,8 +567,15 @@ class ExternalKnowledgeConnectionListResponse(BaseModel):
     total: int
 
 
+class ExternalKnowledgeStoreListForm(BaseModel):
+    connection_id: Optional[str] = None
+    connection: ExternalKnowledgeConnectionForm
+
+
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
-EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector'}
+EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector', 'openai'}
+# Providers that search server-side by text, so a source needs no field mapping.
+EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS = {'openai'}
 
 
 def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeConnectionForm) -> tuple[str, dict]:
@@ -584,8 +596,16 @@ def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeCon
     allowed_config_keys = {'timeout'}
     if provider == 'milvus':
         allowed_config_keys.add('db_name')
+    normalized = {key: value for key, value in config.items() if key in allowed_config_keys}
 
-    return provider, {key: value for key, value in config.items() if key in allowed_config_keys}
+    # Like model_ids on provider connections: a store_ids list (empty means all) lists the stores as
+    # knowledge bases, readable by whoever access_grants allows.
+    if provider in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS and isinstance(config.get('store_ids'), list):
+        normalized['store_ids'] = list(dict.fromkeys(str(i).strip() for i in config['store_ids'] if str(i).strip()))
+        access_grants = config.get('access_grants')
+        normalized['access_grants'] = access_grants if isinstance(access_grants, list) else []
+
+    return provider, normalized
 
 
 def _get_external_auth_config(provider: str, incoming: Optional[dict], existing: Optional[dict] = None) -> dict:
@@ -602,6 +622,14 @@ def _get_normalized_external_source(source: ExternalKnowledgeSourceForm, provide
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Only collection sources are supported.')
     if not source.name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Collection name is required.')
+
+    if provider in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS:
+        vector_store_ids = get_vector_store_ids(source.model_dump())
+        if not vector_store_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Vector store ID is required.')
+        source.name = ', '.join(vector_store_ids)
+        source.config = {'vector_store_ids': vector_store_ids}
+        return source
 
     config = source.config or {}
     allowed_keys = {'content_field', 'metadata_field', 'document_id_field'}
@@ -828,17 +856,7 @@ async def _get_external_source_test_result(
         user_id=user.id,
         name=connection.get('name'),
         description='',
-        meta={
-            'source': 'external',
-            'read_only': True,
-            'external': {
-                'connection_id': connection.get('id'),
-                'source': source.model_dump(),
-                'provider': connection.get('provider'),
-                'auth_mode': 'service_account',
-                'capabilities': {'retrieve': True},
-            },
-        },
+        meta=_get_external_knowledge_meta(connection, source),
         access_grants=[],
         created_at=int(time.time()),
         updated_at=int(time.time()),
@@ -897,6 +915,45 @@ async def test_external_knowledge_retrieval(
     return await _get_external_source_test_result(request, connection, source, form_data.query, form_data.count, user)
 
 
+@router.post('/external/source/stores', response_model=dict)
+async def list_external_knowledge_stores(
+    form_data: ExternalKnowledgeStoreListForm,
+    user=Depends(get_admin_user),
+):
+    if form_data.connection_id:
+        existing_connection = await _get_external_connection_by_id(form_data.connection_id)
+        if not existing_connection:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='External connection not found.')
+        connection = _get_external_connection_update_from_form(form_data.connection, existing_connection)
+    else:
+        connection = _get_external_connection_from_form(form_data.connection, user.id, id='external-test')
+
+    if connection['provider'] not in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Listing is only supported for OpenAI-compatible sources.',
+        )
+
+    try:
+        return {'items': await list_openai_vector_stores(connection)}
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+def _get_external_knowledge_meta(connection: dict, source: ExternalKnowledgeSourceForm) -> dict:
+    return {
+        'source': 'external',
+        'read_only': True,
+        'external': {
+            'connection_id': connection.get('id'),
+            'source': source.model_dump(),
+            'provider': connection.get('provider'),
+            'auth_mode': 'service_account',
+            'capabilities': {'retrieve': True},
+        },
+    }
+
+
 @router.post('/external/knowledge/create', response_model=KnowledgeResponse | None)
 async def create_external_knowledge(
     request: Request,
@@ -931,17 +988,7 @@ async def create_external_knowledge(
     if not knowledge:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.FILE_EXISTS)
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': form_data.connection_id,
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     knowledge = await Knowledges.update_knowledge_meta_by_id(knowledge.id, meta, db=db)
     await embed_knowledge_base_metadata(request, knowledge.id, knowledge.name, knowledge.description)
     return knowledge
@@ -996,17 +1043,7 @@ async def create_external_knowledge_source(
         await _set_external_connections(connections)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.FILE_EXISTS)
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': connection.get('id'),
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     knowledge = await Knowledges.update_knowledge_meta_by_id(knowledge.id, meta, db=db)
     await embed_knowledge_base_metadata(request, knowledge.id, knowledge.name, knowledge.description)
     return knowledge
@@ -1063,17 +1100,7 @@ async def update_external_knowledge_source(
         await _set_external_connections(connections)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
 
-    meta = {
-        'source': 'external',
-        'read_only': True,
-        'external': {
-            'connection_id': connection.get('id'),
-            'source': source.model_dump(),
-            'provider': connection.get('provider'),
-            'auth_mode': 'service_account',
-            'capabilities': {'retrieve': True},
-        },
-    }
+    meta = _get_external_knowledge_meta(connection, source)
     updated = await Knowledges.update_knowledge_meta_by_id(id, meta, db=db)
     if not updated:
         connections[idx] = existing_connection
@@ -2274,24 +2301,26 @@ async def export_knowledge_by_id(id: str, user=Depends(get_admin_user), db: Asyn
 
     # Create zip file in memory
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for file in files:
-            content = file.data.get('content', '') if file.data else ''
-            if content:
-                # Use original filename with .txt extension
-                filename = file.filename
-                if not filename.endswith('.txt'):
-                    filename = f'{filename}.txt'
-                zf.writestr(filename, content)
 
-    zip_buffer.seek(0)
+    def write_zip():
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for file in files:
+                content = file.data.get('content', '') if file.data else ''
+                if content:
+                    # Use original filename with .txt extension
+                    filename = file.filename
+                    if not filename.endswith('.txt'):
+                        filename = f'{filename}.txt'
+                    zf.writestr(filename, content)
+
+    await asyncio.to_thread(write_zip)
 
     # Sanitize knowledge name for filename
     safe_name = ''.join(c if c.isalnum() or c in ' -_' else '_' for c in knowledge.name)
     zip_filename = f'{safe_name}.zip'
 
-    return StreamingResponse(
-        zip_buffer,
+    return Response(
+        content=zip_buffer.getvalue(),
         media_type='application/zip',
         headers={'Content-Disposition': f"attachment; filename*=UTF-8''{quote(zip_filename, safe='')}"},
     )

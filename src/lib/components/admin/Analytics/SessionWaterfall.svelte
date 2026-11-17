@@ -5,6 +5,7 @@
 
 	export let items: TraceItem[];
 	export let page: number;
+	export let modelNames: Record<string, string> = {};
 	export let label: (item: TraceItem) => string;
 	export let status: (item: TraceItem) => string;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
@@ -69,6 +70,7 @@
 				<span></span>
 				<div class="flex justify-between">
 					{#if sequence}
+						<!-- {$i18n.t('Saved order')} -->
 						<span>1</span><span>{$i18n.t('Saved order')}</span><span>{bars.length}</span>
 					{:else}
 						<span>0s</span><span>{duration(span / 2)}</span><span>{duration(span)}</span>
@@ -83,7 +85,7 @@
 					class="grid grid-cols-[6rem_minmax(0,1fr)_3rem] sm:grid-cols-[10rem_minmax(0,1fr)_3.5rem] gap-x-2 items-center min-h-7 text-[0.6875rem]"
 					title={sequence
 						? lane.name
-						: `${item.model_id || ''} · ${label(item)} · ${status(item)}${waterfall ? ` · ${duration(item.started_at! - start)}–${duration(item.ended_at! - start)}` : ''}`}
+						: `${modelNames[item.model_id || ''] || item.model_id || ''} · ${label(item)} · ${status(item)}${waterfall ? ` · ${duration(item.started_at! - start)}–${duration(item.ended_at! - start)}` : ''}`}
 				>
 					<span class="truncate"
 						>{lane.name}{!sequence && item.status === 'failed' ? ` · ${status(item)}` : ''}</span
@@ -107,7 +109,7 @@
 									? `min(0.5rem, ${80 / bars.length}%)`
 									: `${span > 0 ? (100 * elapsed(item)) / span : 0}%`}
 								title={sequence
-									? `#${entry.index + 1} · ${entry.item.model_id || ''} · ${status(entry.item)}`
+									? `#${entry.index + 1} · ${modelNames[entry.item.model_id || ''] || entry.item.model_id || ''} · ${status(entry.item)}`
 									: undefined}
 								style:background={entry.item.model_id
 									? modelColor(entry.item.model_id)

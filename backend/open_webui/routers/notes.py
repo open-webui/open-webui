@@ -566,8 +566,8 @@ async def update_note_by_id(
             event_data['data'] = note.data
 
         await sio.emit(
-            'events:note',
-            event_data,
+            'events',
+            {'data': {'type': 'note:updated', 'data': event_data}},
             to=f'note:{note.id}',
         )
 

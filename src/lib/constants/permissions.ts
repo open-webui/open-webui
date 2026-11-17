@@ -67,11 +67,12 @@ export const DEFAULT_PERMISSIONS = {
 		channels: true,
 		encrypted_channels: false,
 		folders: true,
-		direct_tool_servers: false,
 		web_search: true,
 		image_generation: true,
+		video_generation: false,
 		code_interpreter: true,
 		memories: true,
+		subagents: true,
 		automations: false,
 		calendar: true,
 		webhooks: false

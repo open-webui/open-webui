@@ -1,0 +1,76 @@
+<script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { url: pageUrl, tab: pageTab } = getPageContext();
+
+	import { onMount, getContext } from 'svelte';
+	import { WEBUI_NAME, showSidebar, functions, mobile } from '$lib/stores';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Sidebar from '$lib/components/icons/Sidebar.svelte';
+
+	const i18n = getContext('i18n');
+
+	onMount(async () => {});
+	import PageTitle from '$lib/components/common/PageTitle.svelte';
+</script>
+
+<!-- LICENSE covers this Open WebUI browser-title identifier.
+	Do not alter, remove, obscure, or replace it except as LICENSE permits:
+	https://docs.openwebui.com/license. -->
+<PageTitle title={$i18n.t('Home') + ' / ' + $WEBUI_NAME} />
+
+<div
+	class=" flex flex-col w-full h-full max-h-full transition-width duration-200 ease-in-out {$showSidebar &&
+	!pageTab
+		? 'md:max-w-[calc(100%-var(--sidebar-width))]'
+		: ''} max-w-full"
+>
+	<nav class="px-1.5 md:px-2.5 w-full drag-region">
+		<div class=" flex items-center">
+			{#if $mobile && !pageTab}
+				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center self-start">
+					<Tooltip
+						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+						interactive={true}
+					>
+						<button
+							id="sidebar-toggle-button"
+							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							on:click={() => {
+								showSidebar.set(!$showSidebar);
+							}}
+						>
+							<div class=" self-center p-1.5">
+								<Sidebar className="size-4" />
+							</div>
+						</button>
+					</Tooltip>
+				</div>
+			{/if}
+
+			<div class=" flex w-full">
+				<div
+					class="flex gap-0.5 md:gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent pt-1"
+				>
+					<a
+						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/home/notes')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground/notes">{$i18n.t('Notes')}</a
+					>
+
+					<a
+						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/playground/calendar')
+							? ''
+							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+						href="/playground/completions">{$i18n.t('Calendar')}</a
+					>
+				</div>
+			</div>
+		</div>
+	</nav>
+
+	<div class=" flex-1 max-h-full overflow-y-auto">
+		<slot />
+	</div>
+</div>

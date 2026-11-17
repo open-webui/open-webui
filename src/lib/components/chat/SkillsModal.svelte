@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { getContext } from 'svelte';
-	import { skills, terminalSkills } from '$lib/stores';
+	import type { Writable } from 'svelte/store';
+	import { skills } from '$lib/stores';
 
 	import Modal from '../common/Modal.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+
+	export let terminalSkills: Writable<any[]>;
 
 	export let show = false;
 	export let selectedSkillIds = [];

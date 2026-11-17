@@ -6,6 +6,7 @@
 
 	import { slide } from 'svelte/transition';
 	import { page } from '$app/stores';
+	import { getPageContext } from '$lib/utils/page';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -24,6 +25,7 @@
 	import ChannelMenu from './ChannelMenu.svelte';
 
 	const i18n: any = getContext('i18n');
+	const { tab: pageTab } = getPageContext();
 
 	let showChannelPinnedMessagesModal = false;
 	let showChannelInfoModal = false;
@@ -67,16 +69,11 @@
 	<ChannelInfoModal bind:show={showChannelInfoModal} {channel} {onUpdate} />
 {/if}
 <nav
-	class="sticky top-0 z-30 w-full px-1.5 md:px-3 py-1 -mb-8 flex items-center drag-region flex-col"
+	class="sticky top-0 z-30 w-full shrink-0 px-1.5 md:px-3 pt-0.5 pb-1 flex items-center drag-region flex-col"
 >
-	<div
-		id="navbar-bg-gradient-to-b"
-		class=" bg-linear-to-b via-50% from-white via-white to-transparent dark:from-gray-900 dark:via-gray-900 dark:to-transparent pointer-events-none absolute inset-0 -bottom-7 z-[-1]"
-	></div>
-
-	<div class=" flex max-w-full w-full mx-auto pt-0.5 bg-transparent">
+	<div class=" flex max-w-full w-full mx-auto bg-transparent">
 		<div class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center w-full max-w-full">
-			{#if $mobile}
+			{#if $mobile && !pageTab}
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
@@ -88,7 +85,7 @@
 					>
 						<button
 							id="sidebar-toggle-button"
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							class="flex cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
@@ -103,7 +100,7 @@
 			{/if}
 
 			<div
-				class="col-start-2 row-start-1 min-w-0 overflow-hidden max-w-full py-0.5 flex items-center
+				class="col-start-2 row-start-1 min-w-0 overflow-hidden max-w-full flex items-center
 			{$showSidebar ? 'ml-1' : ''}
 			"
 			>
@@ -151,7 +148,7 @@
 						{/if}
 
 						<div
-							class=" min-w-0 truncate text-left text-sm leading-5 text-gray-700 dark:text-gray-300"
+							class="min-w-0 truncate text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
 						>
 							{#if channel?.name}
 								{channel.name}
@@ -174,7 +171,7 @@
 					{#if channel}
 						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
-								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 								aria-label={$i18n.t('Pinned Messages')}
 								type="button"
 								on:click={() => {
@@ -190,7 +187,7 @@
 						{#if channel?.user_count !== undefined}
 							<Tooltip content={$i18n.t('Users')}>
 								<button
-									class=" flex h-7 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+									class="flex h-6 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 									type="button"
 									on:click={() => {
 										showChannelInfoModal = true;
@@ -209,7 +206,7 @@
 						{/if}
 						<Tooltip content={$i18n.t('Search')}>
 							<button
-								class=" flex size-7 items-center justify-center cursor-pointer rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
 								aria-label={$i18n.t('Search')}
 								type="button"
 								on:click={() => {

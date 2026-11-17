@@ -13,8 +13,6 @@
 	import type { i18n as i18nType, t } from 'i18next';
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
-	const contextCompactions =
-		getContext<Writable<Record<string, 'in_progress' | { error: string }>>>('contextCompactions');
 
 	const dispatch = createEventDispatcher();
 
@@ -22,16 +20,7 @@
 	import { getChatById } from '$lib/apis/chats';
 	import { generateTags } from '$lib/apis';
 
-	import {
-		audioQueue,
-		config,
-		models,
-		settings,
-		temporaryChatEnabled,
-		TTSWorker,
-		user,
-		visibleControls
-	} from '$lib/stores';
+	import { config, settings, TTSWorker, user, visibleControls } from '$lib/stores';
 	import { synthesizeOpenAISpeech } from '$lib/apis/audio';
 	import { imageGenerations } from '$lib/apis/images';
 	import {
@@ -47,6 +36,7 @@
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
+	import { isTemporaryChatId } from '$lib/utils/chatId';
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
@@ -75,6 +65,9 @@
 	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { audioQueue, models } = getChatContext();
 
 	interface MessageType {
 		user_id?: string;
@@ -135,13 +128,19 @@
 	export let chatId = '';
 	export let history;
 	export let messageId;
-	$: compactionStatus = $contextCompactions?.[messageId];
+	$: compacting =
+		!message.done &&
+		(message.output ?? []).some(
+			(item) => item?.type === 'open_webui:context_compaction' && item.status === 'in_progress'
+		);
 	export let selectedModels = [];
 
 	let messageSource = history.messages[messageId];
 	let message: MessageType = structuredClone(messageSource);
-	$: canBranch =
-		!message.model?.startsWith('agent:') && !selectedModels.some((id) => id.startsWith('agent:'));
+	$: isAgent =
+		message.model?.startsWith('agent:') || selectedModels.some((id) => id.startsWith('agent:'));
+	// Agents regenerate on a fork of their own conversation; continuing or copying a reply has no turn to fork.
+	$: canBranch = !isAgent;
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
@@ -187,13 +186,14 @@
 
 	export let isLastMessage = true;
 	export let readOnly = false;
-	export let shareMode: 'continue' | null = null;
+	export let writeAccess = false;
 	export let allowDelete = true;
 	export let allowToolApproval: boolean = false;
 	export let compactPreview = false;
 	export let editCodeBlock = true;
 	export let topPadding = false;
 	export let onInsertToNote: ((content: string) => void) | null = null;
+	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
 	let citationsElement: HTMLDivElement;
 
@@ -730,7 +730,7 @@
 				</Name>
 			{/if}
 
-			{#if message.contextSummary && !compactionStatus}
+			{#if message.contextSummary}
 				<ContextCompactionLabel summary={message.contextSummary} {compactPreview} />
 			{/if}
 
@@ -741,15 +741,24 @@
 							<StatusHistory statusHistory={message?.statusHistory} />
 						{/if}
 
-						{#if message?.files && message.files?.filter( (f) => ['image', 'file'].includes(f.type) ).length > 0}
+						{#if message?.files && message.files?.filter( (f) => ['image', 'video', 'file'].includes(f.type) ).length > 0}
 							<div
 								class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap"
 								dir={$settings?.chatDirection ?? 'auto'}
 							>
-								{#each message.files.filter((f) => ['image', 'file'].includes(f.type)) as file}
+								{#each message.files.filter( (f) => ['image', 'video', 'file'].includes(f.type) ) as file}
 									<div>
 										{#if file.type === 'image' || (file?.content_type ?? '').startsWith('image/')}
 											<Image src={file.url} alt={file.name || $i18n.t('Generated Image')} />
+										{:else if file.type === 'video' || (file?.content_type ?? '').startsWith('video/')}
+											<!-- svelte-ignore a11y-media-has-caption -->
+											<video
+												src={file.url}
+												controls
+												preload="metadata"
+												class="max-h-96 max-w-full rounded-xl"
+												aria-label={file.name || $i18n.t('Generated Video')}
+											></video>
 										{:else}
 											<FileItem
 												item={file}
@@ -823,14 +832,18 @@
 										}}
 										on:keydown={(e) => {
 											if (e.key === 'Escape') {
-												document.getElementById('close-edit-message-button')?.click();
+												cancelEditMessage();
 											}
 
 											const isCmdOrCtrlPressed = e.metaKey || e.ctrlKey;
 											const isEnterPressed = e.key === 'Enter';
 
-											if (isCmdOrCtrlPressed && isEnterPressed) {
-												document.getElementById('confirm-edit-message-button')?.click();
+											if (
+												isCmdOrCtrlPressed &&
+												isEnterPressed &&
+												(!message.user_id || message.user_id === $user?.id)
+											) {
+												editMessageConfirmHandler();
 											}
 										}}
 									></textarea>
@@ -883,21 +896,23 @@
 							class="w-full flex flex-col relative {edit ? 'hidden' : ''}"
 							id="response-content-container"
 						>
-							{#if hasResponseContent && message.error !== true}
+							{#if message.error !== true}
+								<!-- Mount before the first chunk so artifact detection can recognize new content. -->
 								<!-- always show message contents even if there's an error -->
 								<!-- unless message.error === true which is legacy error handling, where the error message is stored in message.content -->
 								<ContentRenderer
 									id={`${chatId}-${message.id}`}
 									{chatId}
+									{onOpenArtifacts}
 									messageId={message.id}
-									content={message.content}
+									content={message.content ?? ''}
 									output={message.output}
 									sources={message.sources}
 									floatingButtons={message?.done &&
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
 									save={(!readOnly && (!message.user_id || message.user_id === $user?.id)) ||
-										(shareMode === 'continue' && message.user_id === $user?.id)}
+										(writeAccess && message.user_id === $user?.id)}
 									preview={!readOnly}
 									{compactPreview}
 									editCodeBlock={!readOnly && editCodeBlock}
@@ -947,11 +962,7 @@
 								/>
 							{/if}
 
-							{#if compactionStatus}
-								<ContextCompactionLabel status={compactionStatus} {compactPreview} />
-							{/if}
-
-							{#if !compactionStatus && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
+							{#if !compacting && !message.done && !message.error && (hasResponseContent || !hasVisibleStatus)}
 								<div class="text-[0.90625rem] leading-relaxed">
 									<span
 										class="inline-block w-[0.125rem] h-3.5 bg-gray-400 dark:bg-gray-500 ml-0.5 animate-cursor-pulse align-text-bottom"
@@ -1345,8 +1356,8 @@
 									</Tooltip>
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
-									{#if !readOnly && !$temporaryChatEnabled && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (writeAccess && message.user_id === $user?.id)}
+									{#if !readOnly && !isTemporaryChatId(chatId) && ($config?.features.enable_message_rating ?? true) && ($user?.role === 'admin' || ($user?.permissions?.chat?.rate_response ?? true))}
 										<Tooltip content={$i18n.t('Good Response')} placement="bottom">
 											<button
 												aria-label={$i18n.t('Good Response')}
@@ -1469,8 +1480,8 @@
 									{/if}
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || shareMode === 'continue'}
-									{#if canBranch && ($user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true))}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || writeAccess}
+									{#if $user?.role === 'admin' || ($user?.permissions?.chat?.regenerate_response ?? true)}
 										{#if $settings?.regenerateMenu ?? true}
 											<button
 												type="button"
@@ -1511,7 +1522,12 @@
 													});
 												}}
 											>
-												<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
+												<Tooltip
+													content={isAgent
+														? $i18n.t('Regenerate (file changes are not undone)')
+														: $i18n.t('Regenerate')}
+													placement="bottom"
+												>
 													<button
 														type="button"
 														aria-label={$i18n.t('Regenerate')}
@@ -1556,7 +1572,12 @@
 												</Tooltip>
 											</RegenerateMenu>
 										{:else}
-											<Tooltip content={$i18n.t('Regenerate')} placement="bottom">
+											<Tooltip
+												content={isAgent
+													? $i18n.t('Regenerate (file changes are not undone)')
+													: $i18n.t('Regenerate')}
+												placement="bottom"
+											>
 												<button
 													type="button"
 													aria-label={$i18n.t('Regenerate')}
@@ -1619,7 +1640,7 @@
 									{/if}
 								{/if}
 
-								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (shareMode === 'continue' && message.user_id === $user?.id)}
+								{#if (!readOnly && (!message.user_id || message.user_id === $user?.id)) || (writeAccess && message.user_id === $user?.id)}
 									{#each (!readOnly && model?.actions) || [] as action}
 										<Tooltip
 											content={resolveLocalizedFunction(

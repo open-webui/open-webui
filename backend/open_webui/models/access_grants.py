@@ -575,6 +575,13 @@ class AccessGrantsTable:
         - There's a grant for the specific user with the requested permission
         - There's a grant for any of the user's groups with the requested permission
         """
+        if resource_type == 'knowledge':
+            from open_webui.retrieval.external import has_virtual_knowledge_access, is_virtual_knowledge_id
+
+            # Knowledge listed from a connection takes the connection's access; it has no grant rows.
+            if is_virtual_knowledge_id(resource_id):
+                return await has_virtual_knowledge_access(user_id, resource_id, permission)
+
         async with get_async_db_context(db) as db:
             if user_group_ids is None:
                 from open_webui.models.groups import Groups

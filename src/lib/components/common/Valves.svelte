@@ -55,7 +55,9 @@
 							valves[property] = null;
 						}
 
-						dispatch('change');
+						if (valves[property] !== '') {
+							dispatch('change');
+						}
 					}}
 				>
 					{#if (valves[property] ?? null) === null}

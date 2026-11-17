@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import { page } from '$app/stores';
+	import { getPageContext } from '$lib/utils/page';
+	const { url: pageUrl } = getPageContext();
 	import { config, user, mobile } from '$lib/stores';
 	import { commentsRequest, type CommentResource, type ResourceComment } from '$lib/apis/comments';
 	import { toast } from 'svelte-sonner';
@@ -14,7 +15,7 @@
 	export let modal = false;
 	export let resourceType: CommentResource['resource_type'] | null = null;
 	const i18n = getContext<any>('i18n');
-	let currentUrl = $page.url.href;
+	let currentUrl = $pageUrl.href;
 	let account = $user?.id;
 	let deepLink = '';
 	let alive = true;
@@ -22,8 +23,8 @@
 		alive = false;
 	});
 	$: enabled = !!($config?.features?.enable_comments && $user);
-	$: if ($page.url.href !== currentUrl || $user?.id !== account) {
-		currentUrl = $page.url.href;
+	$: if ($pageUrl.href !== currentUrl || $user?.id !== account) {
+		currentUrl = $pageUrl.href;
 		account = $user?.id;
 		deepLink = '';
 		view = null;
@@ -53,11 +54,11 @@
 	$: if (
 		enabled &&
 		resourceType &&
-		$page.url.searchParams.get('comment') &&
+		$pageUrl.searchParams.get('comment') &&
 		deepLink !== currentUrl
 	) {
 		deepLink = currentUrl;
-		loadLink($page.url.searchParams.get('comment')!);
+		loadLink($pageUrl.searchParams.get('comment')!);
 	}
 </script>
 

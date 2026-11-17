@@ -4,14 +4,24 @@ import re
 import time
 from itertools import zip_longest
 from typing import Any, Optional
+from urllib.parse import quote
 
+import aiohttp
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL
 from open_webui.models.config import Config
 from open_webui.models.knowledge import KnowledgeModel
+from open_webui.utils.session_pool import get_session
 
 log = logging.getLogger(__name__)
 
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
+
+# OpenAI caps vector store search at 50 results and list pages at 100 stores.
+OPENAI_VECTOR_STORE_MAX_RESULTS = 50
+OPENAI_VECTOR_STORE_PAGE_SIZE = 100
+# Stops a server that always reports more pages; allows 10,000 stores.
+OPENAI_VECTOR_STORE_MAX_PAGES = 100
 
 
 async def _get_external_connection(connection_id: str) -> Optional[dict]:
@@ -291,6 +301,288 @@ async def _retrieve_pgvector(connection, auth_config, knowledge, query, count, e
     return [_normalize_result(row, mapping, knowledge, distance=row.get('distance')) for row in rows]
 
 
+async def _openai_vector_store_request(
+    connection: dict,
+    auth_config: Optional[dict],
+    method: str,
+    path: str,
+    params: Optional[dict] = None,
+    json: Optional[dict] = None,
+) -> dict:
+    """Call an OpenAI-compatible vector store API (OpenAI, LiteLLM, Azure OpenAI v1 at /openai/v1)."""
+    base_url = (connection.get('endpoint') or '').strip().rstrip('/')
+    if not base_url:
+        raise RuntimeError('Endpoint is not configured')
+
+    headers = {'Accept': 'application/json'}
+    api_key = (auth_config or {}).get('api_key')
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+
+    timeout = aiohttp.ClientTimeout(total=(connection.get('config') or {}).get('timeout') or 30)
+    session = await get_session()
+    try:
+        async with session.request(
+            method,
+            f'{base_url}{path}',
+            headers=headers,
+            params=params,
+            json=json,
+            timeout=timeout,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            if r.status >= 400:
+                detail = (await r.text())[:500]
+                raise RuntimeError(f'Vector store request failed ({r.status}): {detail}')
+            try:
+                data = await r.json(content_type=None)
+            except ValueError as exc:
+                raise RuntimeError(f'Vector store endpoint returned a non-JSON response ({r.status})') from exc
+    except aiohttp.ClientError as exc:
+        raise RuntimeError(f'Vector store request failed: {exc}') from exc
+
+    if not isinstance(data, dict):
+        raise RuntimeError('Vector store endpoint returned an unexpected response')
+    return data
+
+
+def get_vector_store_ids(source: dict) -> list[str]:
+    """Store IDs a text-search source covers; older sources keep a single ID in `name`."""
+    ids = (source.get('config') or {}).get('vector_store_ids')
+    if not isinstance(ids, list):
+        ids = (source.get('name') or '').split(',')
+    return list(dict.fromkeys(str(store_id).strip() for store_id in ids if str(store_id).strip()))
+
+
+async def _search_openai_vector_store(connection, auth_config, knowledge, vector_store_id, query, count) -> list[dict]:
+    data = await _openai_vector_store_request(
+        connection,
+        auth_config,
+        'POST',
+        f'/vector_stores/{quote(vector_store_id, safe="")}/search',
+        json={
+            'query': query,
+            'max_num_results': max(1, min(count, OPENAI_VECTOR_STORE_MAX_RESULTS)),
+        },
+    )
+
+    normalized = []
+    for item in data.get('data') or []:
+        if not isinstance(item, dict):
+            continue
+        content = '\n'.join(
+            part['text']
+            for part in item.get('content') or []
+            if isinstance(part, dict) and isinstance(part.get('text'), str) and part['text']
+        )
+        if not content:
+            continue
+        attributes = item.get('attributes') if isinstance(item.get('attributes'), dict) else {}
+        result = {
+            'content': content,
+            'title': item.get('filename'),
+            # Kept from the file's attributes, which _normalize_result would otherwise overwrite.
+            'url': attributes.get('url'),
+            'document_id': item.get('file_id'),
+            'metadata': attributes,
+            'score': item.get('score'),
+        }
+        normalized.append(_normalize_result(result, {}, knowledge, distance=item.get('score')))
+    return normalized[:count]
+
+
+async def _retrieve_openai(connection, auth_config, knowledge, query, count, embedding_function) -> list[dict]:
+    # The server embeds the query, so the Open WebUI embedding model is not involved.
+    source = (knowledge.meta or {}).get('external', {}).get('source') or {}
+    vector_store_ids = get_vector_store_ids(source)
+    if not vector_store_ids:
+        raise RuntimeError('Vector store ID is not configured')
+
+    results = await asyncio.gather(
+        *(
+            _search_openai_vector_store(connection, auth_config, knowledge, store_id, query, count)
+            for store_id in vector_store_ids
+        ),
+        return_exceptions=True,
+    )
+    # One unreachable store should not hide the others; fail only when every store failed.
+    failures = [result for result in results if isinstance(result, BaseException)]
+    for store_id, result in zip(vector_store_ids, results):
+        if isinstance(result, BaseException):
+            log.warning('Vector store %s search failed: %s', store_id, result)
+    if len(failures) == len(results):
+        raise failures[0]
+
+    # Stores may sit on different backends with incomparable scores, so interleave by rank.
+    merged = [
+        chunk
+        for chunks_at_rank in zip_longest(*(result for result in results if not isinstance(result, BaseException)))
+        for chunk in chunks_at_rank
+        if chunk
+    ]
+    return merged[:count]
+
+
+async def list_openai_vector_stores(connection: dict) -> list[dict]:
+    """List the vector stores a connection can search, as {id, name, description}.
+
+    LiteLLM's registry comes first since it covers every backend LiteLLM proxies; servers without
+    it (OpenAI, Azure) are listed through the OpenAI vector stores API.
+    """
+    auth_config = connection.get('auth_config') or {}
+
+    try:
+        data = await _openai_vector_store_request(
+            connection, auth_config, 'GET', '/vector_store/list', params={'page_size': 1000}
+        )
+        if isinstance(data.get('data'), list):
+            return [
+                {
+                    'id': item['vector_store_id'],
+                    'name': item.get('vector_store_name') or item['vector_store_id'],
+                    'description': item.get('vector_store_description') or '',
+                }
+                for item in data['data']
+                if isinstance(item, dict) and item.get('vector_store_id')
+            ]
+    except RuntimeError:
+        pass
+
+    stores = []
+    after = None
+    for _ in range(OPENAI_VECTOR_STORE_MAX_PAGES):
+        data = await _openai_vector_store_request(
+            connection,
+            auth_config,
+            'GET',
+            '/vector_stores',
+            params={'limit': OPENAI_VECTOR_STORE_PAGE_SIZE, **({'after': after} if after else {})},
+        )
+        items = [item for item in data.get('data') or [] if isinstance(item, dict) and item.get('id')]
+        stores.extend(
+            {
+                'id': item['id'],
+                'name': item.get('name') or item['id'],
+                'description': (
+                    item['metadata'].get('description') or '' if isinstance(item.get('metadata'), dict) else ''
+                ),
+            }
+            for item in items
+        )
+        if not data.get('has_more') or not items:
+            break
+        after = data.get('last_id') or items[-1]['id']
+    return stores
+
+
+# A connection with `config.store_ids` lists its stores as read-only knowledge bases, like `model_ids` on
+# provider connections: empty means every store the endpoint lists. The endpoint stays the source of
+# truth; nothing is copied into the database, so stores added or removed upstream show up on the next listing.
+
+VIRTUAL_KNOWLEDGE_PREFIX = 'ext:'
+STORE_LIST_CACHE_TTL = 60
+_store_list_cache: dict[str, tuple[float, Any, list[dict]]] = {}
+
+
+def is_virtual_knowledge_id(id: Any) -> bool:
+    return isinstance(id, str) and id.startswith(VIRTUAL_KNOWLEDGE_PREFIX)
+
+
+async def _get_connections_with_store_ids() -> list[dict]:
+    connections = await Config.get(EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY, []) or []
+    return [
+        connection
+        for connection in connections
+        if connection.get('enabled', True) and isinstance((connection.get('config') or {}).get('store_ids'), list)
+    ]
+
+
+async def _get_connection_stores(connection: dict) -> list[dict]:
+    """The connection's stores narrowed by Store IDs. The endpoint's list is cached briefly per
+    endpoint and key; a failed listing serves the last good one."""
+    cached = _store_list_cache.get(connection['id'])
+    # Only what reaches the endpoint keys the cache, so Store ID edits apply on the next read.
+    version = (connection.get('endpoint'), (connection.get('auth_config') or {}).get('api_key'))
+    if cached and cached[1] == version and time.monotonic() - cached[0] < STORE_LIST_CACHE_TTL:
+        stores = cached[2]
+    else:
+        try:
+            stores = await list_openai_vector_stores(connection)
+            _store_list_cache[connection['id']] = (time.monotonic(), version, stores)
+        except RuntimeError as e:
+            log.warning('Listing vector stores for connection %s failed: %s', connection['id'], e)
+            stores = cached[2] if cached and cached[1] == version else []
+
+    store_ids = (connection.get('config') or {}).get('store_ids') or []
+    return [store for store in stores if store['id'] in store_ids] if store_ids else stores
+
+
+def _to_virtual_knowledge(connection: dict, store: dict) -> KnowledgeModel:
+    return KnowledgeModel(
+        id=f'{VIRTUAL_KNOWLEDGE_PREFIX}{connection["id"]}:{store["id"]}',
+        # Owned by no one, so nobody gets owner rights; reading goes through the connection's access.
+        user_id='',
+        name=store['name'],
+        description=store.get('description') or '',
+        meta={
+            'source': 'external',
+            'read_only': True,
+            'external': {
+                'connection_id': connection['id'],
+                'source': {'type': 'collection', 'name': store['id'], 'config': {'vector_store_ids': [store['id']]}},
+                'provider': connection.get('provider'),
+                'auth_mode': 'service_account',
+                'capabilities': {'retrieve': True},
+            },
+        },
+        created_at=connection.get('created_at') or 0,
+        updated_at=connection.get('updated_at') or 0,
+    )
+
+
+async def _can_read_connection(user_id: str, connection: dict) -> bool:
+    from open_webui.models.users import Users
+    from open_webui.utils.access_control import has_connection_access
+
+    user = await Users.get_user_by_id(user_id)
+    return bool(user) and await has_connection_access(user, connection)
+
+
+async def _get_connection_for_virtual_knowledge(id: str) -> Optional[dict]:
+    connection_id = id[len(VIRTUAL_KNOWLEDGE_PREFIX) :].partition(':')[0]
+    return next((item for item in await _get_connections_with_store_ids() if item.get('id') == connection_id), None)
+
+
+async def get_virtual_knowledge(id: str) -> Optional[KnowledgeModel]:
+    connection = await _get_connection_for_virtual_knowledge(id)
+    if not connection:
+        return None
+    store_id = id[len(VIRTUAL_KNOWLEDGE_PREFIX) :].partition(':')[2]
+    store = next((store for store in await _get_connection_stores(connection) if store['id'] == store_id), None)
+    return _to_virtual_knowledge(connection, store) if store else None
+
+
+async def has_virtual_knowledge_access(user_id: str, id: str, permission: str = 'read') -> bool:
+    if permission != 'read':
+        return False
+    connection = await _get_connection_for_virtual_knowledge(id)
+    return bool(connection) and await _can_read_connection(user_id, connection)
+
+
+async def list_virtual_knowledge(user_id: Optional[str] = None, query: Optional[str] = None) -> list[KnowledgeModel]:
+    """Stores of every connection listing them that the user can read; no user_id means no filtering."""
+    query = (query or '').lower()
+    knowledge = []
+    for connection in await _get_connections_with_store_ids():
+        if user_id and not await _can_read_connection(user_id, connection):
+            continue
+        for store in await _get_connection_stores(connection):
+            item = _to_virtual_knowledge(connection, store)
+            if not query or query in f'{item.name} {item.description}'.lower():
+                knowledge.append(item)
+    return knowledge
+
+
 async def retrieve_external_knowledge(
     request,
     knowledge: KnowledgeModel,
@@ -330,6 +622,7 @@ async def retrieve_external_knowledge_for_connection(
         'qdrant': _retrieve_qdrant,
         'milvus': _retrieve_milvus,
         'pgvector': _retrieve_pgvector,
+        'openai': _retrieve_openai,
     }.get(provider)
     if not retrieve:
         raise RuntimeError(f'Unsupported external knowledge provider: {connection.get("provider")}')

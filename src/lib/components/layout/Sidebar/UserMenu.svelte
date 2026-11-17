@@ -4,6 +4,7 @@
 	import { createEventDispatcher, getContext, onMount, tick } from 'svelte';
 
 	import { goto } from '$app/navigation';
+	import type { AppLayoutContext } from '$lib/types';
 	import { fade, slide } from 'svelte/transition';
 
 	import { getUsage } from '$lib/apis';
@@ -37,6 +38,7 @@
 	import { toast } from 'svelte-sonner';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let show = false;
 	let confirmSignOut = false;
@@ -272,7 +274,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/workspace');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/workspace', label: $i18n.t('Workspace') });
+							else goto('/workspace');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -323,7 +327,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/notes');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/notes', label: $i18n.t('Notes') });
+							else goto('/notes');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -374,7 +380,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/calendar');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/calendar', label: $i18n.t('Calendar') });
+							else goto('/calendar');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -425,7 +433,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/automations');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/automations', label: $i18n.t('Automations') });
+							else goto('/automations');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);
@@ -476,7 +486,9 @@
 							if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
 							e.preventDefault();
 							show = false;
-							goto('/playground');
+							if (appLayout?.openPageTab)
+								appLayout.openPageTab({ href: '/playground', label: $i18n.t('Playground') });
+							else goto('/playground');
 							if ($mobile) {
 								await tick();
 								showSidebar.set(false);

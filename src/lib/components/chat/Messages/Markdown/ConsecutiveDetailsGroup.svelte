@@ -14,6 +14,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
+	import { agentViewName, type AgentView } from '$lib/components/chat/Messages/agentViews';
 
 	import { settings } from '$lib/stores';
 
@@ -23,6 +24,7 @@
 	export let tokens: Array<{
 		summary?: string;
 		text?: string;
+		view?: AgentView | null;
 		attributes?: {
 			type?: string;
 			name?: string;
@@ -150,14 +152,74 @@
 		return result;
 	})();
 
+	// Agent tool calls read as what they did ("Ran 2 commands, Read 3 files").
+	$: actionText = (() => {
+		const views = tokens.flatMap((t) => (t?.view ? [t.view] : []));
+		if (!views.length) return '';
+		const count = (kind: AgentView['kind']) => views.filter((view) => view.kind === kind).length;
+		const unique = (paths: string[]) => new Set(paths).size;
+		const commands = count('command');
+		const edited = unique(
+			views.flatMap((view) => (view.kind === 'edit' ? view.files.map((f) => f.path) : []))
+		);
+		const read = unique(views.flatMap((view) => (view.kind === 'read' ? view.paths : [])));
+		const searches = count('search');
+		const listed = count('list');
+		const webSearches = count('web');
+		const fetched = count('fetch');
+
+		const parts = [];
+		if (commands)
+			parts.push(
+				commands === 1
+					? $i18n.t('Ran 1 command')
+					: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
+			);
+		if (edited)
+			parts.push(
+				edited === 1
+					? $i18n.t('Edited 1 file')
+					: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
+			);
+		if (read)
+			parts.push(
+				read === 1 ? $i18n.t('Read 1 file') : $i18n.t('Read {{COUNT}} files', { COUNT: read })
+			);
+		if (searches)
+			parts.push(
+				searches === 1
+					? $i18n.t('Searched code')
+					: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
+			);
+		if (listed)
+			parts.push(
+				listed === 1
+					? $i18n.t('Listed 1 directory')
+					: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
+			);
+		if (webSearches)
+			parts.push(
+				webSearches === 1
+					? $i18n.t('Searched the web')
+					: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
+			);
+		if (fetched)
+			parts.push(
+				fetched === 1
+					? $i18n.t('Fetched 1 page')
+					: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
+			);
+		return parts.join(', ');
+	})();
+
 	$: summaryText = (() => {
 		const parts = [];
 
 		if (toolCallCount > 0) {
-			// Group by tool name and show counts
+			// Other tools are counted by name.
 			const nameCounts: Record<string, number> = {};
 			tokens
-				.filter((t) => t?.attributes?.type === 'tool_calls')
+				.filter((t) => t?.attributes?.type === 'tool_calls' && !t?.view)
 				.forEach((t) => {
 					const name = t?.attributes?.name ?? 'tool';
 					nameCounts[name] = (nameCounts[name] || 0) + 1;
@@ -195,10 +257,9 @@
 		);
 	$: toolNames = tokens
 		.filter((token) => token.attributes?.type === 'tool_calls')
-		.map((token) => token.attributes?.name ?? 'tool');
+		.map((token) => (token.view ? agentViewName(token.view) : (token.attributes?.name ?? 'tool')));
 	$: groupLabel =
 		!hasRejected &&
-		!hasError &&
 		pendingToolTokens.length === 0 &&
 		codeInterpreterCount === 0 &&
 		toolLabels.some(Boolean)
@@ -257,6 +318,13 @@
 							class="text-gray-400 dark:text-gray-500 {hasActiveDetails ? 'shimmer' : ''}"
 							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
 						>
+					{:else if actionText}
+						<span class="text-gray-500 dark:text-gray-400 {hasActiveDetails ? 'shimmer' : ''}"
+							>{actionText}</span
+						>
+						{#if summaryText}
+							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+						{/if}
 					{:else}
 						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
 							>{prefixText}</span

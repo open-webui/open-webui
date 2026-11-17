@@ -15,6 +15,10 @@ export default defineConfig({
 		sveltekit(),
 		viteStaticCopy({
 			targets: [
+				{ src: 'node_modules/chart.js/dist/chart.umd.min.js', dest: 'visualizations' },
+				{ src: 'node_modules/dompurify/dist/purify.min.js', dest: 'visualizations' },
+				{ src: 'node_modules/chart.js/LICENSE.md', dest: 'licenses/visualizations/chartjs' },
+				{ src: 'node_modules/dompurify/LICENSE', dest: 'licenses/visualizations/dompurify' },
 				{
 					src: 'src/lib/encryption/vendor/THIRD_PARTY_LICENSES.txt',
 					dest: 'licenses/encryption'

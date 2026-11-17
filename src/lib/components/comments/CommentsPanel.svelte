@@ -124,25 +124,25 @@
 				}
 			);
 	};
-	const changed = (data: CommentResource) => {
+	const changed = (event: { data?: { type?: string; data?: CommentResource } }) => {
+		const { type, data } = event?.data ?? {};
+		if (!data) return;
 		if (
 			data.resource_type !== resource?.resource_type ||
 			data.resource_id !== resource?.resource_id
 		)
 			return;
+		if (type === 'comments:unavailable') {
+			fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
+			return;
+		}
+		if (type !== 'comments:changed') return;
 		clearTimeout(refreshTimer);
 		refreshTimer = setTimeout(refresh, 150);
 	};
 	const reconnect = () => {
 		join();
 		refresh();
-	};
-	const unavailable = (data: CommentResource) => {
-		if (
-			data?.resource_type === resource?.resource_type &&
-			data?.resource_id === resource?.resource_id
-		)
-			fail(new CommentError(403, $i18n.t('Comments are no longer available.')));
 	};
 	const revealInitialPosition = () => {
 		if (!alive || loading || !revealPending || !commentList) return;
@@ -207,22 +207,19 @@
 	});
 	$: if ($socket !== connection) {
 		connection?.emit('comments:leave', { subscription_id: subscriptionId });
-		connection?.off('comments:changed', changed);
+		connection?.off('events', changed);
 		connection?.off('connect', reconnect);
-		connection?.off('comments:unavailable', unavailable);
 		connection = $socket;
-		connection?.on('comments:changed', changed);
+		connection?.on('events', changed);
 		connection?.on('connect', reconnect);
-		connection?.on('comments:unavailable', unavailable);
 		join();
 	}
 	onDestroy(() => {
 		alive = false;
 		clearTimeout(refreshTimer);
 		connection?.emit('comments:leave', { subscription_id: subscriptionId });
-		connection?.off('comments:changed', changed);
+		connection?.off('events', changed);
 		connection?.off('connect', reconnect);
-		connection?.off('comments:unavailable', unavailable);
 	});
 </script>
 

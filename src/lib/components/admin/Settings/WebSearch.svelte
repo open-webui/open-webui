@@ -12,6 +12,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -60,6 +61,125 @@
 	];
 
 	let webConfig: any = null;
+
+	let savedConfig: Record<string, any> | null = null;
+	$: settingLabels = {
+		ENABLE_WEB_SEARCH: $i18n.t('settings.admin.web.webSearch.label'),
+		ENABLE_WEB_SEARCH_CONFIRMATION: $i18n.t('settings.admin.web.webSearchConfirmation.label'),
+		WEB_SEARCH_CONFIRMATION_CONTENT: $i18n.t(
+			'settings.admin.web.webSearchConfirmationContent.label'
+		),
+		WEB_SEARCH_ENGINE: $i18n.t('settings.admin.web.webSearchEngine.label'),
+		OLLAMA_CLOUD_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.ollamaCloudApiKey.label'),
+		PERPLEXITY_SEARCH_API_URL: $i18n.t('settings.admin.web.perplexitySearchApiUrl.label'),
+		PERPLEXITY_API_KEY: $i18n.t('settings.admin.web.perplexityApiKey.label'),
+		SEARXNG_QUERY_URL: $i18n.t('settings.admin.web.searxngQueryUrl.label'),
+		SEARXNG_LANGUAGE: $i18n.t('settings.admin.web.searxngSearchLanguageAllEnEsDeFrEtc.label'),
+		YACY_QUERY_URL: $i18n.t('settings.admin.web.yacyInstanceUrl.label'),
+		YACY_USERNAME: $i18n.t('settings.admin.web.yacyUsername.label'),
+		YACY_PASSWORD: $i18n.t('settings.admin.web.yacyPassword.label'),
+		GOOGLE_PSE_API_KEY: $i18n.t('settings.admin.web.googlePseApiKey.label'),
+		GOOGLE_PSE_ENGINE_ID: $i18n.t('settings.admin.web.googlePseEngineId.label'),
+		BRAVE_SEARCH_API_KEY: $i18n.t('settings.admin.web.braveSearchApiKey.label'),
+		BRAVE_SEARCH_CONTEXT_TOKENS: $i18n.t('settings.admin.web.contextTokens.label'),
+		KAGI_SEARCH_API_KEY: $i18n.t('settings.admin.web.kagiSearchApiKey.label'),
+		MOJEEK_SEARCH_API_KEY: $i18n.t('settings.admin.web.mojeekSearchApiKey.label'),
+		BOCHA_SEARCH_API_KEY: $i18n.t('settings.admin.web.bochaSearchApiKey.label'),
+		SERPSTACK_API_KEY: $i18n.t('settings.admin.web.serpstackApiKey.label'),
+		SERPER_API_KEY: $i18n.t('settings.admin.web.serperApiKey.label'),
+		SERPHOUSE_API_KEY: $i18n.t('settings.admin.web.serphouseApiKey.label'),
+		SERPHOUSE_DOMAIN: $i18n.t('settings.admin.web.serphouseDomain.label'),
+		SERPLY_API_KEY: $i18n.t('settings.admin.web.serplyApiKey.label'),
+		TAVILY_API_KEY: $i18n.t('settings.admin.web.tavilyApiKey.label'),
+		TAVILY_SEARCH_DEPTH: $i18n.t('settings.admin.web.tavilySearchDepth.label'),
+		STAAN_API_KEY: $i18n.t('Staan API Key'),
+		STAAN_MARKET: $i18n.t('Market'),
+		STAAN_MAX_SNIPPETS: $i18n.t('Max Snippets'),
+		SEARCHAPI_API_KEY: $i18n.t('settings.admin.web.searchapiApiKey.label'),
+		SEARCHAPI_ENGINE: $i18n.t('settings.admin.web.searchapiEngine.label'),
+		SERPAPI_API_KEY: $i18n.t('settings.admin.web.serpapiApiKey.label'),
+		SERPAPI_ENGINE: $i18n.t('settings.admin.web.serpapiEngine.label'),
+		JINA_API_BASE_URL: $i18n.t('settings.admin.web.jinaApiBaseUrl.label'),
+		JINA_API_KEY: $i18n.t('settings.admin.web.jinaApiKey.label'),
+		BING_SEARCH_V7_ENDPOINT: $i18n.t('settings.admin.web.bingSearchV7Endpoint.label'),
+		BING_SEARCH_V7_SUBSCRIPTION_KEY: $i18n.t(
+			'settings.admin.web.bingSearchV7SubscriptionKey.label'
+		),
+		EXA_API_KEY: $i18n.t('settings.admin.web.exaApiKey.label'),
+		EXA_MAX_CONTENT_LENGTH: $i18n.t('settings.admin.web.maxContentLength.label'),
+		PERPLEXITY_MODEL: $i18n.t('settings.admin.web.perplexityModel.label'),
+		PERPLEXITY_SEARCH_CONTEXT_USAGE: $i18n.t(
+			'settings.admin.web.perplexitySearchContextUsage.label'
+		),
+		MICROSOFT_WEB_IQ_API_BASE_URL: $i18n.t('settings.admin.web.microsoftWebIqApiBaseUrl.label'),
+		MICROSOFT_WEB_IQ_API_KEY: $i18n.t('settings.admin.web.microsoftWebIqApiKey.label'),
+		MICROSOFT_WEB_IQ_LANGUAGE: $i18n.t('settings.admin.web.language.label'),
+		SOUGOU_API_SID: $i18n.t('settings.admin.web.sougouSearchApiSid.label'),
+		SOUGOU_API_SK: $i18n.t('settings.admin.web.sougouSearchApiSk.label'),
+		FIRECRAWL_API_BASE_URL: $i18n.t('settings.admin.web.firecrawlApiBaseUrl.label'),
+		FIRECRAWL_API_KEY: $i18n.t('settings.admin.web.firecrawlApiKey.label'),
+		FIRECRAWL_TIMEOUT: $i18n.t('settings.admin.web.firecrawlTimeoutS.label'),
+		EXTERNAL_WEB_SEARCH_URL: $i18n.t('settings.admin.web.externalWebSearchUrl.label'),
+		EXTERNAL_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.externalWebSearchApiKey.label'),
+		YANDEX_WEB_SEARCH_URL: $i18n.t('settings.admin.web.yandexWebSearchUrl.label'),
+		YANDEX_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.yandexWebSearchApiKey.label'),
+		YANDEX_WEB_SEARCH_CONFIG: $i18n.t('settings.admin.web.yandexWebSearchConfig.label'),
+		YOUCOM_API_KEY: $i18n.t('settings.admin.web.youComApiKey.label'),
+		LINKUP_API_KEY: $i18n.t('settings.admin.web.linkupApiKey.label'),
+		LINKUP_SEARCH_PARAMS: $i18n.t('settings.admin.web.parameters.label'),
+		OPENSERP_BASE_URL: $i18n.t('settings.admin.web.openserpUrl.label'),
+		DDGS_BACKEND: $i18n.t('settings.admin.web.ddgsBackend.label'),
+		WEB_SEARCH_RESULT_COUNT: $i18n.t('settings.admin.web.searchResultCount.label'),
+		WEB_SEARCH_CONCURRENT_REQUESTS: $i18n.t('settings.admin.web.concurrentRequests.label'),
+		WEB_FETCH_MAX_CONTENT_LENGTH: $i18n.t('settings.admin.web.fetchUrlContentLengthLimit.label'),
+		WEB_SEARCH_DOMAIN_FILTER_LIST: $i18n.t('settings.admin.web.domainFilterList.label'),
+		BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL: $i18n.t(
+			'settings.admin.web.bypassEmbeddingAndRetrieval.label'
+		),
+		BYPASS_WEB_SEARCH_WEB_LOADER: $i18n.t('settings.admin.web.bypassWebLoader.label'),
+		WEB_SEARCH_TRUST_ENV: $i18n.t('settings.admin.web.trustProxyEnvironment.label'),
+		WEB_LOADER_ENGINE: $i18n.t('settings.admin.web.webLoaderEngine.label'),
+		WEB_LOADER_TIMEOUT: $i18n.t('settings.admin.web.timeout.label'),
+		ENABLE_WEB_LOADER_SSL_VERIFICATION: $i18n.t('settings.admin.web.verifySslCertificate.label'),
+		PLAYWRIGHT_WS_URL: $i18n.t('settings.admin.web.playwrightWebsocketUrl.label'),
+		PLAYWRIGHT_TIMEOUT: $i18n.t('settings.admin.web.playwrightTimeoutMs.label'),
+		TAVILY_EXTRACT_DEPTH: $i18n.t('settings.admin.web.tavilyExtractDepth.label'),
+		EXTERNAL_WEB_LOADER_URL: $i18n.t('settings.admin.web.externalWebLoaderUrl.label'),
+		EXTERNAL_WEB_LOADER_API_KEY: $i18n.t('settings.admin.web.externalWebLoaderApiKey.label'),
+		WEB_LOADER_CONCURRENT_REQUESTS: $i18n.t('settings.admin.web.concurrentRequests.label'),
+		YOUTUBE_LOADER_LANGUAGE: $i18n.t('settings.admin.web.youtubeLanguage.label'),
+		YOUTUBE_LOADER_PROXY_URL: $i18n.t('settings.admin.web.youtubeProxyUrl.label')
+	};
+	const sensitiveKeys = [
+		'OLLAMA_CLOUD_WEB_SEARCH_API_KEY',
+		'PERPLEXITY_API_KEY',
+		'YACY_PASSWORD',
+		'GOOGLE_PSE_API_KEY',
+		'BRAVE_SEARCH_API_KEY',
+		'KAGI_SEARCH_API_KEY',
+		'MOJEEK_SEARCH_API_KEY',
+		'BOCHA_SEARCH_API_KEY',
+		'SERPSTACK_API_KEY',
+		'SERPER_API_KEY',
+		'SERPHOUSE_API_KEY',
+		'SERPLY_API_KEY',
+		'TAVILY_API_KEY',
+		'STAAN_API_KEY',
+		'SEARCHAPI_API_KEY',
+		'SERPAPI_API_KEY',
+		'JINA_API_KEY',
+		'BING_SEARCH_V7_SUBSCRIPTION_KEY',
+		'EXA_API_KEY',
+		'MICROSOFT_WEB_IQ_API_KEY',
+		'SOUGOU_API_SID',
+		'SOUGOU_API_SK',
+		'FIRECRAWL_API_KEY',
+		'EXTERNAL_WEB_SEARCH_API_KEY',
+		'YANDEX_WEB_SEARCH_API_KEY',
+		'YOUCOM_API_KEY',
+		'LINKUP_API_KEY',
+		'EXTERNAL_WEB_LOADER_API_KEY'
+	];
 	const inputClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -120,6 +240,10 @@
 		if (Array.isArray(webConfig.YOUTUBE_LOADER_LANGUAGE)) {
 			webConfig.YOUTUBE_LOADER_LANGUAGE = webConfig.YOUTUBE_LOADER_LANGUAGE.join(',');
 		}
+
+		if (res) {
+			savedConfig = structuredClone(webConfig);
+		}
 	};
 
 	onMount(async () => {
@@ -160,6 +284,8 @@
 				typeof webConfig.LINKUP_SEARCH_PARAMS === 'object'
 					? JSON.stringify(webConfig.LINKUP_SEARCH_PARAMS ?? {}, null, 2)
 					: (webConfig.LINKUP_SEARCH_PARAMS ?? '');
+
+			savedConfig = structuredClone(webConfig);
 		}
 	});
 </script>
@@ -209,6 +335,7 @@
 									'Your query will be sent to the configured web search provider.'
 								)}
 								bind:value={webConfig.WEB_SEARCH_CONFIRMATION_CONTENT}
+								maxSize={200}
 							/>
 						</AdminSettingField>
 					{/if}
@@ -1143,6 +1270,7 @@
 									<Textarea
 										className={textareaClass}
 										bind:value={webConfig.YANDEX_WEB_SEARCH_CONFIG}
+										maxSize={200}
 										placeholder={$i18n.t(
 											'Leave empty to use the default config, or enter a valid json (see https://yandex.cloud/en/docs/search-api/api-ref/WebSearch/search#yandex.cloud.searchapi.v2.WebSearchRequest)'
 										)}
@@ -1186,6 +1314,7 @@
 								<Textarea
 									className={textareaClass}
 									bind:value={webConfig.LINKUP_SEARCH_PARAMS}
+									maxSize={200}
 									placeholder={`{\n  "depth": "standard",\n  "outputType": "sourcedAnswer"\n}`}
 								/>
 							</div>
@@ -1686,11 +1815,11 @@
 		{/if}
 	</div>
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+		<AdminSettingSaveButton
+			settings={webConfig}
+			{savedConfig}
+			labels={settingLabels}
+			{sensitiveKeys}
+		/>
 	</div>
 </form>

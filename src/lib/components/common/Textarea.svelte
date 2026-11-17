@@ -46,7 +46,9 @@
 
 			textareaElement.style.height = '';
 
+			// A hidden textarea (e.g. in a background tab) measures 0; leave sizing to field-sizing.
 			let height = textareaElement.scrollHeight;
+			if (height === 0) return;
 			if (maxSize && height > maxSize) {
 				height = maxSize;
 			}
@@ -73,7 +75,7 @@
 	{placeholder}
 	aria-label={ariaLabel || placeholder}
 	class={className}
-	style="field-sizing: content;"
+	style="field-sizing: content;{maxSize ? ` max-height: ${maxSize}px;` : ''}"
 	{rows}
 	{required}
 	{readonly}

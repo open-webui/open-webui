@@ -405,7 +405,7 @@ def convert_chat_completions_payload_to_ollama(openai_payload: dict) -> dict:
     ollama_payload['model'] = openai_payload.get('model')
     ollama_payload['messages'] = convert_chat_completions_messages_to_ollama(openai_payload.get('messages'))
     ollama_payload['stream'] = openai_payload.get('stream', False)
-    if 'tools' in openai_payload:
+    if 'tools' in openai_payload and openai_payload.get('tool_choice') != 'none':
         ollama_payload['tools'] = openai_payload['tools']
 
     # If there are advanced parameters in the payload, format them in Ollama's options field

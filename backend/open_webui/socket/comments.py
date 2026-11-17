@@ -81,4 +81,13 @@ async def revalidate_comment_subscription(sio, sid, session_user):
                 key: value for key, value in session['comments_resources'].items() if tuple(value) != resource
             }
             await sio.save_session(sid, session)
-            await sio.emit('comments:unavailable', {'resource_type': resource[0], 'resource_id': resource[1]}, to=sid)
+            await sio.emit(
+                'events',
+                {
+                    'data': {
+                        'type': 'comments:unavailable',
+                        'data': {'resource_type': resource[0], 'resource_id': resource[1]},
+                    }
+                },
+                to=sid,
+            )

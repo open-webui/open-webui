@@ -695,6 +695,9 @@ class EventDefinitions(BaseModel):
     IMAGE_EDITED: EventDefinition = EventDefinition(
         name='image.edited', description='An image was edited.', message='Image edited'
     )
+    VIDEO_GENERATED: EventDefinition = EventDefinition(
+        name='video.generated', description='A video was generated.', message='Video generated'
+    )
     AUDIO_SPEECH_REQUESTED: EventDefinition = EventDefinition(
         name='audio.speech_requested', description='Speech generation was requested.', message='Speech requested'
     )

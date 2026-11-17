@@ -15,9 +15,12 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import {
+		createExternalKnowledgeConnection,
 		createExternalKnowledgeSource,
+		deleteExternalKnowledgeConnection,
 		getExternalKnowledgeConnections,
 		searchKnowledgeBases,
+		listExternalKnowledgeStores,
 		testExternalKnowledgeSource,
 		updateExternalKnowledgeConnection,
 		updateExternalKnowledgeSource,
@@ -55,8 +58,20 @@
 		};
 	};
 
+	// Providers that search by text server-side, so sources need no field mapping.
+	const TEXT_SEARCH_PROVIDERS = ['openai'];
+	const DEFAULT_PROVIDER = 'openai';
+
 	let loading = false;
 	let testing = false;
+	let verifying = false;
+	// Stores the connection can search, offered as suggestions for the Vector Store ID.
+	let storeOptions: { id: string; name: string }[] = [];
+	// A text-search knowledge base can cover several stores; results are merged.
+	let storeIds: string[] = [];
+	let storeIdInput = '';
+	// Save a connection whose stores are listed as knowledge bases, live, instead of one knowledge base.
+	let listStores = false;
 	let creating = false;
 	let showSourceModal = false;
 	let connections: ExternalKnowledgeConnection[] = [];
@@ -73,7 +88,7 @@
 	let sourceForm = {
 		name: '',
 		description: '',
-		provider: 'qdrant',
+		provider: DEFAULT_PROVIDER,
 		endpoint: '',
 		apiKey: '',
 		timeout: 30,
@@ -87,6 +102,13 @@
 		collectionField: 'collection_name',
 		testQuery: ''
 	};
+
+	$: textSearch = TEXT_SEARCH_PROVIDERS.includes(sourceForm.provider);
+	$: connectionMode = listStores && textSearch && !editingItem;
+
+	// Like model_ids on provider connections: a store_ids list (empty means all) lists the stores.
+	const hasStoreIds = (connection?: ExternalKnowledgeConnection) =>
+		Array.isArray(connection?.config?.store_ids);
 
 	const schemaDefaults = (provider = sourceForm.provider) => {
 		if (provider === 'milvus') {
@@ -123,19 +145,39 @@
 		sourceForm = {
 			name: '',
 			description: '',
-			provider: 'qdrant',
+			provider: DEFAULT_PROVIDER,
 			endpoint: '',
 			apiKey: '',
 			timeout: 30,
 			dbName: '',
 			sourceName: '',
 			testQuery: '',
-			...schemaDefaults('qdrant')
+			...schemaDefaults(DEFAULT_PROVIDER)
 		};
 		accessGrants = [];
 		testResult = null;
+		storeOptions = [];
+		storeIds = [];
+		storeIdInput = '';
+		listStores = false;
 		editingItem = null;
 		editingConnection = null;
+	};
+
+	const openEditConnection = (connection: ExternalKnowledgeConnection) => {
+		resetForm();
+		editingConnection = connection;
+		listStores = true;
+		sourceForm = {
+			...sourceForm,
+			name: connection.name ?? '',
+			provider: connection.provider,
+			endpoint: connection.endpoint ?? '',
+			timeout: connection.config?.timeout ?? 30
+		};
+		storeIds = connection.config?.store_ids ?? [];
+		accessGrants = structuredClone(connection.config?.access_grants ?? []);
+		showSourceModal = true;
 	};
 
 	const openCreateSource = () => {
@@ -174,6 +216,12 @@
 			tableName: sourceConfig.table_name ?? defaults.tableName,
 			collectionField: sourceConfig.collection_field ?? defaults.collectionField
 		};
+		storeIds = Array.isArray(sourceConfig.vector_store_ids)
+			? sourceConfig.vector_store_ids
+			: (source?.name ?? '')
+					.split(',')
+					.map((id: string) => id.trim())
+					.filter(Boolean);
 		accessGrants = structuredClone(item.access_grants ?? []);
 		showSourceModal = true;
 	};
@@ -195,11 +243,17 @@
 			})
 		]);
 		connections = connectionRes?.items ?? [];
-		items = knowledgeRes?.items ?? [];
+		// Stores a connection lists are managed through that connection's row.
+		items = (knowledgeRes?.items ?? []).filter(
+			(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
+		);
 		loading = false;
 	};
 
 	const endpointPlaceholder = () => {
+		if (sourceForm.provider === 'openai') {
+			return 'http://litellm:4000/v1';
+		}
 		if (sourceForm.provider === 'pgvector') {
 			return 'postgresql://user:password@host:5432/db';
 		}
@@ -238,6 +292,14 @@
 	});
 
 	const sourcePayload = () => {
+		if (textSearch) {
+			return {
+				type: 'collection',
+				name: storeIds.join(', '),
+				config: { vector_store_ids: storeIds }
+			};
+		}
+
 		const config: Record<string, string> = {
 			content_field: sourceForm.contentField.trim(),
 			...(sourceForm.vectorField.trim() ? { vector_field: sourceForm.vectorField.trim() } : {}),
@@ -263,16 +325,61 @@
 
 	const testFormIsValid = () =>
 		!!sourceForm.endpoint.trim() &&
-		!!sourceForm.sourceName.trim() &&
-		!!sourceForm.contentField.trim() &&
-		(sourceForm.provider === 'qdrant' || !!sourceForm.vectorField.trim()) &&
-		(sourceForm.provider !== 'pgvector' ||
-			(!!sourceForm.tableName.trim() && !!sourceForm.collectionField.trim())) &&
+		(textSearch ? storeIds.length > 0 : !!sourceForm.sourceName.trim()) &&
+		(textSearch ||
+			(!!sourceForm.contentField.trim() &&
+				(sourceForm.provider === 'qdrant' || !!sourceForm.vectorField.trim()) &&
+				(sourceForm.provider !== 'pgvector' ||
+					(!!sourceForm.tableName.trim() && !!sourceForm.collectionField.trim())))) &&
 		!!sourceForm.testQuery.trim();
 
 	const sourceFormIsValid = () => !!sourceForm.name.trim() && testFormIsValid();
 
+	const loadStoreOptions = async () => {
+		const res = await listExternalKnowledgeStores(localStorage.token, {
+			...(editingConnection?.id ? { connection_id: editingConnection.id } : {}),
+			connection: connectionPayload()
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		storeOptions = res?.items ?? [];
+		return !!res;
+	};
+
+	// Checks the endpoint and key by listing the stores, which then fill the Vector Store ID suggestions.
+	const verifyConnection = async () => {
+		if (!sourceForm.endpoint.trim()) {
+			toast.error($i18n.t('Fill the required fields first.'));
+			return;
+		}
+
+		verifying = true;
+		if (await loadStoreOptions()) {
+			toast.success($i18n.t('Loaded {{COUNT}} vector stores.', { COUNT: storeOptions.length }));
+		}
+		verifying = false;
+	};
+
+	const addStoreIds = (value: string) => {
+		const ids = value
+			.split(',')
+			.map((id) => id.trim())
+			.filter((id) => id && !storeIds.includes(id));
+		if (ids.length) {
+			storeIds = [...storeIds, ...ids];
+			markUntested();
+		}
+		storeIdInput = '';
+	};
+
+	const removeStoreId = (id: string) => {
+		storeIds = storeIds.filter((item) => item !== id);
+		markUntested();
+	};
+
 	const testSource = async () => {
+		addStoreIds(storeIdInput);
 		if (!testFormIsValid()) {
 			toast.error($i18n.t('Fill the source fields and test query first.'));
 			return;
@@ -369,17 +476,70 @@
 		creating = false;
 	};
 
+	const saveConnection = async () => {
+		if (!sourceForm.name.trim() || !sourceForm.endpoint.trim()) {
+			toast.error($i18n.t('Fill the required fields first.'));
+			return;
+		}
+
+		creating = true;
+		const payload = connectionPayload();
+		const connection = {
+			...payload,
+			config: { ...payload.config, store_ids: storeIds, access_grants: accessGrants }
+		};
+		const res = await (
+			editingConnection
+				? updateExternalKnowledgeConnection(localStorage.token, editingConnection.id, connection)
+				: createExternalKnowledgeConnection(localStorage.token, connection)
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Saved'));
+			showSourceModal = false;
+			resetForm();
+			await refresh();
+		}
+		creating = false;
+	};
+
+	const deleteConnection = async () => {
+		if (!editingConnection) return;
+
+		creating = true;
+		const res = await deleteExternalKnowledgeConnection(
+			localStorage.token,
+			editingConnection.id
+		).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+
+		if (res) {
+			toast.success($i18n.t('Deleted'));
+			showSourceModal = false;
+			resetForm();
+			await refresh();
+		}
+		creating = false;
+	};
+
 	const submitSource = async () => {
 		if (creating) return;
-		if (editingItem) {
+		addStoreIds(storeIdInput);
+		if (connectionMode) {
+			await saveConnection();
+		} else if (editingItem) {
 			await updateSource();
 		} else {
 			await createSource();
 		}
 	};
 
-	const toggleSource = async (item: ExternalKnowledgeItem) => {
-		const connection = connectionForItem(item);
+	const toggleConnection = async (connection?: ExternalKnowledgeConnection) => {
 		if (!connection) return;
 
 		const res = await updateExternalKnowledgeConnection(localStorage.token, connection.id, {
@@ -405,6 +565,7 @@
 			...sourceForm,
 			...schemaDefaults(sourceForm.provider)
 		};
+		storeOptions = [];
 		markUntested();
 	};
 
@@ -412,7 +573,7 @@
 </script>
 
 <Modal
-	ariaLabel={editingItem
+	ariaLabel={editingItem || editingConnection
 		? $i18n.t('Edit Knowledge Connection')
 		: $i18n.t('Add Knowledge Connection')}
 	bind:show={showSourceModal}
@@ -422,7 +583,9 @@
 	<div>
 		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
-				{editingItem ? $i18n.t('Edit Knowledge Connection') : $i18n.t('Add Knowledge Connection')}
+				{editingItem || editingConnection
+					? $i18n.t('Edit Knowledge Connection')
+					: $i18n.t('Add Knowledge Connection')}
 			</h1>
 
 			<button
@@ -480,6 +643,7 @@
 										on:change={updateProvider}
 										selectClassName="text-sm"
 									>
+										<option value="openai">{$i18n.t('OpenAI-compatible')}</option>
 										<option value="qdrant">Qdrant</option>
 										<option value="milvus">Milvus</option>
 										<option value="pgvector">pgvector</option>
@@ -488,17 +652,19 @@
 							</div>
 						</div>
 
-						<div class="flex flex-col w-full mt-2">
-							<label class="text-xs text-gray-500 mb-0.5" for="external-source-description"
-								>{$i18n.t('Description')}</label
-							>
-							<textarea
-								id="external-source-description"
-								class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
-								rows="2"
-								bind:value={sourceForm.description}
-							></textarea>
-						</div>
+						{#if !connectionMode}
+							<div class="flex flex-col w-full mt-2">
+								<label class="text-xs text-gray-500 mb-0.5" for="external-source-description"
+									>{$i18n.t('Description')}</label
+								>
+								<textarea
+									id="external-source-description"
+									class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+									rows="2"
+									bind:value={sourceForm.description}
+								></textarea>
+							</div>
+						{/if}
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col flex-1">
@@ -516,6 +682,39 @@
 										placeholder={endpointPlaceholder()}
 										required
 									/>
+
+									{#if textSearch}
+										<Tooltip
+											content={$i18n.t('Verify Connection')}
+											className="shrink-0 flex items-center mr-1"
+										>
+											<button
+												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												type="button"
+												on:click={verifyConnection}
+												disabled={verifying}
+												aria-label={$i18n.t('Verify Connection')}
+											>
+												{#if verifying}
+													<Spinner />
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+														aria-hidden="true"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -582,23 +781,86 @@
 
 						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
+						{#if textSearch && !editingItem}
+							<div class="flex justify-between items-center mb-2">
+								<label class="text-xs text-gray-500" for="external-source-stores-as-knowledge-bases"
+									>{$i18n.t('List stores as knowledge bases')}</label
+								>
+								<Switch
+									id="external-source-stores-as-knowledge-bases"
+									bind:state={listStores}
+									disabled={!!editingConnection}
+								/>
+							</div>
+						{/if}
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
 									<label class="text-xs text-gray-500" for="external-source-collection"
-										>{$i18n.t('Collection')}</label
+										>{connectionMode
+											? $i18n.t('Store IDs')
+											: textSearch
+												? $i18n.t('Vector Stores')
+												: $i18n.t('Collection')}</label
 									>
 								</div>
-								<div class="flex flex-1 items-center">
+								{#if textSearch}
+									{#if storeIds.length > 0}
+										<div class="flex flex-wrap gap-1 mb-1">
+											{#each storeIds as id (id)}
+												<div
+													class="flex items-center gap-1 rounded-lg bg-gray-50 dark:bg-gray-850 px-2 py-0.5 text-xs"
+												>
+													<span class="line-clamp-1"
+														>{storeOptions.find((store) => store.id === id)?.name ?? id}</span
+													>
+													<button
+														class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+														type="button"
+														aria-label={$i18n.t('Remove')}
+														on:click={() => removeStoreId(id)}
+													>
+														<XMark className="size-3" />
+													</button>
+												</div>
+											{/each}
+										</div>
+									{/if}
 									<input
 										id="external-source-collection"
 										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.sourceName}
-										on:input={markUntested}
-										placeholder="research-docs"
-										required
+										bind:value={storeIdInput}
+										on:change={() => addStoreIds(storeIdInput)}
+										on:keydown={(e) => {
+											if (e.key === 'Enter' || e.key === ',') {
+												e.preventDefault();
+												addStoreIds(storeIdInput);
+											}
+										}}
+										placeholder={connectionMode
+											? $i18n.t('Leave empty to include all stores')
+											: $i18n.t('Add a vector store ID')}
+										list="external-source-stores"
+										autocomplete="off"
 									/>
-								</div>
+									<datalist id="external-source-stores">
+										{#each storeOptions.filter((store) => !storeIds.includes(store.id)) as store (store.id)}
+											<option value={store.id}>{store.name}</option>
+										{/each}
+									</datalist>
+								{:else}
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-collection"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.sourceName}
+											on:input={markUntested}
+											placeholder="research-docs"
+											required
+										/>
+									</div>
+								{/if}
 							</div>
 						</div>
 
@@ -642,141 +904,153 @@
 							</div>
 						{/if}
 
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-content-field"
-										>{$i18n.t('Content Field')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-content-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.contentField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
-										required
-									/>
-								</div>
-							</div>
-
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-vector-field">
-										{$i18n.t('Vector Field')}
-									</label>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-vector-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.vectorField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
-										required={sourceForm.provider !== 'qdrant'}
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-metadata-field"
-										>{$i18n.t('Metadata Field')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-metadata-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.metadataField}
-										on:input={markUntested}
-										placeholder={sourceForm.provider === 'pgvector'
-											? 'vmetadata'
-											: 'payload.metadata'}
-									/>
-								</div>
-							</div>
-
-							<div class="flex flex-col flex-1">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-document-id-field"
-										>{$i18n.t('Document ID Field')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-document-id-field"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.documentIdField}
-										on:input={markUntested}
-										placeholder="id"
-									/>
-								</div>
-							</div>
-						</div>
-
-						<div class="flex gap-2 mt-2">
-							<div class="flex flex-col w-full">
-								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-test-query"
-										>{$i18n.t('Test Query')}</label
-									>
-								</div>
-								<div class="flex flex-1 items-center">
-									<input
-										id="external-source-test-query"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
-										bind:value={sourceForm.testQuery}
-										on:input={markUntested}
-										placeholder={$i18n.t('Ask a test question')}
-										required
-									/>
-
-									<Tooltip
-										content={$i18n.t('Verify Connection')}
-										className="shrink-0 flex items-center mr-1"
-									>
-										<button
-											class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
-											type="button"
-											on:click={testSource}
-											disabled={testing}
-											aria-label={$i18n.t('Verify Connection')}
+						{#if !textSearch}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-content-field"
+											>{$i18n.t('Content Field')}</label
 										>
-											{#if testing}
-												<Spinner />
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													viewBox="0 0 20 20"
-													fill="currentColor"
-													class="w-4 h-4"
-													aria-hidden="true"
-												>
-													<path
-														fill-rule="evenodd"
-														d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
-														clip-rule="evenodd"
-													/>
-												</svg>
-											{/if}
-										</button>
-									</Tooltip>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-content-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.contentField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
+											required
+										/>
+									</div>
 								</div>
 
-								<div class="text-xs text-gray-500 mt-1">
-									<!-- LICENSE covers this Open WebUI wordmark.
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-vector-field">
+											{$i18n.t('Vector Field')}
+										</label>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-vector-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.vectorField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
+											required={sourceForm.provider !== 'qdrant'}
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-metadata-field"
+											>{$i18n.t('Metadata Field')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-metadata-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.metadataField}
+											on:input={markUntested}
+											placeholder={sourceForm.provider === 'pgvector'
+												? 'vmetadata'
+												: 'payload.metadata'}
+										/>
+									</div>
+								</div>
+
+								<div class="flex flex-col flex-1">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-document-id-field"
+											>{$i18n.t('Document ID Field')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-document-id-field"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.documentIdField}
+											on:input={markUntested}
+											placeholder="id"
+										/>
+									</div>
+								</div>
+							</div>
+						{/if}
+
+						{#if connectionMode}
+							<div class="text-xs text-gray-500 mt-2">
+								{$i18n.t(
+									'Each store this connection lists appears as a knowledge base, read live from the endpoint. Access below applies to all of them.'
+								)}
+							</div>
+						{:else}
+							<div class="flex gap-2 mt-2">
+								<div class="flex flex-col w-full">
+									<div class="flex justify-between mb-0.5">
+										<label class="text-xs text-gray-500" for="external-source-test-query"
+											>{$i18n.t('Test Query')}</label
+										>
+									</div>
+									<div class="flex flex-1 items-center">
+										<input
+											id="external-source-test-query"
+											class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											bind:value={sourceForm.testQuery}
+											on:input={markUntested}
+											placeholder={$i18n.t('Ask a test question')}
+											required
+										/>
+
+										<Tooltip
+											content={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
+											className="shrink-0 flex items-center mr-1"
+										>
+											<button
+												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												type="button"
+												on:click={testSource}
+												disabled={testing}
+												aria-label={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
+											>
+												{#if testing}
+													<Spinner />
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+														aria-hidden="true"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												{/if}
+											</button>
+										</Tooltip>
+									</div>
+
+									{#if !textSearch}
+										<div class="text-xs text-gray-500 mt-1">
+											<!-- LICENSE covers this Open WebUI wordmark.
 										Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										https://docs.openwebui.com/license. -->
-									{$i18n.t(
-										'External vectors must be generated with the same embedding model configured in Open WebUI.'
-									)}
+											{$i18n.t(
+												'External vectors must be generated with the same embedding model configured in Open WebUI.'
+											)}
+										</div>
+									{/if}
 								</div>
 							</div>
-						</div>
+						{/if}
 
 						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
 
@@ -807,14 +1081,27 @@
 						/>
 
 						<div class="flex justify-between items-center pt-3 text-sm font-normal">
-							<div></div>
+							{#if connectionMode && editingConnection}
+								<button
+									class="text-xs text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
+									type="button"
+									on:click={deleteConnection}
+								>
+									{$i18n.t('Delete')}
+								</button>
+							{:else}
+								<div></div>
+							{/if}
 
 							<button
 								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
 								type="submit"
-								disabled={creating || !sourceFormIsValid() || !testResult?.documents?.length}
+								disabled={creating ||
+									(connectionMode
+										? !sourceForm.name.trim() || !sourceForm.endpoint.trim()
+										: !sourceFormIsValid() || !testResult?.documents?.length)}
 							>
-								{editingItem ? $i18n.t('Save') : $i18n.t('Create')}
+								{editingItem || editingConnection ? $i18n.t('Save') : $i18n.t('Create')}
 								{#if creating}<Spinner className="size-3" />{/if}
 							</button>
 						</div>
@@ -845,6 +1132,57 @@
 	</div>
 
 	<div class="flex flex-col gap-1.5">
+		{#each connections.filter(hasStoreIds) as connection (connection.id)}
+			<div class="group/setting-row flex w-full gap-2 items-center">
+				<div
+					class="flex-1 relative flex gap-1.5 items-center min-w-0 {connection.enabled === false
+						? 'opacity-50'
+						: ''}"
+				>
+					<Tooltip content={$i18n.t('Knowledge')}>
+						<DatabaseSettings className="size-4" strokeWidth="1.5" />
+					</Tooltip>
+					<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
+						<label
+							for={`knowledge-connection-${connection.id}-control`}
+							class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 dark:group-hover/setting-row:text-white"
+							>{connection.name}</label
+						>
+						{' '}
+						<span class="text-gray-500">
+							{connection.provider} ·
+							{connection.config?.store_ids?.length
+								? $i18n.t('{{COUNT}} stores', { COUNT: connection.config.store_ids.length })
+								: $i18n.t('All stores')}
+						</span>
+					</div>
+				</div>
+
+				<div class="flex gap-1 items-center">
+					<Tooltip content={$i18n.t('Configure')}>
+						<button
+							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+							type="button"
+							aria-label={$i18n.t('Configure')}
+							on:click={() => openEditConnection(connection)}
+						>
+							<Cog6 />
+						</button>
+					</Tooltip>
+
+					<Tooltip
+						content={connection.enabled !== false ? $i18n.t('Enabled') : $i18n.t('Disabled')}
+					>
+						<Switch
+							id={`knowledge-connection-${connection.id}-control`}
+							state={connection.enabled !== false}
+							on:change={() => toggleConnection(connection)}
+						/>
+					</Tooltip>
+				</div>
+			</div>
+		{/each}
+
 		{#each items as item}
 			{@const connection = connectionForItem(item)}
 			<div class="group/setting-row flex w-full gap-2 items-center">
@@ -898,7 +1236,7 @@
 							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
 							on:change={() => {
-								toggleSource(item);
+								toggleConnection(connection);
 							}}
 						/>
 					</Tooltip>
@@ -911,13 +1249,13 @@
 		<div class="py-2">
 			<Spinner />
 		</div>
-	{:else if items.length === 0}
+	{:else if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 
-	{#if items.length === 0}
+	{#if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('Test must pass before a source is created.')}
 		</div>

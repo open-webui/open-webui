@@ -49,7 +49,7 @@
 		appReplies = {};
 	}
 
-	const receiveAppChannelReply = (event) => {
+	const receiveAppChannelReply = (event: Record<string, any>) => {
 		if (event.reply?.type === 'ack') return;
 		if (event.channel_id !== channel?.id || (event.parent_id ?? null) !== (thread ? id : null))
 			return;
@@ -57,16 +57,21 @@
 		appReplies = { ...appReplies, [key]: event };
 	};
 
+	const appEventHandler = (message: { data?: { type?: string; data?: Record<string, any> } }) => {
+		if (message?.data?.type !== 'channel:app' || !message.data.data) return;
+		receiveAppChannelReply(message.data.data);
+	};
+
 	onMount(() => {
 		const appSocket = $socket;
-		appSocket?.on('events:app', receiveAppChannelReply);
-		return () => appSocket?.off('events:app', receiveAppChannelReply);
+		appSocket?.on('events', appEventHandler);
+		return () => appSocket?.off('events', appEventHandler);
 	});
 
 	const loadMoreMessages = async () => {
 		// scroll slightly down to disable continuous loading
-		const element = document.getElementById('messages-container');
-		element.scrollTop = element.scrollTop + 100;
+		const element = listElement?.closest<HTMLElement>('[id="messages-container"]');
+		if (element) element.scrollTop = element.scrollTop + 100;
 
 		messagesLoading = true;
 
@@ -75,11 +80,12 @@
 		await tick();
 		messagesLoading = false;
 	};
+	let listElement: HTMLDivElement;
 </script>
 
 {#if messages}
 	{@const messageList = messages.slice().reverse()}
-	<div>
+	<div bind:this={listElement}>
 		{#if !top}
 			<Loader
 				on:visible={(e) => {

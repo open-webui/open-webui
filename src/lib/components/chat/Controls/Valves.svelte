@@ -2,7 +2,7 @@
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import { toast } from 'svelte-sonner';
 
-	import { config, functions, models, settings, tools, user } from '$lib/stores';
+	import { config, functions, settings, tools, user } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
 
 	import {
@@ -21,6 +21,9 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Valves from '$lib/components/common/Valves.svelte';
+	import { getChatContext } from '$lib/components/chat/context';
+
+	const { models } = getChatContext();
 
 	const dispatch = createEventDispatcher();
 
@@ -89,6 +92,11 @@
 							.map((v) => v.trim())
 							.filter((v) => v.length > 0);
 					} else if (valves[property] == null) {
+						valves[property] = null;
+					}
+				} else if (valves[property] === '') {
+					const types = (valvesSpec.properties[property]?.anyOf ?? []).map((inner) => inner.type);
+					if (types.includes('null') && !types.includes('string')) {
 						valves[property] = null;
 					}
 				}

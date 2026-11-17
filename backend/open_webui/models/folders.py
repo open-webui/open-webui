@@ -79,6 +79,22 @@ class SharedFolderResponse(BaseModel):
 # Forms
 
 
+def folder_status_ids(meta: dict | None) -> tuple[str, ...]:
+    """The statuses this folder defines in meta.statuses, in order. Chats may also have none (null)."""
+    statuses = (meta or {}).get('statuses')
+    ids: list[str] = []
+    for item in statuses if isinstance(statuses, list) else []:
+        if (
+            isinstance(item, dict)
+            and isinstance(item.get('id'), str)
+            and 0 < len(item['id']) <= 64
+            and item['id'] != 'none'
+            and item['id'] not in ids
+        ):
+            ids.append(item['id'])
+    return tuple(ids)
+
+
 class FolderForm(BaseModel):
     name: str
     data: Optional[dict] = None

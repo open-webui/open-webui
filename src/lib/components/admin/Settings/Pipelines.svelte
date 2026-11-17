@@ -21,6 +21,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: Writable<i18nType> = getContext('i18n');
@@ -40,6 +41,14 @@
 	let valves: any = null;
 	let valves_spec: any = null;
 	let selectedPipelineIdx = 0;
+
+	let savedConfig: Record<string, any> | null = null;
+	$: settingLabels = Object.fromEntries(
+		Object.entries(valves_spec?.properties ?? {}).map(([property, spec]: [string, any]) => [
+			property,
+			spec.title
+		])
+	);
 
 	let pipelineDownloadUrl = '';
 	const inputClass =
@@ -75,14 +84,7 @@
 			if (res) {
 				toast.success($i18n.t('Valves updated successfully'));
 				setPipelines();
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections
-							? ($settings?.directConnections ?? null)
-							: null
-					)
-				);
+				models.set(await getModels(localStorage.token));
 				saveHandler();
 			}
 		} else {
@@ -97,6 +99,7 @@
 
 		valves = null;
 		valves_spec = null;
+		savedConfig = null;
 
 		valves_spec = await getPipelineValvesSpec(
 			localStorage.token,
@@ -114,12 +117,15 @@
 				valves[property] = valves[property].join(',');
 			}
 		}
+
+		savedConfig = structuredClone(valves);
 	};
 
 	const setPipelines = async () => {
 		pipelines = null;
 		valves = null;
 		valves_spec = null;
+		savedConfig = null;
 
 		if ((PIPELINES_LIST ?? []).length > 0) {
 			console.debug(selectedPipelinesUrlIdx);
@@ -149,14 +155,7 @@
 		if (res) {
 			toast.success($i18n.t('Pipeline downloaded successfully'));
 			setPipelines();
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 
 		downloading = false;
@@ -181,14 +180,7 @@
 			if (res) {
 				toast.success($i18n.t('Pipeline downloaded successfully'));
 				setPipelines();
-				models.set(
-					await getModels(
-						localStorage.token,
-						$config?.features?.enable_direct_connections
-							? ($settings?.directConnections ?? null)
-							: null
-					)
-				);
+				models.set(await getModels(localStorage.token));
 			}
 		} else {
 			toast.error($i18n.t('No file selected'));
@@ -224,14 +216,7 @@
 		if (res) {
 			toast.success($i18n.t('Pipeline deleted successfully'));
 			setPipelines();
-			models.set(
-				await getModels(
-					localStorage.token,
-					$config?.features?.enable_direct_connections
-						? ($settings?.directConnections ?? null)
-						: null
-				)
-			);
+			models.set(await getModels(localStorage.token));
 		}
 	};
 
@@ -497,12 +482,7 @@
 
 	{#if PIPELINES_LIST !== null && PIPELINES_LIST.length > 0}
 		<div class="flex justify-end pt-6 text-sm font-normal">
-			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-				type="submit"
-			>
-				{$i18n.t('Save')}
-			</button>
+			<AdminSettingSaveButton settings={valves} {savedConfig} labels={settingLabels} />
 		</div>
 	{/if}
 </form>

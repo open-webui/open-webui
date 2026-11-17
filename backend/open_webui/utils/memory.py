@@ -287,7 +287,24 @@ def model_allows_memory(model: dict | None) -> bool:
     return ((model or {}).get('info', {}).get('meta', {}).get('capabilities') or {}).get('memory', True)
 
 
-async def recall_memories(request, messages: list[dict], user, model: dict | None = None) -> str:
+async def memory_context_enabled(user, features: dict) -> bool:
+    """Whether this request asked for memory context and the user may have it."""
+    if not (
+        features.get('memory')
+        and await Config.get('memories.enable')
+        and await Config.get('memories.system_context.enable')
+    ):
+        return False
+    # features is client-supplied; re-check the permission the native FC path enforces.
+    return getattr(user, 'role', None) == 'admin' or await has_permission(
+        getattr(user, 'id', ''),
+        'features.memories',
+        await Config.get('user.permissions'),
+    )
+
+
+async def recall_memories(request, messages: list[dict], user, model: dict | None = None, sent: str = '') -> str:
+    """Recall memories for the latest turn, leaving out any whose line is already in the earlier recall text `sent`."""
     if not model_allows_memory(model):
         return ''
 
@@ -371,7 +388,12 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
         ('Relevant Context', 'context'),
     ):
         if sections[key]:
-            ordered = sorted(sections[key], key=lambda memory: (memory.casefold(), memory))
+            ordered = sorted(
+                (memory for memory in sections[key] if f'- {memory}\n' not in sent),
+                key=lambda memory: (memory.casefold(), memory),
+            )
+            if not ordered:
+                continue
             parts.append(f'[{title}]\n' + '\n'.join(f'- {memory}' for memory in ordered))
     if not parts:
         return ''
@@ -500,7 +522,7 @@ async def _review_memory(
         role = message.get('role', '')
         content = message.get('content', '')
         if not isinstance(content, str):
-            content = get_content_from_message(message)
+            content = get_content_from_message(message) or ''
         content = content.strip()
         if role not in {'user', 'assistant'} or not content:
             continue

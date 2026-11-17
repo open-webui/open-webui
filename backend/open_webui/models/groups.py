@@ -123,6 +123,14 @@ class GroupForm(BaseModel):
     permissions: Optional[dict] = None
     data: Optional[dict] = None
 
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, name: str) -> str:
+        name = name.strip()
+        if not name:
+            raise ValueError('Group name cannot be empty.')
+        return name
+
     @field_validator('data')
     @classmethod
     def validate_default_models(cls, data):

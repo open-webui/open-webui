@@ -93,9 +93,23 @@ def strip_tool_approval_prompt(prompt):
     return _TOOL_APPROVAL_PROMPT_RE.sub('', prompt) if prompt else prompt
 
 
-def set_tool_call_visibility(item, tools):
-    """Copy trusted tool visibility metadata onto display output, without changing execution."""
-    if item.get('type') == 'function_call' and tools.get(item.get('name'), {}).get('hidden') is True:
+def set_tool_call_metadata(item, tools):
+    """Copy application-owned display metadata, never trusting provider annotations."""
+    if item.get('type') != 'function_call':
+        return
+    tool = tools.get(item.get('name'), {})
+    for field, source in (('tool_id', 'tool_id'), ('tool_type', 'type')):
+        item.pop(field, None)
+        if tool.get(source):
+            item[field] = tool[source]
+    item.pop('tool_targets', None)
+    if tool.get('type') == 'builtin' and tool.get('tool_id') == 'builtin:call_tool':
+        item['tool_targets'] = {
+            name: {'tool_id': target['tool_id'], 'tool_type': target['type']}
+            for name, target in tools.items()
+            if target.get('type') == 'builtin' and target.get('tool_id') and not target.get('hidden')
+        }
+    if tool.get('hidden') is True:
         item['hidden'] = True
 
 
@@ -319,10 +333,9 @@ def prepare_tool_call(call, schema=None, *, display_labels=False, approval_revie
 
 
 def final_answer_payload(payload):
-    """Make one OpenAI-compatible continuation request with tools disabled."""
+    """Make one OpenAI-compatible continuation request with tool calls turned off."""
     return {
         **payload,
-        'tools': [],
         'tool_choice': 'none',
         'messages': [*payload.get('messages', []), {'role': 'system', 'content': FINAL_ANSWER_PROMPT}],
     }

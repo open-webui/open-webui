@@ -8,6 +8,7 @@
 	import { getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import NotesIcon from './icons/Notes.svelte';
 	import XMarkIcon from './icons/XMark.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -76,7 +77,7 @@
 						showSidebar.set(false);
 					}
 				}}
-				draggable="false"
+				draggable="true"
 			>
 				<div class="self-center">
 					<NotesIcon className="size-3.5" strokeWidth="1.5" />
@@ -85,17 +86,19 @@
 					{note.title}
 				</div>
 			</a>
-			<button
-				class="hover-reveal self-center py-0.5 rounded-lg transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
-				on:click|preventDefault|stopPropagation={async () => {
-					await toggleNotePinnedStatusById(localStorage.token, note.id);
-					const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(() => []);
-					pinnedNotes.set(_pinnedNotes);
-				}}
-				aria-label={$i18n.t('Unpin')}
-			>
-				<XMarkIcon className="size-3.5" strokeWidth="1.5" />
-			</button>
+			<Tooltip content={$i18n.t('Unpin')} className="flex items-center">
+				<button
+					class="hover-reveal self-center py-0.5 rounded-lg transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+					on:click|preventDefault|stopPropagation={async () => {
+						await toggleNotePinnedStatusById(localStorage.token, note.id);
+						const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(() => []);
+						pinnedNotes.set(_pinnedNotes);
+					}}
+					aria-label={$i18n.t('Unpin')}
+				>
+					<XMarkIcon className="size-3.5" strokeWidth="1.5" />
+				</button>
+			</Tooltip>
 		</div>
 	{/each}
 </div>

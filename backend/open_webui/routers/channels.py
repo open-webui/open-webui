@@ -1,12 +1,11 @@
 import base64
-import io
 import logging
 import time
 import uuid
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, Response
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import ENABLE_PROFILE_IMAGE_URL_FORWARDING, STATIC_DIR
@@ -1217,14 +1216,19 @@ async def app_channel_reply_handler(channel_id, message_id, user_id):
                 # An inactive/removed app or one without write access cannot post a public reply.
                 log.warning('Could not save app error reply: app=%s message=%s', app_id, message_id)
             await emit_to_users(
-                'events:app',
+                'events',
                 {
-                    'app_id': app_id,
-                    'app_name': app_name,
-                    'channel_id': channel_id,
-                    'message_id': message_id,
-                    'parent_id': parent_id,
-                    'reply': {'type': 'error', 'content': detail},
+                    'data': {
+                        'type': 'channel:app',
+                        'data': {
+                            'app_id': app_id,
+                            'app_name': app_name,
+                            'channel_id': channel_id,
+                            'message_id': message_id,
+                            'parent_id': parent_id,
+                            'reply': {'type': 'error', 'content': detail},
+                        },
+                    }
                 },
                 [user_id],
             )
@@ -2094,11 +2098,10 @@ async def get_webhook_profile_image(
             try:
                 header, base64_data = webhook.profile_image_url.split(',', 1)
                 image_data = base64.b64decode(base64_data)
-                image_buffer = io.BytesIO(image_data)
                 media_type = header.split(';')[0].lstrip('data:')
 
-                return StreamingResponse(
-                    image_buffer,
+                return Response(
+                    content=image_data,
                     media_type=media_type,
                     headers={'Content-Disposition': 'inline'},
                 )

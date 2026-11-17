@@ -383,6 +383,20 @@ class ChatMessageTable:
             )
             return result.scalar_one_or_none() is not None
 
+    async def has_queued_message(self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None) -> bool:
+        """Whether the user sent a message while this reply was still running."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChatMessage.meta)
+                .where(ChatMessage.chat_id == chat_id)
+                .where(ChatMessage.parent_id == message_id)
+                .where(ChatMessage.role == 'user')
+            )
+            return any(
+                (meta or {}).get('status') == 'pending' and (meta or {}).get('internal') is not True
+                for meta in result.scalars()
+            )
+
     async def get_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> list[ChatMessageModel]:
         async with get_async_db_context(db) as db:
             result = await db.execute(
@@ -635,6 +649,7 @@ class ChatMessageTable:
 
             stmt = select(
                 ChatMessage.model_id,
+                func.max(ChatMessage.meta['model_name'].as_string()).label('model_name'),
                 func.count(ChatMessage.id).label('count'),
                 func.count(distinct(ChatMessage.user_id)).label('unique_users'),
                 func.count(distinct(ChatMessage.chat_id)).label('unique_chats'),
@@ -655,6 +670,7 @@ class ChatMessageTable:
             result = await db.execute(stmt)
             return {
                 row.model_id: {
+                    'name': row.model_name if isinstance(row.model_name, str) and row.model_name.strip() else None,
                     'count': row.count,
                     'unique_users': row.unique_users,
                     'unique_chats': row.unique_chats,

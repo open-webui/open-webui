@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { WorkBook } from 'xlsx';
 	import ExcelPreview from './ExcelPreview.svelte';
-	import DOMPurify from 'dompurify';
 
 	import { getContext, onMount, tick } from 'svelte';
 
@@ -51,9 +50,7 @@
 
 	let selectedTab = '';
 	let excelWorkbook: WorkBook | null = null;
-	let excelSheetNames: string[] = [];
 	let selectedSheet = '';
-	let excelHtml = '';
 	let excelError = false;
 	let rowCount = 0;
 
@@ -150,31 +147,14 @@
 				getFileContentById(item.id),
 				import('$lib/utils/excelToTable')
 			]);
-			excelWorkbook = await readExcelWorkbook(arrayBuffer);
-			excelSheetNames = excelWorkbook.SheetNames;
-
-			if (excelSheetNames.length > 0) {
-				selectedSheet = excelSheetNames[0];
-				await renderExcelSheet();
-			}
+			const workbook = await readExcelWorkbook(arrayBuffer);
+			selectedSheet = workbook.SheetNames[0] ?? '';
+			excelWorkbook = workbook;
 		} catch (error) {
 			console.error('Error loading Excel/CSV file:', error);
 			excelError = true;
 		}
 	};
-
-	const renderExcelSheet = async () => {
-		if (!excelWorkbook || !selectedSheet) return;
-		const { excelToTable } = await import('$lib/utils/excelToTable');
-		const worksheet = excelWorkbook.Sheets[selectedSheet];
-		const result = await excelToTable(worksheet);
-		excelHtml = DOMPurify.sanitize(result.html, { ADD_ATTR: ['target'] });
-		rowCount = result.rowCount;
-	};
-
-	$: if (selectedSheet && excelWorkbook) {
-		renderExcelSheet();
-	}
 
 	const loadDocxContent = async () => {
 		try {
@@ -314,7 +294,7 @@
 					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
-								<div class="capitalize shrink-0">{item.type}</div>
+								<div class="capitalize shrink-0">{$i18n.t('Knowledge Base')}</div>
 								•
 							{/if}
 
@@ -547,14 +527,9 @@
 							</div>
 						{:else}
 							<div class="h-[60vh]">
-								<ExcelPreview
-									html={excelHtml}
-									sheetNames={excelSheetNames}
-									{selectedSheet}
-									onSheetChange={(sheet) => {
-										selectedSheet = sheet;
-									}}
-								/>
+								{#if excelWorkbook}
+									<ExcelPreview workbook={excelWorkbook} bind:selectedSheet bind:rowCount />
+								{/if}
 							</div>
 						{/if}
 					{:else if isCode}

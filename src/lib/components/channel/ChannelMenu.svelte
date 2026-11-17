@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { goto } = getPageContext();
+
 	import { getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { channels, config, user } from '$lib/stores';
-	import { goto } from '$app/navigation';
+
 	import { canUseEncryption, enter } from '$lib/encryption/client';
 	import { updateChannelMemberMuteStatusById } from '$lib/apis/channels';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -64,7 +67,7 @@
 			type="button"
 			class="flex {sidebar
 				? 'size-4.5'
-				: 'size-7'} items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors touch-auto"
+				: 'size-6'} items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 touch-auto"
 			aria-label={$i18n.t(channel.type === 'dm' ? 'Conversation options' : 'Channel options')}
 			aria-haspopup="menu"
 			aria-expanded={show}

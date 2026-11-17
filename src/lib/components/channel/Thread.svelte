@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { getPageContext } from '$lib/utils/page';
+	const { goto, url: pageUrl } = getPageContext();
 
 	import { socket, user } from '$lib/stores';
 
@@ -36,8 +36,8 @@
 
 	$: if (threadId) {
 		initHandler(
-			$page.url.searchParams.get('thread') === threadId
-				? ($page.url.searchParams.get('message') ?? '')
+			$pageUrl.searchParams.get('thread') === threadId
+				? ($pageUrl.searchParams.get('message') ?? '')
 				: ''
 		);
 	}
@@ -76,7 +76,7 @@
 
 			await tick();
 			if (anchor) {
-				const element = document.getElementById(`message-${threadId}-${anchor}`);
+				const element = threadRoot?.querySelector(`[id="message-${threadId}-${anchor}"]`);
 				element?.scrollIntoView({ block: 'center' });
 				element?.animate([{ backgroundColor: '#a5a5c544' }, { backgroundColor: 'transparent' }], {
 					duration: 2200
@@ -221,10 +221,11 @@
 		loading = null;
 		$socket?.off('events:channel', channelEventHandler);
 	});
+	let threadRoot: HTMLDivElement;
 </script>
 
 {#if channel}
-	<div class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
+	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
 		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 

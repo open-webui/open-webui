@@ -142,6 +142,7 @@
 			</div>
 		</div>
 		<div class="ml-12 mt-2 flex justify-between text-[0.625rem] tabular-nums">
+			<!-- {$i18n.t('Response order')} -->
 			<span>{bars[0].first}</span><span>{$i18n.t('Response order')}</span><span
 				>{bars[bars.length - 1].last}</span
 			>
