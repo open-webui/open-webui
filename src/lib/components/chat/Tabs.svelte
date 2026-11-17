@@ -724,6 +724,12 @@
 		pendingPageTab = null;
 		openPageTab(request);
 	}
+	$: if (viewReady && chatId) {
+		const duplicate = tabs.tabs.find(
+			(tab) => tab.kind === 'chat' && tab.id !== mainChatTabId && tab.chatId === chatId
+		);
+		if (duplicate) void closeTab(duplicate.id);
+	}
 
 	const openFiles = (
 		terminalId = $selectedTerminalId,
