@@ -1144,9 +1144,8 @@
 
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												const suggestionsContainerElement = inputRoot?.querySelector<HTMLElement>(
-													'[id="suggestions-container"]'
-												);
+												const suggestionsContainerElement =
+													document.getElementById('suggestions-container');
 
 												if (!suggestionsContainerElement) {
 													if (
