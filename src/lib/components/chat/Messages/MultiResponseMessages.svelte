@@ -260,6 +260,7 @@
 
 									{#if message.timestamp}
 										<span
+											data-reveal-on-focus
 											class=" self-center invisible group-hover:visible text-gray-400 text-xs font-medium uppercase ml-0.5 -mt-0.5"
 										>
 											{dayjs(message.timestamp * 1000).format($i18n.t('h:mm a'))}
@@ -279,7 +280,7 @@
 					</div>
 
 					{#if isLastMessage}
-						<div class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+						<div data-message-actions class=" flex-shrink-0 text-gray-600 dark:text-gray-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
 									type="button"

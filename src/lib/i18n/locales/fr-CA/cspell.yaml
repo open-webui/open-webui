@@ -10,6 +10,7 @@ overrides:
       - emojis
       - executable
       - Edition
+      - Échap
       - integrations
       - elections
       - Regénérer

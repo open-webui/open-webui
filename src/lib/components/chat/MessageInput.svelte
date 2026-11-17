@@ -25,6 +25,7 @@
 	import { transcribeAudio } from '$lib/apis/audio';
 	import { uploadFile } from '$lib/apis/files';
 	import { getToolDisplayName, getToolTooltipContent } from '$lib/utils/mcp-tools';
+	import { focusActiveMessage, isJumpToMessagesShortcut } from '$lib/utils/message-navigation';
 
 	import { WEBUI_BASE_URL, WEBUI_API_BASE_URL, PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 
@@ -726,8 +727,9 @@
 													</div>
 													<div class=" absolute -top-1 -right-1">
 														<button
-															class=" bg-gray-400 text-white border border-white rounded-full group-hover:visible invisible transition"
+															class=" bg-gray-400 text-white border border-white rounded-full opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto transition"
 															type="button"
+															aria-label={$i18n.t('Remove')}
 															on:click={() => {
 																files.splice(fileIdx, 1);
 																files = files;
@@ -847,6 +849,11 @@
 												generateAutoCompletion={generateMessageAutoCompletion}
 												on:keydown={async (event) => {
 													const e = getKeyboardEvent(event);
+
+													if (isJumpToMessagesShortcut(e) && focusActiveMessage()) {
+														e.preventDefault();
+														return;
+													}
 
 													const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 													const commandsContainerElement =
@@ -1040,6 +1047,12 @@
 											}}
 											on:keydown={async (e) => {
 												const textarea = getTextArea(e);
+
+												if (isJumpToMessagesShortcut(e) && focusActiveMessage()) {
+													e.preventDefault();
+													return;
+												}
+
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 												const commandsContainerElement =
 													document.getElementById('commands-container');

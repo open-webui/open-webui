@@ -179,7 +179,7 @@
 		// Reset pagination variables
 		tags.set(await getAllTags(getRequestToken()));
 		pinnedChats.set(await getPinnedChatList(getRequestToken()));
-		initFolders();
+		await initFolders();
 
 		currentChatPage.set(1);
 		allChatsLoaded = false;
@@ -1061,8 +1061,10 @@
 						on:update={async (e) => {
 							initChatList();
 						}}
-						on:change={async () => {
-							initChatList();
+						on:change={async (e) => {
+							await initChatList();
+							await tick();
+							changeFocus(e.detail?.buttonID);
 						}}
 						on:select={(e) => {
 							toggleChatSelection(e.detail);

@@ -2,14 +2,18 @@
 	import { onDestroy, onMount, createEventDispatcher } from 'svelte';
 	import { fly } from 'svelte/transition';
 	import { isApp } from '$lib/stores';
+	import * as focusTrap from 'focus-trap';
 
 	const dispatch = createEventDispatcher();
 
 	export let show = false;
 	export let className = '';
+	export let ariaLabel = '';
 
 	let modalElement: any = null;
+	let contentEl: HTMLElement;
 	let mounted = false;
+	let trap: focusTrap.FocusTrap | null = null;
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key === 'Escape' && isTopModal()) {
@@ -40,7 +44,23 @@
 		}
 	}
 
+	// The drawer is a full-screen overlay, so keep keyboard focus inside it while open.
+	$: if (show && contentEl && !trap) {
+		trap = focusTrap.createFocusTrap(contentEl, {
+			fallbackFocus: contentEl,
+			clickOutsideDeactivates: true,
+			escapeDeactivates: false,
+			returnFocusOnDeactivate: true
+		});
+		trap.activate();
+	} else if (!show && trap) {
+		trap.deactivate();
+		trap = null;
+	}
+
 	onDestroy(() => {
+		trap?.deactivate();
+		trap = null;
 		show = false;
 		if (modalElement) {
 			if (document.body.contains(modalElement)) {
@@ -64,7 +84,13 @@
 		show = false;
 	}}
 >
+	<!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
 	<div
+		bind:this={contentEl}
+		role="dialog"
+		aria-modal="true"
+		aria-label={ariaLabel || undefined}
+		tabindex="-1"
 		class=" mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} max-h-[100dvh] overflow-y-auto scrollbar-hidden"
 		on:mousedown={(e) => {
 			e.stopPropagation();

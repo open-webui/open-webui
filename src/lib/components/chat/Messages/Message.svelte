@@ -6,6 +6,7 @@
 	const i18n = getI18n();
 
 	import { settings } from '$lib/stores';
+	import { messageNavigation } from '$lib/utils/message-navigation';
 
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
@@ -40,11 +41,28 @@
 	export let readOnly = false;
 </script>
 
+<!-- svelte-ignore a11y-no-noninteractive-tabindex -->
 <div
+	use:messageNavigation
+	data-keyboard-message
+	role="group"
+	tabindex={idx === 0 ? 0 : -1}
+	aria-label={$i18n.t('Message {{number}} from {{name}}', {
+		number: idx + 1,
+		name: history.messages[messageId]?.role === 'user' ? $i18n.t('You') : $i18n.t('Assistant')
+	})}
+	aria-describedby="message-keyboard-help-{chatId}"
 	class="flex flex-col justify-between px-5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
-		: 'max-w-5xl'} mx-auto rounded-lg group"
+		: 'max-w-5xl'} mx-auto rounded-lg group keyboard-message"
 >
+	{#if idx === 0}
+		<span id="message-keyboard-help-{chatId}" hidden>
+			{$i18n.t(
+				'Use Up and Down to navigate messages, Enter for actions, Left and Right to navigate actions, and Escape to return to the message.'
+			)}
+		</span>
+	{/if}
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage

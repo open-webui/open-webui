@@ -54,6 +54,21 @@ Want to learn more about CANChat's features? Check out our [documentation](https
 
 ---
 
+## Keyboard navigation
+
+- Press **Alt+Up** (**Option+Up** on macOS) in the message composer to jump to the active message. **Shift+Tab** follows the normal focus order. Use **Up/Down** to move between messages, or **Home/End** for the first/last loaded message. Focusing a message reveals its timestamp and actions.
+- Press **Enter** on a message to focus its actions. Use the **arrow keys** to choose an action and **Enter/Space** to activate it. **Escape** returns to the message; **Tab/Shift+Tab** lets you leave the message area.
+- In a chat's **Chat Menu**, choose **Move to folder** to select an existing folder, remove the chat from its folder, or create a new destination folder without dragging. Choose **Tags** to manage tags.
+- Use **Tab** within the model selector to reach the **Temporary Chat** switch. **Escape** closes the selector and returns focus to its button.
+- Folder and Chat Controls expansion buttons support **Enter/Space**. Sidebar folders also support **Right/Left** to expand/collapse. On large screens (1024px and wider), the Chat Controls side panel is non-modal and does not trap keyboard focus. On smaller screens, and when zoomed in, it opens as a modal drawer that keeps focus inside until you close it.
+- Hover-revealed controls also appear on keyboard focus and remain visible on devices without hover. Hidden controls do not intercept pointer clicks. Message action bars scroll horizontally on narrow screens.
+
+The keyboard regression tests mount real components with mocked API responses; no running backend is required:
+
+```bash
+npx playwright test playwright/tests/e2e/accessibility/keyboard.spec.ts --project=chromium-en --project=firefox-en --no-deps --workers=1
+```
+
 ## How to Install
 
 ### Prerequisites
@@ -317,6 +332,14 @@ If you have any questions, suggestions, or need assistance, please see our
   Vous souhaitez en savoir plus sur les fonctionnalités de CANChat ? Consultez notre [documentation](https://gcxgce.sharepoint.com/teams/1000538/SitePages/CANchat_FR.aspx) pour un aperçu complet !
 
 ---
+
+## Navigation au clavier
+
+- Appuyez sur **Maj+Tab** dans le champ de message pour revenir au message actif. Utilisez les **flèches haut/bas** pour parcourir les messages, ou **Début/Fin** pour atteindre le premier/dernier message chargé. Le focus révèle l'horodatage et les actions du message.
+- Appuyez sur **Entrée** sur un message pour accéder à ses actions. Utilisez les **flèches** pour choisir une action et **Entrée/Espace** pour l'activer. **Échap** revient au message; **Tab/Maj+Tab** permet de quitter la zone.
+- Dans le **Menu du chat**, choisissez **Déplacer vers un dossier** pour sélectionner un dossier existant, retirer le chat de son dossier ou créer un dossier de destination sans glisser-déposer. Choisissez **Tags** pour gérer les étiquettes.
+- Utilisez **Tab** dans le sélecteur de modèle pour atteindre le bouton **Chat temporaire**. **Échap** ferme le sélecteur et ramène le focus à son bouton.
+- Les boutons des dossiers et des contrôles du chat prennent en charge **Entrée/Espace**. Les dossiers de la barre latérale prennent aussi en charge les **flèches droite/gauche** pour développer/réduire leur contenu. Le panneau non modal des contrôles du chat ne piège pas le focus.
 
 ## Comment installer CANChat
 

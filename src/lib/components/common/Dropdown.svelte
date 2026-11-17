@@ -9,6 +9,8 @@
 	export let side: 'bottom' | 'top' | 'right' | 'left' = 'bottom';
 	export let align: 'start' | 'center' | 'end' = 'start';
 	export let ariaLabel: string | undefined = undefined;
+	export let buttonClass = '';
+	export let buttonID: string | undefined = undefined;
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -21,7 +23,13 @@
 	}}
 	typeahead={false}
 >
-	<DropdownMenu.Trigger aria-label={ariaLabel} data-dropdown-trigger="true">
+	<DropdownMenu.Trigger
+		on:keydown
+		id={buttonID}
+		class={buttonClass}
+		aria-label={ariaLabel}
+		data-dropdown-trigger="true"
+	>
 		<slot />
 	</DropdownMenu.Trigger>
 

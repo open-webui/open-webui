@@ -417,6 +417,7 @@
 		ariaMessage.set($i18n.t('Message editing started.'));
 		editTextAreaElement.style.height = '';
 		editTextAreaElement.style.height = `${editTextAreaElement.scrollHeight}px`;
+		editTextAreaElement.focus();
 	};
 
 	const editMessageConfirmHandler = async () => {
@@ -663,6 +664,7 @@
 
 				{#if message.timestamp}
 					<div
+						data-reveal-on-focus
 						class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 					>
 						<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
@@ -842,6 +844,7 @@
 							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">
 								<textarea
 									id="message-edit-{message.id}"
+									aria-label={$i18n.t('Edit')}
 									bind:this={editTextAreaElement}
 									class=" bg-transparent outline-none w-full resize-none"
 									bind:value={editedContent}
@@ -955,6 +958,7 @@
 				{#if !edit}
 					{#if message.done || siblings.length > 1}
 						<div
+							data-message-actions
 							class=" flex justify-start overflow-x-auto buttons text-gray-600 dark:text-gray-500 mt-0.5"
 						>
 							{#if siblings.length > 1}

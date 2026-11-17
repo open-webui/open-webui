@@ -118,6 +118,7 @@
 
 					{#if message.timestamp}
 						<div
+							data-reveal-on-focus
 							class=" self-center text-xs invisible group-hover:visible text-gray-400 font-medium first-letter:capitalize ml-0.5 translate-y-[1px]"
 						>
 							<Tooltip content={dayjs(message.timestamp * 1000).format('dddd, DD MMMM YYYY HH:mm')}>
@@ -232,6 +233,7 @@
 					</div>
 
 					<div
+						data-message-actions
 						class=" flex {($settings?.chatBubble ?? true)
 							? 'justify-end'
 							: ''}  text-gray-600 dark:text-gray-500"

@@ -78,6 +78,24 @@
 					</div>
 
 					<div class="w-full flex justify-between items-center" tabindex="0">
+						<div class=" text-sm">{$i18n.t('Jump to messages')}</div>
+
+						<div class="flex space-x-1 text-xs">
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								Alt
+							</div>
+
+							<div
+								class=" h-fit py-1 px-2 flex items-center justify-center rounded border border-black/10 capitalize text-gray-600 dark:border-white/10 dark:text-gray-300"
+							>
+								↑
+							</div>
+						</div>
+					</div>
+
+					<div class="w-full flex justify-between items-center" tabindex="0">
 						<div class=" text-sm">{$i18n.t('Copy last code block')}</div>
 
 						<div class="flex space-x-1 text-xs">

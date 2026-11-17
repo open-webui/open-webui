@@ -419,7 +419,7 @@
 			? 'from-transparent'
 			: id === $chatId || confirmEdit
 				? 'visible block from-gray-200 dark:from-gray-900'
-				: 'invisible group-hover:visible from-gray-100 dark:from-gray-950'}
+				: 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto from-gray-100 dark:from-gray-950'}
             absolute z-50 {className === 'pr-2'
 			? 'right-[8px]'
 			: 'right-0'}  top-[4px] py-1 pr-0.5 mr-1.5 pl-5 bg-gradient-to-l from-80%

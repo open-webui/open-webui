@@ -47,6 +47,7 @@
 
 	export let disabled = false;
 	export let hide = false;
+	export let customTrigger = false;
 
 	let initialized = false;
 
@@ -57,28 +58,25 @@
 			ariaMessage.set($i18n.t('collapsed'));
 		}
 	};
+
+	const toggle = () => {
+		if (!disabled) {
+			open = !open;
+			announceAction(open);
+		}
+	};
 </script>
 
-<div class={className}>
+<div class="{className} {grow ? buttonClassName : ''}">
 	{#if title !== null}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div
-			class="{buttonClassName} cursor-pointer"
-			tabindex="0"
-			on:pointerup={() => {
-				if (!disabled) {
-					open = !open;
-					announceAction(open);
-				}
-			}}
-			on:keydown={(e) => {
-				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-					e.preventDefault();
-					open = !open;
-					announceAction(open);
-				}
-			}}
+		<button
+			type="button"
+			aria-expanded={open}
+			{disabled}
+			class="{grow ? 'w-full' : buttonClassName} cursor-pointer"
+			on:click={toggle}
 		>
 			<div
 				class=" w-full font-medium flex items-center justify-between gap-2 {attributes?.done &&
@@ -103,7 +101,7 @@
 							{$i18n.t('Thinking...')}
 						{/if}
 					{:else}
-						<h3>{title}</h3>
+						<span>{title}</span>
 					{/if}
 				</div>
 
@@ -115,50 +113,26 @@
 					{/if}
 				</div>
 			</div>
+		</button>
+	{:else if customTrigger}
+		<div class={grow ? 'w-full' : buttonClassName}>
+			<slot {toggle} />
 		</div>
 	{:else}
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
-		<!-- svelte-ignore a11y-click-events-have-key-events -->
-		<div
-			class="{buttonClassName} cursor-pointer"
-			on:pointerup={() => {
-				if (!disabled) {
-					open = !open;
-					announceAction(open);
-				}
-			}}
-			on:keydown={(e) => {
-				if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
-					e.preventDefault();
-					open = !open;
-					announceAction(open);
-				}
-			}}
+		<button
+			type="button"
+			class="{grow ? 'w-full' : buttonClassName} cursor-pointer"
+			aria-expanded={open}
+			{disabled}
+			on:click={toggle}
 		>
-			<div>
-				<slot />
-
-				{#if grow}
-					{#if open && !hide}
-						<div
-							transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}
-							on:pointerup={(e) => {
-								e.stopPropagation();
-							}}
-						>
-							<slot name="content" />
-						</div>
-					{/if}
-				{/if}
-			</div>
-		</div>
+			<slot {toggle} />
+		</button>
 	{/if}
 
-	{#if !grow}
-		{#if open && !hide}
-			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
-				<slot name="content" />
-			</div>
-		{/if}
+	{#if open && !hide}
+		<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
+			<slot name="content" />
+		</div>
 	{/if}
 </div>

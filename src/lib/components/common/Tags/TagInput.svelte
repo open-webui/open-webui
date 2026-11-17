@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getI18n } from '$lib/utils/context';
 
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, tick } from 'svelte';
 	import { tags } from '$lib/stores';
 	import { toast } from 'svelte-sonner';
 	const dispatch = createEventDispatcher();
@@ -11,6 +11,8 @@
 	export let label = '';
 	let showTagInput = false;
 	let tagName = '';
+	let input: HTMLInputElement;
+	let trigger: HTMLButtonElement;
 
 	const addTagHandler = async () => {
 		tagName = tagName.trim();
@@ -18,6 +20,8 @@
 			dispatch('add', tagName);
 			tagName = '';
 			showTagInput = false;
+			await tick();
+			trigger.focus();
 		} else {
 			toast.error($i18n.t(`Invalid Tag`));
 		}
@@ -28,13 +32,20 @@
 	{#if showTagInput}
 		<div class="flex items-center">
 			<input
+				bind:this={input}
 				bind:value={tagName}
+				aria-label={$i18n.t('Add a tag')}
 				class=" px-2 cursor-pointer self-center text-xs h-fit bg-transparent outline-none line-clamp-1 w-[6.5rem]"
 				placeholder={$i18n.t('Add a tag')}
 				list="tagOptions"
 				on:keydown={(event) => {
 					if (event.key === 'Enter') {
+						event.preventDefault();
 						addTagHandler();
+					} else if (event.key === 'Escape') {
+						event.stopPropagation();
+						showTagInput = false;
+						tick().then(() => trigger.focus());
 					}
 				}}
 			/>
@@ -63,11 +74,17 @@
 	{/if}
 
 	<button
+		bind:this={trigger}
 		class=" cursor-pointer self-center p-0.5 flex h-fit items-center dark:hover:bg-gray-700 rounded-full transition border dark:border-gray-600 border-dashed"
 		type="button"
 		aria-label={$i18n.t('Add Tag')}
-		on:click={() => {
+		aria-expanded={showTagInput}
+		on:click={async () => {
 			showTagInput = !showTagInput;
+			if (showTagInput) {
+				await tick();
+				input.focus();
+			}
 		}}
 	>
 		<div class=" m-auto self-center">

@@ -228,6 +228,8 @@
 		<div class=" flex flex-col h-full px-3.5">
 			<div class="flex w-full items-start gap-1.5">
 				<Collapsible
+					customTrigger
+					let:toggle
 					className="w-full flex-1"
 					bind:open={showSystem}
 					buttonClassName="w-full rounded-lg text-sm border border-gray-50 dark:border-gray-850 w-full py-1 px-1.5"
@@ -245,7 +247,13 @@
 						{/if}
 
 						<div class="flex-shrink-0">
-							<button class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg">
+							<button
+								type="button"
+								aria-label={$i18n.t('System Instructions')}
+								aria-expanded={showSystem}
+								on:click={toggle}
+								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+							>
 								{#if showSystem}
 									<ChevronUp className="size-3.5" />
 								{:else}

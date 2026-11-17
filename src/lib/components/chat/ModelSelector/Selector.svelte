@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { getI18n } from '$lib/utils/context';
 
-	import { DropdownMenu } from 'bits-ui';
+	import { Popover } from 'bits-ui';
 	import { marked } from 'marked';
 	import Fuse from 'fuse.js';
 
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher, onMount, tick } from 'svelte';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
@@ -53,6 +53,11 @@
 	export let triggerClassName = 'text-lg';
 
 	let show = false;
+	const closeSelector = async () => {
+		show = false;
+		await tick();
+		document.getElementById(`model-selector-${id}-button`)?.focus();
+	};
 
 	let selectedModel: (typeof items)[number] | null = null;
 	$: selectedModel = items.find((item) => item.value === value) ?? null;
@@ -61,6 +66,7 @@
 	let ollamaVersion: any = null;
 
 	let selectedModelIdx = 0;
+	$: activeModelIdx = Math.min(selectedModelIdx, filteredItems.length - 1);
 
 	const fuse = new Fuse(
 		items.map((item) => {
@@ -246,19 +252,19 @@
 	}
 </script>
 
-<DropdownMenu.Root
+<Popover.Root
 	bind:open={show}
-	onOpenChange={async () => {
+	onOpenChange={(open) => {
 		searchValue = '';
 		selectedModelIdx = 0;
-		window.setTimeout(() => document.getElementById('model-search-input')?.focus(), 0);
+		if (open && searchEnabled) {
+			window.setTimeout(() => document.getElementById(`model-search-input-${id}`)?.focus(), 0);
+		}
 	}}
-	closeFocus={false}
 >
-	<DropdownMenu.Trigger
+	<Popover.Trigger
 		class="relative w-full font-primary"
 		id="model-selector-{id}-button"
-		aria-haspopup="listbox"
 		aria-expanded={show}
 		aria-label={$i18n.t('Select a model, currently "{{model}}"', {
 			model: selectedModel?.label ?? $i18n.t('None')
@@ -276,14 +282,15 @@
 			</span>
 			<ChevronDown className="self-center ml-2 size-3" strokeWidth="2.5" />
 		</div>
-	</DropdownMenu.Trigger>
+	</Popover.Trigger>
 
-	<DropdownMenu.Content
+	<Popover.Content
 		class=" z-40 {$mobile
 			? `w-full`
 			: `${className}`} max-w-[calc(100vw-1rem)] justify-start rounded-xl  bg-white dark:bg-gray-850 dark:text-white shadow-lg  outline-none"
 		transition={flyAndScale}
-		side={$mobile ? 'bottom' : 'bottom-start'}
+		side="bottom"
+		align="start"
 		sideOffset={3}
 	>
 		<slot>
@@ -292,19 +299,35 @@
 					<Search className="size-4" strokeWidth="2.5" />
 
 					<input
-						id="model-search-input"
+						id="model-search-input-{id}"
+						role="combobox"
+						aria-autocomplete="list"
+						aria-expanded={show}
+						aria-controls="model-list-{id}"
+						aria-activedescendant={filteredItems.length
+							? `model-option-${id}-${activeModelIdx}`
+							: undefined}
+						aria-label={$i18n.t('Search a model')}
 						bind:value={searchValue}
 						class="w-full text-sm bg-transparent outline-none"
 						placeholder={$i18n.t('Search a model')}
 						autocomplete="off"
 						on:keydown={(e) => {
-							if (e.code === 'Enter' && filteredItems.length > 0) {
-								value = filteredItems[selectedModelIdx].value;
-								show = false;
+							if (!['Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+								return;
+							}
+							e.preventDefault();
+							e.stopPropagation();
+							if (e.key === 'Enter' && filteredItems.length > 0) {
+								value = filteredItems[Math.min(selectedModelIdx, filteredItems.length - 1)].value;
+								closeSelector();
 								return; // dont need to scroll on selection
-							} else if (e.code === 'ArrowDown') {
-								selectedModelIdx = Math.min(selectedModelIdx + 1, filteredItems.length - 1);
-							} else if (e.code === 'ArrowUp') {
+							} else if (e.key === 'ArrowDown') {
+								selectedModelIdx = Math.max(
+									0,
+									Math.min(selectedModelIdx + 1, filteredItems.length - 1)
+								);
+							} else if (e.key === 'ArrowUp') {
 								selectedModelIdx = Math.max(selectedModelIdx - 1, 0);
 							} else {
 								// if the user types something, reset to the top selection.
@@ -321,153 +344,159 @@
 			{/if}
 
 			<div class="px-3 my-2 max-h-64 overflow-y-auto scrollbar-hidden group">
-				{#each filteredItems as item, index}
-					<button
-						aria-label={getModelDesc(item.model)}
-						class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
-						selectedModelIdx
-							? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
-							: ''}"
-						data-arrow-selected={index === selectedModelIdx}
-						on:click={() => {
-							value = item.value;
-							selectedModelIdx = index;
+				<div id="model-list-{id}" role="listbox" aria-label={$i18n.t('Models')}>
+					{#each filteredItems as item, index}
+						<button
+							id="model-option-{id}-{index}"
+							role="option"
+							aria-selected={index === activeModelIdx}
+							aria-label={item.label}
+							class="flex w-full text-left font-medium line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-none transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg cursor-pointer data-[highlighted]:bg-muted {index ===
+							selectedModelIdx
+								? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-transparent'
+								: ''}"
+							data-arrow-selected={index === selectedModelIdx}
+							on:click={() => {
+								value = item.value;
+								selectedModelIdx = index;
 
-							show = false;
-						}}
-					>
-						<div class="flex flex-col">
-							{#if $mobile && getModelTags(item).length > 0}
-								<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
-									{#each getModelTags(item) as tag}
-										<div
-											class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-										>
-											{tag.name}
-										</div>
-									{/each}
-								</div>
-							{/if}
-							<div class="flex items-center gap-2">
-								<div class="flex items-center min-w-fit">
-									<div class="line-clamp-1">
-										<div class="flex items-center min-w-fit">
-											<Tooltip
-												content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
-												placement="top-start"
-											>
-												<img
-													src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
-													alt=""
-													class="rounded-full size-5 flex items-center mr-2"
-												/>
-												{item.label}
-											</Tooltip>
-										</div>
-									</div>
-									{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
-										<div class="flex ml-1 items-center translate-y-[0.5px]">
-											<Tooltip
-												content={`${
-													item.model.ollama?.details?.quantization_level
-														? item.model.ollama?.details?.quantization_level + ' '
-														: ''
-												}${
-													item.model.ollama?.size
-														? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
-														: ''
-												}`}
-												className="self-end"
-											>
-												<span
-													class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
-													>{item.model.ollama?.details?.parameter_size ?? ''}</span
-												>
-											</Tooltip>
-										</div>
-									{/if}
-								</div>
-
-								<!-- {JSON.stringify(item.info)} -->
-
-								{#if item.model.owned_by === 'openai'}
-									<Tooltip content={`${'External'}`}>
-										<div class="translate-y-[1px]">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 16 16"
-												fill="currentColor"
-												class="size-3"
-											>
-												<path
-													fill-rule="evenodd"
-													d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
-													clip-rule="evenodd"
-												/>
-												<path
-													fill-rule="evenodd"
-													d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
-													clip-rule="evenodd"
-												/>
-											</svg>
-										</div>
-									</Tooltip>
-								{/if}
-
-								{#if item.model?.info?.meta?.description}
-									<Tooltip
-										content={marked.parse(
-											sanitizeResponseContent(getModelDesc(item.value)).replaceAll('\n', '<br>')
-										)}
-									>
-										<div class=" translate-y-[1px]">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke-width="1.5"
-												stroke="currentColor"
-												class="w-4 h-4"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
-												/>
-											</svg>
-										</div>
-									</Tooltip>
-								{/if}
-
-								{#if !$mobile && getModelTags(item).length > 0}
-									<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+								closeSelector();
+							}}
+						>
+							<div class="flex flex-col">
+								{#if $mobile && getModelTags(item).length > 0}
+									<div class="flex gap-0.5 self-start h-full mb-1.5 -translate-x-1">
 										{#each getModelTags(item) as tag}
-											<Tooltip content={tag.name}>
-												<div
-													class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
-												>
-													{tag.name}
-												</div>
-											</Tooltip>
+											<div
+												class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+											>
+												{tag.name}
+											</div>
 										{/each}
 									</div>
 								{/if}
-							</div>
-						</div>
+								<div class="flex items-center gap-2">
+									<div class="flex items-center min-w-fit">
+										<div class="line-clamp-1">
+											<div class="flex items-center min-w-fit">
+												<Tooltip
+													content={$user?.role === 'admin' ? (item?.value ?? '') : ''}
+													placement="top-start"
+												>
+													<img
+														src={item.model?.info?.meta?.profile_image_url ?? '/static/favicon.png'}
+														alt=""
+														class="rounded-full size-5 flex items-center mr-2"
+													/>
+													{item.label}
+												</Tooltip>
+											</div>
+										</div>
+										{#if item.model.owned_by === 'ollama' && (item.model.ollama?.details?.parameter_size ?? '') !== ''}
+											<div class="flex ml-1 items-center translate-y-[0.5px]">
+												<Tooltip
+													content={`${
+														item.model.ollama?.details?.quantization_level
+															? item.model.ollama?.details?.quantization_level + ' '
+															: ''
+													}${
+														item.model.ollama?.size
+															? `(${(item.model.ollama?.size / 1024 ** 3).toFixed(1)}GB)`
+															: ''
+													}`}
+													className="self-end"
+												>
+													<span
+														class=" text-xs font-medium text-gray-600 dark:text-gray-400 line-clamp-1"
+														>{item.model.ollama?.details?.parameter_size ?? ''}</span
+													>
+												</Tooltip>
+											</div>
+										{/if}
+									</div>
 
-						{#if value === item.value}
-							<div class="ml-auto pl-2 pr-2 md:pr-0">
-								<Check />
+									<!-- {JSON.stringify(item.info)} -->
+
+									{#if item.model.owned_by === 'openai'}
+										<Tooltip content={`${'External'}`}>
+											<div class="translate-y-[1px]">
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 16 16"
+													fill="currentColor"
+													class="size-3"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M8.914 6.025a.75.75 0 0 1 1.06 0 3.5 3.5 0 0 1 0 4.95l-2 2a3.5 3.5 0 0 1-5.396-4.402.75.75 0 0 1 1.251.827 2 2 0 0 0 3.085 2.514l2-2a2 2 0 0 0 0-2.828.75.75 0 0 1 0-1.06Z"
+														clip-rule="evenodd"
+													/>
+													<path
+														fill-rule="evenodd"
+														d="M7.086 9.975a.75.75 0 0 1-1.06 0 3.5 3.5 0 0 1 0-4.95l2-2a3.5 3.5 0 0 1 5.396 4.402.75.75 0 0 1-1.251-.827 2 2 0 0 0-3.085-2.514l-2 2a2 2 0 0 0 0 2.828.75.75 0 0 1 0 1.06Z"
+														clip-rule="evenodd"
+													/>
+												</svg>
+											</div>
+										</Tooltip>
+									{/if}
+
+									{#if item.model?.info?.meta?.description}
+										<Tooltip
+											content={marked.parse(
+												sanitizeResponseContent(getModelDesc(item.value)).replaceAll('\n', '<br>')
+											)}
+										>
+											<div class=" translate-y-[1px]">
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="w-4 h-4"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+													/>
+												</svg>
+											</div>
+										</Tooltip>
+									{/if}
+
+									{#if !$mobile && getModelTags(item).length > 0}
+										<div class="flex gap-0.5 self-center items-center h-full translate-y-[0.5px]">
+											{#each getModelTags(item) as tag}
+												<Tooltip content={tag.name}>
+													<div
+														class=" text-xs font-bold px-1 rounded uppercase line-clamp-1 bg-gray-500/20 text-gray-700 dark:text-gray-200"
+													>
+														{tag.name}
+													</div>
+												</Tooltip>
+											{/each}
+										</div>
+									{/if}
+								</div>
 							</div>
-						{/if}
-					</button>
-				{:else}
+
+							{#if value === item.value}
+								<div class="ml-auto pl-2 pr-2 md:pr-0">
+									<Check />
+								</div>
+							{/if}
+						</button>
+					{/each}
+				</div>
+				{#if filteredItems.length === 0}
 					<div>
 						<div class="block px-3 py-2 text-sm text-gray-700 dark:text-gray-100">
 							{$i18n.t('No results found')}
 						</div>
 					</div>
-				{/each}
+				{/if}
 
 				{#if !(searchValue.trim() in $MODEL_DOWNLOAD_POOL) && searchValue && ollamaVersion && $user.role === 'admin'}
 					<Tooltip
@@ -598,7 +627,7 @@
 								history.replaceState(null, '', location.pathname);
 							}
 
-							show = false;
+							closeSelector();
 						}}
 					>
 						<div class="flex gap-2.5 items-center">
@@ -630,5 +659,5 @@
 			<div class="hidden w-[42rem]" />
 			<div class="hidden w-[32rem]" />
 		</slot>
-	</DropdownMenu.Content>
-</DropdownMenu.Root>
+	</Popover.Content>
+</Popover.Root>

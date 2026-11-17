@@ -3,7 +3,7 @@
 
 	import { DropdownMenu } from 'bits-ui';
 	import { flyAndScale } from '$lib/utils/transitions';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, tick } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -28,6 +28,8 @@
 	import Download from '$lib/components/icons/Download.svelte';
 	import { toast } from 'svelte-sonner';
 	import { getRequestToken } from '$lib/services/auth';
+	import MoveChatModal from './MoveChatModal.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 
 	const i18n = getI18n();
 
@@ -43,6 +45,25 @@
 
 	let show = false;
 	let pinned = false;
+	let showMove = false;
+	let showTags = false;
+
+	const handleEscape = async (event: CustomEvent<{ originalEvent: KeyboardEvent }>) => {
+		if (event.detail.originalEvent.key === 'Escape') {
+			event.preventDefault();
+			event.detail.originalEvent.stopPropagation();
+			show = false;
+			await tick();
+			document.getElementById(buttonID)?.focus();
+		}
+	};
+
+	const openDialog = async (dialog: 'move' | 'tags') => {
+		show = false;
+		await tick();
+		if (dialog === 'move') showMove = true;
+		else showTags = true;
+	};
 
 	const pinHandler = async () => {
 		await toggleChatPinnedStatusById(getRequestToken(), chatId);
@@ -116,8 +137,36 @@
 	}
 </script>
 
+<MoveChatModal
+	bind:show={showMove}
+	{chatId}
+	returnFocusSelector={buttonID ? `#${buttonID}` : ''}
+	on:change={(e) => dispatch('change', { buttonID: e.detail.focusId })}
+/>
+
+<Modal
+	bind:show={showTags}
+	size="sm"
+	title={$i18n.t('Tags')}
+	labelledBy={`chat-tags-title-${chatId}`}
+	returnFocusSelector={buttonID ? `#${buttonID}` : ''}
+>
+	<div class="p-5 space-y-4">
+		<h2 id={`chat-tags-title-${chatId}`} class="text-lg font-semibold">{$i18n.t('Tags')}</h2>
+		<Tags
+			{chatId}
+			on:add={(e) => dispatch('tag', { type: 'add', name: e.detail.name })}
+			on:delete={(e) => dispatch('tag', { type: 'delete', name: e.detail.name })}
+		/>
+		<button type="button" class="rounded-lg px-3 py-2" on:click={() => (showTags = false)}
+			>{$i18n.t('Close')}</button
+		>
+	</div>
+</Modal>
+
 <Dropdown
 	bind:show
+	on:keydown={handleEscape}
 	on:change={(e) => {
 		if (e.detail === false) {
 			onClose();
@@ -131,12 +180,27 @@
 
 	<div slot="content">
 		<DropdownMenu.Content
+			on:keydown={handleEscape}
 			class="w-full max-w-[200px] rounded-xl px-1 py-1.5 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
 			sideOffset={-2}
 			side="bottom"
 			align="start"
 			transition={flyAndScale}
 		>
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => openDialog('move')}
+			>
+				<div>{$i18n.t('Move to folder')}</div>
+			</DropdownMenu.Item>
+
+			<DropdownMenu.Item
+				class="flex gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
+				on:click={() => openDialog('tags')}
+			>
+				<div>{$i18n.t('Tags')}</div>
+			</DropdownMenu.Item>
+
 			<DropdownMenu.Item
 				class="flex gap-2 items-center px-3 py-1.5 text-sm  cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md"
 				on:click={() => {
@@ -223,34 +287,6 @@
 				<GarbageBin strokeWidth="2" />
 				<div class="flex items-center">{$i18n.t('Delete')}</div>
 			</DropdownMenu.Item>
-
-			<hr class="border-gray-50 dark:border-gray-850 my-0.5" />
-
-			<div class="flex p-1">
-				<Tags
-					{chatId}
-					on:add={(e) => {
-						dispatch('tag', {
-							type: 'add',
-							name: e.detail.name
-						});
-
-						show = false;
-					}}
-					on:delete={(e) => {
-						dispatch('tag', {
-							type: 'delete',
-							name: e.detail.name
-						});
-
-						show = false;
-					}}
-					on:close={() => {
-						show = false;
-						onClose();
-					}}
-				/>
-			</div>
 		</DropdownMenu.Content>
 	</div>
 </Dropdown>

@@ -11,7 +11,9 @@
 	import Overview from './Overview.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Artifacts from './Artifacts.svelte';
-	import * as focusTrap from 'focus-trap';
+	import { getI18n } from '$lib/utils/context';
+
+	const i18n = getI18n();
 
 	export let history: any;
 	export let models: any[] = [];
@@ -35,7 +37,20 @@
 	let dragged = false;
 
 	let minSize = 0;
-	let trap: any = null;
+	let returnFocus: HTMLElement | null = null;
+
+	const focusControls = async () => {
+		const previousFocus = document.activeElement;
+		await tick();
+		if (!$showControls) return;
+		const control = document.querySelector<HTMLButtonElement>(
+			'#chat-controls-container-wrapper button'
+		);
+		if (control) {
+			returnFocus = previousFocus instanceof HTMLElement ? previousFocus : null;
+			control.focus();
+		}
+	};
 
 	export const openPane = () => {
 		if (parseInt(localStorage?.chatControlsSize)) {
@@ -72,16 +87,6 @@
 
 	const onMouseUp = (event: any) => {
 		dragged = false;
-	};
-
-	const focusTrapListener = async () => {
-		await tick();
-		const wrapper = document.getElementById('chat-controls-container-wrapper');
-		trap = focusTrap.createFocusTrap(wrapper, {
-			clickOutsideDeactivates: true,
-			returnFocusOnDeactivate: true
-		});
-		trap.activate();
 	};
 
 	onMount(() => {
@@ -126,6 +131,7 @@
 
 	onDestroy(() => {
 		showControls.set(false);
+		returnFocus?.focus();
 
 		mediaQuery.removeEventListener('change', handleMediaQuery);
 		document.removeEventListener('mousedown', onMouseDown);
@@ -143,7 +149,11 @@
 	};
 
 	$: if ($showControls) {
-		focusTrapListener();
+		focusControls();
+	}
+	$: if (!$showControls && returnFocus) {
+		returnFocus.focus();
+		returnFocus = null;
 	}
 	$: if (!chatId) {
 		closeHandler();
@@ -155,6 +165,7 @@
 		{#if $showControls}
 			<Drawer
 				show={$showControls}
+				ariaLabel={$i18n.t('Chat Controls')}
 				on:close={() => {
 					showControls.set(false);
 				}}
@@ -197,7 +208,6 @@
 							<Controls
 								on:close={() => {
 									showControls.set(false);
-									trap.deactivate();
 								}}
 								{models}
 								bind:chatFiles
@@ -289,7 +299,6 @@
 								<Controls
 									on:close={() => {
 										showControls.set(false);
-										trap.deactivate();
 									}}
 									{models}
 									bind:chatFiles

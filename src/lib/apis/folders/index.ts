@@ -1,8 +1,15 @@
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { apiJson } from '$lib/apis/client';
 
+export type Folder = {
+	id: string;
+	name: string;
+	parent_id: string | null;
+	is_expanded: boolean;
+};
+
 export const createNewFolder = async (token: string = '', name: string) => {
-	return apiJson(`${WEBUI_API_BASE_URL}/folders/`, {
+	return apiJson<Folder>(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'POST',
 		token,
 		headers: {
@@ -15,7 +22,7 @@ export const createNewFolder = async (token: string = '', name: string) => {
 };
 
 export const getFolders = async (token: string = '') => {
-	return apiJson(`${WEBUI_API_BASE_URL}/folders/`, {
+	return apiJson<Folder[]>(`${WEBUI_API_BASE_URL}/folders/`, {
 		method: 'GET',
 		token,
 		headers: {

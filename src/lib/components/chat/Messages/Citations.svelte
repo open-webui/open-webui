@@ -126,7 +126,7 @@
 				{/each}
 			</div>
 		{:else}
-			<Collapsible bind:open={isCollapsibleOpen} className="w-full">
+			<Collapsible bind:open={isCollapsibleOpen} className="w-full" customTrigger let:toggle>
 				<div
 					class="flex items-center gap-2 text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition cursor-pointer"
 				>
@@ -163,13 +163,19 @@
 							<span>{$i18n.t('more')}</span>
 						</div>
 					</div>
-					<div class="flex-shrink-0">
+					<button
+						type="button"
+						class="flex-shrink-0 p-1 rounded"
+						aria-label={$i18n.t('References from')}
+						aria-expanded={isCollapsibleOpen}
+						on:click={toggle}
+					>
 						{#if isCollapsibleOpen}
 							<ChevronUp strokeWidth="3.5" className="size-3.5" />
 						{:else}
 							<ChevronDown strokeWidth="3.5" className="size-3.5" />
 						{/if}
-					</div>
+					</button>
 				</div>
 				<div slot="content">
 					<div class="flex text-xs font-medium">

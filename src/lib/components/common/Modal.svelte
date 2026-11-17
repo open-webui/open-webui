@@ -16,6 +16,7 @@
 	export let disableClose = false;
 	export let disableFocusTrap: boolean = false; // For component without focusable elements, skip trap creation
 	export let title = '';
+	export let labelledBy = '';
 
 	// New props for custom focus behavior:
 	export let initialFocusSelector = ''; // e.g. '#first-input'
@@ -112,6 +113,10 @@
 	>
 		<div
 			bind:this={contentEl}
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby={labelledBy || undefined}
+			aria-label={!labelledBy && title ? title : undefined}
 			class=" m-auto max-w-full {sizeToWidth(size)} {size !== 'full'
 				? 'mx-2'
 				: ''} shadow-3xl min-h-fit scrollbar-hidden {className}"

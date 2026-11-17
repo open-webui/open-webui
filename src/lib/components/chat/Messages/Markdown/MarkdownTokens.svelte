@@ -155,9 +155,12 @@
 				</table>
 			</div>
 
-			<div class=" absolute top-1 right-1.5 z-20 invisible group-hover:visible">
+			<div
+				class=" absolute top-1 right-1.5 z-20 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto [@media(hover:none)]:opacity-100 [@media(hover:none)]:pointer-events-auto"
+			>
 				<Tooltip content={$i18n.t('Export to CSV')}>
 					<button
+						aria-label={$i18n.t('Export to CSV')}
 						class="p-1 rounded-lg bg-transparent transition"
 						on:click={(e) => {
 							e.stopPropagation();
