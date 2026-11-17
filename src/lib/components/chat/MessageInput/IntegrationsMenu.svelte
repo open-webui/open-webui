@@ -11,12 +11,14 @@
 		terminalServers,
 		user,
 		tools as _tools,
-		skills as _skills
+		skills as _skills,
+		imageModels as _imageModels
 	} from '$lib/stores';
 
 	import { deleteOAuthSession } from '$lib/apis/auths';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
+	import { getImageModels } from '$lib/apis/images';
 	import {
 		listTerminalSkills,
 		resolveTerminalTarget,
@@ -38,6 +40,7 @@
 	import Terminal from '$lib/components/icons/Terminal.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
@@ -78,6 +81,7 @@
 	export let webSearchEnabled = false;
 	export let showImageGenerationButton = false;
 	export let imageGenerationEnabled = false;
+	export let selectedImageModelId = '';
 	export let showCodeInterpreterButton = false;
 	export let codeInterpreterEnabled = false;
 
@@ -97,6 +101,7 @@
 	let skillSearchDebounceTimer: ReturnType<typeof setTimeout>;
 	let toolRequestId = 0;
 	let skillRequestId = 0;
+	let imageModelQuery = '';
 
 	$: toolIds = Object.keys(tools ?? {});
 	$: toolGroups = [
@@ -125,6 +130,21 @@
 		scheduleSkillSearch();
 	}
 
+	$: imageModelOptions = $_imageModels ?? [];
+	$: selectedImageModel = imageModelOptions.find((model) => model.id === selectedImageModelId);
+	$: imageModelGroups = Object.entries(
+		imageModelOptions
+			.filter((model) =>
+				`${model.name} ${model.model} ${model.connection_name}`
+					.toLowerCase()
+					.includes(imageModelQuery.trim().toLowerCase())
+			)
+			.reduce<Record<string, typeof imageModelOptions>>((groups, model) => {
+				(groups[model.connection_name] ??= []).push(model);
+				return groups;
+			}, {})
+	);
+
 	// This content mounts already open; initialize after the derived lists have been set up.
 	onMount(() => {
 		void init();
@@ -136,7 +156,18 @@
 		($user?.role === 'admin' || $user?.permissions?.chat?.file_upload);
 
 	const init = async () => {
-		await Promise.all([loadTools(), loadSkills()]);
+		await Promise.all([loadTools(), loadSkills(), loadImageModels()]);
+	};
+
+	const loadImageModels = async () => {
+		if (!showImageGenerationButton) return;
+		if ($_imageModels === null) {
+			_imageModels.set(await getImageModels(localStorage.token).catch(() => []));
+		}
+		// A pick the user can no longer use (removed or restricted by an admin) falls back to the default.
+		if (selectedImageModelId && !($_imageModels ?? []).some((m) => m.id === selectedImageModelId)) {
+			selectedImageModelId = '';
+		}
 	};
 
 	const setTools = (toolItems: IntegrationItem[] | null, query = '') => {
@@ -434,6 +465,61 @@
 			{/each}
 		{/if}
 
+		{#if showImageGenerationButton}
+			<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
+				<div
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+					role="presentation"
+					on:click={() => {
+						imageGenerationEnabled = !imageGenerationEnabled;
+					}}
+				>
+					<button
+						type="button"
+						class="flex-1 truncate text-left cursor-pointer focus-visible:outline-none!"
+						role="menuitemcheckbox"
+						aria-checked={imageGenerationEnabled}
+					>
+						<div class="flex flex-1 gap-2 items-center">
+							<div class="shrink-0">
+								<Photo className="size-3.5" strokeWidth="1.5" />
+							</div>
+
+							<div class=" truncate">
+								{$i18n.t('Image')}
+								{#if imageModelOptions.length > 1}
+									<span class="ml-0.5 text-xs text-gray-500">
+										{selectedImageModel?.name ?? $i18n.t('Default')}
+									</span>
+								{/if}
+							</div>
+						</div>
+					</button>
+
+					<div class="flex shrink-0 items-center gap-1.5">
+						{#if imageModelOptions.length > 1}
+							<button
+								type="button"
+								role="menuitem"
+								class="flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								aria-label={$i18n.t('Choose image model')}
+								on:click={(e) => {
+									e.stopPropagation();
+									tab = 'image';
+								}}
+							>
+								<ChevronRight />
+							</button>
+						{/if}
+
+						<div inert>
+							<Switch state={imageGenerationEnabled} />
+						</div>
+					</div>
+				</div>
+			</Tooltip>
+		{/if}
+
 		{#if showWebSearchButton}
 			<Tooltip content={$i18n.t('Search the internet')} placement="top-start">
 				<button
@@ -461,33 +547,6 @@
 
 					<div class=" shrink-0" inert>
 						<Switch state={webSearchEnabled} />
-					</div>
-				</button>
-			</Tooltip>
-		{/if}
-
-		{#if showImageGenerationButton}
-			<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
-				<button
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-					role="menuitemcheckbox"
-					aria-checked={imageGenerationEnabled}
-					on:click={() => {
-						imageGenerationEnabled = !imageGenerationEnabled;
-					}}
-				>
-					<div class="flex-1 truncate">
-						<div class="flex flex-1 gap-2 items-center">
-							<div class="shrink-0">
-								<Photo className="size-3.5" strokeWidth="1.5" />
-							</div>
-
-							<div class=" truncate">{$i18n.t('Image')}</div>
-						</div>
-					</div>
-
-					<div class=" shrink-0" inert>
-						<Switch state={imageGenerationEnabled} />
 					</div>
 				</button>
 			</Tooltip>
@@ -738,6 +797,95 @@
 					{/each}
 				</div>
 			{/if}
+		</div>
+	</div>
+{:else if tab === 'image'}
+	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
+		<button
+			role="menuitem"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			on:click={() => {
+				imageModelQuery = '';
+				tab = '';
+			}}
+		>
+			<ChevronLeft />
+
+			<div class="flex items-center w-full justify-between">
+				<div>
+					{$i18n.t('Image model')}
+					<span class="ml-0.5 text-gray-500">{imageModelOptions.length}</span>
+				</div>
+			</div>
+		</button>
+
+		{#if imageModelOptions.length > 6}
+			<SearchInput bind:value={imageModelQuery} placeholder={$i18n.t('Search image models')} />
+		{/if}
+
+		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
+			<div class="flex flex-col gap-0.5" role="group" aria-label={$i18n.t('Image model')}>
+				{#if !imageModelQuery.trim()}
+					<button
+						type="button"
+						role="menuitemradio"
+						aria-checked={!selectedImageModelId}
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						on:click={() => {
+							selectedImageModelId = '';
+							imageGenerationEnabled = true;
+							tab = '';
+						}}
+					>
+						<div class="truncate">{$i18n.t('Default')}</div>
+						{#if !selectedImageModelId}
+							<Check className="size-3.5 shrink-0" strokeWidth="2" />
+						{/if}
+					</button>
+				{/if}
+
+				{#each imageModelGroups as [label, models] (label)}
+					{#if imageModelGroups.length > 1}
+						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+							{label}
+						</div>
+					{/if}
+
+					{#each models as model (model.id)}
+						<button
+							type="button"
+							role="menuitemradio"
+							aria-checked={selectedImageModelId === model.id}
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							on:click={() => {
+								selectedImageModelId = model.id;
+								imageGenerationEnabled = true;
+								imageModelQuery = '';
+								tab = '';
+							}}
+						>
+							<div class="flex min-w-0 items-center gap-2">
+								<div class="truncate">{model.name}</div>
+								<div class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+									{#if model.image_generation && model.image_edit}
+										{$i18n.t('Generate and edit')}
+									{:else if model.image_edit}
+										{$i18n.t('Edit only')}
+									{/if}
+								</div>
+							</div>
+
+							{#if selectedImageModelId === model.id}
+								<Check className="size-3.5 shrink-0" strokeWidth="2" />
+							{/if}
+						</button>
+					{/each}
+				{:else}
+					<div class="text-center text-xs text-gray-500 py-3">
+						{$i18n.t('No image models found')}
+					</div>
+				{/each}
+			</div>
 		</div>
 	</div>
 {/if}

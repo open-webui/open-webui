@@ -92,6 +92,17 @@ export const skills: Writable<null | any[]> = writable(null);
 export const terminalSkills: Writable<any[]> = writable([]);
 export const functions = writable(null);
 
+export type ImageModel = {
+	id: string;
+	name: string;
+	model: string;
+	connection_id: string;
+	connection_name: string;
+	image_generation: boolean;
+	image_edit: boolean;
+};
+export const imageModels: Writable<null | ImageModel[]> = writable(null);
+
 export type WorkspaceSection = 'models' | 'knowledge' | 'prompts' | 'skills' | 'tools';
 export type WorkspaceAction = {
 	id: string;

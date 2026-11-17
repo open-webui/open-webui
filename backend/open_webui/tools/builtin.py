@@ -37,6 +37,7 @@ from open_webui.routers.images import (
     image_edits,
     image_generations,
 )
+from open_webui.utils.images.connections import get_requested_image_model
 from open_webui.routers.memories import (
     AddMemoryForm,
     ListMemoryPathsForm,
@@ -391,7 +392,7 @@ async def generate_image(
 
         images = await image_generations(
             request=__request__,
-            form_data=CreateImageForm(prompt=prompt, size=size),
+            form_data=CreateImageForm(prompt=prompt, size=size, model=get_requested_image_model(__metadata__)),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')
@@ -482,7 +483,9 @@ async def edit_image(
             resolved_images.append(url)
         images = await image_edits(
             request=__request__,
-            form_data=EditImageForm(prompt=prompt, image=resolved_images, size=size),
+            form_data=EditImageForm(
+                prompt=prompt, image=resolved_images, size=size, model=get_requested_image_model(__metadata__)
+            ),
             metadata=(
                 {'channel_id': __chat_id__.removeprefix('channel:'), 'message_id': __message_id__}
                 if isinstance(__chat_id__, str) and __chat_id__.startswith('channel:')

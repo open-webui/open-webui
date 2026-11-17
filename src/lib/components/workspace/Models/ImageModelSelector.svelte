@@ -1,0 +1,88 @@
+<script lang="ts">
+	import { getContext, onMount } from 'svelte';
+	import { imageModels } from '$lib/stores';
+	import { getImageModels } from '$lib/apis/images';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
+
+	const i18n = getContext<any>('i18n');
+
+	export let imageModelId: string = '';
+	export let onChange: () => void = () => {};
+
+	let show = false;
+	let valueElement: HTMLElement | null = null;
+
+	onMount(async () => {
+		if ($imageModels === null) {
+			imageModels.set(await getImageModels(localStorage.token).catch(() => []));
+		}
+	});
+
+	$: models = $imageModels ?? [];
+	$: items = [
+		{ value: '', label: $i18n.t('Default') },
+		...(imageModelId && !models.some((model) => model.id === imageModelId)
+			? [{ value: imageModelId, label: $i18n.t('Unavailable') }]
+			: []),
+		...models.map((model) => ({
+			value: model.id,
+			label:
+				new Set(models.map((m) => m.connection_id)).size > 1
+					? `${model.name} (${model.connection_name})`
+					: model.name
+		}))
+	];
+	$: selectedLabel = items.find((item) => item.value === imageModelId)?.label ?? $i18n.t('Default');
+
+	const select = (value: string) => {
+		imageModelId = value;
+		show = false;
+		onChange();
+	};
+</script>
+
+{#if models.length > 1 || imageModelId}
+	<Dropdown anchorElement={valueElement} bind:show>
+		<button
+			type="button"
+			aria-expanded={show}
+			class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal disabled:cursor-default sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
+		>
+			<span class="text-gray-600 dark:text-gray-400"
+				><ModelSettingsLabel
+					label={$i18n.t('Default image model')}
+					description={$i18n.t(
+						'Choose the image model used for chats with this model, unless the user picks another.'
+					)}
+				/></span
+			>
+			<span bind:this={valueElement} class="min-w-0 truncate text-gray-900 dark:text-gray-100"
+				>{selectedLabel}</span
+			>
+			<ChevronRight className="size-3 text-gray-400" />
+		</button>
+
+		<div slot="content">
+			<div
+				class="flex max-h-64 w-56 max-w-[calc(100vw-2rem)] flex-col gap-0.5 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1 text-gray-900 shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-gray-100"
+			>
+				{#each items as item (item.value)}
+					<button
+						type="button"
+						class="flex min-h-7 w-full items-center justify-between gap-2 rounded-xl px-2 py-1 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800"
+						aria-pressed={item.value === imageModelId}
+						on:click={() => select(item.value)}
+					>
+						<span class="min-w-0 flex-1 truncate">{item.label}</span>
+						{#if item.value === imageModelId}<Check
+								className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+							/>{/if}
+					</button>
+				{/each}
+			</div>
+		</div>
+	</Dropdown>
+{/if}

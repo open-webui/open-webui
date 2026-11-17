@@ -57,6 +57,7 @@
 	$: hasInternalList = [
 		'tools',
 		'skills',
+		'image',
 		'files',
 		'notes',
 		'knowledge',

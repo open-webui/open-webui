@@ -42,10 +42,20 @@ from open_webui.utils.images.comfyui import (
     comfyui_edit_image,
     comfyui_upload_image,
 )
+from open_webui.utils.images.connections import (
+    DEFAULT_GEMINI_IMAGE_MODEL,
+    DEFAULT_OPENAI_IMAGE_MODEL,
+    IMAGE_CONNECTIONS_CONFIG_KEY,
+    IMAGE_EDIT_DEFAULT_MODEL_CONFIG_KEY,
+    IMAGE_GENERATION_DEFAULT_MODEL_CONFIG_KEY,
+    get_image_models,
+    normalize_image_connection,
+    resolve_image_model,
+)
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 from PIL import Image, ImageOps
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -56,8 +66,6 @@ IMAGE_CACHE_DIR = CACHE_DIR / 'image' / 'generations'
 IMAGE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 router = APIRouter()
-
-DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-image-2'
 
 IMAGE_FILE_EXTENSIONS = {
     'image/jpeg': '.jpg',
@@ -70,37 +78,10 @@ IMAGE_FILE_EXTENSIONS = {
 IMAGE_CONFIG_KEYS = {
     'ENABLE_IMAGE_GENERATION': 'image_generation.enable',
     'ENABLE_IMAGE_PROMPT_GENERATION': 'image_generation.prompt.enable',
-    'IMAGE_GENERATION_ENGINE': 'image_generation.engine',
-    'IMAGE_GENERATION_MODEL': 'image_generation.model',
-    'IMAGE_SIZE': 'image_generation.size',
-    'IMAGE_STEPS': 'image_generation.steps',
-    'IMAGES_OPENAI_API_BASE_URL': 'image_generation.openai.api_base_url',
-    'IMAGES_OPENAI_API_KEY': 'image_generation.openai.api_key',
-    'IMAGES_OPENAI_API_VERSION': 'image_generation.openai.api_version',
-    'IMAGES_OPENAI_API_PARAMS': 'image_generation.openai.params',
-    'AUTOMATIC1111_BASE_URL': 'image_generation.automatic1111.base_url',
-    'AUTOMATIC1111_API_AUTH': 'image_generation.automatic1111.api_auth',
-    'AUTOMATIC1111_PARAMS': 'image_generation.automatic1111.api_params',
-    'COMFYUI_BASE_URL': 'image_generation.comfyui.base_url',
-    'COMFYUI_API_KEY': 'image_generation.comfyui.api_key',
-    'COMFYUI_WORKFLOW': 'image_generation.comfyui.workflow',
-    'COMFYUI_WORKFLOW_NODES': 'image_generation.comfyui.nodes',
-    'IMAGES_GEMINI_API_BASE_URL': 'image_generation.gemini.api_base_url',
-    'IMAGES_GEMINI_API_KEY': 'image_generation.gemini.api_key',
-    'IMAGES_GEMINI_ENDPOINT_METHOD': 'image_generation.gemini.endpoint_method',
     'ENABLE_IMAGE_EDIT': 'images.edit.enable',
-    'IMAGE_EDIT_ENGINE': 'images.edit.engine',
-    'IMAGE_EDIT_MODEL': 'images.edit.model',
-    'IMAGE_EDIT_SIZE': 'images.edit.size',
-    'IMAGES_EDIT_OPENAI_API_BASE_URL': 'images.edit.openai.api_base_url',
-    'IMAGES_EDIT_OPENAI_API_KEY': 'images.edit.openai.api_key',
-    'IMAGES_EDIT_OPENAI_API_VERSION': 'images.edit.openai.api_version',
-    'IMAGES_EDIT_GEMINI_API_BASE_URL': 'images.edit.gemini.api_base_url',
-    'IMAGES_EDIT_GEMINI_API_KEY': 'images.edit.gemini.api_key',
-    'IMAGES_EDIT_COMFYUI_BASE_URL': 'images.edit.comfyui.base_url',
-    'IMAGES_EDIT_COMFYUI_API_KEY': 'images.edit.comfyui.api_key',
-    'IMAGES_EDIT_COMFYUI_WORKFLOW': 'images.edit.comfyui.workflow',
-    'IMAGES_EDIT_COMFYUI_WORKFLOW_NODES': 'images.edit.comfyui.nodes',
+    'IMAGE_GENERATION_DEFAULT_MODEL': IMAGE_GENERATION_DEFAULT_MODEL_CONFIG_KEY,
+    'IMAGE_EDIT_DEFAULT_MODEL': IMAGE_EDIT_DEFAULT_MODEL_CONFIG_KEY,
+    'IMAGE_CONNECTIONS': IMAGE_CONNECTIONS_CONFIG_KEY,
     'USER_PERMISSIONS': 'user.permissions',
 }
 
@@ -187,144 +168,80 @@ def get_image_file_item(base64_string, param_name='image'):
     )
 
 
-async def set_image_model(request: Request, model: str):
-    log.info('Setting image model to %s', model)
-    await Config.upsert({'image_generation.model': model})
-    image_config = await get_image_config()
-    if image_config.IMAGE_GENERATION_ENGINE in ['', 'automatic1111']:
-        api_auth = get_automatic1111_api_auth(image_config)
-
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
-                headers={'authorization': api_auth},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                options = await r.json()
-            if model != options['sd_model_checkpoint']:
-                options['sd_model_checkpoint'] = model
-                async with session.post(
-                    url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
-                    json=options,
-                    headers={'authorization': api_auth},
-                    ssl=AIOHTTP_CLIENT_SESSION_SSL,
-                ) as r:
-                    r.raise_for_status()
-        except Exception as e:
-            log.debug('%s', e)
-
-    return image_config.IMAGE_GENERATION_MODEL
+def get_automatic1111_api_auth(api_auth: str | None) -> str:
+    if not api_auth:
+        return ''
+    return f'Basic {base64.b64encode(api_auth.encode("utf-8")).decode("utf-8")}'
 
 
-async def get_image_model(request):
-    image_config = await get_image_config()
-    if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-        return (
-            image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else DEFAULT_OPENAI_IMAGE_MODEL
-        )
-    elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
-        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else 'imagen-3.0-generate-002'
-    elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
-        return image_config.IMAGE_GENERATION_MODEL if image_config.IMAGE_GENERATION_MODEL else ''
-    elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
-        try:
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/options',
-                headers={'authorization': get_automatic1111_api_auth(image_config)},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                options = await r.json()
-            return options['sd_model_checkpoint']
-        except Exception as e:
-            log.exception(f'Failed to get default model from automatic1111: {e}')
-            raise HTTPException(
-                status_code=400,
-                detail=ERROR_MESSAGES.DEFAULT(e, 'Failed to connect to the image generation engine'),
-            )
+async def set_automatic1111_model(connection: dict, model: str) -> None:
+    """AUTOMATIC1111 holds one checkpoint instance-wide; switch it when the request needs another."""
+    if not model:
+        return
+
+    headers = {'authorization': get_automatic1111_api_auth(connection.get('key'))}
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/sdapi/v1/options',
+        headers=headers,
+        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+    ) as r:
+        r.raise_for_status()
+        options = await r.json()
+
+    if model != options.get('sd_model_checkpoint'):
+        log.info('Switching AUTOMATIC1111 checkpoint to %s', model)
+        async with session.post(
+            url=f'{connection["url"]}/sdapi/v1/options',
+            json={**options, 'sd_model_checkpoint': model},
+            headers=headers,
+            ssl=AIOHTTP_CLIENT_SESSION_SSL,
+        ) as r:
+            r.raise_for_status()
+
+
+class ImageConnection(BaseModel):
+    id: str | None = None
+    name: str = ''
+    type: str = 'openai'
+    url: str = ''
+    key: str = ''
+    config: dict = {}
+
+    model_config = ConfigDict(extra='allow')
 
 
 class ImagesConfig(BaseModel):
     ENABLE_IMAGE_GENERATION: bool
     ENABLE_IMAGE_PROMPT_GENERATION: bool
-
-    IMAGE_GENERATION_ENGINE: str
-    IMAGE_GENERATION_MODEL: str
-    IMAGE_SIZE: str | None
-    IMAGE_STEPS: int | None
-
-    IMAGES_OPENAI_API_BASE_URL: str
-    IMAGES_OPENAI_API_KEY: str
-    IMAGES_OPENAI_API_VERSION: str
-    IMAGES_OPENAI_API_PARAMS: dict | str | None
-
-    AUTOMATIC1111_BASE_URL: str
-    AUTOMATIC1111_API_AUTH: dict | str | None
-    AUTOMATIC1111_PARAMS: dict | str | None
-
-    COMFYUI_BASE_URL: str
-    COMFYUI_API_KEY: str
-    COMFYUI_WORKFLOW: str
-    COMFYUI_WORKFLOW_NODES: list[dict]
-
-    IMAGES_GEMINI_API_BASE_URL: str
-    IMAGES_GEMINI_API_KEY: str
-    IMAGES_GEMINI_ENDPOINT_METHOD: str
-
     ENABLE_IMAGE_EDIT: bool
-    IMAGE_EDIT_ENGINE: str
-    IMAGE_EDIT_MODEL: str
-    IMAGE_EDIT_SIZE: str | None
-
-    IMAGES_EDIT_OPENAI_API_BASE_URL: str
-    IMAGES_EDIT_OPENAI_API_KEY: str
-    IMAGES_EDIT_OPENAI_API_VERSION: str
-    IMAGES_EDIT_GEMINI_API_BASE_URL: str
-    IMAGES_EDIT_GEMINI_API_KEY: str
-    IMAGES_EDIT_COMFYUI_BASE_URL: str
-    IMAGES_EDIT_COMFYUI_API_KEY: str
-    IMAGES_EDIT_COMFYUI_WORKFLOW: str
-    IMAGES_EDIT_COMFYUI_WORKFLOW_NODES: list[dict]
+    IMAGE_GENERATION_DEFAULT_MODEL: str = ''
+    IMAGE_EDIT_DEFAULT_MODEL: str = ''
+    IMAGE_CONNECTIONS: list[ImageConnection] = []
 
 
 @router.get('/config', response_model=ImagesConfig)
 async def get_config(request: Request, user=Depends(get_admin_user)):
-    return await get_config_values(IMAGE_CONFIG_KEYS)
+    values = await get_config_values(IMAGE_CONFIG_KEYS)
+    return {**values, 'IMAGE_CONNECTIONS': values.get('IMAGE_CONNECTIONS') or []}
 
 
 @router.post('/config/update')
 async def update_config(request: Request, form_data: ImagesConfig, user=Depends(get_admin_user)):
-    # Check the model requests will actually use, so an empty OpenAI model field (gpt-image default) can use auto.
-    image_model = form_data.IMAGE_GENERATION_MODEL or (
-        DEFAULT_OPENAI_IMAGE_MODEL if form_data.IMAGE_GENERATION_ENGINE == 'openai' else ''
-    )
-    if form_data.IMAGE_SIZE == 'auto' and not re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, image_model):
-        raise HTTPException(
-            status_code=400,
-            detail=ERROR_MESSAGES.INCORRECT_FORMAT(
-                f'  (auto is only allowed with models matching {IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN}).'
-            ),
-        )
+    connections = []
+    try:
+        for connection in form_data.IMAGE_CONNECTIONS:
+            connections.append(normalize_image_connection(connection.model_dump()))
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
 
-    pattern = r'^\d+x\d+$'
-    if not (form_data.IMAGE_SIZE == 'auto' or form_data.IMAGE_SIZE == '' or re.match(pattern, form_data.IMAGE_SIZE)):
-        raise HTTPException(
-            status_code=400,
-            detail=ERROR_MESSAGES.INCORRECT_FORMAT('  (e.g., 512x512).'),
-        )
+    if len({connection['id'] for connection in connections}) != len(connections):
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT('Image connection IDs must be unique'))
 
-    if form_data.IMAGE_STEPS < 0:
-        raise HTTPException(
-            status_code=400,
-            detail=ERROR_MESSAGES.INCORRECT_FORMAT('  (e.g., 50).'),
-        )
-
-    updates = config_updates(form_data.model_dump(), IMAGE_CONFIG_KEYS)
-    updates['image_generation.comfyui.base_url'] = form_data.COMFYUI_BASE_URL.strip('/')
-    updates['images.edit.comfyui.base_url'] = form_data.IMAGES_EDIT_COMFYUI_BASE_URL.strip('/')
+    updates = config_updates(form_data.model_dump(exclude={'IMAGE_CONNECTIONS'}), IMAGE_CONFIG_KEYS)
+    updates[IMAGE_CONNECTIONS_CONFIG_KEY] = connections
     await Config.upsert(updates)
-    await set_image_model(request, form_data.IMAGE_GENERATION_MODEL)
+
     values = await get_config_values(IMAGE_CONFIG_KEYS)
     await publish_event(
         request,
@@ -334,133 +251,162 @@ async def update_config(request: Request, form_data: ImagesConfig, user=Depends(
         data={
             'image_generation_enabled': values.get('ENABLE_IMAGE_GENERATION'),
             'image_edit_enabled': values.get('ENABLE_IMAGE_EDIT'),
-            'image_generation_engine': values.get('IMAGE_GENERATION_ENGINE'),
-            'image_edit_engine': values.get('IMAGE_EDIT_ENGINE'),
+            'image_connections': [
+                {'id': connection['id'], 'name': connection['name'], 'type': connection['type']}
+                for connection in connections
+            ],
         },
     )
-    return values
+    return {**values, 'IMAGE_CONNECTIONS': connections}
 
 
-def get_automatic1111_api_auth(image_config):
-    if image_config.AUTOMATIC1111_API_AUTH is None:
-        return ''
-    else:
-        auth1111_byte_string = image_config.AUTOMATIC1111_API_AUTH.encode('utf-8')
-        auth1111_base64_encoded_bytes = base64.b64encode(auth1111_byte_string)
-        auth1111_base64_encoded_string = auth1111_base64_encoded_bytes.decode('utf-8')
-        return f'Basic {auth1111_base64_encoded_string}'
+async def get_openai_connection_models(connection: dict) -> list[dict]:
+    headers = {'Authorization': f'Bearer {connection.get("key", "")}'} if connection.get('key') else {}
+    session = await get_session()
+    async with session.get(url=f'{connection["url"]}/models', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
+        await raise_for_provider_status(r)
+        res = await r.json(content_type=None)
+
+    models = [
+        {'id': model['id'], 'name': model['id']}
+        for model in (res.get('data') or [])
+        if isinstance(model, dict) and model.get('id')
+    ]
+
+    # LiteLLM labels each model with its mode, which tells image models apart from chat models.
+    try:
+        async with session.get(
+            url=f'{connection["url"]}/model/info', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+        ) as r:
+            info = await r.json(content_type=None) if r.ok else {}
+        modes = {
+            entry.get('model_name'): (entry.get('model_info') or {}).get('mode')
+            for entry in (info.get('data') or [])
+            if isinstance(entry, dict)
+        }
+        if any(modes.values()):
+            for model in models:
+                model['image'] = modes.get(model['id']) in ('image_generation', 'image_edit')
+    except Exception as e:
+        log.debug('No model info at %s: %s', connection['url'], e)
+
+    return models
 
 
-class ConnectionVerificationForm(BaseModel):
-    engine: str
-    url: str
-    key: str | None = None
+async def get_gemini_connection_models(connection: dict) -> list[dict]:
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/models',
+        headers={'x-goog-api-key': connection.get('key', '')},
+        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+    ) as r:
+        await raise_for_provider_status(r)
+        res = await r.json(content_type=None)
+
+    models = []
+    for model in res.get('models') or []:
+        model_id = str(model.get('name') or '').removeprefix('models/')
+        if not model_id:
+            continue
+        methods = model.get('supportedGenerationMethods') or []
+        models.append(
+            {
+                'id': model_id,
+                'name': model.get('displayName') or model_id,
+                'image': 'predict' in methods or 'image' in model_id,
+            }
+        )
+    return models or [{'id': DEFAULT_GEMINI_IMAGE_MODEL, 'name': DEFAULT_GEMINI_IMAGE_MODEL, 'image': True}]
 
 
-@router.post('/verify')
-async def verify_connection(form_data: ConnectionVerificationForm, user=Depends(get_admin_user)):
-    url = form_data.url.rstrip('/')
-    headers = {}
-    if form_data.engine == 'automatic1111':
-        url = f'{url}/sdapi/v1/options'
-        if form_data.key is not None:
-            headers['Authorization'] = f'Basic {base64.b64encode(form_data.key.encode("utf-8")).decode("utf-8")}'
-    elif form_data.engine == 'comfyui':
-        url = f'{url}/object_info'
-        if form_data.key:
-            headers['Authorization'] = f'Bearer {form_data.key}'
-    else:
-        raise HTTPException(status_code=400, detail='Unsupported image engine')
+async def get_comfyui_connection_models(connection: dict) -> list[dict]:
+    config = connection.get('config') or {}
+    headers = {'Authorization': f'Bearer {connection["key"]}'} if connection.get('key') else {}
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/object_info', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+    ) as r:
+        await raise_for_provider_status(r)
+        info = await r.json(content_type=None)
+
+    def options(class_type: str, key: str | None = None) -> list[dict]:
+        required = ((info.get(class_type) or {}).get('input') or {}).get('required') or {}
+        key = key or next((name for name in required if '_name' in name), None)
+        values = (required.get(key) or [[]])[0] if key else []
+        return [{'id': value, 'name': value} for value in values if isinstance(value, str)]
+
+    workflow_json = config.get('workflow') or config.get('edit_workflow')
+    nodes = config.get('nodes') if config.get('workflow') else config.get('edit_nodes')
+    model_node_id = next(
+        (node['node_ids'][0] for node in nodes or [] if node.get('type') == 'model' and node.get('node_ids')),
+        None,
+    )
+    if workflow_json and model_node_id:
+        workflow = JSONCodec.loads(workflow_json)
+        class_type = (workflow.get(model_node_id) or {}).get('class_type')
+        if class_type:
+            return options(class_type)
+    return options('CheckpointLoaderSimple', 'ckpt_name')
+
+
+async def get_automatic1111_connection_models(connection: dict) -> list[dict]:
+    session = await get_session()
+    async with session.get(
+        url=f'{connection["url"]}/sdapi/v1/sd-models',
+        headers={'authorization': get_automatic1111_api_auth(connection.get('key'))},
+        ssl=AIOHTTP_CLIENT_SESSION_SSL,
+    ) as r:
+        await raise_for_provider_status(r)
+        models = await r.json(content_type=None)
+    return [{'id': model['title'], 'name': model['model_name']} for model in models]
+
+
+@router.post('/connections/verify')
+async def verify_image_connection(form_data: ImageConnection, user=Depends(get_admin_user)):
+    """Reach a connection before saving it and list the models it serves."""
+    try:
+        connection = normalize_image_connection(form_data.model_dump())
+    except (ValueError, TypeError) as e:
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(e))
+
+    if not connection['url']:
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
 
     try:
-        session = await get_session()
-        async with session.get(url=url, headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL) as r:
-            r.raise_for_status()
-            return True
-    except Exception:
-        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.INVALID_URL)
+        if connection['type'] == 'openai':
+            return await get_openai_connection_models(connection)
+        if connection['type'] == 'gemini':
+            return await get_gemini_connection_models(connection)
+        if connection['type'] == 'comfyui':
+            return await get_comfyui_connection_models(connection)
+        return await get_automatic1111_connection_models(connection)
+    except Exception as e:
+        log.error(
+            f'Failed to verify image connection {connection["url"]}: {str(e) or type(e).__name__}',
+            exc_info=not isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ClientResponseError, TimeoutError)),
+        )
+        error = e.message if isinstance(e, aiohttp.ClientResponseError) else e
+        raise HTTPException(
+            status_code=400,
+            detail=ERROR_MESSAGES.DEFAULT(error, 'Failed to connect to the image generation engine'),
+        )
 
 
 @router.get('/models')
 async def get_models(request: Request, user=Depends(get_verified_user)):
+    """Image models this user can pick from, with what each can do."""
     image_config = await get_image_config()
-    try:
-        if image_config.IMAGE_GENERATION_ENGINE == 'openai':
-            return [
-                {'id': 'gpt-image-1', 'name': 'GPT-IMAGE 1'},
-                {'id': 'gpt-image-1.5', 'name': 'GPT-IMAGE 1.5'},
-                {'id': 'gpt-image-2', 'name': 'GPT-IMAGE 2'},
-            ]
-        elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
-            return [
-                {'id': 'imagen-3.0-generate-002', 'name': 'imagen-3.0 generate-002'},
-            ]
-        elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
-            # TODO - get models from comfyui
-            headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.COMFYUI_BASE_URL}/object_info',
-                headers=headers,
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                info = await r.json()
+    if not (image_config.ENABLE_IMAGE_GENERATION or image_config.ENABLE_IMAGE_EDIT):
+        return []
 
-            workflow = JSONCodec.loads(image_config.COMFYUI_WORKFLOW)
-            model_node_id = None
+    if user.role != 'admin' and not await has_permission(
+        user.id, 'features.image_generation', image_config.USER_PERMISSIONS
+    ):
+        return []
 
-            for node in image_config.COMFYUI_WORKFLOW_NODES:
-                if node['type'] == 'model':
-                    if node['node_ids']:
-                        model_node_id = node['node_ids'][0]
-                    break
-
-            if model_node_id:
-                model_list_key = None
-
-                log.info(workflow[model_node_id]['class_type'])
-                for key in info[workflow[model_node_id]['class_type']]['input']['required']:
-                    if '_name' in key:
-                        model_list_key = key
-                        break
-
-                if model_list_key:
-                    return list(
-                        map(
-                            lambda model: {'id': model, 'name': model},
-                            info[workflow[model_node_id]['class_type']]['input']['required'][model_list_key][0],
-                        )
-                    )
-            else:
-                return list(
-                    map(
-                        lambda model: {'id': model, 'name': model},
-                        info['CheckpointLoaderSimple']['input']['required']['ckpt_name'][0],
-                    )
-                )
-        elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
-            session = await get_session()
-            async with session.get(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/sd-models',
-                headers={'authorization': get_automatic1111_api_auth(image_config)},
-                ssl=AIOHTTP_CLIENT_SESSION_SSL,
-            ) as r:
-                models = await r.json()
-            return list(
-                map(
-                    lambda model: {'id': model['title'], 'name': model['model_name']},
-                    models,
-                )
-            )
-    except Exception as e:
-        log.error(
-            f'Failed to list image generation models: {str(e) or type(e).__name__}',
-            exc_info=not isinstance(e, (aiohttp.ClientConnectionError, TimeoutError)),
-        )
-        raise HTTPException(
-            status_code=400,
-            detail=ERROR_MESSAGES.DEFAULT(e, 'Failed to retrieve image generation models'),
-        )
+    return [
+        {key: value for key, value in model.items() if key != 'connection'} for model in await get_image_models(user)
+    ]
 
 
 class CreateImageForm(BaseModel):
@@ -632,7 +578,7 @@ async def generate_images(request: Request, form_data: CreateImageForm, user=Dep
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = await image_generations(request, form_data, user=user)
+    result = await image_generations(request, form_data, user=user, strict=True)
     await publish_event(
         request,
         EVENTS.IMAGE_GENERATED,
@@ -654,15 +600,17 @@ async def image_generations(
     form_data: CreateImageForm,
     metadata: dict | None = None,
     user=None,
+    strict: bool = False,
 ):
-    image_config = await get_image_config()
-    # if IMAGE_SIZE = 'auto', default WidthxHeight to the 512x512 default
-    # This is only relevant when the user has set IMAGE_SIZE to 'auto' with an
-    # image model other than gpt-image-1, which is warned about on settings save
+    connection, model = await resolve_image_model(user, 'image_generation', form_data.model, strict=strict)
+    connection_config = connection.get('config') or {}
+    connection_size = connection_config.get('size') or ''
+    connection_steps = connection_config.get('steps')
 
+    # An 'auto' size has no width and height, so engines that need them fall back to 512x512.
     size = '512x512'
-    if image_config.IMAGE_SIZE and 'x' in image_config.IMAGE_SIZE:
-        size = image_config.IMAGE_SIZE
+    if 'x' in connection_size:
+        size = connection_size
 
     if form_data.size and 'x' in form_data.size:
         size = form_data.size
@@ -671,20 +619,19 @@ async def image_generations(
 
     metadata = metadata or {}
 
-    model = await get_image_model(request)
-
     try:
-        if image_config.IMAGE_GENERATION_ENGINE == 'openai':
+        if connection['type'] == 'openai':
+            model = model or DEFAULT_OPENAI_IMAGE_MODEL
             headers = {
-                'Authorization': f'Bearer {image_config.IMAGES_OPENAI_API_KEY}',
+                **({'Authorization': f'Bearer {connection["key"]}'} if connection['key'] else {}),
                 'Content-Type': 'application/json',
             }
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
 
-            url = f'{image_config.IMAGES_OPENAI_API_BASE_URL}/images/generations'
-            openai_size = form_data.size or image_config.IMAGE_SIZE
+            url = f'{connection["url"]}/images/generations'
+            openai_size = form_data.size or connection_size
             # 512x512 is the stock IMAGE_SIZE, left over from DALL-E. GPT image models reject it,
             # so let them pick their own size unless the request asked for one.
             if (
@@ -693,8 +640,8 @@ async def image_generations(
                 and re.match(IMAGE_AUTO_SIZE_MODELS_REGEX_PATTERN, model)
             ):
                 openai_size = 'auto'
-            if image_config.IMAGES_OPENAI_API_VERSION:
-                url = f'{url}?api-version={image_config.IMAGES_OPENAI_API_VERSION}'
+            if connection_config.get('api_version'):
+                url = f'{url}?api-version={connection_config["api_version"]}'
 
             data = {
                 'model': model,
@@ -709,7 +656,7 @@ async def image_generations(
                     )
                     else {'response_format': 'b64_json'}
                 ),
-                **({} if not image_config.IMAGES_OPENAI_API_PARAMS else image_config.IMAGES_OPENAI_API_PARAMS),
+                **(connection_config.get('params') or {}),
             }
 
             session = await get_session()
@@ -729,7 +676,7 @@ async def image_generations(
                     image_data, content_type = await get_image_data(
                         image_url,
                         {k: v for k, v in headers.items() if k != 'Content-Type'}
-                        if _is_same_origin(image_url, image_config.IMAGES_OPENAI_API_BASE_URL)
+                        if _is_same_origin(image_url, connection['url'])
                         else None,
                     )
                 else:
@@ -739,18 +686,17 @@ async def image_generations(
                 images.append(image_file)
             return images
 
-        elif image_config.IMAGE_GENERATION_ENGINE == 'gemini':
+        elif connection['type'] == 'gemini':
+            model = model or DEFAULT_GEMINI_IMAGE_MODEL
             headers = {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': image_config.IMAGES_GEMINI_API_KEY,
+                'x-goog-api-key': connection['key'],
             }
 
             data = {}
+            endpoint_method = connection_config.get('endpoint_method') or ''
 
-            if (
-                image_config.IMAGES_GEMINI_ENDPOINT_METHOD == ''
-                or image_config.IMAGES_GEMINI_ENDPOINT_METHOD == 'predict'
-            ):
+            if endpoint_method in ('', 'predict'):
                 model = f'{model}:predict'
                 data = {
                     'instances': {'prompt': form_data.prompt},
@@ -760,13 +706,13 @@ async def image_generations(
                     },
                 }
 
-            elif image_config.IMAGES_GEMINI_ENDPOINT_METHOD == 'generateContent':
+            elif endpoint_method == 'generateContent':
                 model = f'{model}:generateContent'
                 data = {'contents': [{'parts': [{'text': form_data.prompt}]}]}
 
             session = await get_session()
             async with session.post(
-                url=f'{image_config.IMAGES_GEMINI_API_BASE_URL}/models/{model}',
+                url=f'{connection["url"]}/models/{model}',
                 json=data,
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -797,7 +743,7 @@ async def image_generations(
 
             return images
 
-        elif image_config.IMAGE_GENERATION_ENGINE == 'comfyui':
+        elif connection['type'] == 'comfyui':
             data = {
                 'prompt': form_data.prompt,
                 'width': width,
@@ -805,8 +751,8 @@ async def image_generations(
                 'n': form_data.n,
             }
 
-            if image_config.IMAGE_STEPS is not None or form_data.steps is not None:
-                data['steps'] = form_data.steps if form_data.steps is not None else image_config.IMAGE_STEPS
+            if connection_steps is not None or form_data.steps is not None:
+                data['steps'] = form_data.steps if form_data.steps is not None else connection_steps
 
             if form_data.negative_prompt is not None:
                 data['negative_prompt'] = form_data.negative_prompt
@@ -815,8 +761,8 @@ async def image_generations(
                 **{
                     'workflow': ComfyUIWorkflow(
                         **{
-                            'workflow': image_config.COMFYUI_WORKFLOW,
-                            'nodes': image_config.COMFYUI_WORKFLOW_NODES,
+                            'workflow': connection_config.get('workflow') or '',
+                            'nodes': connection_config.get('nodes') or [],
                         }
                     ),
                     **data,
@@ -826,8 +772,8 @@ async def image_generations(
                 model,
                 form_data,
                 str(uuid.uuid4()),
-                image_config.COMFYUI_BASE_URL,
-                image_config.COMFYUI_API_KEY,
+                connection['url'],
+                connection['key'],
             )
             log.debug('res: %s', res)
 
@@ -835,13 +781,13 @@ async def image_generations(
 
             for image in res['data']:
                 headers = None
-                if image_config.COMFYUI_API_KEY:
-                    headers = {'Authorization': f'Bearer {image_config.COMFYUI_API_KEY}'}
+                if connection['key']:
+                    headers = {'Authorization': f'Bearer {connection["key"]}'}
 
                 image_data, content_type = await get_image_data(
                     image['url'],
                     headers,
-                    trusted_base_url=image_config.COMFYUI_BASE_URL,
+                    trusted_base_url=connection['url'],
                 )
                 _, image_file = await upload_image(
                     request,
@@ -852,13 +798,10 @@ async def image_generations(
                 )
                 images.append(image_file)
             return images
-        elif image_config.IMAGE_GENERATION_ENGINE == 'automatic1111' or image_config.IMAGE_GENERATION_ENGINE == '':
-            # Automatic1111 holds one checkpoint instance-wide, so set_image_model
-            # persists the global default and switches the shared backend. Only an
-            # admin may do that; a non-admin generates on the currently configured
-            # checkpoint. The model field is not a per-user selection on this backend.
-            if form_data.model and user.role == 'admin':
-                await set_image_model(request, form_data.model)
+        elif connection['type'] == 'automatic1111':
+            # The checkpoint is shared by everyone on this backend. Only models an admin listed on
+            # the connection reach here, so switching to one is what the admin allowed.
+            await set_automatic1111_model(connection, model)
 
             data = {
                 'prompt': form_data.prompt,
@@ -867,20 +810,20 @@ async def image_generations(
                 'height': height,
             }
 
-            if image_config.IMAGE_STEPS is not None or form_data.steps is not None:
-                data['steps'] = form_data.steps if form_data.steps is not None else image_config.IMAGE_STEPS
+            if connection_steps is not None or form_data.steps is not None:
+                data['steps'] = form_data.steps if form_data.steps is not None else connection_steps
 
             if form_data.negative_prompt is not None:
                 data['negative_prompt'] = form_data.negative_prompt
 
-            if image_config.AUTOMATIC1111_PARAMS:
-                data = {**data, **image_config.AUTOMATIC1111_PARAMS}
+            if connection_config.get('params'):
+                data = {**data, **connection_config['params']}
 
             session = await get_session()
             async with session.post(
-                url=f'{image_config.AUTOMATIC1111_BASE_URL}/sdapi/v1/txt2img',
+                url=f'{connection["url"]}/sdapi/v1/txt2img',
                 json=data,
-                headers={'authorization': get_automatic1111_api_auth(image_config)},
+                headers={'authorization': get_automatic1111_api_auth(connection['key'])},
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
             ) as r:
                 res = await r.json(content_type=None)
@@ -937,7 +880,7 @@ async def edit_images(request: Request, form_data: EditImageForm, user=Depends(g
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    result = await image_edits(request, form_data, user=user)
+    result = await image_edits(request, form_data, user=user, strict=True)
     await publish_event(
         request,
         EVENTS.IMAGE_EDITED,
@@ -959,19 +902,18 @@ async def image_edits(
     form_data: EditImageForm,
     metadata: dict | None = None,
     user=Depends(get_verified_user),
+    strict: bool = False,
 ):
-    image_config = await get_image_config()
+    connection, model = await resolve_image_model(user, 'image_edit', form_data.model, strict=strict)
+    connection_config = connection.get('config') or {}
+    connection_size = connection_config.get('edit_size') or ''
     size = None
     width, height = None, None
     metadata = metadata or {}
 
-    if (image_config.IMAGE_EDIT_SIZE and 'x' in image_config.IMAGE_EDIT_SIZE) or (
-        form_data.size and 'x' in form_data.size
-    ):
-        size = form_data.size if form_data.size else image_config.IMAGE_EDIT_SIZE
+    if 'x' in connection_size or (form_data.size and 'x' in form_data.size):
+        size = form_data.size if form_data.size else connection_size
         width, height = tuple(map(int, size.split('x')))
-
-    model = image_config.IMAGE_EDIT_MODEL if form_data.model is None else form_data.model
 
     try:
 
@@ -1040,10 +982,9 @@ async def image_edits(
         )
 
     try:
-        if image_config.IMAGE_EDIT_ENGINE == 'openai':
-            headers = {
-                'Authorization': f'Bearer {image_config.IMAGES_EDIT_OPENAI_API_KEY}',
-            }
+        if connection['type'] == 'openai':
+            model = model or DEFAULT_OPENAI_IMAGE_MODEL
+            headers = {'Authorization': f'Bearer {connection["key"]}'} if connection['key'] else {}
 
             if ENABLE_FORWARD_USER_INFO_HEADERS:
                 headers = include_user_info_headers(headers, user)
@@ -1077,8 +1018,8 @@ async def image_edits(
                     files.append(get_image_file_item(img, 'image[]'))
 
             url_search_params = ''
-            if image_config.IMAGES_EDIT_OPENAI_API_VERSION:
-                url_search_params += f'?api-version={image_config.IMAGES_EDIT_OPENAI_API_VERSION}'
+            if connection_config.get('api_version'):
+                url_search_params += f'?api-version={connection_config["api_version"]}'
 
             # Build multipart form data for aiohttp
             form = aiohttp.FormData()
@@ -1097,7 +1038,7 @@ async def image_edits(
 
             session = await get_session()
             async with session.post(
-                url=f'{image_config.IMAGES_EDIT_OPENAI_API_BASE_URL}/images/edits{url_search_params}',
+                url=f'{connection["url"]}/images/edits{url_search_params}',
                 headers=headers,
                 data=form,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1111,7 +1052,7 @@ async def image_edits(
                     image_data, content_type = await get_image_data(
                         image_url,
                         {k: v for k, v in headers.items() if k != 'Content-Type'}
-                        if _is_same_origin(image_url, image_config.IMAGES_EDIT_OPENAI_API_BASE_URL)
+                        if _is_same_origin(image_url, connection['url'])
                         else None,
                     )
                 else:
@@ -1121,10 +1062,10 @@ async def image_edits(
                 images.append(image_file)
             return images
 
-        elif image_config.IMAGE_EDIT_ENGINE == 'gemini':
+        elif connection['type'] == 'gemini':
             headers = {
                 'Content-Type': 'application/json',
-                'x-goog-api-key': image_config.IMAGES_EDIT_GEMINI_API_KEY,
+                'x-goog-api-key': connection['key'],
             }
 
             model = f'{model}:generateContent'
@@ -1154,7 +1095,7 @@ async def image_edits(
 
             session = await get_session()
             async with session.post(
-                url=f'{image_config.IMAGES_EDIT_GEMINI_API_BASE_URL}/models/{model}',
+                url=f'{connection["url"]}/models/{model}',
                 json=data,
                 headers=headers,
                 ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -1178,7 +1119,7 @@ async def image_edits(
 
             return images
 
-        elif image_config.IMAGE_EDIT_ENGINE == 'comfyui':
+        elif connection['type'] == 'comfyui':
             try:
                 files = []
                 if isinstance(form_data.image, str):
@@ -1192,8 +1133,8 @@ async def image_edits(
                 for file_item in files:
                     res = await comfyui_upload_image(
                         file_item,
-                        image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
-                        image_config.IMAGES_EDIT_COMFYUI_API_KEY,
+                        connection['url'],
+                        connection['key'],
                     )
                     comfyui_images.append(res.get('name', file_item[1][0]))
             except Exception as e:
@@ -1212,8 +1153,8 @@ async def image_edits(
                 **{
                     'workflow': ComfyUIWorkflow(
                         **{
-                            'workflow': image_config.IMAGES_EDIT_COMFYUI_WORKFLOW,
-                            'nodes': image_config.IMAGES_EDIT_COMFYUI_WORKFLOW_NODES,
+                            'workflow': connection_config.get('edit_workflow') or '',
+                            'nodes': connection_config.get('edit_nodes') or [],
                         }
                     ),
                     **data,
@@ -1223,8 +1164,8 @@ async def image_edits(
                 model,
                 form_data,
                 str(uuid.uuid4()),
-                image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
-                image_config.IMAGES_EDIT_COMFYUI_API_KEY,
+                connection['url'],
+                connection['key'],
             )
             log.debug('res: %s', res)
 
@@ -1243,13 +1184,13 @@ async def image_edits(
 
             for image_url in image_urls:
                 headers = None
-                if image_config.IMAGES_EDIT_COMFYUI_API_KEY:
-                    headers = {'Authorization': f'Bearer {image_config.IMAGES_EDIT_COMFYUI_API_KEY}'}
+                if connection['key']:
+                    headers = {'Authorization': f'Bearer {connection["key"]}'}
 
                 image_data, content_type = await get_image_data(
                     image_url,
                     headers,
-                    trusted_base_url=image_config.IMAGES_EDIT_COMFYUI_BASE_URL,
+                    trusted_base_url=connection['url'],
                 )
                 _, image_file = await upload_image(
                     request,

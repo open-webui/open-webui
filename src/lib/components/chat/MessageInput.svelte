@@ -46,7 +46,8 @@
 		showFileNavDir,
 		TTSWorker,
 		chatTabRequest,
-		visibleControls
+		visibleControls,
+		imageModels
 	} from '$lib/stores';
 
 	import {
@@ -255,6 +256,7 @@
 	export let selectedFilterIds: string[] = [];
 
 	export let imageGenerationEnabled = false;
+	export let selectedImageModelId = '';
 	export let webSearchEnabled = false;
 	export let codeInterpreterEnabled = false;
 	export let toolApprovalMode = 'full';
@@ -354,6 +356,7 @@
 		selectedSkillIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
+		selectedImageModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
 	};
@@ -1072,7 +1075,8 @@
 				getCurrentDirectory?.(fileItem.terminal_id) ||
 				(terminalContext?.terminalId === fileItem.terminal_id
 					? terminalContext?.currentDirectory
-					: null) || (await getCwd(terminal))?.cwd;
+					: null) ||
+				(await getCwd(terminal))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
 			const uploadedFile = await uploadNewFileToTerminal(terminal, cwd, fileItem.file);
 			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
@@ -2232,7 +2236,8 @@
 							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
 								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
-								: ' border-gray-200/60 dark:border-gray-800/40'} {($settings?.highContrastMode ?? false)
+								: ' border-gray-200/60 dark:border-gray-800/40'} {($settings?.highContrastMode ??
+							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
 								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-gray-100"
 							dir={$settings?.chatDirection ?? 'auto'}
@@ -2680,6 +2685,7 @@
 													bind:selectedFilterIds
 													bind:webSearchEnabled
 													bind:imageGenerationEnabled
+													bind:selectedImageModelId
 													bind:codeInterpreterEnabled
 													oauthRedirectHandler={(tool: {
 														id: string;
@@ -2881,7 +2887,11 @@
 										{/if}
 
 										{#if showInputSelections && imageGenerationEnabled && showImageGenerationButton && $visibleControls['chat.selected_image_generation']}
-											<Tooltip content={$i18n.t('Image')} placement="top">
+											<Tooltip
+												content={$imageModels?.find((model) => model.id === selectedImageModelId)
+													?.name ?? $i18n.t('Image')}
+												placement="top"
+											>
 												<button
 													aria-label={$i18n.t('Image')}
 													aria-pressed={imageGenerationEnabled}

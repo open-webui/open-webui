@@ -465,6 +465,7 @@
 		[];
 
 	let imageGenerationEnabled = false;
+	let selectedImageModelId = '';
 	let webSearchEnabled = false;
 	let codeInterpreterEnabled = false;
 	let webSearchActive = false;
@@ -963,6 +964,7 @@
 			selectedFilterIds = input.selectedFilterIds ?? [];
 			webSearchEnabled = input.webSearchEnabled ?? false;
 			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
+			selectedImageModelId = input.selectedImageModelId ?? '';
 			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
 			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
 			// parameters or invoke the change handler, which can save settings and approve tools.
@@ -1052,6 +1054,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		selectedImageModelId = '';
 
 		if (chatIdProp) {
 			await loadChat(signal);
@@ -1094,6 +1097,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		selectedImageModelId = '';
 		prompt = '';
 		messageInput?.setText('');
 		await chatId.set('');
@@ -1183,6 +1187,7 @@
 		webSearchEnabled = false;
 		imageGenerationEnabled = false;
 		codeInterpreterEnabled = false;
+		selectedImageModelId = '';
 
 		if (selectedModelIds.filter((id) => id).length > 0) {
 			await setDefaults();
@@ -1394,6 +1399,13 @@
 				webSearchEnabled: !!defaultFeature('web_search'),
 				imageGenerationEnabled: !!defaultFeature('image_generation'),
 				codeInterpreterEnabled: !!defaultFeature('code_interpreter'),
+				selectedImageModelId: currentModels.every(
+					(model) =>
+						(model.info?.meta?.imageModelId ?? '') ===
+						(currentModels[0]?.info?.meta?.imageModelId ?? '')
+				)
+					? (currentModels[0]?.info?.meta?.imageModelId ?? '')
+					: '',
 				terminalId:
 					terminalId &&
 					isTerminalAvailable(terminalId) &&
@@ -1410,6 +1422,7 @@
 					webSearchEnabled,
 					imageGenerationEnabled,
 					codeInterpreterEnabled,
+					selectedImageModelId,
 					terminalId: $selectedTerminalId
 				};
 				if (!modelDefaults) {
@@ -1460,7 +1473,8 @@
 				selectedFilterIds,
 				webSearchEnabled,
 				imageGenerationEnabled,
-				codeInterpreterEnabled
+				codeInterpreterEnabled,
+				selectedImageModelId
 			} = defaults);
 			selectedTerminalId.set(defaults.terminalId);
 
@@ -2235,6 +2249,7 @@
 				webSearchEnabled = false;
 				imageGenerationEnabled = false;
 				codeInterpreterEnabled = false;
+				selectedImageModelId = '';
 
 				await restoreChatInput(storageChatInput);
 			}
@@ -4852,10 +4867,14 @@
 		if ($config?.features)
 			features = {
 				voice: ($voiceCall && callMode === 'current') || !!bridge?.connected,
+				// A picked image model rides on the flag; plain true leaves the choice to the server.
 				image_generation:
 					$config?.features?.enable_image_generation &&
-					($user?.role === 'admin' || $user?.permissions?.features?.image_generation)
-						? imageGenerationEnabled
+					($user?.role === 'admin' || $user?.permissions?.features?.image_generation) &&
+					imageGenerationEnabled
+						? selectedImageModelId
+							? { model: selectedImageModelId }
+							: true
 						: false,
 				code_interpreter:
 					$config?.features?.enable_code_interpreter &&
@@ -5596,6 +5615,7 @@
 		selectedSkillIds,
 		selectedFilterIds,
 		imageGenerationEnabled,
+		selectedImageModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
 	});
@@ -6215,6 +6235,7 @@
 										bind:selectedSkillIds
 										bind:selectedFilterIds
 										bind:imageGenerationEnabled
+										bind:selectedImageModelId
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
 										{oauthRedirectHandler}
@@ -6334,6 +6355,7 @@
 										bind:selectedSkillIds
 										bind:selectedFilterIds
 										bind:imageGenerationEnabled
+										bind:selectedImageModelId
 										bind:codeInterpreterEnabled
 										{pendingOAuthTools}
 										{oauthRedirectHandler}
@@ -6410,6 +6432,7 @@
 									bind:selectedSkillIds
 									bind:selectedFilterIds
 									bind:imageGenerationEnabled
+									bind:selectedImageModelId
 									bind:codeInterpreterEnabled
 									bind:webSearchEnabled
 									bind:atSelectedModel

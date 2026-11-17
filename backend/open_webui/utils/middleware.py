@@ -103,6 +103,7 @@ from open_webui.utils.filter import (
     get_filter_functions,
     process_filter_functions,
 )
+from open_webui.utils.images.connections import get_requested_image_model
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
 from open_webui.utils.memory import add_memory_context, recall_memories, review_memory_after_turn
@@ -1521,7 +1522,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         try:
             images = await image_edits(
                 request=request,
-                form_data=EditImageForm(**{'prompt': prompt, 'image': input_images}),
+                form_data=EditImageForm(prompt=prompt, image=input_images, model=get_requested_image_model(metadata)),
                 metadata=image_metadata,
                 user=user,
             )
@@ -1633,7 +1634,7 @@ async def chat_image_generation_handler(request: Request, form_data: dict, extra
         try:
             images = await image_generations(
                 request=request,
-                form_data=CreateImageForm(**{'prompt': prompt}),
+                form_data=CreateImageForm(prompt=prompt, model=get_requested_image_model(metadata)),
                 metadata=image_metadata,
                 user=user,
             )
