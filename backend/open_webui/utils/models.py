@@ -238,7 +238,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 if custom_model.is_active:
                     arena_meta = model['info']['meta'] if model.get('arena') else None
                     model['name'] = custom_model.name
-                    model['info'] = custom_model.model_dump()
+                    model['info'] = custom_model.model_dump(exclude={'meta': {'profile_image_url'}})
                     if arena_meta:
                         # Evaluation config owns arena access grants and model_ids
                         model['info']['meta'].update(
@@ -300,7 +300,7 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
                 **({'loaded': base_model.get('loaded')} if base_model and base_model.get('loaded') is not None else {}),
             }
 
-            info = custom_model.model_dump()
+            info = custom_model.model_dump(exclude={'meta': {'profile_image_url'}})
             schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
             if schema:
                 info.setdefault('meta', {})['chat_variables_schema'] = schema
