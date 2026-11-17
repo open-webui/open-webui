@@ -43,6 +43,7 @@ from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.mcp.apps import app_csp, ui_resource_uri, verify_app_binding
 from open_webui.utils.mcp.client import tool_visible_to
 from open_webui.utils.misc import is_string_allowed
+from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.plugin import (
     get_tool_contents_cache,
     get_tool_module_from_cache,
@@ -116,6 +117,23 @@ async def get_tools(
                 )
             )
 
+    # Tool servers that forward the user's SSO token fail once that SSO session is gone.
+    # Only flag them for browsers signed in through SSO, where signing in again fixes it.
+    oauth_session_expired = (
+        ENABLE_TOOL_SERVERS
+        and 'oauth_session_id' in request.cookies
+        and any(
+            connection.get('auth_type') == 'system_oauth' and (connection.get('config') or {}).get('enable')
+            for connection in await Config.get('tool_server.connections', [])
+        )
+        and await get_system_oauth_token(request, user) is None
+    )
+
+    def get_system_oauth_status(auth_type: str) -> dict:
+        if auth_type == 'system_oauth' and oauth_session_expired:
+            return {'authenticated': False, 'auth_type': 'system_oauth'}
+        return {}
+
     # OpenAPI Tool Servers
     server_connections = {}
     for server in await get_tool_servers(request):
@@ -151,6 +169,7 @@ async def get_tools(
                     ],
                     'updated_at': int(time.time()),
                     'created_at': int(time.time()),
+                    **get_system_oauth_status(connection.get('auth_type')),
                 }
             )
         )
@@ -192,6 +211,7 @@ async def get_tools(
                             if auth_type in ('oauth_2.1', 'oauth_2.1_static')
                             else {}
                         ),
+                        **get_system_oauth_status(auth_type),
                     }
                 )
             )

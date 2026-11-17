@@ -1167,6 +1167,11 @@
 		console.log('saveSessionSelectedModels', selectedModels, sessionStorage.selectedModels);
 	};
 
+	// The backend only marks a tool as system_oauth when the user's SSO session is gone, so
+	// signing in again is the fix. These tools never block sending or redirect on their own.
+	const isSystemOAuthTool = (toolId: string) =>
+		($tools ?? []).find((tool) => tool.id === toolId)?.auth_type === 'system_oauth';
+
 	const continueOAuthRedirect = async () => {
 		if (tabbed) {
 			pendingOAuthTools = [];
@@ -1181,7 +1186,11 @@
 			return;
 		}
 
-		const nextTool = pendingOAuthTools[0];
+		const nextTool = pendingOAuthTools.find((tool) => !isSystemOAuthTool(tool.id));
+		if (!nextTool) {
+			sessionStorage.removeItem('oauthRedirectInProgressToolId');
+			return;
+		}
 		if (sessionStorage.getItem('oauthRedirectInProgressToolId') === nextTool.id) {
 			sessionStorage.removeItem('oauthRedirectInProgressToolId');
 			return;
@@ -3195,7 +3204,7 @@
 		const pendingToolId = sessionStorage.getItem('pendingOAuthToolId');
 		if (pendingToolId) {
 			sessionStorage.removeItem('pendingOAuthToolId');
-			if (!selectedToolIds.includes(pendingToolId)) {
+			if (!selectedToolIds.includes(pendingToolId) && !isSystemOAuthTool(pendingToolId)) {
 				selectedToolIds = [...selectedToolIds, pendingToolId];
 			}
 		}
@@ -4612,7 +4621,7 @@
 			return { status: 'rejected' };
 		}
 
-		if (pendingOAuthTools.length > 0) {
+		if (pendingOAuthTools.some((tool) => !isSystemOAuthTool(tool.id))) {
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
 			return { status: 'rejected' };
 		}
@@ -5705,6 +5714,12 @@
 		await tick();
 		saveSessionSelectedModels();
 		await saveDraft(draft, null, false);
+		if (isSystemOAuthTool(tool.id)) {
+			sessionStorage.setItem('pendingOAuthToolId', tool.id);
+			localStorage.removeItem('token');
+			window.location.href = '/auth?state=logout&form=signin';
+			return;
+		}
 		initiateOAuthRedirect(tool);
 	};
 
