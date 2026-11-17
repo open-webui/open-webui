@@ -235,7 +235,7 @@
 	export let dirty = false;
 	let diskChanged = false;
 	let overwriteChoice: ((replace: boolean) => void) | null = null;
-	let saveTarget: (TerminalTarget & { path: string }) | null = null;
+	let selectedFileLocation: (TerminalTarget & { path: string }) | null = null;
 	let dirtyChoice: {
 		sending: boolean;
 		resolve: (confirmed: boolean) => void;
@@ -354,7 +354,7 @@
 	// Preserve translations for the former save notifications during extraction.
 	// $i18n.t('File saved'); $i18n.t('Failed to save file');
 	const saveFile = async (content: string) => {
-		const target = saveTarget;
+		const target = selectedFileLocation;
 		if (
 			diskChanged &&
 			!(await new Promise<boolean>((resolve) => {
@@ -380,7 +380,7 @@
 			new File([content], name, { type: 'text/plain' })
 		);
 		if (!result) throw new Error('Failed to save file. Your changes are still in the editor.');
-		if (saveTarget === target) {
+		if (selectedFileLocation === target) {
 			fileContent = content;
 			diskChanged = false;
 		}
@@ -1217,7 +1217,7 @@
 		}
 
 		openedFile = null;
-		saveTarget = null;
+		selectedFileLocation = null;
 		dirty = false;
 		loading = true;
 		error = null;
@@ -1399,7 +1399,7 @@
 		if (terminalContext) terminalContext = { ...terminalContext, file: null };
 		dirty = false;
 		diskChanged = false;
-		saveTarget = { ...terminal, path: filePath };
+		selectedFileLocation = { ...terminal, path: filePath };
 		pendingFile = filesystemFile(
 			{ path: filePath, name: entry.name, size: entry.size, modified: entry.modified },
 			selector,
