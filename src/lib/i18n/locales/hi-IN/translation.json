@@ -1891,6 +1891,7 @@
 	"Load Model": "मॉडल लोड करें",
 	"Load more": "और लोड करें",
 	"Loaded": "लोड किया गया",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "लोड हो रहा है",
 	"Loading animations…": "एनिमेशन लोड हो रहे हैं…",
 	"Loading avatar...": "अवतार लोड हो रहा है...",

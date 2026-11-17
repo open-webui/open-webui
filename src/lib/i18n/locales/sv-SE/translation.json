@@ -1891,6 +1891,7 @@
 	"Load Model": "Läs in modell",
 	"Load more": "Läs in fler",
 	"Loaded": "Inläst",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Läser in",
 	"Loading animations…": "Läser in animeringar…",
 	"Loading avatar...": "Läser in avatar...",

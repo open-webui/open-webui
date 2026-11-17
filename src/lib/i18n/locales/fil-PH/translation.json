@@ -1892,6 +1892,7 @@
 	"Load Model": "I-load ang Modelo",
 	"Load more": "Mag-load pa",
 	"Loaded": "Naka-load",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Naglo-load",
 	"Loading animations…": "Naglo-load ng mga animation…",
 	"Loading avatar...": "Naglo-load ng avatar...",

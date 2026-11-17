@@ -33,7 +33,11 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.models import ModelForm, Models
-from open_webui.retrieval.external import retrieve_external_knowledge, retrieve_external_knowledge_for_connection
+from open_webui.retrieval.external import (
+    list_openai_vector_stores,
+    retrieve_external_knowledge,
+    retrieve_external_knowledge_for_connection,
+)
 from open_webui.retrieval.utils import is_media_content_type
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.retrieval import (
@@ -562,6 +566,11 @@ class ExternalKnowledgeConnectionListResponse(BaseModel):
     total: int
 
 
+class ExternalKnowledgeStoreListForm(BaseModel):
+    connection_id: Optional[str] = None
+    connection: ExternalKnowledgeConnectionForm
+
+
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
 EXTERNAL_KNOWLEDGE_PROVIDERS = {'qdrant', 'milvus', 'pgvector', 'openai'}
 # Providers that search server-side by text, so a source needs no field mapping.
@@ -891,6 +900,31 @@ async def test_external_knowledge_retrieval(
 
     source = form_data.source or ExternalKnowledgeSourceForm(name='test', config={'content_field': 'payload.text'})
     return await _get_external_source_test_result(request, connection, source, form_data.query, form_data.count, user)
+
+
+@router.post('/external/source/stores', response_model=dict)
+async def list_external_knowledge_stores(
+    form_data: ExternalKnowledgeStoreListForm,
+    user=Depends(get_admin_user),
+):
+    if form_data.connection_id:
+        existing_connection = await _get_external_connection_by_id(form_data.connection_id)
+        if not existing_connection:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='External connection not found.')
+        connection = _get_external_connection_update_from_form(form_data.connection, existing_connection)
+    else:
+        connection = _get_external_connection_from_form(form_data.connection, user.id, id='external-test')
+
+    if connection['provider'] not in EXTERNAL_KNOWLEDGE_TEXT_SEARCH_PROVIDERS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Listing is only supported for OpenAI-compatible sources.',
+        )
+
+    try:
+        return {'items': await list_openai_vector_stores(connection)}
+    except RuntimeError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 def _get_external_knowledge_meta(connection: dict, source: ExternalKnowledgeSourceForm) -> dict:

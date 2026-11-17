@@ -1891,6 +1891,7 @@
 	"Load Model": "بارگذاری مدل",
 	"Load more": "بارگذاری بیشتر",
 	"Loaded": "بارگذاری شده",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "در حال بارگذاری",
 	"Loading animations…": "در حال بارگذاری انیمیشن\u200cها…",
 	"Loading avatar...": "در حال بارگذاری آواتار...",

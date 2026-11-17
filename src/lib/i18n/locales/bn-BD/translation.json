@@ -1891,6 +1891,7 @@
 	"Load Model": "মডেল লোড করুন",
 	"Load more": "আরও লোড করুন",
 	"Loaded": "লোড হয়েছে",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "লোড হচ্ছে",
 	"Loading animations…": "অ্যানিমেশন লোড হচ্ছে…",
 	"Loading avatar...": "অ্যাভাটার লোড হচ্ছে...",

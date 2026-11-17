@@ -1931,6 +1931,7 @@
 	"Load Model": "Завантажити модель",
 	"Load more": "Завантажити ще",
 	"Loaded": "Завантажено",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Завантаження",
 	"Loading animations…": "Завантаження анімацій…",
 	"Loading avatar...": "Завантаження аватара...",

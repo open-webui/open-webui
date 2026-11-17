@@ -18,6 +18,7 @@
 		createExternalKnowledgeSource,
 		getExternalKnowledgeConnections,
 		searchKnowledgeBases,
+		listExternalKnowledgeStores,
 		testExternalKnowledgeSource,
 		updateExternalKnowledgeConnection,
 		updateExternalKnowledgeSource,
@@ -61,6 +62,9 @@
 
 	let loading = false;
 	let testing = false;
+	let verifying = false;
+	// Stores the connection can search, offered as suggestions for the Vector Store ID.
+	let storeOptions: { id: string; name: string }[] = [];
 	let creating = false;
 	let showSourceModal = false;
 	let connections: ExternalKnowledgeConnection[] = [];
@@ -140,6 +144,7 @@
 		};
 		accessGrants = [];
 		testResult = null;
+		storeOptions = [];
 		editingItem = null;
 		editingConnection = null;
 	};
@@ -286,6 +291,32 @@
 
 	const sourceFormIsValid = () => !!sourceForm.name.trim() && testFormIsValid();
 
+	const loadStoreOptions = async () => {
+		const res = await listExternalKnowledgeStores(localStorage.token, {
+			...(editingConnection?.id ? { connection_id: editingConnection.id } : {}),
+			connection: connectionPayload()
+		}).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		storeOptions = res?.items ?? [];
+		return !!res;
+	};
+
+	// Checks the endpoint and key by listing the stores, which then fill the Vector Store ID suggestions.
+	const verifyConnection = async () => {
+		if (!sourceForm.endpoint.trim()) {
+			toast.error($i18n.t('Fill the required fields first.'));
+			return;
+		}
+
+		verifying = true;
+		if (await loadStoreOptions()) {
+			toast.success($i18n.t('Loaded {{COUNT}} vector stores.', { COUNT: storeOptions.length }));
+		}
+		verifying = false;
+	};
+
 	const testSource = async () => {
 		if (!testFormIsValid()) {
 			toast.error($i18n.t('Fill the source fields and test query first.'));
@@ -419,6 +450,7 @@
 			...sourceForm,
 			...schemaDefaults(sourceForm.provider)
 		};
+		storeOptions = [];
 		markUntested();
 	};
 
@@ -531,6 +563,39 @@
 										placeholder={endpointPlaceholder()}
 										required
 									/>
+
+									{#if textSearch}
+										<Tooltip
+											content={$i18n.t('Verify Connection')}
+											className="shrink-0 flex items-center mr-1"
+										>
+											<button
+												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												type="button"
+												on:click={verifyConnection}
+												disabled={verifying}
+												aria-label={$i18n.t('Verify Connection')}
+											>
+												{#if verifying}
+													<Spinner />
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														viewBox="0 0 20 20"
+														fill="currentColor"
+														class="w-4 h-4"
+														aria-hidden="true"
+													>
+														<path
+															fill-rule="evenodd"
+															d="M15.312 11.424a5.5 5.5 0 01-9.201 2.466l-.312-.311h2.433a.75.75 0 000-1.5H3.989a.75.75 0 00-.75.75v4.242a.75.75 0 001.5 0v-2.43l.31.31a7 7 0 0011.712-3.138.75.75 0 00-1.449-.39zm1.23-3.723a.75.75 0 00.219-.53V2.929a.75.75 0 00-1.5 0V5.36l-.31-.31A7 7 0 003.239 8.188a.75.75 0 101.448.389A5.5 5.5 0 0113.89 6.11l.311.31h-2.432a.75.75 0 000 1.5h4.243a.75.75 0 00.53-.219z"
+															clip-rule="evenodd"
+														/>
+													</svg>
+												{/if}
+											</button>
+										</Tooltip>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -611,8 +676,17 @@
 										bind:value={sourceForm.sourceName}
 										on:input={markUntested}
 										placeholder={textSearch ? 'vs_abc123' : 'research-docs'}
+										list={textSearch ? 'external-source-stores' : undefined}
+										autocomplete="off"
 										required
 									/>
+									{#if textSearch}
+										<datalist id="external-source-stores">
+											{#each storeOptions as store (store.id)}
+												<option value={store.id}>{store.name}</option>
+											{/each}
+										</datalist>
+									{/if}
 								</div>
 							</div>
 						</div>
@@ -753,7 +827,7 @@
 									/>
 
 									<Tooltip
-										content={$i18n.t('Verify Connection')}
+										content={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
 										className="shrink-0 flex items-center mr-1"
 									>
 										<button
@@ -761,7 +835,7 @@
 											type="button"
 											on:click={testSource}
 											disabled={testing}
-											aria-label={$i18n.t('Verify Connection')}
+											aria-label={textSearch ? $i18n.t('Test') : $i18n.t('Verify Connection')}
 										>
 											{#if testing}
 												<Spinner />

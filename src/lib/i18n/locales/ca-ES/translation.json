@@ -1911,6 +1911,7 @@
 	"Load Model": "Carregar model",
 	"Load more": "Carrega'n més",
 	"Loaded": "Carregat",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "S'està carregant",
 	"Loading animations…": "Carregant animacions…",
 	"Loading avatar...": "Carregant l'avatar...",

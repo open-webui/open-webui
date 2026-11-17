@@ -1911,6 +1911,7 @@
 	"Load Model": "Charger le modèle",
 	"Load more": "",
 	"Loaded": "Chargé",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Chargement en cours",
 	"Loading animations…": "Chargement des animations…",
 	"Loading avatar...": "Chargement de l'avatar...",

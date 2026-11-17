@@ -1871,6 +1871,7 @@
 	"Load Model": "โหลดโมเดล",
 	"Load more": "โหลดเพิ่มเติม",
 	"Loaded": "โหลดแล้ว",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "กำลังโหลด",
 	"Loading animations…": "กำลังโหลดแอนิเมชัน…",
 	"Loading avatar...": "กำลังโหลดอวตาร์...",

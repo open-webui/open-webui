@@ -17,8 +17,11 @@ log = logging.getLogger(__name__)
 EXTERNAL_KNOWLEDGE_CONNECTIONS_CONFIG_KEY = 'external_knowledge.connections'
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][A-Za-z0-9_]*$')
 
-# OpenAI caps vector store search at 50 results per request.
+# OpenAI caps vector store search at 50 results and list pages at 100 stores.
 OPENAI_VECTOR_STORE_MAX_RESULTS = 50
+OPENAI_VECTOR_STORE_PAGE_SIZE = 100
+# Stops a server that always reports more pages; allows 10,000 stores.
+OPENAI_VECTOR_STORE_MAX_PAGES = 100
 
 
 async def _get_external_connection(connection_id: str) -> Optional[dict]:
@@ -303,9 +306,10 @@ async def _openai_vector_store_request(
     auth_config: Optional[dict],
     method: str,
     path: str,
+    params: Optional[dict] = None,
     json: Optional[dict] = None,
 ) -> dict:
-    """Call an OpenAI-compatible vector store API (OpenAI, Azure OpenAI, LiteLLM)."""
+    """Call an OpenAI-compatible vector store API (OpenAI, LiteLLM, Azure OpenAI v1 at /openai/v1)."""
     base_url = (connection.get('endpoint') or '').strip().rstrip('/')
     if not base_url:
         raise RuntimeError('Endpoint is not configured')
@@ -322,6 +326,7 @@ async def _openai_vector_store_request(
             method,
             f'{base_url}{path}',
             headers=headers,
+            params=params,
             json=json,
             timeout=timeout,
             ssl=AIOHTTP_CLIENT_SESSION_SSL,
@@ -383,6 +388,45 @@ async def _retrieve_openai(connection, auth_config, knowledge, query, count, emb
         }
         normalized.append(_normalize_result(result, {}, knowledge, distance=item.get('score')))
     return normalized[:count]
+
+
+async def list_openai_vector_stores(connection: dict) -> list[dict]:
+    """List the vector stores a connection can search, as {id, name}.
+
+    LiteLLM's registry comes first since it covers every backend LiteLLM proxies; servers without
+    it (OpenAI, Azure) are listed through the OpenAI vector stores API.
+    """
+    auth_config = connection.get('auth_config') or {}
+
+    try:
+        data = await _openai_vector_store_request(
+            connection, auth_config, 'GET', '/vector_store/list', params={'page_size': 1000}
+        )
+        if isinstance(data.get('data'), list):
+            return [
+                {'id': item['vector_store_id'], 'name': item.get('vector_store_name') or item['vector_store_id']}
+                for item in data['data']
+                if isinstance(item, dict) and item.get('vector_store_id')
+            ]
+    except RuntimeError:
+        pass
+
+    stores = []
+    after = None
+    for _ in range(OPENAI_VECTOR_STORE_MAX_PAGES):
+        data = await _openai_vector_store_request(
+            connection,
+            auth_config,
+            'GET',
+            '/vector_stores',
+            params={'limit': OPENAI_VECTOR_STORE_PAGE_SIZE, **({'after': after} if after else {})},
+        )
+        items = [item for item in data.get('data') or [] if isinstance(item, dict) and item.get('id')]
+        stores.extend({'id': item['id'], 'name': item.get('name') or item['id']} for item in items)
+        if not data.get('has_more') or not items:
+            break
+        after = data.get('last_id') or items[-1]['id']
+    return stores
 
 
 async def retrieve_external_knowledge(

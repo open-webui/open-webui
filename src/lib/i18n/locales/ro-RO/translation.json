@@ -1911,6 +1911,7 @@
 	"Load Model": "Încarcă modelul",
 	"Load more": "Încarcă mai multe",
 	"Loaded": "Încărcat",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Se încarcă",
 	"Loading animations…": "Se încarcă animațiile…",
 	"Loading avatar...": "Se încarcă avatarul...",

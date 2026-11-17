@@ -1881,6 +1881,7 @@
 	"Load Model": "加载模型",
 	"Load more": "",
 	"Loaded": "已加载",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "加载中……",
 	"Loading animations…": "正在加载动画……",
 	"Loading avatar...": "正在加载虚拟形象……",

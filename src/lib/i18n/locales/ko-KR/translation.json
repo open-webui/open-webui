@@ -1872,6 +1872,7 @@
 	"Load Model": "모델 로드",
 	"Load more": "더 불러오기",
 	"Loaded": "로드됨",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "로딩 중",
 	"Loading animations…": "애니메이션 로딩 중…",
 	"Loading avatar...": "아바타 로딩 중...",

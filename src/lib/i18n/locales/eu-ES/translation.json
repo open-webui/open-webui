@@ -1891,6 +1891,7 @@
 	"Load Model": "Kargatu modeloa",
 	"Load more": "Kargatu gehiago",
 	"Loaded": "Kargatuta",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Kargatzen",
 	"Loading animations…": "Animazioak kargatzen…",
 	"Loading avatar...": "Avatarra kargatzen...",

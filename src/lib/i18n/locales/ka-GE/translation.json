@@ -1891,6 +1891,7 @@
 	"Load Model": "მოდელის ჩატვირთვა",
 	"Load more": "მეტის ჩატვირთვა",
 	"Loaded": "ჩატვირთულია",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "იტვირთება",
 	"Loading animations…": "ანიმაციები იტვირთება…",
 	"Loading avatar...": "ავატარი იტვირთება...",

@@ -1931,6 +1931,7 @@
 	"Load Model": "Załaduj model",
 	"Load more": "Załaduj więcej",
 	"Loaded": "Załadowany",
+	"Loaded {{COUNT}} vector stores.": "",
 	"Loading": "Ładowanie",
 	"Loading animations…": "Wczytywanie animacji…",
 	"Loading avatar...": "Wczytywanie awatara...",
