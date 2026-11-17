@@ -490,6 +490,7 @@
 						className={textareaClass}
 						placeholder={$i18n.t('Enter a watermark for the response. Leave empty for none.')}
 						bind:value={adminConfig.RESPONSE_WATERMARK}
+						maxSize={200}
 					/>
 				</AdminSettingField>
 

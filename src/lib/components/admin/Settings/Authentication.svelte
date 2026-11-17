@@ -341,6 +341,7 @@
 							'Enter a title for the pending user info overlay. Leave empty for default.'
 						)}
 						bind:value={adminConfig.PENDING_USER_OVERLAY_TITLE}
+						maxSize={200}
 					/>
 				</AdminSettingField>
 
@@ -356,6 +357,7 @@
 							'Enter content for the pending user info overlay. Leave empty for default.'
 						)}
 						bind:value={adminConfig.PENDING_USER_OVERLAY_CONTENT}
+						maxSize={200}
 					/>
 				</AdminSettingField>
 			</AdminSettingSection>

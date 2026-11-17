@@ -406,6 +406,7 @@
 						id="realtime-input-params"
 						className={textareaClass}
 						bind:value={REALTIME_INPUT_PARAMS}
+						maxSize={200}
 						placeholder={$i18n.t('Enter additional parameters in JSON format')}
 					/>
 				</AdminSettingField>
@@ -414,6 +415,7 @@
 						id="realtime-prompt-template"
 						className={textareaClass}
 						bind:value={realtime.REALTIME_CALL_PROMPT_TEMPLATE}
+						maxSize={300}
 						placeholder={$i18n.t('Leave empty to use the default prompt, or enter a custom prompt')}
 					/>
 				</AdminSettingField>
@@ -903,6 +905,7 @@
 							id="tts-openai-params"
 							className={textareaClass}
 							bind:value={TTS_OPENAI_PARAMS}
+							maxSize={200}
 							placeholder={$i18n.t('Enter additional parameters in JSON format')}
 						/>
 					</AdminSettingField>
@@ -915,6 +918,7 @@
 							id="realtime-tts-prompt-template"
 							className={textareaClass}
 							bind:value={REALTIME_TTS_PROMPT_TEMPLATE}
+							maxSize={300}
 							placeholder={$i18n.t(
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}

@@ -462,6 +462,7 @@
 									id="images-openai-api-params"
 									className={textareaClass}
 									bind:value={config.IMAGES_OPENAI_API_PARAMS}
+									maxSize={200}
 									placeholder={$i18n.t('Enter additional parameters in JSON format')}
 									minSize={100}
 								/>
@@ -537,6 +538,7 @@
 									id="automatic1111-params"
 									className={textareaClass}
 									bind:value={config.AUTOMATIC1111_PARAMS}
+									maxSize={200}
 									placeholder={$i18n.t('Enter additional parameters in JSON format')}
 									minSize={100}
 								/>
@@ -678,6 +680,7 @@
 										className="my-1 w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 disabled:text-gray-600 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
 										rows="10"
 											bind:value={config.COMFYUI_WORKFLOW}
+											maxSize={300}
 										required
 									/>
 								{/if} -->
