@@ -1354,7 +1354,7 @@ class ChatTable:
         message = chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
         return message.get(metadata_key)
 
-    async def insert_chat_turn(self, chat_id, user, user_message, message_ids):
+    async def insert_chat_turn(self, chat_id, user, user_message, message_ids, chat_fields: dict, variables: dict):
         from fastapi import HTTPException
 
         if not await self.has_chat_access(chat_id, user, permission='write'):
@@ -1429,6 +1429,9 @@ class ChatTable:
                     },
                 )
             chat.chat = {**(chat.chat or {}), 'history': history}
+            if chat.user_id == user.id:
+                chat.chat.update(self._clean_null_bytes(chat_fields))
+                chat.variables = self._clean_null_bytes(variables)
             flag_modified(chat, 'chat')
             chat.current_message_id = history['currentId']
             chat.updated_at = int(time.time())

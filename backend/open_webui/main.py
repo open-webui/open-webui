@@ -1559,6 +1559,10 @@ async def chat_completion(
                         # A reply in this chat is still running: it takes this message at its next step.
                         if await queue_user_message(request, chat_id, user, user_message, parent_id):
                             return {'status': True, 'queued': True, 'chat_id': chat_id}
+                    selected_chat_models = user_message.get('models') or [entry['model_id'] for entry in message_ids]
+                    chat_fields = {'models': selected_chat_models}
+                    if metadata.get('files') is not None:
+                        chat_fields['files'] = metadata['files']
                     if assistant_message_id:
                         message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                         if not message or (message.get('user_id') or chat.user_id) != user.id:
@@ -1566,8 +1570,13 @@ async def chat_completion(
                         if any(entry.get('message_id') != assistant_message_id for entry in message_ids):
                             raise HTTPException(status_code=400, detail='Invalid response ID.')
                         metadata['user_message_id'] = message.get('parentId')
+                        if chat.user_id == user.id:
+                            await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
+                            await Chats.update_chat_variables_by_id(chat_id, chat_variables)
                     else:
-                        turn = await Chats.insert_chat_turn(chat_id, user, user_message, message_ids)
+                        turn = await Chats.insert_chat_turn(
+                            chat_id, user, user_message, message_ids, chat_fields, chat_variables
+                        )
                         event_emitter = await get_event_emitter(
                             {**metadata, 'message_id': turn['currentId']}, update_db=False
                         )
@@ -1599,16 +1608,7 @@ async def chat_completion(
                             except Exception:
                                 log.exception('Failed to cancel chat.user_message timers for chat %s', chat_id)
 
-                    if chat.user_id == user.id:
-                        selected_chat_models = user_message.get('models') or [
-                            entry['model_id'] for entry in message_ids
-                        ]
-                        chat_fields = {'models': selected_chat_models}
-                        if metadata.get('files') is not None:
-                            chat_fields['files'] = metadata['files']
-                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
-                        await Chats.update_chat_variables_by_id(chat_id, chat_variables)
-                    else:
+                    if chat.user_id != user.id:
                         tasks = {
                             key: value
                             for key, value in (tasks or {}).items()
