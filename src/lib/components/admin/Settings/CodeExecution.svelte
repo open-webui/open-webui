@@ -9,6 +9,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 
 	const i18n: any = getContext('i18n');
@@ -16,8 +17,55 @@
 	export let saveHandler: Function;
 
 	let config: any = null;
+	let savedConfig: Record<string, any> | null = null;
 
 	let engines = ['pyodide', 'jupyter'];
+
+	$: settingLabels = {
+		ENABLE_CODE_EXECUTION: $i18n.t('settings.admin.codeExecution.enableCodeExecution.label'),
+		CODE_EXECUTION_ENGINE: $i18n.t('settings.admin.codeExecution.codeExecutionEngine.label'),
+		CODE_EXECUTION_JUPYTER_URL: $i18n.t(
+			'settings.admin.codeExecution.codeExecutionJupyterUrl.label'
+		),
+		CODE_EXECUTION_JUPYTER_AUTH: $i18n.t(
+			'settings.admin.codeExecution.codeExecutionJupyterAuth.label'
+		),
+		CODE_EXECUTION_JUPYTER_AUTH_PASSWORD: $i18n.t(
+			'settings.admin.codeExecution.codeExecutionJupyterAuthPassword.label'
+		),
+		CODE_EXECUTION_JUPYTER_AUTH_TOKEN: $i18n.t(
+			'settings.admin.codeExecution.codeExecutionJupyterAuthToken.label'
+		),
+		CODE_EXECUTION_JUPYTER_TIMEOUT: $i18n.t(
+			'settings.admin.codeExecution.codeExecutionJupyterTimeout.label'
+		),
+		ENABLE_CODE_INTERPRETER: $i18n.t('settings.admin.codeExecution.enableCodeInterpreter.label'),
+		CODE_INTERPRETER_ENGINE: $i18n.t('settings.admin.codeExecution.codeInterpreterEngine.label'),
+		CODE_INTERPRETER_JUPYTER_URL: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterJupyterUrl.label'
+		),
+		CODE_INTERPRETER_JUPYTER_AUTH: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterJupyterAuth.label'
+		),
+		CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterJupyterAuthPassword.label'
+		),
+		CODE_INTERPRETER_JUPYTER_AUTH_TOKEN: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterJupyterAuthToken.label'
+		),
+		CODE_INTERPRETER_JUPYTER_TIMEOUT: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterJupyterTimeout.label'
+		),
+		CODE_INTERPRETER_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.codeExecution.codeInterpreterPromptTemplate.label'
+		)
+	};
+	const sensitiveKeys = [
+		'CODE_EXECUTION_JUPYTER_AUTH_PASSWORD',
+		'CODE_EXECUTION_JUPYTER_AUTH_TOKEN',
+		'CODE_INTERPRETER_JUPYTER_AUTH_PASSWORD',
+		'CODE_INTERPRETER_JUPYTER_AUTH_TOKEN'
+	];
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -25,6 +73,9 @@
 
 	const submitHandler = async () => {
 		const res = await setCodeExecutionConfig(localStorage.token, config);
+		if (res) {
+			savedConfig = structuredClone(config);
+		}
 	};
 
 	onMount(async () => {
@@ -32,6 +83,7 @@
 
 		if (res) {
 			config = res;
+			savedConfig = structuredClone(res);
 		}
 	});
 </script>
@@ -314,11 +366,11 @@
 		{/if}
 	</div>
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-			type="submit"
-		>
-			{$i18n.t('Save')}
-		</button>
+		<AdminSettingSaveButton
+			settings={config}
+			{savedConfig}
+			labels={settingLabels}
+			{sensitiveKeys}
+		/>
 	</div>
 </form>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getModels, getTaskConfig, updateTaskConfig } from '$lib/apis';
 	import { getChatConfig, updateChatConfig } from '$lib/apis/chats';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { getBaseModels } from '$lib/apis/models';
@@ -16,9 +16,11 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import { config as appConfig } from '$lib/stores';
 	import { setInterfaceVisibility } from '$lib/apis/configs';
 	import type { Visibility } from '$lib/utils/ui-visibility';
+	import { CONTROL_LABELS, type ControlId } from '$lib/utils/ui-visibility';
 	import VisibilitySettings from './Interface/Visibility.svelte';
 
 	export let saveHandler: () => void;
@@ -98,6 +100,115 @@
 	let showTaskParameters = false;
 	let visibility: Visibility = { ...($appConfig?.ui?.visibility ?? {}) };
 
+	let savedConfig: Record<string, any> | null = null;
+	$: settings = {
+		...Object.fromEntries(
+			(Object.keys(CONTROL_LABELS) as ControlId[]).map((id) => [id, visibility[id] !== false])
+		),
+		...taskConfig,
+		TASK_MODEL_PARAMS: configuredParams(taskConfig.TASK_MODEL_PARAMS),
+		...chatConfig,
+		TOOL_SEARCH_ALWAYS_LOADED: toolSearchAlwaysLoaded
+	};
+	$: settingLabels = {
+		...Object.fromEntries(
+			Object.entries(CONTROL_LABELS).map(([id, label]) => [id, $i18n.t(label)])
+		),
+		TASK_MODEL: $i18n.t('settings.admin.interface.localTaskModel.label'),
+		TASK_MODEL_EXTERNAL: $i18n.t('settings.admin.interface.externalTaskModel.label'),
+		TASK_MODEL_PARAMS: $i18n.t('settings.admin.interface.taskModelParameters.label'),
+		ENABLE_CONTEXT_COMPACTION: $i18n.t('settings.admin.interface.contextCompaction.label'),
+		CONTEXT_COMPACTION_MODEL: $i18n.t('settings.admin.interface.contextCompactionModel.label'),
+		CONTEXT_COMPACTION_TOKEN_THRESHOLD: $i18n.t('settings.admin.interface.tokenThreshold.label'),
+		CONTEXT_COMPACTION_TOKEN_CAP: $i18n.t('settings.admin.interface.tokenCap.label'),
+		CONTEXT_COMPACTION_RETENTION_PERCENTAGE: $i18n.t(
+			'settings.admin.interface.retainedMessages.label'
+		),
+		CONTEXT_COMPACTION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.contextCompactionPrompt.label'
+		),
+		ENABLE_TOOL_CALL_LABELS: $i18n.t('settings.admin.interface.toolCallLabels.label'),
+		ENABLE_TOOL_PERMISSIONS: $i18n.t('settings.admin.interface.toolPermissions.label'),
+		ENABLE_TOOL_PERMISSIONS_AUTO: $i18n.t('settings.admin.interface.toolPermissionsAuto.label'),
+		TOOL_PERMISSIONS_AUTO_ENGINE: $i18n.t(
+			'settings.admin.interface.toolPermissionsAutoEngine.label'
+		),
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL: $i18n.t(
+			'settings.admin.interface.toolPermissionsDecisionsUrl.label'
+		),
+		TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY: $i18n.t(
+			'settings.admin.interface.toolPermissionsDecisionsKey.label'
+		),
+		TOOL_PERMISSIONS_AUTO_DECISIONS_MODEL: $i18n.t(
+			'settings.admin.interface.toolPermissionsDecisionsModel.label'
+		),
+		TOOL_PERMISSIONS_AUTO_DECISIONS_THRESHOLD: $i18n.t(
+			'settings.admin.interface.toolPermissionsDecisionsThreshold.label'
+		),
+		TOOL_PERMISSIONS_AUTO_PROMPT: $i18n.t(
+			'settings.admin.interface.toolPermissionsAutoPrompt.label'
+		),
+		ENABLE_TOOL_SEARCH: $i18n.t('settings.admin.interface.toolSearch.label'),
+		TOOL_SEARCH_ENGINE: $i18n.t('settings.admin.interface.toolSearchEngine.label'),
+		TOOL_SEARCH_DECISIONS_API_BASE_URL: $i18n.t(
+			'settings.admin.interface.toolSearchDecisionsUrl.label'
+		),
+		TOOL_SEARCH_DECISIONS_API_KEY: $i18n.t('settings.admin.interface.toolSearchDecisionsKey.label'),
+		TOOL_SEARCH_DECISIONS_MODEL: $i18n.t('settings.admin.interface.toolSearchDecisionsModel.label'),
+		TOOL_SEARCH_DECISIONS_THRESHOLD: $i18n.t(
+			'settings.admin.interface.toolSearchDecisionsThreshold.label'
+		),
+		TOOL_SEARCH_DECISIONS_PROMPT: $i18n.t(
+			'settings.admin.interface.toolSearchDecisionsPrompt.label'
+		),
+		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: $i18n.t(
+			'settings.admin.interface.toolSearchDeferBuiltinTools.label'
+		),
+		TOOL_SEARCH_DEFER_THRESHOLD: $i18n.t('settings.admin.interface.toolSearchThreshold.label'),
+		TOOL_SEARCH_ALWAYS_LOADED: $i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.label'),
+		VISUALIZATION_PROMPT_TEMPLATE: $i18n.t('settings.admin.interface.visualizationPrompt.label'),
+		ENABLE_TITLE_GENERATION: $i18n.t('settings.admin.interface.titleGeneration.label'),
+		TITLE_GENERATION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.titleGenerationPrompt.label'
+		),
+		ENABLE_VOICE_MODE_PROMPT: $i18n.t('settings.admin.interface.voiceModePrompt.label'),
+		VOICE_MODE_PROMPT_TEMPLATE: $i18n.t('settings.admin.interface.promptTemplate.label'),
+		ENABLE_FOLLOW_UP_GENERATION: $i18n.t('settings.admin.interface.followUpGeneration.label'),
+		FOLLOW_UP_GENERATION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.followUpGenerationPrompt.label'
+		),
+		ENABLE_TAGS_GENERATION: $i18n.t('settings.admin.interface.tagsGeneration.label'),
+		TAGS_GENERATION_PROMPT_TEMPLATE: $i18n.t('settings.admin.interface.tagsGenerationPrompt.label'),
+		ENABLE_RETRIEVAL_QUERY_GENERATION: $i18n.t(
+			'settings.admin.interface.retrievalQueryGeneration.label'
+		),
+		ENABLE_SEARCH_QUERY_GENERATION: $i18n.t(
+			'settings.admin.interface.webSearchQueryGeneration.label'
+		),
+		QUERY_GENERATION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.queryGenerationPrompt.label'
+		),
+		ENABLE_AUTOCOMPLETE_GENERATION: $i18n.t(
+			'settings.admin.interface.autocompleteGeneration.label'
+		),
+		AUTOCOMPLETE_GENERATION_INPUT_MAX_LENGTH: $i18n.t(
+			'settings.admin.interface.autocompleteGenerationInputMaxLength.label'
+		),
+		AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.autocompleteGenerationPrompt.label'
+		),
+		IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.imagePromptGenerationPrompt.label'
+		),
+		TOOLS_FUNCTION_CALLING_PROMPT_TEMPLATE: $i18n.t(
+			'settings.admin.interface.toolsFunctionCallingPrompt.label'
+		)
+	};
+	const sensitiveKeys = [
+		'TOOL_PERMISSIONS_AUTO_DECISIONS_API_KEY',
+		'TOOL_SEARCH_DECISIONS_API_KEY'
+	];
+
 	const configuredParams = (params: Record<string, any> = {}) =>
 		Object.fromEntries(
 			Object.entries(params).filter(
@@ -150,6 +261,8 @@
 					}
 				: current
 		);
+		await tick();
+		savedConfig = structuredClone(settings);
 		saveHandler();
 	};
 
@@ -229,6 +342,8 @@
 
 	onMount(async () => {
 		await init();
+		await tick();
+		savedConfig = structuredClone(settings);
 	});
 </script>
 
@@ -946,12 +1061,7 @@
 		</div>
 
 		<div class="flex justify-end pt-6 text-sm font-normal">
-			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-				type="submit"
-			>
-				{$i18n.t('Save')}
-			</button>
+			<AdminSettingSaveButton {settings} {savedConfig} labels={settingLabels} {sensitiveKeys} />
 		</div>
 	</form>
 {:else}

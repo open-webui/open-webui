@@ -7,13 +7,13 @@
 	import { getConfig, getImageConnectionModels, updateConfig } from '$lib/apis/images';
 	import type { ImageCapability } from '$lib/utils/images';
 
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import SettingsSelect from '$lib/components/common/SettingsSelect.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import ImageConnection from './Images/ImageConnection.svelte';
 	import ImageConnectionModal from './Images/ImageConnectionModal.svelte';
 
@@ -33,6 +33,14 @@
 	let config: ImagesConfig | null = null;
 	let savedConfig: ImagesConfig | null = null;
 	let showAddConnectionModal = false;
+
+	$: settingLabels = {
+		ENABLE_IMAGE_GENERATION: $i18n.t('settings.admin.images.imageGeneration.label'),
+		ENABLE_IMAGE_EDIT: $i18n.t('settings.admin.images.imageEdit.label'),
+		IMAGE_GENERATION_DEFAULT_MODEL: $i18n.t('settings.admin.images.defaultGenerationModel.label'),
+		IMAGE_EDIT_DEFAULT_MODEL: $i18n.t('settings.admin.images.defaultEditModel.label'),
+		ENABLE_IMAGE_PROMPT_GENERATION: $i18n.t('settings.admin.images.imagePromptGeneration.label')
+	};
 
 	let connectionModels: ImageModel[] = [];
 
@@ -242,18 +250,12 @@
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
-			type="submit"
+		<AdminSettingSaveButton
+			settings={config}
+			{savedConfig}
+			labels={settingLabels}
 			disabled={loading}
-		>
-			{$i18n.t('Save')}
-
-			{#if loading}
-				<span class="shrink-0">
-					<Spinner className="size-3" />
-				</span>
-			{/if}
-		</button>
+			{loading}
+		/>
 	</div>
 </form>

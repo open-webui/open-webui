@@ -12,6 +12,8 @@
 	"{{count}} added lines_other": "",
 	"{{COUNT}} Available Skills": "",
 	"{{COUNT}} Available Tools": "",
+	"{{count}} Changes_one": "{{count}} Change",
+	"{{count}} Changes_other": "{{count}} Changes",
 	"{{COUNT}} characters": "",
 	"{{count}} cores": "{{count}} cores",
 	"{{count}} cores_one": "",

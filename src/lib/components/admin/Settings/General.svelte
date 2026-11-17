@@ -14,7 +14,7 @@
 	import { banners as _banners, config, showChangelog } from '$lib/stores';
 	import type { Banner } from '$lib/types';
 	import { compareVersion } from '$lib/utils';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Banners from './Interface/Banners.svelte';
@@ -22,6 +22,7 @@
 	import AdminSettingField from './AdminSettingField.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import I18nSettings from './I18nSettings.svelte';
 	import { updateI18n } from '$lib/i18n';
@@ -45,6 +46,42 @@
 
 	let banners: Banner[] = [];
 	let bannerLocale = '';
+
+	let savedConfig: Record<string, any> | null = null;
+	$: settings = {
+		...adminConfig,
+		DEFAULT_INTERFACE_SETTINGS: defaultInterfaceSettings,
+		I18N: uiI18nEntries,
+		BANNERS: banners
+	};
+	$: settingLabels = {
+		ENABLE_COMMUNITY_SHARING: $i18n.t('settings.admin.general.communitySharing.label'),
+		ENABLE_MESSAGE_RATING: $i18n.t('settings.admin.general.messageRating.label'),
+		ENABLE_FOLDERS: $i18n.t('settings.admin.general.folders.label'),
+		FOLDER_MAX_FILE_COUNT: $i18n.t('settings.admin.general.folderMaxFileCount.label'),
+		ENABLE_MEMORIES: $i18n.t('settings.admin.general.memories.label'),
+		ENABLE_MEMORY_SYSTEM_CONTEXT: $i18n.t('settings.admin.general.memorySystemContext.label'),
+		ENABLE_SKILL_LAZY_LOADING: $i18n.t('settings.admin.general.skillLazyLoading.label'),
+		SKILL_CONTENT_MAX_CHARS: $i18n.t('settings.admin.general.skillContentMaxChars.label'),
+		SKILL_PREVIEW_MAX_CHARS: $i18n.t('settings.admin.general.skillPreviewMaxChars.label'),
+		VIEW_CHAT_MAX_CHARS: $i18n.t('settings.admin.general.viewChatMaxChars.label'),
+		ENABLE_NOTES: $i18n.t('settings.admin.general.notes.label'),
+		ENABLE_COMMENTS: $i18n.t('settings.admin.general.comments.label'),
+		ENABLE_NOTIFICATIONS: $i18n.t('settings.admin.general.notifications.label'),
+		ENABLE_CHANNELS: $i18n.t('settings.admin.general.channels.label'),
+		ENABLE_ENCRYPTED_CHANNELS: $i18n.t('settings.admin.general.encryptedChannels.label'),
+		CHANNEL_MODEL_RESPONSE_MODE: $i18n.t('settings.admin.general.modelResponseMode.label'),
+		ENABLE_APPS: $i18n.t('settings.admin.general.apps.label'),
+		ENABLE_CALENDAR: $i18n.t('settings.admin.general.calendar.label'),
+		ENABLE_AUTOMATIONS: $i18n.t('settings.admin.general.automations.label'),
+		ENABLE_USER_WEBHOOKS: $i18n.t('settings.admin.general.userWebhooks.label'),
+		ENABLE_USER_STATUS: $i18n.t('settings.admin.general.userStatus.label'),
+		RESPONSE_WATERMARK: $i18n.t('settings.admin.general.responseWatermark.label'),
+		WEBUI_URL: $i18n.t('settings.admin.general.webuiUrl.label'),
+		I18N: $i18n.t('settings.admin.general.translations.uiTranslations.label'),
+		DEFAULT_INTERFACE_SETTINGS: $i18n.t('Default Interface Settings'),
+		BANNERS: $i18n.t('settings.admin.general.banners.label')
+	};
 	const inputClass =
 		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
@@ -98,6 +135,7 @@
 			}
 			await updateI18n(res.I18N ?? cleaned);
 			await updateBanners();
+			savedConfig = structuredClone(settings);
 			await config.set(await getBackendConfig());
 			saveHandler();
 		} catch (error) {
@@ -119,6 +157,9 @@
 		uiI18nEntries = i18nToEntries(adminConfig.I18N ?? {});
 
 		banners = [...$_banners];
+
+		await tick();
+		savedConfig = structuredClone(settings);
 
 		if (WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check) {
 			checkForVersionUpdates();
@@ -617,12 +658,6 @@
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
-		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-			type="submit"
-			disabled={saving}
-		>
-			{$i18n.t('Save')}
-		</button>
+		<AdminSettingSaveButton {settings} {savedConfig} labels={settingLabels} disabled={saving} />
 	</div>
 </form>

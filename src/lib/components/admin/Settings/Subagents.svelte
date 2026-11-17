@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AdminSettingRow from './AdminSettingRow.svelte';
-	import { getContext, onMount } from 'svelte';
+	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
+	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { config as appConfig } from '$lib/stores';
@@ -21,6 +22,28 @@
 	let maxOutput: number | null = null;
 	let systemPrompt = '';
 
+	let savedConfig: Record<string, any> | null = null;
+	$: settings = {
+		ENABLE_SUBAGENTS: enabled,
+		SUBAGENTS_BACKGROUND_ENABLED: backgroundEnabled,
+		SUBAGENTS_MAX_CONCURRENT: maxConcurrent,
+		SUBAGENTS_MAX_ASYNC: maxAsync,
+		SUBAGENTS_MAX_ITERATIONS: maxIterations,
+		SUBAGENTS_MAX_OUTPUT: maxOutput,
+		SUBAGENTS_SYSTEM_PROMPT: systemPrompt
+	};
+	$: settingLabels = {
+		ENABLE_SUBAGENTS: $i18n.t('settings.admin.subagents.enableSubAgents.label'),
+		SUBAGENTS_BACKGROUND_ENABLED: $i18n.t(
+			'settings.admin.subagents.enableBackgroundSubAgents.label'
+		),
+		SUBAGENTS_MAX_CONCURRENT: $i18n.t('settings.admin.subagents.maxConcurrent.label'),
+		SUBAGENTS_MAX_ASYNC: $i18n.t('settings.admin.subagents.maxBackground.label'),
+		SUBAGENTS_MAX_ITERATIONS: $i18n.t('settings.admin.subagents.maxIterations.label'),
+		SUBAGENTS_MAX_OUTPUT: $i18n.t('settings.admin.subagents.maxOutput.label'),
+		SUBAGENTS_SYSTEM_PROMPT: $i18n.t('settings.admin.subagents.systemPrompt.label')
+	};
+
 	onMount(async () => {
 		try {
 			const config = await getSubagentsConfig(localStorage.token);
@@ -36,6 +59,9 @@
 		} finally {
 			loading = false;
 		}
+
+		await tick();
+		savedConfig = structuredClone(settings);
 	});
 
 	const save = async () => {
@@ -50,6 +76,7 @@
 				SUBAGENTS_MAX_OUTPUT: maxOutput ?? null,
 				SUBAGENTS_SYSTEM_PROMPT: systemPrompt
 			});
+			savedConfig = structuredClone(settings);
 			await appConfig.set(await getBackendConfig());
 			toast.success($i18n.t('Settings saved successfully!'));
 		} catch (error) {
@@ -215,13 +242,7 @@
 
 	{#if !loading}
 		<div class="flex justify-end pt-6 text-sm font-normal">
-			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
-				type="submit"
-				disabled={saving}
-			>
-				{$i18n.t('Save')}
-			</button>
+			<AdminSettingSaveButton {settings} {savedConfig} labels={settingLabels} disabled={saving} />
 		</div>
 	{/if}
 </form>
