@@ -164,7 +164,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.machines import filter_user_terminal_tools, upload_files_to_machine
+from open_webui.utils.machines import filter_user_terminal_tools, get_machine_json, upload_files_to_machine
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
     ToolApprovalRequired,
@@ -976,7 +976,26 @@ async def process_tool_result(
 
     max_chars = await Config.get('tools.output_max_chars')
     if max_chars and tool_result and len(tool_result) > max_chars:
-        tool_result = f'{tool_result[:max_chars]}\n\n[Truncated: {len(tool_result)} characters, limit {max_chars}]'
+        saved_to = ''
+        tools = (metadata or {}).get('tools', {})
+        # A terminal tool reading a saved file back would only save it again.
+        if tool_type != 'terminal' and any(tool.get('type') == 'terminal' for tool in tools.values()):
+            try:
+                result = await get_machine_json(
+                    request,
+                    user,
+                    metadata,
+                    '/files/write',
+                    method='POST',
+                    body={'path': f'.tool_outputs/{uuid4().hex}.txt', 'content': tool_result},
+                )
+                if result:
+                    saved_to = f', full output saved to {result["path"]} on the machine'
+            except Exception:
+                log.warning('Could not save tool output to the machine')
+        tool_result = (
+            f'{tool_result[:max_chars]}\n\n[Truncated: {len(tool_result)} characters, limit {max_chars}{saved_to}]'
+        )
 
     return tool_result, tool_result_files, tool_result_embeds
 
