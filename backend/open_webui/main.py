@@ -1606,8 +1606,11 @@ async def chat_completion(
                         chat_fields = {'models': selected_chat_models}
                         if metadata.get('files') is not None:
                             chat_fields['files'] = metadata['files']
-                        await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
-                        await Chats.update_chat_variables_by_id(chat_id, chat_variables)
+                        # Rewriting the stored chat is slow on long chats; skip it when nothing changed.
+                        if any((chat.chat or {}).get(key) != value for key, value in chat_fields.items()):
+                            await Chats.update_chat_by_id(chat_id, chat_fields, touch=False)
+                        if chat_variables != chat.variables:
+                            await Chats.update_chat_variables_by_id(chat_id, chat_variables)
                     else:
                         tasks = {
                             key: value
