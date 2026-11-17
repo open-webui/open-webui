@@ -7,6 +7,7 @@ import re
 import sys
 import urllib
 import uuid
+import weakref
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from functools import partialmethod
@@ -858,7 +859,61 @@ async def recover_oauth_client_metadata(connection: dict, oauth_client_info: dic
     return recovered
 
 
-class OAuthClientManager:
+OAUTH_REFRESH_LOCK_TIMEOUT = 60
+OAUTH_REFRESH_LOCKS: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
+
+
+class OAuthSessionRefresher:
+    async def _refresh_token(self, session) -> dict:
+        """
+        Refresh an OAuth token if needed, with concurrency protection.
+
+        Args:
+            session: The OAuth session object
+
+        Returns:
+            dict: Refreshed token data, or None if refresh failed
+        """
+        redis = self.app.state.redis
+        if redis:
+            # Shared across workers and replicas
+            refresh_lock = redis.lock(
+                f'{REDIS_KEY_PREFIX}:oauth:refresh_lock:{session.id}',
+                timeout=OAUTH_REFRESH_LOCK_TIMEOUT,
+                blocking_timeout=OAUTH_REFRESH_LOCK_TIMEOUT,
+            )
+        else:
+            refresh_lock = OAUTH_REFRESH_LOCKS.setdefault(session.id, asyncio.Lock())
+
+        # Cancel a stalled refresh before another worker can acquire the expired lease
+        async with refresh_lock, asyncio.timeout(OAUTH_REFRESH_LOCK_TIMEOUT / 2):
+            # Another request may have refreshed while we waited; its refresh token is now spent
+            current_session = await OAuthSessions.get_session_by_id(session.id)
+            if current_session and current_session.token != session.token:
+                return current_session.token
+
+            try:
+                # Perform the actual refresh
+                refreshed_token = await self._perform_token_refresh(session)
+
+                if refreshed_token:
+                    # Update the session with new token data
+                    session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
+                    log.info('Successfully refreshed token for session %s', session.id)
+                    return session.token
+                else:
+                    log.error(f'Failed to refresh token for session {session.id}')
+                    return None
+
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                # Transient provider failure: the grant is still valid, keep the session
+                raise
+            except Exception as e:
+                log.error(f'Error refreshing token for session {session.id}: {e}')
+                return None
+
+
+class OAuthClientManager(OAuthSessionRefresher):
     def __init__(self, app):
         self.oauth = OAuth()
         self.app = app
@@ -1127,36 +1182,6 @@ class OAuthClientManager:
             log.error(f'Error getting OAuth token for user {user_id}: {e}')
             return None
 
-    async def _refresh_token(self, session) -> dict:
-        """
-        Refresh an OAuth token if needed, with concurrency protection.
-
-        Args:
-            session: The OAuth session object
-
-        Returns:
-            dict: Refreshed token data, or None if refresh failed
-        """
-        try:
-            # Perform the actual refresh
-            refreshed_token = await self._perform_token_refresh(session)
-
-            if refreshed_token:
-                # Update the session with new token data
-                session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
-                log.info('Successfully refreshed token for session %s', session.id)
-                return session.token
-            else:
-                log.error(f'Failed to refresh token for session {session.id}')
-                return None
-
-        except (aiohttp.ClientError, asyncio.TimeoutError):
-            # Transient provider failure: the grant is still valid, keep the session
-            raise
-        except Exception as e:
-            log.error(f'Error refreshing token for session {session.id}: {e}')
-            return None
-
     async def _perform_token_refresh(self, session) -> dict:
         """
         Perform the actual OAuth token refresh.
@@ -1394,13 +1419,12 @@ class OAuthClientManager:
         return response
 
 
-class OAuthManager:
+class OAuthManager(OAuthSessionRefresher):
     def __init__(self, app):
         self.oauth = OAuth()
         self.app = app
 
         self._clients = {}
-        self._refresh_locks: dict[str, asyncio.Lock] = {}
 
     async def initialize(self):
         # Provider connections are fixed for this worker's lifetime.
@@ -1494,49 +1518,6 @@ class OAuthManager:
         except Exception as e:
             log.error(f'Error getting OAuth token for user {user_id}: {e}')
             return None
-
-    async def _refresh_token(self, session) -> dict:
-        """
-        Refresh an OAuth token if needed, with concurrency protection.
-
-        Args:
-            session: The OAuth session object
-
-        Returns:
-            dict: Refreshed token data, or None if refresh failed
-        """
-        redis = self.app.state.redis
-        if redis:
-            # Shared across workers and replicas
-            refresh_lock = redis.lock(f'{REDIS_KEY_PREFIX}:oauth:refresh_lock:{session.id}', timeout=60)
-        else:
-            refresh_lock = self._refresh_locks.setdefault(session.id, asyncio.Lock())
-
-        async with refresh_lock:
-            # Another request may have refreshed while we waited; its refresh token is now spent
-            current_session = await OAuthSessions.get_session_by_id(session.id)
-            if current_session and current_session.token != session.token:
-                return current_session.token
-
-            try:
-                # Perform the actual refresh
-                refreshed_token = await self._perform_token_refresh(session)
-
-                if refreshed_token:
-                    # Update the session with new token data
-                    session = await OAuthSessions.update_session_by_id(session.id, refreshed_token)
-                    log.info('Successfully refreshed token for session %s', session.id)
-                    return session.token
-                else:
-                    log.error(f'Failed to refresh token for session {session.id}')
-                    return None
-
-            except (aiohttp.ClientError, asyncio.TimeoutError):
-                # Transient provider failure: the grant is still valid, keep the session
-                raise
-            except Exception as e:
-                log.error(f'Error refreshing token for session {session.id}: {e}')
-                return None
 
     async def _perform_token_refresh(self, session) -> dict:
         """
