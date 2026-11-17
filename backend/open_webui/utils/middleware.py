@@ -106,7 +106,12 @@ from open_webui.utils.filter import (
 from open_webui.utils.images.connections import get_requested_image_model
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
-from open_webui.utils.memory import add_memory_context, recall_memories, review_memory_after_turn
+from open_webui.utils.memory import (
+    add_memory_context,
+    memory_context_enabled,
+    recall_memories,
+    review_memory_after_turn,
+)
 from open_webui.utils.misc import (
     add_or_update_system_message,
     add_or_update_user_message,
@@ -123,6 +128,7 @@ from open_webui.utils.misc import (
     get_reasoning_details,
     get_response_error_detail,
     get_system_message,
+    get_tool_results,
     is_empty_reply,
     is_raster_image_content_type,
     merge_system_messages,
@@ -2384,23 +2390,8 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     form_data['messages'],
                 )
 
-        if (
-            'memory' in features
-            and features['memory']
-            and await Config.get('memories.enable')
-            and await Config.get('memories.system_context.enable')
-        ):
-            # features is client-supplied; re-check the permission the native FC path enforces.
-            if getattr(user, 'role', None) == 'admin' or await has_permission(
-                getattr(user, 'id', ''),
-                'features.memories',
-                await Config.get('user.permissions'),
-            ):
-                if use_builtin_tools:
-                    if not metadata.get('assistant_message_id'):
-                        initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
-                else:
-                    form_data = await add_memory_context(request, form_data, user, model)
+        if not use_builtin_tools and await memory_context_enabled(user, features):
+            form_data = await add_memory_context(request, form_data, user, model)
 
         if 'web_search' in features and features['web_search'] and await Config.get('web.search.enable'):
             # features is client-supplied; re-check the permission the native FC path enforces.
@@ -3011,6 +3002,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     metadata['context_summary'] = context_summary
 
     # Added after compaction: it can summarize away the copy the model had, and it should not summarize this turn's.
+    if (
+        use_builtin_tools
+        and not metadata.get('assistant_message_id')
+        and await memory_context_enabled(user, features)
+    ):
+        initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
     for name, manifest in manifests.items():
         if get_last_tool_result(form_data['messages'], name) != manifest:
             initial_output.extend(hidden_tool_result(name, manifest))
@@ -3032,8 +3029,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
 
 async def preload_memory(request, messages: list[dict], user, model: dict) -> list[dict]:
-    """Keep automatic recall in ordinary tool history so later turns replay it unchanged."""
-    result = await recall_memories(request, messages, user, model)
+    """Keep automatic recall in ordinary tool history so later turns replay it unchanged.
+
+    Memories whose line is still in an earlier recall are left out, so each is sent again only once
+    it changes, was cut off by the character limit, or its earlier copy was compacted away.
+    """
+    sent = ''.join(f'{result}\n' for result in get_tool_results(messages, 'recall_memories'))
+    result = await recall_memories(request, messages, user, model, sent=sent)
     return hidden_tool_result('recall_memories', result) if result else []
 
 

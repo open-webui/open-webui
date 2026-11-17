@@ -294,18 +294,25 @@ def get_paired_tool_call_ids(messages: list[dict]) -> list[set[str]]:
     return paired_ids_by_message
 
 
-def get_last_tool_result(messages: list[dict], name: str) -> str | None:
-    """What the named tool last returned in these messages, or None if it never did."""
+def get_tool_results(messages: list[dict], name: str) -> list[str]:
+    """Everything the named tool returned in these messages, oldest first."""
     call_ids = {
         tool_call.get('id')
         for message in messages
         for tool_call in message.get('tool_calls') or []
         if (tool_call.get('function') or {}).get('name') == name
     }
-    for message in reversed(messages):
-        if message.get('role') == 'tool' and message.get('tool_call_id') in call_ids:
-            return get_content_from_message(message) or ''
-    return None
+    return [
+        get_content_from_message(message) or ''
+        for message in messages
+        if message.get('role') == 'tool' and message.get('tool_call_id') in call_ids
+    ]
+
+
+def get_last_tool_result(messages: list[dict], name: str) -> str | None:
+    """What the named tool last returned in these messages, or None if it never did."""
+    results = get_tool_results(messages, name)
+    return results[-1] if results else None
 
 
 def reconcile_tool_pairs(messages: list[dict]) -> list[dict]:
