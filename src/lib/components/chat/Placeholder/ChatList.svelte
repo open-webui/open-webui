@@ -135,7 +135,7 @@
 		{@const chats = group.page?.chats ?? []}
 		{#if group.label}
 			<!-- The header itself is frosted, so rows scrolling under it blur and a chat background image still shows around it. -->
-			<div class="sticky top-0 z-[1] mt-1 pt-0.5 first:mt-0">
+			<div class="sticky top-0 z-[1] mt-1.5 first:mt-0">
 				<div class="group-header flex h-8 items-center gap-2 rounded-xl pl-2 pr-3 backdrop-blur-md">
 					<button
 						type="button"
