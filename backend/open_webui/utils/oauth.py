@@ -1346,6 +1346,12 @@ class OAuthClientManager:
                     sessions = await OAuthSessions.get_sessions_by_user_id(user_id)
                     for session in sessions:
                         if session.provider == client_id:
+                            log.warning(
+                                'Reconnect for user %s, client_id %s, deleting session %s',
+                                user_id,
+                                client_id,
+                                session.id,
+                            )
                             await OAuthSessions.delete_session_by_id(session.id)
 
                     session = await OAuthSessions.create_session(
@@ -2285,6 +2291,12 @@ class OAuthManager:
             # Keep the newest sessions up to the limit, prune the rest
             if len(provider_sessions) >= OAUTH_MAX_SESSIONS_PER_USER:
                 for old_session in provider_sessions[OAUTH_MAX_SESSIONS_PER_USER - 1 :]:
+                    log.warning(
+                        'Session limit reached for user %s, provider %s, deleting session %s',
+                        user.id,
+                        provider,
+                        old_session.id,
+                    )
                     await OAuthSessions.delete_session_by_id(old_session.id, db=db)
 
             session = await OAuthSessions.create_session(
@@ -2517,6 +2529,12 @@ class OAuthManager:
         for user in users_to_logout:
             sessions = await OAuthSessions.get_sessions_by_user_id(user.id, db=db)
             for oauth_session in sessions:
+                log.warning(
+                    'Back-channel logout: user %s, provider %s, deleting session %s',
+                    user.id,
+                    oauth_session.provider,
+                    oauth_session.id,
+                )
                 await OAuthSessions.delete_session_by_id(oauth_session.id, db=db)
 
             if redis:
