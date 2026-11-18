@@ -37,6 +37,7 @@
 
 	let showEventModal = false;
 	let editEvent: CalendarEventModel | null = null;
+	let editEventStartAt: number | null = null;
 	let defaultStartAt: number | null = null;
 	let showCreateCalendarModal = false;
 	let editCalendar: CalendarModel | null = null;
@@ -152,8 +153,25 @@
 		editEvent = evt.instance_id
 			? ((await getCalendarEventById(localStorage.token, evt.id)) ?? evt)
 			: evt;
+		editEventStartAt = evt.start_at;
 		defaultStartAt = null;
 		showEventModal = true;
+	}
+
+	async function handleDeleteEvent(e: CustomEvent<CalendarEventModel>) {
+		const start = new Date((editEventStartAt ?? e.detail.start_at) / 1e6);
+		await refresh();
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			document.getElementById(
+				`calendar-hour-${new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours()).getTime()}`
+			) ??
+			document.getElementById(
+				`calendar-day-${new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime()}`
+			)
+		)?.focus();
 	}
 
 	async function handleNavigate() {
@@ -221,6 +239,7 @@
 			if ($pageUrl.searchParams.get('event') !== id) return;
 			currentDate = new Date(event.start_at / 1e6);
 			editEvent = event;
+			editEventStartAt = event.start_at;
 			defaultStartAt = null;
 			showEventModal = true;
 			await refresh();
@@ -269,7 +288,7 @@
 	{defaultStartAt}
 	on:close={closeLinkedEvent}
 	on:save={() => refresh()}
-	on:delete={() => refresh()}
+	on:delete={handleDeleteEvent}
 />
 
 <CreateCalendarModal
