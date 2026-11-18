@@ -40,7 +40,10 @@ const usageCheckpoints = new WeakMap<object, number>();
 
 export const captureUsageCheckpoint = (message: ContextMessage): void => {
 	const usage = message.usage ?? message.info?.usage;
-	if (usage) usageCheckpoints.set(usage, estimateMessagesTokens([message]));
+	// Tool results that end the reply came back after the report.
+	const output = [...(message.output ?? [])] as { type?: string }[];
+	while (output.at(-1)?.type === 'function_call_output') output.pop();
+	if (usage) usageCheckpoints.set(usage, estimateMessagesTokens([{ ...message, output }]));
 };
 
 export const estimateUsageGrowth = (message: ContextMessage): number => {
@@ -49,7 +52,7 @@ export const estimateUsageGrowth = (message: ContextMessage): number => {
 	const tokens = estimateMessagesTokens([message]);
 	if (!usageCheckpoints.has(usage)) {
 		// shortcut: loaded chats anchor here; persist checkpoints if reloads must retain in-flight estimates.
-		usageCheckpoints.set(usage, tokens);
+		captureUsageCheckpoint(message);
 	}
 	return Math.max(0, tokens - usageCheckpoints.get(usage)!);
 };
