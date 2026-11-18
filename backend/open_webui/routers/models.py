@@ -44,6 +44,7 @@ from open_webui.models.models import (
     ModelResponse,
     Models,
 )
+from open_webui.models.users import UserModel
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
@@ -153,6 +154,21 @@ async def _verify_background_image(url: str | None, user, db, previous_url: str 
     if (file.meta or {}).get('content_type') != content_type:
         if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
             raise HTTPException(status_code=500, detail='Could not validate background image.')
+
+
+async def _verify_profile_image(
+    url: str | None, user: UserModel, db: AsyncSession, previous_url: str | None = None
+) -> None:
+    if not url or url == previous_url or not url.startswith('/api/v1/files/'):
+        return
+    file_id = url.split('/')[-2]
+    file = await Files.get_file_by_id(file_id, db=db)
+    if not file or not (
+        user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
+    ):
+        raise HTTPException(status_code=403, detail='Profile image is not accessible.')
+    if (file.meta or {}).get('content_type') not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail='Invalid profile image.')
 
 
 async def _verify_voice_avatar(avatar, user, db, previous=None) -> None:
@@ -398,6 +414,7 @@ async def create_new_model(
     )
 
     await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_profile_image(form_data.meta.profile_image_url, user, db)
     await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
@@ -480,6 +497,21 @@ async def export_models(
                 raise HTTPException(
                     status_code=400, detail=f'Could not export background for model {model.id}.'
                 ) from error
+        url = model.meta.profile_image_url
+        if url and url.startswith('/api/v1/files/'):
+            data['meta']['profile_image_url'] = None
+            try:
+                file = await Files.get_file_by_id(url.split('/')[-2], db=db)
+                if file:
+                    path = await asyncio.to_thread(Storage.get_file, file.path)
+                    with open(path, 'rb') as image:
+                        image_data = await asyncio.to_thread(image.read)
+                    content_type = (file.meta or {}).get('content_type')
+                    data['meta']['profile_image_url'] = f'data:{content_type};base64,' + base64.b64encode(
+                        image_data
+                    ).decode('ascii')
+            except Exception:
+                pass
         exported.append(data)
     return exported
 
@@ -677,6 +709,12 @@ async def import_models(
                             db,
                             existing_model.meta.background_image_url if existing_model else None,
                         )
+                        await _verify_profile_image(
+                            imported_model.meta.profile_image_url,
+                            user,
+                            db,
+                            existing_model.meta.profile_image_url if existing_model else None,
+                        )
                         if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
                             imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
                         await _verify_voice_avatar(
@@ -748,6 +786,9 @@ async def sync_models(
             model.meta.background_image_url = previous.meta.background_image_url
         await _verify_background_image(
             model.meta.background_image_url, user, db, previous.meta.background_image_url if previous else None
+        )
+        await _verify_profile_image(
+            model.meta.profile_image_url, user, db, previous.meta.profile_image_url if previous else None
         )
     models = await Models.sync_models(user.id, form_data.models, db=db)
     await publish_event(
@@ -946,6 +987,7 @@ async def set_model_version(
     await _check_model_controls(form, model, user, request)
     await _verify_version_dependencies(request, form, user, db)
     await _verify_background_image(form.meta.background_image_url, user, db)
+    await _verify_profile_image(form.meta.profile_image_url, user, db)
     await _verify_voice_avatar(form.meta.voice_avatar, user, db)
     result = await Models.update_model_by_id(id, form, db=db, user_id=user.id, production_version_id=entry.id)
     if result is None:
@@ -1044,6 +1086,23 @@ async def get_model_profile_image(
                     media_type=media_type,
                     headers=headers,
                 )
+            except Exception:
+                pass
+        elif profile_image_url.startswith('/api/v1/files/'):
+            try:
+                file = await Files.get_file_by_id(profile_image_url.split('/')[-2], db=db)
+                media_type = (file.meta or {}).get('content_type') if file else None
+                if media_type in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                    path = await asyncio.to_thread(Storage.get_file, file.path)
+                    with open(path, 'rb') as image:
+                        image_data = await asyncio.to_thread(image.read)
+                    headers = {
+                        'Content-Disposition': 'inline',
+                        'X-Content-Type-Options': 'nosniff',
+                    }
+                    if updated_at:
+                        headers['ETag'] = f'"{updated_at}"'
+                    return Response(content=image_data, media_type=media_type, headers=headers)
             except Exception:
                 pass
         else:
@@ -1166,6 +1225,7 @@ async def update_model_by_id(
 
     if 'profile_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.profile_image_url = model.meta.profile_image_url
+    await _verify_profile_image(form_data.meta.profile_image_url, user, db, model.meta.profile_image_url)
 
     if 'voice_avatar' not in form_data.meta.model_fields_set:
         form_data.meta.voice_avatar = model.meta.voice_avatar
