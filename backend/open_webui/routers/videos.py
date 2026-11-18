@@ -27,6 +27,7 @@ from open_webui.utils.images.comfyui import (
     comfyui_create_video,
     comfyui_upload_image,
 )
+from open_webui.utils.images.connections import get_image_model_ref
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.videos.connections import (
@@ -225,6 +226,8 @@ async def video_generations(
     ComfyUI connections run the admin's workflow instead (see ``comfyui_video_generations``).
     """
     connection, model = await resolve_video_model(request, user, form_data.model, strict=strict)
+    if not hasattr(request.state, 'model_id'):
+        request.state.model_id = get_image_model_ref(connection['id'], model)
     connection_config = connection.get('config') or {}
     seconds = form_data.seconds or connection_config.get('seconds')
     size = form_data.size or connection_config.get('size')

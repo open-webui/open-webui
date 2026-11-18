@@ -48,6 +48,7 @@ from open_webui.utils.images.connections import (
     IMAGE_CONNECTIONS_CONFIG_KEY,
     IMAGE_EDIT_DEFAULT_MODEL_CONFIG_KEY,
     IMAGE_GENERATION_DEFAULT_MODEL_CONFIG_KEY,
+    get_image_model_ref,
     get_image_models,
     get_openai_connection_models,
     normalize_image_connection,
@@ -581,6 +582,8 @@ async def image_generations(
     strict: bool = False,
 ):
     connection, model = await resolve_image_model(request, user, 'image_generation', form_data.model, strict=strict)
+    if not hasattr(request.state, 'model_id'):
+        request.state.model_id = get_image_model_ref(connection['id'], model)
     connection_config = connection.get('config') or {}
     connection_size = connection_config.get('size') or ''
     connection_steps = connection_config.get('steps')
@@ -932,6 +935,8 @@ async def image_edits(
     strict: bool = False,
 ):
     connection, model = await resolve_image_model(request, user, 'image_edit', form_data.model, strict=strict)
+    if not hasattr(request.state, 'model_id'):
+        request.state.model_id = get_image_model_ref(connection['id'], model)
     connection_config = connection.get('config') or {}
     connection_size = connection_config.get('edit_size') or ''
     size = None
