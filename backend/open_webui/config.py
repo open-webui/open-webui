@@ -2088,6 +2088,10 @@ VIEW_CHAT_MAX_CHARS = int(os.environ['VIEW_CHAT_MAX_CHARS']) if os.getenv('VIEW_
 if VIEW_CHAT_MAX_CHARS is not None and VIEW_CHAT_MAX_CHARS <= 0:
     raise ValueError('VIEW_CHAT_MAX_CHARS must be a positive integer or unset')
 
+TOOL_OUTPUT_MAX_CHARS = int(os.environ['TOOL_OUTPUT_MAX_CHARS']) if os.getenv('TOOL_OUTPUT_MAX_CHARS') else None
+if TOOL_OUTPUT_MAX_CHARS is not None and TOOL_OUTPUT_MAX_CHARS <= 0:
+    raise ValueError('TOOL_OUTPUT_MAX_CHARS must be a positive integer or unset')
+
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
 ENABLE_ENCRYPTED_CHANNELS = os.getenv('ENABLE_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
@@ -2971,6 +2975,7 @@ DEFAULT_CONFIG = {
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
+    'tools.output_max_chars': TOOL_OUTPUT_MAX_CHARS,
     'ollama.enable': ENABLE_OLLAMA_API,
     'ollama.base_urls': OLLAMA_BASE_URLS,
     'ollama.api_configs': OLLAMA_API_CONFIGS,

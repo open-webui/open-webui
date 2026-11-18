@@ -3444,6 +3444,8 @@
 	"settings.admin.general.skillPreviewMaxChars.description": "Characters shown when instructions exceed the read limit. Cannot exceed that limit. Leave empty to use the default.",
 	"settings.admin.general.skillPreviewMaxChars.label": "Skill Preview Length",
 	"settings.admin.general.title": "General",
+	"settings.admin.general.toolOutputMaxChars.description": "Maximum characters of a tool result sent to the model. Longer results are cut off. Leave empty for no limit.",
+	"settings.admin.general.toolOutputMaxChars.label": "Tool Output Limit",
 	"settings.admin.general.translations.addTranslation.label": "Add translation",
 	"settings.admin.general.translations.uiTranslations.label": "UI Translations",
 	"settings.admin.general.userStatus.description": "Show user status information in the app.",

@@ -947,6 +947,10 @@ async def process_tool_result(
         else:
             tool_result = str(tool_result)
 
+    max_chars = await Config.get('tools.output_max_chars')
+    if max_chars and tool_result and len(tool_result) > max_chars:
+        tool_result = f'{tool_result[:max_chars]}\n\n[Truncated: {len(tool_result)} characters, limit {max_chars}]'
+
     return tool_result, tool_result_files, tool_result_embeds
 
 
