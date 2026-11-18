@@ -72,7 +72,9 @@ code {
 }
 
 .group:hover .hover-reveal,
-.group:focus-within .hover-reveal {
+.group:focus-visible .hover-reveal,
+.group:has(:focus-visible) .hover-reveal,
+.group:has([aria-haspopup][aria-expanded='true']) .hover-reveal {
 	@apply opacity-100 pointer-events-auto;
 }
 
