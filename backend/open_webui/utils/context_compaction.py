@@ -269,6 +269,10 @@ def _usage_token_count(usage: dict) -> int:
 
 
 async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict | None:
+    config = await _load_config()
+    if not config['enable']:
+        return None
+
     chat_data = chat.chat or {}
     history = chat_data.get('history') or {}
     current_id = getattr(chat, 'current_message_id', None) or history.get('currentId')
@@ -282,10 +286,6 @@ async def get_chat_context_usage(chat: Any, model_id: str | None = None) -> dict
     messages_map = await Chats.get_messages_map_by_chat_id(chat.id)
     messages = get_message_list(messages_map or history.get('messages') or {}, current_id)
     if not messages:
-        return None
-
-    config = await _load_config()
-    if not config['enable']:
         return None
 
     params = ((chat.chat or {}).get('params') or {}).copy()
