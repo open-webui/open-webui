@@ -3335,7 +3335,9 @@
 					terminalServers.set(servers);
 				}
 				const terminalId = chatContent.terminal_id;
-				selectedTerminalId.set(terminalId && isTerminalAvailable(terminalId) ? terminalId : null);
+				selectedTerminalId.set(
+					$config?.features?.enable_tool_servers ? (terminalId ?? null) : null
+				);
 				terminalContext =
 					$selectedTerminalId &&
 					$selectedTerminalId === terminalId &&
@@ -4480,6 +4482,8 @@
 		if (initializedTerminalChatId === id) return;
 		if (!$config?.features?.enable_tool_servers || !context?.currentDirectory) return;
 		const userSettings: any = $settings;
+		if (!isTerminalAvailable(context.terminalId ?? ''))
+			terminalServers.set(await getTerminalServers(localStorage.token));
 		const target = resolveTerminalTarget(
 			context.terminalId,
 			$terminalServers ?? [],

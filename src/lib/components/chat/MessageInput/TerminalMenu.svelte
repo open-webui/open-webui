@@ -198,6 +198,29 @@
 </script>
 
 {#snippet menuItems()}
+	{#if $selectedTerminalId && $terminalServers !== null && !selectedSystemTerminal}
+		<div class="group/terminal relative rounded-xl">
+			<button
+				type="button"
+				role="menuitemradio"
+				aria-checked="true"
+				class="{rowClass} pr-14 bg-gray-50/40 dark:bg-gray-800/40"
+				on:click={() => toggleTerminal($selectedTerminalId)}
+			>
+				<div class="flex flex-1 gap-2 items-center truncate">
+					{#if $selectedTerminalId.startsWith('tether:')}
+						<Server className="size-3.5 shrink-0" strokeWidth="2" />
+					{:else}
+						<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+					{/if}
+					<span class="truncate">{selectedLabel}</span>
+				</div>
+				<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
+					<Check className="size-3.5" />
+				</div>
+			</button>
+		</div>
+	{/if}
 	<!-- Terminals, then the user's own devices -->
 	{#each systemSections as section}
 		<div class="flex items-center justify-between pl-2 pr-1 py-1">
@@ -420,6 +443,9 @@
 		terminalId={managedTerminalId}
 		connections={writable}
 		onCreate={async (id) => selectTerminal(selectedTerminalId, id, chatId)}
+		onDelete={async (id) => {
+			if ($selectedTerminalId === id) selectTerminal(selectedTerminalId, null, chatId);
+		}}
 	/>
 {/if}
 

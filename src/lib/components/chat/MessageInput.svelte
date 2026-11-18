@@ -941,7 +941,7 @@
 			.catch(() => (canCreateTerminal = false));
 	$: showTerminalSelector =
 		$config?.features?.enable_tool_servers &&
-		(($terminalServers ?? []).some((t) => t.id) || canCreateTerminal);
+		(($terminalServers ?? []).some((t) => t.id) || canCreateTerminal || $selectedTerminalId);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(

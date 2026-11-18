@@ -270,12 +270,7 @@
 		await refreshTerminalServers().catch((e) => {
 			console.error('Failed to load terminals:', e);
 		});
-		selectedTerminalId.set(
-			$config?.features?.enable_tool_servers &&
-				$terminalServers?.some((terminal) => terminal.id === localStorage.selectedTerminalId)
-				? localStorage.selectedTerminalId
-				: null
-		);
+		selectedTerminalId.set(localStorage.selectedTerminalId ?? null);
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
@@ -427,12 +422,7 @@
 		loaded = true;
 	});
 
-	$: if (
-		loaded &&
-		$selectedTerminalId &&
-		$terminalServers !== null &&
-		!$terminalServers.some((terminal) => terminal.id === $selectedTerminalId)
-	) {
+	$: if (loaded && $selectedTerminalId && !$config?.features?.enable_tool_servers) {
 		selectedTerminalId.set(null);
 	}
 
