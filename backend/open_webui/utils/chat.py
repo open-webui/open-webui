@@ -25,6 +25,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+from open_webui.utils.audit import log_model_usage
 from open_webui.utils.chat_id import get_temporary_chat_session_id
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -221,8 +222,8 @@ async def generate_chat_completion(
 
     if model.get('pipe'):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
-        return await generate_function_chat_completion(request, form_data, user=user, models=models)
-    if model.get('owned_by') == 'ollama':
+        response = await generate_function_chat_completion(request, form_data, user=user, models=models)
+    elif model.get('owned_by') == 'ollama':
         # Apply before Ollama conversion so tool follow-ups keep the model system prompt
         if not bypass_system_prompt:
             model_info = await Models.get_model_by_id(form_data['model'])
@@ -246,13 +247,22 @@ async def generate_chat_completion(
                 background=response.background,
             )
         else:
-            return convert_ollama_response_to_chat_completions(response)
+            response = convert_ollama_response_to_chat_completions(response)
     else:
-        return await generate_openai_chat_completion(
+        response = await generate_openai_chat_completion(
             request=request,
             form_data=form_data,
             user=user,
         )
+
+    # Chat replies are logged by the response handler
+    task = metadata.get('task')
+    if task and isinstance(response, dict):
+        usage = response.get('usage') or {}
+        timings = response.get('timings') or {}
+        if isinstance(usage, dict) and isinstance(timings, dict):
+            log_model_usage(request, user, form_data['model'], {**usage, **timings}, task=task)
+    return response
 
 
 chat_completion = generate_chat_completion
