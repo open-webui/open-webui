@@ -219,7 +219,7 @@
 					</div>
 				</AdminSettingSection>
 
-				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.terminal.title')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.machines.title')}>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
 							<div class="text-xs text-gray-600 dark:text-gray-400">
@@ -253,7 +253,7 @@
 													: ''}"
 											>
 												<Tooltip
-													content={$i18n.t('settings.admin.integrations.sections.terminal.title')}
+													content={$i18n.t('settings.admin.integrations.openTerminal.label')}
 												>
 													<Cloud className="size-4" strokeWidth="1.5" />
 												</Tooltip>

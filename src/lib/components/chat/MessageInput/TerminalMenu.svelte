@@ -204,7 +204,7 @@
 			<span
 				class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
 			>
-				{section.devices ? $i18n.t('Your devices') : $i18n.t('Terminals')}
+				{section.devices ? $i18n.t('Your devices') : $i18n.t('Machines')}
 			</span>
 			{#if !section.devices}
 				<div class="flex items-center gap-0.5">
@@ -319,7 +319,7 @@
 			>
 				<ChevronLeft />
 				<div class="flex items-center w-full justify-between">
-					<div>{$i18n.t('Terminals')}</div>
+					<div>{$i18n.t('Machines')}</div>
 				</div>
 			</button>
 			<div class="min-h-0 overflow-y-auto overflow-x-hidden scrollbar-thin">
