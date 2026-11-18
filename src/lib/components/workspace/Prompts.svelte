@@ -75,6 +75,7 @@
 	const i18n = getContext<Writable<i18nType>>('i18n');
 	const { workspaceActions, workspaceCounts } = getContext<WorkspaceContext>('workspace');
 	let promptsImportInputElement: HTMLInputElement;
+	let searchInputElement: HTMLInputElement;
 	let loaded = false;
 
 	let importFiles = null;
@@ -321,7 +322,24 @@
 		}
 
 		page = 1;
-		getPromptList();
+		await getPromptList();
+	};
+
+	const confirmDeleteHandler = async () => {
+		const target = deletePrompt;
+		const menus = Array.from(document.getElementsByName('prompt-menu'));
+		const index = menus.findIndex((menu) => menu.id === `prompt-menu-${target.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
+		await deleteHandler(target);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors.map((id) => document.getElementById(id)).find(Boolean) ?? searchInputElement
+		)?.focus();
 	};
 
 	onMount(async () => {
@@ -410,9 +428,7 @@
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete prompt?')}
-			on:confirm={() => {
-				deleteHandler(deletePrompt);
-			}}
+			on:confirm={confirmDeleteHandler}
 		>
 			<div class=" text-sm text-gray-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{deletePrompt.command}</span>.
@@ -486,6 +502,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						aria-label={$i18n.t('Search Prompts')}
@@ -738,6 +755,8 @@
 													<button
 														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 														type="button"
+														id="prompt-menu-{prompt.id}"
+														name="prompt-menu"
 														aria-label={$i18n.t('Prompt Menu')}
 														on:click={(e) => {
 															e.preventDefault();

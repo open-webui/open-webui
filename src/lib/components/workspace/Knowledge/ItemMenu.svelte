@@ -42,6 +42,8 @@
 			><button
 				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 				type="button"
+				id="knowledge-menu-{resourceId}"
+				name="knowledge-menu"
 				aria-label={$i18n.t('More Options')}
 				on:click={(e) => {
 					e.preventDefault();

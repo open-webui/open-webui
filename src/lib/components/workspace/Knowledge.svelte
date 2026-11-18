@@ -68,6 +68,7 @@
 	let showDeleteConfirm = false;
 	let showCreateModal = false;
 	let tagsContainerElement: HTMLDivElement;
+	let searchInputElement: HTMLInputElement;
 
 	let selectedItem: KnowledgeListItem | null = null;
 
@@ -208,8 +209,27 @@
 
 		if (res) {
 			toast.success($i18n.t('Knowledge deleted successfully.'));
-			init();
+			await init();
 		}
+	};
+
+	const confirmDeleteHandler = async () => {
+		const target = selectedItem;
+		if (!target) return;
+
+		const menus = Array.from(document.getElementsByName('knowledge-menu'));
+		const index = menus.findIndex((menu) => menu.id === `knowledge-menu-${target.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
+		await deleteHandler(target);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors.map((id) => document.getElementById(id)).find(Boolean) ?? searchInputElement
+		)?.focus();
 	};
 
 	const closeCreateModal = async () => {
@@ -320,12 +340,7 @@
 
 <Comments modal bind:view={comments} resourceType="knowledge">
 	{#if loaded && items !== null && total !== null}
-		<DeleteConfirmDialog
-			bind:show={showDeleteConfirm}
-			on:confirm={() => {
-				deleteHandler(selectedItem);
-			}}
-		/>
+		<DeleteConfirmDialog bind:show={showDeleteConfirm} on:confirm={confirmDeleteHandler} />
 
 		<Modal bind:show={showCreateModal} size="md" ariaLabel={$i18n.t('Create a knowledge base')}>
 			<KnowledgeEditor
@@ -344,6 +359,7 @@
 					</div>
 					<input
 						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						aria-label={$i18n.t('Search Knowledge')}

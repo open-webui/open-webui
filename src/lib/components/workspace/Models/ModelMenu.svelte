@@ -67,6 +67,8 @@
 	<Tooltip content={$i18n.t('More')}>
 		<button
 			type="button"
+			id="model-menu-{model.id}"
+			name="model-menu"
 			class="focus-ring rounded-lg"
 			aria-label={`${$i18n.t('More')}: ${resolveLocalizedModelName(model, $i18n.language)}`}
 			aria-haspopup="menu"
