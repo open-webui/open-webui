@@ -1315,9 +1315,18 @@ class ChatTable:
         return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
-        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
-        if messages_map and message_id in messages_map:
-            return messages_map[message_id]
+        async with get_async_db_context() as session:
+            row = await session.get(ChatMessage, f'{id}-{message_id}')
+            if row is not None:
+                return {
+                    'id': message_id,
+                    'content': '',
+                    **{
+                        ChatMessages.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(row, column.key)
+                        for column in ChatMessage.__table__.columns
+                        if column.key not in ChatMessages.EXCLUDED_COLUMNS and getattr(row, column.key) is not None
+                    },
+                }
 
         # Messages the frontend saved straight into the chat blob have no chat_message row yet.
         async with get_async_db_context() as session:
@@ -1988,6 +1997,17 @@ class ChatTable:
                 self._repair_chat_current_id(model.chat)
                 return model
 
+        except Exception:
+            return None
+
+    async def get_chat_without_history_by_id(self, id: str) -> tuple[str, str, dict, str | None, str | None] | None:
+        """Return (id, user_id, meta, folder_id, current_message_id) for a chat, without its history."""
+        try:
+            async with get_async_db_context() as session:
+                result = await session.execute(
+                    select(Chat.id, Chat.user_id, Chat.meta, Chat.folder_id, Chat.current_message_id).filter_by(id=id)
+                )
+                return result.first()
         except Exception:
             return None
 
