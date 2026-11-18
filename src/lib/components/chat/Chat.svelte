@@ -3121,6 +3121,7 @@
 		}
 
 		autoScroll = true;
+		isNearTop = true;
 
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
 		prompt = '';
@@ -3408,6 +3409,7 @@
 				serverContextUsage = chat?.context_usage ?? null;
 
 				autoScroll = true;
+				isNearTop = true;
 				await tick();
 				if (signal.aborted) return;
 
