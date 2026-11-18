@@ -2,6 +2,7 @@
 	import { getContext, setContext, type ComponentType, type SvelteComponent } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
+	import { updated } from '$app/state';
 	import { config, user, WEBUI_NAME } from '$lib/stores';
 	import { type PageContext } from '$lib/utils/page';
 	import { pageTabKey } from './tabs';
@@ -111,7 +112,12 @@
 			  ['knowledge', 'prompts'].includes(parts[2])
 			? { showCreateOnMount: true, createModalCloseHref: `/workspace/${parts[2]}` }
 			: {};
-	$: component = key && pages[route as keyof typeof pages]?.();
+	$: component =
+		key &&
+		pages[route as keyof typeof pages]?.().catch(async (error) => {
+			if (await updated.check()) location.reload();
+			throw error;
+		});
 	$: allowed =
 		(parts[1] !== 'notes' ||
 			($config?.features?.enable_notes &&
