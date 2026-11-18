@@ -197,7 +197,7 @@
 								translatedLocales={Object.keys(translations)}
 							/>
 						</div>
-						<div class="flex justify-center pb-3">
+						<div class="flex justify-center pb-5">
 							<input
 								bind:this={imageInputElement}
 								type="file"
@@ -261,27 +261,41 @@
 								}}
 							/>
 
-							<button
-								class="relative rounded-full w-fit h-fit shrink-0"
-								type="button"
-								on:click={() => {
-									imageInputElement.click();
-								}}
-							>
-								<img
-									src={profileImageUrl}
-									class="size-16 rounded-full object-cover shrink-0"
-									alt={$i18n.t('Profile')}
-								/>
-
-								<div
-									class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
+							<div class="group relative w-fit h-fit shrink-0">
+								<button
+									class="relative rounded-full w-fit h-fit shrink-0"
+									type="button"
+									on:click={() => {
+										imageInputElement.click();
+									}}
 								>
-									<div class="my-auto text-white">
-										<PencilSolid className="size-4" />
+									<img
+										src={profileImageUrl}
+										class="size-16 rounded-full object-cover shrink-0"
+										alt={$i18n.t('Profile')}
+									/>
+
+									<div
+										class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
+									>
+										<div class="my-auto text-white">
+											<PencilSolid className="size-4" />
+										</div>
 									</div>
-								</div>
-							</button>
+								</button>
+
+								{#if profileImageUrl && profileImageUrl !== `${WEBUI_BASE_URL}/favicon.png`}
+									<button
+										class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+										on:click={() => {
+											profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
+										}}
+										type="button"
+									>
+										{$i18n.t('Reset')}</button
+									>
+								{/if}
+							</div>
 						</div>
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
