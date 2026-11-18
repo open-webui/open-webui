@@ -6589,6 +6589,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'done': True,
                                 'output': cancelled_output,
+                                **({'usage': {**usage, 'incomplete': True}} if usage else {}),
                             },
                         )
                     await clear_response_stream(request.app.state.redis, response_stream_task_id)
