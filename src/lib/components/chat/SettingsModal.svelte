@@ -406,8 +406,7 @@
 		return (
 			$user?.role === 'admin' ? [...personalSettings, ...administratorTabs] : personalSettings
 		).filter(
-			(tab) =>
-				tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)
+			(tab) => tab.id !== 'admin:analytics' || ($config?.features?.enable_admin_analytics ?? true)
 		);
 	};
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Grid from '$lib/components/icons/Grid.svelte';
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import Computer from '$lib/components/icons/Computer.svelte';
@@ -73,8 +72,6 @@
 	<BarsArrowUp {className} {strokeWidth} />
 {:else if id === 'integrations'}
 	<WrenchAlt {className} {strokeWidth} />
-{:else if id === 'apps'}
-	<Grid {className} {strokeWidth} />
 {:else if id === 'documents'}
 	<Document {className} {strokeWidth} />
 {:else if id === 'web'}
