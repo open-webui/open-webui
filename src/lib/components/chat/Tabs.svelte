@@ -1190,6 +1190,8 @@
 			if (
 				target &&
 				tab.kind === 'terminal' &&
+				// An exited or expired shell has nothing left to stop.
+				!(chatView === viewEntry && sessionFailures[id]?.status === 404) &&
 				!(await new Promise<boolean>((resolve) => {
 					stopTerminalChoice = resolve;
 				}))
