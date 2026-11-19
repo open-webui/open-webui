@@ -25,6 +25,7 @@
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import ExternalKnowledge from './ExternalKnowledge.svelte';
+	import Apps from './Apps.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 
@@ -327,6 +328,10 @@
 			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.knowledge.title')}>
 				<ExternalKnowledge />
 			</AdminSettingSection>
+
+			{#if $config?.features?.enable_apps}
+				<Apps />
+			{/if}
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">

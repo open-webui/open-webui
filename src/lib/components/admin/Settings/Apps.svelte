@@ -53,17 +53,15 @@
 	});
 </script>
 
+<!-- The Apps section of the Integrations settings. -->
 <AppModal bind:show app={selected} onChange={load} />
-<div class="flex h-full flex-col text-sm">
-	<div class="flex items-center gap-2 mb-4">
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white">{$i18n.t('Apps')}</h2>
-		<ExperimentalBadge />
-	</div>
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<AdminSettingSection first>
+<AdminSettingSection title={$i18n.t('Apps')}>
 			<div>
 				<div class="mb-2 flex items-center justify-between">
-					<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Connected apps')}</div>
+					<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+						{$i18n.t('Connected apps')}
+						<ExperimentalBadge />
+					</div>
 					<Tooltip content={$i18n.t('Add app')}
 						><button
 							type="button"
@@ -143,6 +141,4 @@
 					{$i18n.t('Connect external apps to Open WebUI.')}
 				</p>
 			</div>
-		</AdminSettingSection>
-	</div>
-</div>
+</AdminSettingSection>
