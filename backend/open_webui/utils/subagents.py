@@ -107,11 +107,10 @@ async def queue_user_message(
     if not user_message.get('id'):
         return False
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-        async with Chats._chat_transaction(chat_id) as (_, chat):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
             if not chat or chat.user_id != user.id:
                 return False
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.get('messages') or {}
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
             last_id = Chats._last_descendant_id(messages, parent_id)
             if (messages.get(last_id) or {}).get('role') == 'assistant':
                 parent_id = user_message['parentId'] = last_id
@@ -135,12 +134,12 @@ async def queue_user_message(
                 'meta': {'status': 'pending'},
                 'timestamp': int(time.time()),
             }
-            messages[message['id']] = message
             reply.setdefault('childrenIds', []).append(message['id'])
-            history['messages'] = messages
-            chat.chat = {**(chat.chat or {}), 'history': history}
             chat.updated_at = int(time.time())
-        await ChatMessages.upsert_message(message['id'], chat_id, user.id, message)
+            await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
+            await ChatMessages.upsert_message(
+                parent_id, chat_id, reply.get('user_id') or chat.user_id, reply, db=session
+            )
     return True
 
 
@@ -175,8 +174,7 @@ async def insert_queued_turn(
     queued_ids = {message['id'] for message in queued}
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
         async with Chats._chat_transaction(chat_id) as (session, chat):
-            history = copy.deepcopy((chat.chat or {}).get('history') or {}) if chat else {}
-            messages = history.get('messages') or {}
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
             reply = messages.get(reply_id)
             if not reply:
                 return None
@@ -210,16 +208,12 @@ async def insert_queued_turn(
                 *(child_id for child_id in reply.get('childrenIds', []) if child_id not in queued_ids),
                 user_message['id'],
             ]
-            turn = {message['id']: message for message in (user_message, assistant_message)}
-            messages.update(turn)
-            history['messages'] = messages
-            history['currentId'] = assistant_message['id']
-            chat.chat = {**(chat.chat or {}), 'history': history}
             chat.current_message_id = assistant_message['id']
             chat.updated_at = now
             await ChatMessages.delete_message_ids_by_chat_id(chat_id, queued_ids, db=session)
-            for message_id, message in turn.items():
-                await ChatMessages.upsert_message(message_id, chat_id, user.id, message, db=session)
+            await ChatMessages.upsert_message(reply_id, chat_id, user.id, reply, db=session)
+            for message in (user_message, assistant_message):
+                await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
     return {
         'user_message': user_message,
         'assistant_message': assistant_message,
@@ -269,12 +263,11 @@ async def process_pending_internal_messages(
         if not user or user.role not in VERIFIED_USER_ROLES:
             return
 
-        async with Chats._chat_transaction(parent_chat_id) as (_, chat):
+        async with Chats._chat_transaction(parent_chat_id) as (session, chat):
             if not chat or chat.user_id != user_id:
                 return
 
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.get('messages') or {}
+            messages = await ChatMessages.get_messages_map_by_chat_id(parent_chat_id, db=session) or {}
             pending = [
                 message
                 for message in messages.values()
@@ -380,7 +373,7 @@ async def process_pending_internal_messages(
                     if child_id != user_message_id and child_id not in removed_ids
                 ]
             # The chat may have gone on since the message was added.
-            current = messages.get(history.get('currentId')) or {}
+            current = messages.get(chat.current_message_id) or {}
             if current.get('role') == 'assistant' and any(
                 message.get('id') == parent_id for message in get_message_list(messages, current['id'])
             ):
@@ -430,16 +423,16 @@ async def process_pending_internal_messages(
                 messages[parent_id]['childrenIds'] = parent_children
             messages[user_message_id] = {**messages.get(user_message_id, {}), **user_message}
             messages[assistant_message_id] = assistant_message
-            history['messages'] = messages
-            history['currentId'] = assistant_message_id
-            chat.chat = {**(chat.chat or {}), 'history': history}
             chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
 
-        if removed_ids:
-            await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids)
-        await ChatMessages.upsert_message(user_message_id, parent_chat_id, user_id, user_message)
-        await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, user_id, assistant_message)
+            if removed_ids:
+                await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids, db=session)
+            for message_id in dict.fromkeys((first.get('parentId'), parent_id, user_message_id, assistant_message_id)):
+                if message_id in messages:
+                    await ChatMessages.upsert_message(
+                        message_id, parent_chat_id, user_id, messages[message_id], db=session
+                    )
 
         from open_webui.socket.main import sio
 
@@ -517,11 +510,10 @@ async def insert_internal_message(
         'timestamp': int(time.time()),
     }
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-        async with Chats._chat_transaction(chat_id) as (_, chat):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
             if not chat or chat.user_id != user.id:
                 return
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.setdefault('messages', {})
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
             parent = messages.get(parent_id)
             is_active = await has_active_tasks(request.app.state.redis, chat_id)
             replies = [
@@ -535,12 +527,13 @@ async def insert_internal_message(
                 message['parentId'] = max(replies, key=lambda reply: reply.get('timestamp', 0))['id']
             if is_active:
                 message['meta']['status'] = 'pending'
-            messages[message['id']] = message
             if message['parentId'] in messages:
                 messages[message['parentId']].setdefault('childrenIds', []).append(message['id'])
-            chat.chat = {**(chat.chat or {}), 'history': history}
+                await ChatMessages.upsert_message(
+                    message['parentId'], chat_id, user.id, messages[message['parentId']], db=session
+                )
             chat.updated_at = int(time.time())
-        await ChatMessages.upsert_message(message['id'], chat_id, user.id, message)
+            await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
 
     if is_active:
         from open_webui.socket.main import sio

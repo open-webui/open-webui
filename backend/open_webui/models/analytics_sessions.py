@@ -436,7 +436,7 @@ async def session_trace(
         literal('response').label('type'),
         ChatMessage.role.label('name'),
         literal(None, Text).label('call_id'),
-        case((error, 'failed'), (ChatMessage.done.is_(True), 'completed'), else_='in_progress').label('status'),
+        case((error, 'failed'), (ChatMessage.done.is_not(False), 'completed'), else_='in_progress').label('status'),
         literal(None, Text).label('error_type'),
         json_text(db, ChatMessage.meta, 'response_started_at').label('started_at'),
         json_text(db, ChatMessage.meta, 'response_ended_at').label('ended_at'),

@@ -116,11 +116,9 @@ def message_match_sql(table: str, dialect: str, key: str):
         for source in sources
     )
     if table == 'chat':
-        # shortcut: partial imports use their existing rows; reconcile them when writes become atomic.
         return text(
-            'CASE WHEN EXISTS (SELECT 1 FROM chat_message WHERE chat_id = chat.id) '
-            'THEN EXISTS (SELECT 1 FROM chat_message AS m WHERE m.chat_id = chat.id '
-            f"AND lower({row_content}) LIKE :{key} ESCAPE '\\') ELSE ({legacy_match}) END"
+            'EXISTS (SELECT 1 FROM chat_message AS m WHERE m.chat_id = chat.id '
+            f"AND lower({row_content}) LIKE :{key} ESCAPE '\\')"
         )
     return text(f'({legacy_match})')
 

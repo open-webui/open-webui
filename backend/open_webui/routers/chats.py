@@ -1597,6 +1597,9 @@ async def update_chat_by_id(
                 )
                 or chat
             )
+        if chat is not None and 'history' not in chat.chat:
+            # Clients replace their chat with this response, so it carries the messages too.
+            chat = await Chats.get_chat_by_id(id) or chat
 
         await publish_event(
             request,
@@ -1716,7 +1719,7 @@ async def update_chat_message_by_id(
         subject_id=message_id,
         data={'chat_id': id, 'content_preview': (form_data.content or '')[:300]},
     )
-    return await chat_response(chat, db=db)
+    return await chat_response(await Chats.get_chat_by_id(id) or chat, db=db)
 
 
 @router.delete('/{id}/messages/{message_id}', response_model=ChatResponse | None)
@@ -2031,6 +2034,8 @@ async def fork_chat_by_id(
 
     if is_owner and chat.pinned:
         fork = await Chats.toggle_chat_pinned_by_id(fork.id, db=db) or fork
+    if 'history' not in fork.chat:
+        fork = await Chats.get_chat_by_id(fork.id) or fork
 
     await publish_event(
         request,
