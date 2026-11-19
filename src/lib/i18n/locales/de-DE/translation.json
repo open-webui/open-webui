@@ -4852,7 +4852,7 @@
 	"You have no archived conversations.": "Sie haben keine archivierten Unterhaltungen.",
 	"You have no shared conversations.": "Sie haben keine geteilten Unterhaltungen.",
 	"You have reached the end.": "Sie haben das Ende erreicht.",
-	"You have shared this chat": "Sie haben diesen Chat",
+	"You have shared this chat": "Sie haben diesen Chat geteilt",
 	"You're a helpful assistant.": "Du bist ein hilfreicher Assistent.",
 	"You're now logged in.": "Sie sind jetzt angemeldet.",
 	"Your account is awaiting administrator approval.": "Ihr Konto wartet auf die Freigabe durch einen Administrator.",
@@ -4873,4 +4873,5 @@
 	"YouTube video player": "YouTube-Videoplayer",
 	"Zoom in": "Vergrößern",
 	"Zoom out": "Verkleinern"
+
 }
