@@ -50,6 +50,7 @@ from open_webui.env import (
     USER_AGENT,
     USE_SLIM,
 )
+from open_webui.retrieval.loaders.custom_web import CustomWebLoader
 from open_webui.retrieval.loaders.external_web import ExternalWebLoader
 from open_webui.retrieval.loaders.microsoft_web_iq import MicrosoftWebIQLoader
 from open_webui.retrieval.loaders.tavily import TavilyLoader
@@ -1280,6 +1281,13 @@ def get_web_loader(
         web_loader_args['external_url'] = cfg('web.loader.external_web_loader_url')
         web_loader_args['external_api_key'] = cfg('web.loader.external_web_loader_api_key')
 
+    if engine == 'custom':
+        WebLoaderClass = CustomWebLoader
+        web_loader_args['custom_url'] = cfg('web.loader.custom_web_loader_url')
+        web_loader_args['custom_method'] = cfg('web.loader.custom_web_loader_method')
+        web_loader_args['custom_payload'] = cfg('web.loader.custom_web_loader_payload')
+        web_loader_args['custom_api_key'] = cfg('web.loader.custom_web_loader_api_key')
+
     if WebLoaderClass:
         web_loader = WebLoaderClass(**web_loader_args)
 
@@ -1293,5 +1301,5 @@ def get_web_loader(
     else:
         raise ValueError(
             f'Invalid WEB_LOADER_ENGINE: {engine}. '
-            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'exa', 'external', or 'microsoft_web_iq'."
+            "Please set it to 'safe_web', 'playwright', 'firecrawl', 'tavily', 'exa', 'external', 'custom', or 'microsoft_web_iq'."
         )

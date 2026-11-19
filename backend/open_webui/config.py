@@ -1331,6 +1331,38 @@ EXTERNAL_WEB_LOADER_URL = os.getenv('EXTERNAL_WEB_LOADER_URL', '')
 
 EXTERNAL_WEB_LOADER_API_KEY = os.getenv('EXTERNAL_WEB_LOADER_API_KEY', '')
 
+CUSTOM_WEB_SEARCH_URL = os.getenv('CUSTOM_WEB_SEARCH_URL', '')
+
+CUSTOM_WEB_SEARCH_METHOD = os.getenv('CUSTOM_WEB_SEARCH_METHOD', 'POST')
+
+CUSTOM_WEB_SEARCH_API_KEY = os.getenv('CUSTOM_WEB_SEARCH_API_KEY', '')
+
+custom_web_search_payload = os.getenv('CUSTOM_WEB_SEARCH_PAYLOAD', '{}')
+try:
+    custom_web_search_payload = JSONCodec.loads(custom_web_search_payload)
+except JSONCodec.JSONDecodeError:
+    custom_web_search_payload = {}
+if not isinstance(custom_web_search_payload, dict):
+    custom_web_search_payload = {}
+
+CUSTOM_WEB_SEARCH_PAYLOAD = custom_web_search_payload
+
+CUSTOM_WEB_LOADER_URL = os.getenv('CUSTOM_WEB_LOADER_URL', '')
+
+CUSTOM_WEB_LOADER_METHOD = os.getenv('CUSTOM_WEB_LOADER_METHOD', 'POST')
+
+CUSTOM_WEB_LOADER_API_KEY = os.getenv('CUSTOM_WEB_LOADER_API_KEY', '')
+
+custom_web_loader_payload = os.getenv('CUSTOM_WEB_LOADER_PAYLOAD', '{}')
+try:
+    custom_web_loader_payload = JSONCodec.loads(custom_web_loader_payload)
+except JSONCodec.JSONDecodeError:
+    custom_web_loader_payload = {}
+if not isinstance(custom_web_loader_payload, dict):
+    custom_web_loader_payload = {}
+
+CUSTOM_WEB_LOADER_PAYLOAD = custom_web_loader_payload
+
 YANDEX_WEB_SEARCH_URL = os.getenv('YANDEX_WEB_SEARCH_URL', '')
 
 YANDEX_WEB_SEARCH_API_KEY = os.getenv('YANDEX_WEB_SEARCH_API_KEY', '')
@@ -3173,6 +3205,14 @@ DEFAULT_CONFIG = {
     'web.search.external_web_search_api_key': EXTERNAL_WEB_SEARCH_API_KEY,
     'web.loader.external_web_loader_url': EXTERNAL_WEB_LOADER_URL,
     'web.loader.external_web_loader_api_key': EXTERNAL_WEB_LOADER_API_KEY,
+    'web.search.custom_web_search_url': CUSTOM_WEB_SEARCH_URL,
+    'web.search.custom_web_search_method': CUSTOM_WEB_SEARCH_METHOD,
+    'web.search.custom_web_search_payload': CUSTOM_WEB_SEARCH_PAYLOAD,
+    'web.search.custom_web_search_api_key': CUSTOM_WEB_SEARCH_API_KEY,
+    'web.loader.custom_web_loader_url': CUSTOM_WEB_LOADER_URL,
+    'web.loader.custom_web_loader_method': CUSTOM_WEB_LOADER_METHOD,
+    'web.loader.custom_web_loader_payload': CUSTOM_WEB_LOADER_PAYLOAD,
+    'web.loader.custom_web_loader_api_key': CUSTOM_WEB_LOADER_API_KEY,
     'web.search.yandex_web_search_url': YANDEX_WEB_SEARCH_URL,
     'web.search.yandex_web_search_api_key': YANDEX_WEB_SEARCH_API_KEY,
     'web.search.yandex_web_search_config': YANDEX_WEB_SEARCH_CONFIG,

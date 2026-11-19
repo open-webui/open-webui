@@ -89,6 +89,7 @@ from open_webui.retrieval.web.bing import search_bing
 from open_webui.retrieval.web.bocha import search_bocha
 from open_webui.retrieval.web.brave import search_brave
 from open_webui.retrieval.web.brave_llm_context import search_brave_llm_context
+from open_webui.retrieval.web.custom import search_custom
 from open_webui.retrieval.web.duckduckgo import search_duckduckgo
 from open_webui.retrieval.web.exa import search_exa
 from open_webui.retrieval.web.external import search_external
@@ -286,6 +287,14 @@ RETRIEVAL_CONFIG_KEYS = {
     'ENABLE_WEB_SEARCH': 'web.search.enable',
     'ENABLE_WEB_SEARCH_CONFIRMATION': 'web.search.confirmation.enable',
     'WEB_SEARCH_CONFIRMATION_CONTENT': 'web.search.confirmation.content',
+    'CUSTOM_WEB_LOADER_API_KEY': 'web.loader.custom_web_loader_api_key',
+    'CUSTOM_WEB_LOADER_METHOD': 'web.loader.custom_web_loader_method',
+    'CUSTOM_WEB_LOADER_PAYLOAD': 'web.loader.custom_web_loader_payload',
+    'CUSTOM_WEB_LOADER_URL': 'web.loader.custom_web_loader_url',
+    'CUSTOM_WEB_SEARCH_API_KEY': 'web.search.custom_web_search_api_key',
+    'CUSTOM_WEB_SEARCH_METHOD': 'web.search.custom_web_search_method',
+    'CUSTOM_WEB_SEARCH_PAYLOAD': 'web.search.custom_web_search_payload',
+    'CUSTOM_WEB_SEARCH_URL': 'web.search.custom_web_search_url',
     'EXA_API_KEY': 'web.search.exa_api_key',
     'EXA_MAX_CONTENT_LENGTH': 'web.search.exa_max_content_length',
     'EXTERNAL_DOCUMENT_LOADER_API_KEY': 'rag.external_document_loader_api_key',
@@ -763,6 +772,14 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
             'EXTERNAL_WEB_SEARCH_API_KEY': config['web.search.external_web_search_api_key'],
             'EXTERNAL_WEB_LOADER_URL': config['web.loader.external_web_loader_url'],
             'EXTERNAL_WEB_LOADER_API_KEY': config['web.loader.external_web_loader_api_key'],
+            'CUSTOM_WEB_SEARCH_URL': config['web.search.custom_web_search_url'],
+            'CUSTOM_WEB_SEARCH_METHOD': config['web.search.custom_web_search_method'],
+            'CUSTOM_WEB_SEARCH_PAYLOAD': config['web.search.custom_web_search_payload'],
+            'CUSTOM_WEB_SEARCH_API_KEY': config['web.search.custom_web_search_api_key'],
+            'CUSTOM_WEB_LOADER_URL': config['web.loader.custom_web_loader_url'],
+            'CUSTOM_WEB_LOADER_METHOD': config['web.loader.custom_web_loader_method'],
+            'CUSTOM_WEB_LOADER_PAYLOAD': config['web.loader.custom_web_loader_payload'],
+            'CUSTOM_WEB_LOADER_API_KEY': config['web.loader.custom_web_loader_api_key'],
             'YOUTUBE_LOADER_LANGUAGE': config['rag.youtube_loader_language'],
             'YOUTUBE_LOADER_PROXY_URL': config['rag.youtube_loader_proxy_url'],
             'YOUTUBE_LOADER_TRANSLATION': request.app.state.YOUTUBE_LOADER_TRANSLATION,
@@ -847,6 +864,14 @@ class WebConfig(BaseModel):
     EXTERNAL_WEB_SEARCH_API_KEY: str | None = None
     EXTERNAL_WEB_LOADER_URL: str | None = None
     EXTERNAL_WEB_LOADER_API_KEY: str | None = None
+    CUSTOM_WEB_SEARCH_URL: str | None = None
+    CUSTOM_WEB_SEARCH_METHOD: str | None = None
+    CUSTOM_WEB_SEARCH_PAYLOAD: dict | None = None
+    CUSTOM_WEB_SEARCH_API_KEY: str | None = None
+    CUSTOM_WEB_LOADER_URL: str | None = None
+    CUSTOM_WEB_LOADER_METHOD: str | None = None
+    CUSTOM_WEB_LOADER_PAYLOAD: dict | None = None
+    CUSTOM_WEB_LOADER_API_KEY: str | None = None
     YOUTUBE_LOADER_LANGUAGE: list[str] | None = None
     YOUTUBE_LOADER_PROXY_URL: str | None = None
     YOUTUBE_LOADER_TRANSLATION: str | None = None
@@ -1227,6 +1252,14 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
             'EXTERNAL_WEB_SEARCH_API_KEY': config['web.search.external_web_search_api_key'],
             'EXTERNAL_WEB_LOADER_URL': config['web.loader.external_web_loader_url'],
             'EXTERNAL_WEB_LOADER_API_KEY': config['web.loader.external_web_loader_api_key'],
+            'CUSTOM_WEB_SEARCH_URL': config['web.search.custom_web_search_url'],
+            'CUSTOM_WEB_SEARCH_METHOD': config['web.search.custom_web_search_method'],
+            'CUSTOM_WEB_SEARCH_PAYLOAD': config['web.search.custom_web_search_payload'],
+            'CUSTOM_WEB_SEARCH_API_KEY': config['web.search.custom_web_search_api_key'],
+            'CUSTOM_WEB_LOADER_URL': config['web.loader.custom_web_loader_url'],
+            'CUSTOM_WEB_LOADER_METHOD': config['web.loader.custom_web_loader_method'],
+            'CUSTOM_WEB_LOADER_PAYLOAD': config['web.loader.custom_web_loader_payload'],
+            'CUSTOM_WEB_LOADER_API_KEY': config['web.loader.custom_web_loader_api_key'],
             'YOUTUBE_LOADER_LANGUAGE': config['rag.youtube_loader_language'],
             'YOUTUBE_LOADER_PROXY_URL': config['rag.youtube_loader_proxy_url'],
             'YOUTUBE_LOADER_TRANSLATION': request.app.state.YOUTUBE_LOADER_TRANSLATION,
@@ -2601,6 +2634,19 @@ async def search_web(
             request,
             config['web.search.external_web_search_url'],
             config['web.search.external_web_search_api_key'],
+            query,
+            config['web.search.result_count'],
+            config['web.search.domain.filter_list'],
+            user=user,
+        )
+    elif engine == 'custom':
+        return await asyncio.to_thread(
+            search_custom,
+            request,
+            config['web.search.custom_web_search_url'],
+            config['web.search.custom_web_search_method'],
+            config['web.search.custom_web_search_payload'],
+            config['web.search.custom_web_search_api_key'],
             query,
             config['web.search.result_count'],
             config['web.search.domain.filter_list'],

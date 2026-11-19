@@ -46,6 +46,7 @@
 		'sougou',
 		'firecrawl',
 		'external',
+		'custom',
 		'yandex',
 		'youcom',
 		'linkup',
@@ -57,7 +58,8 @@
 		'tavily',
 		'exa',
 		'microsoft_web_iq',
-		'external'
+		'external',
+		'custom'
 	];
 
 	let webConfig: any = null;
@@ -121,6 +123,10 @@
 		FIRECRAWL_TIMEOUT: $i18n.t('settings.admin.web.firecrawlTimeoutS.label'),
 		EXTERNAL_WEB_SEARCH_URL: $i18n.t('settings.admin.web.externalWebSearchUrl.label'),
 		EXTERNAL_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.externalWebSearchApiKey.label'),
+		CUSTOM_WEB_SEARCH_URL: $i18n.t('settings.admin.web.customWebSearchUrl.label'),
+		CUSTOM_WEB_SEARCH_METHOD: $i18n.t('settings.admin.web.customWebSearchMethod.label'),
+		CUSTOM_WEB_SEARCH_PAYLOAD: $i18n.t('settings.admin.web.customWebSearchPayload.label'),
+		CUSTOM_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.customWebSearchApiKey.label'),
 		YANDEX_WEB_SEARCH_URL: $i18n.t('settings.admin.web.yandexWebSearchUrl.label'),
 		YANDEX_WEB_SEARCH_API_KEY: $i18n.t('settings.admin.web.yandexWebSearchApiKey.label'),
 		YANDEX_WEB_SEARCH_CONFIG: $i18n.t('settings.admin.web.yandexWebSearchConfig.label'),
@@ -146,6 +152,10 @@
 		TAVILY_EXTRACT_DEPTH: $i18n.t('settings.admin.web.tavilyExtractDepth.label'),
 		EXTERNAL_WEB_LOADER_URL: $i18n.t('settings.admin.web.externalWebLoaderUrl.label'),
 		EXTERNAL_WEB_LOADER_API_KEY: $i18n.t('settings.admin.web.externalWebLoaderApiKey.label'),
+		CUSTOM_WEB_LOADER_URL: $i18n.t('settings.admin.web.customWebLoaderUrl.label'),
+		CUSTOM_WEB_LOADER_METHOD: $i18n.t('settings.admin.web.customWebLoaderMethod.label'),
+		CUSTOM_WEB_LOADER_PAYLOAD: $i18n.t('settings.admin.web.customWebLoaderPayload.label'),
+		CUSTOM_WEB_LOADER_API_KEY: $i18n.t('settings.admin.web.customWebLoaderApiKey.label'),
 		WEB_LOADER_CONCURRENT_REQUESTS: $i18n.t('settings.admin.web.concurrentRequests.label'),
 		YOUTUBE_LOADER_LANGUAGE: $i18n.t('settings.admin.web.youtubeLanguage.label'),
 		YOUTUBE_LOADER_PROXY_URL: $i18n.t('settings.admin.web.youtubeProxyUrl.label')
@@ -175,15 +185,24 @@
 		'SOUGOU_API_SK',
 		'FIRECRAWL_API_KEY',
 		'EXTERNAL_WEB_SEARCH_API_KEY',
+		'CUSTOM_WEB_SEARCH_API_KEY',
 		'YANDEX_WEB_SEARCH_API_KEY',
 		'YOUCOM_API_KEY',
 		'LINKUP_API_KEY',
-		'EXTERNAL_WEB_LOADER_API_KEY'
+		'EXTERNAL_WEB_LOADER_API_KEY',
+		'CUSTOM_WEB_LOADER_API_KEY'
 	];
 	const inputClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
 	const textareaClass =
 		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+
+	const parseJSONPayload = (value: any) => {
+		if (typeof value === 'string') {
+			return value.trim() !== '' ? JSON.parse(value) : {};
+		}
+		return value ?? {};
+	};
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
@@ -218,18 +237,26 @@
 			webConfig.PLAYWRIGHT_TIMEOUT = webConfig.PLAYWRIGHT_TIMEOUT.toString();
 		}
 
-		// Convert Linkup params JSON string to object before sending
-		const linkupParams =
-			typeof webConfig.LINKUP_SEARCH_PARAMS === 'string' &&
-			webConfig.LINKUP_SEARCH_PARAMS.trim() !== ''
-				? JSON.parse(webConfig.LINKUP_SEARCH_PARAMS)
-				: (webConfig.LINKUP_SEARCH_PARAMS ?? {});
+		// Convert JSON textarea values to objects before sending
+		let linkupParams;
+		let customWebSearchPayload;
+		let customWebLoaderPayload;
+		try {
+			linkupParams = parseJSONPayload(webConfig.LINKUP_SEARCH_PARAMS);
+			customWebSearchPayload = parseJSONPayload(webConfig.CUSTOM_WEB_SEARCH_PAYLOAD);
+			customWebLoaderPayload = parseJSONPayload(webConfig.CUSTOM_WEB_LOADER_PAYLOAD);
+		} catch {
+			toast.error($i18n.t('Invalid JSON format'));
+			return false;
+		}
 
 		const res = await updateRAGConfig(localStorage.token, {
 			web: {
 				...webConfig,
 				EXA_MAX_CONTENT_LENGTH: webConfig.EXA_MAX_CONTENT_LENGTH ?? null,
-				LINKUP_SEARCH_PARAMS: linkupParams
+				LINKUP_SEARCH_PARAMS: linkupParams,
+				CUSTOM_WEB_SEARCH_PAYLOAD: customWebSearchPayload,
+				CUSTOM_WEB_LOADER_PAYLOAD: customWebLoaderPayload
 			}
 		});
 
@@ -244,6 +271,8 @@
 		if (res) {
 			savedConfig = structuredClone(webConfig);
 		}
+
+		return true;
 	};
 
 	onMount(async () => {
@@ -279,11 +308,20 @@
 				}
 			}
 
-			// Convert Linkup params object to JSON string for textarea display
-			webConfig.LINKUP_SEARCH_PARAMS =
-				typeof webConfig.LINKUP_SEARCH_PARAMS === 'object'
-					? JSON.stringify(webConfig.LINKUP_SEARCH_PARAMS ?? {}, null, 2)
-					: (webConfig.LINKUP_SEARCH_PARAMS ?? '');
+			// Convert JSON object config values to strings for textarea display
+			for (const key of [
+				'LINKUP_SEARCH_PARAMS',
+				'CUSTOM_WEB_SEARCH_PAYLOAD',
+				'CUSTOM_WEB_LOADER_PAYLOAD'
+			]) {
+				webConfig[key] =
+					typeof webConfig[key] === 'object'
+						? JSON.stringify(webConfig[key] ?? {}, null, 2)
+						: (webConfig[key] ?? '');
+			}
+
+			webConfig.CUSTOM_WEB_SEARCH_METHOD = webConfig.CUSTOM_WEB_SEARCH_METHOD ?? 'POST';
+			webConfig.CUSTOM_WEB_LOADER_METHOD = webConfig.CUSTOM_WEB_LOADER_METHOD ?? 'POST';
 
 			savedConfig = structuredClone(webConfig);
 		}
@@ -293,8 +331,9 @@
 <form
 	class="flex h-full flex-col justify-between text-sm"
 	on:submit|preventDefault={async () => {
-		await submitHandler();
-		saveHandler();
+		if (await submitHandler()) {
+			saveHandler();
+		}
 	}}
 >
 	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
@@ -1220,6 +1259,82 @@
 								/>
 							</div>
 						</div>
+					{:else if webConfig.WEB_SEARCH_ENGINE === 'custom'}
+						<div class="mb-2.5 flex w-full flex-col">
+							<div>
+								<label
+									for="custom-web-search-url"
+									class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+								>
+									{$i18n.t('settings.admin.web.customWebSearchUrl.label')}
+								</label>
+
+								<div class="flex w-full">
+									<div class="flex-1">
+										<input
+											id="custom-web-search-url"
+											class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+											type="url"
+											placeholder={$i18n.t('Enter Custom Web Search URL')}
+											bind:value={webConfig.CUSTOM_WEB_SEARCH_URL}
+											autocomplete="off"
+											required
+										/>
+									</div>
+								</div>
+							</div>
+
+							<div class="mt-2">
+								<label
+									for="custom-web-search-method"
+									class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+								>
+									{$i18n.t('settings.admin.web.customWebSearchMethod.label')}
+								</label>
+
+								<SettingsSelect
+									id="custom-web-search-method"
+									bind:value={webConfig.CUSTOM_WEB_SEARCH_METHOD}
+									className="w-full"
+								>
+									<option value="POST">POST</option>
+									<option value="GET">GET</option>
+								</SettingsSelect>
+							</div>
+
+							<div class="mt-2">
+								<label
+									for="custom-web-search-payload"
+									class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+								>
+									{$i18n.t('settings.admin.web.customWebSearchPayload.label')}
+								</label>
+
+								<Textarea
+									id="custom-web-search-payload"
+									className={textareaClass}
+									bind:value={webConfig.CUSTOM_WEB_SEARCH_PAYLOAD}
+									maxSize={200}
+									placeholder={`{\n  "query": "{{query}}",\n  "count": "{{count}}"\n}`}
+								/>
+
+								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+									{$i18n.t('settings.admin.web.customWebSearchPayload.description')}
+								</p>
+							</div>
+
+							<div class="mt-2">
+								<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+									{$i18n.t('settings.admin.web.customWebSearchApiKey.label')}
+								</div>
+
+								<SensitiveInput
+									variant="settings"
+									placeholder={$i18n.t('Enter Custom Web Search API Key')}
+									bind:value={webConfig.CUSTOM_WEB_SEARCH_API_KEY}
+								/>
+							</div>
+						</div>
 					{:else if webConfig.WEB_SEARCH_ENGINE === 'yandex'}
 						<div class="mb-2.5 flex w-full flex-col">
 							<div>
@@ -1763,6 +1878,81 @@
 								variant="settings"
 								placeholder={$i18n.t('Enter External Web Loader API Key')}
 								bind:value={webConfig.EXTERNAL_WEB_LOADER_API_KEY}
+							/>
+						</div>
+					</div>
+				{:else if webConfig.WEB_LOADER_ENGINE === 'custom'}
+					<div class="mb-2.5 flex w-full flex-col">
+						<div>
+							<label
+								for="custom-web-loader-url"
+								class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+							>
+								{$i18n.t('settings.admin.web.customWebLoaderUrl.label')}
+							</label>
+
+							<div class="flex w-full">
+								<div class="flex-1">
+									<input
+										id="custom-web-loader-url"
+										class="w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+										type="url"
+										placeholder={$i18n.t('Enter Custom Web Loader URL')}
+										bind:value={webConfig.CUSTOM_WEB_LOADER_URL}
+										autocomplete="off"
+									/>
+								</div>
+							</div>
+						</div>
+
+						<div class="mt-2">
+							<label
+								for="custom-web-loader-method"
+								class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+							>
+								{$i18n.t('settings.admin.web.customWebLoaderMethod.label')}
+							</label>
+
+							<SettingsSelect
+								id="custom-web-loader-method"
+								bind:value={webConfig.CUSTOM_WEB_LOADER_METHOD}
+								className="w-full"
+							>
+								<option value="POST">POST</option>
+								<option value="GET">GET</option>
+							</SettingsSelect>
+						</div>
+
+						<div class="mt-2">
+							<label
+								for="custom-web-loader-payload"
+								class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1 block"
+							>
+								{$i18n.t('settings.admin.web.customWebLoaderPayload.label')}
+							</label>
+
+							<Textarea
+								id="custom-web-loader-payload"
+								className={textareaClass}
+								bind:value={webConfig.CUSTOM_WEB_LOADER_PAYLOAD}
+								maxSize={200}
+								placeholder={`{\n  "urls": "{{urls}}"\n}`}
+							/>
+
+							<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+								{$i18n.t('settings.admin.web.customWebLoaderPayload.description')}
+							</p>
+						</div>
+
+						<div class="mt-2">
+							<div class=" self-center text-xs text-gray-600 dark:text-gray-400 mb-1">
+								{$i18n.t('settings.admin.web.customWebLoaderApiKey.label')}
+							</div>
+
+							<SensitiveInput
+								variant="settings"
+								placeholder={$i18n.t('Enter Custom Web Loader API Key')}
+								bind:value={webConfig.CUSTOM_WEB_LOADER_API_KEY}
 							/>
 						</div>
 					</div>
