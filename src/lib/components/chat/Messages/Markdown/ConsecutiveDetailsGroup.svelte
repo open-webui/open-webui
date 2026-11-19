@@ -15,6 +15,7 @@
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
 	import { agentViewName, type AgentView } from '$lib/components/chat/Messages/agentViews';
+	import { toolCallLabel } from '$lib/components/chat/Messages/builtinToolLabels';
 
 	import { settings } from '$lib/stores';
 
@@ -28,6 +29,7 @@
 		attributes?: {
 			type?: string;
 			name?: string;
+			tool_id?: string;
 			display_label?: string;
 			running_label?: string;
 			done?: string;
@@ -293,9 +295,13 @@
 				token.attributes?.status ?? ''
 			)
 				? ''
-				: token.attributes?.done === 'true'
-					? token.attributes?.display_label
-					: token.attributes?.running_label
+				: toolCallLabel(
+						token.attributes,
+						token.attributes?.done === 'true',
+						token.attributes?.status === 'failed' ||
+							(token.attributes?.done === 'true' && isToolResultError(decode(token.text ?? ''))),
+						$i18n.t
+					)
 		);
 	$: toolNames = tokens
 		.filter((token) => token.attributes?.type === 'tool_calls')

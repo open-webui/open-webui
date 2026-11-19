@@ -43,6 +43,7 @@ export type OutputDetailToken = {
 		type: string;
 		id?: string;
 		name?: string;
+		tool_id?: string;
 		display_label?: string;
 		running_label?: string;
 		done?: string;
@@ -257,6 +258,8 @@ export function buildToolCallToken(
 			type: 'tool_calls',
 			id: callId,
 			name,
+			// Only server-set builtin ids get fixed labels; a user tool may share a builtin's name.
+			tool_id: item.tool_type === 'builtin' ? item.tool_id : undefined,
 			running_label:
 				typeof item.display_labels?.running === 'string' ? item.display_labels.running : '',
 			display_label:

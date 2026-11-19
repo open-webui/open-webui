@@ -26,6 +26,7 @@
 		diffStats,
 		type AgentView
 	} from '$lib/components/chat/Messages/agentViews';
+	import { toolCallLabel } from '$lib/components/chat/Messages/builtinToolLabels';
 	import { settings } from '$lib/stores';
 
 	export let id: string = '';
@@ -33,6 +34,7 @@
 		type?: string;
 		id?: string;
 		name?: string;
+		tool_id?: string;
 		display_label?: string;
 		running_label?: string;
 		arguments?: string;
@@ -206,9 +208,7 @@
 		(!needsInput &&
 		!isRejected &&
 		!['pending', 'queued', 'requires_approval', 'incomplete'].includes(attributes.status ?? '')
-			? isDone
-				? attributes.display_label
-				: attributes.running_label
+			? toolCallLabel(attributes, isDone, isError, $i18n.t)
 			: '');
 	$: viewOutput = view ? agentViewOutput(view) : '';
 	$: editStats =
