@@ -1,65 +1,158 @@
 <script lang="ts">
-	import { onMount, getContext } from 'svelte';
+	import { getContext, untrack } from 'svelte';
 
 	import CodeEditor from './CodeEditor.svelte';
-	import Drawer from './Drawer.svelte';
+	import Modal from './Modal.svelte';
+	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n: any = getContext('i18n');
 
 	let {
-		show = $bindable(),
-		value = $bindable(),
+		show = $bindable(false),
+		value = '',
 		lang = 'python',
-		onChange = () => {},
+		title = '',
+		description = '',
+		onChange = (_value: string) => {},
 		onSave = () => {}
+	}: {
+		show?: boolean;
+		value?: string;
+		lang?: string;
+		title?: string;
+		description?: string;
+		onChange?: (value: string) => void;
+		onSave?: () => void;
 	} = $props();
 
-	let boilerplate = ``;
-
-	let codeEditor = $state(null);
-	let _content = $state(value);
+	// Edits stay in a draft until saved, so closing (or Escape) discards them.
+	let draft = $state('');
 
 	$effect(() => {
-		if (_content !== undefined && _content !== null) {
-			value = _content;
+		if (show) {
+			draft = untrack(() => value) ?? '';
 		}
 	});
+
+	const jsonError = $derived.by(() => {
+		if (lang !== 'json' || !draft.trim()) return '';
+		try {
+			JSON.parse(draft);
+			return '';
+		} catch (e) {
+			return e instanceof Error ? e.message : `${e}`;
+		}
+	});
+
+	const format = () => {
+		if (lang !== 'json' || !draft.trim() || jsonError) return;
+		draft = JSON.stringify(JSON.parse(draft), null, 2);
+	};
+
+	const save = () => {
+		if (jsonError) return;
+		onChange(draft);
+		onSave();
+		show = false;
+	};
 </script>
 
-<Drawer bind:show className="h-full" zIndexClass="z-99999" ariaLabel={$i18n.t('Code Editor')}>
-	<div class="flex h-full flex-col">
-		<div
-			class=" sticky top-0 z-30 flex justify-between bg-white px-4.5 pt-3 pb-3 dark:bg-gray-900 dark:text-gray-100"
-		>
-			<div class="  self-center text-lg font-normal">
-				{$i18n.t('Code Editor')}
+<Modal bind:show size="lg" ariaLabel={title || $i18n.t('Code Editor')}>
+	<div class="flex h-[min(80dvh,46rem)] flex-col dark:text-gray-200">
+		<div class="flex items-start justify-between gap-4 px-4 pt-3 pb-2">
+			<div class="min-w-0">
+				<h1 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+					{title || $i18n.t('Code Editor')}
+				</h1>
+				{#if description}
+					<div class="text-xs text-gray-500 line-clamp-1">{description}</div>
+				{/if}
 			</div>
+
 			<button
-				class="self-center"
+				class="shrink-0 self-start mt-0.5"
+				type="button"
 				aria-label={$i18n.t('Close')}
 				onclick={() => {
 					show = false;
 				}}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					class="h-5 w-5"
-				>
-					<path
-						d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"
-					/>
-				</svg>
+				<XMark className="size-4" />
 			</button>
 		</div>
 
 		<div
-			class="flex h-full w-full flex-1 flex-col md:flex-row md:space-x-4 dark:text-gray-200 overflow-y-auto"
+			class="code-editor-modal mx-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/80 bg-gray-50/60 py-1 dark:border-gray-850 dark:bg-gray-950/40"
 		>
-			<div class=" flex h-full w-full flex-col sm:flex-row sm:justify-center sm:space-x-6">
-				<CodeEditor bind:this={codeEditor} {value} {boilerplate} {lang} {onChange} {onSave} />
+			<CodeEditor
+				value={draft}
+				{lang}
+				ariaLabel={title || $i18n.t('Code Editor')}
+				className="text-xs"
+				onChange={(content: string) => {
+					draft = content;
+				}}
+				onSave={save}
+			/>
+		</div>
+
+		<div class="flex items-center justify-between gap-3 px-4 pt-3 pb-4">
+			<div class="min-w-0 flex items-center gap-3 text-xs">
+				{#if lang === 'json'}
+					<button
+						class="shrink-0 text-gray-500 transition hover:text-gray-900 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed dark:hover:text-white"
+						type="button"
+						disabled={!draft.trim() || !!jsonError}
+						onclick={format}
+					>
+						{$i18n.t('Format')}
+					</button>
+				{/if}
+
+				{#if jsonError}
+					<div class="truncate text-red-500 dark:text-red-400" title={jsonError}>
+						{$i18n.t('Invalid JSON')}: {jsonError}
+					</div>
+				{/if}
+			</div>
+
+			<div class="flex shrink-0 items-center gap-2">
+				<button
+					class="px-1 py-1.5 text-xs text-gray-500 transition hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-200"
+					type="button"
+					onclick={() => {
+						show = false;
+					}}
+				>
+					{$i18n.t('Cancel')}
+				</button>
+
+				<button
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					type="button"
+					disabled={!!jsonError}
+					onclick={save}
+				>
+					{$i18n.t('Save')}
+				</button>
 			</div>
 		</div>
 	</div>
-</Drawer>
+</Modal>
+
+<style>
+	/* Sit on the panel instead of the editor's own white/black (or One Dark) background. */
+	.code-editor-modal :global(.cm-editor),
+	.code-editor-modal :global(.cm-gutters) {
+		background-color: transparent !important;
+	}
+
+	.code-editor-modal :global(.cm-gutters) {
+		color: var(--color-gray-400);
+	}
+
+	.code-editor-modal :global(.cm-activeLine),
+	.code-editor-modal :global(.cm-activeLineGutter) {
+		background-color: color-mix(in oklab, currentColor 4%, transparent) !important;
+	}
+</style>

@@ -82,8 +82,8 @@
 
 		{#if selectedTools.length > 0}
 			{#if selectedToolServers.length > 0}
-				<div class=" flex justify-between dark:text-gray-300 px-5 pb-1">
-					<div class=" text-base font-normal self-center">{$i18n.t('Tools')}</div>
+				<div class=" flex justify-between dark:text-gray-300 px-4 pb-1">
+					<div class="text-xs text-gray-500 self-center">{$i18n.t('Tools')}</div>
 				</div>
 			{/if}
 
@@ -179,11 +179,11 @@
 		{/if}
 
 		{#if selectedToolServers.length > 0}
-			<div class=" flex justify-between dark:text-gray-300 px-5 pb-0.5">
-				<div class=" text-base font-normal self-center">{$i18n.t('Tool Servers')}</div>
+			<div class=" flex justify-between dark:text-gray-300 px-4 pb-0.5">
+				<div class="text-xs text-gray-500 self-center">{$i18n.t('Tool Servers')}</div>
 			</div>
 
-			<div class="px-5 pb-5 w-full flex flex-col justify-center">
+			<div class="px-4 pb-4 w-full flex flex-col justify-center">
 				<div class=" text-xs text-gray-600 dark:text-gray-300 mb-2">
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:

@@ -331,8 +331,8 @@
 >
 	<div class="w-full">
 		{#if completed}
-			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Complete!')}</div>
+			<div class="px-4 py-4">
+				<div class="text-sm font-medium mb-1">{$i18n.t('Sync Complete!')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
@@ -349,8 +349,8 @@
 				</div>
 			</div>
 		{:else if error}
-			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Failed')}</div>
+			<div class="px-4 py-4">
+				<div class="text-sm font-medium mb-1">{$i18n.t('Sync Failed')}</div>
 				<div class="mb-3 text-xs text-gray-500">
 					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>

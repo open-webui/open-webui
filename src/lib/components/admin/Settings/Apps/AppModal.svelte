@@ -220,8 +220,8 @@
 	size="sm"
 	bind:show
 >
-	<div class="flex justify-between dark:text-gray-100 px-5 pt-4 pb-2">
-		<h1 class="text-lg font-medium self-center font-primary">
+	<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-2">
+		<h1 class="text-sm font-medium self-center">
 			{showScopes
 				? scopeMode === 'requested'
 					? $i18n.t('Requested scopes')
@@ -236,11 +236,11 @@
 			class="self-center"
 			on:click={() => {
 				show = false;
-			}}><XMark className="size-5" /></button
+			}}><XMark className="size-4" /></button
 		>
 	</div>
 	{#if showScopes}
-		<div class="px-5 pb-4 text-sm dark:text-gray-200">
+		<div class="px-4 pb-4 text-sm dark:text-gray-200">
 			<p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
 				{scopeMode === 'requested'
 					? $i18n.t('Enter the scopes requested by the app.')
@@ -313,7 +313,7 @@
 			</div>
 		</div>
 	{:else}
-		<form class="px-5 pb-4 text-sm dark:text-gray-200" on:submit|preventDefault={submit}>
+		<form class="px-4 pb-4 text-sm dark:text-gray-200" on:submit|preventDefault={submit}>
 			{#if loading}<div class="flex justify-center py-4"><Spinner className="size-5" /></div>
 			{:else}
 				{#if !manifest}<AdminSettingField

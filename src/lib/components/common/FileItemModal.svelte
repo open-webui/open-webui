@@ -255,11 +255,11 @@
 </script>
 
 <Modal ariaLabel={item?.name ?? $i18n.t('File')} bind:show size="lg">
-	<div class=" px-4.5 py-3.5 w-full flex flex-col justify-center dark:text-gray-400">
+	<div class=" px-4 py-3 w-full flex flex-col justify-center dark:text-gray-400">
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">
 				<div>
-					<div class=" font-normal text-lg dark:text-gray-100">
+					<div class="text-sm font-medium dark:text-gray-100">
 						<a
 							href={item?.type === 'file'
 								? item?.url?.startsWith('http')

@@ -1,4 +1,6 @@
+import asyncio
 import logging
+import mimetypes
 import random
 import urllib.parse
 from typing import Optional
@@ -66,13 +68,12 @@ async def get_history(prompt_id, base_url, api_key):
         return await r.json()
 
 
-async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
-    """Queue a prompt and wait on *ws* for ComfyUI to finish executing it.
+async def _ws_run_prompt(ws, workflow, client_id, base_url, api_key) -> dict:
+    """Queue a prompt, wait on *ws* for ComfyUI to finish executing it, and return its history entry.
 
-    Returns a dict of ``{'data': [{'url': ...}, ...]}``.
+    Raises when the workflow failed.
     """
     prompt_id = (await queue_prompt(workflow, client_id, base_url, api_key))['prompt_id']
-    output_images = []
 
     async for msg in ws:
         if msg.type == aiohttp.WSMsgType.TEXT:
@@ -93,6 +94,16 @@ async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
         raise Exception(
             f'ComfyUI {error.get("node_type", "workflow")} failed: {error.get("exception_message", "").strip()}'
         )
+    return history
+
+
+async def _ws_get_images(ws, workflow, client_id, base_url, api_key):
+    """Queue a prompt and wait on *ws* for ComfyUI to finish executing it.
+
+    Returns a dict of ``{'data': [{'url': ...}, ...]}``.
+    """
+    history = await _ws_run_prompt(ws, workflow, client_id, base_url, api_key)
+    output_images = []
 
     for node_id in history['outputs']:
         node_output = history['outputs'][node_id]
@@ -154,46 +165,48 @@ class ComfyUICreateImageForm(BaseModel):
     seed: Optional[int] = None
 
 
+# Node types filled from the request field of the same name, with the input key used when none is set.
+WORKFLOW_NODE_INPUT_KEYS = {
+    'prompt': 'text',
+    'negative_prompt': 'text',
+    'width': 'width',
+    'height': 'height',
+    'n': 'batch_size',
+    'steps': 'steps',
+    'length': 'length',
+    'fps': 'fps',
+}
+
+
 def _apply_workflow_nodes(workflow, nodes, model, payload):
-    """Mutate *workflow* dict in-place based on typed node definitions."""
+    """Mutate *workflow* dict in-place based on typed node definitions.
+
+    A value the request leaves out (None) keeps the one already in the workflow.
+    """
+
+    def set_input(node, value, default_key=None):
+        if value is None:
+            return
+        for node_id in node.node_ids:
+            workflow[node_id]['inputs'][node.key or default_key] = value
+
     for node in nodes:
-        if node.type:
-            if node.type == 'model':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key] = model
-            elif node.type == 'prompt':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'text'] = payload.prompt
-            elif node.type == 'negative_prompt':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'text'] = payload.negative_prompt
-            elif node.type == 'image':
-                if isinstance(payload.image, list):
-                    for idx, node_id in enumerate(node.node_ids):
-                        if idx < len(payload.image):
-                            workflow[node_id]['inputs'][node.key] = payload.image[idx]
-                else:
-                    for node_id in node.node_ids:
-                        workflow[node_id]['inputs'][node.key] = payload.image
-            elif node.type == 'width':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'width'] = payload.width
-            elif node.type == 'height':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'height'] = payload.height
-            elif node.type == 'n':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'batch_size'] = payload.n
-            elif node.type == 'steps':
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key if node.key else 'steps'] = payload.steps
-            elif node.type == 'seed':
-                seed = payload.seed if payload.seed else random.randint(0, 1125899906842624)
-                for node_id in node.node_ids:
-                    workflow[node_id]['inputs'][node.key] = seed
-        else:
-            for node_id in node.node_ids:
-                workflow[node_id]['inputs'][node.key] = node.value
+        if not node.type:
+            set_input(node, node.value)
+        elif node.type == 'model':
+            # No model (a connection without model IDs) runs the one the workflow sets.
+            set_input(node, model or None)
+        elif node.type == 'image':
+            image = getattr(payload, 'image', None)
+            if isinstance(image, list):
+                for node_id, value in zip(node.node_ids, image):
+                    workflow[node_id]['inputs'][node.key] = value
+            else:
+                set_input(node, image)
+        elif node.type == 'seed':
+            set_input(node, getattr(payload, 'seed', None) or random.randint(0, 1125899906842624))
+        elif node.type in WORKFLOW_NODE_INPUT_KEYS:
+            set_input(node, getattr(payload, node.type, None), WORKFLOW_NODE_INPUT_KEYS[node.type])
 
 
 async def comfyui_create_image(model: str, payload: ComfyUICreateImageForm, client_id, base_url, api_key):
@@ -263,3 +276,91 @@ async def comfyui_edit_image(model: str, payload: ComfyUIEditImageForm, client_i
         return None
 
     return images
+
+
+class ComfyUICreateVideoForm(BaseModel):
+    workflow: ComfyUIWorkflow
+
+    prompt: str
+    negative_prompt: Optional[str] = None
+    image: Optional[str] = None  # starting frame, as a file name uploaded to ComfyUI
+    width: Optional[int] = None
+    height: Optional[int] = None
+    length: Optional[int] = None  # in frames
+    fps: Optional[float] = None
+
+    steps: Optional[int] = None
+    seed: Optional[int] = None
+
+
+VIDEO_EXTENSIONS = ('.mp4', '.webm', '.mkv', '.mov', '.gif', '.webp')
+
+
+def get_video_outputs(history: dict) -> list[dict]:
+    """The video files a finished prompt saved, as ``{filename, subfolder, type}`` entries.
+
+    ComfyUI's SaveVideo and SaveWEBM list them under ``images`` (marked ``animated``), and
+    VideoHelperSuite's Video Combine under ``gifs``. Inputs a workflow loaded (LoadVideo) are left out.
+    """
+    outputs = []
+    for node_output in (history.get('outputs') or {}).values():
+        for key in ('images', 'gifs', 'videos'):
+            for entry in node_output.get(key) or []:
+                if (
+                    isinstance(entry, dict)
+                    and entry.get('filename', '').lower().endswith(VIDEO_EXTENSIONS)
+                    and entry.get('type') != 'input'
+                ):
+                    outputs.append(entry)
+    # Prefer saved files over the temporary previews some nodes also write.
+    saved = [entry for entry in outputs if entry.get('type') == 'output']
+    return saved or outputs
+
+
+async def get_video(entry: dict, base_url: str, api_key: str) -> tuple[bytes, str]:
+    """Download a video ComfyUI saved, with its content type."""
+    data = {'filename': entry['filename'], 'subfolder': entry.get('subfolder', ''), 'type': entry.get('type', 'output')}
+    headers = {**default_headers}
+    if api_key:
+        headers['Authorization'] = f'Bearer {api_key}'
+
+    session = await get_session()
+    async with session.get(
+        f'{base_url}/view?{urllib.parse.urlencode(data)}', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
+    ) as r:
+        r.raise_for_status()
+        content_type = r.headers.get('content-type', '').split(';')[0]
+        if not content_type.startswith(('video/', 'image/')):
+            content_type = mimetypes.guess_type(entry['filename'])[0] or 'video/mp4'
+        return await r.read(), content_type
+
+
+async def comfyui_create_video(
+    model: str, payload: ComfyUICreateVideoForm, client_id, base_url, api_key, timeout: float
+) -> list[tuple[bytes, str]]:
+    """Run a video workflow and return each video it saved, as ``(data, content_type)``.
+
+    Raises when the workflow fails, saves no video, or is not done within *timeout* seconds.
+    """
+    ws_url = base_url.replace('http://', 'ws://').replace('https://', 'wss://')
+    workflow = JSONCodec.loads(payload.workflow.workflow)
+    _apply_workflow_nodes(workflow, payload.workflow.nodes, model, payload)
+    log.debug('Workflow: %s', workflow)
+
+    headers = {'Authorization': f'Bearer {api_key}'} if api_key else {}
+    session = await get_session()
+    try:
+        async with asyncio.timeout(timeout):
+            async with session.ws_connect(
+                f'{ws_url}/ws?clientId={client_id}',
+                headers=headers,
+                ssl=AIOHTTP_CLIENT_SESSION_SSL,
+            ) as ws:
+                history = await _ws_run_prompt(ws, workflow, client_id, base_url, api_key)
+    except TimeoutError:
+        raise Exception(f'The video was not ready after {int(timeout)} seconds')
+
+    outputs = get_video_outputs(history)
+    if not outputs:
+        raise Exception('The ComfyUI workflow saved no video. Add a Save Video node to it.')
+    return [await get_video(entry, base_url, api_key) for entry in outputs]

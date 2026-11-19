@@ -88,7 +88,7 @@
 	<Modal ariaLabel={$i18n.t('Add Members')} size="sm" bind:show>
 		<div>
 			<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
-				<div class="self-center text-base">
+				<div class="text-sm font-medium self-center">
 					<div class="flex items-center gap-0.5 shrink-0">
 						{$i18n.t('Add Members')}
 					</div>

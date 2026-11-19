@@ -101,7 +101,7 @@
 		<div>
 			<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
 				<div class="flex w-full justify-between items-center mr-3">
-					<div class="self-center text-base flex gap-1.5 items-center">
+					<div class="text-sm font-medium self-center flex gap-1.5 items-center">
 						<div>{$i18n.t('Webhooks')}</div>
 						<span class="text-sm text-gray-500">{webhooks.length}</span>
 					</div>

@@ -317,8 +317,13 @@ print("${endTag}")
 				if (!readOnly) onSave();
 			}
 
-			// Format code when Ctrl + Shift + F is pressed
-			if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+			// Format Python code when Ctrl + Shift + F is pressed (the formatter is Black)
+			if (
+				lang === 'python' &&
+				(e.ctrlKey || e.metaKey) &&
+				e.shiftKey &&
+				e.key.toLowerCase() === 'f'
+			) {
 				e.preventDefault();
 				await formatPythonCodeHandler();
 			}

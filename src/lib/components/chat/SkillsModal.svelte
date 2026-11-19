@@ -38,11 +38,11 @@
 		</div>
 
 		{#if selectedSkills.length > 0}
-			<div class=" flex justify-between dark:text-gray-300 px-5 pb-1">
-				<div class=" text-base font-normal self-center">{$i18n.t('Skills')}</div>
+			<div class=" flex justify-between dark:text-gray-300 px-4 pb-1">
+				<div class="text-xs text-gray-500 self-center">{$i18n.t('Skills')}</div>
 			</div>
 
-			<div class="px-5 pb-5 w-full flex flex-col justify-center">
+			<div class="px-4 pb-4 w-full flex flex-col justify-center">
 				<div class=" text-sm dark:text-gray-300 mb-1">
 					{#each selectedSkills as skill}
 						<Collapsible buttonClassName="w-full mb-0.5">

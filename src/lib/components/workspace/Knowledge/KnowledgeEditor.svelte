@@ -73,8 +73,8 @@
 
 <div class="w-full max-h-full">
 	{#if modal}
-		<div class="flex justify-between items-center dark:text-gray-100 px-5 pt-4 pb-2">
-			<h3 class="text-base font-normal">
+		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-2">
+			<h3 class="text-sm font-medium">
 				{$i18n.t(edit ? 'Settings' : 'Create a knowledge base')}
 			</h3>
 			<button
@@ -85,7 +85,7 @@
 					onBack();
 				}}
 			>
-				<XMark className="size-5" />
+				<XMark className="size-4" />
 			</button>
 		</div>
 	{:else}
@@ -114,7 +114,7 @@
 	{/if}
 
 	<form
-		class="flex flex-col {modal ? 'px-5 pb-3' : 'max-w-lg mx-auto mt-10 mb-10'}"
+		class="flex flex-col {modal ? 'px-4 pb-3' : 'max-w-lg mx-auto mt-10 mb-10'}"
 		on:submit|preventDefault={() => {
 			submitHandler();
 		}}

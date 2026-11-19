@@ -203,16 +203,16 @@
 	size="sm"
 	bind:show
 >
-	<div class="px-5 pb-5 pt-4 dark:text-gray-200">
+	<div class="px-4 pb-4 pt-3 dark:text-gray-200">
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<div class="font-primary text-lg font-medium">
+			<div class="text-sm font-medium">
 				{editingKey ? $i18n.t('Edit control') : $i18n.t('Add control')}
 			</div>
 			<button
 				type="button"
 				class={actionClass}
 				aria-label={$i18n.t('Close')}
-				on:click={() => (show = false)}><XMark className="size-5" /></button
+				on:click={() => (show = false)}><XMark className="size-4" /></button
 			>
 		</div>
 		<form class="space-y-2.5" on:submit|preventDefault|stopPropagation={apply}>

@@ -318,8 +318,8 @@
 	bind:show
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1.5">
+			<h1 class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -333,7 +333,7 @@
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
@@ -346,7 +346,7 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
+					<div>
 						<div class="flex flex-row justify-between items-center w-full">
 							<label for="image-connection-type-select" class="text-xs text-gray-500"
 								>{$i18n.t('Connection Type')}</label

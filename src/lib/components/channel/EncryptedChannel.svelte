@@ -329,7 +329,7 @@
 
 <Modal bind:show={showParticipants} size="sm" ariaLabel={$i18n.t('Participants')}>
 	<div class="flex items-center justify-between px-4 pt-3 mb-1 dark:text-gray-100">
-		<h2 class="text-base font-normal">{$i18n.t('Participants')}</h2>
+		<h2 class="text-sm font-medium">{$i18n.t('Participants')}</h2>
 		<button
 			type="button"
 			aria-label={$i18n.t('Close')}

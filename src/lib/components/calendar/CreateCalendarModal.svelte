@@ -66,7 +66,7 @@
 	<div>
 		<!-- Header -->
 		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
-			<h3 class="text-base font-normal">{calendar ? $i18n.t('Edit') : $i18n.t('New Calendar')}</h3>
+			<h3 class="text-sm font-medium">{calendar ? $i18n.t('Edit') : $i18n.t('New Calendar')}</h3>
 			<button
 				class="self-center shrink-0 ml-2"
 				aria-label={$i18n.t('Close')}

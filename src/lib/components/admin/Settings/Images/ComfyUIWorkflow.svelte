@@ -14,6 +14,7 @@
 	export let workflow = '';
 	export let nodes: WorkflowNode[] = [];
 	export let requiredTypes: string[] = ['prompt'];
+	export let requiredNote = '';
 
 	const inputClass =
 		'w-full bg-transparent text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
@@ -51,18 +52,17 @@
 		</div>
 
 		<div class="flex items-center gap-2 shrink-0">
-			{#if workflow}
-				<button
-					class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:hover:text-white"
-					type="button"
-					aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
-					on:click={() => {
-						showEditor = true;
-					}}
-				>
-					{$i18n.t('Edit')}
-				</button>
-			{/if}
+			<!-- Always available, so a workflow can be pasted in as well as uploaded. -->
+			<button
+				class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:hover:text-white"
+				type="button"
+				aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
+				on:click={() => {
+					showEditor = true;
+				}}
+			>
+				{$i18n.t('Edit')}
+			</button>
 
 			<Tooltip content={$i18n.t('settings.admin.images.clickHereToUploadAWorkflowJsonFile.label')}>
 				<button
@@ -83,7 +83,9 @@
 		bind:show={showEditor}
 		value={workflow}
 		lang="json"
-		onChange={(value) => {
+		title={label}
+		description={$i18n.t('Paste or edit a workflow exported as API format from ComfyUI.')}
+		onChange={(value: string) => {
 			workflow = value;
 		}}
 	/>
@@ -128,7 +130,7 @@
 		</div>
 
 		<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-			{$i18n.t('*Prompt node ID(s) are required for image generation')}
+			{requiredNote || $i18n.t('*Prompt node ID(s) are required for image generation')}
 		</div>
 	{/if}
 </div>

@@ -118,19 +118,19 @@
 	size="sm"
 	ariaLabel={$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
 >
-	<div class="flex items-center justify-between px-5 pb-2 pt-4 dark:text-gray-100">
-		<h2 class="font-primary text-lg font-medium">
+	<div class="flex items-center justify-between px-4 pb-2 pt-3 dark:text-gray-100">
+		<h2 class="text-sm font-medium">
 			{$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
 		</h2>
 		<button
 			type="button"
 			class="shrink-0 self-center"
 			on:click={() => (show = false)}
-			aria-label={$i18n.t('Close')}><XMark className="size-5" /></button
+			aria-label={$i18n.t('Close')}><XMark className="size-4" /></button
 		>
 	</div>
 	<form
-		class="space-y-2 px-5 pb-4 text-gray-900 dark:text-gray-100"
+		class="space-y-2 px-4 pb-4 text-gray-900 dark:text-gray-100"
 		on:submit|preventDefault={save}
 	>
 		{#if error}<p role="alert" class="text-sm text-gray-700 dark:text-gray-300">{error}</p>{/if}
