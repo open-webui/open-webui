@@ -257,11 +257,23 @@ async def connect_mcp_server(
         )
         return headers
 
+    async def refresh_headers():
+        splits = server_id.split(':')
+        oauth_server_id = splits[-1] if len(splits) > 1 else server_id
+        await request.app.state.oauth_client_manager.get_oauth_token(
+            user.id, f'mcp:{oauth_server_id}', force_refresh=True
+        )
+        return await get_headers()
+
     auth = OAuthTokenAuth(get_headers) if mcp_server_connection.get('auth_type') == 'system_oauth' else None
     headers = {} if auth else await get_headers()
 
     if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
         raise HTTPException(status_code=401, detail='Auth required')
+
+    if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static'):
+        auth = OAuthTokenAuth(get_headers, refresh_headers)
+        headers = {}
 
     client = MCPClient(
         event_caller=extra_params.get('__event_call__') if metadata.get('session_id') else None,
