@@ -156,6 +156,7 @@
 		if (!selectedChatId) return;
 
 		const id = selectedChatId;
+		const index = chatList?.findIndex((chat) => chat.id === id) ?? -1;
 		const deleted = await deleteChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -166,6 +167,10 @@
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
 		selectedChatId = null;
+
+		await tick();
+		const rows = chatListElement?.children ?? [];
+		(rows[Math.min(index, rows.length - 1)]?.querySelector('button') ?? searchInput)?.focus();
 
 		if ($chatId === id) {
 			await goto('/');
