@@ -321,7 +321,7 @@
 				{#if edit}
 					<button
 						type="button"
-						class="px-1 py-1.5 text-sm font-medium text-gray-500 transition hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-200"
+						class="px-1 py-1.5 text-xs text-gray-500 transition hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-200"
 						disabled={busy}
 						on:click={() => (showDelete = true)}>{$i18n.t('Delete')}</button
 					>

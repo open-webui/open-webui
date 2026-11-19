@@ -192,7 +192,7 @@
 			{/if}
 		</div>
 
-		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-sm">
+		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-xs">
 			<button
 				on:click={closeModal}
 				class="font-normal text-gray-600 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"

@@ -330,10 +330,10 @@
 							</div>
 						</div>
 
-						<div class="flex justify-between pt-3 text-sm font-normal">
+						<div class="flex justify-between pt-3 text-xs">
 							<button
 								type="button"
-								class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+								class="text-xs text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
 								on:click={() => {
 									showRevokeConfirmation = true;
 								}}>{$i18n.t('Sign out all devices')}</button

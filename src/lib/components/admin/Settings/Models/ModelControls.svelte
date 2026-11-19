@@ -323,7 +323,7 @@
 					{$i18n.t('Add at least two options for a slider.')}
 				</p>
 			{/if}
-			<div class="flex justify-end gap-1.5 pt-1 text-sm font-medium">
+			<div class="flex justify-end gap-1.5 pt-1 text-xs">
 				<button
 					type="button"
 					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 hover:bg-gray-100 dark:hover:bg-gray-850"

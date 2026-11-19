@@ -403,7 +403,7 @@
 													: $i18n.t('Reset all permissions to their initial configuration values')}
 											>
 												<button
-													class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
+													class="text-xs font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
 													type="button"
 													on:click={() => {
 														showResetConfirmDialog = true;
