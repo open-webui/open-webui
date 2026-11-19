@@ -175,9 +175,17 @@
 				>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
-								{$i18n.t('settings.admin.integrations.externalToolServers.label')}
-							</div>
+							<Tooltip
+								content={$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
+								placement="top-start"
+								className="w-fit"
+							>
+								<div
+									class="text-xs text-gray-600 dark:text-gray-400 underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+								>
+									{$i18n.t('settings.admin.integrations.externalToolServers.label')}
+								</div>
+							</Tooltip>
 
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
@@ -213,18 +221,35 @@
 								{$i18n.t('No tool server connections configured.')}
 							</div>
 						{/if}
-
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
-						</div>
 					</div>
 				</AdminSettingSection>
 
 				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.machines.title')}>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
-								{$i18n.t('settings.admin.integrations.openTerminal.label')}
+							<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+								<Tooltip
+									content={$i18n.t(
+										'Connect to Open Terminal servers. Admins and users granted access can use file browsing and terminal tools through these servers.'
+									)}
+									placement="top-start"
+									className="w-fit"
+								>
+									<div
+										class="underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+									>
+										{$i18n.t('settings.admin.integrations.openTerminal.label')}
+									</div>
+								</Tooltip>
+								<Tooltip content={$i18n.t('Learn more about Open Terminal')}>
+									<a
+										class="text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+										href="https://github.com/open-webui/open-terminal"
+										target="_blank"
+										rel="noopener noreferrer"
+										aria-label={$i18n.t('Learn more about Open Terminal')}>↗</a
+									>
+								</Tooltip>
 							</div>
 
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
@@ -310,17 +335,6 @@
 								{$i18n.t('No terminal connections configured.')}
 							</div>
 						{/if}
-
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t(
-								'Connect to Open Terminal servers. Admins and users granted access can use file browsing and terminal tools through these servers.'
-							)}
-						</div>
-						<a
-							class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-							href="https://github.com/open-webui/open-terminal"
-							target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
-						>
 					</div>
 				</AdminSettingSection>
 			</fieldset>

@@ -1115,7 +1115,19 @@
 <div class="flex w-full flex-col justify-between text-xs">
 	<div class="mb-2 flex items-center justify-between">
 		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
-			<div>{$i18n.t('settings.admin.integrations.externalKnowledge.title')}</div>
+			<Tooltip
+				content={$i18n.t(
+					'Connect external knowledge sources. A source is created only after its test passes.'
+				)}
+				placement="top-start"
+				className="w-fit"
+			>
+				<div
+					class="underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+				>
+					{$i18n.t('settings.admin.integrations.externalKnowledge.title')}
+				</div>
+			</Tooltip>
 			<ExperimentalBadge />
 		</div>
 
@@ -1252,12 +1264,6 @@
 	{:else if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
 			{$i18n.t('No external knowledge sources configured.')}
-		</div>
-	{/if}
-
-	{#if items.length === 0 && !connections.some(hasStoreIds)}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-			{$i18n.t('Test must pass before a source is created.')}
 		</div>
 	{/if}
 </div>

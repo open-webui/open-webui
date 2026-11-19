@@ -59,7 +59,17 @@
 	<div>
 		<div class="mb-2 flex items-center justify-between">
 			<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-				{$i18n.t('Connected apps')}
+				<Tooltip
+					content={$i18n.t('Connect external apps to Open WebUI.')}
+					placement="top-start"
+					className="w-fit"
+				>
+					<div
+						class="underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+					>
+						{$i18n.t('Connected apps')}
+					</div>
+				</Tooltip>
 				<ExperimentalBadge />
 			</div>
 			<Tooltip content={$i18n.t('Add app')}
@@ -135,8 +145,5 @@
 						{$i18n.t('No apps connected.')}
 					</p>{/each}
 			</div>{/if}
-		<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-			{$i18n.t('Connect external apps to Open WebUI.')}
-		</p>
 	</div>
 </AdminSettingSection>
