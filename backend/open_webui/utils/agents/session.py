@@ -4,7 +4,7 @@ import hashlib
 import re
 from urllib.parse import quote
 
-from open_webui.models.chats import ChatModel, Chats
+from open_webui.models.chats import Chats
 from open_webui.utils.auth import decode_token
 
 
@@ -32,7 +32,7 @@ async def ensure_chat_selections(chat):
         if data['terminal_id'] == state['terminal_id']:
             data.setdefault('working_directory', state['cwd'])
         row.chat = data
-        chat = ChatModel.model_validate(row)
+        chat = chat.model_copy(update={'chat': {**(chat.chat or {}), **data}})
     return chat
 
 

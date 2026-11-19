@@ -69,9 +69,9 @@ class SharedChatsTable:
         Returns the SharedChatModel with the share token as its id.
         """
         async with get_async_db_context(db) as db:
-            from open_webui.models.chats import Chat
+            from open_webui.models.chats import Chats
 
-            chat = await db.get(Chat, chat_id)
+            chat = await Chats.get_chat_by_id(chat_id, db=db)
             if not chat:
                 return None
 
@@ -100,13 +100,13 @@ class SharedChatsTable:
         Re-snapshot: update the shared chat with the current state of the original chat.
         """
         async with get_async_db_context(db) as db:
-            from open_webui.models.chats import Chat
+            from open_webui.models.chats import Chats
 
             shared_chat = await db.get(SharedChat, share_id)
             if not shared_chat:
                 return None
 
-            chat = await db.get(Chat, shared_chat.chat_id)
+            chat = await Chats.get_chat_by_id(shared_chat.chat_id, db=db)
             if not chat:
                 return None
 
@@ -127,9 +127,9 @@ class SharedChatsTable:
             shared = await db.get(SharedChat, share_id)
             if shared:
                 if share_mode is None and shared.chat.get('share_mode') == 'continue':
-                    from open_webui.models.chats import Chat
+                    from open_webui.models.chats import Chats
 
-                    chat = await db.get(Chat, shared.chat_id)
+                    chat = await Chats.get_chat_by_id(shared.chat_id, db=db)
                     if chat:
                         shared.chat = chat.chat
                         shared.title = chat.title
