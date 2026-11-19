@@ -1089,6 +1089,7 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     # Make sure models are loaded in app state
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
+    request.state.model_id = form_data.get('model')
     # Use generic dispatcher in utils.embeddings
     return await generate_embeddings(request, form_data, user)
 

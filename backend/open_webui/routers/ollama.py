@@ -916,6 +916,7 @@ async def embed(
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info('generate_ollama_batch_embeddings %s', form_data)
+    request.state.model_id = form_data.model
     await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
     await validate_ollama_backend_idx(request, form_data.model, url_idx, user)
 
@@ -969,6 +970,7 @@ async def embeddings(
         raise HTTPException(status_code=503, detail=ERROR_MESSAGES.OLLAMA_API_DISABLED)
 
     log.info('generate_ollama_embeddings %s', form_data)
+    request.state.model_id = form_data.model
     await check_model_access(user, await Models.get_model_by_id(form_data.model), BYPASS_MODEL_ACCESS_CONTROL)
     await validate_ollama_backend_idx(request, form_data.model, url_idx, user)
 
@@ -1315,6 +1317,7 @@ async def generate_openai_embeddings(
     payload.pop('metadata', None)
 
     model_id = form_data.model
+    request.state.model_id = model_id
     model_info = await Models.get_model_by_id(model_id)
     if model_info is not None:
         if model_info.base_model_id:

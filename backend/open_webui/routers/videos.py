@@ -20,6 +20,7 @@ from open_webui.routers.images import (
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_headers_and_cookies
+from open_webui.utils.images.connections import get_image_model_ref
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.videos.connections import (
     VIDEO_CONNECTIONS_CONFIG_KEY,
@@ -216,6 +217,8 @@ async def video_generations(
     OpenAI's API (which LiteLLM follows) takes a multipart form; OpenRouter's takes JSON.
     """
     connection, model = await resolve_video_model(request, user, form_data.model, strict=strict)
+    if not hasattr(request.state, 'model_id'):
+        request.state.model_id = get_image_model_ref(connection['id'], model)
     connection_config = connection.get('config') or {}
     seconds = form_data.seconds or connection_config.get('seconds')
     size = form_data.size or connection_config.get('size')
