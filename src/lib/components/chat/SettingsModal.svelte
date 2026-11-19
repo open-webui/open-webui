@@ -27,6 +27,7 @@
 	import ArchivedChats from './Settings/ArchivedChats.svelte';
 	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
 	import SettingsAlt from '../icons/SettingsAlt.svelte';
 	import UserCircle from '../icons/UserCircle.svelte';
@@ -51,11 +52,10 @@
 	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
 	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
 	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
+	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
 	import AdminInterface from '$lib/components/admin/Settings/Interface.svelte';
 	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
 	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
-	import AdminVideos from '$lib/components/admin/Settings/Videos.svelte';
-	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
 	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
@@ -165,7 +165,6 @@
 		'admin:documents': $i18n.t('Tools'),
 		'admin:audio': $i18n.t('Tools'),
 		'admin:images': $i18n.t('Tools'),
-		'admin:videos': $i18n.t('Tools'),
 		'admin:web': $i18n.t('Tools'),
 		'admin:code-execution': $i18n.t('Tools'),
 		'admin:pipelines': $i18n.t('Tools'),
@@ -178,6 +177,13 @@
 		$i18n.t('General');
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
+	// Code Execution and Pipelines are kept for existing setups, so they sit behind a closed
+	// "Legacy" row at the end of Tools. It opens on click, while one of them is selected, or
+	// while searching.
+	const legacyAdminTabs = ['admin:code-execution', 'admin:pipelines'];
+	let showLegacyTabs = false;
+	$: legacyTabsOpen =
+		showLegacyTabs || legacyAdminTabs.includes(selectedTab) || search.trim() !== '';
 	const settingGroupHeadingClass = (first: boolean) =>
 		`hidden md:block shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 ${
 			first ? 'mt-0.5' : 'mt-2'
@@ -303,6 +309,12 @@
 			searchPrefixes: ['settings.admin.documents.']
 		},
 		{
+			id: 'admin:web',
+			titleKey: 'settings.admin.web.title',
+			title: $i18n.t('settings.admin.web.title'),
+			searchPrefixes: ['settings.admin.web.']
+		},
+		{
 			id: 'admin:audio',
 			titleKey: 'settings.admin.audio.title',
 			title: $i18n.t('settings.admin.audio.title'),
@@ -310,21 +322,9 @@
 		},
 		{
 			id: 'admin:images',
-			titleKey: 'settings.admin.images.title',
-			title: $i18n.t('settings.admin.images.title'),
-			searchPrefixes: ['settings.admin.images.']
-		},
-		{
-			id: 'admin:videos',
-			titleKey: 'settings.admin.videos.title',
-			title: $i18n.t('settings.admin.videos.title'),
-			searchPrefixes: ['settings.admin.videos.']
-		},
-		{
-			id: 'admin:web',
-			titleKey: 'settings.admin.web.title',
-			title: $i18n.t('settings.admin.web.title'),
-			searchPrefixes: ['settings.admin.web.']
+			titleKey: 'Images & Videos',
+			title: $i18n.t('Images & Videos'),
+			searchPrefixes: ['settings.admin.images.', 'settings.admin.videos.']
 		},
 		{
 			id: 'admin:code-execution',
@@ -755,12 +755,34 @@
 						{/if}
 
 						{@const tab = adminSettings.find((setting) => setting.id === tabId)}
-						{#if tab}
+						{@const legacy = legacyAdminTabs.includes(tabId)}
+						{#if legacy && tabId === filteredAdminSettings.find( (id) => legacyAdminTabs.includes(id) )}
+							<button
+								type="button"
+								aria-expanded={legacyTabsOpen}
+								class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-75"
+								on:click={() => {
+									showLegacyTabs = !legacyTabsOpen;
+								}}
+							>
+								<!-- Small chevron in an icon-sized slot, so the label lines up with the tabs. -->
+								<span class="flex size-3.5 shrink-0 items-center justify-center">
+									<ChevronRight
+										className="size-2.5 transition-transform duration-75 {legacyTabsOpen
+											? 'rotate-90'
+											: ''}"
+										strokeWidth="2.5"
+									/>
+								</span>
+								<span>{$i18n.t('Legacy')}</span>
+							</button>
+						{/if}
+						{#if tab && (!legacy || legacyTabsOpen)}
 							<button
 								role="tab"
 								aria-controls={adminTabPanelId(tab.id)}
 								aria-selected={selectedTab === tab.id}
-								class={tabButtonClass(selectedTab === tab.id)}
+								class="{tabButtonClass(selectedTab === tab.id)} {legacy ? 'md:pl-4' : ''}"
 								on:click={() => {
 									selectTab(tab.id);
 								}}
@@ -860,6 +882,12 @@
 				<AdminWebSearch saveHandler={adminConfigSaveHandler} />
 			{:else if selectedTab === 'admin:code-execution'}
 				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
+			{:else if selectedTab === 'admin:pipelines'}
+				<AdminPipelines
+					saveHandler={() => {
+						toast.success($i18n.t('Settings saved successfully!'));
+					}}
+				/>
 			{:else if selectedTab === 'admin:interface'}
 				<AdminInterface
 					saveHandler={() => {
@@ -878,20 +906,8 @@
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}
 				/>
-			{:else if selectedTab === 'admin:videos'}
-				<AdminVideos
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
 			{:else if selectedTab === 'admin:db'}
 				<AdminDatabase
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
-			{:else if selectedTab === 'admin:pipelines'}
-				<AdminPipelines
 					saveHandler={() => {
 						toast.success($i18n.t('Settings saved successfully!'));
 					}}

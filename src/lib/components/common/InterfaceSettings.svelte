@@ -137,7 +137,7 @@
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
 	const sectionHeadingClass = 'mt-4 text-xs text-gray-600 dark:text-gray-500';
 	const firstSectionHeadingClass = 'text-xs text-gray-600 dark:text-gray-500';
-	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-500';
+	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-500/80';
 	const actionButtonClass =
 		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white';
 
