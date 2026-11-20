@@ -2312,6 +2312,10 @@ TOOL_SEARCH_ALWAYS_LOADED = [
 
 TOOL_SEARCH_DEFER_BUILTIN_TOOLS = os.getenv('TOOL_SEARCH_DEFER_BUILTIN_TOOLS', 'True').lower() == 'true'
 
+# Listing deferred tools in the system prompt helps models find them, but the prompt then changes
+# (and the provider prompt cache is invalidated) whenever the set of deferred tools changes.
+TOOL_SEARCH_LIST_TOOLS = os.getenv('TOOL_SEARCH_LIST_TOOLS', 'True').lower() == 'true'
+
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
 DEFAULT_TITLE_GENERATION_PROMPT_TEMPLATE = """### Task:
@@ -3338,6 +3342,7 @@ DEFAULT_CONFIG = {
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
     'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,
+    'chat.tool_search.list_tools': TOOL_SEARCH_LIST_TOOLS,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

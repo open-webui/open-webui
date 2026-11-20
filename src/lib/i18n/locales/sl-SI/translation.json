@@ -3616,6 +3616,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Konfiguriraj v nastavitvah dokumentov",
 	"settings.admin.interface.toolSearchEngine.description": "Izberite, kako se orodja ujemajo z iskalno poizvedbo. Izvaja se samo izbrani pogon.",
 	"settings.admin.interface.toolSearchEngine.label": "Iskalni pogon",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Orodja, katerih definicija je daljša od tega števila znakov, so odložena.",
 	"settings.admin.interface.toolSearchThreshold.label": "Prag odlaganja (znaki)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Usmerja, kako asistent oblikuje klice orodij in funkcij.",

@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Διαμόρφωση στις ρυθμίσεις εγγράφων",
 	"settings.admin.interface.toolSearchEngine.description": "Επιλέξτε πώς αντιστοιχίζονται τα εργαλεία σε μια αναζήτηση. Εκτελείται μόνο η επιλεγμένη μηχανή.",
 	"settings.admin.interface.toolSearchEngine.label": "Μηχανή αναζήτησης",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Τα εργαλεία των οποίων ο ορισμός υπερβαίνει αυτόν τον αριθμό χαρακτήρων αναβάλλονται.",
 	"settings.admin.interface.toolSearchThreshold.label": "Όριο αναβολής (χαρακτήρες)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Καθοδηγεί τον τρόπο με τον οποίο ο βοηθός μορφοποιεί τις κλήσεις εργαλείων και λειτουργιών.",

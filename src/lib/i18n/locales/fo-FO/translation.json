@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Set upp í stillingunum fyri Skjøl",
 	"settings.admin.interface.toolSearchEngine.description": "Vel, hvussu amboð verða funnin í einari leiting. Bara valdi motorurin koyrir.",
 	"settings.admin.interface.toolSearchEngine.label": "Leitimotorur",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Amboð, sum hava eina allýsing við fleiri teknum enn hetta, verða útsett.",
 	"settings.admin.interface.toolSearchThreshold.label": "Útsetingarmark (tekin)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Vegleiðir, hvussu hjálparin sniðgevur amboðs- og funktiónskall.",

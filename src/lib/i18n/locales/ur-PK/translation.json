@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "دستاویزات کی ترتیبات میں کنفیگر کریں",
 	"settings.admin.interface.toolSearchEngine.description": "منتخب کریں کہ ٹولز کو تلاش سے کیسے ملایا جائے۔ صرف منتخب کردہ انجن چلتا ہے۔",
 	"settings.admin.interface.toolSearchEngine.label": "تلاش کا انجن",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "جن ٹولز کی تعریف حروف کی اس تعداد سے زیادہ ہو انہیں مؤخر کیا جاتا ہے۔",
 	"settings.admin.interface.toolSearchThreshold.label": "مؤخر کرنے کا تھریشولڈ (حروف)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "اسسٹنٹ کو ٹول اور فنکشن کالز کا فارمیٹ بنانے میں رہنمائی فراہم کرتا ہے۔",

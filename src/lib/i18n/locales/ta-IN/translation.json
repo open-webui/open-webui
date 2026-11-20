@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "ஆவண அமைப்புகளில் கட்டமைக்கவும்",
 	"settings.admin.interface.toolSearchEngine.description": "கருவிகளைத் தேடலுடன் எவ்வாறு பொருத்துவது என்பதைத் தேர்ந்தெடுக்கவும். தேர்ந்தெடுக்கப்பட்ட இயந்திரம் மட்டுமே இயங்கும்.",
 	"settings.admin.interface.toolSearchEngine.label": "தேடல் இயந்திரம்",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "வரையறையில் இந்த எண்ணிக்கையைவிட அதிக எழுத்துகளைக் கொண்ட கருவிகள் ஒத்திவைக்கப்படுகின்றன.",
 	"settings.admin.interface.toolSearchThreshold.label": "ஒத்திவைப்பு வரம்பு மதிப்பு (எழுத்துகள்)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "உதவியாளர் கருவி மற்றும் செயல்பாட்டு அழைப்புகளை எவ்வாறு வடிவமைக்கிறது என்பதை வழிநடத்துகிறது.",

@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "",
 	"settings.admin.interface.toolSearchEngine.description": "",
 	"settings.admin.interface.toolSearchEngine.label": "",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "",
 	"settings.admin.interface.toolSearchThreshold.label": "",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Guides how such assistant formats tool and function calls. Such think.",

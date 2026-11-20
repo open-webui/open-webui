@@ -3546,6 +3546,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "문서 설정에서 구성",
 	"settings.admin.interface.toolSearchEngine.description": "검색 시 도구를 찾는 방식을 선택합니다. 선택한 엔진만 실행됩니다.",
 	"settings.admin.interface.toolSearchEngine.label": "검색 엔진",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "정의가 이 문자 수보다 긴 도구는 지연 로드됩니다.",
 	"settings.admin.interface.toolSearchThreshold.label": "지연 로드 임계값(문자 수)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "어시스턴트가 도구 및 함수 호출 형식을 구성하는 방식을 안내합니다.",

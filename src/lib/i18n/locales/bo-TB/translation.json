@@ -3544,6 +3544,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "ཡིག་ཆའི་སྒྲིག་འགོད་ནང་སྒྲིག་འགོད་བྱེད་པ།",
 	"settings.admin.interface.toolSearchEngine.description": "འཚོལ་བཤེར་དང་མཐུན་པའི་ལག་ཆ་འཚོལ་སྟངས་འདེམས། བདམས་པའི་འཕྲུལ་འཁོར་ཁོ་ན་འཁོར་སྐྱོད་བྱེད།",
 	"settings.admin.interface.toolSearchEngine.label": "འཚོལ་བཤེར་འཕྲུལ་འཁོར།",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "མཚན་ཉིད་ཀྱི་ཡིག་རྟགས་གྲངས་འདི་ལས་མང་བའི་ལག་ཆ་འགྱངས་ཀྱི་ཡོད།",
 	"settings.admin.interface.toolSearchThreshold.label": "འགྱངས་པའི་ཚད་མཚམས། (ཡིག་རྟགས།)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "རོགས་རམ་པས་ལག་ཆ་དང་ལས་འགན་འབོད་པའི་རྣམ་གཞག་ལ་ལམ་སྟོན་བྱེད།",

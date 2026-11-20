@@ -3568,6 +3568,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Cumraigh i socruithe Doiciméad",
 	"settings.admin.interface.toolSearchEngine.description": "Roghnaigh conas a mheaitseáiltear uirlisí le cuardach. Ní ritheann ach an t-inneall roghnaithe.",
 	"settings.admin.interface.toolSearchEngine.label": "Inneall cuardaigh",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Cuirtear siar uirlisí a bhfuil a sainmhíniú níos faide ná an líon seo carachtar.",
 	"settings.admin.interface.toolSearchThreshold.label": "Tairseach an Chur Siar (carachtair)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Treoraíonn sé seo conas a fhormáidíonn an cúntóir glaonna uirlisí agus feidhme.",

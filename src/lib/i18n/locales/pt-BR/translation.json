@@ -3592,6 +3592,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Configurar nas configurações de Documentos",
 	"settings.admin.interface.toolSearchEngine.description": "Escolha como as ferramentas são comparadas com a busca. Só o mecanismo selecionado é executado.",
 	"settings.admin.interface.toolSearchEngine.label": "Mecanismo de busca",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Ferramentas cuja definição tem mais caracteres que este valor são adiadas.",
 	"settings.admin.interface.toolSearchThreshold.label": "Limite para Adiar (Caracteres)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Orienta como o assistente formata chamadas de ferramentas e funções.",

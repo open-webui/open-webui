@@ -3592,6 +3592,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "Configurează în setările documentelor",
 	"settings.admin.interface.toolSearchEngine.description": "Alegeți cum sunt potrivite instrumentele cu o căutare. Rulează doar motorul selectat.",
 	"settings.admin.interface.toolSearchEngine.label": "Motor de căutare",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "Instrumentele a căror definiție depășește acest număr de caractere sunt amânate.",
 	"settings.admin.interface.toolSearchThreshold.label": "Prag de amânare (caractere)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "Ghidează modul în care asistentul formatează apelurile de instrumente și funcții.",

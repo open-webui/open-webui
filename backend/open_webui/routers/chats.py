@@ -86,6 +86,7 @@ CHAT_CONFIG_KEYS = {
     'TOOL_SEARCH_DEFER_THRESHOLD': 'chat.tool_search.defer_threshold',
     'TOOL_SEARCH_ALWAYS_LOADED': 'chat.tool_search.always_loaded',
     'TOOL_SEARCH_DEFER_BUILTIN_TOOLS': 'chat.tool_search.defer_builtin_tools',
+    'TOOL_SEARCH_LIST_TOOLS': 'chat.tool_search.list_tools',
 }
 
 
@@ -257,6 +258,7 @@ class ChatConfigForm(BaseModel):
     TOOL_SEARCH_DEFER_THRESHOLD: int = 400
     TOOL_SEARCH_ALWAYS_LOADED: list[str] = []
     TOOL_SEARCH_DEFER_BUILTIN_TOOLS: bool = True
+    TOOL_SEARCH_LIST_TOOLS: bool = True
 
     @field_validator('TOOL_SEARCH_DECISIONS_API_BASE_URL', 'TOOL_PERMISSIONS_AUTO_DECISIONS_API_BASE_URL')
     @classmethod
@@ -933,6 +935,7 @@ async def set_chat_config(form_data: ChatConfigForm, user=Depends(get_admin_user
             field
             in {
                 'TOOL_SEARCH_ENGINE',
+                'TOOL_SEARCH_LIST_TOOLS',
                 'ENABLE_TOOL_PERMISSIONS_AUTO',
                 'ENABLE_TOOL_CALL_LABELS',
                 'VISUALIZATION_PROMPT_TEMPLATE',

@@ -75,7 +75,8 @@
 		TOOL_SEARCH_DECISIONS_PROMPT: '',
 		TOOL_SEARCH_DEFER_THRESHOLD: 400,
 		TOOL_SEARCH_ALWAYS_LOADED: [] as string[],
-		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true
+		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: true,
+		TOOL_SEARCH_LIST_TOOLS: true
 	};
 	let toolSearchAlwaysLoaded = '';
 	let defaultDecisionsPrompt = '';
@@ -164,6 +165,7 @@
 		TOOL_SEARCH_DEFER_BUILTIN_TOOLS: $i18n.t(
 			'settings.admin.interface.toolSearchDeferBuiltinTools.label'
 		),
+		TOOL_SEARCH_LIST_TOOLS: $i18n.t('settings.admin.interface.toolSearchListTools.label'),
 		TOOL_SEARCH_DEFER_THRESHOLD: $i18n.t('settings.admin.interface.toolSearchThreshold.label'),
 		TOOL_SEARCH_ALWAYS_LOADED: $i18n.t('settings.admin.interface.toolSearchAlwaysLoaded.label'),
 		VISUALIZATION_PROMPT_TEMPLATE: $i18n.t('settings.admin.interface.visualizationPrompt.label'),
@@ -804,6 +806,14 @@
 							bind:state={chatConfig.TOOL_SEARCH_DEFER_BUILTIN_TOOLS}
 							ariaLabelledbyId={labelId}
 						/>
+					</AdminSettingRow>
+
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.interface.toolSearchListTools.label')}
+						description={$i18n.t('settings.admin.interface.toolSearchListTools.description')}
+						let:labelId
+					>
+						<Switch bind:state={chatConfig.TOOL_SEARCH_LIST_TOOLS} ariaLabelledbyId={labelId} />
 					</AdminSettingRow>
 
 					<AdminSettingRow

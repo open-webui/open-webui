@@ -3664,6 +3664,8 @@
 	"settings.admin.interface.toolSearchEmbeddings.settings": "",
 	"settings.admin.interface.toolSearchEngine.description": "",
 	"settings.admin.interface.toolSearchEngine.label": "",
+	"settings.admin.interface.toolSearchListTools.description": "",
+	"settings.admin.interface.toolSearchListTools.label": "",
 	"settings.admin.interface.toolSearchThreshold.description": "تُؤجَّل الأدوات التي يتجاوز طول تعريفها هذا العدد من الأحرف.",
 	"settings.admin.interface.toolSearchThreshold.label": "حد التأجيل (بالأحرف)",
 	"settings.admin.interface.toolsFunctionCallingPrompt.description": "توجّه كيفية تنسيق المساعد لاستدعاءات الأدوات والدوال.",
