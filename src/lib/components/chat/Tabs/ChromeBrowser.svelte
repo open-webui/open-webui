@@ -174,6 +174,7 @@
 					string
 				>
 			)[event.key.toLowerCase()];
+		const text = event.key === 'Enter' ? '\r' : event.key;
 		command('key', {
 			event: type,
 			key: event.key,
@@ -182,8 +183,8 @@
 			modifiers: modifiers(event),
 			...(editing ? { commands: [editing] } : {}),
 			text:
-				type === 'keyDown' && event.key.length === 1 && !event.ctrlKey && !event.metaKey
-					? event.key
+				type === 'keyDown' && text.length === 1 && !event.ctrlKey && !event.metaKey
+					? text
 					: undefined
 		});
 	};
