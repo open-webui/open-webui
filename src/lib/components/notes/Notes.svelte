@@ -208,6 +208,19 @@
 			? `/notes/${note.id}?page=${encodeURIComponent(note.data.page_id)}&search=${encodeURIComponent(query)}`
 			: `/notes/${note.id}`;
 
+	// Same payload as sidebar page links, so a note can be dropped into split view;
+	// the text/plain note entry still lets the chat composer attach it.
+	const noteDragStartHandler = (event: DragEvent, note) => {
+		if (!event.dataTransfer) return;
+		event.dataTransfer.setData(
+			'application/x-open-webui-page',
+			JSON.stringify({ type: 'page', href: noteUrl(note), label: note.title })
+		);
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+		event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'note', id: note.id }));
+		event.dataTransfer.effectAllowed = 'copyMove';
+	};
+
 	const getItemsPage = async () => {
 		searchController?.abort();
 		searchController = new AbortController();
@@ -639,6 +652,8 @@
 											<div
 												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-900 dark:focus-within:bg-base-900"
 												role="presentation"
+												draggable="true"
+												on:dragstart={(e) => noteDragStartHandler(e, note)}
 												on:click={(e) => {
 													if (e.target instanceof Element && e.target.closest('a')) return;
 													goto(noteUrl(note));
@@ -781,6 +796,7 @@
 											<div class="group relative min-w-0 self-start rounded-xl">
 												<a
 													href={noteUrl(note)}
+													on:dragstart={(e) => noteDragStartHandler(e, note)}
 													class="focus-ring flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 pt-2 pb-1.5 text-center transition-colors duration-75 hover:bg-base-50/60 dark:hover:bg-white/4"
 													aria-label={note.title}
 												>
