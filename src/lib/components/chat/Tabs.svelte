@@ -4,7 +4,7 @@
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
-	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext, type ComponentProps } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { get, readable, writable, type Readable, type Writable } from 'svelte/store';
 	import {
@@ -24,6 +24,7 @@
 	import Sortable from 'sortablejs';
 	import { beforeNavigate } from '$app/navigation';
 	import { WEBUI_NAME } from '$lib/stores';
+	import type Chat from './Chat.svelte';
 	import { pageTabKey } from './Tabs/tabs';
 	import Page from './Tabs/Page.svelte';
 	let pageViews: Record<string, Page> = {};
@@ -186,6 +187,20 @@
 	};
 	$: if (!mainTabFolder) isRenamingFolder = false;
 	$: mainTabTitle = mainTabFolder?.name ?? title;
+	export let getEmbeddedDraft: (
+		text?: string,
+		files?: any[]
+	) => NonNullable<ComponentProps<Chat>['embeddedDraft']>;
+	$: if (
+		viewReady &&
+		!chatLoading &&
+		$chatTabRequest &&
+		'folderId' in $chatTabRequest &&
+		$chatTabRequest.folderId === mainTabFolder?.id
+	) {
+		chatTabRequest.set(null);
+		if (mainTabFolder?.canEdit) openFeatureTab('chat');
+	}
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	/** Double-clicking the main chat tab renames the chat. */
@@ -870,23 +885,30 @@
 		queuedArtifactCode = null;
 		openArtifacts(code);
 	}
-	const openFeatureTab = (
+	export const openFeatureTab = (
 		kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat',
-		inSplit = false
+		inSplit = false,
+		text?: string,
+		files?: any[]
 	) => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		if (kind === 'artifacts') return openArtifacts(undefined, mainChatTabId, inSplit);
 		const view = availableViews.find((view) => view.kind === kind)!;
 		if (kind === 'chat') {
+			if (!viewReady || !viewEntry) return false;
+			const id = uuidv4();
+			if (mainTabFolder?.canEdit) {
+				viewEntry.transient[`chat:${id}`] = { embeddedDraft: getEmbeddedDraft(text, files) };
+			}
 			let chatNumber = 1;
 			while (tabs.tabs.some((tab) => tab.kind === 'chat' && tab.chatNumber === chatNumber))
 				chatNumber++;
-			const pending = $chatTabRequest;
+			const pending = $chatTabRequest && 'parentChatId' in $chatTabRequest ? $chatTabRequest : null;
 			const initialPrompt = pending?.parentChatId === chatId ? pending.prompt : '';
 			if (pending?.parentChatId === chatId) chatTabRequest.set(null);
 			openPanel(
 				{
-					id: uuidv4(),
+					id,
 					kind,
 					label: `${view.label} ${chatNumber}`,
 					chatNumber,
@@ -895,7 +917,7 @@
 				},
 				inSplit
 			);
-			return;
+			return true;
 		}
 		openPanel({ id: kind, kind, label: view.label }, inSplit);
 	};
@@ -1652,7 +1674,13 @@
 		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasExtraTabs = true;
 	}
-	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId) chatTabRequest.set(null);
+	$: if (
+		!canOpenChatTab &&
+		$chatTabRequest &&
+		'parentChatId' in $chatTabRequest &&
+		$chatTabRequest.parentChatId === chatId
+	)
+		chatTabRequest.set(null);
 	$: if (viewReady && $showTabs === 'chat') {
 		if (canOpenChatTab) openFeatureTab('chat', true);
 		else chatTabRequest.set(null);

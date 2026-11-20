@@ -14,9 +14,10 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+	import { chatId, chatTabRequest, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 	import {
 		folderStates,
 		folderChatPageKey,
@@ -866,7 +867,11 @@
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
-							onNewChat={openFolderHandler}
+							onNewChat={async () => {
+								if ($selectedFolder?.id !== folderId) await openFolderHandler();
+								if ($page.params.folderId === folderId) chatTabRequest.set({ folderId });
+								if ($mobile) showSidebar.set(false);
+							}}
 							onEdit={() => {
 								showFolderModal = true;
 							}}

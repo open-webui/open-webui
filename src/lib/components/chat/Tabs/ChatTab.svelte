@@ -81,7 +81,7 @@
 					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
 					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
 			);
-	const embeddedDraft = {
+	const embeddedDraft = initialView?.embeddedDraft ?? {
 		selectedModels: [modelId ?? ''],
 		params: context.length
 			? {

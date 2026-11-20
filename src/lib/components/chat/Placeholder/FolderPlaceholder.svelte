@@ -794,7 +794,6 @@
 			event.preventDefault();
 			openFilterFromKeyboard();
 		} else if (event.key === 'c' && !readOnly) {
-			// Jump into the floating composer.
 			event.preventDefault();
 			onNewChat();
 		}

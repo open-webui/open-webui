@@ -215,7 +215,9 @@ export const embed = writable(null);
 /** Whether the main chat is temporary, or for a new chat, whether it starts as one. */
 export const temporaryChat = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
-export const chatTabRequest = writable<{ parentChatId: string; prompt: string } | null>(null);
+export const chatTabRequest = writable<
+	{ parentChatId: string; prompt: string } | { folderId: string } | null
+>(null);
 
 export type QueryData = {
 	query: string;

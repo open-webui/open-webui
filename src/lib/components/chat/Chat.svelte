@@ -215,6 +215,11 @@
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
 	export let embeddedDraft: {
+		controls?: ReturnType<typeof getChatInputControls>;
+		terminalId?: string | null;
+		terminalContext?: TerminalContext | null;
+		chatVariables?: Record<string, any>;
+		submit?: boolean;
 		selectedModels: string[];
 		params: Record<string, any>;
 		history: typeof history;
@@ -507,6 +512,7 @@
 	};
 
 	const handleWebSearchToggle = (enabled: boolean) => {
+		if ($selectedFolder && !$chatId) return;
 		if (enabled && $config?.features?.enable_web_search_confirmation && !webSearchConfirmed) {
 			webSearchEnabled = false;
 			pendingWebSearchPrompt = null;
@@ -956,6 +962,18 @@
 		});
 	};
 
+	const applyChatInputControls = (input: ReturnType<typeof getChatInputControls>) => {
+		selectedToolIds = input.selectedToolIds ?? [];
+		selectedSkillIds = input.selectedSkillIds ?? [];
+		selectedFilterIds = input.selectedFilterIds ?? [];
+		webSearchEnabled = input.webSearchEnabled ?? false;
+		imageGenerationEnabled = input.imageGenerationEnabled ?? false;
+		selectedImageModelId = input.selectedImageModelId ?? '';
+		videoGenerationEnabled = input.videoGenerationEnabled ?? false;
+		selectedVideoModelId = input.selectedVideoModelId ?? '';
+		codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
+	};
+
 	const restoreChatInput = async (storageChatInput: string | null) => {
 		if (!storageChatInput || $temporaryChat) {
 			return false;
@@ -966,15 +984,7 @@
 			prompt = input.prompt ?? '';
 			messageInput?.setText(prompt);
 			files = input.files ?? [];
-			selectedToolIds = input.selectedToolIds ?? [];
-			selectedSkillIds = input.selectedSkillIds ?? [];
-			selectedFilterIds = input.selectedFilterIds ?? [];
-			webSearchEnabled = input.webSearchEnabled ?? false;
-			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
-			selectedImageModelId = input.selectedImageModelId ?? '';
-			videoGenerationEnabled = input.videoGenerationEnabled ?? false;
-			selectedVideoModelId = input.selectedVideoModelId ?? '';
-			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
+			applyChatInputControls(input);
 			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
 			// parameters or invoke the change handler, which can save settings and approve tools.
 			return true;
@@ -1077,7 +1087,7 @@
 	};
 
 	const initEmbeddedDraft = async () => {
-		startChatLoad();
+		const signal = startChatLoad();
 		modelDefaults = null;
 		terminalContext = null;
 		clearTimeout(saveControlsTimer);
@@ -1121,7 +1131,13 @@
 			await temporaryChat.set(isTemporaryEnforced() || embeddedDraft.temporary);
 		}
 
-		await setDefaults();
+		if (embeddedDraft?.controls) {
+			chatVariables = embeddedDraft.chatVariables ?? {};
+			selectedTerminalId.set(embeddedDraft.terminalId ?? null);
+			terminalContext = embeddedDraft.terminalContext ?? null;
+			applyChatInputControls(embeddedDraft.controls);
+		}
+		await setDefaults(!!embeddedDraft?.controls);
 		loading = false;
 		await tick();
 		if (embeddedDraft) {
@@ -1129,9 +1145,10 @@
 			messageInput?.setText(prompt);
 		}
 		if (!$mobile) messageInput?.focus({ preventScroll: true });
-		if (initialPrompt) {
+		if (embeddedDraft?.submit || initialPrompt) {
 			await tick();
-			submitHandler(initialPrompt);
+			if (!signal.aborted)
+				submitHandler(embeddedDraft?.submit ? embeddedDraft.prompt : initialPrompt);
 		}
 	};
 
@@ -3210,6 +3227,7 @@
 		}
 
 		if (signal.aborted) return;
+		if (preserveTabs) tabs?.focusMainChat();
 		loading = false;
 		await tick();
 		if (signal.aborted) return;
@@ -3262,7 +3280,6 @@
 		);
 
 		await tick();
-		if (preserveTabs) tabs?.focusMainChat();
 		if (!$mobile) messageInput?.focus({ preventScroll: true });
 	};
 
@@ -4141,6 +4158,16 @@
 		bridgeRequest: { userMessageId: string; modelId: string } | null = null
 	) => {
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
+		if ($selectedFolder && !$chatId && !bridgeRequest) {
+			if (tabs?.openFeatureTab('chat', false, inputContent, inputFiles)) {
+				atSelectedModel = undefined;
+				return { status: 'submitted' as const };
+			}
+			prompt = inputContent;
+			files = inputFiles;
+			messageInput?.setText(prompt);
+			return { status: 'deferred' as const };
+		}
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -4673,7 +4700,9 @@
 			return { status: 'rejected' };
 		}
 
+		const openingFolderTab = $selectedFolder && !$chatId && !bridgeRequest;
 		if (
+			!openingFolderTab &&
 			$config?.features?.enable_web_search_confirmation &&
 			webSearchActive &&
 			!webSearchConfirmed
@@ -4685,7 +4714,10 @@
 
 		// Uploads need the chat first. Otherwise the message shows at once and submitPrompt sets
 		// up the chat, which can take several round trips (e.g. a folder's working directory).
-		if (files.some((file) => file.status === 'pending' && file.file instanceof File)) {
+		if (
+			!openingFolderTab &&
+			files.some((file) => file.status === 'pending' && file.file instanceof File)
+		) {
 			const currentHistory = history;
 			processing = 'uploading';
 			try {
@@ -5179,7 +5211,8 @@
 
 				session_id: $socket?.id,
 				chat_id: _chatId || undefined,
-				folder_id: $selectedFolder?.id ?? undefined,
+				folder_id:
+					$selectedFolder?.id ?? ($temporaryChat && draftFolderId ? draftFolderId : undefined),
 
 				id: responseMessageId,
 				...(messageIdsList ? { message_ids: messageIdsList } : {}),
@@ -5610,11 +5643,9 @@
 
 			await tick();
 
-			await refreshChatList(localStorage.token);
-
-			if (selectedFolderId) {
-				await refreshFolderChatLists(selectedFolderId, chat);
-			}
+			// The sidebar catches up on its own; the reply does not wait for it.
+			void refreshChatList(localStorage.token);
+			if (selectedFolderId) void refreshFolderChatLists(selectedFolderId, chat);
 
 			if ($chatId === _chatId && $selectedFolder?.id === selectedFolderId) selectedFolder.set(null);
 		} else {
@@ -5679,15 +5710,23 @@
 		return folderId ? `chat-input-folder-${folderId}` : 'chat-input';
 	};
 
-	const getChatInputDraft = () => ({
-		prompt,
-		files: files
-			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
-			.map((file) => ({
-				...file,
-				user: undefined,
-				access_grants: undefined
-			})),
+	const getEmbeddedDraft = (text?: string, inputFiles: any[] = []) =>
+		structuredClone({
+			selectedModels: atSelectedModel ? [atSelectedModel.id] : selectedModels,
+			params,
+			history,
+			chatFiles,
+			chatVariables,
+			temporary: $temporaryChat,
+			terminalId: $selectedTerminalId,
+			terminalContext,
+			controls: getChatInputControls(),
+			prompt: text ?? '',
+			files: inputFiles,
+			submit: text !== undefined
+		});
+
+	const getChatInputControls = () => ({
 		selectedToolIds,
 		selectedSkillIds,
 		selectedFilterIds,
@@ -5697,6 +5736,18 @@
 		selectedVideoModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
+	});
+
+	const getChatInputDraft = () => ({
+		prompt,
+		files: files
+			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
+			.map((file) => ({
+				...file,
+				user: undefined,
+				access_grants: undefined
+			})),
+		...getChatInputControls()
 	});
 
 	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {
@@ -6499,6 +6550,7 @@
 									: 'items-center'}"
 							>
 								<Placeholder
+									onNewFolderChat={() => tabs?.openFeatureTab('chat')}
 									bind:folderTabActions
 									{selectedTerminalId}
 									{terminalSkills}
@@ -6570,6 +6622,7 @@
 			{#if !embedded}
 				<Tabs
 					{mainChatHref}
+					{getEmbeddedDraft}
 					chatLoading={loading}
 					chatStreaming={streaming}
 					bind:fullWidth={fullWidthTabs}

@@ -49,6 +49,7 @@
 
 	export let history;
 	export let chatId = '';
+	export let onNewFolderChat: () => void = () => {};
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 
 	export let prompt = '';
@@ -216,7 +217,7 @@
 				readOnly={folderReadOnly}
 				bind:folderTabActions
 				bind:folderSection
-				onNewChat={() => messageInput?.focus()}
+				onNewChat={onNewFolderChat}
 			/>
 
 			{#if !folderReadOnly}
