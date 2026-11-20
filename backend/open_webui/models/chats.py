@@ -30,6 +30,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
+    ColumnElement,
     ForeignKey,
     Index,
     String,
@@ -45,7 +46,6 @@ from sqlalchemy import (
     update,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql import case, exists
 from sqlalchemy.sql.expression import bindparam
 
@@ -134,52 +134,20 @@ def chat_search_snippet(chat: dict, search_text: str, max_length: int = 200) -> 
 
 def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
     if dialect_name == 'sqlite':
-        return f"""
-        (
-            EXISTS (
-                SELECT 1
-                FROM json_each(Chat.chat, '$.history.messages') AS history_message
-                WHERE LOWER(CASE WHEN history_message.type = 'object'
-                    THEN history_message.value->>'content' END) LIKE '%' || :{key} || '%'
-            )
-            OR EXISTS (
-                SELECT 1
-                FROM json_each(Chat.chat, '$.messages') AS legacy_message
-                WHERE LOWER(CASE WHEN legacy_message.type = 'object'
-                    THEN legacy_message.value->>'content' END) LIKE '%' || :{key} || '%'
-            )
-        )
-        """
+        content = "json_extract(message.content, '$')"
+    elif dialect_name == 'postgresql':
+        content = "CASE WHEN json_typeof(message.content) = 'string' THEN message.content #>> '{}' END"
+    else:
+        raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
 
-    if dialect_name == 'postgresql':
-        return f"""
-        (
-            EXISTS (
-                SELECT 1
-                FROM chat_message AS message
-                WHERE message.chat_id = Chat.id
-                AND message.user_id = Chat.user_id
-                AND json_typeof(message.content) = 'string'
-                AND LOWER(message.content #>> '{{}}') LIKE '%' || :{key} || '%'
-            )
-            OR EXISTS (
-                SELECT 1
-                FROM json_each(CASE WHEN json_typeof(Chat.chat#>'{{history,messages}}') = 'object'
-                    THEN Chat.chat#>'{{history,messages}}' ELSE '{{}}'::json END) AS history_message
-                WHERE json_typeof(history_message.value->'content') = 'string'
-                AND LOWER(history_message.value->>'content') LIKE '%' || :{key} || '%'
-            )
-            OR EXISTS (
-                SELECT 1
-                FROM json_array_elements(CASE WHEN json_typeof(Chat.chat->'messages') = 'array'
-                    THEN Chat.chat->'messages' ELSE '[]'::json END) AS legacy_message
-                WHERE json_typeof(legacy_message->'content') = 'string'
-                AND LOWER(legacy_message->>'content') LIKE '%' || :{key} || '%'
-            )
-        )
-        """
-
-    raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
+    return f"""
+    EXISTS (
+        SELECT 1
+        FROM chat_message AS message
+        WHERE message.chat_id = Chat.id
+        AND LOWER({content}) LIKE '%' || :{key} || '%'
+    )
+    """
 
 
 def chat_list_order(sort_by: str = 'updated_at', sort_dir: str = 'desc', user_id: str | None = None):
@@ -489,39 +457,64 @@ class ChatTable:
 
     @asynccontextmanager
     async def edit_message_output(self, chat_id: str, message_id: str):
-        """Read and modify tool state under the same lock, updating both message stores."""
+        """Read and modify tool state under the chat lock."""
         async with self._chat_transaction(chat_id) as (session, chat):
             if chat is None:
                 yield None
                 return
-            history = (chat.chat or {}).get('history') or {}
-            message = dict(history.get('messages', {}).get(message_id) or {})
             row = await session.get(ChatMessage, f'{chat_id}-{message_id}')
-            if row is not None:
-                message.update(
-                    {
-                        ChatMessages.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(row, column.key)
-                        for column in ChatMessage.__table__.columns
-                        if column.key not in ChatMessages.EXCLUDED_COLUMNS and getattr(row, column.key) is not None
-                    }
-                )
-                message['id'] = message_id
-            if not message:
+            if row is None:
                 yield None
                 return
-            message = deepcopy(message)
+            message = deepcopy(ChatMessages.to_message(row))
             yield message
             message = self._clean_null_bytes(message)
-            history.setdefault('messages', {})[message_id] = message
-            chat.chat = {**(chat.chat or {}), 'history': history}
-            flag_modified(chat, 'chat')
-            await ChatMessages.upsert_message(
-                message_id, chat_id, message.get('user_id') or chat.user_id, message, db=session
-            )
+            await ChatMessages.upsert_message(message_id, chat_id, row.user_id, message, db=session)
 
     def _clean_null_bytes(self, obj):
         """Recursively remove null bytes from strings in dict/list structures."""
         return sanitize_data_for_db(obj)
+
+    async def _with_history(self, chat: Chat, db: AsyncSession) -> ChatModel:
+        """The chat model with chat.history built from its message rows."""
+        messages = await ChatMessages.get_messages_map_by_chat_id(chat.id, db=db) or {}
+        return ChatModel.model_validate(chat).model_copy(
+            update={
+                'chat': {**(chat.chat or {}), 'history': {'messages': messages, 'currentId': chat.current_message_id}}
+            }
+        )
+
+    @staticmethod
+    def _without_history(chat: dict) -> dict:
+        """The chat blob as stored: its messages live in chat_message rows."""
+        return {key: value for key, value in chat.items() if key not in ('history', 'messages')}
+
+    @staticmethod
+    def _history_messages(chat: dict, user_id: str) -> dict:
+        """The messages a client sent with a chat, each with its author; a legacy list becomes a chain."""
+        history = chat.get('history') if isinstance(chat.get('history'), dict) else {}
+        messages = history.get('messages') if isinstance(history.get('messages'), dict) else None
+        if messages is None and isinstance(chat.get('messages'), list):
+            messages = {}
+            parent_id = None
+            for index, message in enumerate(chat['messages']):
+                if isinstance(message, dict):
+                    # Ids by position, so saving the same list again updates these messages.
+                    message_id = str(message.get('id') or index)
+                    messages[message_id] = {
+                        **message,
+                        'id': message_id,
+                        'parentId': message.get('parentId') or parent_id,
+                    }
+                    parent_id = message_id
+        authored = {}
+        for message_id, message in (messages or {}).items():
+            if isinstance(message, dict):
+                author_id = message.get('user_id') or (
+                    message['user'].get('id') if isinstance(message.get('user'), dict) else None
+                )
+                authored[message_id] = {**message, 'user_id': author_id if isinstance(author_id, str) else user_id}
+        return authored
 
     def get_current_message_id(self, chat: dict | None) -> str | None:
         chat = chat or {}
@@ -722,34 +715,12 @@ class ChatTable:
                 }
             )
 
-            chat_item = Chat(**chat.model_dump())
+            chat_item = Chat(**{**chat.model_dump(), 'chat': self._without_history(chat.chat)})
             session.add(chat_item)
+            await session.flush()
+            ChatMessages.insert_messages(id, self._history_messages(chat.chat, user_id), db=session)
             await session.commit()
-
-            # Dual-write initial messages to chat_message table
-            try:
-                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
-                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
-                if not messages and isinstance(form_data.chat.get('messages'), list):
-                    messages = {
-                        message.get('id'): message
-                        for message in form_data.chat['messages']
-                        if isinstance(message, dict) and message.get('id')
-                    }
-                for message_id, message in messages.items():
-                    if isinstance(message, dict) and message.get('role'):
-                        await ChatMessages.upsert_message(
-                            message_id=message_id,
-                            chat_id=id,
-                            user_id=message.get('user_id')
-                            or (message['user'].get('id') if isinstance(message.get('user'), dict) else None)
-                            or user_id,
-                            data=message,
-                        )
-            except Exception as e:
-                log.warning(f'Failed to write initial messages to chat_message table: {e}')
-
-            return ChatModel.model_validate(chat_item) if chat_item else None
+            return chat
 
     async def get_internal_chat_ids_by_parent_id(self, parent_chat_id: str, user_id: str) -> list[str]:
         async with get_async_db_context() as session:
@@ -849,42 +820,13 @@ class ChatTable:
             if cleared:
                 log.info('Import: cleared %d dangling folder_id(s) for user %s', cleared, user_id)
 
-            chats = []
-
-            for form_data in chat_import_forms:
-                chat = self._chat_import_form_to_chat_model(user_id, form_data)
-                chats.append(Chat(**chat.model_dump()))
-
-            session.add_all(chats)
+            chats = [self._chat_import_form_to_chat_model(user_id, form_data) for form_data in chat_import_forms]
+            session.add_all(Chat(**{**chat.model_dump(), 'chat': self._without_history(chat.chat)}) for chat in chats)
+            await session.flush()
+            for chat in chats:
+                ChatMessages.insert_messages(chat.id, self._history_messages(chat.chat, user_id), db=session)
             await session.commit()
-
-            # Dual-write messages to chat_message table
-            for form_data, imported_chat in zip(chat_import_forms, chats):
-                history = form_data.chat.get('history') if isinstance(form_data.chat.get('history'), dict) else {}
-                messages = history.get('messages') if isinstance(history.get('messages'), dict) else {}
-                if not messages and isinstance(form_data.chat.get('messages'), list):
-                    messages = {
-                        message.get('id'): message
-                        for message in form_data.chat['messages']
-                        if isinstance(message, dict) and message.get('id')
-                    }
-                for message_id, message in messages.items():
-                    if isinstance(message, dict) and message.get('role'):
-                        try:
-                            await ChatMessages.upsert_message(
-                                message_id=message_id,
-                                chat_id=imported_chat.id,
-                                user_id=message.get('user_id')
-                                or (message['user'].get('id') if isinstance(message.get('user'), dict) else None)
-                                or user_id,
-                                data={**message, 'timestamp': message.get('timestamp')},
-                            )
-                        except Exception as e:
-                            log.warning(
-                                f'Failed to write imported message {message_id} for chat {imported_chat.id}: {e}'
-                            )
-
-            return [ChatModel.model_validate(chat) for chat in chats]
+            return chats
 
     async def update_chat_by_id(
         self,
@@ -900,9 +842,25 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                stored = chat_item.chat or {}
+                if 'history' not in chat and isinstance(chat.get('messages'), list):
+                    listed = self._history_messages(chat, chat_item.user_id)
+                    stored_ids = set(
+                        (await session.execute(select(ChatMessage.id).where(ChatMessage.chat_id == id))).scalars()
+                    )
+                    # Only a chat kept by its list takes it; a chat kept by its history ignores the copy.
+                    if not stored_ids or any(f'{id}-{message_id}' in stored_ids for message_id in listed):
+                        chat = {**chat, 'history': {'messages': listed}}
+
+                stored = self._without_history(chat_item.chat or {})
                 updated = {**stored, **chat}
                 if 'history' in chat:
+                    stored = {
+                        **stored,
+                        'history': {
+                            'messages': await ChatMessages.get_messages_map_by_chat_id(id, db=session) or {},
+                            'currentId': chat_item.current_message_id,
+                        },
+                    }
                     # The caller built its history from an earlier read; merge so messages saved since then survive.
                     updated['history'] = self.merge_history(stored.get('history'), chat['history'])
                     for mid, message in (stored.get('history', {}).get('messages') or {}).items():
@@ -917,9 +875,9 @@ class ChatTable:
                     self._repair_chat_current_id(updated)
 
                 updated = self._clean_null_bytes(updated)
-                chat_item.chat = updated
+                chat_item.chat = self._without_history(updated)
                 chat_item.title = updated.get('title', 'New Chat')
-                if any(key in chat for key in ('history', 'messages', 'currentId', 'branchPointMessageId')):
+                if 'history' in chat:
                     chat_item.current_message_id = self.get_current_message_id(updated)
 
                 if touch:
@@ -927,15 +885,11 @@ class ChatTable:
 
                 for mid in chat.get('history', {}).get('messages') or {}:
                     message = updated['history']['messages'].get(mid)
-                    if (
-                        message
-                        and message.get('role')
-                        and message != (stored.get('history', {}).get('messages') or {}).get(mid)
-                    ):
+                    if message and message != (stored.get('history', {}).get('messages') or {}).get(mid):
                         await ChatMessages.upsert_message(
                             mid, id, message.get('user_id') or chat_item.user_id, message, db=session
                         )
-                return ChatModel.model_validate(chat_item)
+                return ChatModel.model_validate(chat_item).model_copy(update={'chat': updated})
         except Exception:
             return
 
@@ -1104,18 +1058,6 @@ class ChatTable:
             return row[0] or 'New Chat'
 
     @staticmethod
-    def get_unresolved_parent_ids(messages_map: dict) -> set[str]:
-        """Return parent IDs referenced by messages but absent from the map.
-
-        An empty set means the message graph is fully connected.
-        """
-        return {
-            msg['parentId']
-            for msg in messages_map.values()
-            if msg.get('parentId') and msg['parentId'] not in messages_map
-        }
-
-    @staticmethod
     def merge_history(existing_history: dict | None, incoming_history: dict | None) -> dict:
         existing = (existing_history or {}).get('messages') or {}
         incoming = (incoming_history or {}).get('messages') or {}
@@ -1247,88 +1189,13 @@ class ChatTable:
         ChatTable._add_child_id_to_parent(messages, messages[message_id].get('parentId'), message_id)
         return messages[message_id]
 
-    async def backfill_messages_by_chat_id(self, chat_id: str, user_id: str, messages: dict[str, dict]) -> None:
-        """Write messages to the ``chat_message`` table so future lookups
-        use the fast path.  Errors are logged but never raised.
-        """
-        writable = {
-            message_id: message
-            for message_id, message in messages.items()
-            if isinstance(message, dict) and message.get('role')
-        }
-        try:
-            await ChatMessages.upsert_messages(chat_id, user_id, writable)
-        except Exception as e:
-            log.warning('Backfill failed for chat %s: %s', chat_id, e)
-
     async def get_messages_map_by_chat_id(self, id: str) -> dict | None:
-        """Message map for walking history (see ``get_message_list``).
-
-        Prefer ``chat_message`` rows to avoid loading the large embedded
-        history; fall back to the legacy JSON when no rows exist.
-        When rows exist but the parent-link graph has gaps (e.g. migration
-        failures), missing messages are merged from the legacy history
-        and backfilled so future requests self-heal.
-        """
-        # Fast path: build from normalized chat_message rows.
-        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
-
-        if messages_map is not None:
-            unresolved_ids = self.get_unresolved_parent_ids(messages_map)
-            if not unresolved_ids:
-                return messages_map
-
-            # Graph has gaps — enrich from the legacy embedded history.
-            log.info(
-                'Chat %s: %d unresolved parent reference(s) in chat_message — enriching from legacy history',
-                id,
-                len(unresolved_ids),
-            )
-            chat = await self.get_chat_by_id(id)
-            if chat:
-                history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
-                missing_messages = {
-                    message_id: history_messages[message_id]
-                    for message_id in unresolved_ids
-                    if message_id in history_messages
-                }
-
-                if missing_messages:
-                    messages_map.update(missing_messages)
-
-                    # Backfill so future requests use the fast path.
-                    await self.backfill_messages_by_chat_id(id, chat.user_id, missing_messages)
-
-            return messages_map
-
-        # No rows — fall back to the legacy embedded history.
-        chat = await self.get_chat_by_id(id)
-        if chat is None:
-            return None
-
-        history_messages = chat.chat.get('history', {}).get('messages', {}) or {}
-
-        # Backfill so future requests use the fast path.
-        if history_messages:
-            await self.backfill_messages_by_chat_id(id, chat.user_id, history_messages)
-
-        return history_messages
+        """Message map for walking history (see ``get_message_list``)."""
+        return await ChatMessages.get_messages_map_by_chat_id(id)
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
-        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
-        if messages_map and message_id in messages_map:
-            return messages_map[message_id]
-
-        # Messages the frontend saved straight into the chat blob have no chat_message row yet.
-        async with get_async_db_context() as session:
-            result = await session.execute(select(Chat.chat[('history', 'messages')]).filter_by(id=id))
-            row = result.one_or_none()
-
-        if row is None:
-            return None
-
-        messages = row[0] or {}
-        return self._clean_null_bytes(messages.get(message_id, {}))
+        messages_map = await ChatMessages.get_messages_map_by_message_ids(id, [message_id])
+        return messages_map.get(message_id)
 
     async def get_message_metadata(
         self,
@@ -1347,13 +1214,6 @@ class ChatTable:
         if metadata_row is not None:
             return metadata_row[0]
 
-        chat = await self.get_chat_by_id(chat_id)
-        if chat is None:
-            return None
-
-        message = chat.chat.get('history', {}).get('messages', {}).get(message_id, {})
-        return message.get(metadata_key)
-
     async def insert_chat_turn(self, chat_id, user, user_message, message_ids):
         from fastapi import HTTPException
 
@@ -1362,13 +1222,13 @@ class ChatTable:
         async with self._chat_transaction(chat_id) as (db, chat):
             if not chat:
                 raise HTTPException(404, 'Chat not found.')
-            history = (chat.chat or {}).get('history') or {'messages': {}, 'currentId': None}
-            messages = history.get('messages') or {}
             user_message_id = user_message.get('id')
             assistant_ids = [entry.get('message_id') for entry in message_ids]
             ids = [user_message_id, *assistant_ids] if user_message else assistant_ids
             if not all(isinstance(mid, str) and mid for mid in ids) or len(set(ids)) != len(ids):
                 raise HTTPException(409, 'Message already exists or has an invalid ID.')
+            messages = await ChatMessages.get_messages_map_by_message_ids(chat_id, ids, db=db)
+            history = {'messages': messages, 'currentId': chat.current_message_id}
             # An empty reply may be prepared before the request.
             for mid in assistant_ids:
                 existing_reply = messages.get(mid)
@@ -1388,6 +1248,8 @@ class ChatTable:
                 if existing and existing.get('role') != 'user':
                     raise HTTPException(403, 'You can only regenerate replies to user messages.')
                 parent_id = existing.get('parentId') if existing else user_message.get('parentId')
+                if parent_id is not None:
+                    messages.update(await ChatMessages.get_messages_map_by_message_ids(chat_id, [parent_id], db=db))
                 if parent_id is not None and parent_id not in messages:
                     raise HTTPException(409, 'Parent message no longer exists.')
                 message = existing or (
@@ -1428,14 +1290,14 @@ class ChatTable:
                         'user_id': user.id,
                     },
                 )
-            chat.chat = {**(chat.chat or {}), 'history': history}
-            flag_modified(chat, 'chat')
             chat.current_message_id = history['currentId']
             chat.updated_at = int(time.time())
             for mid, message in turn.items():
                 await ChatMessages.upsert_message(mid, chat_id, message.get('user_id') or chat.user_id, message, db=db)
             if parent_id:
                 turn[parent_id] = history['messages'][parent_id]
+                if not existing:
+                    await ChatMessages.upsert_message(parent_id, chat_id, chat.user_id, turn[parent_id], db=db)
             return {'messages': turn, 'currentId': history['currentId']}
 
     async def upsert_message_to_chat_by_id_and_message_id(
@@ -1454,19 +1316,21 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                chat = chat_item.chat or {}
-                self._repair_chat_current_id(chat)
-
-                history = chat.get('history', {})
+                messages = await ChatMessages.get_messages_map_by_message_ids(id, [message_id], db=session)
+                is_new = message_id not in messages
+                if is_new and message.get('parentId'):
+                    messages = await ChatMessages.get_messages_map_by_message_ids(id, [message['parentId']], db=session)
+                elif is_new:
+                    messages = await ChatMessages.get_messages_map_by_chat_id(id, db=session) or {}
+                history = {'messages': messages, 'currentId': chat_item.current_message_id}
                 saved_message = self.upsert_message_to_history(history, message_id, message)
-                await ChatMessages.upsert_message(
-                    message_id, id, saved_message.get('user_id') or chat_item.user_id, saved_message, db=session
-                )
-                chat['history'] = history
-                chat_item.chat = chat  # chat is a fresh dict when the column was empty
-                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
-                chat_item.current_message_id = self.get_current_message_id(chat)
-                flag_modified(chat_item, 'chat')
+                saved_ids = [message_id, saved_message.get('parentId')] if is_new else [message_id]
+                for mid in saved_ids:
+                    if mid in messages:
+                        await ChatMessages.upsert_message(
+                            mid, id, messages[mid].get('user_id') or chat_item.user_id, messages[mid], db=session
+                        )
+                chat_item.current_message_id = history['currentId']
 
                 if touch:
                     chat_item.updated_at = int(time.time())
@@ -1483,7 +1347,13 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                chat = chat_item.chat or {}
+                chat = {
+                    **(chat_item.chat or {}),
+                    'history': {
+                        'messages': await ChatMessages.get_messages_map_by_chat_id(id, db=session) or {},
+                        'currentId': chat_item.current_message_id,
+                    },
+                }
                 self._repair_chat_current_id(chat)
 
                 history = chat.get('history', {})
@@ -1491,27 +1361,20 @@ class ChatTable:
                 deleted_ids = self.delete_message_from_history(history, message_id)
                 await ChatMessages.delete_message_ids_by_chat_id(id, deleted_ids, db=session)
                 if not deleted_ids:
-                    chat_item.chat = chat
-                    chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                     chat_item.current_message_id = self.get_current_message_id(chat)
-                    flag_modified(chat_item, 'chat')
 
-                    return ChatModel.model_validate(chat_item)
+                    return ChatModel.model_validate(chat_item).model_copy(update={'chat': chat})
 
                 for mid, message in (history.get('messages') or {}).items():
-                    if message.get('parentId') == parent_id:
+                    if message.get('parentId') == parent_id or mid == parent_id:
                         await ChatMessages.upsert_message(
                             mid, id, message.get('user_id') or chat_item.user_id, message, db=session
                         )
 
-                chat['history'] = history
-                chat_item.chat = chat
-                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
                 chat_item.current_message_id = self.get_current_message_id(chat)
-                flag_modified(chat_item, 'chat')
                 chat_item.updated_at = int(time.time())
 
-                updated_chat = ChatModel.model_validate(chat_item)
+                updated_chat = ChatModel.model_validate(chat_item).model_copy(update={'chat': chat})
 
             return updated_chat
         except Exception:
@@ -1526,9 +1389,7 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                chat = chat_item.chat or {}
-                self._repair_chat_current_id(chat)
-                history = chat.get('history', {})
+                history = {'messages': await ChatMessages.get_messages_map_by_message_ids(id, [message_id], db=session)}
 
                 if message_id in history.get('messages', {}):
                     status_history = history['messages'][message_id].get('statusHistory', [])
@@ -1538,12 +1399,6 @@ class ChatTable:
                     await ChatMessages.upsert_message(
                         message_id, id, message.get('user_id') or chat_item.user_id, message, db=session
                     )
-
-                chat['history'] = history
-                chat_item.chat = chat
-                chat_item.title = self._clean_null_bytes(chat.get('title', 'New Chat'))
-                chat_item.current_message_id = self.get_current_message_id(chat)
-                flag_modified(chat_item, 'chat')
 
                 return ChatModel.model_validate(chat_item)
         except Exception:
@@ -1556,8 +1411,7 @@ class ChatTable:
             if chat_item is None:
                 return None
 
-            chat = chat_item.chat or {}
-            history = chat.get('history', {})
+            history = {'messages': await ChatMessages.get_messages_map_by_message_ids(id, [message_id], db=session)}
 
             message_files = []
 
@@ -1574,10 +1428,6 @@ class ChatTable:
                     db=session,
                 )
 
-            chat['history'] = history
-            chat_item.chat = self._clean_null_bytes(chat)
-            # History was mutated in place, so the new blob compares equal to the loaded one.
-            flag_modified(chat_item, 'chat')
             chat_item.updated_at = int(time.time())
 
             return message_files
@@ -1983,7 +1833,7 @@ class ChatTable:
                 if chat_item is None:
                     return None
 
-                model = ChatModel.model_validate(chat_item)
+                model = await self._with_history(chat_item, db=session)
                 model.chat = self._clean_null_bytes(model.chat)
                 self._repair_chat_current_id(model.chat)
                 return model
@@ -2022,7 +1872,7 @@ class ChatTable:
                 if not chat:
                     return None
 
-                model = ChatModel.model_validate(chat)
+                model = await self._with_history(chat, db=session)
                 model.chat = self._clean_null_bytes(model.chat)
                 self._repair_chat_current_id(model.chat)
                 return model
@@ -2182,7 +2032,7 @@ class ChatTable:
             stmt = select(Chat).where(Chat.meta['internal'].as_boolean().is_not(True))
             result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [await self._with_history(chat, db=session) for chat in all_chats]
 
     async def get_user_usage_chat_stats(self, user_id: str, db: AsyncSession | None = None) -> dict:
         async with get_async_db_context(db) as session:
@@ -2259,7 +2109,7 @@ class ChatTable:
 
             return ChatListResponse(
                 **{
-                    'items': [ChatModel.model_validate(chat) for chat in all_chats],
+                    'items': [await self._with_history(chat, db=session) for chat in all_chats],
                     'total': total,
                 }
             )
@@ -2293,7 +2143,7 @@ class ChatTable:
             stmt = select(Chat).filter_by(user_id=user_id, archived=True)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
             result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
-            return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
+            return [await self._with_history(chat, db=session) for chat in result.scalars().all()]
 
     # search user conversations
     async def get_chats_by_user_id_and_search_text(  # noqa: C901
@@ -2489,14 +2339,27 @@ class ChatTable:
             # Validate and return chats
             return [ChatTitleIdResponse.model_validate(chat) for chat in all_chats]
 
+    @staticmethod
+    async def _search_bodies(session: AsyncSession, *conditions: ColumnElement[bool]) -> dict[str, dict]:
+        """Message contents of the matching chats, in the shape ``chat_search_snippet`` reads."""
+        result = await session.execute(
+            select(ChatMessage.chat_id, ChatMessage.created_at, ChatMessage.id, ChatMessage.content)
+            .join(Chat, Chat.id == ChatMessage.chat_id)
+            .where(*conditions)
+        )
+        bodies = {}
+        for row in sorted(result.all(), key=lambda row: (row.created_at or 0, row.id)):
+            bodies.setdefault(row.chat_id, {'messages': []})['messages'].append({'content': row.content})
+        return bodies
+
     async def get_chat_search_snippets(
         self, ids: list[str], user_id: str, search_text: str, db: AsyncSession | None = None
     ) -> dict[str, str | None]:
         if not ids or not chat_search_content_query(search_text):
             return {}
         async with get_async_db_context(db) as session:
-            result = await session.execute(select(Chat.id, Chat.chat).where(Chat.id.in_(ids), Chat.user_id == user_id))
-            return {id: chat_search_snippet(body, search_text) for id, body in result.all()}
+            bodies = await self._search_bodies(session, Chat.id.in_(ids), Chat.user_id == user_id)
+            return {id: chat_search_snippet(body, search_text) for id, body in bodies.items()}
 
     async def get_chats_by_folder_id_and_user_id(
         self,
@@ -2586,67 +2449,15 @@ class ChatTable:
             return participants
 
         async with get_async_db_context(db) as session:
-            dialect = session.bind.dialect.name
-            # An empty history object is authoritative, including after message deletion.
-            if dialect == 'sqlite':
-                messages = """
-                    SELECT c.id AS chat_id, c.user_id AS owner_id,
-                           CASE WHEN m.type = 'object' THEN m.value ELSE '{}' END AS message
-                    FROM chat AS c, json_each(
-                        CASE
-                            WHEN json_type(c.chat, '$.history.messages') = 'object'
-                                THEN json_extract(c.chat, '$.history.messages')
-                            WHEN json_type(c.chat, '$.messages') = 'array'
-                                THEN json_extract(c.chat, '$.messages')
-                            ELSE '[]'
-                        END
-                    ) AS m
-                    WHERE c.id IN :chat_ids
-                """
-                role = "json_extract(message, '$.role')"
-
-                def author(path):
-                    return f"""CASE WHEN json_type(message, '{path}') = 'text'
-                        AND trim(json_extract(message, '{path}')) <> ''
-                        THEN json_extract(message, '{path}') END"""
-
-                author_id = f"COALESCE({author('$.user_id')}, {author('$.user.id')}, NULLIF(trim(owner_id), ''))"
-            elif dialect == 'postgresql':
-                messages = """
-                    SELECT c.id AS chat_id, c.user_id AS owner_id, m.message
-                    FROM chat AS c CROSS JOIN LATERAL (
-                        SELECT value AS message FROM json_each(
-                            CASE WHEN json_typeof(c.chat#>'{history,messages}') = 'object'
-                                THEN c.chat#>'{history,messages}' ELSE '{}'::json END
-                        )
-                        UNION ALL
-                        SELECT value AS message FROM json_array_elements(
-                            CASE WHEN json_typeof(c.chat#>'{history,messages}') IS DISTINCT FROM 'object'
-                                AND json_typeof(c.chat->'messages') = 'array'
-                                THEN c.chat->'messages' ELSE '[]'::json END
-                        )
-                    ) AS m
-                    WHERE c.id IN :chat_ids
-                """
-                role = "message->>'role'"
-
-                def author(path):
-                    return f"""CASE WHEN json_typeof(message#>'{path}') = 'string'
-                        AND trim(message#>>'{path}') <> '' THEN message#>>'{path}' END"""
-
-                author_id = f"COALESCE({author('{user_id}')}, {author('{user,id}')}, NULLIF(trim(owner_id), ''))"
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect}')
-
-            query = text(f"""
-                WITH messages AS ({messages}), authors AS (
-                    SELECT chat_id, {author_id} AS author_id
-                    FROM messages WHERE {role} = 'user'
+            result = await session.execute(
+                select(ChatMessage.chat_id, ChatMessage.user_id)
+                .where(
+                    ChatMessage.chat_id.in_(chat_ids), ChatMessage.role == 'user', func.trim(ChatMessage.user_id) != ''
                 )
-                SELECT DISTINCT chat_id, author_id FROM authors
-                WHERE author_id IS NOT NULL ORDER BY chat_id, author_id
-            """).bindparams(bindparam('chat_ids', expanding=True))
-            for chat_id, author_id in (await session.execute(query, {'chat_ids': chat_ids})).all():
+                .distinct()
+                .order_by(ChatMessage.chat_id, ChatMessage.user_id)
+            )
+            for chat_id, author_id in result.all():
                 participants[chat_id].append(author_id)
         return participants
 
@@ -2840,13 +2651,7 @@ class ChatTable:
 
             bodies = {}
             if chat_search_content_query(search) and rows:
-                bodies = dict(
-                    (
-                        await session.execute(
-                            select(Chat.id, Chat.chat).where(Chat.id.in_([row['id'] for row in rows]))
-                        )
-                    ).all()
-                )
+                bodies = await self._search_bodies(session, Chat.id.in_([row['id'] for row in rows]))
 
         terms = chat_search_content_query(search).split()
         chats = []
@@ -3004,7 +2809,7 @@ class ChatTable:
 
             result = await session.execute(stmt)
             all_chats = result.scalars().all()
-            return [ChatModel.model_validate(chat) for chat in all_chats]
+            return [await self._with_history(chat, db=session) for chat in all_chats]
 
     async def update_chat_folder_id_by_id_and_user_id(
         self, id: str, user_id: str, folder_id: str, db: AsyncSession | None = None
