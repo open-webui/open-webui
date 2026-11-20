@@ -43,6 +43,15 @@
 	export let onTagsChange: () => Promise<void>;
 	export let ownsFolder = false;
 
+	// Same payload as the sidebar chat item, so a row can be dropped into split view
+	// or onto the composer.
+	const chatDragStartHandler = (event: DragEvent, chat: WorkspaceChat) => {
+		if (!event.dataTransfer) return;
+		event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'chat', id: chat.id }));
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+		event.dataTransfer.setData('application/x-open-webui-chat', chat.id);
+	};
+
 	let collapsed: Record<string, boolean> = {};
 	let menuOpen: Record<string, boolean> = {};
 
@@ -183,6 +192,8 @@
 						chat.id
 							? 'opacity-60'
 							: ''}"
+						draggable={renaming !== chat.id}
+						on:dragstart={(event) => chatDragStartHandler(event, chat)}
 						on:click={(event) => open(event, chat)}
 					>
 						<div class="flex shrink-0 items-center gap-2">
