@@ -3752,6 +3752,20 @@
 		await processNextInQueue($chatId);
 	};
 
+	// Takes back a message whose chat could not be set up; it returns to the input after any draft.
+	const unsendMessage = async (id: string) => {
+		const message = history.messages[id];
+		const parent = history.messages[message?.parentId];
+		if (parent) parent.childrenIds = parent.childrenIds.filter((childId: string) => childId !== id);
+		delete history.messages[id];
+		if (history.currentId === id) history.currentId = message.parentId;
+		history = history;
+		files = [...files, ...(message.files ?? [])];
+		// An emptied chat shows the placeholder's input again.
+		await tick();
+		await draftPrompt(message.content);
+	};
+
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
@@ -4186,17 +4200,20 @@
 		saveSessionSelectedModels();
 
 		const currentHistory = history;
+		let _chatId: string | null = null;
 		processing = 'uploading';
 		try {
 			await tick();
 			if (history !== currentHistory) return { status: 'rejected' as const };
-			if ((await getChatId(currentHistory, _files)) === null)
-				return { status: 'rejected' as const };
+			_chatId = await getChatId(currentHistory, _files);
 		} catch (error) {
 			toast.error(`${error}`);
-			return { status: 'rejected' as const };
 		} finally {
 			processing = '';
+		}
+		if (_chatId === null) {
+			if (!existingUserMessage && history === currentHistory) await unsendMessage(userMessageId);
+			return { status: 'rejected' as const };
 		}
 
 		return await sendMessage(history, userMessageId, {
@@ -4666,25 +4683,23 @@
 			return { status: 'deferred' };
 		}
 
-		const currentHistory = history;
-		processing = 'uploading';
-		try {
-			// Set up the chat before the message is posted and the input cleared, so a refusal
-			// (e.g. a missing working directory) leaves the draft in place.
-			const _chatId = await getChatId(currentHistory);
-			if (_chatId === null) return { status: 'rejected' };
-			if (history !== currentHistory) return { status: 'rejected' };
-			if (
-				files.some((file) => file.status === 'pending' && file.file instanceof File) &&
-				!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history))))
-			)
+		// Uploads need the chat first. Otherwise the message shows at once and submitPrompt sets
+		// up the chat, which can take several round trips (e.g. a folder's working directory).
+		if (files.some((file) => file.status === 'pending' && file.file instanceof File)) {
+			const currentHistory = history;
+			processing = 'uploading';
+			try {
+				const _chatId = await getChatId(currentHistory);
+				if (_chatId === null || history !== currentHistory) return { status: 'rejected' };
+				if (!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history)))))
+					return { status: 'rejected' };
+				if (history !== currentHistory) return { status: 'rejected' };
+			} catch (error) {
+				toast.error(`${error}`);
 				return { status: 'rejected' };
-			if (history !== currentHistory) return { status: 'rejected' };
-		} catch (error) {
-			toast.error(`${error}`);
-			return { status: 'rejected' };
-		} finally {
-			processing = '';
+			} finally {
+				processing = '';
+			}
 		}
 
 		if (
@@ -5570,8 +5585,8 @@
 			);
 
 			if (!createdChat?.id) throw new Error($i18n.t('Failed to create chat'));
-			if (!_history.currentId) {
-				// A refused first message leaves no empty chat behind.
+			if (!Object.values(_history.messages).some((message) => message.role === 'assistant')) {
+				// A refused first message leaves no chat behind.
 				await initializeTerminalDirectory(createdChat.id, context).catch(async (error) => {
 					if (await deleteChatById(localStorage.token, createdChat.id).catch(() => null))
 						throw error;
