@@ -80,6 +80,7 @@
 		TerminalRequestError,
 		type TerminalTarget
 	} from '$lib/apis/terminal';
+	import { getBrowserTabs } from '$lib/apis/terminal/browser';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -294,6 +295,7 @@
 		leaveChatView();
 		setView({ status: 'idle' });
 		tabs = createTabsState();
+		adoptedSessions = new Set();
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
@@ -378,6 +380,7 @@
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		tabs = createTabsState();
+		adoptedSessions = new Set();
 		terminalTitles = {};
 		terminalProcesses = {};
 		chatStreamingStates = {};
@@ -1118,6 +1121,51 @@
 			target: { ...selectedConnection }
 		});
 	};
+	// Browser tabs opened outside this page session (e.g. by an assistant through the
+	// same authenticated API) never enter this client-side strip on their own. The
+	// terminal's tab list is scoped to this user and chat, so adopt the sessions it
+	// reports that the strip does not have yet; Browser restores each one by sessionId.
+	let adoptedSessions = new Set<string>();
+	let hydrationInFlight = false;
+	const hydrateBrowserTabs = async () => {
+		const target = selectedConnection;
+		if (!viewReady || !target || !supportsBrowser || !chatId || chatLoading) return;
+		if (hydrationInFlight) return;
+		hydrationInFlight = true;
+		const forChatId = chatId;
+		try {
+			const { tabs: serverTabs } = await getBrowserTabs(target);
+			if (!viewReady || chatId !== forChatId) return;
+			for (const item of serverTabs) {
+				if (adoptedSessions.has(item.session_id)) continue;
+				if (
+					tabs.tabs.some(
+						(tab) => tab.kind === 'browser' && tab.sessionId === item.session_id
+					)
+				) {
+					adoptedSessions.add(item.session_id);
+					continue;
+				}
+				adoptedSessions.add(item.session_id);
+				openPanel({
+					id: uuidv4(),
+					kind: 'browser',
+					label: item.title || $i18n.t('Browser'),
+					path: item.url ?? undefined,
+					terminalId: target.selector,
+					browserBaseUrl: getBrowserBaseUrl(target),
+					sessionId: item.session_id,
+					target: { ...target }
+				});
+			}
+		} catch {
+			/* Terminal servers without the tab list simply have nothing to adopt. */
+		} finally {
+			hydrationInFlight = false;
+		}
+	};
+	$: if (isMounted && viewReady && !chatLoading && supportsBrowser && selectedConnection)
+		void hydrateBrowserTabs();
 	const getBrowserBaseUrl = (target: TerminalTarget) => {
 		const terminal = ($terminalServers ?? []).find((item) => item.id === target.selector);
 		return chatContextNeedsSavedChat(terminal) && target.context.chatId
@@ -1731,6 +1779,11 @@
 		mediaQuery.addEventListener('change', handleMediaQuery);
 		handleMediaQuery(mediaQuery);
 
+		// Assistant-opened browser tabs can appear at any time; check periodically.
+		const browserTabPoll = setInterval(() => {
+			if (isMounted && viewReady && !chatLoading) void hydrateBrowserTabs();
+		}, 15_000);
+
 		let isDestroyed = false;
 
 		const init = async () => {
@@ -1750,6 +1803,7 @@
 			unsubscribeViews();
 			document.removeEventListener('keydown', handleWorkspaceShortcut, true);
 			unsubscribeVisibility();
+			clearInterval(browserTabPoll);
 			isDestroyed = true;
 			isMounted = false;
 			if (!isLargeScreen) {

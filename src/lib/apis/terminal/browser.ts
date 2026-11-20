@@ -47,6 +47,22 @@ export const closeBrowserSession = (target: TerminalTarget, id: string) =>
 		keepalive: true
 	});
 
+export type BrowserTab = {
+	session_id: string;
+	token?: string;
+	url: string | null;
+	title: string | null;
+	mode: 'proxy' | 'chrome';
+	active: boolean | null;
+	selected: boolean | null;
+};
+
+export const getBrowserTabs = (target: TerminalTarget) =>
+	terminalRequest<{ current_session_id: string | null; tabs: BrowserTab[] }>(
+		target,
+		'/browser/tabs'
+	);
+
 export const browserViewUrl = (target: TerminalTarget, session: BrowserSession) =>
 	`${target.baseUrl.replace(/\/$/, '')}/browser/view/${encodeURIComponent(session.id)}/${encodeURIComponent(session.token)}`;
 
