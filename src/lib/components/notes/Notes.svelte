@@ -18,7 +18,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, getContext, onDestroy } from 'svelte';
+	import { onMount, getContext, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -65,6 +65,7 @@
 	let importFiles = '';
 	let importDocumentFiles: FileList | null = null;
 	let notesImportInputElement: HTMLInputElement;
+	let searchInputElement: HTMLInputElement;
 	let selectedNote = null;
 	let openNoteMenuId: string | null = null;
 	let showDeleteConfirm = false;
@@ -115,8 +116,25 @@
 		if (res) {
 			closePageTabs(`/notes/${id}`);
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
-			init();
+			await init();
 		}
+	};
+
+	const confirmDeleteHandler = async () => {
+		const target = selectedNote;
+		const menus = Array.from(document.getElementsByName('note-menu'));
+		const index = menus.findIndex((menu) => menu.id === `note-menu-${target.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
+		await deleteNoteHandler(target.id);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors.map((id) => document.getElementById(id)).find(Boolean) ?? searchInputElement
+		)?.focus();
 	};
 
 	const inputFilesHandler = async (inputFiles: File[]) => {
@@ -419,10 +437,7 @@
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
-			on:confirm={() => {
-				deleteNoteHandler(selectedNote.id);
-				showDeleteConfirm = false;
-			}}
+			on:confirm={confirmDeleteHandler}
 		>
 			<div class=" text-sm text-gray-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
@@ -495,6 +510,7 @@
 					</div>
 					<input
 						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Notes')}
@@ -755,6 +771,8 @@
 																	? 'size-6'
 																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
 																type="button"
+																id="note-menu-{note.id}"
+																name="note-menu"
 																aria-label={$i18n.t('Note Menu')}
 																on:click={(e) => {
 																	e.preventDefault();
@@ -850,6 +868,8 @@
 																	? 'size-6'
 																	: 'size-5'} shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-white/4 dark:hover:text-gray-400"
 																type="button"
+																id="note-menu-{note.id}"
+																name="note-menu"
 																aria-label={$i18n.t('Note Menu')}
 															>
 																<EllipsisHorizontal className="size-3" />
