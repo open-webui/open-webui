@@ -154,7 +154,7 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col">
-	<div class="m-0 flex shrink-0 items-center gap-1 px-2">
+	<div class="m-0 flex shrink-0 items-center gap-1 px-2 pb-0.75">
 		<span class="min-w-0 flex-1 truncate text-xs text-base-700 dark:text-base-300" title={label}
 			>{label}</span
 		>

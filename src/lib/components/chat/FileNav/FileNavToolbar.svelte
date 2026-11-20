@@ -131,7 +131,7 @@
 />
 
 <div
-	class="m-0 flex items-center gap-1 px-1 shrink-0"
+	class="m-0 flex items-center gap-1 px-1 pb-0.75 shrink-0"
 >
 	<div class="flex shrink-0 items-center gap-0.5 px-1">
 		<!-- Back -->
