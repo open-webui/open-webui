@@ -178,12 +178,13 @@
 	const shouldShowSettingGroup = (tabIds: string[], index: number) =>
 		index === 0 || settingGroupTitle(tabIds[index]) !== settingGroupTitle(tabIds[index - 1]);
 	// Code Execution and Pipelines are kept for existing setups, so they sit behind a closed
-	// "Legacy" row at the end of Tools. It opens on click, while one of them is selected, or
+	// "Legacy" row at the end of Tools. It opens on click, when one of them gets selected, or
 	// while searching.
 	const legacyAdminTabs = ['admin:code-execution', 'admin:pipelines'];
 	let showLegacyTabs = false;
-	$: legacyTabsOpen =
-		showLegacyTabs || legacyAdminTabs.includes(selectedTab) || search.trim() !== '';
+	// Open once when a legacy tab becomes selected, but leave it collapsible afterwards.
+	$: if (legacyAdminTabs.includes(selectedTab)) showLegacyTabs = true;
+	$: legacyTabsOpen = showLegacyTabs || search.trim() !== '';
 	const settingGroupHeadingClass = (first: boolean) =>
 		`hidden md:block shrink-0 text-[0.625rem] text-base-600 dark:text-base-500 px-2 ${
 			first ? 'mt-0.5' : 'mt-2'
@@ -762,7 +763,7 @@
 								aria-expanded={legacyTabsOpen}
 								class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left text-base-500 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 transition-colors duration-75"
 								on:click={() => {
-									showLegacyTabs = !legacyTabsOpen;
+									showLegacyTabs = !showLegacyTabs;
 								}}
 							>
 								<!-- Small chevron in an icon-sized slot, so the label lines up with the tabs. -->

@@ -50,6 +50,7 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
+	import FileNavIcon from '../chat/FileNav/Icon.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import XMark from '../icons/XMark.svelte';
@@ -774,137 +775,137 @@
 									<div
 										class="{groupedNotes.length - 1 !== idx
 											? 'mb-3'
-											: ''} grid grid-cols-[repeat(auto-fill,minmax(min(160px,100%),1fr))] gap-2.5 p-3"
+											: ''} grid grid-cols-[repeat(auto-fill,minmax(min(104px,100%),1fr))] gap-1.5 p-2"
 									>
 										{#each notesList as note, idx (note.id)}
-											<div
-												class="group relative flex h-26 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-base-50/40 p-2 text-left transition-colors duration-75 hover:bg-base-50/40 focus-within:bg-base-50/40 dark:border-white/[0.06] dark:bg-base-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
-											>
-												<div class="flex min-w-0 items-start">
-													<a href={noteUrl(note)} class="min-w-0 flex-1 pr-5">
-														<Tooltip content={note.title} placement="top-start">
-															<div
-																class="line-clamp-2 break-words text-xs text-base-800 dark:text-base-200"
-															>
-																{note.title}
-															</div>
-														</Tooltip>
-													</a>
-
-													{#if shiftKey}
-														<Tooltip content={$i18n.t('Delete')}>
-															<button
-																class="absolute right-1 top-1 flex {($settings?.highContrastMode ??
-																false)
-																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded text-base-400 transition hover:bg-base-50/40 hover:text-base-600 dark:text-base-500 dark:hover:bg-white/4 dark:hover:text-base-400"
-																type="button"
-																aria-label={$i18n.t('Delete')}
-																on:click={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	deleteNoteHandler(note.id);
-																}}
-															>
-																<GarbageBin className="size-3.5" />
-															</button>
-														</Tooltip>
-													{:else}
-														<NoteMenu
-															onAccess={(note.user_id === $user?.id &&
-																$user?.permissions?.sharing?.notes) ||
-															$user?.role === 'admin'
-																? () => accessModal.open(note.id)
-																: null}
-															onDownload={(type) => {
-																selectedNote = note;
-
-																downloadHandler(type);
-															}}
-															onCopyLink={async () => {
-																const baseUrl = window.location.origin;
-																const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
-
-																if (res) {
-																	toast.success($i18n.t('Copied link to clipboard'));
-																} else {
-																	toast.error($i18n.t('Failed to copy link'));
-																}
-															}}
-															onDelete={() => {
-																selectedNote = note;
-																showDeleteConfirm = true;
-															}}
-															isPinned={$pinnedNotes.some((n) => n.id === note.id)}
-															onPin={async () => {
-																await toggleNotePinnedStatusById(localStorage.token, note.id);
-																pinnedNotes.set(
-																	await getPinnedNoteList(localStorage.token).catch(() => [])
-																);
-																init();
-															}}
-														>
-															<button
-																class="absolute right-1 top-1 flex {($settings?.highContrastMode ??
-																false)
-																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded text-base-400 transition hover:bg-base-50/40 hover:text-base-600 dark:text-base-500 dark:hover:bg-white/4 dark:hover:text-base-400"
-																type="button"
-																aria-label={$i18n.t('Note Menu')}
-															>
-																<EllipsisHorizontal className="size-3" />
-															</button>
-														</NoteMenu>
-													{/if}
-												</div>
-
+											<div class="group relative min-w-0 self-start rounded-xl">
 												<a
 													href={noteUrl(note)}
-													class="mt-2 min-h-0 flex-1 overflow-hidden text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
-													style="mask-image: linear-gradient(to bottom, black 65%, transparent 100%);"
+													class="focus-ring flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 pt-2 pb-1.5 text-center transition-colors duration-75 hover:bg-base-50/60 dark:hover:bg-white/4"
+													aria-label={note.title}
 												>
-													<div class="line-clamp-4 whitespace-pre-line break-words">
-														{note.data?.content?.md || $i18n.t('No content')}
-													</div>
-												</a>
-
-												<a href={noteUrl(note)} class="mt-2 block min-w-0">
-													<div
-														class="flex min-w-0 w-full items-center justify-between gap-1 text-[0.5625rem] leading-3 text-base-500 dark:text-base-400"
+													<span
+														class="flex h-[5.75rem] w-full shrink-0 items-center justify-center"
+														aria-hidden="true"
 													>
-														<Tooltip
-															content={note?.user?.email ?? $i18n.t('Deleted User')}
-															className="min-w-0"
-															placement="top-start"
+														<span
+															class="relative h-[5.75rem] w-[4.75rem] overflow-hidden rounded-lg border border-base-200 bg-white shadow-xs dark:border-base-700 dark:bg-base-850"
 														>
-															<span class="flex min-w-0 max-w-44 items-center gap-1.75">
-																<ProfileImage
-																	src={note?.user?.id
-																		? `/api/v1/users/${note.user.id}/profile/image`
-																		: '/user.png'}
-																	className="size-4 shrink-0 rounded-full!"
-																/>
-																<span class="min-w-0 max-w-24 truncate">
-																	{capitalizeFirstLetter(
-																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-																	)}
+															{#if note.data?.content?.md?.trim()}
+																<span
+																	dir="auto"
+																	class="absolute left-0 top-0 block w-full whitespace-pre-line break-words p-1.5 text-left text-[10px] leading-[13px] text-base-500 dark:text-base-400"
+																	><span class="block text-base-800 dark:text-base-200"
+																		>{note.title}</span
+																	>{note.data.content.md.slice(0, 600)}</span
+																>
+																<span
+																	class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-white from-15% to-transparent dark:from-base-850"
+																></span>
+															{:else}
+																<span class="flex h-full w-full items-center justify-center">
+																	<FileNavIcon
+																		name="page-text"
+																		size={20}
+																		strokeWidth={1.2}
+																		class="text-base-400 dark:text-base-500"
+																	/>
 																</span>
-															</span>
-														</Tooltip>
+															{/if}
+														</span>
+													</span>
 
-														<Tooltip
-															content={dayjs(note.updated_at / 1000000)
-																.locale($i18n.language)
-																.format('LLLL')}
+													<Tooltip content={note.title} className="w-full min-w-0" placement="top">
+														<span
+															dir="auto"
+															class="block w-full min-w-0 shrink-0 truncate text-[0.8125rem] leading-[18px] text-base-800 dark:text-base-200"
 														>
-															<div class="max-w-full shrink-0 truncate">
-																{dayjs(note.updated_at / 1000000)
-																	.locale($i18n.language)
-																	.fromNow()}
-															</div>
-														</Tooltip>
-													</div>
+															{note.title}
+														</span>
+													</Tooltip>
+
+													<Tooltip
+														content={dayjs(note.updated_at / 1000000)
+															.locale($i18n.language)
+															.format('LLLL')}
+														className="w-full min-w-0"
+													>
+														<span
+															class="block w-full min-w-0 truncate text-xs leading-4 text-base-500 dark:text-base-400"
+														>
+															{dayjs(note.updated_at / 1000000)
+																.locale($i18n.language)
+																.fromNow()}
+														</span>
+													</Tooltip>
 												</a>
+
+												{#if shiftKey}
+													<Tooltip content={$i18n.t('Delete')}>
+														<button
+															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-white/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100"
+															type="button"
+															aria-label={$i18n.t('Delete')}
+															on:click={(e) => {
+																e.preventDefault();
+																e.stopPropagation();
+																deleteNoteHandler(note.id);
+															}}
+														>
+															<GarbageBin className="size-3.5" />
+														</button>
+													</Tooltip>
+												{:else}
+													<NoteMenu
+														onAccess={(note.user_id === $user?.id &&
+															$user?.permissions?.sharing?.notes) ||
+														$user?.role === 'admin'
+															? () => accessModal.open(note.id)
+															: null}
+														show={openNoteMenuId === note.id}
+														onDownload={(type) => {
+															selectedNote = note;
+
+															downloadHandler(type);
+														}}
+														onCopyLink={async () => {
+															const baseUrl = window.location.origin;
+															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+
+															if (res) {
+																toast.success($i18n.t('Copied link to clipboard'));
+															} else {
+																toast.error($i18n.t('Failed to copy link'));
+															}
+														}}
+														onDelete={() => {
+															selectedNote = note;
+															showDeleteConfirm = true;
+														}}
+														isPinned={$pinnedNotes.some((n) => n.id === note.id)}
+														onPin={async () => {
+															await toggleNotePinnedStatusById(localStorage.token, note.id);
+															pinnedNotes.set(
+																await getPinnedNoteList(localStorage.token).catch(() => [])
+															);
+															init();
+														}}
+														onChange={(state) => {
+															openNoteMenuId = state ? note.id : null;
+														}}
+													>
+														<button
+															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-white/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100 max-md:opacity-100 {openNoteMenuId ===
+															note.id
+																? 'opacity-100'
+																: 'opacity-0'}"
+															type="button"
+															aria-label={$i18n.t('Note Menu')}
+														>
+															<FileNavIcon name="three-dots" size={12} strokeWidth={1.4} />
+														</button>
+													</NoteMenu>
+												{/if}
 											</div>
 										{/each}
 									</div>
