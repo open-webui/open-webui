@@ -1,6 +1,6 @@
 <script>
 	import { toast } from 'svelte-sonner';
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	import { page } from '$app/stores';
 
 	const i18n = getContext('i18n');
@@ -48,6 +48,12 @@
 	};
 
 	const deleteHandler = async () => {
+		const menus = Array.from(document.getElementsByName('group-button'));
+		const index = menus.findIndex((menu) => menu.id === `group-button-${group.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
 		const res = await deleteGroupById(localStorage.token, group.id).catch((error) => {
 			toast.error(`${error}`);
 			return null;
@@ -56,6 +62,14 @@
 		if (res) {
 			toast.success($i18n.t('Group deleted successfully'));
 			await setGroups();
+
+			await tick();
+			if (document.activeElement === document.body) {
+				neighbors
+					.map((id) => document.getElementById(id))
+					.find(Boolean)
+					?.focus();
+			}
 		}
 		return !!res;
 	};
@@ -81,6 +95,8 @@
 />
 
 <button
+	id="group-button-{group.id}"
+	name="group-button"
 	class="group flex cursor-pointer text-left w-full px-1.5 py-1.5"
 	{draggable}
 	on:dragstart={onDragStart}

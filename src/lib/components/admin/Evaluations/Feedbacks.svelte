@@ -7,7 +7,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	dayjs.extend(relativeTime);
 
-	import { onMount, getContext } from 'svelte';
+	import { onMount, getContext, tick } from 'svelte';
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
@@ -109,6 +109,12 @@
 	};
 
 	const deleteFeedbackHandler = async (feedbackId: string) => {
+		const menus = Array.from(document.getElementsByName('feedback-menu'));
+		const index = menus.findIndex((menu) => menu.id === `feedback-menu-${feedbackId}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
 		const response = await deleteFeedbackById(localStorage.token, feedbackId).catch((err) => {
 			toast.error(err);
 			return null;
@@ -120,7 +126,15 @@
 				selectedModelId = '';
 			}
 			page = 1;
-			getFeedbacks();
+			await getFeedbacks();
+
+			await tick();
+			if (document.activeElement !== document.body) return;
+
+			neighbors
+				.map((id) => document.getElementById(id))
+				.find(Boolean)
+				?.focus();
 		}
 	};
 
@@ -541,6 +555,8 @@
 										}}
 									>
 										<button
+											id="feedback-menu-{feedback.id}"
+											name="feedback-menu"
 											class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											aria-label={$i18n.t('More')}
 										>

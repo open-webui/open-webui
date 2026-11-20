@@ -54,6 +54,7 @@
 	let shiftKey = false;
 
 	let functionsImportInputElement: HTMLInputElement;
+	let searchInputElement: HTMLInputElement;
 	let importFiles;
 
 	let tagsContainerElement: HTMLDivElement;
@@ -232,6 +233,23 @@
 		}
 	};
 
+	const confirmDeleteHandler = async () => {
+		const target = selectedFunction;
+		const menus = Array.from(document.getElementsByName('function-menu'));
+		const index = menus.findIndex((menu) => menu.id === `function-menu-${target.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
+		await deleteHandler(target);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors.map((id) => document.getElementById(id)).find(Boolean) ?? searchInputElement
+		)?.focus();
+	};
+
 	const toggleGlobalHandler = async (func) => {
 		const res = await toggleGlobalById(localStorage.token, func.id).catch((error) => {
 			toast.error(`${error}`);
@@ -387,6 +405,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Functions')}
@@ -672,6 +691,8 @@
 											<button
 												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												type="button"
+												id="function-menu-{func.id}"
+												name="function-menu"
 												aria-label={$i18n.t('Function Menu')}
 												on:click={(e) => {
 													e.preventDefault();
@@ -738,9 +759,7 @@
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete function?')}
-		on:confirm={() => {
-			deleteHandler(selectedFunction);
-		}}
+		on:confirm={confirmDeleteHandler}
 	>
 		<div class=" text-sm text-gray-500 truncate">
 			{$i18n.t('This will delete')}

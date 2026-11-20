@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { adminUserCount, config, user } from '$lib/stores';
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -53,6 +53,7 @@
 	let showDeleteConfirmDialog = false;
 	let showAddUserModal = false;
 
+	let searchInputElement: HTMLInputElement;
 	let showUserChatsModal = false;
 	let showEditUserModal = false;
 	let showUserPreviewModal = false;
@@ -69,8 +70,25 @@
 		}
 
 		if (res) {
-			getUserList();
+			await getUserList();
 		}
+	};
+
+	const confirmDeleteHandler = async () => {
+		const target = selectedUser;
+		const menus = Array.from(document.getElementsByName('user-delete'));
+		const index = menus.findIndex((menu) => menu.id === `user-delete-${target.id}`);
+		const neighbors = [...menus.slice(index + 1), ...menus.slice(0, index).reverse()].map(
+			(menu) => menu.id
+		);
+
+		await deleteUserHandler(target.id);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors.map((id) => document.getElementById(id)).find(Boolean) ?? searchInputElement
+		)?.focus();
 	};
 
 	const sortState = (key, orderBy, direction) =>
@@ -139,12 +157,7 @@
 	});
 </script>
 
-<ConfirmDialog
-	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
-	}}
-/>
+<ConfirmDialog bind:show={showDeleteConfirmDialog} on:confirm={confirmDeleteHandler} />
 
 <AddUserModal
 	bind:show={showAddUserModal}
@@ -194,6 +207,7 @@
 				</div>
 				<input
 					class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+					bind:this={searchInputElement}
 					bind:value={query}
 					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search')}
@@ -487,6 +501,8 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
+											id="user-delete-{user.id}"
+											name="user-delete"
 											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
 											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
