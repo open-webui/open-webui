@@ -3,7 +3,7 @@
 	const { goto, active } = getPageContext();
 
 	import { formatSchedule } from '$lib/utils/schedule';
-	import { onMount, onDestroy, getContext } from 'svelte';
+	import { onMount, onDestroy, getContext, tick } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -74,6 +74,7 @@
 	let page = 1;
 	let importFiles: FileList | null = null;
 	let automationsImportInputElement: HTMLInputElement;
+	let searchInputElement: HTMLInputElement;
 	let foldersLoaded = false;
 	let channelsLoaded = false;
 
@@ -220,7 +221,25 @@
 		}
 
 		page = 1;
-		getAutomationList();
+		await getAutomationList();
+	};
+
+	const confirmDeleteHandler = async () => {
+		const target = deleteTarget;
+		if (!target || !automations) return;
+
+		const index = automations.findIndex((automation) => automation.id === target.id);
+		const neighbors = [...automations.slice(index + 1), ...automations.slice(0, index).reverse()];
+
+		await deleteHandler(target);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		(
+			neighbors
+				.map((automation) => document.getElementById(`automation-menu-${automation.id}`))
+				.find(Boolean) ?? searchInputElement
+		)?.focus();
 	};
 
 	const cloneHandler = (automation: AutomationResponse) => {
@@ -383,9 +402,7 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete automation?')}
-	on:confirm={() => {
-		if (deleteTarget) deleteHandler(deleteTarget);
-	}}
+	on:confirm={confirmDeleteHandler}
 >
 	<div class="text-sm text-gray-500 truncate">
 		{$i18n.t('This will delete')} <span class="font-normal">{deleteTarget?.name}</span>.
@@ -436,6 +453,7 @@
 					</div>
 					<input
 						class="w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						aria-label={$i18n.t('Search Automations')}
@@ -647,6 +665,7 @@
 											}}
 										>
 											<button
+												id="automation-menu-{automation.id}"
 												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
 												type="button"
 												aria-label={$i18n.t('Automation Menu')}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, tick } from 'svelte';
 	import { settings } from '$lib/stores';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -13,7 +13,7 @@
 	export let onToggle: (id: string) => void = () => {};
 	export let onCreateCalendar: () => void = () => {};
 	export let onEditCalendar: (cal: CalendarModel) => void = () => {};
-	export let onDeleteCalendar: (id: string) => void = () => {};
+	export let onDeleteCalendar: (id: string) => Promise<void> | void = () => {};
 	export let onDateSelect: (date: Date) => void = () => {};
 
 	// Delete confirmation state
@@ -30,11 +30,22 @@
 		showDeleteConfirm = true;
 	}
 
-	function confirmDelete() {
-		if (deleteTargetCalendar) {
-			onDeleteCalendar(deleteTargetCalendar.id);
-		}
+	async function confirmDelete() {
+		const target = deleteTargetCalendar;
 		deleteTargetCalendar = null;
+		if (!target) return;
+
+		const index = calendars.findIndex((cal) => cal.id === target.id);
+		const neighbors = [...calendars.slice(index + 1), ...calendars.slice(0, index).reverse()];
+
+		await onDeleteCalendar(target.id);
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		neighbors
+			.map((cal) => document.getElementById(`calendar-${cal.id}-button`))
+			.find(Boolean)
+			?.focus();
 	}
 
 	// Mini calendar state
@@ -217,6 +228,7 @@
 					hover:bg-gray-50 dark:hover:bg-gray-800/50"
 			>
 				<button
+					id="calendar-{cal.id}-button"
 					class="flex items-center gap-2 px-2 py-1 flex-1 text-left min-w-0"
 					on:click={() => onToggle(cal.id)}
 				>

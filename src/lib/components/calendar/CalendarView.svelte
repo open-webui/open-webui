@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, getContext } from 'svelte';
+	import { createEventDispatcher, getContext, tick } from 'svelte';
 	import { settings } from '$lib/stores';
 	import type { CalendarEventModel, CalendarModel } from '$lib/apis/calendar';
 	import CalendarEventChip from './CalendarEventChip.svelte';
@@ -150,10 +150,20 @@
 		dispatch('createEvent', { start_at: ms * NS });
 	}
 
-	function goToDayView(day: Date) {
+	async function goToDayView(day: Date, event: CalendarEventModel) {
 		currentDate = day;
 		view = 'day';
 		onNavigate();
+
+		await tick();
+		if (document.activeElement !== document.body) return;
+
+		const start = new Date(event.start_at / NS);
+		document
+			.getElementById(
+				`calendar-hour-${new Date(start.getFullYear(), start.getMonth(), start.getDate(), start.getHours()).getTime()}`
+			)
+			?.focus();
 	}
 
 	function handleHourClick(day: Date, hour: number) {
@@ -198,6 +208,7 @@
 					>
 						<button
 							type="button"
+							id="calendar-day-{day.getTime()}"
 							class="absolute inset-0"
 							aria-label={formatDay(day)}
 							on:click={() => handleDayClick(day)}
@@ -226,7 +237,7 @@
 								<button
 									type="button"
 									class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
-									on:click={() => goToDayView(day)}
+									on:click={() => goToDayView(day, dayEvents[3])}
 								>
 									{$i18n.t('and {{COUNT}} more', { COUNT: dayEvents.length - 3 })}
 								</button>
@@ -294,6 +305,12 @@
 										>
 											<button
 												type="button"
+												id="calendar-hour-{new Date(
+													day.getFullYear(),
+													day.getMonth(),
+													day.getDate(),
+													hour
+												).getTime()}"
 												class="absolute inset-0"
 												aria-label={formatDayHour(day, hour)}
 												on:click={() => handleHourClick(day, hour)}
@@ -312,7 +329,7 @@
 													<button
 														type="button"
 														class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
-														on:click={() => goToDayView(day)}
+														on:click={() => goToDayView(day, hourEvents[3])}
 													>
 														{$i18n.t('and {{COUNT}} more', { COUNT: hourEvents.length - 3 })}
 													</button>
@@ -352,6 +369,12 @@
 						>
 							<button
 								type="button"
+								id="calendar-hour-{new Date(
+									currentDate.getFullYear(),
+									currentDate.getMonth(),
+									currentDate.getDate(),
+									hour
+								).getTime()}"
 								class="absolute inset-0"
 								aria-label={formatDayHour(currentDate, hour)}
 								on:click={() => handleHourClick(currentDate, hour)}
