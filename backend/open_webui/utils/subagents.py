@@ -94,25 +94,25 @@ async def _build_request(source: Request, user_id: str, *, internal: bool) -> Re
 async def queue_user_message(
     request: Request, chat_id: str, user: UserModel, user_message: dict, parent_id: str
 ) -> bool:
-    """Hold a message sent while its reply is running. The reply ends at its next step and this is answered next."""
-    if not user_message.get('id') or not await has_active_tasks(request.app.state.redis, chat_id):
-        return False
-    # Only a reply still being written holds messages. Checked before locking: the turn that answers
-    # held messages is started under this lock, and its own reply is already finished.
-    reply = await Chats.get_message_by_id_and_message_id(chat_id, parent_id)
-    if not reply or reply.get('role') != 'assistant' or reply.get('done') is not False:
+    """Queue a message at the end of the chat, which may have moved on since the browser loaded it. It is answered
+    after the running reply there, with the messages already queued."""
+    if not user_message.get('id'):
         return False
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-        # Checked under the lock the reply's own cleanup takes, so the message can't be left unanswered.
-        if not await has_active_tasks(request.app.state.redis, chat_id):
-            return False
         async with Chats._chat_transaction(chat_id) as (_, chat):
             if not chat or chat.user_id != user.id:
                 return False
             history = copy.deepcopy((chat.chat or {}).get('history') or {})
             messages = history.get('messages') or {}
+            last_id = Chats._last_descendant_id(messages, parent_id)
+            if (messages.get(last_id) or {}).get('role') == 'assistant':
+                parent_id = user_message['parentId'] = last_id
             reply = messages.get(parent_id)
-            if not reply:
+            # Checked under the lock the reply's own cleanup takes, so the message can't be left unanswered.
+            if not reply or not (
+                await ChatMessages.has_queued_message(chat_id, parent_id)
+                or (reply.get('done') is False and await has_active_tasks(request.app.state.redis, chat_id))
+            ):
                 return False
             message = {
                 'id': user_message['id'],

@@ -4182,11 +4182,11 @@
 			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
 		);
 
-		const runningReply = history.currentId ? history.messages[history.currentId] : null;
+		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 		const queued =
 			!bridgeRequest &&
-			runningReply?.role === 'assistant' &&
-			runningReply.done === false &&
+			lastMessage?.role === 'assistant' &&
+			(lastMessage.done === false || backendQueue.length > 0) &&
 			usesBackendQueue(_files);
 
 		// Create user message
@@ -5217,6 +5217,7 @@
 				id: responseMessageId,
 				...(messageIdsList ? { message_ids: messageIdsList } : {}),
 				parent_id: userMessage?.parentId ?? null,
+				...(userMessage?.meta?.status === 'pending' ? { queue: true } : {}),
 				// Whether a message is queued is the backend's call, not a status the browser sends.
 				user_message:
 					userMessage?.meta?.status === 'pending'

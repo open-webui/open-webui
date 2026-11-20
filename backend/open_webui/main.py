@@ -1243,6 +1243,7 @@ async def chat_completion(
         #   absent → legacy caller, no chat management
         is_new_chat = 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id')
         parent_id = form_data.pop('parent_id', None)
+        queue = form_data.pop('queue', False) is True
         form_data.pop('new_chat', None)  # Legacy field
 
         # Multi-model message_ids: list of {model_id, message_id} entries.
@@ -1551,13 +1552,22 @@ async def chat_completion(
 
                     user_message = metadata.get('user_message') or {}
                     assistant_message_id = metadata.get('assistant_message_id')
-                    if parent_id and not (
-                        assistant_message_id or metadata.get('regeneration_message_id') or metadata['internal']
+                    if (
+                        queue
+                        and parent_id
+                        and not (
+                            assistant_message_id or metadata.get('regeneration_message_id') or metadata['internal']
+                        )
                     ):
                         from open_webui.utils.subagents import queue_user_message
 
                         # A reply in this chat is still running: it takes this message at its next step.
                         if await queue_user_message(request, chat_id, user, user_message, parent_id):
+                            if user_message.get('parentId') != parent_id:
+                                event_emitter = await get_event_emitter(
+                                    {**metadata, 'message_id': user_message['id']}, update_db=False
+                                )
+                                await event_emitter({'type': 'chat:reload'})
                             return {'status': True, 'queued': True, 'chat_id': chat_id}
                     if assistant_message_id:
                         message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
@@ -1576,6 +1586,8 @@ async def chat_completion(
                             for mid, message in turn['messages'].items()
                         }
                         await event_emitter({'type': 'chat:messages', 'data': turn})
+                        if queue and user_message.get('parentId') != parent_id:
+                            await event_emitter({'type': 'chat:reload'})
                         user_message_id = user_message.get('id')
                         await emit_chat_list_event({**metadata, 'message_id': user_message_id}, chat_id)
                         for message_id, message in turn['messages'].items():
