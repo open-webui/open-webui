@@ -449,6 +449,16 @@ async def generate_image(
         return JSONCodec.dumps({'error': str(e)})
 
 
+def _is_terminal_file_path(path: str | None) -> bool:
+    if not path or path.startswith('/api/v1/files/'):
+        return False
+    if path.startswith('/'):
+        return True
+    if len(path) >= 3 and path[0].isalpha() and path[1] == ':' and path[2] in ('/', '\\'):
+        return True
+    return False
+
+
 async def edit_image(
     prompt: str,
     image_urls: list[str],
@@ -479,7 +489,7 @@ async def edit_image(
 
         resolved_images = []
         for url in image_urls:
-            if url.startswith('/') and not url.startswith('/api/v1/files/'):
+            if _is_terminal_file_path(url):
                 data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
                 url = await asyncio.to_thread(get_image_data_url, data)
             resolved_images.append(url)
@@ -575,7 +585,7 @@ async def generate_video(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        if image_url and image_url.startswith('/') and not image_url.startswith('/api/v1/files/'):
+        if _is_terminal_file_path(image_url):
             data = await get_terminal_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
             image_url = await asyncio.to_thread(get_image_data_url, data)
 
