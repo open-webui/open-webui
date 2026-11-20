@@ -40,24 +40,28 @@
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
-	import { capitalizeFirstLetter, copyToClipboard, formatNumber, getTimeRange } from '$lib/utils';
+	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
 	import { downloadNote, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import Search from '../icons/Search.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import FileNavIcon from '../chat/FileNav/Icon.svelte';
+	import Dropdown from '../common/Dropdown.svelte';
+	import DropdownMenu from '../common/DropdownMenu.svelte';
+	import DropdownSub from '../common/DropdownSub.svelte';
+	import Check from '../icons/Check.svelte';
+	import Plus from '../icons/Plus.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import DropdownOptions from '../common/DropdownOptions.svelte';
 	import Loader from '../common/Loader.svelte';
 	import SidebarIcon from '../icons/Sidebar.svelte';
-	import SplitCreateButton from '../common/SplitCreateButton.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 
@@ -82,9 +86,9 @@
 
 	let sortKey = 'updated_at';
 	let sortDirection = 'desc';
-	let displayOption = null;
-	let viewOption = null;
-	let permission = null;
+	let displayOption: string | null = null;
+	let viewOption: string | null = null;
+	let permission: string | null = null;
 
 	let page = 1;
 
@@ -207,6 +211,31 @@
 		query && note.data?.page_id
 			? `/notes/${note.id}?page=${encodeURIComponent(note.data.page_id)}&search=${encodeURIComponent(query)}`
 			: `/notes/${note.id}`;
+
+	$: filterCount = (viewOption ? 1 : 0) + (permission ? 1 : 0);
+
+	const setViewOption = (value: string | null) => {
+		viewOption = value;
+		if (value) localStorage.noteViewOption = value;
+		else delete localStorage.noteViewOption;
+		// The access filter only applies to notes others can share with you.
+		if (value === 'created') permission = null;
+	};
+
+	const setDisplayOption = (value: string | null) => {
+		displayOption = value;
+		if (value) localStorage.noteDisplayOption = value;
+		else delete localStorage.noteDisplayOption;
+	};
+
+	const newNoteHandler = async () => {
+		const res = await createNoteHandler(dayjs().locale($i18n.language).format('YYYY-MM-DD'));
+		if (res) goto(`/notes/${res.id}`);
+	};
+
+	const menuLabel = 'px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500';
+	const iconButton =
+		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white dark:aria-expanded:bg-base-850 dark:aria-expanded:text-white';
 
 	// Same payload as sidebar page links, so a note can be dropped into split view;
 	// the text/plain note entry still lets the chat composer attach it.
@@ -443,150 +472,220 @@
 			</div>
 		</DeleteConfirmDialog>
 
-		<div class="flex items-center gap-0.5 md:gap-1 mb-1">
-			{#if $mobile && !pageTab}
-				<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
-					<Tooltip
-						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-						interactive={true}
-					>
-						<button
-							id="sidebar-toggle-button"
-							class="cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition"
-							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
-							on:click={() => {
-								showSidebar.set(!$showSidebar);
-							}}
-						>
-							<div class="self-center p-1.5">
-								<SidebarIcon className="size-4" />
-							</div>
-						</button>
-					</Tooltip>
-				</div>
-			{/if}
-
-			<div class="flex w-full items-center">
-				<div class="flex items-center gap-1 py-1 min-w-0">
-					<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Notes')}</span>
-					<span class="text-sm text-base-500 dark:text-base-500">
-						{total === null ? '' : formatNumber(total)}
-					</span>
-				</div>
-
-				<div class="ml-auto flex items-center gap-1">
-					<SplitCreateButton
-						actions={[
-							{
-								id: 'notes-new',
-								label: $i18n.t('Create'),
-								onClick: async () => {
-									const res = await createNoteHandler(
-										dayjs().locale($i18n.language).format('YYYY-MM-DD')
-									);
-
-									if (res) {
-										goto(`/notes/${res.id}`);
-									}
-								}
-							},
-							{
-								id: 'notes-import',
-								label: $i18n.t('Import txt/md'),
-								onClick: () => notesImportInputElement?.click()
-							}
-						]}
-					/>
-				</div>
-			</div>
-		</div>
-
 		<div class="space-y-1">
-			<div class="flex h-8 flex-1 items-center w-full gap-2">
-				<div class="flex min-w-0 flex-1 items-center">
-					<div class=" self-center ml-1 mr-3">
-						<Search className="size-3.5" />
+			<div class="flex h-8 items-center gap-1">
+				{#if $mobile && !pageTab}
+					<div class="{$showSidebar ? 'md:hidden' : ''} flex flex-none items-center">
+						<Tooltip
+							content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+							interactive={true}
+						>
+							<button
+								id="sidebar-toggle-button"
+								class="cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+							>
+								<div class="self-center p-1.5">
+									<SidebarIcon className="size-4" />
+								</div>
+							</button>
+						</Tooltip>
 					</div>
+				{/if}
+
+				<label
+					class="flex h-full min-w-0 flex-1 items-center gap-2 px-1 text-base-400 dark:text-base-500"
+				>
+					<FileNavIcon name="search" size={14} class="shrink-0" />
 					<input
-						class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+						class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-500"
 						bind:value={query}
 						on:input={handleSearchInput}
+						on:keydown={(event) => {
+							if (event.key === 'Escape' && query) {
+								query = '';
+								handleSearchInput();
+							}
+						}}
 						placeholder={$i18n.t('Search Notes')}
 						aria-label={$i18n.t('Search Notes')}
 					/>
-
 					{#if query}
-						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
-							<button
-								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
-								aria-label={$i18n.t('Clear search')}
-								on:click={() => {
-									query = '';
-									handleSearchInput();
-								}}
-							>
-								<XMark className="size-3" strokeWidth="2" />
-							</button>
-						</div>
+						<button
+							type="button"
+							class="flex size-4 shrink-0 items-center justify-center rounded-full hover:text-base-700 dark:hover:text-base-200"
+							aria-label={$i18n.t('Clear search')}
+							on:click={() => {
+								query = '';
+								handleSearchInput();
+							}}
+						>
+							<XMark className="size-3" strokeWidth="2" />
+						</button>
 					{/if}
-				</div>
+				</label>
 
-				<div
-					class="flex max-w-[55%] shrink-0 overflow-x-auto scrollbar-none"
-					on:wheel={(e) => {
-						if (e.deltaY !== 0) {
-							e.preventDefault();
-							e.currentTarget.scrollLeft += e.deltaY;
-						}
-					}}
-				>
-					<div
-						class="flex w-fit gap-0.5 text-center text-sm rounded-full bg-transparent whitespace-nowrap"
-					>
-						<DropdownOptions
-							align="end"
-							bind:value={viewOption}
-							items={[
-								{ value: null, label: $i18n.t('All') },
-								{ value: 'created', label: $i18n.t('Created by you') },
-								{ value: 'shared', label: $i18n.t('Shared with you') }
-							]}
-							onChange={(value) => {
-								if (value) {
-									localStorage.noteViewOption = value;
-								} else {
-									delete localStorage.noteViewOption;
-								}
-							}}
-						/>
+				<div class="flex shrink-0 items-center gap-1">
+					<Dropdown align="end">
+						<button
+							type="button"
+							class="{iconButton} {filterCount ? 'text-base-800 dark:text-base-100' : ''}"
+							aria-label={$i18n.t('Filter')}
+							title={$i18n.t('Filter')}
+						>
+							<svg
+								class="size-3.75"
+								viewBox="0 0 16 16"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.5"
+								stroke-linecap="round"
+								aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" /></svg
+							>
+							{#if filterCount}
+								<span
+									class="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-base-800 dark:bg-base-100"
+								></span>
+							{/if}
+						</button>
 
-						{#if [null, 'shared'].includes(viewOption)}
-							<DropdownOptions
-								align="end"
-								bind:value={permission}
-								items={[
-									{ value: null, label: $i18n.t('Write') },
-									{ value: 'read_only', label: $i18n.t('Read Only') }
-								]}
-							/>
-						{/if}
+						<DropdownMenu slot="content" className="w-48">
+							<div class={menuLabel}>{$i18n.t('Show')}</div>
+							{#each [[null, 'All'], ['created', 'Created by you'], ['shared', 'Shared with you']] as const as [value, label]}
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={viewOption === value}
+									on:click={() => setViewOption(value)}
+								>
+									<span class="flex-1 text-left">{$i18n.t(label)}</span>
+									{#if viewOption === value}<Check className="size-3! shrink-0" />{/if}
+								</button>
+							{/each}
 
-						<DropdownOptions
-							align="end"
-							bind:value={displayOption}
-							items={[
-								{ value: null, label: $i18n.t('List') },
-								{ value: 'grid', label: $i18n.t('Grid') }
-							]}
-							onChange={() => {
-								if (displayOption) {
-									localStorage.noteDisplayOption = displayOption;
-								} else {
-									delete localStorage.noteDisplayOption;
-								}
-							}}
-						/>
-					</div>
+							{#if [null, 'shared'].includes(viewOption)}
+								<hr class="border-base-50/30 dark:border-base-800/30" />
+								<div class={menuLabel}>{$i18n.t('Access')}</div>
+								{#each [[null, 'Write'], ['read_only', 'Read Only']] as const as [value, label]}
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={permission === value}
+										on:click={() => (permission = value)}
+									>
+										<span class="flex-1 text-left">{$i18n.t(label)}</span>
+										{#if permission === value}<Check className="size-3! shrink-0" />{/if}
+									</button>
+								{/each}
+							{/if}
+
+							{#if filterCount}
+								<hr class="border-base-50/30 dark:border-base-800/30" />
+								<button
+									type="button"
+									on:click={() => {
+										setViewOption(null);
+										permission = null;
+									}}
+								>
+									<XMark className="size-3.5" />{$i18n.t('Clear filters')}
+								</button>
+							{/if}
+						</DropdownMenu>
+					</Dropdown>
+
+					<Dropdown align="end">
+						<button
+							type="button"
+							class={iconButton}
+							aria-label={$i18n.t('Display options')}
+							title={$i18n.t('Display options')}
+						>
+							<AdjustmentsHorizontal className="size-3.75" />
+						</button>
+
+						<DropdownMenu slot="content" className="w-48">
+							<div class={menuLabel}>{$i18n.t('Layout')}</div>
+							{#each [[null, 'List', 'list'], ['grid', 'Grid', 'grid']] as const as [value, label, icon]}
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={displayOption === value}
+									on:click={() => setDisplayOption(value)}
+								>
+									<FileNavIcon name={icon} size={14} />
+									<span class="flex-1 text-left">{$i18n.t(label)}</span>
+									{#if displayOption === value}<Check className="size-3! shrink-0" />{/if}
+								</button>
+							{/each}
+
+							<hr class="border-base-50/30 dark:border-base-800/30" />
+
+							<DropdownSub contentClass="select-none z-50" maxWidth={320} sideOffset={6}>
+								<button
+									slot="trigger"
+									type="button"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
+								>
+									<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Ordering')}</span>
+									<span class="truncate text-base-500 dark:text-base-400"
+										>{sortKey === 'name' ? $i18n.t('Title') : $i18n.t('Updated')}</span
+									>
+									<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
+								</button>
+								{#each [['updated_at', 'Updated'], ['name', 'Title']] as const as [value, label]}
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={sortKey === value}
+										on:click={() => {
+											if (sortKey !== value) setSortKey(value);
+										}}
+									>
+										<span class="flex-1 text-left">{$i18n.t(label)}</span>
+										{#if sortKey === value}<Check className="size-3! shrink-0" />{/if}
+									</button>
+								{/each}
+								<hr class="border-base-50/30 dark:border-base-800/30" />
+								{#each [['asc', 'Ascending'], ['desc', 'Descending']] as const as [value, label]}
+									<button
+										type="button"
+										role="menuitemradio"
+										aria-checked={sortDirection === value}
+										on:click={() => (sortDirection = value)}
+									>
+										<span class="flex-1 text-left">{$i18n.t(label)}</span>
+										{#if sortDirection === value}<Check className="size-3! shrink-0" />{/if}
+									</button>
+								{/each}
+							</DropdownSub>
+						</DropdownMenu>
+					</Dropdown>
+
+					<Dropdown align="end" closeOnSelect>
+						<button
+							type="button"
+							class={iconButton}
+							aria-label={$i18n.t('New Note')}
+							title={$i18n.t('New Note')}
+						>
+							<Plus className="size-3.5" strokeWidth="2" />
+						</button>
+
+						<DropdownMenu slot="content" className="w-44">
+							<button type="button" on:click={newNoteHandler}>
+								<FileNavIcon name="file-plus" size={14} />
+								<span class="flex-1 text-left">{$i18n.t('New Note')}</span>
+							</button>
+							<button type="button" on:click={() => notesImportInputElement?.click()}>
+								<FileNavIcon name="upload" size={14} />
+								<span class="flex-1 text-left">{$i18n.t('Import txt/md')}</span>
+							</button>
+						</DropdownMenu>
+					</Dropdown>
 				</div>
 			</div>
 

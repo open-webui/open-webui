@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, url: pageUrl } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
 	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import type { AppLayoutContext } from '$lib/types';
 
@@ -14,7 +16,15 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import type i18nType from '$lib/i18n';
 
-	import { WEBUI_NAME, baseModels, channels, folders, type AgentModel } from '$lib/stores';
+	import {
+		WEBUI_NAME,
+		baseModels,
+		channels,
+		folders,
+		mobile,
+		showSidebar,
+		type AgentModel
+	} from '$lib/stores';
 	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
@@ -53,7 +63,6 @@
 	dayjs.extend(localizedFormat);
 
 	const i18n: typeof i18nType = getContext('i18n');
-	const automationsLayout: any = getContext('automationsLayout');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let automation: AutomationResponse;
@@ -367,22 +376,6 @@
 		await loadRuns();
 	});
 
-	$: if (automation) {
-		automationsLayout?.setHeader({
-			itemName: automation.name,
-			actions: AutomationItemHeaderActions,
-			actionProps: {
-				loading,
-				dirty,
-				saving,
-				runNowHandler,
-				copyLinkHandler,
-				saveHandler,
-				duplicateHandler: () => (showCloneModal = true),
-				deleteHandler: () => (showDeleteConfirm = true)
-			}
-		});
-	}
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
 
 	const rowClass =
@@ -417,12 +410,41 @@
 	<div class="w-full px-2.5 pb-12 md:px-3.5">
 		<!-- One centered column, like an issue: name, prompt, properties, then activity. -->
 		<div>
-			<input
-				class="w-full bg-transparent text-[0.9375rem] font-normal text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-500"
-				bind:value={name}
-				aria-label={$i18n.t('Name')}
-				placeholder={$i18n.t('Automation name')}
-			/>
+			<div class="flex h-8 items-center gap-1">
+				{#if $mobile && !pageTab}
+					<div class="{$showSidebar ? 'md:hidden' : ''} -ml-1 flex flex-none items-center">
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class="flex size-7 items-center justify-center text-base-400 transition"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+								type="button"
+							>
+								<SidebarIcon className="size-4" />
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
+				<input
+					class="min-w-0 flex-1 bg-transparent text-[0.9375rem] font-normal text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-500"
+					bind:value={name}
+					aria-label={$i18n.t('Name')}
+					placeholder={$i18n.t('Automation name')}
+				/>
+				<AutomationItemHeaderActions
+					{loading}
+					{dirty}
+					{saving}
+					{runNowHandler}
+					{copyLinkHandler}
+					{saveHandler}
+					duplicateHandler={() => (showCloneModal = true)}
+					deleteHandler={() => (showDeleteConfirm = true)}
+				/>
+			</div>
 			{#if showPrompt || !prompt.trim()}
 				<Textarea
 					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-base-500 outline-hidden placeholder:text-base-400 dark:text-base-400 dark:placeholder:text-base-500"
