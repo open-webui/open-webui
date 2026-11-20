@@ -319,7 +319,7 @@ print("${endTag}")
 
 			// Format Python code when Ctrl + Shift + F is pressed (the formatter is Black)
 			if (
-				lang === 'python' &&
+				(lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py') &&
 				(e.ctrlKey || e.metaKey) &&
 				e.shiftKey &&
 				e.key.toLowerCase() === 'f'
