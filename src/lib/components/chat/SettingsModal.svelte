@@ -300,7 +300,7 @@
 			id: 'admin:integrations',
 			titleKey: 'settings.admin.integrations.title',
 			title: $i18n.t('settings.admin.integrations.title'),
-			searchPrefixes: ['settings.admin.integrations.']
+			searchPrefixes: ['settings.admin.integrations.', 'settings.admin.general.apps.']
 		},
 		{
 			id: 'admin:documents',
