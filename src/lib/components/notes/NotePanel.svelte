@@ -66,7 +66,7 @@
 			<div
 				class="w-full z-40 pointer-events-auto overflow-hidden scrollbar-hidden flex flex-col {floating
 					? ''
-					: 'bg-white dark:bg-gray-900'}"
+					: 'bg-white dark:bg-base-900'}"
 			>
 				<slot />
 			</div>

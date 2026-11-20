@@ -174,7 +174,7 @@
 
 <svelte:document on:fullscreenchange={fullscreenChanged} />
 
-<div bind:this={container} class="relative h-full w-full min-h-0 bg-white dark:bg-gray-900">
+<div bind:this={container} class="relative h-full w-full min-h-0 bg-white dark:bg-base-900">
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		bind:this={surface}
@@ -204,11 +204,11 @@
 	</div>
 	{#if status || error}
 		<div
-			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-xs text-gray-500 dark:bg-gray-900/90 dark:text-gray-400"
+			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-xs text-base-500 dark:bg-base-900/90 dark:text-base-400"
 		>
-			<span class={error ? '' : 'text-xs text-gray-400 dark:text-gray-500'}>{error || status}</span>
+			<span class={error ? '' : 'text-xs text-base-400 dark:text-base-500'}>{error || status}</span>
 			{#if error}<button
-					class="text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white"
+					class="text-base-700 hover:text-black dark:text-base-300 dark:hover:text-white"
 					on:click={connect}>{$i18n.t('Retry')}</button
 				>{/if}
 		</div>
@@ -219,7 +219,7 @@
 	{#if fullscreenEnabled}
 		<button
 			type="button"
-			class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-gray-400/70 hover:bg-white/80 hover:text-gray-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-gray-900/80 dark:hover:text-gray-200 dark:focus-visible:bg-gray-900/80"
+			class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-base-400/70 hover:bg-white/80 hover:text-base-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-base-900/80 dark:hover:text-base-200 dark:focus-visible:bg-base-900/80"
 			aria-label={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			title={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			on:click={toggleFullscreen}

@@ -239,7 +239,7 @@
 				: $i18n.t('Switch to visual editor')}
 		>
 			<button
-				class="text-xs px-2 py-0.5 rounded-full transition-all text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+				class="text-xs px-2 py-0.5 rounded-full transition-all text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 hover:bg-base-200/50 dark:hover:bg-base-700/50"
 				on:click={() => (viewMode === 'visual' ? switchToJson() : switchToVisual())}
 			>
 				{viewMode === 'visual' ? $i18n.t('Visual') : 'JSON'}
@@ -250,7 +250,7 @@
 	{#if viewMode === 'json'}
 		<div
 			bind:this={cmContainer}
-			class="w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800"
+			class="w-full rounded-2xl overflow-hidden border border-base-100 dark:border-base-800"
 		/>
 		{#if jsonError}
 			<div class="text-xs text-red-500 mt-1.5 px-1">{jsonError}</div>
@@ -263,7 +263,7 @@
 					<!-- Role label -->
 					<div class="flex items-start pt-1.5">
 						<div
-							class="text-[0.6875rem] font-normal uppercase tracking-wide min-w-[4.5rem] text-gray-400 dark:text-gray-500"
+							class="text-[0.6875rem] font-normal uppercase tracking-wide min-w-[4.5rem] text-base-400 dark:text-base-500"
 						>
 							{getItemLabel(di)}
 						</div>
@@ -288,7 +288,7 @@
 							<textarea
 								aria-label={$i18n.t('Thought')}
 								use:fitContent
-								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.90625rem] text-gray-500 dark:text-gray-400 p-1.5 rounded-lg"
+								class="w-full bg-transparent outline-hidden focus-visible:outline-none! resize-none overflow-hidden text-[0.90625rem] text-base-500 dark:text-base-400 p-1.5 rounded-lg"
 								value={getReasoningText(di.item)}
 								on:input={(e) => {
 									updateReasoningText(di.indices[0], e.target.value);
@@ -298,7 +298,7 @@
 								rows="1"
 							/>
 						{:else if di.type === 'function_call'}
-							<div class="text-[0.90625rem] p-1.5 text-gray-500 dark:text-gray-400">
+							<div class="text-[0.90625rem] p-1.5 text-base-500 dark:text-base-400">
 								{#if di.item.arguments}
 									<pre
 										class="text-xs font-mono whitespace-pre-wrap overflow-x-auto pb-0.5">{formatArgs(
@@ -315,7 +315,7 @@
 								{/if}
 							</div>
 						{:else if di.type === 'code_interpreter'}
-							<div class="text-[0.90625rem] p-1.5 text-gray-500 dark:text-gray-400">
+							<div class="text-[0.90625rem] p-1.5 text-base-500 dark:text-base-400">
 								{#if di.item.code}
 									<pre class="text-xs font-mono whitespace-pre overflow-x-auto">{di.item.code}</pre>
 								{/if}
@@ -328,7 +328,7 @@
 								{/if}
 							</div>
 						{:else if di.type === 'openai_tool'}
-							<div class="text-[0.90625rem] p-1.5 text-gray-500 dark:text-gray-400">
+							<div class="text-[0.90625rem] p-1.5 text-base-500 dark:text-base-400">
 								{#if di.item.action?.queries || di.item.queries}
 									<span class="text-xs"
 										>{(di.item.action?.queries ?? di.item.queries ?? []).join(', ')}</span
@@ -341,7 +341,7 @@
 					<!-- Delete -->
 					<div class="pt-1.5">
 						<button
-							class="hover-reveal p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition rounded-lg"
+							class="hover-reveal p-1 text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition rounded-lg"
 							aria-label={$i18n.t('Delete')}
 							on:click={() => deleteIndices(di.indices)}
 						>
@@ -365,7 +365,7 @@
 			{/each}
 
 			{#if displayItems.length === 0}
-				<div class="text-sm text-gray-400 dark:text-gray-500 italic px-1">
+				<div class="text-sm text-base-400 dark:text-base-500 italic px-1">
 					{$i18n.t('No output items')}
 				</div>
 			{/if}

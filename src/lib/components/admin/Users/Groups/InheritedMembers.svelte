@@ -37,13 +37,13 @@
 			<Spinner className="size-5" />
 		</div>
 	{:then result}
-		<p class="my-2 text-xs text-gray-500 dark:text-gray-400">
+		<p class="my-2 text-xs text-base-500 dark:text-base-400">
 			{$i18n.t('Inherited members are managed in their directly assigned groups.')}
 		</p>
 		{#if result.items.length > 0}
-			<table class="w-full table-fixed text-left text-sm text-gray-500 dark:text-gray-400">
-				<thead class="text-xs text-gray-800 uppercase dark:text-gray-200">
-					<tr class="border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
+			<table class="w-full table-fixed text-left text-sm text-base-500 dark:text-base-400">
+				<thead class="text-xs text-base-800 uppercase dark:text-base-200">
+					<tr class="border-b-[1.5px] border-base-50/50 dark:border-base-800/10">
 						<th scope="col" class="w-1/2 px-2.5 py-1.5">{$i18n.t('Name')}</th>
 						<th scope="col" class="px-2.5 py-1.5">{$i18n.t('Inherited via')}</th>
 					</tr>
@@ -51,7 +51,7 @@
 				<tbody>
 					{#each result.items as member (member.id)}
 						<tr class="text-xs">
-							<td class="px-3 py-1 font-normal text-gray-900 dark:text-white">
+							<td class="px-3 py-1 font-normal text-base-900 dark:text-white">
 								<Tooltip content={member.email} placement="top-start">
 									<div class="flex min-w-0 items-center gap-2">
 										<img
@@ -66,7 +66,7 @@
 							<td class="px-3 py-1">
 								{#each member.via_group_ids as id}
 									<a
-										class="block truncate rounded-sm transition hover:text-gray-700 hover:underline dark:hover:text-gray-200"
+										class="block truncate rounded-sm transition hover:text-base-700 hover:underline dark:hover:text-base-200"
 										href={`/admin/users/groups?id=${id}`}
 										title={groups.find((group) => group.id === id)?.path || id}
 									>
@@ -79,7 +79,7 @@
 				</tbody>
 			</table>
 		{:else}
-			<div class="px-10 py-2 text-center text-xs text-gray-500">
+			<div class="px-10 py-2 text-center text-xs text-base-500">
 				{$i18n.t('No inherited members')}
 			</div>
 		{/if}

@@ -10,7 +10,7 @@
 			: 'size-2 my-1'} mx-1"
 >
 	<span
-		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-gray-700 dark:bg-gray-200 opacity-75"
+		class="absolute inline-flex h-full w-full animate-pulse rounded-full bg-base-700 dark:bg-base-200 opacity-75"
 	></span>
 	<span
 		class="relative inline-flex {size === 'md'

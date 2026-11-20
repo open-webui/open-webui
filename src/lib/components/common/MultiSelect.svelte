@@ -110,7 +110,7 @@
 	on:keydown={handleTriggerKeydown}
 >
 	<div class="flex w-full items-center justify-between gap-2">
-		<span class="truncate text-left {selectedLabels.length ? '' : 'text-gray-500'}">
+		<span class="truncate text-left {selectedLabels.length ? '' : 'text-base-500'}">
 			{selectedLabels.length ? selectedLabels.join(', ') : placeholder}
 		</span>
 
@@ -121,14 +121,14 @@
 {#if open}
 	<div use:portal bind:this={contentEl} transition:flyAndScale>
 		<div
-			class="rounded-2xl min-w-[10.625rem] max-h-72 overflow-y-auto p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+			class="rounded-2xl min-w-[10.625rem] max-h-72 overflow-y-auto p-1 border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 dark:text-white shadow-lg"
 			role="listbox"
 			aria-multiselectable="true"
 			aria-label={placeholder}
 		>
 			{#each items as item}
 				<button
-					class="focus-ring flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
+					class="focus-ring flex w-full gap-2 items-center px-3 py-1.5 text-sm cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 rounded-xl"
 					type="button"
 					role="option"
 					aria-selected={selectedValues.includes(item.value)}
@@ -139,7 +139,7 @@
 							item.value
 						)
 							? 'bg-black outline-black text-white'
-							: 'outline-gray-200 dark:outline-gray-600'}"
+							: 'outline-base-200 dark:outline-base-600'}"
 					>
 						{#if selectedValues.includes(item.value)}
 							<svg
@@ -163,7 +163,7 @@
 					<span
 						class="truncate {selectedValues.includes(item.value)
 							? ''
-							: 'text-gray-500 dark:text-gray-400'}"
+							: 'text-base-500 dark:text-base-400'}"
 					>
 						{item.label}
 					</span>

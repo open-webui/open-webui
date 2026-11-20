@@ -33,6 +33,39 @@
 }
 
 /*
+  `base-*` is the UI colour scale; `gray-*` stays plain grey. Each step reads
+  `--app-base-*` (for custom CSS to theme the UI) and otherwise falls back to
+  the matching grey, so the default look and custom CSS that overrides
+  `--color-gray-*` keep working. `inline` resolves the fallback per element.
+*/
+@theme inline static {
+	--color-base-50: var(--app-base-50, var(--color-gray-50));
+	--color-base-100: var(--app-base-100, var(--color-gray-100));
+	--color-base-200: var(--app-base-200, var(--color-gray-200));
+	--color-base-300: var(--app-base-300, var(--color-gray-300));
+	--color-base-400: var(--app-base-400, var(--color-gray-400));
+	--color-base-500: var(--app-base-500, var(--color-gray-500));
+	--color-base-600: var(--app-base-600, var(--color-gray-600));
+	--color-base-700: var(--app-base-700, var(--color-gray-700));
+	--color-base-800: var(--app-base-800, var(--color-gray-800));
+	--color-base-850: var(--app-base-850, var(--color-gray-850));
+	--color-base-900: var(--app-base-900, var(--color-gray-900));
+	--color-base-950: var(--app-base-950, var(--color-gray-950));
+}
+
+/* Grey utilities no longer appear in our source; keep them for external HTML and custom CSS. */
+@source inline('{hover:,dark:,dark:hover:,}{bg,text,border}-gray-{50,{100..900..100},850,950}');
+
+@layer theme {
+	html.oled-dark {
+		--color-gray-800: #101010;
+		--color-gray-850: #050505;
+		--color-gray-900: #000000;
+		--color-gray-950: #000000;
+	}
+}
+
+/*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
@@ -46,7 +79,7 @@
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: var(--color-gray-200, currentColor);
+		border-color: var(--color-base-200, currentColor);
 	}
 }
 
@@ -72,11 +105,11 @@
 
 	input::placeholder,
 	textarea::placeholder {
-		color: theme(--color-gray-400);
+		color: var(--color-base-400);
 	}
 
 	input[type='checkbox'] {
-		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
+		@apply appearance-none size-3.5 align-middle bg-white border border-base-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-base-800 dark:border-base-600 self-center;
 		/* Center the custom mark */
 		display: inline-block;
 		position: relative;

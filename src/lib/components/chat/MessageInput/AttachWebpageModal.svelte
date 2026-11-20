@@ -15,7 +15,7 @@
 	let url = '';
 
 	const highContrastInputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const submitHandler = () => {
 		let urls = url
@@ -39,12 +39,12 @@
 
 <Modal ariaLabel={$i18n.t('Attach Webpage')} bind:show size="sm">
 	<div class="flex flex-col h-full">
-		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between items-center dark:text-base-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Attach Webpage')}
 			</h1>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
@@ -64,14 +64,14 @@
 				<div class="flex justify-between mb-0.5">
 					<label
 						for="webpage-url"
-						class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500'}`}
+						class={`text-xs ${($settings?.highContrastMode ?? false) ? 'text-base-800 dark:text-base-100' : 'text-base-500'}`}
 						>{$i18n.t('Webpage URLs')}</label
 					>
 				</div>
 
 				<textarea
 					id="webpage-url"
-					class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+					class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700'}`}
 					type="text"
 					bind:value={url}
 					rows="3"
@@ -82,7 +82,7 @@
 
 				<div class="flex justify-end gap-2 pt-3">
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						type="submit"
 					>
 						{$i18n.t('Add')}

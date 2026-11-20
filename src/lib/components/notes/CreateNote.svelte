@@ -32,7 +32,7 @@
 	on:confirm={createNote}
 	on:cancel={() => goto('/notes', { replaceState: true })}
 >
-	<div class="text-sm text-gray-500 whitespace-pre-wrap break-words max-h-60 overflow-auto">
+	<div class="text-sm text-base-500 whitespace-pre-wrap break-words max-h-60 overflow-auto">
 		<div class="font-medium">{title}</div>
 		{content}
 	</div>

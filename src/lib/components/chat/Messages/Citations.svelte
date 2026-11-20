@@ -172,7 +172,7 @@
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
-			class="text-xs font-normal text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
+			class="text-xs font-normal text-base-600 dark:text-base-300 px-3.5 h-8 rounded-full hover:bg-base-100 dark:hover:bg-base-800 transition flex items-center gap-1 border border-base-50 dark:border-base-850/30"
 			aria-label={citations.length === 1
 				? $i18n.t('Toggle 1 source')
 				: $i18n.t('Toggle {{COUNT}} sources', { COUNT: citations.length })}
@@ -187,7 +187,7 @@
 						<img
 							src="https://www.google.com/s2/favicons?sz=32&domain={citation.source.name}"
 							alt="favicon"
-							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
+							class="size-4 rounded-full shrink-0 border border-white dark:border-base-850 bg-white dark:bg-base-900"
 							on:error={(e) => {
 								// LICENSE covers this Open WebUI fallback logo.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -198,7 +198,7 @@
 					{/each}
 					{#if citations.length > 3}
 						<div
-							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[0.5rem] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap tracking-tighter"
+							class="size-4 rounded-full shrink-0 border border-white dark:border-base-850 bg-base-100 dark:bg-base-800 flex items-center justify-center text-[0.5rem] font-normal text-base-500 dark:text-base-400 whitespace-nowrap tracking-tighter"
 							aria-hidden="true"
 						>
 							+{citations.length - Math.min(urlCitations.length, 3)}
@@ -228,13 +228,13 @@
 					aria-label={$i18n.t('View source: {{name}}', {
 						name: `${idx + 1} ${decodeString(citation.source.name)}`
 					})}
-					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
+					class="no-toggle outline-hidden flex dark:text-base-300 bg-transparent text-base-600 rounded-xl gap-1.5 items-center"
 					on:click={() => {
 						showCitationModal = true;
 						selectedCitation = citation;
 					}}
 				>
-					<div class=" font-normal bg-gray-50 dark:bg-gray-850 rounded-md px-1">
+					<div class=" font-normal bg-base-50 dark:bg-base-850 rounded-md px-1">
 						{idx + 1}
 					</div>
 					<div

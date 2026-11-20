@@ -14,13 +14,13 @@
 </script>
 
 <Modal size="lg" ariaLabel={$i18n.t('Files on {{name}}', { name: label })} onRequestClose={onClose}>
-	<div class="p-4 text-gray-900 dark:text-gray-100">
+	<div class="p-4 text-base-900 dark:text-base-100">
 		<div class="mb-3 flex items-center justify-between gap-2">
 			<h2 class="min-w-0 truncate text-sm font-medium" title={label}>{label}</h2>
 			<button
 				type="button"
 				aria-label={$i18n.t('Close')}
-				class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+				class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 				on:click={onClose}><XMark className="size-4" /></button
 			>
 		</div>

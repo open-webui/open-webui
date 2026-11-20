@@ -230,10 +230,10 @@
 </script>
 
 <div
-	class="my-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/8 dark:bg-gray-950/20"
+	class="my-2 w-full overflow-hidden rounded-xl border border-base-200 bg-white dark:border-white/8 dark:bg-base-950/20"
 >
 	<div
-		class="flex h-8 items-center {expanded ? 'border-b border-gray-100 dark:border-white/8' : ''}"
+		class="flex h-8 items-center {expanded ? 'border-b border-base-100 dark:border-white/8' : ''}"
 	>
 		<button
 			type="button"
@@ -242,18 +242,18 @@
 			aria-expanded={expanded}
 		>
 			<div
-				class="flex size-5 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400"
+				class="flex size-5 shrink-0 items-center justify-center text-base-500 dark:text-base-400"
 			>
 				<Icon name={fileIconName(name || path || '', 'file')} size={14} />
 			</div>
-			<div class="min-w-0 flex-1 truncate text-xs font-medium text-gray-800 dark:text-gray-100">
+			<div class="min-w-0 flex-1 truncate text-xs font-medium text-base-800 dark:text-base-100">
 				{name}
 			</div>
 		</button>
 
 		<button
 			type="button"
-			class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
+			class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-base-400 transition-colors hover:text-base-700 disabled:opacity-40 disabled:hover:text-base-400 dark:text-base-500 dark:hover:text-base-200 dark:disabled:hover:text-base-500"
 			disabled={unavailable}
 			on:click|stopPropagation={downloadFile}
 			aria-label={t('Download')}
@@ -263,7 +263,7 @@
 		{#if !fileId}
 			<button
 				type="button"
-				class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
+				class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-base-400 transition-colors hover:text-base-700 disabled:opacity-40 disabled:hover:text-base-400 dark:text-base-500 dark:hover:text-base-200 dark:disabled:hover:text-base-500"
 				disabled={unavailable}
 				on:click|stopPropagation={openInFiles}
 				aria-label={t('Open')}
@@ -275,14 +275,14 @@
 
 	{#if expanded}
 		{#if unavailable}
-			<div class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+			<div class="px-4 py-3 text-xs text-base-500 dark:text-base-400">
 				{t('Terminal unavailable')}
 			</div>
 		{:else if error}
 			<div class="px-4 py-3 text-xs text-red-500 dark:text-red-400">{error}</div>
 		{:else}
 			<div
-				class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-gray-50 dark:bg-gray-950"
+				class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-base-50 dark:bg-base-950"
 			>
 				<FilePreview
 					selectedFile={path}
@@ -306,7 +306,7 @@
 				/>
 				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileModelData === null && fileDocxData === null && fileContent === null && excelWorkbook === null && fileOfficeSlides === null}
 					<div
-						class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400"
+						class="flex h-full items-center justify-center px-3 text-xs text-base-500 dark:text-base-400"
 					>
 						{t('No preview available')}
 					</div>

@@ -200,7 +200,7 @@
 			aria-expanded={showPicker}
 			class="grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal disabled:cursor-default sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 		>
-			<span class="text-gray-600 dark:text-gray-400"
+			<span class="text-base-600 dark:text-base-400"
 				><slot name="label"
 					><ModelSettingsLabel
 						label={$i18n.t('Knowledge')}
@@ -212,7 +212,7 @@
 			>
 			<span
 				bind:this={valueElement}
-				class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100"
+				class="flex min-w-0 items-center gap-1 text-base-900 dark:text-base-100"
 			>
 				<span class="min-w-0 truncate"
 					>{selectedItems
@@ -220,14 +220,14 @@
 						.map((item) => item.name || item.id)
 						.join(', ') || $i18n.t('None')}</span
 				>
-				{#if selectedItems.length > 3}<span class="shrink-0 text-gray-500"
+				{#if selectedItems.length > 3}<span class="shrink-0 text-base-500"
 						>+{selectedItems.length - 3}</span
 					>{/if}
 				{#if selectedItems.some((item) => item.status === 'uploading')}<Spinner
 						className="size-3.5 shrink-0"
 					/>{/if}
 			</span>
-			<ChevronRight className="size-3 text-gray-400" />
+			<ChevronRight className="size-3 text-base-400" />
 		</button>
 		<div slot="selected">
 			<div class="flex flex-col pb-1">
@@ -236,7 +236,7 @@
 						{#each selectedItems as file, fileIdx}
 							<Tooltip content={file.description || file.name || file.id}>
 								<div
-									class="flex min-h-7 w-full items-center gap-2 rounded-xl px-2 py-1 text-xs font-normal text-gray-900 hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800"
+									class="flex min-h-7 w-full items-center gap-2 rounded-xl px-2 py-1 text-xs font-normal text-base-900 hover:bg-base-50 dark:text-base-100 dark:hover:bg-base-800"
 								>
 									<button
 										{disabled}
@@ -249,7 +249,7 @@
 											showItemModal = true;
 										}}
 									>
-										<div class="shrink-0 text-gray-500 dark:text-gray-400">
+										<div class="shrink-0 text-base-500 dark:text-base-400">
 											{#if file.status === 'uploading'}
 												<Spinner className="size-3.5" />
 											{:else if file.type === 'collection'}
@@ -271,7 +271,7 @@
 									</button>
 
 									{#if file.status === 'uploading'}
-										<div class="shrink-0 text-gray-400 dark:text-gray-500">
+										<div class="shrink-0 text-base-400 dark:text-base-500">
 											{$i18n.t('Uploading')}
 										</div>
 									{/if}
@@ -279,7 +279,7 @@
 									<button
 										{disabled}
 										type="button"
-										class="flex size-4 shrink-0 items-center justify-center text-gray-400 dark:text-gray-500"
+										class="flex size-4 shrink-0 items-center justify-center text-base-400 dark:text-base-500"
 										aria-label={$i18n.t('Remove File')}
 										on:click={() => {
 											selectedItems = selectedItems.filter((_, idx) => idx !== fileIdx);
@@ -301,7 +301,7 @@
 				<button
 					type="button"
 					{disabled}
-					class="text-left hover:text-gray-900 dark:hover:text-gray-100"
+					class="text-left hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => (selectedItems = [])}>{$i18n.t('Clear')}</button
 				>
 			{/if}
@@ -309,7 +309,7 @@
 				<button
 					type="button"
 					{disabled}
-					class="hover:text-gray-900 dark:hover:text-gray-100"
+					class="hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => filesInputElement.click()}>{$i18n.t('Upload Files')}</button
 				>
 			{/if}
@@ -319,12 +319,12 @@
 						href="/workspace/knowledge"
 						target="_blank"
 						rel="noreferrer"
-						class="hover:text-gray-900 dark:hover:text-gray-100">{$i18n.t('Manage')}</a
+						class="hover:text-base-900 dark:hover:text-base-100">{$i18n.t('Manage')}</a
 					>
 				{/if}
 				<button
 					type="button"
-					class="hover:text-gray-900 dark:hover:text-gray-100"
+					class="hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => picker.close()}>{$i18n.t('Done')}</button
 				>
 			</div>

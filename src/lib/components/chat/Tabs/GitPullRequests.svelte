@@ -303,17 +303,17 @@
 		style:--git-list-width={`${listWidth}px`}
 	>
 		<div
-			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-gray-100/50 dark:border-white/2"
+			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-base-100/50 dark:border-white/2"
 		>
-			<Icon name="search" size={12} class="shrink-0 text-gray-300 dark:text-gray-600" /><input
-				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+			<Icon name="search" size={12} class="shrink-0 text-base-300 dark:text-base-600" /><input
+				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-base-700 dark:text-base-300 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 				aria-label={$i18n.t('Search pull requests')}
 				placeholder={$i18n.t('Search pull requests')}
 				bind:value={search}
 			/>
 			<Dropdown align="end" closeOnSelect>
 				<button
-					class="flex shrink-0 items-center gap-1 h-6 px-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+					class="flex shrink-0 items-center gap-1 h-6 px-1.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
 					aria-label={$i18n.t('Filter pull requests')}
 					><span class="text-[0.6875rem]"
 						>{states.find((option) => option.value === state)?.label}</span
@@ -336,7 +336,7 @@
 			</Dropdown>
 			<Tooltip content={$i18n.t('New pull request')}>
 				<button
-					class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+					class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 					aria-label={$i18n.t('New pull request')}
 					on:click={startCreate}><Icon name="plus" size={12} /></button
 				>
@@ -344,31 +344,31 @@
 		</div>
 		{#if listError}<div
 				role="alert"
-				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-base-500 dark:text-base-400 break-words"
 			>
 				{listError}
 			</div>{/if}
 		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 			{#each filtered as pr (pr.number)}{@const checks =
 					pr.state === 'OPEN' ? checksSummary(pr.statusCheckRollup) : null}<button
-					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
+					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-base-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
 					pr.number
-						? 'bg-gray-100/40 dark:bg-gray-800/25'
-						: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
+						? 'bg-base-100/40 dark:bg-base-800/25'
+						: 'hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
 					on:click={() => select(pr)}
 					><span class="flex w-full min-w-0 items-center gap-1.5"
-						><span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200"
+						><span class="min-w-0 flex-1 truncate text-xs text-base-800 dark:text-base-200"
 							>{pr.title}</span
 						>{#if checks}<span
 								class="w-1.5 h-1.5 rounded-full shrink-0 {outcomeTone[checks.outcome]}"
 								title={checksTitle(checks)}
 							></span>{/if}</span
-					><span class="w-full truncate text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+					><span class="w-full truncate text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 						>{rowDetails(pr)}</span
 					></button
 				>{/each}
 			{#if !filtered.length}<div
-					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 				>
 					{$i18n.t(
 						listLoading ? 'Loading...' : search.trim() ? 'No results found' : 'No pull requests'
@@ -384,7 +384,7 @@
 	>
 		{#if showingDetail}
 			<div
-				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-white/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 			>
 				<button
 					class="@min-[560px]:hidden"
@@ -396,14 +396,14 @@
 						: $i18n.t('New pull request')}</span
 				>
 				{#if onDraft && selected?.state === 'OPEN' && !creating && !editing && (failingChecks.length || feedback.length)}<button
-						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-white/5 dark:hover:text-base-200 transition-colors duration-75"
 						on:click={() =>
 							selected && sendToChat(feedbackPrompt($i18n.t, selected, failingChecks, feedback))}
 						><Icon name="chat-plus" size={11} />{$i18n.t('Address feedback')}</button
 					>{/if}
 				{#if selected && !creating && !editing}<Dropdown side="top" align="end" closeOnSelect
 						><button
-							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 							aria-label={$i18n.t('Pull request actions')}
 							><Icon name="three-dots" size={12} /></button
 						>
@@ -449,7 +449,7 @@
 		{/if}
 		{#if error && showingDetail}<div
 				role="alert"
-				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-base-500 dark:text-base-400 break-words"
 			>
 				{error}
 			</div>{/if}
@@ -460,30 +460,30 @@
 			>
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2">
 					<input
-						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 						aria-label={$i18n.t('Pull request title')}
 						placeholder={$i18n.t('Title')}
 						bind:value={title}
 						required
 					/>
 					<textarea
-						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100/50 dark:border-white/2"
+						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-white/2"
 						aria-label={$i18n.t('Pull request description')}
 						placeholder={$i18n.t('Description')}
 						rows="6"
 						bind:value={body}
 					></textarea>
 					{#if creating}<div
-							class="flex min-w-0 items-center gap-1.5 h-7 px-1 border-t border-gray-100/50 dark:border-white/2 text-gray-400 dark:text-gray-600"
+							class="flex min-w-0 items-center gap-1.5 h-7 px-1 border-t border-base-100/50 dark:border-white/2 text-base-400 dark:text-base-600"
 						>
 							<Icon name="git-branch" size={12} class="shrink-0" /><input
-								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-base-700 dark:text-base-300 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 								aria-label={$i18n.t('Base branch')}
 								placeholder={$i18n.t('Base branch')}
 								bind:value={base}
 								required
 							/><span class="shrink-0 font-mono text-[0.625rem]">←</span><input
-								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+								class="min-w-0 flex-1 bg-transparent font-mono text-[0.625rem] text-base-700 dark:text-base-300 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 								aria-label={$i18n.t('Head branch')}
 								placeholder={$i18n.t('Head branch')}
 								bind:value={head}
@@ -492,17 +492,17 @@
 						</div>{/if}
 				</div>
 				<div
-					class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+					class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-white/2"
 				>
 					{#if creating}<button
 							type="button"
-							class="flex shrink-0 items-center gap-1.5 h-6 px-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+							class="flex shrink-0 items-center gap-1.5 h-6 px-1 text-[0.6875rem] text-base-500 dark:text-base-400"
 							role="checkbox"
 							aria-checked={draft}
 							on:click={() => (draft = !draft)}
 							><span
-								class="flex items-center justify-center w-3 h-3 rounded border shrink-0 border-gray-300 dark:border-gray-600 {draft
-									? 'bg-gray-800 dark:bg-white'
+								class="flex items-center justify-center w-3 h-3 rounded border shrink-0 border-base-300 dark:border-base-600 {draft
+									? 'bg-base-800 dark:bg-white'
 									: ''}"
 								>{#if draft}<Icon
 										name="check"
@@ -529,24 +529,24 @@
 			</form>
 		{:else if selected}
 			<div
-				class="flex items-center gap-0.5 px-1 h-7 shrink-0 border-b border-gray-100/50 dark:border-white/2"
+				class="flex items-center gap-0.5 px-1 h-7 shrink-0 border-b border-base-100/50 dark:border-white/2"
 			>
 				{#each tabs as tab}<button
 						class="px-2 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 						tab.value
-							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
-							: 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}"
+							? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-white'
+							: 'text-base-400 hover:text-base-600 dark:hover:text-base-300'}"
 						on:click={() => selected && select(selected, tab.value)}>{tab.label}</button
 					>{/each}
 			</div>
 			{#if loading}<div
-					class="flex flex-1 items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+					class="flex flex-1 items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 				>
 					{$i18n.t('Loading...')}
 				</div>
 			{:else if view === 'code'}<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden">
 					{#if diff}<GitDiff code={diff} {mode} {hideWhitespace} />{:else}<div
-							class="flex h-full items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
+							class="flex h-full items-center justify-center p-3 text-center text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('No text changes')}
 						</div>{/if}
@@ -554,44 +554,44 @@
 			{:else if view === 'summary'}
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2.5 py-2">
 					<dl class="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-1">
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Author')}</dt>
-						<dd class="truncate text-gray-700 dark:text-gray-300">
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Author')}</dt>
+						<dd class="truncate text-base-700 dark:text-base-300">
 							{selected.author?.login ?? $i18n.t('Unknown')}
 						</dd>
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Branch')}</dt>
-						<dd class="truncate font-mono text-[0.625rem] text-gray-700 dark:text-gray-300">
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Branch')}</dt>
+						<dd class="truncate font-mono text-[0.625rem] text-base-700 dark:text-base-300">
 							{selected.baseRefName} ← {selected.headRefName}
 						</dd>
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Status')}</dt>
-						<dd class="truncate text-gray-700 dark:text-gray-300">
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Status')}</dt>
+						<dd class="truncate text-base-700 dark:text-base-300">
 							{selected.isDraft ? $i18n.t('Draft') : label(selected.state)}{selected.reviewDecision
 								? ` · ${label(selected.reviewDecision)}`
 								: ''}
 						</dd>
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Reviewers')}</dt>
-						<dd class="truncate text-gray-700 dark:text-gray-300">
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Reviewers')}</dt>
+						<dd class="truncate text-base-700 dark:text-base-300">
 							{people(selected.reviewRequests)}
 						</dd>
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Assignees')}</dt>
-						<dd class="truncate text-gray-700 dark:text-gray-300">{people(selected.assignees)}</dd>
-						<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Labels')}</dt>
-						<dd class="truncate text-gray-700 dark:text-gray-300">
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Assignees')}</dt>
+						<dd class="truncate text-base-700 dark:text-base-300">{people(selected.assignees)}</dd>
+						<dt class="text-base-400 dark:text-base-600">{$i18n.t('Labels')}</dt>
+						<dd class="truncate text-base-700 dark:text-base-300">
 							{selected.labels?.map((item) => item.name).join(', ') || $i18n.t('None')}
 						</dd>
-						{#if selected.state === 'OPEN'}<dt class="text-gray-400 dark:text-gray-600">
+						{#if selected.state === 'OPEN'}<dt class="text-base-400 dark:text-base-600">
 								{$i18n.t('Merge')}
 							</dt>
-							<dd class="truncate text-gray-700 dark:text-gray-300">
+							<dd class="truncate text-base-700 dark:text-base-300">
 								{selected.mergeable ? label(selected.mergeable) : $i18n.t('Unknown')}
 							</dd>{/if}
 					</dl>
 					<div
-						class="mt-3 pb-1 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
+						class="mt-3 pb-1 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
 					>
 						{$i18n.t('Description')}
 					</div>
 					{#if selected.body?.trim()}<div
-							class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+							class="markdown-prose-xs max-w-none break-words text-base-800 dark:text-base-200"
 						>
 							<Markdown
 								id={`pr-${selected.number}-body`}
@@ -600,12 +600,12 @@
 								allowEmbeds={false}
 								editCodeBlock={false}
 							/>
-						</div>{:else}<div class="text-xs text-gray-400 dark:text-gray-600">
+						</div>{:else}<div class="text-xs text-base-400 dark:text-base-600">
 							{$i18n.t('No description')}
 						</div>{/if}
 				</div>
 				{#if selected.state === 'OPEN'}<div
-						class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+						class="flex items-center gap-1 px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-white/2"
 					>
 						{#if selected.isDraft}<button
 								class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {busy
@@ -648,7 +648,7 @@
 						{/if}
 					</div>
 				{:else if selected.state === 'CLOSED'}<div
-						class="flex items-center px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+						class="flex items-center px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-white/2"
 					>
 						<button
 							class="flex-1 h-6 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {secondaryButton}"
@@ -661,30 +661,30 @@
 						{@const outcome = checkOutcome(check)}
 						{@const link = checkLink(check)}
 						<div
-							class="group flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-gray-50/50 dark:border-white/2"
+							class="group flex min-w-0 items-center gap-1.5 h-7 px-2.5 border-b border-base-50/50 dark:border-white/2"
 						>
 							<span class="w-1.5 h-1.5 rounded-full shrink-0 {outcomeTone[outcome]}"
 							></span>{#if link}<a
-									class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200 hover:underline"
+									class="min-w-0 flex-1 truncate text-[0.6875rem] text-base-800 dark:text-base-200 hover:underline"
 									href={link}
 									target="_blank"
 									rel="noopener noreferrer">{checkName(check)}</a
 								>{:else}<span
-									class="min-w-0 flex-1 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200"
+									class="min-w-0 flex-1 truncate text-[0.6875rem] text-base-800 dark:text-base-200"
 									>{checkName(check)}</span
 								>{/if}
 							{#if onDraft && outcome === 'fail' && selected.state === 'OPEN'}<button
-									class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+									class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-white/5 dark:hover:text-base-200 transition-colors duration-75"
 									on:click={() => selected && sendToChat(checkPrompt($i18n.t, selected, check))}
 									><Icon name="chat-plus" size={11} />{$i18n.t('Fix')}</button
 								>{/if}<span
-								class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+								class="shrink-0 font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 								>{checkResult(check)}</span
 							>
 						</div>
 					{/each}
 					{#if !selected.statusCheckRollup?.length}<div
-							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('No checks')}
 						</div>{/if}
@@ -696,22 +696,22 @@
 				]}
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 					{#each activity as item, index}<div
-							class="group px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
+							class="group px-2.5 py-1.5 border-b border-base-50/50 dark:border-white/2"
 						>
 							<div class="flex min-w-0 items-center gap-1.5 h-5">
 								<span
-									class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+									class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 									>{item.author?.login ?? $i18n.t('Unknown')}{item.state
 										? ` · ${label(item.state)}`
 										: ''}</span
 								>{#if onDraft && item.body?.trim()}<button
-										class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+										class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-white/5 dark:hover:text-base-200 transition-colors duration-75"
 										on:click={() => selected && sendToChat(notePrompt($i18n.t, selected, item))}
 										><Icon name="chat-plus" size={11} />{$i18n.t('Add to chat')}</button
 									>{/if}
 							</div>
 							{#if item.body?.trim()}<div
-									class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+									class="markdown-prose-xs max-w-none break-words text-base-800 dark:text-base-200"
 								>
 									<Markdown
 										id={`pr-${selected.number}-activity-${index}`}
@@ -723,17 +723,17 @@
 								</div>{/if}
 						</div>{/each}
 					{#if !activity.length}<div
-							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+							class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('No activity')}
 						</div>{/if}
 				</div>
 				<form
-					class="border-t border-gray-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+					class="border-t border-base-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
 					on:submit|preventDefault={() => mutate('comment')}
 				>
 					<textarea
-						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none"
+						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none"
 						aria-label={$i18n.t('Comment')}
 						placeholder={$i18n.t('Leave a comment')}
 						rows="2"
@@ -762,7 +762,7 @@
 				</form>
 			{/if}
 		{:else}<div
-				class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+				class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 			>
 				{$i18n.t('Select a pull request')}
 			</div>{/if}

@@ -909,8 +909,8 @@
 		<div
 			class="flex w-full min-w-0 text-left px-0.5 bg-transparent {triggerClassName} justify-between {($settings?.highContrastMode ??
 			false)
-				? 'dark:placeholder-gray-100 placeholder-gray-800'
-				: 'placeholder-gray-400'}"
+				? 'dark:placeholder-base-100 placeholder-base-800'
+				: 'placeholder-base-400'}"
 			on:mouseenter={async () => {
 				models.set(await getModels(localStorage.token));
 			}}
@@ -928,7 +928,7 @@
 		>
 			<div
 				class="z-40 {className ??
-					'w-[20rem]'} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-gray-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-gray-800 dark:bg-gray-850 dark:text-white flex flex-col overflow-hidden"
+					'w-[20rem]'} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-base-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-base-800 dark:bg-base-850 dark:text-white flex flex-col overflow-hidden"
 				transition:flyAndScale
 			>
 				<slot>
@@ -939,7 +939,7 @@
 							<input
 								id="model-search-input"
 								bind:value={searchValue}
-								class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+								class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-base-400 dark:placeholder:text-base-500"
 								placeholder={searchPlaceholder ?? $i18n.t('Search a model')}
 								autocomplete="off"
 								aria-label={$i18n.t('Search In Models')}
@@ -1006,11 +1006,11 @@
 												type="button"
 												class="focus-ring flex size-[1.375rem] shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {compareEnabled
 													? ($settings?.highContrastMode ?? false)
-														? 'bg-gray-200 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-800'
-														: 'bg-gray-50 text-gray-700 hover:bg-gray-50 dark:bg-gray-800/60 dark:text-gray-200 dark:hover:bg-gray-800/60'
+														? 'bg-base-200 text-base-900 hover:bg-base-200 dark:bg-base-800 dark:text-base-100 dark:hover:bg-base-800'
+														: 'bg-base-50 text-base-700 hover:bg-base-50 dark:bg-base-800/60 dark:text-base-200 dark:hover:bg-base-800/60'
 													: ($settings?.highContrastMode ?? false)
-														? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-														: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
+														? 'text-base-700 hover:bg-base-200 hover:text-base-900 dark:text-base-300 dark:hover:bg-base-800 dark:hover:text-base-100'
+														: 'text-base-500 hover:bg-base-50/40 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-100'}"
 												aria-label={$i18n.t('Compare')}
 												aria-pressed={compareEnabled}
 												on:click={() => {
@@ -1030,12 +1030,12 @@
 											items={modelFilterItems}
 											triggerClass="relative flex h-[1.375rem] max-w-32 items-center gap-0.5 rounded-xl bg-transparent px-1.5 text-[0.6875rem] font-normal transition-colors duration-100 {($settings?.highContrastMode ??
 											false)
-												? 'text-gray-700 hover:bg-gray-200 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-												: 'text-gray-500 hover:bg-gray-50/40 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
+												? 'text-base-700 hover:bg-base-200 hover:text-base-900 dark:text-base-300 dark:hover:bg-base-800 dark:hover:text-base-100'
+												: 'text-base-500 hover:bg-base-50/40 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-100'}"
 											itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] capitalize {($settings?.highContrastMode ??
 											false)
-												? 'hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100'
-												: 'hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100'}"
+												? 'hover:bg-base-200 hover:text-base-900 dark:hover:bg-base-800 dark:hover:text-base-100'
+												: 'hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100'}"
 											contentClass="min-w-36 model-selector-child-menu"
 											onChange={setModelFilter}
 										/>
@@ -1062,16 +1062,16 @@
 									class="my-2 flex w-full flex-col items-start justify-center px-4 py-3 text-start"
 								>
 									<div
-										class="mb-0.5 text-xs font-normal leading-4 text-gray-800 dark:text-gray-100"
+										class="mb-0.5 text-xs font-normal leading-4 text-base-800 dark:text-base-100"
 									>
 										{$i18n.t('No models available')}
 									</div>
-									<div class="w-full text-[0.6875rem] leading-3.5 text-gray-500 dark:text-gray-400">
+									<div class="w-full text-[0.6875rem] leading-3.5 text-base-500 dark:text-base-400">
 										{$i18n.t('Connect to an AI provider to start chatting')}
 									</div>
 									<button
 										type="button"
-										class="focus-ring mt-3 rounded-lg px-0 py-1 text-[0.6875rem] font-normal leading-none text-gray-600 underline-offset-2 transition-colors duration-100 hover:text-gray-800 hover:underline focus:outline-hidden focus:underline dark:text-gray-300 dark:hover:text-gray-100"
+										class="focus-ring mt-3 rounded-lg px-0 py-1 text-[0.6875rem] font-normal leading-none text-base-600 underline-offset-2 transition-colors duration-100 hover:text-base-800 hover:underline focus:outline-hidden focus:underline dark:text-base-300 dark:hover:text-base-100"
 										on:click={() => {
 											show = false;
 											showSettings.set('admin:connections');
@@ -1083,7 +1083,7 @@
 							{:else}
 								<div class="">
 									<div
-										class="flex min-h-8 items-center rounded-xl px-2 text-[0.8125rem] text-gray-700 dark:text-gray-100"
+										class="flex min-h-8 items-center rounded-xl px-2 text-[0.8125rem] text-base-700 dark:text-base-100"
 									>
 										{$i18n.t('No results found')}
 									</div>
@@ -1143,26 +1143,26 @@
 										role="option"
 										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
-										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {selectedModelIdx ===
+										class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-base-700 outline-hidden transition-colors duration-75 dark:text-base-100 {selectedModelIdx ===
 										filteredItems.length + targetIndex
 											? ($settings?.highContrastMode ?? false)
-												? 'bg-gray-200 dark:bg-gray-800'
-												: 'bg-gray-50/70 dark:bg-gray-800/60'
+												? 'bg-base-200 dark:bg-base-800'
+												: 'bg-base-50/70 dark:bg-base-800/60'
 											: ''}"
 									>
-										<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
+										<Spinner className="size-3 shrink-0 text-base-400 dark:text-base-500" />
 										<div class="min-w-0 flex-1 truncate">
 											{$i18n.t('Downloading "{{searchValue}}"', { searchValue: searchValue })}
 										</div>
 										{#if 'pullProgress' in target.download}
 											<div
-												class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+												class="shrink-0 text-[0.6875rem] tabular-nums text-base-500 dark:text-base-400"
 											>
 												{target.download.pullProgress}%
 											</div>
 										{/if}
 										<button
-											class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+											class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 											aria-label={$i18n.t('Cancel download of {{model}}', { model: searchValue })}
 											on:click|stopPropagation={() => {
 												cancelModelPullHandler(target.poolKey);
@@ -1196,25 +1196,25 @@
 										role="option"
 										aria-selected={selectedModelIdx === filteredItems.length + targetIndex}
 										data-arrow-selected={selectedModelIdx === filteredItems.length + targetIndex}
-										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
+										class="focus-ring flex h-8 w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-base-700 outline-hidden transition-colors duration-75 dark:text-base-100 {($settings?.highContrastMode ??
 										false)
-											? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-											: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'} {selectedModelIdx ===
+											? 'hover:bg-base-200 dark:hover:bg-base-800'
+											: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'} {selectedModelIdx ===
 										filteredItems.length + targetIndex
 											? ($settings?.highContrastMode ?? false)
-												? 'bg-gray-200 dark:bg-gray-800'
-												: 'bg-gray-50/70 dark:bg-gray-800/60'
+												? 'bg-base-200 dark:bg-base-800'
+												: 'bg-base-50/70 dark:bg-base-800/60'
 											: ''}"
 										on:click={() => {
 											downloadModelHandler(target);
 										}}
 									>
-										<Download className="size-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+										<Download className="size-3.5 shrink-0 text-base-400 dark:text-base-500" />
 										<div class="min-w-0 flex-1 truncate">
 											{$i18n.t('Download "{{searchValue}}"', { searchValue: searchValue })}
 										</div>
 										<div
-											class="shrink-0 truncate text-[0.6875rem] text-gray-500 dark:text-gray-400"
+											class="shrink-0 truncate text-[0.6875rem] text-base-500 dark:text-base-400"
 										>
 											{target.label}
 										</div>
@@ -1233,9 +1233,9 @@
 								placement="top-start"
 							>
 								<div
-									class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100"
+									class="flex h-8 w-full select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-base-700 outline-hidden transition-colors duration-75 dark:text-base-100"
 								>
-									<Spinner className="size-3 shrink-0 text-gray-400 dark:text-gray-500" />
+									<Spinner className="size-3 shrink-0 text-base-400 dark:text-base-500" />
 									<div class="min-w-0 flex-1 truncate">
 										{$i18n.t('Downloading "{{name}}"', {
 											name: downloadName
@@ -1245,13 +1245,13 @@
 									</div>
 									{#if 'pullProgress' in download}
 										<div
-											class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+											class="shrink-0 text-[0.6875rem] tabular-nums text-base-500 dark:text-base-400"
 										>
 											{download.pullProgress}%
 										</div>
 									{/if}
 									<button
-										class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+										class="focus-ring flex size-4 shrink-0 items-center justify-center rounded text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 										aria-label={$i18n.t('Cancel download of {{model}}', { model: downloadName })}
 										on:click|stopPropagation={() => {
 											cancelModelPullHandler(model);
@@ -1291,7 +1291,7 @@
 								type="button"
 								class="focus-ring {($settings?.highContrastMode ?? false)
 									? 'inline-flex min-h-6 items-center'
-									: ''} text-[0.65rem] font-normal leading-none text-gray-500 underline-offset-2 transition-colors duration-100 hover:text-gray-700 hover:underline dark:text-gray-500 dark:hover:text-gray-300"
+									: ''} text-[0.65rem] font-normal leading-none text-base-500 underline-offset-2 transition-colors duration-100 hover:text-base-700 hover:underline dark:text-base-500 dark:hover:text-base-300"
 								on:click|stopPropagation={setDefaultHandler}
 							>
 								{$i18n.t('Set as default')}

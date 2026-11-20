@@ -148,15 +148,15 @@
 
 {#snippet menuItems()}
 	<SearchInput bind:value={search} placeholder={$i18n.t('Search folders')} />
-	<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
+	<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
 	<button
 		type="button"
 		role="menuitemradio"
 		aria-checked={!directory}
 		disabled={saving || disabled}
 		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {!directory
-			? 'bg-gray-50/40 dark:bg-gray-800/40'
-			: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+			? 'bg-base-50/40 dark:bg-base-800/40'
+			: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 		on:click={() => selectDirectory('')}
 	>
 		<Folder className="size-3.5 shrink-0" strokeWidth="2" />
@@ -167,12 +167,12 @@
 	</button>
 	{#if options.length > 0}
 		<div
-			class="px-2 py-1 text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+			class="px-2 py-1 text-[0.625rem] font-normal text-base-400 dark:text-base-500 uppercase tracking-wider"
 		>
 			{$i18n.t('Recently Used')}
 		</div>
 		{#if historyError}
-			<div role="status" class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<div role="status" class="px-2 py-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 				{historyError}
 			</div>
 		{/if}
@@ -180,7 +180,7 @@
 			{#each options as path}
 				{@const selected = !!directory && normalize(directory) === path}
 				<div
-					class="group/directory relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="group/directory relative rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				>
 					<button
 						type="button"
@@ -191,8 +191,8 @@
 						class="flex h-[1.6875rem] w-full items-center justify-between gap-2 rounded-xl pl-2 {selected
 							? 'pr-14'
 							: 'pr-8'} text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {selected
-							? 'bg-gray-50/40 dark:bg-gray-800/40'
-							: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+							? 'bg-base-50/40 dark:bg-base-800/40'
+							: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 						on:click={() => selectDirectory(path)}
 					>
 						<div class="flex min-w-0 flex-1 items-center gap-2">
@@ -216,7 +216,7 @@
 								type="button"
 								aria-label={$i18n.t('Open folder')}
 								disabled={saving || disabled}
-								class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
+								class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 hover:text-base-700 dark:hover:text-base-200 focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
 								on:click|stopPropagation={() => {
 									closeMenu();
 									showFileNav.set({
@@ -232,11 +232,11 @@
 			{/each}
 		</div>
 	{/if}
-	<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
+	<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
 	<button
 		type="button"
 		disabled={saving || disabled}
-		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-start text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800/40"
+		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-start text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-base-800/40"
 		on:click={() => {
 			closeMenu();
 			showPicker = true;
@@ -254,7 +254,7 @@
 				type="button"
 				role="menuitem"
 				disabled={disabled || saving}
-				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-base-50/40 dark:hover:bg-base-800/40 disabled:cursor-not-allowed disabled:opacity-40"
 				on:click={() => {
 					tab = 'directory';
 					search = '';
@@ -265,14 +265,14 @@
 				<span class="flex-1 truncate"
 					>{directory ? folderName(directory) : $i18n.t('Working Directory')}</span
 				>
-				<div class="text-gray-500"><ChevronRight /></div>
+				<div class="text-base-500"><ChevronRight /></div>
 			</button>
 		</div>
 	{:else if tab === 'directory'}
 		<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 			<button
 				role="menuitem"
-				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					tab = '';
 				}}
@@ -304,10 +304,10 @@
 					aria-label={$i18n.t('Choose working directory')}
 					class="flex min-w-0 items-center text-[0.8125rem] transition gap-1.5 translate-y-[1px] rounded-lg p-1 {disabled ||
 					saving
-						? 'cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
+						? 'cursor-not-allowed opacity-40 text-base-400 dark:text-base-600'
 						: directory
-							? 'cursor-pointer text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200'
-							: 'cursor-pointer text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'}"
+							? 'cursor-pointer text-base-600 hover:text-base-700 dark:text-base-300 dark:hover:text-base-200'
+							: 'cursor-pointer text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400'}"
 				>
 					<Folder className="size-3.5 shrink-0" strokeWidth="2" />
 					{#if directory}
@@ -334,7 +334,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="text-base-500 hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => (showPicker = false)}
 				>
 					<XMark className="size-4" />

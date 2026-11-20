@@ -502,7 +502,7 @@
 />
 
 <div class="flex flex-col gap-2" inert={saving} aria-busy={saving}>
-	<div class="-mx-1 rounded-xl bg-gray-50/60 px-3 py-2 dark:bg-white/[0.03]">
+	<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-white/[0.03]">
 		<Tooltip
 			content={!(share && sharePublic) && visibility === 'private'
 				? $i18n.t('You do not have permission to make this public')
@@ -511,16 +511,16 @@
 			<Dropdown closeOnSelect>
 				<button
 					type="button"
-					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-gray-800 transition hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
+					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-white"
 				>
 					{#if visibility === 'private'}
-						<LockClosed className="size-3.5 text-gray-500 dark:text-gray-400" />
+						<LockClosed className="size-3.5 text-base-500 dark:text-base-400" />
 					{:else}
-						<GlobeAlt className="size-3.5 text-gray-500 dark:text-gray-400" />
+						<GlobeAlt className="size-3.5 text-base-500 dark:text-base-400" />
 					{/if}
 					<span class="sr-only">{labels.title ?? $i18n.t('Visibility')}</span>
 					<span>{visibilityOptions.find((option) => option.value === visibility)?.label}</span>
-					<ChevronDown className="size-3 text-gray-400 dark:text-gray-500" strokeWidth="2" />
+					<ChevronDown className="size-3 text-base-400 dark:text-base-500" strokeWidth="2" />
 				</button>
 				<div slot="content">
 					<DropdownMenu className="min-w-40">
@@ -543,7 +543,7 @@
 				</div>
 			</Dropdown>
 		</Tooltip>
-		<p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">
+		<p class="mt-0.5 text-xs leading-5 text-base-500 dark:text-base-400">
 			{#if visibility === 'private'}
 				{$i18n.t('Only select users and groups with permission can access')}
 			{:else if visibility === 'public'}
@@ -555,7 +555,7 @@
 
 		{#if hasPublicReadGrant(accessGrants ?? []) && !hasAnyoneReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
 			<div
-				class="flex w-full items-center justify-between gap-3 border-t border-gray-100/70 pt-2 mt-2 dark:border-white/5"
+				class="flex w-full items-center justify-between gap-3 border-t border-base-100/70 pt-2 mt-2 dark:border-white/5"
 			>
 				<div class="self-center text-xs">
 					{$i18n.t('Allow public write access')}
@@ -574,13 +574,13 @@
 	<slot />
 
 	{#if share}
-		<div class="flex items-center justify-between text-xs font-normal text-gray-500 my-0.5">
+		<div class="flex items-center justify-between text-xs font-normal text-base-500 my-0.5">
 			<div>
 				{$i18n.t('Access List')}
 			</div>
 			<div class="flex gap-1">
 				<button
-					class="px-2 py-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition text-xs font-normal flex items-center gap-1"
+					class="px-2 py-1 bg-transparent hover:bg-base-100 dark:hover:bg-base-800 rounded-lg transition text-xs font-normal flex items-center gap-1"
 					type="button"
 					on:click={() => {
 						showAddAccessModal = true;
@@ -600,7 +600,7 @@
 					<div class="flex items-center gap-2 min-w-0 flex-1">
 						<!-- Placeholder for group icon vs user icon -->
 						<div
-							class="size-5 rounded-full bg-gray-100 dark:bg-gray-850 flex items-center justify-center text-xs"
+							class="size-5 rounded-full bg-base-100 dark:bg-base-850 flex items-center justify-center text-xs"
 						>
 							{group.name.charAt(0).toUpperCase()}
 						</div>
@@ -608,7 +608,7 @@
 						<div class="truncate text-sm flex items-center gap-2">
 							{group.name}
 							{#if group.member_count != null}
-								<span class="text-xs text-gray-400 font-normal"
+								<span class="text-xs text-base-400 font-normal"
 									>{group.member_count} {$i18n.t('members')}</span
 								>
 							{/if}
@@ -639,7 +639,7 @@
 
 						<button
 							aria-label={$i18n.t('Remove {{name}}', { name: group.name })}
-							class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+							class="rounded-full py-1 transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 							type="button"
 							on:click={() => {
 								removePrincipal('group', group.id);
@@ -655,7 +655,7 @@
 			{#if shareUsers}
 				{#each selectedUsers as user}
 					<div
-						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-gray-50/50 dark:border-gray-850/50 pb-1.5 last:border-0"
+						class="flex items-center gap-2 justify-between text-sm w-full transition border-b border-base-50/50 dark:border-base-850/50 pb-1.5 last:border-0"
 					>
 						<div class="flex items-center gap-2 min-w-0 flex-1">
 							<ProfilePreview {user}>
@@ -692,7 +692,7 @@
 
 							<button
 								aria-label={$i18n.t('Remove {{name}}', { name: user.name ?? user.id })}
-								class="rounded-full py-1 transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="rounded-full py-1 transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								type="button"
 								on:click={() => {
 									removePrincipal('user', user.id);
@@ -706,7 +706,7 @@
 			{/if}
 
 			{#if getVisibility(accessGrants ?? []) === 'private' && accessGroups.length === 0 && selectedUsers.length === 0}
-				<div class="text-xs text-gray-500 text-center py-3">
+				<div class="text-xs text-base-500 text-center py-3">
 					{labels.empty ?? $i18n.t('No access grants. Private to you.')}
 				</div>
 			{/if}

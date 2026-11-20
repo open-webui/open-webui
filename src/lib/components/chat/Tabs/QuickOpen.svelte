@@ -91,10 +91,10 @@
 	size="sm"
 	ariaLabel={$i18n.t('settings.personal.shortcuts.quickOpen.label')}
 	onRequestClose={onclose}
-	className="bg-white dark:bg-gray-850 rounded-xl overflow-hidden !border-gray-100 dark:!border-gray-800 text-gray-700 dark:text-gray-100 font-normal"
+	className="bg-white dark:bg-base-850 rounded-xl overflow-hidden !border-base-100 dark:!border-base-800 text-base-700 dark:text-base-100 font-normal"
 >
 	<div class="flex h-10 items-center gap-2 px-3">
-		<span class="shrink-0 text-gray-500 dark:text-gray-400"><Icon name="search" size={14} /></span>
+		<span class="shrink-0 text-base-500 dark:text-base-400"><Icon name="search" size={14} /></span>
 		<input
 			bind:value={query}
 			role="combobox"
@@ -106,7 +106,7 @@
 			autocomplete="off"
 			spellcheck="false"
 			placeholder={$i18n.t('Search Files')}
-			class="h-8 min-w-0 flex-1 bg-transparent text-[0.8125rem] font-normal outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+			class="h-8 min-w-0 flex-1 bg-transparent text-[0.8125rem] font-normal outline-none placeholder:text-base-400 dark:placeholder:text-base-500"
 			on:keydown={handleKeydown}
 		/>
 		<button type="button" aria-label={$i18n.t('Close')} on:click={onclose}>
@@ -129,23 +129,23 @@
 				aria-selected={index === selectedIndex}
 				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-lg px-2 text-start text-[0.8125rem] font-normal transition-colors duration-75 {index ===
 				selectedIndex
-					? 'bg-gray-100/60 dark:bg-gray-800/60'
-					: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+					? 'bg-base-100/60 dark:bg-base-800/60'
+					: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 				on:click={() => selectResult(result)}
 			>
-				<span class="shrink-0 text-gray-500 dark:text-gray-400"
+				<span class="shrink-0 text-base-500 dark:text-base-400"
 					><Icon name={fileIconName(result.name)} size={14} /></span
 				>
 				<span class="min-w-0 flex-1 truncate">{result.name}</span>
 				<span
-					class="max-w-[55%] truncate text-[0.6875rem] text-gray-400 dark:text-gray-500"
+					class="max-w-[55%] truncate text-[0.6875rem] text-base-400 dark:text-base-500"
 					title={result.path}>{result.path}</span
 				>
 			</button>
 		{/each}
 	</div>
 	{#if !results.length}
-		<div role="status" class="px-3 pb-3 pt-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+		<div role="status" class="px-3 pb-3 pt-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 			{#if loading}{$i18n.t('Searching...')}
 			{:else if failed}{$i18n.t('Failed to search files')}
 			{:else if query.trim()}{$i18n.t('No files found')}

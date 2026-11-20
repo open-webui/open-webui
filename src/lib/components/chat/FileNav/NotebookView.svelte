@@ -261,7 +261,7 @@
 					>
 				{:else}
 					<Tooltip content={$i18n.t('No kernel')} placement="bottom"
-						><span class="size-1.5 rounded-full bg-gray-400 dark:bg-gray-600 inline-block"
+						><span class="size-1.5 rounded-full bg-base-400 dark:bg-base-600 inline-block"
 						></span></Tooltip
 					>
 				{/if}
@@ -270,7 +270,7 @@
 
 		{#if kernelError}
 			<div
-				class="px-2 py-1 text-[0.65rem] text-gray-500 dark:text-gray-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
+				class="px-2 py-1 text-[0.65rem] text-base-500 dark:text-base-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
 			>
 				{kernelError}
 			</div>

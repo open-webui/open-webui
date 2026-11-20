@@ -25,13 +25,13 @@
 
 	// Same soft round buttons as the folder view's top bar.
 	const iconButton =
-		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50/60 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 aria-expanded:bg-gray-100 aria-expanded:text-gray-900 aria-disabled:opacity-60 dark:border-gray-850 dark:bg-gray-850/50 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white dark:aria-expanded:bg-gray-850 dark:aria-expanded:text-white';
+		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 aria-disabled:opacity-60 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white dark:aria-expanded:bg-base-850 dark:aria-expanded:text-white';
 </script>
 
 <div class="ml-auto flex shrink-0 items-center gap-1">
 	{#if dirty}
 		<button
-			class="mr-0.5 flex h-6.5 items-center gap-1.5 rounded-full bg-gray-900 px-3 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="mr-0.5 flex h-6.5 items-center gap-1.5 rounded-full bg-base-900 px-3 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 			type="button"
 			disabled={saving}
 			on:click={saveHandler}

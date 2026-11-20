@@ -13,16 +13,8 @@ export function setTheme(value: string): void {
 		if (name !== resolved) root.classList.remove(name);
 	}
 	root.classList.add(resolved);
-	// Match Settings: light themes leave the existing CSS palette untouched.
-	if (dark) {
-		const colors =
-			value === 'oled-dark'
-				? ['#101010', '#050505', '#000000', '#000000']
-				: ['#333', '#262626', '#171717', '#0d0d0d'];
-		['800', '850', '900', '950'].forEach((shade, index) => {
-			root.style.setProperty(`--color-gray-${shade}`, colors[index]);
-		});
-	}
+	// OLED greys live in tailwind.css under `.oled-dark`, so custom CSS can still override them.
+	if (value === 'oled-dark') root.classList.add('oled-dark');
 	document
 		.querySelector('meta[name="theme-color"]')
 		?.setAttribute(

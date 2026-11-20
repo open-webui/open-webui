@@ -185,7 +185,7 @@
 	$: legacyTabsOpen =
 		showLegacyTabs || legacyAdminTabs.includes(selectedTab) || search.trim() !== '';
 	const settingGroupHeadingClass = (first: boolean) =>
-		`hidden md:block shrink-0 text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 ${
+		`hidden md:block shrink-0 text-[0.625rem] text-base-600 dark:text-base-500 px-2 ${
 			first ? 'mt-0.5' : 'mt-2'
 		} mb-0.5`;
 
@@ -470,8 +470,8 @@
 	const tabButtonClass = (active: boolean) =>
 		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
 			active
-				? 'font-medium text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.04]'
-				: 'text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+				? 'font-medium text-base-900 dark:text-white bg-base-50 dark:bg-white/[0.04]'
+				: 'text-base-600 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300'
 		}`;
 
 	let selectedTab = 'general';
@@ -512,17 +512,17 @@
 <Modal
 	size="full"
 	containerClassName="p-4 sm:p-6 lg:p-8"
-	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-gray-900 rounded-4xl overflow-hidden"
+	className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] flex flex-col md:flex-row bg-white dark:bg-base-900 rounded-4xl overflow-hidden"
 	ariaLabel={$i18n.t('Settings')}
 	bind:show={modalShow}
 >
 	<nav
 		id="settings-tabs-container"
-		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-gray-100/30 dark:border-white/[0.02] md:w-[15rem]"
+		class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-base-100/30 dark:border-white/[0.02] md:w-[15rem]"
 	>
 		<div class="flex items-center gap-1 m-1 md:mb-0 shrink-0">
 			<button
-				class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-gray-600 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+				class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
 				type="button"
 				on:click={() => {
 					show = false;
@@ -534,7 +534,7 @@
 			<button
 				bind:this={searchButton}
 				type="button"
-				class="flex md:hidden size-7 shrink-0 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-white/[0.04] dark:hover:text-gray-300"
+				class="flex md:hidden size-7 shrink-0 items-center justify-center rounded-lg text-base-600 hover:bg-base-50 hover:text-base-700 dark:text-base-500 dark:hover:bg-white/[0.04] dark:hover:text-base-300"
 				aria-label={$i18n.t('Search')}
 				aria-expanded={showSearch || !!search}
 				aria-controls="search-input-settings-modal"
@@ -546,7 +546,7 @@
 
 		{#if !$mobile || showSearch || search}
 			<div
-				class="flex items-center gap-1.5 h-7 px-2 mx-1 md:mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-gray-50/70 dark:bg-white/[0.03]"
+				class="flex items-center gap-1.5 h-7 px-2 mx-1 md:mt-1 mb-0.5 shrink-0 rounded-lg text-xs bg-base-50/70 dark:bg-white/[0.03]"
 			>
 				<div class="self-center rounded-l-xl bg-transparent">
 					<Search className="size-3.5" strokeWidth="1.5" />
@@ -555,7 +555,7 @@
 				<input
 					bind:this={searchInput}
 					data-settings-search
-					class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-gray-600 dark:text-gray-300 dark:placeholder:text-gray-500"
+					class="w-full text-xs bg-transparent py-1 outline-hidden placeholder:text-base-600 dark:text-base-300 dark:placeholder:text-base-500"
 					bind:value={search}
 					id="search-input-settings-modal"
 					on:keydown={searchKeydown}
@@ -576,7 +576,7 @@
 			class="tabs scrollbar-none max-h-32 md:max-h-none flex min-w-0 flex-1 min-h-0 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto md:flex-col p-1 pl-0 md:pl-1 gap-px"
 		>
 			<span
-				class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mt-1.5 mb-0.5"
+				class="hidden md:block text-[0.625rem] text-base-600 dark:text-base-500 px-2 mt-1.5 mb-0.5"
 			>
 				{$i18n.t('Personal')}
 			</span>
@@ -740,9 +740,9 @@
 
 			{#if $user?.role === 'admin' && filteredAdminSettings.length > 0}
 				<div
-					class="hidden md:block shrink-0 self-stretch h-px mx-1 my-2 bg-gray-100/40 dark:bg-white/[0.025]"
+					class="hidden md:block shrink-0 self-stretch h-px mx-1 my-2 bg-base-100/40 dark:bg-white/[0.025]"
 				></div>
-				<span class="hidden md:block text-[0.625rem] text-gray-600 dark:text-gray-500 px-2 mb-0.5">
+				<span class="hidden md:block text-[0.625rem] text-base-600 dark:text-base-500 px-2 mb-0.5">
 					{$i18n.t('Admin')}
 				</span>
 
@@ -760,7 +760,7 @@
 							<button
 								type="button"
 								aria-expanded={legacyTabsOpen}
-								class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors duration-75"
+								class="flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left text-base-500 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 transition-colors duration-75"
 								on:click={() => {
 									showLegacyTabs = !legacyTabsOpen;
 								}}
@@ -796,7 +796,7 @@
 			{/if}
 
 			{#if filteredSettings.length === 0}
-				<div class="px-2 py-1 text-xs text-gray-600 dark:text-gray-500">
+				<div class="px-2 py-1 text-xs text-base-600 dark:text-base-500">
 					{$i18n.t('No matches')}
 				</div>
 			{/if}

@@ -32,9 +32,9 @@
 	let showAdvanced = false;
 
 	const systemPromptTextareaClass =
-		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
 
 	let params = {
 		// Advanced
@@ -146,7 +146,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('settings.personal.general.title')}
 	</h2>
 
@@ -193,10 +193,10 @@
 				</SettingsSelect>
 			</UserSettingRow>
 			{#if $i18n.language === 'en-US' && !($config?.license_metadata ?? false)}
-				<div class="-mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<div class="-mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
 					{$i18n.t("Couldn't find your language?")}
 					<a
-						class="font-normal underline text-gray-400 dark:text-gray-600"
+						class="font-normal underline text-base-400 dark:text-base-600"
 						href="https://github.com/open-webui/open-webui/blob/main/docs/CONTRIBUTING.md#-translations-and-internationalization"
 						target="_blank"
 					>
@@ -253,7 +253,7 @@
 
 	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 			on:click={() => {
 				saveHandler();
 			}}

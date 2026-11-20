@@ -101,17 +101,17 @@
 
 	<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 		{#if title}
-			<div class="line-clamp-1 font-medium text-gray-900 dark:text-gray-50">{title}</div>
+			<div class="line-clamp-1 font-medium text-base-900 dark:text-base-50">{title}</div>
 		{/if}
 
-		<div class="line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
+		<div class="line-clamp-2 text-xs text-base-500 dark:text-base-400">
 			{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
 		</div>
 	</div>
 
 	<button
 		bind:this={closeButtonElement}
-		class="-mr-0.5 flex size-5 shrink-0 items-center justify-center rounded-md text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+		class="-mr-0.5 flex size-5 shrink-0 items-center justify-center rounded-md text-base-400 transition hover:bg-base-100 hover:text-base-700 dark:text-base-500 dark:hover:bg-base-800 dark:hover:text-base-200"
 		on:click|stopPropagation={closeHandler}
 		aria-label={$i18n.t('Dismiss notification')}
 	>

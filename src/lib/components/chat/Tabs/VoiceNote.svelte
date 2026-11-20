@@ -68,9 +68,9 @@
 	let audioUrl = '';
 	let previewBlob: Blob | undefined;
 	const buttonClass =
-		'flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-xs text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200 disabled:opacity-40';
+		'flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-1.5 text-xs text-base-500 hover:bg-base-50/60 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/60 dark:hover:text-base-200 disabled:opacity-40';
 	const primaryButtonClass =
-		'flex h-7 items-center justify-center rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-700 transition hover:bg-gray-200/60 disabled:opacity-40 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700/60';
+		'flex h-7 items-center justify-center rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-700 transition hover:bg-base-200/60 disabled:opacity-40 dark:bg-base-800 dark:text-base-200 dark:hover:bg-base-700/60';
 	$: transcriptionAvailable =
 		canTranscribe &&
 		!!$config?.audio?.stt &&
@@ -357,20 +357,20 @@
 	style:top={position ? `${position.y}px` : undefined}
 	style:bottom={position ? 'auto' : undefined}
 	style:translate={position ? 'none' : undefined}
-	class="voice-note-panel fixed bottom-6 left-1/2 z-[9998] max-w-[calc(100vw-2rem)] -translate-x-1/2 font-normal text-gray-700 outline-none dark:text-gray-200"
+	class="voice-note-panel fixed bottom-6 left-1/2 z-[9998] max-w-[calc(100vw-2rem)] -translate-x-1/2 font-normal text-base-700 outline-none dark:text-base-200"
 >
 	<span id="voice-note-move-hint" class="sr-only">{$i18n.t('Use arrow keys to move.')}</span>
 	{#if recording || initializing}
 		<div class="group relative">
 			<button
-				class="absolute -left-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-gray-500 opacity-0 transition-opacity hover:bg-gray-50/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400 dark:hover:bg-gray-800/60 max-sm:opacity-100"
+				class="absolute -left-9 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-lg text-base-500 opacity-0 transition-opacity hover:bg-base-50/60 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-base-400 dark:hover:bg-base-800/60 max-sm:opacity-100"
 				aria-label={$i18n.t('Cancel')}
 				title={`${$i18n.t('Cancel')} (Esc)`}
 				aria-disabled={busy}
 				on:click={close}><Icon name="xmark" size={14} /></button
 			>
 			<button
-				class="voice-note-pill relative flex h-14 w-56 items-center justify-center touch-none select-none cursor-grab active:cursor-grabbing rounded-full border border-gray-100 bg-white shadow-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-400 dark:border-gray-800 dark:bg-gray-850"
+				class="voice-note-pill relative flex h-14 w-56 items-center justify-center touch-none select-none cursor-grab active:cursor-grabbing rounded-full border border-base-100 bg-white shadow-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-base-400 dark:border-base-800 dark:bg-base-850"
 				disabled={busy || initializing}
 				aria-label={$i18n.t(initializing ? 'Loading...' : 'Stop recording')}
 				title={`${$i18n.t('Stop recording')} · ${$i18n.t('Drag to move')}`}
@@ -390,7 +390,7 @@
 				}}
 			>
 				{#if initializing}
-					<span role="status" class="text-xs text-gray-500 dark:text-gray-400"
+					<span role="status" class="text-xs text-base-500 dark:text-base-400"
 						>{$i18n.t('Loading...')}</span
 					>
 				{:else}
@@ -399,24 +399,24 @@
 						aria-hidden="true"
 					>
 						{#each levels as height}<span
-								class="min-w-0 flex-1 rounded-full bg-gray-500 dark:bg-gray-400"
+								class="min-w-0 flex-1 rounded-full bg-base-500 dark:bg-base-400"
 								style:height={`${height / 16}rem`}
 							></span>{/each}
 					</div>
 					<span
-						class="voice-note-stop pointer-events-none absolute flex size-6 items-center justify-center rounded-lg bg-white text-gray-700 opacity-0 transition-opacity dark:bg-gray-850 dark:text-gray-300"
+						class="voice-note-stop pointer-events-none absolute flex size-6 items-center justify-center rounded-lg bg-white text-base-700 opacity-0 transition-opacity dark:bg-base-850 dark:text-base-300"
 						aria-hidden="true"><span class="size-2.5 rounded-[0.125rem] bg-current"></span></span
 					>
 				{/if}
 			</button>
 			{#if recording}<span
-					class="pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2 text-[0.6875rem] leading-4 tabular-nums text-gray-500 dark:text-gray-400"
+					class="pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2 text-[0.6875rem] leading-4 tabular-nums text-base-500 dark:text-base-400"
 					>{duration(elapsed)}</span
 				>{/if}
 		</div>
 	{:else}
 		<div
-			class="voice-note-review w-[22rem] max-w-full max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-lg dark:border-gray-800 dark:bg-gray-850"
+			class="voice-note-review w-[22rem] max-w-full max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-xl border border-base-100 bg-white px-3 py-2 shadow-lg dark:border-base-800 dark:bg-base-850"
 		>
 			{#if draft}
 				<div class="flex items-center gap-2">
@@ -435,7 +435,7 @@
 						aria-label={$i18n.t('Move')}
 						aria-describedby="voice-note-move-hint"
 						title={$i18n.t('Drag to move')}
-						class="flex h-4 w-5 touch-none select-none cursor-grab items-center justify-center rounded text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:text-gray-500 dark:hover:text-gray-300"
+						class="flex h-4 w-5 touch-none select-none cursor-grab items-center justify-center rounded text-base-400 hover:text-base-600 active:cursor-grabbing dark:text-base-500 dark:hover:text-base-300"
 						on:pointerdown={beginDrag}
 						on:pointermove={moveDrag}
 						on:pointerup={endDrag}
@@ -456,7 +456,7 @@
 					</button>
 				</div>
 				<p
-					class="truncate text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+					class="truncate text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
 					title={draft.directory}
 				>
 					{draft.directory}
@@ -473,7 +473,7 @@
 						bind:value={draft.transcript}
 						disabled={busy}
 						rows="2"
-						class="mt-2 max-h-24 w-full resize-y bg-transparent text-xs leading-5 text-gray-600 dark:text-gray-300 outline-none"
+						class="mt-2 max-h-24 w-full resize-y bg-transparent text-xs leading-5 text-base-600 dark:text-base-300 outline-none"
 					></textarea>{/if}
 				<div class="mt-2 flex items-center gap-1">
 					<button
@@ -498,7 +498,7 @@
 								aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg
 							>{:else}<Icon name="play" size={14} />{/if}
 					</button>
-					<span class="text-xs leading-4 tabular-nums text-gray-500 dark:text-gray-400"
+					<span class="text-xs leading-4 tabular-nums text-base-500 dark:text-base-400"
 						>{duration(draft.duration)}</span
 					>
 					<div class="ms-auto flex items-center gap-0.5">

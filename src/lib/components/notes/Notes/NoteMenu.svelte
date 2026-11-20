@@ -53,7 +53,7 @@
 			{#if onAccess}
 				<button
 					type="button"
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => onAccess?.()}
 				>
 					<LockClosed className="size-3.5" />
@@ -70,7 +70,7 @@
 				>
 					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 					<div
-						class="select-none flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+						class="select-none flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
 						on:click={(e) => e.preventDefault()}
 					>
 						<Bold className="size-3.5 shrink-0" strokeWidth="2" />
@@ -78,19 +78,19 @@
 						<Switch bind:state={autoFormat} ariaLabel={$i18n.t('Formatting')} />
 					</div>
 				</Tooltip>
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-base-100 dark:border-base-800" />
 			{/if}
 			<DropdownSub contentClass="select-none z-50">
 				<button
 					slot="trigger"
-					class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				>
 					<Download className="size-3.5" strokeWidth="2" />
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('txt');
 					}}
@@ -99,7 +99,7 @@
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('md');
 					}}
@@ -108,7 +108,7 @@
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('pdf');
 					}}
@@ -119,7 +119,7 @@
 
 			{#if onUploadFiles}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onUploadFiles();
 					}}
@@ -133,7 +133,7 @@
 				<DropdownSub contentClass="select-none z-50">
 					<button
 						slot="trigger"
-						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					>
 						<Share className="size-3.5" strokeWidth="2" />
 						<div class="flex items-center">{$i18n.t('Share')}</div>
@@ -141,7 +141,7 @@
 
 					{#if onCopyLink}
 						<button
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => {
 								onCopyLink();
 							}}
@@ -153,7 +153,7 @@
 
 					{#if onCopyToClipboard}
 						<button
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => {
 								onCopyToClipboard();
 							}}
@@ -167,7 +167,7 @@
 
 			{#if onPin}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onPin();
 					}}
@@ -183,7 +183,7 @@
 			{/if}
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onDelete();
 				}}

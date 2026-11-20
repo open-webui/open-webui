@@ -39,7 +39,7 @@
 	}
 
 	const item =
-		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition';
+		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/40 dark:hover:bg-base-800/40 transition';
 	const run = (event: MouseEvent, action: () => void) => {
 		event.stopPropagation();
 		event.preventDefault();
@@ -54,7 +54,7 @@
 			<button
 				type="button"
 				aria-label={$i18n.t('More options for {{name}}', { name: label })}
-				class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2"
+				class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 hover:text-base-700 dark:hover:text-base-200 focus-visible:outline focus-visible:outline-2"
 				on:click={(e) => {
 					e.preventDefault();
 					e.stopPropagation();
@@ -98,7 +98,7 @@
 					{/if}
 				{/if}
 				{#if onSettings}
-					<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
+					<hr class="border-base-50 dark:border-base-800/30 mx-1 my-0.5" />
 					<button type="button" class={item} on:click={(e) => run(e, onSettings)}
 						><Cog6 className="size-3.5" />{$i18n.t('Terminal settings')}</button
 					>

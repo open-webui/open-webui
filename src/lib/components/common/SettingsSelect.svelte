@@ -22,13 +22,13 @@
 		title={placeholder || undefined}
 		{required}
 		{disabled}
-		class="h-7 w-full max-w-full appearance-none truncate rounded-lg border border-gray-100/50 !bg-gray-50/40 ps-2.5 pe-8 text-left text-xs text-gray-700 outline-hidden transition-colors ![background-image:none] [appearance:none] [field-sizing:content] [-webkit-appearance:none] focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500 {selectClassName}"
+		class="h-7 w-full max-w-full appearance-none truncate rounded-lg border border-base-100/50 !bg-base-50/40 ps-2.5 pe-8 text-left text-xs text-base-700 outline-hidden transition-colors ![background-image:none] [appearance:none] [field-sizing:content] [-webkit-appearance:none] focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:!bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500 {selectClassName}"
 		on:change
 	>
 		<slot />
 	</select>
 	<ChevronDown
-		className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+		className="pointer-events-none absolute end-2 top-1/2 size-3.5 -translate-y-1/2 text-base-400 dark:text-base-500"
 		strokeWidth="2"
 	/>
 </div>

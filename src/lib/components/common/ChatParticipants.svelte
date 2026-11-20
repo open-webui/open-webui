@@ -66,7 +66,7 @@
 					>
 						{@render avatar(
 							person,
-							`${avatarClass} bg-white dark:bg-gray-900 ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
+							`${avatarClass} bg-white dark:bg-base-900 ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
 						)}
 					</button>
 				{:else}
@@ -81,10 +81,10 @@
 					>
 						{@render avatar(
 							person,
-							`${avatarClass} bg-white dark:bg-gray-900 ${
+							`${avatarClass} bg-white dark:bg-base-900 ${
 								mode === 'presence'
 									? `ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
-									: 'ring-1 ring-white dark:ring-gray-900'
+									: 'ring-1 ring-white dark:ring-base-900'
 							}`
 						)}
 					</ProfilePreview>
@@ -99,7 +99,7 @@
 				class="inline-flex shrink-0 items-center justify-center rounded bg-transparent px-0.5 leading-none {mode ===
 				'presence'
 					? 'h-6 text-xs'
-					: 'text-[0.625rem]'} text-gray-500 hover:text-gray-900 focus-visible:outline dark:text-gray-400 dark:hover:text-gray-100"
+					: 'text-[0.625rem]'} text-base-500 hover:text-base-900 focus-visible:outline dark:text-base-400 dark:hover:text-base-100"
 				aria-label={mode === 'presence'
 					? $i18n.t('Collaborators')
 					: $i18n.t('Show all {{count}} contributors', { count: people.length })}
@@ -113,18 +113,18 @@
 					side="bottom"
 					align={mode === 'presence' ? 'end' : 'start'}
 					sideOffset={6}
-					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-white p-2 text-gray-900 shadow-lg ring-1 ring-black/5 dark:bg-gray-850 dark:text-gray-100 dark:ring-white/10"
+					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-white p-2 text-base-900 shadow-lg ring-1 ring-black/5 dark:bg-base-850 dark:text-base-100 dark:ring-white/10"
 					aria-label={mode === 'presence' ? $i18n.t('Collaborators') : $i18n.t('Contributors')}
 				>
 					{#if mode === 'presence'}
-						<div class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+						<div class="px-2 py-1 text-xs text-base-500 dark:text-base-400">
 							{$i18n.t('Collaborators')}
 						</div>
 					{/if}
 					<ul class="space-y-1">
 						{#each people as person (person.id)}
 							<li
-								class="rounded-lg p-1 hover:bg-gray-50 dark:hover:bg-gray-800 [&>button]:max-w-full"
+								class="rounded-lg p-1 hover:bg-base-50 dark:hover:bg-base-800 [&>button]:max-w-full"
 							>
 								{#if onSelect}
 									<button

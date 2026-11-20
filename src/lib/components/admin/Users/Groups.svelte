@@ -211,7 +211,7 @@
 	{/if}
 
 	<div>
-		<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+		<div class="sticky top-0 z-10 bg-white dark:bg-base-900">
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div class="flex min-w-0 flex-1 items-center">
 					<div class="self-center ml-1 mr-3">
@@ -226,7 +226,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -242,13 +242,13 @@
 					bind:value={sortBy}
 					items={sortItems}
 					placeholder={$i18n.t('Sort')}
-					triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
-					labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+					triggerClass="relative h-8 shrink-0 flex items-center gap-1 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-base-700 transition hover:text-base-900 dark:text-base-200 dark:hover:text-base-100"
+					labelClass="inline-flex h-input outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 					align="end"
 				>
 					<svelte:fragment slot="trigger" let:selectedLabel>
 						<span
-							class="inline-flex h-input outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+							class="inline-flex h-input outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 						>
 							{selectedLabel}
 						</span>
@@ -264,7 +264,7 @@
 				</Select>
 
 				<button
-					class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+					class="ml-1 shrink-0 rounded-lg bg-base-50 px-2.5 py-1 text-xs text-base-900 transition ring-1 ring-base-200 hover:bg-base-100 dark:bg-base-850 dark:text-base-100 dark:ring-base-800 dark:hover:bg-base-800"
 					on:click={() => {
 						showAddGroupModal = !showAddGroupModal;
 					}}
@@ -281,8 +281,8 @@
 						role="group"
 						aria-label={group.name}
 						class="relative flex items-center rounded-xl transition {dropTarget === group.id
-							? 'bg-gray-100/40 dark:bg-gray-800/30'
-							: 'hover:bg-gray-50/60 dark:hover:bg-gray-900'} {draggedGroup?.id === group.id
+							? 'bg-base-100/40 dark:bg-base-800/30'
+							: 'hover:bg-base-50/60 dark:hover:bg-base-900'} {draggedGroup?.id === group.id
 							? 'opacity-40'
 							: ''}"
 						style:padding-left={`${Math.min(group.ancestor_ids.length, 8) * 20}px`}
@@ -305,14 +305,14 @@
 						{#each group.ancestor_ids.slice(0, 8) as ancestorId, depth}
 							<span
 								aria-hidden="true"
-								class="pointer-events-none absolute top-0 bottom-0 border-l border-gray-100 dark:border-gray-900"
+								class="pointer-events-none absolute top-0 bottom-0 border-l border-base-100 dark:border-base-900"
 								style:left={`${depth * 20 + 11}px`}
 							></span>
 						{/each}
 						{#if children.has(group.id)}
 							<button
 								type="button"
-								class="z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+								class="z-10 flex size-6 shrink-0 items-center justify-center rounded-md text-base-500 hover:text-base-900 dark:hover:text-base-100"
 								aria-label={collapsed.has(group.id)
 									? $i18n.t('Expand {{name}}', { name: group.name })
 									: $i18n.t('Collapse {{name}}', { name: group.name })}
@@ -357,8 +357,8 @@
 						role="region"
 						aria-label={$i18n.t('Move to top level')}
 						class="mt-1 rounded-lg px-3 py-2 text-xs transition {dropTarget === 'root'
-							? 'bg-gray-100/40 text-gray-500 dark:bg-gray-800/30 dark:text-gray-400'
-							: 'text-gray-400 dark:text-gray-500'}"
+							? 'bg-base-100/40 text-base-500 dark:bg-base-800/30 dark:text-base-400'
+							: 'text-base-400 dark:text-base-500'}"
 						on:dragover={(event) => {
 							if (canDrop(null)) {
 								event.preventDefault();
@@ -376,16 +376,16 @@
 			</div>
 		{:else}
 			<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-				<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+				<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 					<div class="mb-1.5 text-sm">{$i18n.t('No groups found')}</div>
-					<div class="text-center text-xs leading-5 text-gray-500">
+					<div class="text-center text-xs leading-5 text-base-500">
 						{$i18n.t('Use groups to organize your users and assign permissions.')}
 					</div>
 				</div>
 			</div>
 		{/if}
 
-		<hr class="my-1 border-gray-50 dark:border-gray-850/40" />
+		<hr class="my-1 border-base-50 dark:border-base-850/40" />
 
 		<button
 			class="group flex cursor-pointer text-left w-full px-2.5 py-2"
@@ -397,17 +397,17 @@
 			<div class="w-full">
 				<div class="flex items-center gap-3">
 					<div class="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
-						<div class="text-sm font-normal text-gray-900 group-hover:underline dark:text-gray-100">
+						<div class="text-sm font-normal text-base-900 group-hover:underline dark:text-base-100">
 							{$i18n.t('Default permissions')}
 						</div>
 
-						<div class="line-clamp-1 text-xs text-gray-500">
+						<div class="line-clamp-1 text-xs text-base-500">
 							{$i18n.t('applies to all users with the "user" role')}
 						</div>
 					</div>
 
 					<div
-						class="shrink-0 px-1.5 text-xs text-gray-500 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
+						class="shrink-0 px-1.5 text-xs text-base-500 transition group-hover:text-base-800 dark:text-base-400 dark:group-hover:text-base-200"
 					>
 						{$i18n.t('Edit')}
 					</div>

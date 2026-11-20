@@ -34,7 +34,7 @@
 />
 
 <div
-	class="group/setting-row flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400"
+	class="group/setting-row flex w-full items-center gap-3 text-xs text-base-600 dark:text-base-400"
 >
 	<Tooltip className="w-full relative" content={''} placement="top-start">
 		<div class="flex w-full">
@@ -54,15 +54,15 @@
 				{#if connection?.info?.name}
 					<label
 						for={`${settingId}-control`}
-						class="w-full bg-transparent capitalize outline-hidden text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+						class="w-full bg-transparent capitalize outline-hidden text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 					>
 						{connection?.info?.name ?? connection?.url}
-						<span class="text-gray-500">{connection?.info?.id ?? ''}</span>
+						<span class="text-base-500">{connection?.info?.id ?? ''}</span>
 					</label>
 				{:else}
 					<label
 						for={`${settingId}-control`}
-						class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+						class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 					>
 						{connection?.url}
 					</label>
@@ -75,7 +75,7 @@
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
 				aria-label={$i18n.t('Configure')}
-				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 				on:click={() => {
 					showConfigModal = true;
 				}}

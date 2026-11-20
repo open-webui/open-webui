@@ -457,13 +457,13 @@
 		>
 			<div class="flex min-h-7 shrink-0 items-center justify-between gap-2">
 				{#if modal}
-					<span class="text-xs text-gray-500"
+					<span class="text-xs text-base-500"
 						>{clone ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}</span
 					>
 				{:else}
 					<button
 						type="button"
-						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 						on:click={() => goto('/workspace/prompts')}
 					>
 						<ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}
@@ -482,11 +482,11 @@
 									showAccessControlModal = true;
 								}}
 							/>{/if}
-					{:else}<span class="px-2 py-1 text-xs text-gray-500">{$i18n.t('Read Only')}</span>{/if}
+					{:else}<span class="px-2 py-1 text-xs text-base-500">{$i18n.t('Read Only')}</span>{/if}
 					{#if modal}<button
 							type="button"
 							aria-label={$i18n.t('Close')}
-							class="p-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+							class="p-1 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => confirmDiscard(() => onCancel())}><XMark className="size-4" /></button
 						>{/if}
 				</div>
@@ -504,7 +504,7 @@
 					required
 					{disabled}
 				/>
-				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-base-500">
 					<Tooltip
 						className="min-w-0 flex-1"
 						content={`${$i18n.t('Only alphanumeric characters and hyphens are allowed')} - ${$i18n.t(
@@ -537,7 +537,7 @@
 						<Tooltip className="min-w-0 max-w-[45%]" content={$i18n.t('Click to copy ID')}>
 							<button
 								type="button"
-								class="w-full truncate font-mono text-xs text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+								class="w-full truncate font-mono text-xs text-base-400 hover:text-base-700 dark:hover:text-base-300"
 								on:click={async () => {
 									if (await copyToClipboard(prompt.id))
 										toast.success($i18n.t('ID copied to clipboard'));
@@ -564,7 +564,7 @@
 			</div>
 
 			<div
-				class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-100/80 bg-white dark:border-white/[0.04] dark:bg-gray-900"
+				class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-base-100/80 bg-white dark:border-white/[0.04] dark:bg-base-900"
 			>
 				{#if historyDiff}
 					<VersionDiff
@@ -579,7 +579,7 @@
 					/>
 				{:else}
 					<div
-						class="flex shrink-0 items-center gap-1 bg-gray-50/60 px-2.5 py-1.5 text-xs dark:bg-black"
+						class="flex shrink-0 items-center gap-1 bg-base-50/60 px-2.5 py-1.5 text-xs dark:bg-black"
 					>
 						<div class="min-w-0 flex-1">
 							{#if edit}
@@ -587,7 +587,7 @@
 									<button
 										type="button"
 										aria-label={$i18n.t('History')}
-										class="flex max-w-full items-center gap-2 py-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex max-w-full items-center gap-2 py-0.5 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 										disabled={loading}
 									>
 										<span class="truncate"
@@ -611,7 +611,7 @@
 												onSelect={() => chooseVersion()}
 											/>
 											{#if history.some((entry) => entry.id !== prompt?.version_id)}<hr
-													class="border-gray-100 dark:border-gray-800"
+													class="border-base-100 dark:border-base-800"
 												/>{/if}
 											{#each history.filter((entry) => entry.id !== prompt?.version_id) as entry (entry.id)}
 												<VersionMenuItem
@@ -628,7 +628,7 @@
 												/>
 											{/each}
 											{#if historyLoading}<div
-													class="flex items-center gap-2 px-2 py-1 text-xs text-gray-500"
+													class="flex items-center gap-2 px-2 py-1 text-xs text-base-500"
 												>
 													<Spinner className="size-3" />{$i18n.t('Loading...')}
 												</div>
@@ -636,34 +636,34 @@
 													type="button"
 													on:click={() => loadHistory(historyPage === 0)}>{$i18n.t('Retry')}</button
 												>
-											{:else if !history.length}<div class="px-2 py-2 text-xs text-gray-400">
+											{:else if !history.length}<div class="px-2 py-2 text-xs text-base-400">
 													{$i18n.t('No history available')}
 												</div>
-											{:else if historyHasMore}<hr class="border-gray-100 dark:border-gray-800" />
+											{:else if historyHasMore}<hr class="border-base-100 dark:border-base-800" />
 												<button type="button" on:click={() => loadHistory()}
 													>{$i18n.t('Load more')}</button
 												>{/if}
 										</DropdownMenu>
 									</div>
 								</Dropdown>
-							{:else}<span class="text-gray-500">{$i18n.t('Prompt Content')}</span>{/if}
+							{:else}<span class="text-base-500">{$i18n.t('Prompt Content')}</span>{/if}
 						</div>
 						{#if !readOnly}
 							<button
 								type="button"
-								class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+								class="shrink-0 rounded-md px-2 py-1 text-base-500 hover:bg-base-100 hover:text-base-900 disabled:opacity-50 dark:hover:bg-base-800 dark:hover:text-base-100"
 								disabled={!ready || loading || historyLoading}
 								on:click={compareRevision}>{$i18n.t('Compare revision')}</button
 							>
 						{/if}
 						<Tooltip
 							content={`${$i18n.t('Use')} {{${$i18n.t('variable')}}} ${$i18n.t('for placeholders')}`}
-							><span class="px-1 text-gray-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
+							><span class="px-1 text-base-400">{'{{'}{$i18n.t('variable')}{'}}'}</span></Tooltip
 						>
 						<button
 							type="button"
 							aria-label={$i18n.t('Copy content')}
-							class="shrink-0 p-0.5 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+							class="shrink-0 p-0.5 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 							on:click={copyContent}
 							>{#if contentCopied}<Check className="size-3.5 text-green-500" />{:else}<Clipboard
 									className="size-3.5"
@@ -691,7 +691,7 @@
 
 			{#if historical}
 				<div
-					class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-gray-500"
+					class="flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 py-2 text-xs text-base-500"
 				>
 					<span
 						>{selectedHistoryEntry.id.slice(0, 7)} · {renderDate(
@@ -701,7 +701,7 @@
 					{#if !editingHistory}<div class="ml-auto flex flex-wrap justify-end gap-2">
 							<button
 								type="button"
-								class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+								class="flex h-7 items-center rounded-lg bg-base-100 px-2.5 text-xs text-base-700 disabled:opacity-60 dark:bg-base-850 dark:text-base-200"
 								disabled={comparing || !!historyDiff}
 								on:click={compareToCurrent}
 								>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
@@ -711,11 +711,11 @@
 							{#if !disabled}
 								<button
 									type="button"
-									class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 dark:bg-gray-850 dark:text-gray-200"
+									class="flex h-7 items-center rounded-lg bg-base-100 px-2.5 text-xs text-base-700 dark:bg-base-850 dark:text-base-200"
 									on:click={editVersion}>{$i18n.t('Edit as new version')}</button
 								><button
 									type="button"
-									class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+									class="flex h-7 items-center rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 									on:click={() => confirmDiscard(setAsProduction)}
 									>{$i18n.t('Set as Production')}</button
 								>
@@ -734,16 +734,16 @@
 						/>{:else}<div class="flex-1"></div>{/if}
 					<div class="ml-auto flex shrink-0 items-center gap-3">
 						{#if historical}<label
-								class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-gray-500"
+								class="flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-xs text-base-500"
 								><input
 									type="checkbox"
 									bind:checked={isProduction}
-									class="size-3 rounded border-gray-300 dark:border-gray-600"
+									class="size-3 rounded border-base-300 dark:border-base-600"
 								/><span>{$i18n.t('Set as Production')}</span></label
 							>{/if}
 						<button
 							type="submit"
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							disabled={loading || !ready || historyLoading}
 						>
 							{edit ? $i18n.t('Save') : $i18n.t('Save & Create')}{#if loading}<Spinner

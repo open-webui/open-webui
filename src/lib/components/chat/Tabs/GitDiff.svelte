@@ -66,13 +66,13 @@
 <div class="git-diff font-mono text-[0.6875rem] leading-[1.125rem]" class:split={mode === 'split'}>
 	{#each files as file}
 		{#if files.length > 1}<div
-				class="sticky top-0 z-10 bg-white dark:bg-[var(--chat-tabs-dark-background,var(--color-gray-900))] px-2 py-1 text-[0.625rem] text-gray-500 dark:text-gray-400 border-b border-gray-100/50 dark:border-white/2"
+				class="sticky top-0 z-10 bg-white dark:bg-[var(--chat-tabs-dark-background,var(--color-base-900))] px-2 py-1 text-[0.625rem] text-base-500 dark:text-base-400 border-b border-base-100/50 dark:border-white/2"
 			>
 				{file.path}
 			</div>{/if}
 		{#each file.hunks as hunk, index}
 			<div
-				class="border-b border-gray-100/50 bg-gray-50 px-2 py-0.5 text-gray-400 dark:border-white/2 dark:bg-white/3 dark:text-gray-600"
+				class="border-b border-base-100/50 bg-base-50 px-2 py-0.5 text-base-400 dark:border-white/2 dark:bg-white/3 dark:text-base-600"
 			>
 				{file.headers[index]}
 			</div>
@@ -95,7 +95,7 @@
 	.git-diff {
 		min-width: 100%;
 		width: max-content;
-		color: var(--color-gray-600);
+		color: var(--color-base-600);
 	}
 	.git-diff.split {
 		width: 100%;
@@ -110,7 +110,7 @@
 		flex-shrink: 0;
 		text-align: center;
 		user-select: none;
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	.line-text {
 		white-space: pre;
@@ -135,13 +135,13 @@
 	}
 	.removed {
 		background-color: var(--color-red-100);
-		color: var(--color-gray-600);
+		color: var(--color-base-600);
 	}
 	.added .prefix {
 		color: var(--color-green-600);
 	}
 	.removed .prefix {
-		color: var(--color-gray-500);
+		color: var(--color-base-500);
 	}
 	.git-diff:not(.split) .added {
 		box-shadow: inset 0.1875rem 0 0 #22c55e;
@@ -188,7 +188,7 @@
 		box-shadow: inset 0 -0.125rem 0 rgba(252, 165, 165, 0.48);
 	}
 	:global(.dark) .git-diff {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	:global(.dark) .added {
 		background-color: #22c55e26;
@@ -196,12 +196,12 @@
 	}
 	:global(.dark) .removed {
 		background-color: #ef444426;
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	:global(.dark) .added .prefix {
 		color: var(--color-green-400);
 	}
 	:global(.dark) .removed .prefix {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 </style>

@@ -153,7 +153,7 @@
 	{:else}
 		{#if groupIds.length > 0}
 			<div class="mx-1 mb-1.5">
-				<div class="text-xs text-gray-500 mx-0.5 mb-1">
+				<div class="text-xs text-base-500 mx-0.5 mb-1">
 					{groupIds.length}
 					{$i18n.t('groups')}
 				</div>
@@ -162,7 +162,7 @@
 						{#if selectedGroup[id]}
 							<button
 								type="button"
-								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+								class="inline-flex items-center space-x-1 px-2 py-1 bg-base-100/50 dark:bg-base-850 rounded-lg text-xs"
 								on:click={() => {
 									groupIds = groupIds.filter((gid) => gid !== id);
 									delete selectedGroup[id];
@@ -170,7 +170,7 @@
 							>
 								<div>
 									{selectedGroup[id].name}
-									<span class="text-xs text-gray-500">{selectedGroup[id].member_count}</span>
+									<span class="text-xs text-base-500">{selectedGroup[id].member_count}</span>
 								</div>
 
 								<div>
@@ -185,7 +185,7 @@
 
 		{#if userIds.length > 0}
 			<div class="mx-1 mb-1.5">
-				<div class="text-xs text-gray-500 mx-0.5 mb-1">
+				<div class="text-xs text-base-500 mx-0.5 mb-1">
 					{userIds.length}
 					{$i18n.t('users')}
 				</div>
@@ -194,7 +194,7 @@
 						{#if selectedUsers[id]}
 							<button
 								type="button"
-								class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+								class="inline-flex items-center space-x-1 px-2 py-1 bg-base-100/50 dark:bg-base-850 rounded-lg text-xs"
 								on:click={() => {
 									userIds = userIds.filter((uid) => uid !== id);
 									delete selectedUsers[id];
@@ -216,12 +216,12 @@
 
 		{#if appIds.length > 0}
 			<div class="mx-1 mb-1.5">
-				<div class="text-xs text-gray-500 mx-0.5 mb-1">{appIds.length} {$i18n.t('Apps')}</div>
+				<div class="text-xs text-base-500 mx-0.5 mb-1">{appIds.length} {$i18n.t('Apps')}</div>
 				<div class="flex gap-1 flex-wrap">
 					{#each apps.filter((app) => appIds.includes(app.id)) as app (app.id)}
 						<button
 							type="button"
-							class="inline-flex items-center space-x-1 px-2 py-1 bg-gray-100/50 dark:bg-gray-850 rounded-lg text-xs"
+							class="inline-flex items-center space-x-1 px-2 py-1 bg-base-100/50 dark:bg-base-850 rounded-lg text-xs"
 							on:click={() => (appIds = appIds.filter((id) => id !== app.id))}
 						>
 							<span>{app.name}</span><XMark className="size-3" />
@@ -230,10 +230,10 @@
 				</div>
 			</div>
 		{/if}
-		<div class="mb-1 flex items-center gap-1.5 px-1 py-1 text-gray-400">
+		<div class="mb-1 flex items-center gap-1.5 px-1 py-1 text-base-400">
 			<Search className="size-3.5 shrink-0" />
 			<input
-				class="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-gray-900 shadow-none outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-100"
+				class="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs text-base-900 shadow-none outline-none placeholder:text-base-400 focus:ring-0 dark:text-base-100"
 				bind:value={query}
 				on:input={handleSearchInput}
 				placeholder={$i18n.t('Search')}
@@ -243,27 +243,27 @@
 
 		{#if (includeUsers && filteredUsers.length > 0) || (includeGroups && filteredGroups.length > 0) || filteredApps.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap w-full max-w-full">
-				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
+				<div class=" text-sm text-left text-base-500 dark:text-base-400 w-full max-w-full">
 					<div class="w-full max-h-96 overflow-y-auto rounded-lg">
 						{#if includeGroups && filteredGroups.length > 0}
-							<div class="text-xs text-gray-500 mb-1 mx-1">
+							<div class="text-xs text-base-500 mb-1 mx-1">
 								{$i18n.t('Groups')}
 							</div>
 
 							<div class="mb-3">
 								{#each filteredGroups as group, groupIdx (group.id)}
 									<div
-										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
+										class=" dark:border-base-850 text-xs flex items-center justify-between w-full"
 									>
 										<button
 											type="button"
-											class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1"
+											class="px-3 py-1.5 font-normal text-base-900 dark:text-white flex-1"
 											on:click={() => toggleGroup(group)}
 										>
 											<div class="flex items-center gap-2">
 												<Tooltip content={group.name} placement="top-start">
 													<div class="font-normal truncate flex items-center gap-1">
-														{group.name} <span class="text-gray-500">{group.member_count}</span>
+														{group.name} <span class="text-base-500">{group.member_count}</span>
 													</div>
 												</Tooltip>
 											</div>
@@ -284,16 +284,16 @@
 						{/if}
 
 						{#if includeUsers && filteredUsers.length > 0}
-							<div class="text-xs text-gray-500 mb-1 mx-1">
+							<div class="text-xs text-base-500 mb-1 mx-1">
 								{$i18n.t('Users')}
 							</div>
 
 							<div>
 								{#each filteredUsers as user (user.id)}
 									<div
-										class=" dark:border-gray-850 text-xs flex items-center justify-between w-full"
+										class=" dark:border-base-850 text-xs flex items-center justify-between w-full"
 									>
-										<div class="px-3 py-1 font-normal text-gray-900 dark:text-white flex-1 min-w-0">
+										<div class="px-3 py-1 font-normal text-base-900 dark:text-white flex-1 min-w-0">
 											<div class="flex items-center gap-2">
 												<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 													<img
@@ -338,13 +338,13 @@
 						{/if}
 
 						{#if filteredApps.length > 0}
-							<div class="text-xs text-gray-500 mb-1 mx-1 mt-3">{$i18n.t('Apps')}</div>
+							<div class="text-xs text-base-500 mb-1 mx-1 mt-3">{$i18n.t('Apps')}</div>
 							<div>
 								{#each filteredApps as app (app.id)}
 									<div class="text-xs flex items-center justify-between w-full">
 										<button
 											type="button"
-											class="px-3 py-1.5 font-normal text-gray-900 dark:text-white flex-1 min-w-0"
+											class="px-3 py-1.5 font-normal text-base-900 dark:text-white flex-1 min-w-0"
 											on:click={() =>
 												(appIds = appIds.includes(app.id)
 													? appIds.filter((id) => id !== app.id)
@@ -352,7 +352,7 @@
 										>
 											<div class="flex items-center gap-2">
 												<div
-													class="size-6 rounded-lg bg-gray-100 dark:bg-gray-850 flex items-center justify-center shrink-0"
+													class="size-6 rounded-lg bg-base-100 dark:bg-base-850 flex items-center justify-center shrink-0"
 												>
 													{#if app.data.manifest.profile_image_url}
 														<ProfileImage
@@ -383,7 +383,7 @@
 				</div>
 			</div>
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-5 px-10">
+			<div class="text-base-500 text-xs text-center py-5 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

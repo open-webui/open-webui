@@ -155,12 +155,12 @@
 
 <div class="flex h-full min-h-0 flex-col">
 	<div class="m-0 flex shrink-0 items-center gap-1 px-2 pt-0 pb-1.5">
-		<span class="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-300" title={label}
+		<span class="min-w-0 flex-1 truncate text-xs text-base-700 dark:text-base-300" title={label}
 			>{label}</span
 		>
-		<span class="shrink-0 text-[0.6875rem] text-gray-400">{formatFileSize(byteCount)}</span>
+		<span class="shrink-0 text-[0.6875rem] text-base-400">{formatFileSize(byteCount)}</span>
 		<button
-			class="flex size-5 shrink-0 items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+			class="flex size-5 shrink-0 items-center justify-center rounded text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300"
 			aria-label={$i18n.t('Save')}
 			title={$i18n.t('Save')}
 			on:click={() => void save().catch((e) => toast.error(String(e)))}
@@ -186,7 +186,7 @@
 	onRequestClose={() => {
 		if (!saving) finishSave(false);
 	}}
-	className="bg-white dark:bg-gray-900 rounded-2xl"
+	className="bg-white dark:bg-base-900 rounded-2xl"
 >
 	<form class="flex max-h-[26rem] flex-col p-3 text-sm" on:submit|preventDefault={write}>
 		<label class="flex items-center gap-2 pb-3">
@@ -199,7 +199,7 @@
 				class="min-w-0 flex-1 bg-transparent outline-none"
 			/>
 		</label>
-		<div class="flex h-8 items-center gap-2 text-xs text-gray-500">
+		<div class="flex h-8 items-center gap-2 text-xs text-base-500">
 			<button
 				type="button"
 				class="size-6 shrink-0"
@@ -216,7 +216,7 @@
 		</div>
 		<div class="min-h-24 overflow-y-auto py-1" class:flex={loading} class:flex-col={loading}>
 			{#if loading}<p
-					class="flex flex-1 items-center justify-center p-3 text-center text-xs text-gray-400"
+					class="flex flex-1 items-center justify-center p-3 text-center text-xs text-base-400"
 				>
 					{$i18n.t('Loading...')}
 				</p>
@@ -224,7 +224,7 @@
 					<button
 						type="button"
 						disabled={saving}
-						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs hover:bg-gray-100/40 dark:hover:bg-gray-800/25"
+						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs hover:bg-base-100/40 dark:hover:bg-base-800/25"
 						on:click={() => browse(joinTerminalPath(directory, entry.name))}
 						><FileTypeIcon name={entry.name} type="directory" /><span class="truncate"
 							>{entry.name}</span
@@ -232,11 +232,11 @@
 					>
 				{/each}{/if}
 		</div>
-		{#if error}<p role="alert" class="py-2 text-xs text-gray-500 dark:text-gray-400">
+		{#if error}<p role="alert" class="py-2 text-xs text-base-500 dark:text-base-400">
 				{error}
 			</p>{/if}
 		<div class="flex items-center gap-2 pt-2">
-			<span class="min-w-0 flex-1 truncate text-xs text-gray-400" title={fullPath}>{fullPath}</span>
+			<span class="min-w-0 flex-1 truncate text-xs text-base-400" title={fullPath}>{fullPath}</span>
 			<button
 				type="button"
 				disabled={saving}
@@ -246,7 +246,7 @@
 			<button
 				type="submit"
 				disabled={saving || loading || !writable || !fileName.trim()}
-				class="rounded-lg bg-gray-100 px-3 py-1 text-xs disabled:opacity-40 dark:bg-gray-800"
+				class="rounded-lg bg-base-100 px-3 py-1 text-xs disabled:opacity-40 dark:bg-base-800"
 				>{$i18n.t(replacePath ? 'Replace' : 'Save')}</button
 			>
 		</div>

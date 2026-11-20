@@ -56,9 +56,9 @@
 			.includes(scopeQuery.trim().toLowerCase())
 	);
 	const inputClass =
-		'w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 disabled:text-gray-400 dark:disabled:text-gray-600';
+		'w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 disabled:text-base-400 dark:disabled:text-base-600';
 	const buttonClass =
-		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white';
+		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white';
 	// Keep the dynamic scope label visible to i18next-parser.
 	// $i18n.t('Read messages and history in joined channels');
 	const scopeLabels: Record<string, string> = {
@@ -220,7 +220,7 @@
 	size="sm"
 	bind:show
 >
-	<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-2">
+	<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-2">
 		<h1 class="text-sm font-medium self-center">
 			{showScopes
 				? scopeMode === 'requested'
@@ -240,8 +240,8 @@
 		>
 	</div>
 	{#if showScopes}
-		<div class="px-4 pb-4 text-sm dark:text-gray-200">
-			<p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
+		<div class="px-4 pb-4 text-sm dark:text-base-200">
+			<p class="mb-3 text-xs text-base-500 dark:text-base-400">
 				{scopeMode === 'requested'
 					? $i18n.t('Enter the scopes requested by the app.')
 					: app
@@ -249,7 +249,7 @@
 						: $i18n.t('Review the scopes this app is requesting before adding it.')}
 			</p>
 			{#if availableScopes.length > 8}
-				<div class="mb-3 flex items-center gap-2 text-gray-500">
+				<div class="mb-3 flex items-center gap-2 text-base-500">
 					<Search className="size-4 shrink-0" />
 					<input
 						type="search"
@@ -273,7 +273,7 @@
 							<div slot="label" class="break-words">
 								{$i18n.t(scopeLabels[scope] ?? scope)}
 								{#if scopeLabels[scope]}<div
-										class="mt-0.5 break-all font-mono text-[0.6875rem] text-gray-400 dark:text-gray-600"
+										class="mt-0.5 break-all font-mono text-[0.6875rem] text-base-400 dark:text-base-600"
 									>
 										{scope}
 									</div>{/if}
@@ -296,7 +296,7 @@
 							/>
 						</AdminSettingRow>
 					{:else}
-						<p class="py-3 text-xs text-gray-400 dark:text-gray-600">
+						<p class="py-3 text-xs text-base-400 dark:text-base-600">
 							{scopeQuery ? $i18n.t('No matching scopes.') : $i18n.t('No scopes requested.')}
 						</p>
 					{/each}
@@ -313,7 +313,7 @@
 			</div>
 		</div>
 	{:else}
-		<form class="px-4 pb-4 text-sm dark:text-gray-200" on:submit|preventDefault={submit}>
+		<form class="px-4 pb-4 text-sm dark:text-base-200" on:submit|preventDefault={submit}>
 			{#if loading}<div class="flex justify-center py-4"><Spinner className="size-5" /></div>
 			{:else}
 				{#if !manifest}<AdminSettingField
@@ -395,7 +395,7 @@
 						</AdminSettingField>
 						<button
 							type="button"
-							class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
+							class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
 							on:click={() => {
 								scopeQuery = '';
 								scopeMode = 'requested';
@@ -405,14 +405,14 @@
 					{/if}
 					<AdminSettingSection title={$i18n.t('Connection')}>
 						<div class="flex items-center gap-2">
-							<p class="min-w-0 flex-1 break-all text-xs text-gray-600 dark:text-gray-400">{url}</p>
+							<p class="min-w-0 flex-1 break-all text-xs text-base-600 dark:text-base-400">{url}</p>
 							{#if app}
 								<Tooltip content={$i18n.t('Update app')}>
 									<button
 										type="button"
 										aria-label={$i18n.t('Update app')}
 										disabled={busy}
-										class="self-center flex size-6 shrink-0 items-center justify-center bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition disabled:opacity-50"
+										class="self-center flex size-6 shrink-0 items-center justify-center bg-transparent hover:bg-base-100 dark:hover:bg-base-850 rounded-lg transition disabled:opacity-50"
 										on:click={() =>
 											run(async () => {
 												manifest = await previewAppManifest(localStorage.token, url, {
@@ -439,12 +439,12 @@
 							<button
 								type="button"
 								disabled={busy}
-								class="mt-2 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
+								class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
 								on:click={editDetailsManually}>{$i18n.t('Edit details manually')}</button
 							>
 						{/if}
 						{#if manifestUpdated}
-							<p class="mt-2 text-xs text-gray-500">
+							<p class="mt-2 text-xs text-base-500">
 								{$i18n.t('Saving approves the updated app identity and selected scopes.')}
 							</p>
 						{/if}
@@ -471,7 +471,7 @@
 					<AdminSettingSection>
 						<AdminSettingRow let:labelId label={$i18n.t('Scopes')}>
 							<div class="flex items-center gap-3 text-xs">
-								<span class="text-gray-400 dark:text-gray-600"
+								<span class="text-base-400 dark:text-base-600"
 									>{$i18n.t('{{COUNT}} selected', {
 										COUNT: scopes.length
 									})}</span
@@ -479,7 +479,7 @@
 								<button
 									id={`${labelId}-control`}
 									type="button"
-									class="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:underline"
+									class="text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
 									on:click={() => {
 										scopeQuery = '';
 										scopeMode = 'granted';
@@ -507,14 +507,14 @@
 						{#if app?.configured}<button
 								type="button"
 								disabled={busy}
-								class="px-1 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition disabled:opacity-50"
+								class="px-1 py-1.5 text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 hover:underline transition disabled:opacity-50"
 								on:click={() => {
 									confirm = true;
 								}}>{$i18n.t('Uninstall')}</button
 							>{:else if manifest && !app}<button
 								type="button"
 								disabled={busy}
-								class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white"
+								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-white"
 								on:click={() => {
 									manifest = null;
 									manual = false;
@@ -522,7 +522,7 @@
 							>{:else if !manifest}<button
 								type="button"
 								disabled={busy}
-								class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white"
+								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-white"
 								on:click={(event) => {
 									if (event.currentTarget.form?.reportValidity()) editDetailsManually();
 								}}>{$i18n.t('Enter details manually')}</button

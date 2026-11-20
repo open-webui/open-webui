@@ -201,7 +201,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Temporary: toggle temporary chat for this new chat.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -236,7 +236,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Compact: shorten older messages so this chat can keep going.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx
 						? 'app-interactive-active selected-command-option-button'
 						: ''} disabled:opacity-50"
@@ -294,7 +294,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Fork: fork the current chat branch into a new chat.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx
 						? 'app-interactive-active selected-command-option-button'
 						: ''} disabled:opacity-50"
@@ -342,7 +342,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Status: check what is running in this chat.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -381,7 +381,7 @@
 			<button
 				type="button"
 				aria-label={item.data.id === 'side' ? $i18n.t('Side chat') : $i18n.t('Comments')}
-				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 				on:mousedown={(e) => e.preventDefault()}
 				on:click={() => onSelect(item)}
@@ -408,7 +408,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Model: show or switch the current model.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -433,7 +433,7 @@
 			<button
 				type="button"
 				aria-label={$i18n.t('Compare text')}
-				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 				on:mousedown={(e) => e.preventDefault()}
 				on:click={() => onSelect(item)}
@@ -469,7 +469,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Create skill: create a reusable terminal skill from this chat.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -495,7 +495,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Settings: open settings.')}
-					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40
+					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}
 					on:click={() => {
@@ -529,7 +529,7 @@
 		{@const itemIdx = commandItems.length + promptIdx}
 		<Tooltip content={promptItem.name} placement="top-start">
 			<button
-				class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+				class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {itemIdx ===
 				selectedIdx
 					? 'app-interactive-active selected-command-option-button'
 					: ''}"
@@ -569,7 +569,7 @@
 			tippyOptions={{ maxWidth: '20rem' }}
 		>
 			<button
-				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {itemIdx ===
 				selectedIdx
 					? 'app-interactive-active selected-command-option-button'
 					: ''}"

@@ -469,14 +469,14 @@
 					<svelte:fragment slot="subtitle">
 						{#if invitationSession}
 							<div
-								class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+								class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
 							>
 								<span>{$i18n.t('Encrypted chat in progress')}</span>
 								<span aria-hidden="true">·</span>
 								<button
 									type="button"
 									aria-label={$i18n.t('Join encrypted chat')}
-									class="text-[0.6875rem] font-normal text-gray-700 underline-offset-2 hover:underline dark:text-gray-200"
+									class="text-[0.6875rem] font-normal text-base-700 underline-offset-2 hover:underline dark:text-base-200"
 									on:click={() => {
 										if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
 										enter(id, { action: 'join', session: invitationSession });
@@ -589,7 +589,7 @@
 					minSiblingWidth={360}
 					className="h-full"
 				>
-					<div class="h-full w-full border-l border-gray-100/60 dark:border-gray-800/40">
+					<div class="h-full w-full border-l border-base-100/60 dark:border-base-800/40">
 						<Thread
 							{threadId}
 							{channel}

@@ -22,18 +22,18 @@
 
 	$: outerClass =
 		variant === 'settings'
-			? `${outerClassName} h-7 items-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 transition-colors focus-within:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:focus-within:border-blue-500`
+			? `${outerClassName} h-7 items-center rounded-lg border border-base-100/50 bg-base-50/40 px-2 transition-colors focus-within:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:focus-within:border-blue-500`
 			: outerClassName;
 	$: inputBaseClass =
 		variant === 'settings'
-			? 'min-w-0 flex-1 bg-transparent text-xs text-gray-700 outline-hidden placeholder:text-gray-300 disabled:text-gray-500 dark:text-gray-300 dark:placeholder:text-gray-700'
+			? 'min-w-0 flex-1 bg-transparent text-xs text-base-700 outline-hidden placeholder:text-base-300 disabled:text-base-500 dark:text-base-300 dark:placeholder:text-base-700'
 			: 'w-full bg-transparent py-0.5 text-sm outline-hidden';
 	$: resolvedInputClass = `${inputBaseClass} ${variant === 'plain' ? className : ''} ${inputClassName} ${
 		show ? '' : 'password'
 	}`;
 	$: buttonClass =
 		variant === 'settings'
-			? `ml-1.5 bg-transparent text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 ${showButtonClassName}`
+			? `ml-1.5 bg-transparent text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 ${showButtonClassName}`
 			: `min-w-6 pl-1.5 bg-transparent transition ${showButtonClassName}`;
 </script>
 

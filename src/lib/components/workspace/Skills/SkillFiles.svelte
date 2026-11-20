@@ -622,14 +622,14 @@
 
 {#snippet fileContent()}
 	<div
-		class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-900"
+		class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-base-900"
 	>
 		<div class="flex shrink-0 items-center gap-1 px-2.5 py-1.5 text-xs dark:bg-black">
 			{#if $mobile}
 				<button
 					type="button"
 					aria-label={$i18n.t('Back to files')}
-					class="flex shrink-0 items-center gap-1 whitespace-nowrap py-0.5 pr-1 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="flex shrink-0 items-center gap-1 whitespace-nowrap py-0.5 pr-1 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						flush();
 						showFileDrawer = false;
@@ -638,17 +638,17 @@
 					<ChevronLeft className="size-3.5" />{$i18n.t('Back')}
 				</button>
 			{/if}
-			<span class="min-w-0 flex-1 truncate text-gray-500" title={selected}>{selected}</span>
+			<span class="min-w-0 flex-1 truncate text-base-500" title={selected}>{selected}</span>
 			{#if !readOnly && loadedPath && !objectUrl && !loading && !loadError}
 				<button
 					type="button"
-					class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					class="rounded-lg px-1.5 py-0.5 text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 					on:click={compareRevision}>{$i18n.t('Compare revision')}</button
 				>
 			{/if}
 			{#if /\.md$/i.test(selected) && !loading}<button
 					type="button"
-					class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					class="rounded-lg px-1.5 py-0.5 text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 					on:click={async () => {
 						preview = !preview;
 						if (preview) await renderPreview();
@@ -658,13 +658,13 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Copy content')}
-					class="shrink-0 rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+					class="shrink-0 rounded-lg px-1.5 py-0.5 text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 					on:click={copyContent}>{$i18n.t('Copy')}</button
 				>
 			{/if}
 			<button
 				type="button"
-				class="rounded-lg px-1.5 py-0.5 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+				class="rounded-lg px-1.5 py-0.5 text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => download(selected)}>{$i18n.t('Download')}</button
 			>
 		</div>
@@ -682,7 +682,7 @@
 					sandbox=""
 					class="min-h-0 flex-1"
 				></iframe>
-			{:else}<p class="p-3 text-xs text-gray-500">
+			{:else}<p class="p-3 text-xs text-base-500">
 					{$i18n.t('Binary file. Download to open.')}
 				</p>{/if}
 		{:else if preview}
@@ -758,7 +758,7 @@
 			{#if readOnly}
 				<Tooltip content={$i18n.t('Read Only')}>
 					<span
-						class="flex items-center px-0.5 text-gray-400"
+						class="flex items-center px-0.5 text-base-400"
 						role="img"
 						aria-label={$i18n.t('Read Only')}><LockClosed className="size-3" /></span
 					>
@@ -770,7 +770,7 @@
 					<button
 						type="button"
 						aria-label={$i18n.t('Actions')}
-						class="flex h-7 w-6 shrink-0 items-center justify-center rounded-xl px-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+						class="flex h-7 w-6 shrink-0 items-center justify-center rounded-xl px-1 text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 					>
 						<EllipsisHorizontal className="size-4" />
 					</button>
@@ -779,31 +779,31 @@
 							{#if !readOnly}
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 									on:click={() => startCreate('file')}
 									><Plus className="size-3.5" />{$i18n.t('New File')}</button
 								>
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 									on:click={() => startCreate('directory')}
 									><Folder className="size-3.5" />{$i18n.t('New Folder')}</button
 								>
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 									on:click={() => uploadInput.click()}
 									><ArrowUpTray className="size-3.5" />{$i18n.t('Upload')}</button
 								>
 								<button
 									type="button"
-									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+									class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 									on:click={() => folderInput.click()}
 									><Folder className="size-3.5" />{$i18n.t('Upload Folder')}</button
 								>
 							{/if}
 							{#if canExport}
-								{#if !readOnly}<hr class="border-gray-100 dark:border-gray-800" />{/if}
+								{#if !readOnly}<hr class="border-base-100 dark:border-base-800" />{/if}
 								{@render exports()}
 							{/if}
 						</DropdownMenu>
@@ -815,7 +815,7 @@
 					<button
 						type="button"
 						aria-label={$i18n.t('New File')}
-						class="px-1 py-1.5 rounded-xl bg-transparent transition text-xs flex items-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+						class="px-1 py-1.5 rounded-xl bg-transparent transition text-xs flex items-center text-base-500 hover:text-base-900 dark:hover:text-base-100"
 						on:click={() => startCreate('file')}
 					>
 						<svg
@@ -885,7 +885,7 @@
 				{/if}
 			{/each}
 		</ul>
-		{#if !rows.length}<p class="p-3 text-xs text-gray-500">
+		{#if !rows.length}<p class="p-3 text-xs text-base-500">
 				{$i18n.t('Empty folders are saved when they contain files.')}
 			</p>{/if}
 	</div>

@@ -163,7 +163,7 @@
 	bind:show
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-2">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 pb-2">
 			<div class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Arena Model')}
@@ -182,7 +182,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -276,7 +276,7 @@
 									/>
 
 									<div
-										class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-gray-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
+										class="absolute flex justify-center rounded-full bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-base-700 bg-fixed opacity-0 transition duration-300 ease-in-out hover:opacity-50"
 									>
 										<div class="my-auto text-white">
 											<PencilSolid className="size-4" />
@@ -286,7 +286,7 @@
 
 								{#if profileImageUrl && profileImageUrl !== `${WEBUI_BASE_URL}/favicon.png`}
 									<button
-										class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+										class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-base-400 opacity-0 transition group-hover:opacity-60 hover:text-base-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-base-600 dark:hover:text-base-400"
 										on:click={() => {
 											profileImageUrl = `${WEBUI_BASE_URL}/favicon.png`;
 										}}
@@ -299,7 +299,7 @@
 						</div>
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
-								<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</div>
+								<div class=" mb-0.5 text-xs text-base-500">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
 									<LocalizedField
@@ -314,14 +314,14 @@
 							</div>
 
 							<div class="flex flex-col w-full">
-								<label for="arena-model-id" class="block mb-0.5 text-xs text-gray-500"
+								<label for="arena-model-id" class="block mb-0.5 text-xs text-base-500"
 									>{$i18n.t('ID')}</label
 								>
 
 								<div class="flex-1">
 									<input
 										id="arena-model-id"
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 										type="text"
 										bind:value={id}
 										placeholder={$i18n.t('Model ID')}
@@ -334,7 +334,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mt-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
+							<div class=" mb-1 text-xs text-base-500">{$i18n.t('Description')}</div>
 
 							<div class="flex-1">
 								<LocalizedField
@@ -347,21 +347,21 @@
 							</div>
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class=" border-base-100 dark:border-base-700/10 my-2.5 w-full" />
 
 						<div class="my-2">
 							<AccessControl bind:accessGrants />
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class=" border-base-100 dark:border-base-700/10 my-2.5 w-full" />
 
 						<div class="flex flex-col w-full">
 							<div class="mb-1 flex justify-between">
-								<div class="text-xs text-gray-500">{$i18n.t('Models')}</div>
+								<div class="text-xs text-base-500">{$i18n.t('Models')}</div>
 
 								<div>
 									<button
-										class=" text-xs text-gray-500"
+										class=" text-xs text-base-500"
 										type="button"
 										on:click={() => {
 											filterMode = filterMode === 'include' ? 'exclude' : 'include';
@@ -398,25 +398,25 @@
 									{/each}
 								</div>
 							{:else}
-								<div class="text-gray-500 text-xs text-center py-2">
+								<div class="text-base-500 text-xs text-center py-2">
 									{$i18n.t('Leave empty to include all models or select specific models')}
 								</div>
 							{/if}
 						</div>
 
-						<hr class=" border-gray-100 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class=" border-base-100 dark:border-base-700/10 my-2.5 w-full" />
 
 						<div class="flex items-center">
 							<select
 								class="w-full py-1 text-sm rounded-lg bg-transparent {selectedModelId
 									? ''
-									: 'text-gray-500'} placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+									: 'text-base-500'} placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 								bind:value={selectedModelId}
 								aria-label={$i18n.t('Select a model')}
 							>
 								<option value="">{$i18n.t('Select a model')}</option>
 								{#each $baseModels.filter((m) => m?.owned_by !== 'arena' && !modelIds.includes(m?.id)) as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+									<option value={model.id} class="bg-base-50 dark:bg-base-700">{model.name}</option>
 								{/each}
 							</select>
 
@@ -437,7 +437,7 @@
 					<div class="flex justify-end pt-3 text-sm font-medium gap-1.5">
 						{#if edit}
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 dark:bg-black dark:hover:bg-gray-950 dark:text-white bg-white text-black hover:bg-gray-100 flex-row"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 dark:bg-black dark:hover:bg-base-950 dark:text-white bg-white text-black hover:bg-base-100 flex-row"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -448,7 +448,7 @@
 						{/if}
 
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

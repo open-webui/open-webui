@@ -133,7 +133,7 @@
 />
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={saveHandler}>
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('Images & Videos')}
 	</h2>
 
@@ -160,14 +160,14 @@
 					{#if config.ENABLE_IMAGE_GENERATION || config.ENABLE_IMAGE_EDIT}
 						<div>
 							<div class="mb-2 flex items-center justify-between gap-4">
-								<div class="text-xs text-gray-600 dark:text-gray-400">
+								<div class="text-xs text-base-600 dark:text-base-400">
 									{$i18n.t('settings.admin.images.manageImageConnections.label')}
 								</div>
 
 								<Tooltip content={$i18n.t('settings.admin.images.addConnection.label')}>
 									<button
 										aria-label={$i18n.t('settings.admin.images.addConnection.label')}
-										class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+										class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-base-300"
 										on:click={() => {
 											showAddConnectionModal = true;
 										}}

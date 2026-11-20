@@ -414,7 +414,7 @@
 				deleteHandler(deletePrompt);
 			}}
 		>
-			<div class=" text-sm text-gray-500 truncate">
+			<div class=" text-sm text-base-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{deletePrompt.command}</span>.
 			</div>
 		</DeleteConfirmDialog>
@@ -423,7 +423,7 @@
 			bind:show={showCreateModal}
 			size="full"
 			ariaLabel={createPrompt !== null ? $i18n.t('Clone Prompt') : $i18n.t('Create Prompt')}
-			className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col bg-white dark:bg-gray-900 rounded-4xl"
+			className="!w-[calc(100vw-2rem)] sm:!w-[calc(100vw-3rem)] lg:!w-[calc(100vw-4rem)] !max-w-[80rem] h-[min(54rem,calc(100dvh-4rem))] max-h-[calc(100dvh-4rem)] flex flex-col bg-white dark:bg-base-900 rounded-4xl"
 		>
 			{#key createPrompt}
 				<PromptEditor
@@ -495,7 +495,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -553,7 +553,7 @@
 			{:else if (prompts ?? []).length !== 0}
 				<div class="@container">
 					<div
-						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-base-500 dark:text-base-400"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -606,7 +606,7 @@
 												<Tooltip content={prompt.name} className="min-w-0" placement="top-start">
 													<a
 														href={`/workspace/prompts/${prompt.id}`}
-														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 														>{prompt.name}</a
 													>
 												</Tooltip>
@@ -619,7 +619,7 @@
 										<div class="mt-0.5 min-w-0">
 											{#if prompt.content}
 												<Tooltip content={prompt.content} className="min-w-0" placement="top-start">
-													<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
+													<div class="truncate text-xs leading-4 text-base-500 dark:text-base-400">
 														{prompt.content}
 													</div>
 												</Tooltip>
@@ -628,7 +628,7 @@
 									</div>
 								</div>
 
-								<div class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400">
+								<div class="@max-[48rem]:hidden min-w-0 text-xs text-base-600 dark:text-base-400">
 									<ProfilePreview
 										user={prompt?.user ?? null}
 										side="bottom"
@@ -655,7 +655,7 @@
 										.format('LLLL')}
 									className="@max-[36rem]:hidden min-w-0"
 								>
-									<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
+									<div class="shrink-0 truncate text-xs leading-5 text-base-500 dark:text-base-400">
 										{dayjs((prompt.updated_at ?? prompt.created_at) * 1000)
 											.locale($i18n.language)
 											.fromNow()}
@@ -666,7 +666,7 @@
 										{#if shiftKey}
 											<Tooltip content={$i18n.t('Delete')}>
 												<button
-													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+													class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500 disabled:opacity-50 disabled:cursor-not-allowed"
 													type="button"
 													aria-label={$i18n.t('Delete')}
 													disabled={!prompt.write_access}
@@ -683,7 +683,7 @@
 											<div class="flex shrink-0 flex-row items-center gap-1.5 self-center">
 												<Tooltip content={$i18n.t('Copy Prompt')}>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Copy Prompt')}
 														on:click={(e) => {
@@ -703,7 +703,7 @@
 												<CommentButton
 													onComment={(request) => (comments = request)}
 													modal
-													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 													resource={{ resource_type: 'prompt', resource_id: prompt.id }}
 												/>
 												<PromptMenu
@@ -736,7 +736,7 @@
 													}}
 												>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Prompt Menu')}
 														on:click={(e) => {
@@ -796,11 +796,11 @@
 				{/if}
 			{:else}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 						<div class="mb-1.5 text-sm">
 							{hasFilters ? $i18n.t('No prompts found') : $i18n.t('No prompts yet')}
 						</div>
-						<div class="text-center text-xs leading-5 text-gray-500">
+						<div class="text-center text-xs leading-5 text-base-500">
 							{hasFilters
 								? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
 								: $i18n.t('Items you create or that are shared with you will appear here.')}

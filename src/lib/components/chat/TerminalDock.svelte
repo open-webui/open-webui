@@ -216,17 +216,17 @@
 
 <div class="terminal-dock min-h-0">
 	<div
-		class="flex h-7 min-w-0 items-center border-black/5 text-[11px] text-gray-500 dark:border-white/5 dark:text-gray-400"
+		class="flex h-7 min-w-0 items-center border-black/5 text-[11px] text-base-500 dark:border-white/5 dark:text-base-400"
 		class:border-b={expanded}
 	>
 		{#if !expanded}
 			<button
 				on:click={() => select(activeId)}
-				class="flex h-full min-w-0 flex-1 items-center gap-1.5 pl-3 pr-2 text-left hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex h-full min-w-0 flex-1 items-center gap-1.5 pl-3 pr-2 text-left hover:text-base-900 dark:hover:text-base-100"
 			>
-				<Icon name="terminal" size={12} class="text-gray-400 dark:text-gray-600" />
+				<Icon name="terminal" size={12} class="text-base-400 dark:text-base-600" />
 				<span>{$i18n.t('Sessions')}</span>
-				{#if running}<span class="tabular-nums text-gray-400">{running}</span>{/if}
+				{#if running}<span class="tabular-nums text-base-400">{running}</span>{/if}
 			</button>
 		{:else}
 			<div
@@ -255,7 +255,7 @@
 								class="h-[5px] w-[5px] shrink-0 rounded-full border {tab.available &&
 								tab.status === 'running'
 									? 'border-emerald-500 bg-emerald-500'
-									: 'border-gray-400'}"
+									: 'border-base-400'}"
 							></span>
 							<span class="max-w-28 truncate">{tab.command}</span>
 						</button>
@@ -326,7 +326,7 @@
 	}
 	.terminal-tab.selected {
 		border-color: currentColor;
-		color: var(--color-gray-900, #171717);
+		color: var(--color-base-900, #171717);
 	}
 	:global(.dark) .terminal-tab.selected {
 		color: #e5e5e5;
@@ -342,7 +342,7 @@
 	}
 	.tab-button:hover,
 	.tab-close:hover {
-		color: var(--color-gray-900, #171717);
+		color: var(--color-base-900, #171717);
 	}
 	:global(.dark) .tab-button:hover,
 	:global(.dark) .tab-close:hover {

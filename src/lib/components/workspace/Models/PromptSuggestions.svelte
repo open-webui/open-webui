@@ -105,7 +105,7 @@
 
 	{#each _promptSuggestions as prompt, promptIdx}
 		<div
-			class="rounded-xl px-2 py-1.5 focus-within:bg-gray-50 dark:focus-within:bg-gray-850 {inherited
+			class="rounded-xl px-2 py-1.5 focus-within:bg-base-50 dark:focus-within:bg-base-850 {inherited
 				? 'opacity-60 focus-within:opacity-100'
 				: ''}"
 		>
@@ -113,7 +113,7 @@
 				<!-- Previous labels retained for i18n extraction: {$i18n.t('e.g. Tell me a fun fact about the Roman Empire')} -->
 				<textarea
 					bind:this={promptInputs[promptIdx]}
-					class="min-h-5 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
+					class="min-h-5 min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-base-900 outline-hidden placeholder:text-base-500 dark:text-base-100 dark:placeholder:text-base-400"
 					placeholder={$i18n.t('Write a prompt…')}
 					aria-label={$i18n.t('Prompt')}
 					rows="1"
@@ -130,7 +130,7 @@
 						type="button"
 						{disabled}
 						aria-label={$i18n.t('Remove prompt suggestion')}
-						class="flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+						class="flex size-5 shrink-0 items-center justify-center text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 						on:click={() =>
 							updateSuggestions(promptSuggestions.filter((_, index) => index !== promptIdx))}
 					>
@@ -140,14 +140,14 @@
 			</div>
 			<details class="group/prompt mt-0.5">
 				<summary
-					class="flex w-fit max-w-full cursor-pointer list-none items-center gap-1 text-xs text-gray-500 dark:text-gray-400 [&::-webkit-details-marker]:hidden"
+					class="flex w-fit max-w-full cursor-pointer list-none items-center gap-1 text-xs text-base-500 dark:text-base-400 [&::-webkit-details-marker]:hidden"
 				>
 					<ChevronRight
 						className="size-3 shrink-0 transition-transform group-open/prompt:rotate-90"
 					/>
 					<span class="shrink-0">{$i18n.t('Display text')}</span>
 					{#if prompt.title.some((part) => part.trim())}
-						<span class="truncate text-gray-600 dark:text-gray-300">
+						<span class="truncate text-base-600 dark:text-base-300">
 							{prompt.title.filter((part) => part.trim()).join(' · ')}
 						</span>
 					{/if}
@@ -158,11 +158,11 @@
 					{$i18n.t('Subtitle')}
 					-->
 					{#each ['Title', 'Subtitle'] as label, index}
-						<label class="flex min-w-0 flex-col gap-0.5 text-xs text-gray-500 dark:text-gray-400">
+						<label class="flex min-w-0 flex-col gap-0.5 text-xs text-base-500 dark:text-base-400">
 							<span>{$i18n.t(label)}</span>
 							<input
 								{disabled}
-								class="min-w-0 w-full bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
+								class="min-w-0 w-full bg-transparent text-[0.8125rem] font-normal leading-5 text-base-900 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-500"
 								aria-label={$i18n.t(label)}
 								placeholder={index === 0
 									? $i18n.t('e.g. Tell me a fun fact')
@@ -179,18 +179,18 @@
 			</details>
 		</div>
 	{:else}
-		<p class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+		<p class="px-2 py-1 text-xs text-base-500 dark:text-base-400">
 			{$i18n.t('No suggestion prompts')}
 		</p>
 	{/each}
 	<div
-		class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1 text-xs text-gray-500 dark:text-gray-400"
+		class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1 text-xs text-base-500 dark:text-base-400"
 	>
 		<button
 			type="button"
 			{disabled}
 			aria-label={$i18n.t('Add prompt suggestion')}
-			class="flex items-center gap-1.5 px-2 py-1 text-xs text-gray-500 hover:text-gray-700 disabled:opacity-40 dark:text-gray-400 dark:hover:text-gray-300"
+			class="flex items-center gap-1.5 px-2 py-1 text-xs text-base-500 hover:text-base-700 disabled:opacity-40 dark:text-base-400 dark:hover:text-base-300"
 			on:click={async () => {
 				if (promptSuggestions.length === 0 || promptSuggestions.at(-1).content.trim() !== '') {
 					updateSuggestions([...promptSuggestions, { content: '', title: ['', ''] }]);
@@ -210,13 +210,13 @@
 			<button
 				type="button"
 				{disabled}
-				class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+				class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 				on:click={() => importInput.click()}>{$i18n.t('Import')}</button
 			>
 			<button
 				type="button"
 				disabled={disabled || !promptSuggestions.length}
-				class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+				class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 				on:click={() => {
 					saveAs(
 						new Blob([JSON.stringify(promptSuggestions)], { type: 'application/json' }),

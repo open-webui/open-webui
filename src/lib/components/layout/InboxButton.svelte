@@ -20,9 +20,9 @@
 	<button
 		type="button"
 		data-inbox-trigger
-		class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 transition {opened
+		class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-lg text-base-600 dark:text-base-400 transition {opened
 			? activeClass
-			: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
+			: 'hover:bg-base-100 dark:hover:bg-base-900'}"
 		aria-label={`${$i18n.t('Notifications')}${$inboxCount ? ` (${$inboxCount})` : ''}`}
 		aria-pressed={opened}
 		aria-controls="sidebar-notifications"

@@ -141,7 +141,7 @@
 
 <Modal ariaLabel={edit ? $i18n.t('Edit Channel') : $i18n.t('Create Channel')} size="md" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
 				{#if edit}
 					{$i18n.t('Edit Channel')}
@@ -151,7 +151,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -160,7 +160,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -170,7 +170,7 @@
 				>
 					{#if !edit}
 						<div class="flex flex-col w-full mt-2 mb-1">
-							<label for="channel-type" class="block mb-1 text-xs text-gray-500"
+							<label for="channel-type" class="block mb-1 text-xs text-base-500"
 								>{$i18n.t('Channel Type')}</label
 							>
 
@@ -187,7 +187,7 @@
 								>
 									<select
 										id="channel-type"
-										class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+										class="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 										bind:value={type}
 									>
 										{#each channelTypes as channelType, channelTypeIdx (channelType)}
@@ -207,7 +207,7 @@
 						</div>
 					{/if}
 
-					<div class=" text-gray-300 dark:text-gray-700 text-xs">
+					<div class=" text-base-300 dark:text-base-700 text-xs">
 						{#if type === ''}
 							{$i18n.t('Discussion channel where access is based on groups and permissions')}
 						{:else if type === 'group'}
@@ -218,9 +218,9 @@
 					</div>
 
 					<div class="flex flex-col w-full mt-2">
-						<label for="channel-name" class="block mb-1 text-xs text-gray-500">
+						<label for="channel-name" class="block mb-1 text-xs text-base-500">
 							{$i18n.t('Channel Name')}
-							<span class="text-xs text-gray-200 dark:text-gray-800 ml-0.5">
+							<span class="text-xs text-base-200 dark:text-base-800 ml-0.5">
 								{#if type === 'dm'}{$i18n.t('Optional')}{/if}
 							</span>
 						</label>
@@ -228,7 +228,7 @@
 						<div class="flex-1">
 							<input
 								id="channel-name"
-								class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={`${$i18n.t('new-channel')}`}
@@ -284,10 +284,10 @@
 
 					{#if edit}
 						<div class="flex w-full mt-2 items-center justify-between">
-							<div class="text-xs text-gray-500">{$i18n.t('Webhooks')}</div>
+							<div class="text-xs text-base-500">{$i18n.t('Webhooks')}</div>
 
 							<button
-								class="text-xs bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden text-left"
+								class="text-xs bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden text-left"
 								type="button"
 								on:click={() => {
 									showWebhooksModal = true;
@@ -301,7 +301,7 @@
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						{#if edit}
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-gray-100 flex-row"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 dark:bg-black dark:hover:bg-black/90 dark:text-white bg-white text-black hover:bg-base-100 flex-row"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -312,7 +312,7 @@
 						{/if}
 
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

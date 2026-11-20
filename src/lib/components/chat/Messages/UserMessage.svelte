@@ -191,7 +191,7 @@
 			: 'pl-1'}"
 	>
 		{#if !compactPreview && (!chatBubble || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
-			<div class={chatBubble ? 'mb-1 ps-2 text-xs text-gray-400 dark:text-gray-500' : ''}>
+			<div class={chatBubble ? 'mb-1 ps-2 text-xs text-base-400 dark:text-base-500' : ''}>
 				{#if chatBubble}
 					{authorName}
 				{:else}
@@ -237,7 +237,7 @@
 
 			{#if edit === true}
 				<div
-					class=" w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-4 py-3 mb-2 {($settings?.highContrastMode ??
+					class=" w-full bg-base-50 dark:bg-base-800 rounded-3xl px-4 py-3 mb-2 {($settings?.highContrastMode ??
 					false)
 						? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
 						: ''}"
@@ -346,7 +346,7 @@
 							{#if isOwn && !readOnly}
 								<button
 									id="save-edit-message-button"
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -359,7 +359,7 @@
 						<div class="flex space-x-1.5">
 							<button
 								id="close-edit-message-button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 								on:click={() => {
 									cancelEditMessage();
 								}}
@@ -369,7 +369,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
@@ -383,7 +383,7 @@
 				<div class="w-full min-w-0">
 					<button
 						type="button"
-						class="flex w-full min-w-0 items-center gap-2 text-left text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+						class="flex w-full min-w-0 items-center gap-2 text-left text-base-500 transition-colors hover:text-base-700 dark:text-base-400 dark:hover:text-base-300"
 						aria-expanded={timerExpanded}
 						on:click={() => {
 							timerExpanded = !timerExpanded;
@@ -397,7 +397,7 @@
 							viewBox="0 0 24 24"
 							stroke-width="2"
 							stroke="currentColor"
-							class="size-3 shrink-0 text-gray-400 transition-transform duration-150 dark:text-gray-600 {timerExpanded
+							class="size-3 shrink-0 text-base-400 transition-transform duration-150 dark:text-base-600 {timerExpanded
 								? 'rotate-180'
 								: ''}"
 						>
@@ -406,7 +406,7 @@
 					</button>
 					{#if timerExpanded}
 						<div
-							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-gray-100 pl-3 text-[0.78125rem] leading-relaxed text-gray-600 dark:border-white/10 dark:text-gray-400"
+							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-base-100 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:border-white/10 dark:text-base-400"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{message.content}
@@ -422,7 +422,7 @@
 					>
 						<div
 							class="rounded-3xl {chatBubble
-								? `max-w-[90%] px-4 py-1.5  bg-gray-50 dark:bg-gray-850 ${
+								? `max-w-[90%] px-4 py-1.5  bg-base-50 dark:bg-base-850 ${
 										message.files ? (isOwn ? 'rounded-se-lg' : 'rounded-ss-lg') : ''
 									}`
 								: ' w-full'}"
@@ -478,8 +478,8 @@
 							? 'justify-end'
 							: 'justify-start'
 						: 'items-center'}  {($settings?.highContrastMode ?? false)
-						? 'text-gray-600 dark:text-gray-500'
-						: 'text-gray-600/80 dark:text-gray-500/70'}"
+						? 'text-base-600 dark:text-base-500'
+						: 'text-base-600/80 dark:text-base-500/70'}"
 				>
 					{#if message.timestamp}
 						<Tooltip
@@ -491,7 +491,7 @@
 								datetime={new Date(message.timestamp * 1000).toISOString()}
 								class="{compactPreview ? '' : 'hover-reveal'} {chatBubble && isOwn
 									? 'mr-1'
-									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+									: 'ml-1 shrink-0 whitespace-nowrap'} text-[0.6875rem] tabular-nums text-base-400 dark:text-base-600 select-none"
 							>
 								{formatMessageTimestamp(message.timestamp * 1000, $i18n.language)}
 							</time>
@@ -503,7 +503,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition previous-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -513,7 +513,7 @@
 
 								{#if messageIndexEdit}
 									<div
-										class="text-sm flex justify-center font-normal self-center dark:text-gray-500 min-w-fit"
+										class="text-sm flex justify-center font-normal self-center dark:text-base-500 min-w-fit"
 									>
 										<input
 											aria-label={$i18n.t('Message number')}
@@ -535,13 +535,13 @@
 													messageIndexEdit = false;
 												}
 											}}
-											class="bg-transparent font-normal self-center dark:text-gray-500 min-w-fit outline-hidden"
+											class="bg-transparent font-normal self-center dark:text-base-500 min-w-fit outline-hidden"
 										/>/{siblings.length}
 									</div>
 								{:else}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<div
-										class="text-sm tracking-widest font-normal self-center dark:text-gray-500 min-w-fit"
+										class="text-sm tracking-widest font-normal self-center dark:text-base-500 min-w-fit"
 										on:dblclick={async () => {
 											messageIndexEdit = true;
 
@@ -559,7 +559,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition next-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}
@@ -574,7 +574,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition edit-user-message-button"
+									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition edit-user-message-button"
 								aria-label={$i18n.t('Edit')}
 								bind:this={editButtonElement}
 								on:click={() => {
@@ -591,7 +591,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition"
+									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition"
 								aria-label={$i18n.t('Copy')}
 								on:click={() => {
 									copyToClipboard(message.content);
@@ -609,7 +609,7 @@
 									aria-label={$i18n.t('Delete')}
 									class="{($settings?.highContrastMode ?? false)
 										? ''
-										: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 rounded-lg dark:hover:text-gray-400 hover:text-gray-600 transition"
+										: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition"
 									on:click={(e) => {
 										if (e.shiftKey) {
 											deleteMessageHandler();
@@ -629,7 +629,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition previous-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -639,7 +639,7 @@
 
 								{#if messageIndexEdit}
 									<div
-										class="text-sm flex justify-center font-normal self-center dark:text-gray-500 min-w-fit"
+										class="text-sm flex justify-center font-normal self-center dark:text-base-500 min-w-fit"
 									>
 										<input
 											aria-label={$i18n.t('Message number')}
@@ -661,13 +661,13 @@
 													messageIndexEdit = false;
 												}
 											}}
-											class="bg-transparent font-normal self-center dark:text-gray-500 min-w-fit outline-hidden"
+											class="bg-transparent font-normal self-center dark:text-base-500 min-w-fit outline-hidden"
 										/>/{siblings.length}
 									</div>
 								{:else}
 									<!-- svelte-ignore a11y-no-static-element-interactions -->
 									<div
-										class="text-sm tracking-widest font-normal self-center dark:text-gray-500 min-w-fit"
+										class="text-sm tracking-widest font-normal self-center dark:text-base-500 min-w-fit"
 										on:dblclick={async () => {
 											messageIndexEdit = true;
 
@@ -685,7 +685,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-gray-400 hover:text-gray-600 rounded-md transition next-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}

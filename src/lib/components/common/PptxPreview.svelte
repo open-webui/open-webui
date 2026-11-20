@@ -256,27 +256,27 @@
 	on:pointerdown={focusPreview}
 	class="relative grid {hideThumbs
 		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-base-900 dark:text-base-100 {className}"
 >
 	<aside
 		class={hideThumbs
 			? 'hidden'
-			: 'thumbnail-sidebar overflow-y-auto px-2 pt-3 pb-16 border-r border-gray-50 dark:border-gray-850/30 bg-transparent'}
+			: 'thumbnail-sidebar overflow-y-auto px-2 pt-3 pb-16 border-r border-base-50 dark:border-base-850/30 bg-transparent'}
 		aria-label={listLabel}
 	>
 		{#each slides as slide, index}
 			<button
 				use:trackThumbnail={index}
 				type="button"
-				class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-gray-900 dark:text-gray-100"
+				class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-base-900 dark:text-base-100"
 				on:click={() => selectSlide(index)}
 				aria-label="{itemLabel} {index + 1}"
 				aria-current={safeSlide === index ? 'true' : undefined}
 			>
 				<span
 					class="pt-1.5 text-[0.6875rem] font-medium text-right {safeSlide === index
-						? 'text-gray-400 dark:text-gray-500'
-						: 'text-gray-300/70 dark:text-gray-700'}">{index + 1}</span
+						? 'text-base-400 dark:text-base-500'
+						: 'text-base-300/70 dark:text-base-700'}">{index + 1}</span
 				>
 				<span
 					class="block aspect-video overflow-hidden rounded-md bg-transparent {safeSlide === index
@@ -321,7 +321,7 @@
 							type="button"
 							data-slide-comment={comment.id}
 							data-file-comment-id={comment.id}
-							class="absolute flex size-5 items-center justify-center rounded bg-white/95 text-gray-400 hover:text-gray-600 dark:bg-gray-850/95 dark:text-gray-500 dark:hover:text-gray-300 focus-visible:outline focus-visible:outline-2"
+							class="absolute flex size-5 items-center justify-center rounded bg-white/95 text-base-400 hover:text-base-600 dark:bg-base-850/95 dark:text-base-500 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
 							class:ring-2={selectedComment?.id === comment.id ||
 								selectedComment?.parentId === comment.id}
 							style:left={`${comment.location.x !== undefined ? Math.max(0, Math.min(slideWidth - 24, comment.location.x * fitScale)) : 8}px`}
@@ -340,11 +340,11 @@
 		<div
 			class="absolute bottom-3 {hideThumbs
 				? 'left-1/2'
-				: 'left-[calc(144px+(100%-144px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
+				: 'left-[calc(144px+(100%-144px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-base-850/90 backdrop-blur-sm shadow-lg border border-base-200/60 dark:border-base-700/60 px-1 py-0.5"
 		>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 disabled:opacity-30"
 				disabled={safeSlide === 0}
 				on:click={() => selectSlide(safeSlide - 1)}
 				aria-label={`Previous ${itemLabel.toLowerCase()}`}
@@ -363,12 +363,12 @@
 				</svg>
 			</button>
 			<span
-				class="shrink-0 min-w-12 text-center text-[0.6875rem] text-gray-500 dark:text-gray-400 tabular-nums"
+				class="shrink-0 min-w-12 text-center text-[0.6875rem] text-base-500 dark:text-base-400 tabular-nums"
 				>{safeSlide + 1} / {slides.length}</span
 			>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 disabled:opacity-30"
 				disabled={safeSlide === slides.length - 1}
 				on:click={() => selectSlide(safeSlide + 1)}
 				aria-label={`Next ${itemLabel.toLowerCase()}`}
@@ -389,7 +389,7 @@
 			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 pointer-coarse:hidden"
 				on:click={zoomOut}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -408,7 +408,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-base-500 dark:text-base-400 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label={$i18n.t('Reset zoom')}
 			>
@@ -416,7 +416,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 pointer-coarse:hidden"
 				on:click={zoomIn}
 				aria-label={$i18n.t('Zoom in')}
 			>

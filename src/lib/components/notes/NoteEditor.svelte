@@ -1155,7 +1155,7 @@ ${content}
 		showDeleteConfirm = false;
 	}}
 >
-	<div class=" text-sm text-gray-500">
+	<div class=" text-sm text-base-500">
 		{$i18n.t('This will delete')} <span class="  font-normal">{note?.title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -1179,7 +1179,7 @@ ${content}
 								>
 									<button
 										id="sidebar-toggle-button"
-										class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+										class=" cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition cursor-"
 										aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 										type="button"
 										on:click={() => {
@@ -1266,7 +1266,7 @@ ${content}
 										<div>
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
 													aria-label={$i18n.t('Undo')}
 													on:click={() => {
 														editor.chain().focus().undo().run();
@@ -1278,7 +1278,7 @@ ${content}
 												</button>
 
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-gray-500 disabled:hover:text-gray-500"
+													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
 													aria-label={$i18n.t('Redo')}
 													on:click={() => {
 														editor.chain().focus().redo().run();
@@ -1445,7 +1445,7 @@ ${content}
 										</div>
 									{/if}
 								{:else}
-									<div class="shrink-0 text-xs text-gray-500 px-2 py-1">
+									<div class="shrink-0 text-xs text-base-500 px-2 py-1">
 										{$i18n.t('Read-Only Access')}
 									</div>
 								{/if}
@@ -1464,11 +1464,11 @@ ${content}
 							}}
 						>
 							<div
-								class="flex gap-0.5 items-center text-xs font-normal text-gray-500 dark:text-gray-500 w-full"
+								class="flex gap-0.5 items-center text-xs font-normal text-base-500 dark:text-base-500 w-full"
 							>
 								<div class="min-w-0 max-w-40 pl-2 pr-1">
 									<button
-										class="flex max-w-full items-center gap-1 bg-transparent text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition"
+										class="flex max-w-full items-center gap-1 bg-transparent text-xs text-base-500 hover:text-base-900 dark:hover:text-base-100 transition"
 										aria-expanded={showNoteTabs}
 										aria-controls="note-tabs-panel"
 										bind:this={pagesToggleElement}
@@ -1725,8 +1725,8 @@ ${content}
 						class="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 text-sm rounded-lg transition whitespace-nowrap {(
 							tab === 'Comments' ? !!currentNoteComments : !currentNoteComments
 						)
-							? 'bg-gray-100/40 dark:bg-gray-800/25 font-normal text-gray-700 dark:text-gray-200'
-							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+							? 'bg-base-100/40 dark:bg-base-800/25 font-normal text-base-700 dark:text-base-200'
+							: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20 hover:text-base-600 dark:hover:text-base-300'}"
 						on:click={() =>
 							tab === 'Comments'
 								? (currentNoteComments = { resource_type: 'note', resource_id: note.id })
@@ -1734,7 +1734,7 @@ ${content}
 					>
 						{$i18n.t(tab)}
 						{#if tab === 'Comments' && noteCommentCount > 0}<span
-								class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70"
+								class="text-[0.8125rem] leading-none text-base-400/70 dark:text-base-500/70"
 								>{noteCommentCount}</span
 							>{/if}
 					</button>
@@ -1743,7 +1743,7 @@ ${content}
 			<button
 				type="button"
 				aria-label={$i18n.t('Close')}
-				class="py-1 px-0 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+				class="py-1 px-0 text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
 				on:click={closeNotePanel}><XMark className="size-4" /></button
 			>
 		</div>

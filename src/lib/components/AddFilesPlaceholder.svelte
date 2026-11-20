@@ -16,7 +16,7 @@
 	</div>
 
 	<slot
-		><div class="px-2 mt-2 text-center text-gray-700 dark:text-gray-200 w-full">
+		><div class="px-2 mt-2 text-center text-base-700 dark:text-base-200 w-full">
 			{#if content}
 				{content}
 			{:else}

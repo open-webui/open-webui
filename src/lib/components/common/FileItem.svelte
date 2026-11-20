@@ -16,7 +16,7 @@
 
 	export let className = 'w-60';
 	export let colorClassName =
-		'bg-white dark:bg-gray-850 border border-gray-50/30 dark:border-gray-800/30';
+		'bg-white dark:bg-base-850 border border-base-50/30 dark:border-base-800/30';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -108,7 +108,7 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="shrink-0 text-gray-500 dark:text-gray-400">
+			<div class="shrink-0 text-base-500 dark:text-base-400">
 				{#if !loading}
 					<Tooltip
 						content={type === 'collection'
@@ -142,14 +142,14 @@
 
 		{#if !small}
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
-				<div class=" dark:text-gray-100 text-sm font-normal line-clamp-1 mb-1">
+				<div class=" dark:text-base-100 text-sm font-normal line-clamp-1 mb-1">
 					{decodeString(name)}
 				</div>
 
 				<div
 					class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
-						? 'text-gray-800 dark:text-gray-100'
-						: 'text-gray-500'}"
+						? 'text-base-800 dark:text-base-100'
+						: 'text-base-500'}"
 				>
 					{#if type === 'file' || type === 'filesystem'}
 						{$i18n.t('File')}
@@ -174,14 +174,14 @@
 				placement="top-start"
 			>
 				<div class="flex min-w-0 flex-1 items-center overflow-hidden">
-					<div class="flex min-w-0 flex-1 items-center justify-between dark:text-gray-100">
+					<div class="flex min-w-0 flex-1 items-center justify-between dark:text-base-100">
 						<div class="min-w-0 flex-1 truncate pr-1 font-normal">{decodeString(name)}</div>
 						{#if size}
-							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-base-500">
 								{formatFileSize(size)}
 							</div>
 						{:else}
-							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-base-500">
 								{#if type === 'collection'}
 									{$i18n.t('Knowledge')}
 								{:else}
@@ -199,7 +199,7 @@
 		<div class=" absolute -top-[3px] -right-[3px] flex">
 			<button
 				aria-label={$i18n.t('Remove File')}
-				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
+				class=" bg-white text-black border border-base-50 rounded-full {($settings?.highContrastMode ??
 				false)
 					? ''
 					: 'hover-reveal transition'}"
@@ -212,7 +212,7 @@
 			</button>
 
 			<!-- <button
-				class=" p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
+				class=" p-1 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
 				type="button"
 				on:click={() => {
 				}}

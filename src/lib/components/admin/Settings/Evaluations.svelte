@@ -79,7 +79,7 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('settings.admin.evaluations.title')}
 	</h2>
 
@@ -103,14 +103,14 @@
 			{#if evaluationConfig.ENABLE_EVALUATION_ARENA_MODELS}
 				<AdminSettingSection title={$i18n.t('settings.admin.evaluations.sections.models.title')}>
 					<div class="mb-2 flex items-center justify-between">
-						<div class="text-xs text-gray-600 dark:text-gray-400">
+						<div class="text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('settings.admin.evaluations.arenaModels.label')}
 						</div>
 
 						<Tooltip content={$i18n.t('settings.admin.evaluations.addArenaModel.label')}>
 							<button
 								aria-label={$i18n.t('settings.admin.evaluations.addArenaModel.label')}
-								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
 								type="button"
 								on:click={() => {
 									showAddModel = true;
@@ -134,7 +134,7 @@
 								/>
 							{/each}
 						{:else}
-							<div class="text-center text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="text-center text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t(
 									`Using the default arena model with all models. Click the plus button to add custom models.`
 								)}
@@ -154,7 +154,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 			type="submit"
 		>
 			{$i18n.t('Save')}

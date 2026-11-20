@@ -36,9 +36,9 @@
 	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 
 	const rowClass =
-		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40';
+		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40';
 	const headerButtonClass =
-		'p-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition';
+		'p-0.5 rounded-md text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 transition';
 	const moreClass =
 		'flex items-center opacity-0 pointer-events-none transition-opacity group-hover/terminal:opacity-100 group-hover/terminal:pointer-events-auto group-focus-within/terminal:opacity-100 group-focus-within/terminal:pointer-events-auto';
 
@@ -190,8 +190,8 @@
 
 	$: triggerClass = `flex items-center gap-1.5 translate-y-[1px] text-[0.8125rem] transition rounded-lg ${
 		disabled
-			? 'p-1 cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
-			: `text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200 cursor-pointer ${
+			? 'p-1 cursor-not-allowed opacity-40 text-base-400 dark:text-base-600'
+			: `text-base-600 hover:text-base-700 dark:text-base-300 dark:hover:text-base-200 cursor-pointer ${
 					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
 				}`
 	}`;
@@ -202,7 +202,7 @@
 	{#each systemSections as section}
 		<div class="flex items-center justify-between pl-2 pr-1 py-1">
 			<span
-				class="text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+				class="text-[0.625rem] font-normal text-base-400 dark:text-base-500 uppercase tracking-wider"
 			>
 				{section.devices ? $i18n.t('Your devices') : $i18n.t('Machines')}
 			</span>
@@ -249,7 +249,7 @@
 					role="menuitemradio"
 					aria-checked={$selectedTerminalId === terminal.id}
 					class="{rowClass} {$selectedTerminalId === terminal.id
-						? 'pr-14 bg-gray-50/40 dark:bg-gray-800/40'
+						? 'pr-14 bg-base-50/40 dark:bg-base-800/40'
 						: 'pr-8'}"
 					on:click={() => toggleTerminal(terminal.id)}
 				>
@@ -295,7 +295,7 @@
 				type="button"
 				role="menuitem"
 				{disabled}
-				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-base-50/40 dark:hover:bg-base-800/40 disabled:cursor-not-allowed disabled:opacity-40"
 				on:click={() => {
 					tab = 'terminal';
 				}}
@@ -305,14 +305,14 @@
 						strokeWidth="2"
 					/>{/if}
 				<span class="flex-1 truncate">{selectedLabel}</span>
-				<div class="text-gray-500"><ChevronRight /></div>
+				<div class="text-base-500"><ChevronRight /></div>
 			</button>
 		</div>
 	{:else if tab === 'terminal'}
 		<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 			<button
 				role="menuitem"
-				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					tab = '';
 				}}

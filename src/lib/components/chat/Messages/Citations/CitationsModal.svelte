@@ -39,12 +39,12 @@
 
 <Modal size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center capitalize">
 				{$i18n.t('Citations')}
 			</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -55,12 +55,12 @@
 
 		<div class="flex flex-col md:flex-row w-full px-6 pb-5 md:space-x-4">
 			<div
-				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden text-left text-sm gap-2"
+				class="flex flex-col w-full dark:text-base-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden text-left text-sm gap-2"
 			>
 				{#each citations as citation, idx}
 					<button
 						id={`source-${id}-${idx + 1}`}
-						class="no-toggle outline-hidden flex dark:text-gray-300 rounded-xl gap-1.5 items-center"
+						class="no-toggle outline-hidden flex dark:text-base-300 rounded-xl gap-1.5 items-center"
 						on:click={() => {
 							showCitationModal = true;
 							selectedCitation = citation;

@@ -42,12 +42,12 @@
 <Modal ariaLabel={$i18n.t('Feedback Details')} size="sm" bind:show>
 	{#if selectedFeedback}
 		<div>
-			<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+			<div class="flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 				<div class="text-sm font-medium self-center">
 					{$i18n.t('Feedback Details')}
 				</div>
 				<button
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={close}
 					aria-label={$i18n.t('Close')}
 				>
@@ -55,11 +55,11 @@
 				</button>
 			</div>
 
-			<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+			<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 				{#if loaded}
 					<div class="flex flex-col w-full">
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Chat ID')}</div>
+							<div class=" mb-1 text-xs text-base-500">{$i18n.t('Chat ID')}</div>
 
 							<div class="flex-1 text-xs">
 								<a
@@ -78,7 +78,7 @@
 
 							{#if messages[messages[messageId]?.parentId]}
 								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Prompt')}</div>
+									<div class="mb-1 text-xs text-base-500">{$i18n.t('Prompt')}</div>
 
 									<div class="flex-1 text-xs whitespace-pre-line break-words">
 										<span>{messages[messages[messageId]?.parentId]?.content || '-'}</span>
@@ -88,7 +88,7 @@
 
 							{#if messages[messageId]}
 								<div class="flex flex-col w-full mb-2">
-									<div class="mb-1 text-xs text-gray-500">{$i18n.t('Response')}</div>
+									<div class="mb-1 text-xs text-base-500">{$i18n.t('Response')}</div>
 									<div
 										class="flex-1 text-xs whitespace-pre-line break-words max-h-32 overflow-y-auto"
 									>
@@ -99,14 +99,14 @@
 						{/if}
 
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Rating')}</div>
+							<div class=" mb-1 text-xs text-base-500">{$i18n.t('Rating')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.details?.rating ?? '-'}</span>
 							</div>
 						</div>
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Reason')}</div>
+							<div class=" mb-1 text-xs text-base-500">{$i18n.t('Reason')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.reason || '-'}</span>
@@ -114,7 +114,7 @@
 						</div>
 
 						<div class="flex flex-col w-full mb-2">
-							<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Comment')}</div>
+							<div class=" mb-1 text-xs text-base-500">{$i18n.t('Comment')}</div>
 
 							<div class="flex-1 text-xs">
 								<span>{selectedFeedback?.data?.comment || '-'}</span>
@@ -126,7 +126,7 @@
 								<div class="flex flex-wrap gap-1 mt-1">
 									{#each selectedFeedback?.data?.tags as tag}
 										<span
-											class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-[0.5625rem]"
+											class="px-2 py-0.5 rounded-full bg-base-100 dark:bg-base-850 text-[0.5625rem]"
 											>{tag}</span
 										>
 									{/each}
@@ -136,7 +136,7 @@
 
 						<div class="flex justify-end pt-2">
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 								type="button"
 								on:click={close}
 							>

@@ -71,7 +71,7 @@
 		{#if !chat?.id}
 			<Tooltip content={$i18n.t(`Temporary Chat`)}>
 				<button
-					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 					id="temporary-chat-button"
 					on:click={() => onTemporaryChange?.(!$temporaryChat)}
 					aria-label={$i18n.t(`Temporary Chat`)}
@@ -102,7 +102,7 @@
 		{#if chat?.id && $temporaryChat}
 			<Tooltip content={$i18n.t(`Save Chat`)}>
 				<button
-					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+					class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 					id="save-temporary-chat-button"
 					on:click={async () => {
 						onSaveTempChat();
@@ -120,7 +120,7 @@
 			<button
 				class="flex size-6 {$showSidebar
 					? 'md:hidden'
-					: ''} cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+					: ''} cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 				on:click={() => {
 					initNewChat();
 				}}
@@ -161,7 +161,7 @@
 			id="navbar-bg-gradient-to-b"
 			class="{chat?.id
 				? 'visible'
-				: 'invisible'} bg-linear-to-b via-40% to-97% from-white/90 via-white/50 to-transparent dark:from-gray-900/90 dark:via-gray-900/50 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 z-[-1]"
+				: 'invisible'} bg-linear-to-b via-40% to-97% from-white/90 via-white/50 to-transparent dark:from-base-900/90 dark:via-base-900/50 dark:to-transparent pointer-events-none absolute inset-0 -bottom-10 z-[-1]"
 		></div>
 
 		<div class=" flex max-w-full w-full mx-auto bg-transparent">
@@ -171,7 +171,7 @@
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
 								id="sidebar-toggle-button"
-								class="flex cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								class="flex cursor-pointer rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
 								}}
@@ -196,7 +196,7 @@
 								{@render tabTitleEditor()}
 							{:else}
 								<h1
-									class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+									class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-base-700 dark:text-base-300"
 								>
 									{title || chat?.chat?.title || $i18n.t('New Chat')}
 								</h1>
@@ -219,7 +219,7 @@
 						<h1 class="sr-only">{$i18n.t('New Chat')}</h1>
 						<div class="pointer-events-none invisible flex max-w-full min-w-0 items-center gap-2">
 							<div
-								class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+								class="min-w-0 truncate md:py-1 text-left text-[0.9375rem] font-normal text-base-700 dark:text-base-300"
 							>
 								{$i18n.t('New Chat')}
 							</div>
@@ -228,14 +228,14 @@
 				</div>
 
 				<div class="lg:mr-1 flex flex-none items-center gap-2 self-center">
-					<!-- <div class="md:hidden flex self-center w-[0.0625rem] h-5 mx-2 bg-gray-300 dark:bg-stone-700" /> -->
+					<!-- <div class="md:hidden flex self-center w-[0.0625rem] h-5 mx-2 bg-base-300 dark:bg-stone-700" /> -->
 
 					{#if !tabbed}{@render renderChatActions()}{/if}
 
 					{#if history.currentId || $selectedTerminalId || $user?.role === 'admin' || ($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false))}
 						<Tooltip content={$i18n.t('Tabs')}>
 							<button
-								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								class="flex size-6 cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 								on:click={() => showTabs.set(!$showTabs)}
 								aria-label={$i18n.t('Tabs')}
 								aria-expanded={!!$showTabs}
@@ -251,7 +251,7 @@
 
 	{#if !tabbed && $temporaryChat && isTemporaryChatId($chatId)}
 		<div class=" w-full z-30 text-center">
-			<div class="text-xs text-gray-500">{$i18n.t('Temporary Chat')}</div>
+			<div class="text-xs text-base-500">{$i18n.t('Temporary Chat')}</div>
 		</div>
 	{/if}
 

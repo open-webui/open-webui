@@ -151,12 +151,12 @@
 	bind:this={rootEl}
 	class="relative grid {hideThumbs
 		? 'grid-cols-[minmax(0,1fr)]'
-		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-gray-900 dark:text-gray-100 {className}"
+		: 'grid-cols-[144px_minmax(0,1fr)]'} min-h-0 bg-transparent text-base-900 dark:text-base-100 {className}"
 >
 	<aside
 		class={hideThumbs
 			? 'hidden'
-			: 'thumbnail-sidebar overflow-y-auto px-2 pt-3 pb-16 border-r border-gray-50 dark:border-gray-850/30 bg-transparent'}
+			: 'thumbnail-sidebar overflow-y-auto px-2 pt-3 pb-16 border-r border-base-50 dark:border-base-850/30 bg-transparent'}
 		aria-label={listLabel}
 	>
 		{#if thumbsLoading && thumbnails.length === 0}
@@ -168,15 +168,15 @@
 				<button
 					use:trackThumbnail={index}
 					type="button"
-					class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-gray-900 dark:text-gray-100"
+					class="grid grid-cols-[20px_minmax(0,1fr)] items-start gap-2 w-full mb-3 p-0 text-left text-base-900 dark:text-base-100"
 					on:click={() => selectPage(index)}
 					aria-label="{itemLabel} {index + 1}"
 					aria-current={safePage === index ? 'true' : undefined}
 				>
 					<span
 						class="pt-1.5 text-[0.6875rem] font-medium text-right {safePage === index
-							? 'text-gray-400 dark:text-gray-500'
-							: 'text-gray-300/70 dark:text-gray-700'}">{index + 1}</span
+							? 'text-base-400 dark:text-base-500'
+							: 'text-base-300/70 dark:text-base-700'}">{index + 1}</span
 					>
 					<span
 						class="block overflow-hidden rounded-md bg-transparent {safePage === index

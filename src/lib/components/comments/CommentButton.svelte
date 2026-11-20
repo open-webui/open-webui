@@ -22,8 +22,8 @@
 	$: buttonClass =
 		className ||
 		(menu
-			? 'select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100'
-			: 'inline-flex shrink-0 items-center justify-center p-0 bg-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors');
+			? 'select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100'
+			: 'inline-flex shrink-0 items-center justify-center p-0 bg-transparent text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300 transition-colors');
 	const i18n = getContext<any>('i18n');
 	let requestVersion = 0;
 	$: enabled = !!(

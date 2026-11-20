@@ -387,7 +387,7 @@
 		if (deleteTarget) deleteHandler(deleteTarget);
 	}}
 >
-	<div class="text-sm text-gray-500 truncate">
+	<div class="text-sm text-base-500 truncate">
 		{$i18n.t('This will delete')} <span class="font-normal">{deleteTarget?.name}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -482,11 +482,11 @@
 							onChange={() => {
 								page = 1;
 							}}
-							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
+							triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-base-700 transition dark:text-base-200"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>
 								<span
-									class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+									class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 								>
 									{selectedLabel}
 								</span>
@@ -504,7 +504,7 @@
 						<Dropdown align="end">
 							<Tooltip content={$i18n.t('Actions')}>
 								<button
-									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition dark:text-gray-200"
+									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-base-700 transition dark:text-base-200"
 									type="button"
 								>
 									<span>{$i18n.t('Actions')}</span>
@@ -543,11 +543,11 @@
 				</div>
 			{:else if (automations ?? []).length === 0}
 				<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
-					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 						<div class="mb-1.5 text-sm">
 							{query ? $i18n.t('No results found') : $i18n.t('No automations found')}
 						</div>
-						<div class="text-center text-xs leading-5 text-gray-500">
+						<div class="text-center text-xs leading-5 text-base-500">
 							{query
 								? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
 								: $i18n.t('Create scheduled prompts that run automatically on a recurring basis.')}
@@ -573,7 +573,7 @@
 											<Tooltip content={automation.name} className="min-w-0" placement="top-start">
 												<a
 													href={`/automations/${automation.id}`}
-													class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+													class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 													>{automation.name}</a
 												>
 											</Tooltip>
@@ -586,7 +586,7 @@
 													: $i18n.t('Never')}
 											>
 												<div
-													class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
+													class="shrink-0 truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
 												>
 													{formatLastRun(automation)}
 												</div>
@@ -597,7 +597,7 @@
 							</div>
 
 							<div
-								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
 							>
 								<Tooltip
 									content={`${formatSchedule(automation.data.rrule, $i18n)} · ${formatDestination(automation)}`}
@@ -613,7 +613,7 @@
 								{#if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
-											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 											type="button"
 											aria-label={$i18n.t('Delete')}
 											on:click={(e) => {
@@ -647,7 +647,7 @@
 											}}
 										>
 											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
 												aria-label={$i18n.t('Automation Menu')}
 												on:click={(e) => {

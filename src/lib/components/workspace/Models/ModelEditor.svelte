@@ -937,7 +937,7 @@
 			<div class="flex shrink-0 items-center gap-3" class:px-3={!admin}>
 				{#if onBack}
 					<button
-						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-base-400 transition-colors duration-75 hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 						type="button"
 						on:click={() => {
 							discardThen(() => {
@@ -1000,7 +1000,7 @@
 				<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
 					<button
 						type="button"
-						class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						disabled={promotingVersion}
 						on:click={() => historyMenu.requestPromotion()}
 					>
@@ -1119,7 +1119,7 @@
 										{:else}
 											<div
 												aria-hidden="true"
-												class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-gray-100 dark:bg-gray-850"
+												class="[mask-image:linear-gradient(to_bottom,black_15%,rgba(0,0,0,0.65)_40%,transparent_85%)] absolute inset-0 h-full w-full rounded-xl bg-base-100 dark:bg-base-850"
 											></div>
 										{/if}
 									</div>
@@ -1139,7 +1139,7 @@
 													class="group relative flex size-full items-center overflow-hidden rounded-xl {info
 														.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
 														? 'bg-transparent'
-														: 'bg-gray-50 dark:bg-gray-850'} ring-1 ring-gray-200/70 transition hover:ring-gray-300 dark:ring-white/10 dark:hover:ring-white/20"
+														: 'bg-base-50 dark:bg-base-850'} ring-1 ring-base-200/70 transition hover:ring-base-300 dark:ring-white/10 dark:hover:ring-white/20"
 													type="button"
 													aria-label={$i18n.t('Upload profile image')}
 													on:click={() => {
@@ -1165,7 +1165,7 @@
 													>
 														<div class="m-1">
 															<div
-																class="rounded-full bg-gray-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
+																class="rounded-full bg-base-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
 															>
 																<svg
 																	xmlns="http://www.w3.org/2000/svg"
@@ -1190,7 +1190,7 @@
 
 												{#if info.meta.profile_image_url && info.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`}
 													<button
-														class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-gray-400 opacity-0 transition group-hover:opacity-60 hover:text-gray-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-gray-600 dark:hover:text-gray-400"
+														class="absolute left-1/2 top-full mt-1 -translate-x-1/2 text-[0.5rem] leading-none text-base-400 opacity-0 transition group-hover:opacity-60 hover:text-base-500 hover:opacity-100 group-focus-within:opacity-60 dark:text-base-600 dark:hover:text-base-400"
 														on:click={() => {
 															info.meta.profile_image_url = `${WEBUI_BASE_URL}/static/favicon.png`;
 														}}
@@ -1207,7 +1207,7 @@
 														<input
 															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
 																? 'min-h-6'
-																: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-white dark:placeholder:text-base-700 md:text-lg"
 															placeholder={name || $i18n.t('Model Name')}
 															aria-label={$i18n.t('Model Name')}
 															value={localizedField('name')}
@@ -1221,7 +1221,7 @@
 														<input
 															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
 																? 'min-h-6'
-																: ''} bg-transparent text-base leading-tight text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-white dark:placeholder:text-gray-700 md:text-lg"
+																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-white dark:placeholder:text-base-700 md:text-lg"
 															placeholder={$i18n.t('Model Name')}
 															aria-label={$i18n.t('Model Name')}
 															bind:value={name}
@@ -1237,7 +1237,7 @@
 															{#if backgroundPreview || info.meta.background_image_url}
 																<button
 																	type="button"
-																	class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	class="rounded-md px-1 py-1 text-xs font-normal text-base-500 transition hover:text-base-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-base-400 dark:hover:text-base-300"
 																	disabled={loading}
 																	title={$i18n.t(
 																		'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
@@ -1247,7 +1247,7 @@
 																>
 																<button
 																	type="button"
-																	class="rounded-md px-1 py-1 text-xs font-normal text-gray-500 transition hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	class="rounded-md px-1 py-1 text-xs font-normal text-base-500 transition hover:text-base-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-50 dark:text-base-400 dark:hover:text-base-300"
 																	disabled={loading}
 																	on:click={() => {
 																		clearBackgroundPreview();
@@ -1258,7 +1258,7 @@
 															{:else}
 																<button
 																	type="button"
-																	class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-gray-500 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-300"
+																	class="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-base-500 transition hover:text-base-700 disabled:opacity-50 dark:text-base-400 dark:hover:text-base-300"
 																	disabled={loading}
 																	title={$i18n.t(
 																		'PNG, JPEG, WebP, or GIF. Up to 5 MiB and 25 megapixels.'
@@ -1276,7 +1276,7 @@
 												{#if editingLocale}
 													<div class="mt-1 flex items-center justify-end gap-3 text-[0.6875rem]">
 														<div
-															class="flex shrink-0 items-center gap-2 text-gray-500 dark:text-gray-400"
+															class="flex shrink-0 items-center gap-2 text-base-500 dark:text-base-400"
 														>
 															<button
 																type="button"
@@ -1296,7 +1296,7 @@
 												<input
 													class="block w-full {($settings?.highContrastMode ?? false)
 														? 'min-h-6'
-														: ''} bg-transparent py-0.5 text-xs text-gray-500 outline-hidden placeholder:text-gray-300 dark:text-gray-500 dark:placeholder:text-gray-700"
+														: ''} bg-transparent py-0.5 text-xs text-base-500 outline-hidden placeholder:text-base-300 dark:text-base-500 dark:placeholder:text-base-700"
 													placeholder={$i18n.t('Model ID')}
 													aria-label={$i18n.t('Model ID')}
 													bind:value={id}
@@ -1312,14 +1312,14 @@
 										<div class="mb-1 flex w-full items-center justify-between">
 											{#if editingLocale}
 												<div
-													class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+													class="self-center text-xs font-normal text-base-600 dark:text-base-400"
 												>
 													{$i18n.t('Description ({{language}})', {
 														language: editingLocaleLabel || editingLocale
 													})}
 												</div>
 												<div
-													class="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+													class="flex items-center gap-2 text-xs text-base-500 dark:text-base-400"
 												>
 													<button
 														type="button"
@@ -1342,14 +1342,14 @@
 											aria-label={enableDescription ? $i18n.t('Custom description enabled') : $i18n.t('Default description enabled')}
 											-->
 												<button
-													class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-gray-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
+													class="grid w-full grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 rounded-sm text-start text-xs font-normal text-base-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 													type="button"
 													aria-pressed={enableDescription ? 'true' : 'false'}
 													on:click={() => {
 														enableDescription = !enableDescription;
 													}}
 												>
-													<span class="font-normal text-gray-600 dark:text-gray-400">
+													<span class="font-normal text-base-600 dark:text-base-400">
 														{$i18n.t('Description')}
 													</span>
 													{#if !enableDescription}
@@ -1363,7 +1363,7 @@
 
 										{#if editingLocale}
 											<Textarea
-												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 font-normal text-base-900 dark:text-base-100"
 												placeholder={info.meta.description ||
 													$i18n.t('Add a short description about what this model does')}
 												minSize={32}
@@ -1376,7 +1376,7 @@
 											/>
 										{:else if enableDescription}
 											<Textarea
-												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+												className="w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 font-normal text-base-900 dark:text-base-100"
 												placeholder={$i18n.t('Add a short description about what this model does')}
 												minSize={32}
 												bind:value={info.meta.description}
@@ -1389,7 +1389,7 @@
 											<div
 												class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 											>
-												<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+												<div class="text-xs font-normal text-base-600 dark:text-base-400">
 													<ModelSettingsLabel
 														label={$i18n.t('Base Model (From)')}
 														description={$i18n.t(
@@ -1404,7 +1404,7 @@
 														placeholder={$i18n.t('Select a base model')}
 														searchPlaceholder={$i18n.t('Search a model')}
 														items={getBaseModelItems($baseModels)}
-														triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
+														triggerClassName="text-xs font-normal text-base-900 dark:text-base-100"
 														selectionOnly
 														{includeHidden}
 														bind:value={info.base_model_id}
@@ -1416,7 +1416,7 @@
 										<div
 											class="grid min-w-0 grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 										>
-											<div class="pt-1 text-xs font-normal text-gray-600 dark:text-gray-400">
+											<div class="pt-1 text-xs font-normal text-base-600 dark:text-base-400">
 												<ModelSettingsLabel
 													label={$i18n.t('Tags')}
 													description={$i18n.t(
@@ -1456,7 +1456,7 @@
 								<section class="mt-4">
 									<div class="space-y-2 px-1">
 										<div
-											class="flex items-center justify-between gap-2 text-xs font-normal text-gray-600 dark:text-gray-400"
+											class="flex items-center justify-between gap-2 text-xs font-normal text-base-600 dark:text-base-400"
 										>
 											<ModelSettingsLabel
 												label={$i18n.t('System Prompt')}
@@ -1467,7 +1467,7 @@
 											{#if !readOnly && !historical}
 												<button
 													type="button"
-													class="shrink-0 rounded-md px-2 py-1 text-gray-500 hover:text-gray-900 disabled:opacity-50 dark:hover:text-gray-100"
+													class="shrink-0 rounded-md px-2 py-1 text-base-500 hover:text-base-900 disabled:opacity-50 dark:hover:text-base-100"
 													disabled={loading || promotingVersion}
 													on:click={compareRevision}>{$i18n.t('Compare revision')}</button
 												>
@@ -1479,7 +1479,7 @@
 												<div>
 													<Textarea
 														ariaLabel={$i18n.t('System Prompt')}
-														className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100"
+														className="min-h-12 w-full resize-none overflow-y-hidden bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 font-normal text-base-900 dark:text-base-100"
 														placeholder={$i18n.t(
 															'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 														)}
@@ -1490,14 +1490,14 @@
 												</div>
 												{#if chatVariablesPreview.fields.length > 0 || chatVariablesPreview.userFields.length > 0 || chatVariablesPreview.warnings.length > 0}
 													<div
-														class="mt-2 border-t border-gray-100/60 pt-2 dark:border-gray-850/60"
+														class="mt-2 border-t border-base-100/60 pt-2 dark:border-base-850/60"
 													>
 														<div class="mb-1.5 flex items-center justify-between gap-2">
-															<div class="text-xs font-normal text-gray-600 dark:text-gray-400">
+															<div class="text-xs font-normal text-base-600 dark:text-base-400">
 																{$i18n.t('Detected Variables')}
 															</div>
 															{#if chatVariablesPreview.fields.length + chatVariablesPreview.userFields.length > 0}
-																<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+																<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 																	{chatVariablesPreview.fields.length +
 																		chatVariablesPreview.userFields.length}
 																</div>
@@ -1506,17 +1506,17 @@
 
 														{#if chatVariablesPreview.fields.length > 0}
 															<div
-																class="mb-1 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
+																class="mb-1 text-[0.6875rem] font-normal text-base-600 dark:text-base-400"
 															>
 																{$i18n.t('Chat Variables')}
 															</div>
 															<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
 																{#each chatVariablesPreview.fields as field}
 																	<div
-																		class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
+																		class="flex items-center gap-1 font-normal text-base-900 dark:text-base-100"
 																	>
 																		<span class="font-medium">{field.key}</span>
-																		<span class="text-gray-400 dark:text-gray-600"
+																		<span class="text-base-400 dark:text-base-600"
 																			>{field.type}</span
 																		>
 																		{#if field.required}
@@ -1531,14 +1531,14 @@
 
 														{#if chatVariablesPreview.userFields.length > 0}
 															<div
-																class="mb-1 mt-2 text-[0.6875rem] font-normal text-gray-600 dark:text-gray-400"
+																class="mb-1 mt-2 text-[0.6875rem] font-normal text-base-600 dark:text-base-400"
 															>
 																{$i18n.t('User Variables')}
 															</div>
 															<div class="flex flex-wrap gap-x-3 gap-y-1.5 text-xs">
 																{#each chatVariablesPreview.userFields as field}
 																	<div
-																		class="flex items-center gap-1 font-normal text-gray-900 dark:text-gray-100"
+																		class="flex items-center gap-1 font-normal text-base-900 dark:text-base-100"
 																	>
 																		<span class="font-medium">{field.key}</span>
 																	</div>
@@ -1566,14 +1566,14 @@
 												on:click={() => {
 													showSystemPrompt = true;
 												}}
-												class="w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100"
+												class="w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-[0.8125rem] font-normal text-base-900 dark:text-base-100"
 											>
 												{system}
 											</button>
 										{/if}
 										{#if system.trim()}
 											<button
-												class="block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+												class="block text-xs text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 												type="button"
 												aria-expanded={showSystemPrompt}
 												on:click={() => {
@@ -1592,7 +1592,7 @@
 											aria-expanded={showAdvanced}
 											on:click={() => (showAdvanced = !showAdvanced)}
 										>
-											<span class="font-normal text-gray-600 dark:text-gray-400"
+											<span class="font-normal text-base-600 dark:text-base-400"
 												><ModelSettingsLabel
 													label={$i18n.t('Advanced Params')}
 													description={$i18n.t(
@@ -1600,14 +1600,14 @@
 													)}
 												/></span
 											>
-											<span class="text-gray-900 dark:text-gray-100">
+											<span class="text-base-900 dark:text-base-100">
 												<!-- Previous non-plural key retained for i18n extraction: {$i18n.t('{{count}} modified')} -->
 												{modifiedParamCount
 													? $i18n.t('{{count}} modified', { count: modifiedParamCount })
 													: $i18n.t('Default')}
 											</span>
 											<ChevronRight
-												className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+												className={`size-3 text-base-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
 											/>
 										</button>
 
@@ -1633,14 +1633,14 @@
 												>
 													{#each Object.entries(fields) as [key, original] (key)}
 														<div
-															class="rounded-xl px-2 py-1.5 focus-within:bg-gray-50 dark:focus-within:bg-gray-850 {info.meta.i18n?.[
+															class="rounded-xl px-2 py-1.5 focus-within:bg-base-50 dark:focus-within:bg-base-850 {info.meta.i18n?.[
 																editingLocale
 															]?.[key]?.trim()
 																? ''
 																: 'opacity-60 focus-within:opacity-100'}"
 														>
 															<Textarea
-																className="min-h-5 w-full min-w-0 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-gray-900 outline-hidden placeholder:text-gray-500 dark:text-gray-100 dark:placeholder:text-gray-400"
+																className="min-h-5 w-full min-w-0 resize-none overflow-hidden bg-transparent text-[0.8125rem] font-normal leading-5 text-base-900 outline-hidden placeholder:text-base-500 dark:text-base-100 dark:placeholder:text-base-400"
 																placeholder={original}
 																value={info.meta.i18n?.[editingLocale]?.[key] ?? ''}
 																onInput={(event) =>
@@ -1653,11 +1653,11 @@
 													{/each}
 													{#if customized}
 														<div
-															class="flex justify-end px-2 py-1 text-xs text-gray-500 dark:text-gray-400"
+															class="flex justify-end px-2 py-1 text-xs text-base-500 dark:text-base-400"
 														>
 															<button
 																type="button"
-																class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+																class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 																on:click={() => Object.keys(fields).forEach(clearLocalizedField)}
 																>{$i18n.t('Use default')}</button
 															>
@@ -1707,7 +1707,7 @@
 														slot="label"
 														disabled={readOnly}
 														type="button"
-														class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+														class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 														on:click={() => {
 															customPromptDraft = structuredClone(info.meta.suggestion_prompts);
 															info.meta.suggestion_prompts = null;
@@ -1716,12 +1716,12 @@
 												</PromptSuggestions>
 											{:else}
 												<div
-													class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-gray-500 dark:text-gray-400"
+													class="flex items-center justify-between gap-3 px-1 py-1 text-xs text-base-500 dark:text-base-400"
 												>
 													<span>{$i18n.t('Using default prompt suggestions')}</span>
 													<button
 														type="button"
-														class="shrink-0 hover:text-gray-900 dark:hover:text-gray-100"
+														class="shrink-0 hover:text-base-900 dark:hover:text-base-100"
 														on:click={() => {
 															info.meta.suggestion_prompts = customPromptDraft ?? [
 																{ content: '', title: ['', ''] }
@@ -1733,7 +1733,7 @@
 										</ModelSettingsSection>
 									</section>
 
-									<hr class="my-3 border-gray-100/60 dark:border-gray-850/60" />
+									<hr class="my-3 border-base-100/60 dark:border-base-850/60" />
 
 									<div class="my-3 space-y-0.5">
 										<Knowledge bind:selectedItems={knowledge} disabled={readOnly} />
@@ -1839,13 +1839,13 @@
 													<div class="flex min-w-0 items-center">
 														<label
 															for="realtime-voice-input"
-															class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+															class="self-center text-xs font-normal text-base-600 dark:text-base-400"
 														>
 															{$i18n.t('Realtime Voice')}
 														</label>
 													</div>
 													<TTSVoiceInput
-														className="w-full font-normal text-gray-900 dark:text-gray-100"
+														className="w-full font-normal text-base-900 dark:text-base-100"
 														id="realtime-voice"
 														bind:value={voice.voice}
 														placeholder={$i18n.t('Admin default')}
@@ -1864,13 +1864,13 @@
 												<div class="flex min-w-0 items-center">
 													<label
 														for="tts-voice-input"
-														class="self-center text-xs font-normal text-gray-600 dark:text-gray-400"
+														class="self-center text-xs font-normal text-base-600 dark:text-base-400"
 													>
 														{$i18n.t('TTS Voice')}
 													</label>
 												</div>
 												<TTSVoiceInput
-													className="w-full font-normal text-gray-900 dark:text-gray-100"
+													className="w-full font-normal text-base-900 dark:text-base-100"
 													bind:value={tts.voice}
 													{voices}
 													placeholder={$i18n.t('e.g. alloy, echo, shimmer')}
@@ -1889,7 +1889,7 @@
 									</div>
 								</fieldset>
 
-								<div class="my-2 text-xs text-gray-400 dark:text-gray-500">
+								<div class="my-2 text-xs text-base-400 dark:text-base-500">
 									<div
 										class="flex w-full items-center gap-2 {($settings?.highContrastMode ?? false)
 											? ''
@@ -1925,7 +1925,7 @@
 										<div class="pt-2">
 											<textarea
 												aria-label={$i18n.t('JSON Preview')}
-												class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-gray-900 dark:text-gray-100"
+												class="w-full bg-transparent text-xs leading-5 outline-hidden resize-none font-normal text-base-900 dark:text-base-100"
 												rows="8"
 												value={JSON.stringify(readOnly ? model : modelInfo, null, 2)}
 												disabled
@@ -1957,7 +1957,7 @@
 					{/if}
 					<button
 						form={formId}
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						type="submit"
 						disabled={loading || (edit && !configurationChanged)}
 					>

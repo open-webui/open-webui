@@ -50,7 +50,7 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-base-900 dark:enabled:hover:text-base-100 disabled:opacity-50 disabled:cursor-not-allowed"
 				draggable="false"
 				disabled={!writeAccess}
 				on:click={() => {
@@ -85,7 +85,7 @@
 			{#if accessHandler && writeAccess}
 				<button
 					type="button"
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						accessHandler?.();
 						closeMenu();
@@ -98,7 +98,7 @@
 
 			{#if $config.features.enable_community_sharing}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-base-900 dark:enabled:hover:text-base-100 disabled:opacity-50 disabled:cursor-not-allowed"
 					draggable="false"
 					disabled={!writeAccess}
 					on:click={() => {
@@ -112,7 +112,7 @@
 			{/if}
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				draggable="false"
 				on:click={() => {
 					cloneHandler();
@@ -125,7 +125,7 @@
 
 			{#if $user?.role === 'admin' || $user?.permissions?.workspace?.prompts_export}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					draggable="false"
 					on:click={() => {
 						exportHandler();
@@ -137,10 +137,10 @@
 				</button>
 			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
+			<hr class="border-base-50 dark:border-base-850/30 mx-1 my-0.5" />
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-gray-900 dark:enabled:hover:text-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] enabled:hover:text-base-900 dark:enabled:hover:text-base-100 disabled:opacity-50 disabled:cursor-not-allowed"
 				draggable="false"
 				disabled={!writeAccess}
 				on:click={() => {

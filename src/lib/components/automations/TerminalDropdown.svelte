@@ -34,11 +34,11 @@
 			aria-label={terminalLabel}
 			title={terminalLabel}
 			class={plain
-				? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
-				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${terminalServerId ? 'text-black dark:text-gray-100' : 'text-gray-600 dark:text-gray-400'} hover:text-gray-900 dark:hover:text-gray-100`}
+				? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-base-700 dark:text-base-300'
+				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${terminalServerId ? 'text-black dark:text-base-100' : 'text-base-600 dark:text-base-400'} hover:text-base-900 dark:hover:text-base-100`}
 		>
 			{#if plain}
-				<span class="truncate {terminalServerId ? '' : 'text-gray-400 dark:text-gray-500'}"
+				<span class="truncate {terminalServerId ? '' : 'text-base-400 dark:text-base-500'}"
 					>{terminalServerId ? terminalLabel : $i18n.t('None')}</span
 				>
 			{:else}
@@ -61,9 +61,9 @@
 
 		<div
 			slot="content"
-			class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 min-w-56 max-w-56 p-0.5"
+			class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-white dark:bg-base-850 min-w-56 max-w-56 p-0.5"
 		>
-			<div class="px-2 text-[0.6875rem] text-gray-500 py-0.5">
+			<div class="px-2 text-[0.6875rem] text-base-500 py-0.5">
 				{$i18n.t('Terminal')}
 			</div>
 
@@ -71,8 +71,8 @@
 				<button
 					class="flex w-full h-[1.6875rem] justify-between gap-2 items-center px-2 text-[0.8125rem] cursor-pointer rounded-xl {terminalServerId ===
 					server.id
-						? 'text-gray-900 dark:text-gray-100'
-						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
+						? 'text-base-900 dark:text-base-100'
+						: 'text-base-700 hover:text-base-900 dark:text-base-300 dark:hover:text-base-100'}"
 					type="button"
 					on:click={() => {
 						if (terminalServerId === server.id) {
@@ -90,7 +90,7 @@
 						<span class="truncate">{server.name || server.id}</span>
 					</div>
 					{#if terminalServerId === server.id}
-						<div class="shrink-0 text-gray-500 dark:text-gray-400">
+						<div class="shrink-0 text-base-500 dark:text-base-400">
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 20 20"
@@ -109,8 +109,8 @@
 			{/each}
 
 			{#if terminalServerId}
-				<div class="border-t border-gray-100 dark:border-gray-800 mt-1 pt-1">
-					<div class="px-2 py-0.5 text-[0.6875rem] text-gray-500">
+				<div class="border-t border-base-100 dark:border-base-800 mt-1 pt-1">
+					<div class="px-2 py-0.5 text-[0.6875rem] text-base-500">
 						{$i18n.t('Working Directory')}
 					</div>
 					<div class="px-2">
@@ -118,7 +118,7 @@
 							type="text"
 							bind:value={terminalCwd}
 							placeholder="/home/user/project"
-							class="w-full bg-transparent outline-hidden text-[0.8125rem] py-1 placeholder:text-gray-400 dark:placeholder:text-gray-600"
+							class="w-full bg-transparent outline-hidden text-[0.8125rem] py-1 placeholder:text-base-400 dark:placeholder:text-base-600"
 							on:click={(e) => e.stopPropagation()}
 							on:input={onChange}
 						/>

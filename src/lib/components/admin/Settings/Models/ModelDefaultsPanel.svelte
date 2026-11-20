@@ -173,7 +173,7 @@
 
 <div class="shrink-0 -mx-1">
 	<button
-		class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal text-gray-600 focus-visible:outline focus-visible:outline-2 dark:text-gray-400"
+		class="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal text-base-600 focus-visible:outline focus-visible:outline-2 dark:text-base-400"
 		type="button"
 		aria-expanded={expanded}
 		on:click={() => (expanded = !expanded)}
@@ -185,13 +185,13 @@
 			)}
 		/>
 		<ChevronRight
-			className={`size-3 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+			className={`size-3 text-base-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
 		/>
 	</button>
 
 	{#if expanded}
 		{#if loading}
-			<div class="py-1 text-xs text-gray-400 dark:text-gray-600">{$i18n.t('Loading...')}</div>
+			<div class="py-1 text-xs text-base-400 dark:text-base-600">{$i18n.t('Loading...')}</div>
 		{:else}
 			<div class="space-y-0 pl-3">
 				<div>
@@ -203,7 +203,7 @@
 							showCapabilities = !showCapabilities;
 						}}
 					>
-						<span class="text-xs text-gray-600 dark:text-gray-400">
+						<span class="text-xs text-base-600 dark:text-base-400">
 							<ModelSettingsLabel
 								label={$i18n.t('settings.admin.models.defaults.modelCapabilities.label')}
 								description={$i18n.t(
@@ -212,7 +212,7 @@
 							/>
 						</span>
 						<ChevronRight
-							className={`size-3 text-gray-400 transition-transform ${showCapabilities ? 'rotate-90' : ''}`}
+							className={`size-3 text-base-400 transition-transform ${showCapabilities ? 'rotate-90' : ''}`}
 						/>
 					</button>
 
@@ -252,7 +252,7 @@
 							showParameters = !showParameters;
 						}}
 					>
-						<span class="text-xs text-gray-600 dark:text-gray-400">
+						<span class="text-xs text-base-600 dark:text-base-400">
 							<ModelSettingsLabel
 								label={$i18n.t('settings.admin.models.defaults.modelParameters.label')}
 								description={$i18n.t(
@@ -261,7 +261,7 @@
 							/>
 						</span>
 						<ChevronRight
-							className={`size-3 text-gray-400 transition-transform ${showParameters ? 'rotate-90' : ''}`}
+							className={`size-3 text-base-400 transition-transform ${showParameters ? 'rotate-90' : ''}`}
 						/>
 					</button>
 
@@ -286,7 +286,7 @@
 							showPromptSuggestions = !showPromptSuggestions;
 						}}
 					>
-						<span class="text-xs text-gray-600 dark:text-gray-400">
+						<span class="text-xs text-base-600 dark:text-base-400">
 							<ModelSettingsLabel
 								label={$i18n.t('settings.admin.models.defaults.promptSuggestions.label')}
 								description={$i18n.t(
@@ -295,7 +295,7 @@
 							/>
 						</span>
 						<ChevronRight
-							className={`size-3 text-gray-400 transition-transform ${showPromptSuggestions ? 'rotate-90' : ''}`}
+							className={`size-3 text-base-400 transition-transform ${showPromptSuggestions ? 'rotate-90' : ''}`}
 						/>
 					</button>
 
@@ -320,7 +320,7 @@
 									{#if !editingLocale && !useDefaultPromptSuggestions}
 										<button
 											type="button"
-											class="shrink-0 px-1 py-0.5 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+											class="shrink-0 px-1 py-0.5 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 											on:click={resetPromptSuggestions}
 										>
 											{$i18n.t('Reset to Defaults')}

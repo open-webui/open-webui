@@ -180,7 +180,7 @@
 	<section
 		bind:this={explorer}
 		aria-label={$i18n.t('Sessions')}
-		class="min-w-0 flex-1 text-xs text-gray-500 dark:text-gray-400"
+		class="min-w-0 flex-1 text-xs text-base-500 dark:text-base-400"
 	>
 		{#if overview && overviewKey === scopeKey && !error}<SessionSignals
 				{overview}
@@ -194,13 +194,13 @@
 				maxlength="200"
 				aria-label={$i18n.t('Search sessions')}
 				placeholder={$i18n.t('Search sessions, users or folders')}
-				class="min-w-0 h-7 w-full sm:w-56 bg-transparent p-0 text-xs text-gray-500 dark:text-gray-400 placeholder:text-gray-400 outline-none focus:text-gray-900 dark:focus:text-gray-100"
+				class="min-w-0 h-7 w-full sm:w-56 bg-transparent p-0 text-xs text-base-500 dark:text-base-400 placeholder:text-base-400 outline-none focus:text-base-900 dark:focus:text-base-100"
 			/>
 			<div class="flex w-full sm:w-auto items-center gap-x-4">
 				<select
 					bind:value={modelId}
 					aria-label={$i18n.t('Model')}
-					class="min-w-0 w-fit max-w-40 pr-5 py-1 text-xs bg-transparent outline-none text-gray-500 dark:text-gray-400"
+					class="min-w-0 w-fit max-w-40 pr-5 py-1 text-xs bg-transparent outline-none text-base-500 dark:text-base-400"
 				>
 					<option value="">{$i18n.t('All models')}</option>
 					{#each Object.entries(modelNames).sort( (a, b) => a[1].localeCompare(b[1]) ) as [id, name]}<option
@@ -212,7 +212,7 @@
 						<button
 							type="button"
 							aria-label={$i18n.t('Session options')}
-							class="flex items-center justify-center p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+							class="flex items-center justify-center p-1.5 text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-white"
 						>
 							<EllipsisHorizontal className="size-4" />
 						</button>
@@ -256,7 +256,7 @@
 			{:else}
 				<div class="max-h-[22rem] overflow-auto scrollbar-hover">
 					<table class="session-table w-full text-left text-xs tabular-nums whitespace-nowrap">
-						<thead class="sticky top-0 z-10 bg-white dark:bg-gray-900 text-[0.6875rem]">
+						<thead class="sticky top-0 z-10 bg-white dark:bg-base-900 text-[0.6875rem]">
 							<tr>
 								{#each columns as column}
 									<th
@@ -275,7 +275,7 @@
 											type="button"
 											data-sort={column.key}
 											on:click={() => toggleSort(column.key)}
-											class="w-full flex gap-1.5 items-center px-2.5 py-1.5 text-left font-normal cursor-pointer select-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+											class="w-full flex gap-1.5 items-center px-2.5 py-1.5 text-left font-normal cursor-pointer select-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 											class:justify-end={column.numeric}
 										>
 											{column.label}
@@ -294,21 +294,21 @@
 								<!-- The native title button provides keyboard activation; its click bubbles to the row. -->
 								<tr
 									on:click={(event) => selectSession(session, event)}
-									class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-									class:bg-gray-50={selected?.id === session.id}
-									class:dark:bg-gray-850={selected?.id === session.id}
+									class="cursor-pointer hover:bg-base-50 dark:hover:bg-base-800 transition-colors"
+									class:bg-base-50={selected?.id === session.id}
+									class:dark:bg-base-850={selected?.id === session.id}
 								>
 									<td class="px-2.5 py-1.5">
 										<button
 											type="button"
-											class="text-left block w-full max-w-[12rem] sm:max-w-80 rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+											class="text-left block w-full max-w-[12rem] sm:max-w-80 rounded-sm focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 										>
 											<span
-												class="block truncate text-gray-900 dark:text-gray-200"
+												class="block truncate text-base-900 dark:text-base-200"
 												title={session.title}>{session.title || $i18n.t('Untitled chat')}</span
 											>
 											<span
-												class="flex items-center gap-2 text-[0.6875rem] text-gray-400 dark:text-gray-500 mt-0.5"
+												class="flex items-center gap-2 text-[0.6875rem] text-base-400 dark:text-base-500 mt-0.5"
 												><span class="truncate max-w-40"
 													>{session.folder_name ||
 														(session.model_id
@@ -375,7 +375,7 @@
 														style:width={`${(100 * session.tokens) / overview.max_tokens}%`}
 														style:background={session.model_count === 1 && session.model_id
 															? modelColor(session.model_id)
-															: 'var(--color-gray-400)'}
+															: 'var(--color-base-400)'}
 													></span>
 												{/if}
 											</span>
@@ -383,7 +383,7 @@
 												>{session.recorded_responses
 													? formatter.format(session.tokens)
 													: '-'}{#if session.recorded_responses > 0 && session.complete_responses < session.responses}<span
-														class="text-gray-400">*</span
+														class="text-base-400">*</span
 													>{/if}</span
 											>
 										</div></td
@@ -398,7 +398,7 @@
 			{/if}
 		</div>
 		<div
-			class="mt-3 flex items-center justify-between gap-3 text-[0.6875rem] text-gray-400 dark:text-gray-500"
+			class="mt-3 flex items-center justify-between gap-3 text-[0.6875rem] text-base-400 dark:text-base-500"
 		>
 			<span
 				title={$i18n.t(
@@ -410,13 +410,13 @@
 					type="button"
 					aria-label={$i18n.t('Previous sessions')}
 					disabled={loading || page === 0}
-					class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-30"
+					class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-30"
 					on:click={() => page--}><ChevronLeft className="size-3.5" /></button
 				><span>{$i18n.t('Page')} {page + 1}</span><button
 					type="button"
 					aria-label={$i18n.t('Next sessions')}
 					disabled={loading || error || !hasMore}
-					class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-30"
+					class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-30"
 					on:click={() => page++}><ChevronRight className="size-3.5" /></button
 				>
 			</div>

@@ -161,8 +161,8 @@
 	<button
 		type="button"
 		class={plain
-			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
-			: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}
+			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-base-700 dark:text-base-300'
+			: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100'}
 	>
 		{#if !plain}<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -193,9 +193,9 @@
 
 	<div
 		slot="content"
-		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-48 p-0.5"
+		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-white dark:bg-base-850 w-48 p-0.5"
 	>
-		<div class="px-2 text-[0.6875rem] text-gray-500 pt-0.5">
+		<div class="px-2 text-[0.6875rem] text-base-500 pt-0.5">
 			{$i18n.t('Schedule')}
 		</div>
 
@@ -220,7 +220,7 @@
 					type="text"
 					bind:value={customRrule}
 					placeholder="RRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0"
-					class="w-full bg-transparent outline-hidden text-[0.8125rem] placeholder:text-gray-400 dark:placeholder:text-gray-600"
+					class="w-full bg-transparent outline-hidden text-[0.8125rem] placeholder:text-base-400 dark:placeholder:text-base-600"
 					on:click={(e) => e.stopPropagation()}
 					on:input={onChange}
 				/>
@@ -251,7 +251,7 @@
 					</div>
 				{:else}
 					<div class="flex items-center gap-1.5">
-						<span class="text-xs text-gray-500 mr-0.5">{$i18n.t('Time')}</span>
+						<span class="text-xs text-base-500 mr-0.5">{$i18n.t('Time')}</span>
 						<input
 							aria-label={$i18n.t('Time')}
 							type="time"
@@ -270,7 +270,7 @@
 
 				{#if frequency === 'MONTHLY'}
 					<div class="flex items-center gap-1.5">
-						<span class="text-xs text-gray-500">{$i18n.t('Day')}</span>
+						<span class="text-xs text-base-500">{$i18n.t('Day')}</span>
 						<input
 							aria-label={$i18n.t('Day')}
 							type="number"
@@ -291,8 +291,8 @@
 						<button
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
-								? 'text-black dark:text-gray-100'
-								: 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200'}"
+								? 'text-black dark:text-base-100'
+								: 'text-base-400 dark:text-base-500 hover:text-base-700 dark:hover:text-base-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {
 									selectedDays = selectedDays.filter((x) => x !== d.key);

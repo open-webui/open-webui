@@ -60,13 +60,13 @@
 	);
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 font-mono text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 font-mono text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
 	const item =
-		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 transition';
+		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/40 dark:hover:bg-base-800/40 transition';
 
 	type InstanceAction = 'restart' | 'stop' | 'start' | 'delete';
 
@@ -361,7 +361,7 @@
 	size="sm"
 	ariaLabel={terminalId ? $i18n.t('Terminal settings') : $i18n.t('New terminal')}
 >
-	<div class="text-gray-900 dark:text-gray-100">
+	<div class="text-base-900 dark:text-base-100">
 		<div class="flex items-center justify-between gap-2 px-5 pb-2 pt-4">
 			<h2 class="font-primary min-w-0 truncate text-sm font-medium">
 				{terminalId ? name || $i18n.t('Terminal settings') : $i18n.t('New terminal')}
@@ -376,7 +376,7 @@
 				{/if}
 				<button
 					type="button"
-					class="self-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="self-center text-base-500 hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => (show = false)}
 					aria-label={$i18n.t('Close')}><XMark className="size-4" /></button
 				>
@@ -391,7 +391,7 @@
 				aria-busy={busy}
 				on:submit|preventDefault={save}
 			>
-				{#if error}<p role="alert" class="mb-2 text-xs text-gray-700 dark:text-gray-300">
+				{#if error}<p role="alert" class="mb-2 text-xs text-base-700 dark:text-base-300">
 						{error}
 					</p>{/if}
 
@@ -437,12 +437,12 @@
 						/>
 						<div class="flex items-center gap-2">
 							{#if scope}
-								<span class="-me-1 text-xs text-gray-400 dark:text-gray-500">{$i18n.t('per')}</span>
+								<span class="-me-1 text-xs text-base-400 dark:text-base-500">{$i18n.t('per')}</span>
 								<SettingsSelect
 									bind:value={scope}
 									ariaLabel={$i18n.t('Separate instance per')}
 									disabled={scopeLocked || busy}
-									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-gray-900 dark:!bg-transparent dark:focus-visible:text-white"
+									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-base-900 dark:!bg-transparent dark:focus-visible:text-white"
 								>
 									{#each scopes as option}
 										<option value={option.value}>{$i18n.t(option.label)}</option>
@@ -466,7 +466,7 @@
 						aria-expanded={showAdvanced}
 						on:click={() => (showAdvanced = !showAdvanced)}
 					>
-						<span class="text-gray-600 dark:text-gray-400"
+						<span class="text-base-600 dark:text-base-400"
 							><ModelSettingsLabel
 								label={$i18n.t('Advanced')}
 								description={$i18n.t(
@@ -474,11 +474,11 @@
 								)}
 							/></span
 						>
-						<span class="truncate text-gray-900 dark:text-gray-100">
+						<span class="truncate text-base-900 dark:text-base-100">
 							{summary || $i18n.t('Default')}
 						</span>
 						<ChevronRight
-							className={`size-3 text-gray-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+							className={`size-3 text-base-400 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
 						/>
 					</button>
 
@@ -619,13 +619,13 @@
 
 							<div class="sm:col-span-2">
 								<div class="flex items-center justify-between">
-									<span class="text-xs text-gray-600 dark:text-gray-400"
+									<span class="text-xs text-base-600 dark:text-base-400"
 										>{$i18n.t('Environment variables')}</span
 									>
 									<button
 										type="button"
 										aria-label={$i18n.t('Add variable')}
-										class="text-gray-500 hover:text-gray-900 dark:hover:text-white"
+										class="text-base-500 hover:text-base-900 dark:hover:text-white"
 										on:click={() => (env = [...env, { key: '', value: '' }])}
 										><Plus className="size-3.5" /></button
 									>
@@ -647,13 +647,13 @@
 										<button
 											type="button"
 											aria-label={$i18n.t('Remove variable')}
-											class="shrink-0 text-gray-400 hover:text-gray-900 dark:hover:text-white"
+											class="shrink-0 text-base-400 hover:text-base-900 dark:hover:text-white"
 											on:click={() => (env = env.filter((_, i) => i !== index))}
 											><XMark className="size-3.5" /></button
 										>
 									</div>
 								{/each}
-								<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								<p class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 									{$i18n.t('Set when the instance starts.')}
 								</p>
 							</div>
@@ -663,20 +663,20 @@
 
 				{#if terminalId}
 					<section class="mt-4 w-full">
-						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('Instances')}
-							<span class="text-gray-400 dark:text-gray-600">{instances.length}</span>
+							<span class="text-base-400 dark:text-base-600">{instances.length}</span>
 						</div>
 						<div class="flex flex-col gap-1 py-1">
 							{#each instances as instance (instance.id)}
 								{@const title = instanceName(instance)}
 								<div class="flex w-full items-center gap-1.5">
-									<div class="min-w-0 flex-1 truncate text-xs text-gray-700 dark:text-gray-300">
-										{title}{#if instance.user_name}<span class="text-gray-400 dark:text-gray-600">
+									<div class="min-w-0 flex-1 truncate text-xs text-base-700 dark:text-base-300">
+										{title}{#if instance.user_name}<span class="text-base-400 dark:text-base-600">
 												· {instance.user_name}</span
 											>{/if}
 									</div>
-									<span class="flex shrink-0 items-center gap-1.5 text-xs text-gray-500">
+									<span class="flex shrink-0 items-center gap-1.5 text-xs text-base-500">
 										{#if pending[instance.id]}
 											{$i18n.t(pendingCopy[pending[instance.id]])}
 											<Spinner className="size-3" />
@@ -687,7 +687,7 @@
 									<Dropdown align="end" closeOnSelect>
 										<button
 											type="button"
-											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+											class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 hover:text-base-700 dark:hover:text-base-200"
 											aria-label={$i18n.t('More options for {{name}}', { name: title })}
 											disabled={busy || !!pending[instance.id]}
 											><EllipsisHorizontal className="size-3.5" /></button
@@ -730,7 +730,7 @@
 														><Play className="size-3.5" />{$i18n.t('Start')}</button
 													>
 												{/if}
-												<hr class="border-gray-50 dark:border-gray-800/30 mx-1 my-0.5" />
+												<hr class="border-base-50 dark:border-base-800/30 mx-1 my-0.5" />
 												<button
 													type="button"
 													class={item}
@@ -742,7 +742,7 @@
 									</Dropdown>
 								</div>
 							{:else}
-								<div class="text-xs text-gray-400 dark:text-gray-600">
+								<div class="text-xs text-base-400 dark:text-base-600">
 									{$i18n.t('No instances yet. One starts the first time the terminal is used.')}
 								</div>
 							{/each}
@@ -763,7 +763,7 @@
 					</div>
 					<button
 						type="submit"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						disabled={busy || invalid || (!terminalId && !connectionId)}
 					>
 						{terminalId ? $i18n.t('Save') : $i18n.t('Create')}
@@ -778,13 +778,13 @@
 {#if showAccess}
 	<Modal ariaLabel={`${$i18n.t('Access')}: ${name}`} size="sm" bind:show={showAccess}>
 		<div>
-			<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
+			<div class=" flex justify-between dark:text-base-100 px-5 pt-3 pb-1">
 				<div class=" text-sm self-center">
 					{$i18n.t('Access')}: {name}
 				</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => (showAccess = false)}
 				>
 					<XMark className={'size-4'} />
@@ -800,7 +800,7 @@
 					sharePublic={false}
 					shareOpen={false}
 				>
-					<p class="text-xs text-gray-500 dark:text-gray-400">
+					<p class="text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('People with access can run commands and see every file on this terminal.')}
 					</p>
 				</AccessControl>

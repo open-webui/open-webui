@@ -294,7 +294,7 @@
 			<Tooltip content={$i18n.t(button.name)}
 				><button
 					type="button"
-					class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/6 dark:hover:text-gray-300"
+					class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-500 transition-colors hover:bg-base-100 hover:text-base-700 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/6 dark:hover:text-base-300"
 					disabled={button.disabled}
 					aria-label={$i18n.t(button.name)}
 					on:click={button.action}
@@ -314,14 +314,14 @@
 				aria-label={$i18n.t('URL')}
 				placeholder="https://example.com"
 				spellcheck="false"
-				class="h-7 w-full min-w-0 rounded-full bg-transparent py-1 pr-8 pl-3 text-left text-xs font-normal text-gray-700 outline-none transition-colors hover:bg-gray-100/60 focus:bg-gray-100 sm:px-8 sm:text-center dark:text-gray-300 dark:hover:bg-white/5 dark:focus:bg-white/8"
+				class="h-7 w-full min-w-0 rounded-full bg-transparent py-1 pr-8 pl-3 text-left text-xs font-normal text-base-700 outline-none transition-colors hover:bg-base-100/60 focus:bg-base-100 sm:px-8 sm:text-center dark:text-base-300 dark:hover:bg-white/5 dark:focus:bg-white/8"
 			/>
 			<Tooltip content={$i18n.t('Open in new tab')}
 				><button
 					type="button"
 					disabled={!currentUrl && !frameUrl}
 					aria-label={$i18n.t('Open in new tab')}
-					class="absolute top-1/2 right-1 z-10 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-xs text-gray-500 hover:bg-gray-200/60 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/8"
+					class="absolute top-1/2 right-1 z-10 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full text-xs text-base-500 hover:bg-base-200/60 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/8"
 					on:click={() =>
 						window.open(
 							session
@@ -340,7 +340,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Browser options')}
-					class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/6 dark:hover:text-gray-300"
+					class="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-base-500 transition-colors hover:bg-base-100 hover:text-base-700 disabled:pointer-events-none disabled:opacity-35 dark:hover:bg-white/6 dark:hover:text-base-300"
 					><Icon name="three-dots" size={12} /></button
 				>
 				<div slot="content">
@@ -364,7 +364,7 @@
 							</button>
 						{/each}
 						{#if session.mode === 'chrome'}
-							<hr class="border-gray-100 dark:border-gray-800" />
+							<hr class="border-base-100 dark:border-base-800" />
 							{#each [{ value: 'low', label: 'Low' }, { value: 'balanced', label: 'Balanced' }, { value: 'crisp', label: 'Crisp' }] as item}
 								<button
 									type="button"
@@ -380,7 +380,7 @@
 									{#if quality === item.value}<Icon name="check" size={12} />{/if}
 								</button>
 							{/each}
-							<hr class="border-gray-100 dark:border-gray-800" />
+							<hr class="border-base-100 dark:border-base-800" />
 							<button
 								type="button"
 								role="menuitemcheckbox"
@@ -402,14 +402,14 @@
 		{#if onClose}<button
 				type="button"
 				aria-label={$i18n.t('Close')}
-				class="flex size-5 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400"
+				class="flex size-5 shrink-0 items-center justify-center text-base-500 dark:text-base-400"
 				on:click={onClose}><Icon name="xmark" size={11} /></button
 			>{/if}
 	</div>
 	{#if error}
-		<p role="alert" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">{error}</p>
+		<p role="alert" class="px-2 py-1 text-xs text-base-500 dark:text-base-400">{error}</p>
 	{:else if connectionStatus}
-		<p role="status" class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+		<p role="status" class="px-2 py-1 text-xs text-base-500 dark:text-base-400">
 			{$i18n.t(connectionStatus)}
 		</p>
 	{/if}
@@ -452,8 +452,8 @@
 		{/if}
 		{#if !currentUrl && !frameUrl}<div class="flex h-full overflow-y-auto p-6">
 				<div class="m-auto w-full max-w-xs">
-					<div class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
-						<Icon name="browser" size={18} strokeWidth={1.4} class="text-gray-400" />
+					<div class="flex items-center gap-2 text-sm text-base-700 dark:text-base-200">
+						<Icon name="browser" size={18} strokeWidth={1.4} class="text-base-400" />
 						{$i18n.t('Browser')}
 					</div>
 					{#if target}

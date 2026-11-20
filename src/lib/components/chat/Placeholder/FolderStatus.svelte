@@ -32,7 +32,7 @@
 		<Dropdown align="start" closeOnSelect>
 			<button
 				type="button"
-				class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+				class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-800"
 				{disabled}
 				aria-label={$i18n.t('Status for {{title}}: {{status}}', { title: chat.title, status: tip })}
 			>
@@ -55,7 +55,7 @@
 					</button>
 				{/each}
 				{#if $manage}
-					<hr class="border-gray-50/30 dark:border-gray-800/30" />
+					<hr class="border-base-50/30 dark:border-base-800/30" />
 					<button type="button" on:click={() => $manage?.()}>
 						<Icon name="pencil" size={14} />{$i18n.t('Edit statuses…')}
 					</button>

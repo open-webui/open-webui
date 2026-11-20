@@ -200,13 +200,13 @@
 
 <div class="px-1 mb-1 flex justify-center space-x-2 relative z-10" id="search-container">
 	<div class="flex w-full rounded-xl" id="chat-search">
-		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-gray-300">
+		<div class="self-center py-2 rounded-l-xl bg-transparent dark:text-base-300">
 			<Search />
 		</div>
 
 		<input
 			id="search-input"
-			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-gray-300 outline-hidden"
+			class="w-full rounded-r-xl py-1.5 pl-2.5 text-sm bg-transparent dark:text-base-300 outline-hidden"
 			placeholder={placeholder ? placeholder : $i18n.t('Search')}
 			autocomplete="off"
 			maxlength="500"
@@ -293,7 +293,7 @@
 		{#if showClearButton && value}
 			<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 				<button
-					class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+					class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 					on:click={clearSearchInput}
 				>
 					<XMark className="size-3" strokeWidth="1.5" />
@@ -305,7 +305,7 @@
 	{#if focused && (filteredOptions.length > 0 || filteredItems.length > 0)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="absolute top-0 mt-8 left-0 right-1 border border-gray-100 dark:border-gray-900 bg-gray-50 dark:bg-gray-950 rounded-2xl z-10 shadow-lg"
+			class="absolute top-0 mt-8 left-0 right-1 border border-base-100 dark:border-base-900 bg-base-50 dark:bg-base-950 rounded-2xl z-10 shadow-lg"
 			id="search-options-container"
 			in:fade={{ duration: 50 }}
 			on:mouseenter={() => {
@@ -319,16 +319,16 @@
 		>
 			<div class="px-3 py-2.5 text-xs group">
 				{#if filteredItems.length > 0}
-					<div class="px-1 font-normal dark:text-gray-300 text-gray-700 mb-1 capitalize">
+					<div class="px-1 font-normal dark:text-base-300 text-base-700 mb-1 capitalize">
 						{selectedOption}
 					</div>
 
 					<div class="max-h-60 overflow-auto">
 						{#each filteredItems as item, itemIdx}
 							<button
-								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								class=" px-1.5 py-0.5 flex gap-1 hover:bg-base-100 dark:hover:bg-base-900 w-full rounded {selectedIdx ===
 								itemIdx
-									? 'bg-gray-100 dark:bg-gray-900'
+									? 'bg-base-100 dark:bg-base-900'
 									: ''}"
 								data-selected={selectedIdx === itemIdx}
 								id="search-item-{itemIdx}"
@@ -344,27 +344,27 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-normal line-clamp-1 shrink-0">
+								<div class="dark:text-base-300 text-base-700 font-normal line-clamp-1 shrink-0">
 									{item.name}
 								</div>
 
-								<div class=" text-gray-500 line-clamp-1">
+								<div class=" text-base-500 line-clamp-1">
 									{item.id}
 								</div>
 							</button>
 						{/each}
 					</div>
 				{:else if filteredOptions.length > 0}
-					<div class="px-1 font-normal dark:text-gray-300 text-gray-700 mb-1">
+					<div class="px-1 font-normal dark:text-base-300 text-base-700 mb-1">
 						{$i18n.t('Search options')}
 					</div>
 
 					<div class=" max-h-60 overflow-auto">
 						{#each filteredOptions as option, optionIdx}
 							<button
-								class=" px-1.5 py-0.5 flex gap-1 hover:bg-gray-100 dark:hover:bg-gray-900 w-full rounded {selectedIdx ===
+								class=" px-1.5 py-0.5 flex gap-1 hover:bg-base-100 dark:hover:bg-base-900 w-full rounded {selectedIdx ===
 								optionIdx
-									? 'bg-gray-100 dark:bg-gray-900'
+									? 'bg-base-100 dark:bg-base-900'
 									: ''}"
 								id="search-option-{optionIdx}"
 								on:click|stopPropagation={async () => {
@@ -380,9 +380,9 @@
 									dispatch('input');
 								}}
 							>
-								<div class="dark:text-gray-300 text-gray-700 font-normal">{option.name}</div>
+								<div class="dark:text-base-300 text-base-700 font-normal">{option.name}</div>
 
-								<div class=" text-gray-500 line-clamp-1">
+								<div class=" text-base-500 line-clamp-1">
 									{option.description}
 								</div>
 							</button>

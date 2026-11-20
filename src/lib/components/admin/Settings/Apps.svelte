@@ -58,14 +58,14 @@
 <AdminSettingSection title={$i18n.t('Apps')}>
 	<div>
 		<div class="mb-2 flex items-center justify-between">
-			<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+			<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 				<Tooltip
 					content={$i18n.t('Connect external apps to Open WebUI.')}
 					placement="top-start"
 					className="w-fit"
 				>
 					<div
-						class="underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+						class="underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
 					>
 						{$i18n.t('Connected apps')}
 					</div>
@@ -76,7 +76,7 @@
 				><button
 					type="button"
 					aria-label={$i18n.t('Add app')}
-					class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
 					on:click={() => configure(null)}><Plus /></button
 				></Tooltip
 			>
@@ -87,7 +87,7 @@
 		{:else}<div class="flex flex-col gap-1.5">
 				{#each apps as app (app.id)}
 					<div
-						class="group/setting-row flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400"
+						class="group/setting-row flex w-full items-center gap-3 text-xs text-base-600 dark:text-base-400"
 					>
 						<div
 							class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active ? '' : 'opacity-50'}"
@@ -101,13 +101,13 @@
 							{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
 							<label
 								for={`app-${app.id}-control`}
-								class="truncate text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+								class="truncate text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 								>{app.name}
-								<span class="text-gray-400 dark:text-gray-600">{app.slug}</span></label
+								<span class="text-base-400 dark:text-base-600">{app.slug}</span></label
 							>
 						</div>
 						{#if app.is_active}
-							<span class="text-gray-400 dark:text-gray-500"
+							<span class="text-base-400 dark:text-base-500"
 								>{app.connection_status === 'connected'
 									? $i18n.t('Connected')
 									: app.connection_status === 'connecting'
@@ -120,7 +120,7 @@
 								><button
 									type="button"
 									aria-label={`${$i18n.t('Configure')} ${app.name}`}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 									on:click={() => configure(app)}><Cog6 /></button
 								></Tooltip
 							>
@@ -141,7 +141,7 @@
 							</Tooltip>
 						</div>
 					</div>
-				{:else}<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				{:else}<p class="text-[0.6875rem] text-base-400 dark:text-base-600">
 						{$i18n.t('No apps connected.')}
 					</p>{/each}
 			</div>{/if}

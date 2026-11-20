@@ -356,7 +356,7 @@
 				<button
 					role="menuitem"
 					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 					on:click={() => {
 						shareHandler();
 					}}
@@ -372,7 +372,7 @@
 						role="menuitem"
 						slot="trigger"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 					>
 						<DownloadIcon className="size-3.5" strokeWidth="1.5" />
 						<div class="flex items-center">{$i18n.t('Download')}</div>
@@ -381,7 +381,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -392,7 +392,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -403,7 +403,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 select-none w-full"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -416,7 +416,7 @@
 			<button
 				role="menuitem"
 				draggable="false"
-				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+				class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 				on:click={() => {
 					renameHandler();
 				}}
@@ -429,7 +429,7 @@
 				<button
 					role="menuitem"
 					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 					on:click={() => {
 						markUnreadHandler();
 					}}
@@ -438,12 +438,12 @@
 					<div class="flex items-center">{$i18n.t('Mark as unread')}</div>
 				</button>
 
-				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+				<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 				<button
 					role="menuitem"
 					draggable="false"
-					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+					class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 					on:click={() => {
 						pinHandler();
 					}}
@@ -461,7 +461,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 						on:click={() => {
 							cloneChatHandler();
 						}}
@@ -477,7 +477,7 @@
 							role="menuitem"
 							slot="trigger"
 							draggable="false"
-							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 select-none w-full"
+							class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 select-none w-full"
 						>
 							<FolderIcon className="size-3.5" />
 							<div class="flex items-center">{$i18n.t('Move')}</div>
@@ -487,7 +487,7 @@
 							<button
 								role="menuitem"
 								draggable="false"
-								class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 overflow-hidden w-full"
+								class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 overflow-hidden w-full"
 								on:click={() => {
 									moveChatHandler(chatId, folder.id);
 								}}
@@ -506,7 +506,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 						on:click={() => {
 							archiveChatHandler();
 						}}
@@ -522,7 +522,7 @@
 					<button
 						role="menuitem"
 						draggable="false"
-						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900 w-full"
+						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 w-full"
 						on:click={() => {
 							deleteHandler();
 						}}

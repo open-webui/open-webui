@@ -39,9 +39,9 @@
 <form class="space-y-2 text-xs" on:submit|preventDefault={submit} aria-busy={cloning}>
 	<div class="space-y-2 px-2">
 		<label class="block">
-			<span class="text-gray-600 dark:text-gray-400">{$i18n.t('Repository URL')}</span>
+			<span class="text-base-600 dark:text-base-400">{$i18n.t('Repository URL')}</span>
 			<input
-				class="mt-1 w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500 disabled:opacity-50"
+				class="mt-1 w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500 disabled:opacity-50"
 				type="text"
 				bind:value={url}
 				placeholder="https://github.com/owner/repository.git"
@@ -59,20 +59,20 @@
 	</div>
 	<div class="flex items-center gap-2 px-2">
 		<div
-			class="min-w-0 flex-1 truncate text-gray-500"
+			class="min-w-0 flex-1 truncate text-base-500"
 			title={cloning ? cloningDirectory : directory}
 		>
 			{$i18n.t('Clone into {{directory}}', { directory: cloning ? cloningDirectory : directory })}
 		</div>
 		<button
 			type="button"
-			class="h-7 shrink-0 rounded-lg px-2 hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50"
+			class="h-7 shrink-0 rounded-lg px-2 hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-50"
 			disabled={cloning}
 			on:click={onCancel}>{$i18n.t('Cancel')}</button
 		>
 		<button
 			type="submit"
-			class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 {cloning
+			class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 {cloning
 				? 'cursor-wait'
 				: 'disabled:cursor-not-allowed disabled:opacity-50'}"
 			disabled={disabled || cloning || !url.trim()}

@@ -287,7 +287,7 @@
 	<div bind:this={styleEl}></div>
 
 	{#if loading}
-		<div class="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-950/60">
+		<div class="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-base-950/60">
 			<Spinner className="size-4" />
 		</div>
 	{/if}
@@ -301,7 +301,7 @@
 	{:else if fallbackHtml}
 		<div bind:this={outerContainer} class="h-full overflow-auto overscroll-contain">
 			<div
-				class="max-w-[51rem] min-h-[66rem] my-4 mx-auto py-14 px-16 bg-white text-gray-900 shadow rounded-sm font-[Calibri,Arial,sans-serif] text-base leading-[1.45] [&_.docx-title]:m-0 [&_.docx-title]:mb-4 [&_.docx-title]:text-3xl [&_.docx-title]:leading-[1.2] [&_.docx-subtitle]:mt-[-0.5rem] [&_.docx-subtitle]:mb-5 [&_.docx-subtitle]:text-xl [&_.docx-subtitle]:text-gray-500 [&_.docx-caption]:text-center [&_.docx-caption]:text-sm [&_.docx-caption]:text-gray-500 [&_p]:mt-0 [&_p]:mb-[0.65rem] [&_img]:block [&_img]:max-w-full [&_img]:h-auto [&_img]:my-3 [&_img]:mx-auto [&_table]:w-full [&_table]:my-3 [&_table]:border-collapse [&_table]:font-[Calibri,Arial,sans-serif] [&_table]:text-[0.95rem] [&_td]:border [&_td]:border-gray-300/70 [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_th]:border [&_th]:border-gray-300/70 [&_th]:px-2 [&_th]:py-1.5 [&_th]:align-top [&_blockquote]:my-4 [&_blockquote]:border-l-[3px] [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:text-gray-700"
+				class="max-w-[51rem] min-h-[66rem] my-4 mx-auto py-14 px-16 bg-white text-base-900 shadow rounded-sm font-[Calibri,Arial,sans-serif] text-base leading-[1.45] [&_.docx-title]:m-0 [&_.docx-title]:mb-4 [&_.docx-title]:text-3xl [&_.docx-title]:leading-[1.2] [&_.docx-subtitle]:mt-[-0.5rem] [&_.docx-subtitle]:mb-5 [&_.docx-subtitle]:text-xl [&_.docx-subtitle]:text-base-500 [&_.docx-caption]:text-center [&_.docx-caption]:text-sm [&_.docx-caption]:text-base-500 [&_p]:mt-0 [&_p]:mb-[0.65rem] [&_img]:block [&_img]:max-w-full [&_img]:h-auto [&_img]:my-3 [&_img]:mx-auto [&_table]:w-full [&_table]:my-3 [&_table]:border-collapse [&_table]:font-[Calibri,Arial,sans-serif] [&_table]:text-[0.95rem] [&_td]:border [&_td]:border-base-300/70 [&_td]:px-2 [&_td]:py-1.5 [&_td]:align-top [&_th]:border [&_th]:border-base-300/70 [&_th]:px-2 [&_th]:py-1.5 [&_th]:align-top [&_blockquote]:my-4 [&_blockquote]:border-l-[3px] [&_blockquote]:border-base-300 [&_blockquote]:pl-4 [&_blockquote]:text-base-700"
 			>
 				<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 				{@html fallbackHtml}
@@ -319,11 +319,11 @@
 
 	{#if !loading && !error && data && !fallbackHtml}
 		<div
-			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
+			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-base-850/90 backdrop-blur-sm shadow-lg border border-base-200/60 dark:border-base-700/60 px-1 py-0.5"
 		>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400"
 				on:click={zoomOut}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -342,7 +342,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-base-500 dark:text-base-400 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label={$i18n.t('Reset zoom')}
 			>
@@ -350,7 +350,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400"
 				on:click={zoomIn}
 				aria-label={$i18n.t('Zoom in')}
 			>

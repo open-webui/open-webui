@@ -28,15 +28,15 @@
 	ariaLabel={$i18n.t('Image Max Compression Size')}
 	size="sm"
 	bind:show
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-white dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
+		<div class=" flex justify-between text-base-900 dark:text-white px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Manage')}
 			</h1>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
@@ -47,7 +47,7 @@
 		</div>
 
 		<div
-			class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 text-gray-600 dark:text-gray-400"
+			class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 text-base-600 dark:text-base-400"
 		>
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
@@ -62,7 +62,7 @@
 							<div class=" py-0.5 flex flex-col w-full text-sm">
 								<div
 									id="image-compression-size-label"
-									class="mb-2 text-xs text-gray-600 dark:text-gray-400"
+									class="mb-2 text-xs text-base-600 dark:text-base-400"
 								>
 									{$i18n.t('Image Max Compression Size')}
 								</div>
@@ -76,13 +76,13 @@
 											id="image-comp-width"
 											bind:value={size.width}
 											type="number"
-											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Width')}
 										/>
 									</div>
 
-									<div class="self-center text-gray-500 dark:text-gray-400">
+									<div class="self-center text-base-500 dark:text-base-400">
 										<XMark />
 									</div>
 
@@ -94,7 +94,7 @@
 											id="image-comp-height"
 											bind:value={size.height}
 											type="number"
-											class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-center text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Height')}
 										/>
@@ -106,7 +106,7 @@
 
 					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							type="submit"
 						>
 							{$i18n.t('Save')}

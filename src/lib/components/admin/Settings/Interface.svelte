@@ -293,9 +293,9 @@
 		return model.id;
 	};
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const init = async () => {
 		try {
@@ -354,7 +354,7 @@
 			updateInterfaceHandler();
 		}}
 	>
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+		<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 			{$i18n.t('settings.admin.interface.title')}
 		</h2>
 
@@ -363,10 +363,10 @@
 			<AdminSettingSection title={$i18n.t('settings.admin.interface.sections.tasks.title')}>
 				<div>
 					<div class="mb-2">
-						<div class="text-xs text-gray-600 dark:text-gray-400">
+						<div class="text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('settings.admin.interface.taskModel.label')}
 						</div>
-						<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('settings.admin.interface.taskModel.description')}
 						</div>
 					</div>
@@ -387,7 +387,7 @@
 							>
 								<option value="" selected>{$i18n.t('Current Model')}</option>
 								{#each modelOptions as model}
-									<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									<option value={model.id} class="bg-base-100 dark:bg-base-700">
 										{model.name}
 										{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 									</option>
@@ -412,7 +412,7 @@
 							>
 								<option value="" selected>{$i18n.t('Current Model')}</option>
 								{#each modelOptions as model}
-									<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+									<option value={model.id} class="bg-base-100 dark:bg-base-700">
 										{model.name}
 										{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 									</option>
@@ -429,10 +429,10 @@
 								showTaskParameters = !showTaskParameters;
 							}}
 						>
-							<span class="text-xs text-gray-600 dark:text-gray-400">
+							<span class="text-xs text-base-600 dark:text-base-400">
 								{$i18n.t('settings.admin.interface.taskModelParameters.label')}
 							</span>
-							<span class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{showTaskParameters ? $i18n.t('Close') : $i18n.t('Configure')}
 							</span>
 						</button>
@@ -478,7 +478,7 @@
 						>
 							<option value="" selected>{$i18n.t('Current Model')}</option>
 							{#each modelOptions as model}
-								<option value={model.id} class="bg-gray-100 dark:bg-gray-700">
+								<option value={model.id} class="bg-base-100 dark:bg-base-700">
 									{model.name}
 									{model?.connection_type === 'local' ? `(${$i18n.t('Local')})` : ''}
 								</option>
@@ -544,7 +544,7 @@
 								'Leave empty to use the default prompt, or enter a custom prompt'
 							)}
 						/>
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('settings.admin.interface.availableVariables.label')}:
 							<code>{'{{PREVIOUS_SUMMARY}}'}</code>,
 							<code>{'{{COMPACTED_MESSAGES}}'}</code>,
@@ -710,7 +710,7 @@
 					</AdminSettingRow>
 
 					{#if chatConfig.TOOL_SEARCH_ENGINE === 'embeddings'}
-						<p class="text-xs text-gray-500 dark:text-gray-400">
+						<p class="text-xs text-base-500 dark:text-base-400">
 							{$i18n.t('settings.admin.interface.toolSearchEmbeddings.description', {
 								model: toolSearchEmbeddingModel || $i18n.t('Not configured')
 							})}

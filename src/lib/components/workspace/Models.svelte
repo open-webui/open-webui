@@ -601,7 +601,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -656,7 +656,7 @@
 					<Dropdown align="end">
 						<Tooltip content={$i18n.t('Actions')}>
 							<button
-								class="flex h-8 min-w-0 max-w-28 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+								class="flex h-8 min-w-0 max-w-28 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-base-700 transition hover:text-base-900 dark:text-base-200 dark:hover:text-base-100"
 								type="button"
 							>
 								<span class="min-w-0 truncate">{$i18n.t('Actions')}</span>
@@ -667,7 +667,7 @@
 						<div slot="content">
 							<DropdownMenu className="min-w-[10.625rem] shadow-sm">
 								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 									type="button"
 									on:click={() => {
 										enableAllHandler();
@@ -678,7 +678,7 @@
 								</button>
 
 								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 									type="button"
 									on:click={() => {
 										disableAllHandler();
@@ -688,10 +688,10 @@
 									<div class="flex items-center">{$i18n.t('Disable All')}</div>
 								</button>
 
-								<hr class="mx-1 my-0.5 border-gray-100 dark:border-gray-800" />
+								<hr class="mx-1 my-0.5 border-base-100 dark:border-base-800" />
 
 								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 									type="button"
 									on:click={() => {
 										showAllHandler();
@@ -702,7 +702,7 @@
 								</button>
 
 								<button
-									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 									type="button"
 									on:click={() => {
 										hideAllHandler();
@@ -722,7 +722,7 @@
 					<!-- Previous labels retained for i18n extraction: {$i18n.t('Sort by')} -->
 					<div class="@container" id="model-list">
 						<div
-							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+							class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-base-500 dark:text-base-400"
 						>
 							<button
 								class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -800,12 +800,12 @@
 															{#if model.write_access}
 																<a
 																	href={`/workspace/models/edit?id=${encodeURIComponent(model.id)}`}
-																	class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+																	class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 																	>{localizedModelName}</a
 																>
 															{:else}
 																<span
-																	class="block truncate text-[0.8125rem] leading-5 text-gray-800 dark:text-gray-200"
+																	class="block truncate text-[0.8125rem] leading-5 text-base-800 dark:text-base-200"
 																	>{localizedModelName}</span
 																>
 															{/if}
@@ -822,7 +822,7 @@
 															<a
 																href={`/?model=${encodeURIComponent(model.id)}`}
 																aria-label={`${$i18n.t('Try in chat')}: ${localizedModelName}`}
-																class="focus-ring flex h-5 w-4 items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+																class="focus-ring flex h-5 w-4 items-center justify-center rounded text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 																><ArrowRight className="size-3 -rotate-45" strokeWidth="2" /></a
 															>
 														</Tooltip>
@@ -838,7 +838,7 @@
 														placement="top-start"
 													>
 														<div
-															class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400"
+															class="truncate text-xs leading-4 text-base-500 dark:text-base-400"
 														>
 															{(
 																resolveLocalizedModelDescription(model, $i18n.language) ?? ''
@@ -850,7 +850,7 @@
 										</div>
 									</div>
 
-									<div class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400">
+									<div class="@max-[48rem]:hidden min-w-0 text-xs text-base-600 dark:text-base-400">
 										<ProfilePreview
 											user={model?.user ?? null}
 											side="bottom"
@@ -877,7 +877,7 @@
 											.format('LLLL')}
 										className="@max-[36rem]:hidden min-w-0"
 									>
-										<span class="text-xs leading-5 text-gray-500 dark:text-gray-400"
+										<span class="text-xs leading-5 text-base-500 dark:text-base-400"
 											>{dayjs(model.updated_at * 1000)
 												.locale($i18n.language)
 												.fromNow()}</span
@@ -888,7 +888,7 @@
 											{#if shiftKey && model.write_access}
 												<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
 														on:click={(e) => {
@@ -907,7 +907,7 @@
 
 												<Tooltip content={$i18n.t('Delete')}>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Delete')}
 														on:click={(e) => {
@@ -924,7 +924,7 @@
 													<CommentButton
 														onComment={(request) => (comments = request)}
 														modal
-														className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														className="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														resource={{ resource_type: 'model', resource_id: model.id }}
 													/>
 													<ModelMenu
@@ -963,7 +963,7 @@
 														onClose={() => {}}
 													>
 														<div
-															class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+															class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														>
 															<EllipsisHorizontal className="size-4" />
 														</div>
@@ -1006,11 +1006,11 @@
 					{/if}
 				{:else}
 					<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-						<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+						<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 							<div class="mb-1.5 text-sm">
 								{hasFilters ? $i18n.t('No models found') : $i18n.t('No models yet')}
 							</div>
-							<div class="text-center text-xs leading-5 text-gray-500">
+							<div class="text-center text-xs leading-5 text-base-500">
 								{hasFilters
 									? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
 									: $i18n.t('Items you create or that are shared with you will appear here.')}

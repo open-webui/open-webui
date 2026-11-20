@@ -186,7 +186,7 @@
 					: null}
 			>
 				<div
-					class="flex size-4 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+					class="flex size-4 items-center justify-center rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-white/10 dark:hover:text-white"
 				>
 					<EllipsisHorizontal className="size-3" strokeWidth="1.5" />
 				</div>
@@ -218,7 +218,7 @@
 			deleteHandler();
 		}}
 	>
-		<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+		<div class=" text-sm text-base-700 dark:text-base-300 flex-1 line-clamp-3 mb-2">
 			<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
 				NAME: folder.name
 			})} -->
@@ -235,7 +235,7 @@
 				bind:checked={deleteFolderContents}
 			/>
 
-			<div class="text-xs text-gray-500">
+			<div class="text-xs text-base-500">
 				{$i18n.t('Delete all contents inside this folder')}
 			</div>
 		</div>

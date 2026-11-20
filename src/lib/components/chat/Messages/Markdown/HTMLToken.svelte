@@ -98,7 +98,7 @@
 				<div
 					class="{statusDone === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 line-clamp-1 text-wrap"
+						: ''} text-base-500 dark:text-base-500 line-clamp-1 text-wrap"
 				>
 					{statusTitle}
 				</div>

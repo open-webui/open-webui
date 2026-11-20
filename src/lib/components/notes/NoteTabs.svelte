@@ -209,11 +209,11 @@
 </script>
 
 <section id="note-tabs-panel" aria-label={$i18n.t('Pages')} class="flex h-full min-h-0 flex-col">
-	<div class="flex h-8 shrink-0 items-center justify-between px-3 text-xs text-gray-500">
+	<div class="flex h-8 shrink-0 items-center justify-between px-3 text-xs text-base-500">
 		<span>{$i18n.t('Pages')}</span>
 
 		<button
-			class="flex size-5 items-center justify-center rounded-lg hover:text-gray-900 dark:hover:text-white"
+			class="flex size-5 items-center justify-center rounded-lg hover:text-base-900 dark:hover:text-white"
 			aria-label={$i18n.t('Close pages')}
 			on:click={onClose}><XMark className="size-3.5" /></button
 		>
@@ -226,14 +226,14 @@
 					data-page-id={page.id}
 					data-drop-position={dropTarget?.id === page.id ? dropTarget.position : undefined}
 					style:margin-inline-start={`${Math.min(depth, 6) * 12}px`}
-					class="page-row group relative flex items-center rounded-xl px-1 text-gray-800 dark:text-gray-200 transition {activeId ===
+					class="page-row group relative flex items-center rounded-xl px-1 text-base-800 dark:text-base-200 transition {activeId ===
 					page.id
-						? 'bg-gray-50/60 dark:bg-gray-800/60'
-						: 'hover:bg-gray-50/60 dark:hover:bg-gray-800/60'}"
+						? 'bg-base-50/60 dark:bg-base-800/60'
+						: 'hover:bg-base-50/60 dark:hover:bg-base-800/60'}"
 				>
 					{#if hasChildren}
 						<button
-							class="flex size-5 shrink-0 items-center justify-center rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+							class="flex size-5 shrink-0 items-center justify-center rounded text-base-400 hover:text-base-700 dark:hover:text-base-200"
 							aria-label={$i18n.t(
 								collapsed.has(page.id) ? 'Expand {{title}}' : 'Collapse {{title}}',
 								{ title: page.title }
@@ -284,7 +284,7 @@
 					{/if}
 					{#if editable}
 						<button
-							class="flex size-5 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white {activeId ===
+							class="flex size-5 shrink-0 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-white {activeId ===
 							page.id
 								? ''
 								: 'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'}"
@@ -319,7 +319,7 @@
 		</div>
 		{#if editable}
 			<button
-				class="mt-1 flex h-[1.6875rem] w-full items-center rounded-xl px-7 text-start text-[0.8125rem] text-gray-500 hover:bg-gray-50/60 hover:text-gray-900 dark:hover:bg-gray-800/60 dark:hover:text-gray-100 transition disabled:opacity-40"
+				class="mt-1 flex h-[1.6875rem] w-full items-center rounded-xl px-7 text-start text-[0.8125rem] text-base-500 hover:bg-base-50/60 hover:text-base-900 dark:hover:bg-base-800/60 dark:hover:text-base-100 transition disabled:opacity-40"
 				disabled={busy}
 				on:click={() => create(null)}>{$i18n.t('Add page')}</button
 			>
@@ -349,7 +349,7 @@
 		moveParent !== (moving.parent_id ?? '') &&
 		onAction({ action: 'move', page_id: moving.id, parent_id: moveParent || null })}
 >
-	<div class="text-sm text-gray-500">
+	<div class="text-sm text-base-500">
 		{$i18n.t('Choose a parent page. Subpages move with this page.')}
 	</div>
 	<label class="block mt-3 text-sm">
@@ -357,7 +357,7 @@
 		<NativeSelect
 			bind:value={moveParent}
 			options={moveOptions}
-			className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+			className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-900 outline-hidden"
 		/>
 	</label>
 </ConfirmDialog>

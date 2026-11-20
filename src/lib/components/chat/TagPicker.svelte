@@ -93,7 +93,7 @@
 >
 	<input
 		bind:this={input}
-		class="h-7 w-full bg-transparent px-2 text-xs outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+		class="h-7 w-full bg-transparent px-2 text-xs outline-none placeholder:text-base-400 dark:placeholder:text-base-500"
 		aria-label={$i18n.t('Find or create a tag')}
 		placeholder={$i18n.t('Add tags…')}
 		maxlength="64"
@@ -106,7 +106,7 @@
 	{#each options as tag (tag.id)}
 		{@const checked = isAssigned(tag)}
 		<div
-			class="group/tag flex h-[1.6875rem] items-center rounded-xl pr-1 hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+			class="group/tag flex h-[1.6875rem] items-center rounded-xl pr-1 hover:bg-base-50/60 dark:hover:bg-base-800/60"
 		>
 			<button
 				type="button"
@@ -118,8 +118,8 @@
 			>
 				<span
 					class="mr-1 flex size-3 shrink-0 items-center justify-center rounded-[0.25rem] border transition-colors {checked
-						? 'border-gray-800 bg-gray-800 text-white dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900'
-						: 'border-gray-300 dark:border-gray-600'}"
+						? 'border-base-800 bg-base-800 text-white dark:border-base-100 dark:bg-base-100 dark:text-base-900'
+						: 'border-base-300 dark:border-base-600'}"
 				>
 					{#if checked}<Check className="size-2" strokeWidth="3.5" />{/if}
 				</span>
@@ -129,7 +129,7 @@
 			{#if checked}
 				<button
 					type="button"
-					class="flex size-5 items-center justify-center rounded-md transition hover:bg-gray-100 focus-visible:opacity-100 group-hover/tag:opacity-100 dark:hover:bg-gray-800 {coloring ===
+					class="flex size-5 items-center justify-center rounded-md transition hover:bg-base-100 focus-visible:opacity-100 group-hover/tag:opacity-100 dark:hover:bg-base-800 {coloring ===
 					tag.id
 						? 'opacity-100'
 						: 'opacity-0'}"
@@ -139,7 +139,7 @@
 					disabled={busy}
 					on:click={() => (coloring = coloring === tag.id ? '' : tag.id)}
 				>
-					<span class="size-2 rounded-full ring-2 ring-white dark:ring-gray-850 {tagDot(tag)}"
+					<span class="size-2 rounded-full ring-2 ring-white dark:ring-base-850 {tagDot(tag)}"
 					></span>
 				</button>
 			{/if}
@@ -158,14 +158,14 @@
 						aria-checked={tagColor(tag) === color}
 						aria-label={$i18n.t(color)}
 						title={$i18n.t(color)}
-						class="flex size-5 items-center justify-center rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+						class="flex size-5 items-center justify-center rounded-md hover:bg-base-50 dark:hover:bg-base-800"
 						disabled={busy}
 						on:click={() =>
 							mutate(() => updateTagColorById(localStorage.token, chatId, tag.name, color))}
 					>
 						<span
 							class="size-2 rounded-full {colorDot(color)} {tagColor(tag) === color
-								? 'ring-2 ring-gray-300 ring-offset-1 ring-offset-white dark:ring-gray-600 dark:ring-offset-gray-850'
+								? 'ring-2 ring-base-300 ring-offset-1 ring-offset-white dark:ring-base-600 dark:ring-offset-base-850'
 								: ''}"
 						></span>
 					</button>
@@ -177,15 +177,15 @@
 	{#if canCreate}
 		<button
 			type="button"
-			class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+			class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
 			disabled={busy}
 			on:click={() => mutate(() => addTagById(localStorage.token, chatId, query.trim()), true)}
 		>
-			<Plus className="size-3 text-gray-400" />
+			<Plus className="size-3 text-base-400" />
 			<span class="min-w-0 truncate">{$i18n.t('Create “{{name}}”', { name: query.trim() })}</span>
 		</button>
 	{:else if !options.length}
-		<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+		<div class="px-2 py-1.5 text-xs text-base-400 dark:text-base-500">
 			{$i18n.t('No tags yet. Type to create one.')}
 		</div>
 	{/if}

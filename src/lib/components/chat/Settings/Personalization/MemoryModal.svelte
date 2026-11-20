@@ -53,7 +53,7 @@
 
 <Modal ariaLabel={edit ? $i18n.t('Edit Memory') : $i18n.t('Add Memory')} bind:show size="sm">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-2">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-2">
 			<div class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Memory')}
@@ -66,16 +66,16 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form class="flex flex-col w-full" on:submit|preventDefault={submitHandler}>
 					<div>
 						<div class="flex w-full justify-between items-center mb-1.5">
-							<div class="text-xs text-gray-500">{$i18n.t('Type')}</div>
+							<div class="text-xs text-base-500">{$i18n.t('Type')}</div>
 
 							<button
 								type="button"
-								class="text-xs text-gray-700 dark:text-gray-300"
+								class="text-xs text-base-700 dark:text-base-300"
 								on:click={() => {
 									type = type === 'user' ? 'context' : 'user';
 								}}
@@ -90,7 +90,7 @@
 
 						<textarea
 							bind:value={content}
-							class="bg-transparent w-full text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+							class="bg-transparent w-full text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 							rows="6"
 							style="resize: vertical;"
 							aria-label={$i18n.t('Memory')}
@@ -100,7 +100,7 @@
 						/>
 
 						<div class="flex flex-col w-full mt-1.5">
-							<label for="memory-path" class="mb-0.5 text-xs text-gray-500">
+							<label for="memory-path" class="mb-0.5 text-xs text-base-500">
 								{$i18n.t('Path')}
 								<span class="opacity-50">({$i18n.t('optional')})</span>
 							</label>
@@ -108,7 +108,7 @@
 							<input
 								id="memory-path"
 								bind:value={path}
-								class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+								class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 								placeholder={$i18n.t('Path')}
 								autocomplete="off"
 							/>
@@ -117,7 +117,7 @@
 
 					<div class="flex justify-end pt-1 text-xs">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

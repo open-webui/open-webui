@@ -133,13 +133,13 @@
 	let showFontFamilyInput = false;
 	const settingRowClass = 'group/setting-row flex items-center justify-between gap-2.5';
 	const settingLabelClass =
-		'min-w-0 text-xs text-gray-600 group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:text-gray-400 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white';
+		'min-w-0 text-xs text-base-600 group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:text-base-400 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
-	const sectionHeadingClass = 'mt-4 text-xs text-gray-600 dark:text-gray-500';
-	const firstSectionHeadingClass = 'text-xs text-gray-600 dark:text-gray-500';
-	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-500/80';
+	const sectionHeadingClass = 'mt-4 text-xs text-base-600 dark:text-base-500';
+	const firstSectionHeadingClass = 'text-xs text-base-600 dark:text-base-500';
+	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-base-500 dark:text-base-500/80';
 	const actionButtonClass =
-		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white';
+		'text-xs text-base-600 transition-colors hover:text-base-900 dark:text-base-400 dark:hover:text-white';
 
 	const hasSettingPath = (source: Record<string, any>, path: string) => {
 		let current: any = source;
@@ -510,7 +510,7 @@
 			<div class=" flex items-center gap-2 px-1 pb-1">
 				<button
 					type="button"
-					class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+					class="rounded-lg p-1 transition outline-base-200 hover:bg-base-100 dark:outline-base-700 dark:hover:bg-base-800"
 					on:click={() => {
 						textScale = Math.max(1, parseFloat(((textScale ?? 1) - 0.1).toFixed(2)));
 						setTextScaleHandler(textScale);
@@ -543,7 +543,7 @@
 
 				<button
 					type="button"
-					class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+					class="rounded-lg p-1 transition outline-base-200 hover:bg-base-100 dark:outline-base-700 dark:hover:bg-base-800"
 					on:click={() => {
 						textScale = Math.min(1.5, parseFloat(((textScale ?? 1) + 0.1).toFixed(2)));
 						setTextScaleHandler(textScale);
@@ -588,7 +588,7 @@
 				<input
 					id="font-family-input"
 					aria-labelledby="font-family-label"
-					class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-500 dark:focus:border-blue-500"
+					class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-500 dark:focus:border-blue-500"
 					type="text"
 					placeholder="Aptos"
 					bind:value={fontFamilyInput}

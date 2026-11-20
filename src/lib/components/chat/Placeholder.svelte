@@ -199,7 +199,7 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-1.5 text-gray-500 text-xs my-1 w-fit">
+			<div class="flex items-center gap-1.5 text-base-500 text-xs my-1 w-fit">
 				<EyeSlash strokeWidth="2" className="size-3.5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
@@ -223,7 +223,7 @@
 			{#if !folderReadOnly}
 				<!-- Same mount as the in-chat composer, floating over the list and board. -->
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-gray-900 {dragged
+					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-base-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
 					class:hidden={folderSection !== 'chats'}
@@ -237,7 +237,7 @@
 		</div>
 	{:else}
 		<div
-			class="w-full shrink-0 text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4"
+			class="w-full shrink-0 text-3xl text-base-800 dark:text-base-100 text-center flex items-center gap-4"
 		>
 			<div class="w-full flex flex-col justify-center items-center">
 				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
@@ -313,7 +313,7 @@
 								placement="top"
 							>
 								<div
-									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+									class="mt-0.5 px-2 text-sm font-normal text-base-500 dark:text-base-400 line-clamp-2 max-w-xl markdown"
 								>
 									{@html DOMPurify.sanitize(
 										marked.parse(
@@ -324,7 +324,7 @@
 							</Tooltip>
 
 							{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
-								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+								<div class="mt-0.5 text-sm font-normal text-base-400 dark:text-base-500">
 									{$i18n.t('By')}
 									{#if models[selectedModelIdx]?.info?.meta?.user.community}
 										<a
@@ -353,7 +353,7 @@
 			<!-- Soft halo, like the denser fade around the in-chat composer, so it doesn't float on a vivid background. -->
 			<div
 				aria-hidden="true"
-				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-white/40 blur-2xl dark:bg-gray-900/40"
+				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-white/40 blur-2xl dark:bg-base-900/40"
 			></div>
 			<div class="relative">
 				{@render composer($i18n.t('How can I help you today?'))}

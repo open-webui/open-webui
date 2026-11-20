@@ -944,7 +944,7 @@
 					</div>
 				{:else if loading || assistantSpeaking}
 					<svg
-						class="size-12 text-gray-900 dark:text-gray-400"
+						class="size-12 text-base-900 dark:text-base-400"
 						viewBox="0 0 24 24"
 						fill="currentColor"
 						xmlns="http://www.w3.org/2000/svg"
@@ -1035,7 +1035,7 @@
 					{/if}
 					{#if showAvatar && readyAvatar !== avatar?.file_id}
 						<div class="absolute inset-0 grid place-items-center" role="status">
-							<Spinner className="size-6 text-gray-400 dark:text-gray-500" />
+							<Spinner className="size-6 text-base-400 dark:text-base-500" />
 							<span class="sr-only">{$i18n.t('Loading avatar...')}</span>
 						</div>
 					{:else if !showAvatar}
@@ -1054,7 +1054,7 @@
 							</div>
 						{:else if loading || assistantSpeaking}
 							<svg
-								class="size-44 text-gray-900 dark:text-gray-400"
+								class="size-44 text-base-900 dark:text-base-400"
 								viewBox="0 0 24 24"
 								fill="currentColor"
 								xmlns="http://www.w3.org/2000/svg"
@@ -1182,7 +1182,7 @@
 					>
 						<button
 							aria-label={$i18n.t('Switch camera')}
-							class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							class="p-3 rounded-full bg-base-50 dark:bg-base-900"
 							type="button"
 						>
 							<svg
@@ -1203,7 +1203,7 @@
 					<Tooltip content={$i18n.t('Camera')}>
 						<button
 							aria-label={$i18n.t('Camera')}
-							class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							class="p-3 rounded-full bg-base-50 dark:bg-base-900"
 							type="button"
 							on:click={async () => {
 								await navigator.mediaDevices.getUserMedia({ video: true });
@@ -1237,7 +1237,7 @@
 					<button
 						class="p-3 rounded-full transition-colors duration-200 {muted
 							? 'bg-red-500 text-white'
-							: 'bg-gray-50 dark:bg-gray-900'}"
+							: 'bg-base-50 dark:bg-base-900'}"
 						type="button"
 						aria-label={muted ? $i18n.t('Unmute') : $i18n.t('Mute')}
 						on:click={toggleMute}
@@ -1292,7 +1292,7 @@
 						<button
 							type="button"
 							aria-label={$i18n.t('Stop')}
-							class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+							class="p-3 rounded-full bg-base-50 dark:bg-base-900"
 							on:click={() => bridge?.stopBackend()}
 						>
 							<svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -1304,7 +1304,7 @@
 
 				<button
 					aria-label={$i18n.t('End call')}
-					class="p-3 rounded-full bg-gray-50 dark:bg-gray-900"
+					class="p-3 rounded-full bg-base-50 dark:bg-base-900"
 					on:click={async () => {
 						if (bridge) bridge.end();
 						else {

@@ -62,7 +62,7 @@
 	}
 </script>
 
-<div class="mb-1 flex gap-1 text-xs font-normal items-center text-gray-600 dark:text-gray-400">
+<div class="mb-1 flex gap-1 text-xs font-normal items-center text-base-600 dark:text-base-400">
 	{#if filteredPrompts.length > 0}
 		<Bolt />
 		<h3 id="suggestions-heading">{$i18n.t('Suggested')}</h3>
@@ -72,7 +72,7 @@
 		<div
 			class="flex w-full {$settings?.landingPageMode === 'chat'
 				? ' -mt-1'
-				: 'text-center items-center justify-center'}  self-start text-gray-600 dark:text-gray-400"
+				: 'text-center items-center justify-center'}  self-start text-base-600 dark:text-base-400"
 		>
 			<!-- LICENSE covers this Open WebUI footer identifier.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -94,30 +94,30 @@
 					<button
 						class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-2.5 py-1.5 rounded-lg bg-transparent transition-colors
-				       hover:text-gray-950 dark:hover:text-white group"
+				       hover:text-base-950 dark:hover:text-white group"
 						style="animation-delay: {idx * 45}ms"
 						on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
 					>
 						<div class="flex flex-col text-left leading-snug">
 							{#if prompt.title && prompt.title[0] !== ''}
 								<div
-									class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-white transition line-clamp-1"
 								>
 									{prompt.title[0]}
 								</div>
 								<div
-									class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
+									class="text-xs text-base-600 group-hover:text-base-900 dark:text-base-400 dark:group-hover:text-base-100 font-normal line-clamp-1"
 								>
 									{prompt.title[1]}
 								</div>
 							{:else}
 								<div
-									class="text-sm font-normal group-hover:text-gray-950 dark:text-gray-300 dark:group-hover:text-white transition line-clamp-1"
+									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-white transition line-clamp-1"
 								>
 									{prompt.content}
 								</div>
 								<div
-									class="text-xs text-gray-600 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-gray-100 font-normal line-clamp-1"
+									class="text-xs text-base-600 group-hover:text-base-900 dark:text-base-400 dark:group-hover:text-base-100 font-normal line-clamp-1"
 								>
 									{$i18n.t('Prompt')}
 								</div>

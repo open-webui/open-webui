@@ -83,7 +83,7 @@
 						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
 							<button
 								id="sidebar-toggle-button"
-								class="flex size-7 items-center justify-center text-gray-400 transition"
+								class="flex size-7 items-center justify-center text-base-400 transition"
 								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								on:click={() => {
 									showSidebar.set(!$showSidebar);
@@ -110,15 +110,15 @@
 						{:else}
 							<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Automations')}</span>
 						{/if}
-						<span class="text-sm text-gray-500 dark:text-gray-500">
+						<span class="text-sm text-base-500 dark:text-base-500">
 							{$total === null ? '' : formatNumber($total)}
 						</span>
 						{#if itemName}
 							<ChevronRight
-								className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
+								className="mx-0.5 size-3 shrink-0 text-base-400 rtl:rotate-180 dark:text-base-500"
 								strokeWidth="2"
 							/>
-							<span class="min-w-0 flex-1 truncate text-sm text-gray-900 dark:text-white">
+							<span class="min-w-0 flex-1 truncate text-sm text-base-900 dark:text-white">
 								{itemName}
 							</span>
 						{/if}

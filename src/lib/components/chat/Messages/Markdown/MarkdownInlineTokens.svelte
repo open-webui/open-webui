@@ -134,10 +134,10 @@
 	{:else if token.type === 'image'}
 		{#if terminalDocument?.localPath(token.href)}
 			{#await terminalDocument.resolveImage(token.href)}
-				<span class="text-xs text-gray-400">{token.text}</span>
+				<span class="text-xs text-base-400">{token.text}</span>
 			{:then url}
 				{#if url}<img src={url} alt={token.text} data-terminal-resolved="true" />{:else}<span
-						class="text-xs text-gray-400">Image unavailable: {token.text}</span
+						class="text-xs text-base-400">Image unavailable: {token.text}</span
 					>{/if}
 			{/await}
 		{:else}<Image src={token.href} alt={token.text} allowExternal={true} />{/if}

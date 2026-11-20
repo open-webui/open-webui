@@ -33,14 +33,14 @@
 	{items}
 	placeholder={placeholder ?? $i18n.t('Select a model')}
 	triggerClass="relative w-full"
-	contentClass="w-full rounded-lg bg-white dark:bg-gray-900 dark:text-white shadow-lg border border-gray-300/30 dark:border-gray-700/40 outline-hidden"
+	contentClass="w-full rounded-lg bg-white dark:bg-base-900 dark:text-white shadow-lg border border-base-300/30 dark:border-base-700/40 outline-hidden"
 	onClose={() => {
 		searchValue = '';
 	}}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<span
-			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-normal placeholder-gray-400 focus:outline-hidden"
+			class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate text-lg font-normal placeholder-base-400 focus:outline-hidden"
 		>
 			{selectedLabel}
 		</span>
@@ -61,13 +61,13 @@
 					/>
 				</div>
 
-				<hr class="border-gray-100/30 dark:border-gray-850/30" />
+				<hr class="border-base-100/30 dark:border-base-850/30" />
 			{/if}
 
 			<div class="px-3 my-2 max-h-80 overflow-y-auto">
 				{#each filteredItems as item}
 					<button
-						class="flex w-full font-normal line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-gray-700 dark:text-gray-100 outline-hidden transition-all duration-75 hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg cursor-pointer"
+						class="flex w-full font-normal line-clamp-1 select-none items-center rounded-button py-2 pl-3 pr-1.5 text-sm text-base-700 dark:text-base-100 outline-hidden transition-all duration-75 hover:bg-base-100 dark:hover:bg-base-850 rounded-lg cursor-pointer"
 						type="button"
 						on:click={() => selectItem(item)}
 					>
@@ -81,7 +81,7 @@
 					</button>
 				{:else}
 					<div>
-						<div class="block px-5 py-2 text-sm text-gray-700 dark:text-gray-100">
+						<div class="block px-5 py-2 text-sm text-base-700 dark:text-base-100">
 							{$i18n.t('No results found')}
 						</div>
 					</div>

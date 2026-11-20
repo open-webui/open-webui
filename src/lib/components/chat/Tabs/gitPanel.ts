@@ -1,11 +1,11 @@
 // Shared look and formatting for the Git panel's views.
 
 export const primaryButton =
-	'bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-white/90';
+	'bg-base-900 dark:bg-white text-white dark:text-black hover:bg-base-800 dark:hover:bg-white/90';
 export const disabledButton =
-	'bg-gray-100 dark:bg-white/6 text-gray-400 dark:text-gray-600 cursor-default';
+	'bg-base-100 dark:bg-white/6 text-base-400 dark:text-base-600 cursor-default';
 export const secondaryButton =
-	'bg-gray-100 dark:bg-white/6 text-gray-600 dark:text-gray-300 hover:bg-gray-200/60 dark:hover:bg-white/10 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:hover:bg-gray-100 dark:disabled:hover:bg-white/6';
+	'bg-base-100 dark:bg-white/6 text-base-600 dark:text-base-300 hover:bg-base-200/60 dark:hover:bg-white/10 disabled:text-base-400 dark:disabled:text-base-600 disabled:hover:bg-base-100 dark:disabled:hover:bg-white/6';
 
 export const relativeTime = (date: string) => {
 	const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
@@ -60,7 +60,7 @@ export const outcomeTone: Record<CheckOutcome, string> = {
 	pass: 'bg-green-500 dark:bg-green-400',
 	fail: 'bg-red-500 dark:bg-red-400',
 	pending: 'bg-yellow-500 dark:bg-yellow-400',
-	skip: 'bg-gray-300 dark:bg-gray-600'
+	skip: 'bg-base-300 dark:bg-base-600'
 };
 export const checksSummary = (checks?: Check[]) => {
 	if (!checks?.length) return null;

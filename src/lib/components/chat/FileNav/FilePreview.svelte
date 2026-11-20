@@ -275,7 +275,7 @@
 	<!-- File preview -->
 	{#if fileLoading}
 		<div class="flex items-center justify-center h-full">
-			<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+			<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 		</div>
 	{:else if fileImageUrl !== null}
 		<PanzoomContainer
@@ -319,7 +319,7 @@
 		{#key fileModelData}
 			{#await import('../../common/ModelPreview.svelte')}
 				<div class="flex h-full items-center justify-center">
-					<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+					<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 				</div>
 			{:then { default: ModelPreview }}
 				<ModelPreview
@@ -335,7 +335,7 @@
 				/>
 			{:catch}
 				<div
-					class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+					class="flex h-full items-center justify-center p-4 text-center text-sm text-base-500 dark:text-base-400"
 				>
 					{$i18n.t('Preview failed')}
 				</div>
@@ -485,19 +485,19 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400">
+		<div class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400">
 			{$i18n.t('Could not read file.')}
 		</div>
 	{/if}
 
 	{#if !fileLoading && (fileImageUrl !== null || svgPreview)}
 		<div
-			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-base-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-base-700/60 dark:bg-base-850/90"
 		>
 			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomOut()}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -516,7 +516,7 @@
 			</button>
 			<button
 				type="button"
-				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800"
 				on:click={() => panzoomRef?.reset()}
 				aria-label={$i18n.t('Reset zoom')}
 			>
@@ -524,7 +524,7 @@
 			</button>
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomIn()}
 				aria-label={$i18n.t('Zoom in')}
 			>

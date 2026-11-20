@@ -154,19 +154,19 @@
 				<p>{error}</p>
 				<button
 					type="button"
-					class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+					class="mt-1 text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300"
 					on:click={() => load()}>{$i18n.t('Retry')}</button
 				>
 			</div>{/if}
 		{#each items as item, index (item.id)}
 			{#if index === 0 || dateLabel(item.created_at) !== dateLabel(items[index - 1].created_at)}<div
-					class="px-2.5 pt-3 pb-1.5 text-[0.6875rem] font-normal leading-4 text-gray-500 dark:text-gray-400"
+					class="px-2.5 pt-3 pb-1.5 text-[0.6875rem] font-normal leading-4 text-base-500 dark:text-base-400"
 				>
 					{$i18n.t(dateLabel(item.created_at))}
 				</div>{/if}
 			<button
 				type="button"
-				class="my-0.5 flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-start font-normal hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors duration-75 disabled:opacity-60"
+				class="my-0.5 flex w-full items-start gap-2.5 rounded-lg px-2 py-2 text-start font-normal hover:bg-base-100 dark:hover:bg-base-900 transition-colors duration-75 disabled:opacity-60"
 				disabled={!!selecting}
 				on:click={() => select(item)}
 			>
@@ -178,11 +178,11 @@
 							className="size-5 rounded-full!"
 						/>
 					{:else}
-						<Bell className="size-3.5 text-gray-500 dark:text-gray-400" />
+						<Bell className="size-3.5 text-base-500 dark:text-base-400" />
 					{/if}
 					{#if item.is_new}
 						<span
-							class="absolute -bottom-0.5 -end-0.5 size-1.5 rounded-full bg-sky-500 ring-2 ring-gray-50 dark:bg-sky-400 dark:ring-gray-950"
+							class="absolute -bottom-0.5 -end-0.5 size-1.5 rounded-full bg-sky-500 ring-2 ring-base-50 dark:bg-sky-400 dark:ring-base-950"
 							aria-label={$i18n.t('New')}
 						></span>
 					{/if}
@@ -190,7 +190,7 @@
 				<div class="min-w-0 flex-1">
 					<div class="flex items-start gap-1.5">
 						<span
-							class="min-w-0 flex-1 line-clamp-2 break-words text-xs leading-[1.125rem] text-gray-800 dark:text-gray-200"
+							class="min-w-0 flex-1 line-clamp-2 break-words text-xs leading-[1.125rem] text-base-800 dark:text-base-200"
 						>
 							{$i18n.t(inboxLabels[item.event_type] ?? 'Notification', {
 								name: item.actor?.name ?? $i18n.t('Unknown User'),
@@ -205,14 +205,14 @@
 							aria-label={dayjs(Number(item.created_at) / 1e6)
 								.locale($i18n.language)
 								.fromNow()}
-							class="shrink-0 text-[0.625rem] leading-[1.125rem] text-gray-500 dark:text-gray-400"
+							class="shrink-0 text-[0.625rem] leading-[1.125rem] text-base-500 dark:text-base-400"
 						>
 							{shortTime(item.created_at)}
 						</time>
 					</div>
 					{#if item.title}
 						<div
-							class="mt-0.5 truncate text-xs leading-[1.125rem] text-gray-600 dark:text-gray-400"
+							class="mt-0.5 truncate text-xs leading-[1.125rem] text-base-600 dark:text-base-400"
 							title={item.title}
 						>
 							{item.title}
@@ -222,7 +222,7 @@
 						<div
 							class="mt-0.5 {item.resource_type
 								? 'line-clamp-1'
-								: ''} whitespace-pre-wrap break-words text-xs leading-[1.125rem] text-gray-500 dark:text-gray-400"
+								: ''} whitespace-pre-wrap break-words text-xs leading-[1.125rem] text-base-500 dark:text-base-400"
 						>
 							{item.preview || item.data.message}
 						</div>
@@ -231,23 +231,23 @@
 			</button>
 		{/each}
 		{#if loading && !loaded}<div
-				class="flex flex-1 items-center justify-center px-4 py-6 text-gray-500 dark:text-gray-400"
+				class="flex flex-1 items-center justify-center px-4 py-6 text-base-500 dark:text-base-400"
 			>
 				<Spinner className="size-4" />
 			</div>{:else if !error && !items.length}<p
-				class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
+				class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-base-500 dark:text-base-400"
 			>
 				{$i18n.t('No notifications found.')}
 			</p>{:else if cursor && active && !error}<Loader on:visible={() => load(true)}>
 				<div
 					role="status"
-					class="flex items-center justify-center gap-2 py-4 text-xs text-gray-500 dark:text-gray-400"
+					class="flex items-center justify-center gap-2 py-4 text-xs text-base-500 dark:text-base-400"
 				>
 					<Spinner className="size-4" />
 					<span>{$i18n.t('Loading...')}</span>
 				</div>
 			</Loader>{:else if !cursor && items.length}<p
-				class="px-4 py-4 text-center text-[0.6875rem] text-gray-400 dark:text-gray-500"
+				class="px-4 py-4 text-center text-[0.6875rem] text-base-400 dark:text-base-500"
 			>
 				{$i18n.t('You have reached the end.')}
 			</p>{/if}

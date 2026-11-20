@@ -86,10 +86,10 @@
 	$: scopeName = scopes.find((item) => item.id === scope)?.name ?? '';
 	$: canCreateNote = kinds.includes('note');
 	$: selectionClass = $settings?.highContrastMode
-		? 'bg-gray-200 dark:bg-gray-800'
-		: 'bg-gray-50/70 dark:bg-gray-800/60';
+		? 'bg-base-200 dark:bg-base-800'
+		: 'bg-base-50/70 dark:bg-base-800/60';
 	const quietButton =
-		'focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.6875rem] font-normal text-gray-500 hover:bg-gray-50/60 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-gray-200';
+		'focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.6875rem] font-normal text-base-500 hover:bg-base-50/60 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/60 dark:hover:text-base-200';
 	$: if (show && typeof window !== 'undefined') {
 		const savedPreview = localStorage.getItem('searchPreview');
 		preview =
@@ -329,19 +329,19 @@
 	size={preview ? 'xl' : 'lg'}
 	ariaLabel={$i18n.t('Search workspace')}
 	onRequestClose={close}
-	className="bg-white dark:bg-gray-850 rounded-2xl !border-gray-100 dark:!border-gray-800"
+	className="bg-white dark:bg-base-850 rounded-2xl !border-base-100 dark:!border-base-800"
 >
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class="relative flex max-h-[85dvh] flex-col font-normal text-[0.8125rem] text-gray-700 dark:text-gray-100"
+		class="relative flex max-h-[85dvh] flex-col font-normal text-[0.8125rem] text-base-700 dark:text-base-100"
 		on:keydown={keydown}
 	>
 		<div class="flex h-11 shrink-0 items-center gap-2 px-3">
-			<Search className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400" strokeWidth="2" />
+			<Search className="size-3.5 shrink-0 text-base-500 dark:text-base-400" strokeWidth="2" />
 			<input
 				bind:this={input}
 				bind:value={query}
-				class="h-8 min-w-0 flex-1 bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+				class="h-8 min-w-0 flex-1 bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-base-400 dark:placeholder:text-base-500"
 				placeholder={$i18n.t('Search workspace…')}
 				aria-label={$i18n.t('Search your workspace')}
 				role="combobox"
@@ -367,7 +367,7 @@
 				on:blur={() => (suggesting = false)}
 			/>
 			{#if query}<button
-					class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					aria-label={$i18n.t('Clear search')}
 					on:click={() => {
 						query = '';
@@ -392,7 +392,7 @@
 				on:click={() => togglePanel('filters')}><Adjustments className="size-3.5" /></button
 			>
 			<button
-				class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="focus-ring flex h-[1.6875rem] shrink-0 items-center justify-center rounded-lg text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close search')}
 				on:click={close}><XMark className="size-3.5" /></button
 			>
@@ -400,7 +400,7 @@
 		{#if sharing !== 'all' || scope}
 			<div class="-mt-1 flex flex-wrap items-center gap-1 px-3 pb-1.5">
 				{#if sharing !== 'all'}<button
-						class="{quietButton} !h-[1.375rem] bg-gray-50/60 dark:bg-gray-800/40"
+						class="{quietButton} !h-[1.375rem] bg-base-50/60 dark:bg-base-800/40"
 						on:click={() => (sharing = 'all')}
 						aria-label={$i18n.t('Remove sharing filter')}
 						>{$i18n.t(sharing === 'mine' ? 'Created by you' : 'Shared with you')}<XMark
@@ -408,7 +408,7 @@
 						/></button
 					>{/if}
 				{#if scope}<button
-						class="{quietButton} !h-[1.375rem] max-w-48 bg-gray-50/60 dark:bg-gray-800/40"
+						class="{quietButton} !h-[1.375rem] max-w-48 bg-base-50/60 dark:bg-base-800/40"
 						on:click={() => (scope = '')}
 						aria-label={$i18n.t('Remove location filter')}
 						><span class="truncate">{scopeName}</span><XMark
@@ -436,7 +436,7 @@
 							on:click={() => applySuggestion(suggestion)}
 							><span class="min-w-0 truncate">{suggestion.label}</span
 							>{#if suggestion.description}<span
-									class="ml-auto truncate text-[0.6875rem] text-gray-500 dark:text-gray-400"
+									class="ml-auto truncate text-[0.6875rem] text-base-500 dark:text-base-400"
 									>{suggestion.description}</span
 								>{/if}</button
 						>{/each}</DropdownMenu
@@ -484,7 +484,7 @@
 							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
 						>
 							<span>{$i18n.t('View')}</span>
-							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+							<span class="ml-auto truncate text-base-500 dark:text-base-400"
 								>{$i18n.t(
 									sharing === 'all'
 										? 'All'
@@ -493,7 +493,7 @@
 											: 'Shared with you'
 								)}</span
 							>
-							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+							<ChevronRight className="size-3.5 shrink-0 text-base-400" />
 						</button>
 						{#each [{ value: 'all', label: 'All' }, { value: 'mine', label: 'Created by you' }, { value: 'shared', label: 'Shared with you' }] as option}
 							<button
@@ -519,10 +519,10 @@
 							class="focus-ring flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal"
 						>
 							<span>{$i18n.t('Location')}</span>
-							<span class="ml-auto truncate text-gray-500 dark:text-gray-400"
+							<span class="ml-auto truncate text-base-500 dark:text-base-400"
 								>{scopeName || $i18n.t('Everywhere')}</span
 							>
-							<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+							<ChevronRight className="size-3.5 shrink-0 text-base-400" />
 						</button>
 						<button
 							data-search-panel
@@ -539,7 +539,7 @@
 							{#if (kind === 'all' || kind === group.type) && scopes.some((item) => item.kind === group.kind)}
 								<div
 									data-search-panel
-									class="px-2 pb-1 pt-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+									class="px-2 pb-1 pt-2 text-[0.6875rem] text-base-500 dark:text-base-400"
 								>
 									{$i18n.t(group.label)}
 								</div>
@@ -562,14 +562,14 @@
 						{/each}
 					</DropdownSub>
 					{#if kind !== 'all' || sharing !== 'all' || scope}
-						<hr class="border-gray-100 dark:border-gray-800" />
+						<hr class="border-base-100 dark:border-base-800" />
 						<button on:click={resetFilters}>{$i18n.t('Reset')}</button>
 					{/if}
 				</DropdownMenu>
 			</div>
 		{/if}
 		<div
-			class="flex h-[min(36rem,70dvh)] min-h-40 border-t border-gray-100/60 dark:border-gray-800/40"
+			class="flex h-[min(36rem,70dvh)] min-h-40 border-t border-base-100/60 dark:border-base-800/40"
 			aria-busy={loading}
 		>
 			<div
@@ -578,7 +578,7 @@
 					: 'flex'}"
 			>
 				<div
-					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+					class="flex h-6 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-base-500 dark:text-base-400"
 				>
 					<span id="workspace-search-results-label"
 						>{query.trim() ? $i18n.t('Results') : $i18n.t('Pinned & recent')}</span
@@ -609,7 +609,7 @@
 							class="flex min-h-8 cursor-pointer items-center gap-2 rounded-xl px-2 py-1 text-left font-normal transition-colors duration-75 {selectedIndex ===
 							index
 								? selectionClass
-								: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+								: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 							on:mouseenter={() => (selectedIndex = index)}
 							on:click={() => {
 								selectedIndex = index;
@@ -620,19 +620,19 @@
 						>
 							<svelte:component
 								this={icons[result.kind]}
-								className="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+								className="size-3.5 shrink-0 text-base-500 dark:text-base-400"
 							/>
 							<div class="min-w-0 flex-1">
 								<div class="flex items-center gap-2 leading-5">
 									<span class="min-w-0 flex-1 truncate"
 										><HighlightedText text={result.title} {query} /></span
 									><span
-										class="hidden max-w-[35%] truncate text-[0.6875rem] text-gray-500 dark:text-gray-400 sm:block"
+										class="hidden max-w-[35%] truncate text-[0.6875rem] text-base-500 dark:text-base-400 sm:block"
 										>{contextLabels.get(result.context) ?? result.context}</span
-									>{#if result.pinned}<Pin className="size-2.5 shrink-0 text-gray-400" />{/if}
+									>{#if result.pinned}<Pin className="size-2.5 shrink-0 text-base-400" />{/if}
 								</div>
 								{#if query.trim() && result.snippet}<div
-										class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400"
+										class="truncate text-xs leading-4 text-base-500 dark:text-base-400"
 									>
 										<HighlightedText text={result.snippet} {query} />
 									</div>{/if}
@@ -641,13 +641,13 @@
 					{/each}
 				</div>
 				{#if loading && !results.length}<div
-						class="flex flex-1 items-center justify-center text-gray-400"
+						class="flex flex-1 items-center justify-center text-base-400"
 						aria-label={$i18n.t('Searching')}
 					>
 						<Spinner className="size-4" />
 					</div>{/if}
 				{#if error}<div
-						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
+						class="m-auto px-5 py-6 text-center text-xs text-base-500 dark:text-base-400"
 						role="alert"
 					>
 						<p>{error}</p>
@@ -658,7 +658,7 @@
 						>
 					</div>
 				{:else if !loading && !results.length}<div
-						class="m-auto px-5 py-6 text-center text-xs text-gray-500 dark:text-gray-400"
+						class="m-auto px-5 py-6 text-center text-xs text-base-500 dark:text-base-400"
 					>
 						<p>{query ? $i18n.t('No matches found') : $i18n.t('Nothing here yet')}</p>
 						<p class="mt-1 text-[0.6875rem]">
@@ -676,7 +676,7 @@
 						}}
 					>
 						<div
-							class="flex h-7 items-center justify-center text-gray-400"
+							class="flex h-7 items-center justify-center text-base-400"
 							role="status"
 							aria-label={$i18n.t('Loading more results')}
 						>
@@ -687,11 +687,11 @@
 			</div>
 			{#if preview && selected}
 				<section
-					class="flex w-full min-w-0 flex-col border-gray-100/60 sm:w-[45%] sm:border-l dark:border-gray-800/40"
+					class="flex w-full min-w-0 flex-col border-base-100/60 sm:w-[45%] sm:border-l dark:border-base-800/40"
 					aria-label={$i18n.t('Result preview')}
 				>
 					<div
-						class="flex h-8 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+						class="flex h-8 shrink-0 items-center justify-between px-2 text-[0.6875rem] text-base-500 dark:text-base-400"
 					>
 						<button
 							class={quietButton}
@@ -714,12 +714,12 @@
 					{:else}
 						<div class="min-h-0 flex-1 overflow-y-auto px-3 pb-3 scrollbar-hidden">
 							<h2 class="text-[0.8125rem] font-normal leading-5 break-words">{selected.title}</h2>
-							<div class="mt-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 								{contextLabels.get(selected.context) ?? selected.context} · {formatSearchDate(
 									selected.updated_at
 								)}
 							</div>
-							<div class="mt-3 break-words text-xs leading-snug text-gray-600 dark:text-gray-300">
+							<div class="mt-3 break-words text-xs leading-snug text-base-600 dark:text-base-300">
 								{#if selected.kind === 'note'}
 									<NotePreview id={selected.id.slice(5)} {query} />
 								{:else}
@@ -745,7 +745,7 @@
 								panel = null;
 								open();
 							}}
-							>{$i18n.t('Open result')}<span class="ml-auto text-xs text-gray-400">↵</span></button
+							>{$i18n.t('Open result')}<span class="ml-auto text-xs text-base-400">↵</span></button
 						><button
 							on:click={() => {
 								setPreview(!preview);
@@ -753,7 +753,7 @@
 								input.focus();
 							}}>{preview ? $i18n.t('Hide preview') : $i18n.t('Show preview')}</button
 						><button on:click={copyLink}>{$i18n.t('Copy link')}</button>
-						<hr class="border-gray-100 dark:border-gray-800" />{/if}<button
+						<hr class="border-base-100 dark:border-base-800" />{/if}<button
 						on:click={() => create('chat')}>{$i18n.t('Start a new conversation')}</button
 					>{#if canCreateNote}<button on:click={() => create('note')}
 							>{$i18n.t('Create a new note')}</button
@@ -761,16 +761,16 @@
 				>
 			</div>{/if}
 		<div
-			class="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-gray-100/60 px-2 dark:border-gray-800/40"
+			class="flex h-8 shrink-0 items-center justify-between gap-2 border-t border-base-100/60 px-2 dark:border-base-800/40"
 		>
-			<span class="min-w-0 truncate pl-1 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+			<span class="min-w-0 truncate pl-1 text-[0.6875rem] text-base-500 dark:text-base-400"
 				>{selected
 					? (contextLabels.get(selected.context) ?? selected.context)
 					: $i18n.t('Workspace search')}</span
 			>
 			<div class="flex shrink-0 items-center gap-0.5">
 				<button class={quietButton} disabled={!selected} on:click={() => open()}
-					>{$i18n.t('Open')}<span class="text-gray-400">↵</span></button
+					>{$i18n.t('Open')}<span class="text-base-400">↵</span></button
 				><button
 					class={quietButton}
 					disabled={!selected}
@@ -784,7 +784,7 @@
 					data-search-panel
 					aria-expanded={panel === 'actions'}
 					on:click={() => togglePanel('actions')}
-					>{$i18n.t('Actions')}<span class="text-[0.625rem] text-gray-400">⌘K</span></button
+					>{$i18n.t('Actions')}<span class="text-[0.625rem] text-base-400">⌘K</span></button
 				>
 			</div>
 		</div>

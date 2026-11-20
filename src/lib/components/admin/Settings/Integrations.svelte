@@ -159,7 +159,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('settings.admin.integrations.title')}
 	</h2>
 
@@ -181,7 +181,7 @@
 								className="w-fit"
 							>
 								<div
-									class="text-xs text-gray-600 dark:text-gray-400 underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+									class="text-xs text-base-600 dark:text-base-400 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
 								>
 									{$i18n.t('settings.admin.integrations.externalToolServers.label')}
 								</div>
@@ -190,7 +190,7 @@
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
 									on:click={() => {
 										showConnectionModal = true;
 									}}
@@ -217,7 +217,7 @@
 						</div>
 
 						{#if (servers ?? []).length === 0}
-							<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('No tool server connections configured.')}
 							</div>
 						{/if}
@@ -227,7 +227,7 @@
 				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.machines.title')}>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+							<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 								<Tooltip
 									content={$i18n.t(
 										'Connect to Open Terminal servers. Admins and users granted access can use file browsing and terminal tools through these servers.'
@@ -236,14 +236,14 @@
 									className="w-fit"
 								>
 									<div
-										class="underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500 cursor-help"
+										class="underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
 									>
 										{$i18n.t('settings.admin.integrations.openTerminal.label')}
 									</div>
 								</Tooltip>
 								<Tooltip content={$i18n.t('Learn more about Open Terminal')}>
 									<a
-										class="text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+										class="text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 										href="https://github.com/open-webui/open-terminal"
 										target="_blank"
 										rel="noopener noreferrer"
@@ -255,7 +255,7 @@
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
 									on:click={() => {
 										editTerminalIdx = null;
 										showAddTerminalModal = true;
@@ -286,7 +286,7 @@
 
 												<label
 													for={`terminal-${idx}-control`}
-													class="outline-hidden w-full bg-transparent text-xs text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+													class="outline-hidden w-full bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 												>
 													{connection.name || connection.url || $i18n.t('New Terminal')}
 												</label>
@@ -331,7 +331,7 @@
 						</div>
 
 						{#if terminalConnections.length === 0}
-							<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('No terminal connections configured.')}
 							</div>
 						{/if}
@@ -357,7 +357,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 			type="submit"
 		>
 			{$i18n.t('Save')}

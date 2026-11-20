@@ -83,21 +83,21 @@
 	ariaLabel={$i18n.t('Import skills')}
 	bind:show
 	size="md"
-	className="rounded-2xl bg-white dark:bg-gray-900"
+	className="rounded-2xl bg-white dark:bg-base-900"
 >
-	<div class="flex max-h-[calc(100dvh-3rem)] flex-col text-gray-900 dark:text-gray-100">
+	<div class="flex max-h-[calc(100dvh-3rem)] flex-col text-base-900 dark:text-base-100">
 		<div class="flex shrink-0 items-center justify-between gap-3 px-4 pt-3 pb-2">
 			<h2 class="text-sm font-medium">{$i18n.t('Import skills')}</h2>
 			<button
 				type="button"
-				class="rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => (show = false)}
 			>
 				<XMark className="size-4" />
 			</button>
 		</div>
-		<p class="shrink-0 px-4 pb-3 text-xs leading-5 text-gray-500 dark:text-gray-400">
+		<p class="shrink-0 px-4 pb-3 text-xs leading-5 text-base-500 dark:text-base-400">
 			{$i18n.t(
 				'New skills and copies are private. Replace saves a new version and preserves existing sharing.'
 			)}
@@ -105,7 +105,7 @@
 		<div class="min-h-0 overflow-y-auto overscroll-contain px-4" aria-busy={loading}>
 			{#if loading && !items.length}
 				<div
-					class="flex items-center justify-center gap-2 py-10 text-xs text-gray-500 dark:text-gray-400"
+					class="flex items-center justify-center gap-2 py-10 text-xs text-base-500 dark:text-base-400"
 					role="status"
 				>
 					<Spinner className="size-4" />
@@ -116,35 +116,35 @@
 					<p class="text-xs text-red-600 dark:text-red-400" role="alert">{error}</p>
 					<button
 						type="button"
-						class="mt-3 rounded-lg px-2.5 py-1.5 text-xs transition hover:bg-gray-100 dark:hover:bg-gray-800"
+						class="mt-3 rounded-lg px-2.5 py-1.5 text-xs transition hover:bg-base-100 dark:hover:bg-base-800"
 						on:click={preview}
 					>
 						{$i18n.t('Retry')}
 					</button>
 				</div>
 			{:else if !items.length}
-				<p class="py-10 text-center text-xs text-gray-500 dark:text-gray-400" role="status">
+				<p class="py-10 text-center text-xs text-base-500 dark:text-base-400" role="status">
 					{$i18n.t('No skills found')}
 				</p>
 			{:else}
-				<div class="divide-y divide-gray-100 dark:divide-gray-850">
+				<div class="divide-y divide-base-100 dark:divide-base-850">
 					{#each items as item, index}
 						<div class="py-3 first:pt-0">
 							<div class="flex items-start gap-3">
 								<div class="min-w-0 flex-1 space-y-1">
 									<input
 										aria-label={$i18n.t('Skill name')}
-										class="w-full min-w-0 rounded-md bg-transparent px-1.5 py-1 text-sm font-medium outline-hidden transition hover:bg-gray-50 focus:bg-gray-50 focus:ring-1 focus:ring-gray-300 disabled:opacity-60 dark:hover:bg-gray-850 dark:focus:bg-gray-850 dark:focus:ring-gray-600"
+										class="w-full min-w-0 rounded-md bg-transparent px-1.5 py-1 text-sm font-medium outline-hidden transition hover:bg-base-50 focus:bg-base-50 focus:ring-1 focus:ring-base-300 disabled:opacity-60 dark:hover:bg-base-850 dark:focus:bg-base-850 dark:focus:ring-base-600"
 										bind:value={item.name}
 										disabled={loading || results[index]?.status === 'saved'}
 									/>
 									<label
-										class="flex min-w-0 items-center gap-2 px-1.5 text-xs text-gray-500 dark:text-gray-400"
+										class="flex min-w-0 items-center gap-2 px-1.5 text-xs text-base-500 dark:text-base-400"
 									>
 										<span class="shrink-0">{$i18n.t('ID')}</span>
 										<input
 											aria-label={$i18n.t('Skill ID')}
-											class="min-w-0 flex-1 rounded bg-transparent py-0.5 font-mono outline-hidden focus:ring-1 focus:ring-gray-300 disabled:opacity-60 dark:focus:ring-gray-600"
+											class="min-w-0 flex-1 rounded bg-transparent py-0.5 font-mono outline-hidden focus:ring-1 focus:ring-base-300 disabled:opacity-60 dark:focus:ring-base-600"
 											bind:value={item.id}
 											disabled={loading ||
 												item.action === 'replace' ||
@@ -154,7 +154,7 @@
 								</div>
 								<select
 									aria-label={$i18n.t('Import action')}
-									class="h-7 w-28 shrink-0 rounded-lg border border-gray-100 bg-gray-50 px-2 text-xs outline-hidden focus:ring-1 focus:ring-gray-300 disabled:opacity-60 dark:border-gray-800 dark:bg-gray-850 dark:focus:ring-gray-600"
+									class="h-7 w-28 shrink-0 rounded-lg border border-base-100 bg-base-50 px-2 text-xs outline-hidden focus:ring-1 focus:ring-base-300 disabled:opacity-60 dark:border-base-800 dark:bg-base-850 dark:focus:ring-base-600"
 									bind:value={item.action}
 									on:change={(event) => {
 										if (event.currentTarget.value === 'replace') item.id = item.originalId;
@@ -172,15 +172,15 @@
 									{$i18n.t('ID or name already exists. Choose a unique ID and name for a copy.')}
 								</p>
 							{/if}
-							<details class="group mt-1.5 px-1.5 text-xs text-gray-500 dark:text-gray-400">
+							<details class="group mt-1.5 px-1.5 text-xs text-base-500 dark:text-base-400">
 								<summary
-									class="flex w-fit cursor-pointer list-none items-center gap-1 rounded py-0.5 hover:text-gray-900 dark:hover:text-gray-200 [&::-webkit-details-marker]:hidden"
+									class="flex w-fit cursor-pointer list-none items-center gap-1 rounded py-0.5 hover:text-base-900 dark:hover:text-base-200 [&::-webkit-details-marker]:hidden"
 								>
 									{$i18n.t('{{count}} files', { count: item.files.length })}
 									<ChevronDown className="size-3 transition-transform group-open:rotate-180" />
 								</summary>
 								<div
-									class="mt-1 max-h-32 space-y-1 overflow-y-auto rounded-lg bg-gray-50 p-2 dark:bg-gray-850"
+									class="mt-1 max-h-32 space-y-1 overflow-y-auto rounded-lg bg-base-50 p-2 dark:bg-base-850"
 								>
 									{#each item.files as file}
 										<div class="flex items-start justify-between gap-3">
@@ -211,12 +211,12 @@
 			{/if}
 		</div>
 		<div class="flex shrink-0 items-center justify-between gap-3 px-4 py-3">
-			<span class="text-xs text-gray-500 dark:text-gray-400" aria-live="polite"
+			<span class="text-xs text-base-500 dark:text-base-400" aria-live="polite"
 				>{$i18n.t('{{count}} selected', { count: selectedCount })}</span
 			>
 			<button
 				type="button"
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 				disabled={loading || !selectedCount}
 				on:click={save}
 			>

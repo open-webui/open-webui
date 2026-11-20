@@ -29,12 +29,12 @@
 					{displaySpec.properties[property].title}
 
 					{#if (displaySpec?.required ?? []).includes(property)}
-						<span class=" text-gray-500">{$i18n.t('*required')}</span>
+						<span class=" text-base-500">{$i18n.t('*required')}</span>
 					{/if}
 				</div>
 
 				<button
-					class="px-2 py-1 text-xs flex rounded-lg transition hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+					class="px-2 py-1 text-xs flex rounded-lg transition hover:bg-base-50/70 dark:hover:bg-base-850/50"
 					type="button"
 					on:click={() => {
 						const propertySpec = displaySpec.properties[property] ?? {};
@@ -80,7 +80,7 @@
 					<div class=" flex-1 min-w-0">
 						{#if displaySpec.properties[property]?.enum ?? null}
 							<select
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 								aria-label={displaySpec.properties[property].title}
 								bind:value={valves[property]}
 								on:change={() => {
@@ -100,7 +100,7 @@
 							</select>
 						{:else if (displaySpec.properties[property]?.type ?? null) === 'boolean'}
 							<div class="flex justify-between items-center">
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-base-500">
 									{valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
 								</div>
 
@@ -116,7 +116,7 @@
 							</div>
 						{:else if displaySpec.properties[property]?.input?.type === 'multiselect' && displaySpec.properties[property]?.input?.options}
 							<MultiSelect
-								className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								className="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 								bind:value={valves[property]}
 								options={displaySpec.properties[property].input.options}
 								placeholder={$i18n.t('Select options')}
@@ -135,7 +135,7 @@
 										step={displaySpec.properties[property]?.input?.step}
 										bind:value={valves[property]}
 										on:change
-										class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+										class="w-full h-2 rounded-lg appearance-none cursor-pointer dark:bg-base-700"
 									/>
 								</div>
 								<div>
@@ -153,7 +153,7 @@
 							</div>
 						{:else if (displaySpec.properties[property]?.type ?? null) !== 'string'}
 							<input
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 								type="text"
 								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
@@ -167,7 +167,7 @@
 						{:else if displaySpec.properties[property]?.input ?? null}
 							{#if displaySpec.properties[property]?.input?.type === 'password'}
 								<div
-									class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 border border-gray-100/30 dark:border-gray-850/30"
+									class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 border border-base-100/30 dark:border-base-850/30"
 								>
 									<SensitiveInput
 										id="valve-{property}"
@@ -181,7 +181,7 @@
 								</div>
 							{:else if displaySpec.properties[property]?.input?.type === 'select' && displaySpec.properties[property]?.input?.options}
 								<NativeSelect
-									className="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+									className="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 									bind:value={valves[property]}
 									options={displaySpec.properties[property].input.options}
 									placeholder={displaySpec.properties[property]?.description ??
@@ -196,7 +196,7 @@
 										<input
 											type="color"
 											aria-label={displaySpec.properties[property].title}
-											class="size-6 rounded cursor-pointer border border-gray-200 dark:border-gray-700"
+											class="size-6 rounded cursor-pointer border border-base-200 dark:border-base-700"
 											value={valves[property] ?? '#000000'}
 											on:input={(e) => {
 												// Convert the color value to uppercase immediately
@@ -208,7 +208,7 @@
 
 									<input
 										type="text"
-										class="flex-1 rounded-lg py-2 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+										class="flex-1 rounded-lg py-2 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 										aria-label={displaySpec.properties[property].title}
 										placeholder={$i18n.t('Enter hex color (e.g. #FF0000)')}
 										bind:value={valves[property]}
@@ -235,7 +235,7 @@
 									{#if valves[property]}
 										<input
 											type="text"
-											class=" w-full rounded-lg py-1 text-left text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+											class=" w-full rounded-lg py-1 text-left text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 											aria-label={displaySpec.properties[property].title}
 											placeholder={$i18n.t('Enter coordinates (e.g. 51.505, -0.09)')}
 											bind:value={valves[property]}
@@ -249,7 +249,7 @@
 							{/if}
 						{:else}
 							<textarea
-								class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+								class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 								aria-label={displaySpec.properties[property].title}
 								placeholder={displaySpec.properties[property].title}
 								bind:value={valves[property]}
@@ -265,7 +265,7 @@
 			{/if}
 
 			{#if (displaySpec.properties[property]?.description ?? null) !== null}
-				<div class="markdown-prose-xs max-w-full text-gray-500 dark:text-gray-400">
+				<div class="markdown-prose-xs max-w-full text-base-500 dark:text-base-400">
 					<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 					{@html DOMPurify.sanitize(
 						marked.parse(displaySpec.properties[property].description ?? '', { async: false })

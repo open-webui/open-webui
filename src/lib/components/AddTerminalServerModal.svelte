@@ -36,11 +36,11 @@
 	let error = '';
 	let showDelete = false;
 	const input =
-		'w-full min-w-0 bg-transparent py-0.5 text-sm text-gray-900 outline-hidden placeholder:text-gray-300 dark:text-gray-100 dark:placeholder:text-gray-700';
+		'w-full min-w-0 bg-transparent py-0.5 text-sm text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-100 dark:placeholder:text-base-700';
 	const select =
-		'min-w-0 bg-transparent pr-5 text-sm text-gray-900 outline-hidden dark:text-gray-100';
+		'min-w-0 bg-transparent pr-5 text-sm text-base-900 outline-hidden dark:text-base-100';
 	const button =
-		'flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-50';
+		'flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-50';
 	$: if (show && !initialized) {
 		url = connection?.url ?? '';
 		key = connection?.key ?? '';
@@ -118,7 +118,7 @@
 	size="sm"
 	ariaLabel={$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
 >
-	<div class="flex items-center justify-between px-4 pb-2 pt-3 dark:text-gray-100">
+	<div class="flex items-center justify-between px-4 pb-2 pt-3 dark:text-base-100">
 		<h2 class="text-sm font-medium">
 			{$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
 		</h2>
@@ -130,13 +130,13 @@
 		>
 	</div>
 	<form
-		class="space-y-2 px-4 pb-4 text-gray-900 dark:text-gray-100"
+		class="space-y-2 px-4 pb-4 text-base-900 dark:text-base-100"
 		on:submit|preventDefault={save}
 	>
-		{#if error}<p role="alert" class="text-sm text-gray-700 dark:text-gray-300">{error}</p>{/if}
+		{#if error}<p role="alert" class="text-sm text-base-700 dark:text-base-300">{error}</p>{/if}
 		<div class="flex gap-2">
 			<div class="min-w-0 flex-1">
-				<label for="terminal-name" class="mb-0.5 block text-xs text-gray-500"
+				<label for="terminal-name" class="mb-0.5 block text-xs text-base-500"
 					>{$i18n.t('Name')}</label
 				>
 				<input
@@ -148,7 +148,7 @@
 				/>
 			</div>
 			<div class="min-w-0 flex-1">
-				<label for="terminal-id" class="mb-0.5 block text-xs text-gray-500">
+				<label for="terminal-id" class="mb-0.5 block text-xs text-base-500">
 					{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
 				</label>
 				<input
@@ -163,7 +163,7 @@
 		</div>
 		<div class="flex items-end gap-2">
 			<div class="min-w-0 flex-1">
-				<label for="terminal-url" class="mb-0.5 block text-xs text-gray-500">{$i18n.t('URL')}</label
+				<label for="terminal-url" class="mb-0.5 block text-xs text-base-500">{$i18n.t('URL')}</label
 				>
 				<input
 					id="terminal-url"
@@ -178,7 +178,7 @@
 			<Tooltip content={$i18n.t('Verify Connection')}>
 				<button
 					type="button"
-					class="rounded-lg p-1 transition hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-850"
+					class="rounded-lg p-1 transition hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
 					disabled={busy || !url}
 					on:click={() => verify(true)}
 					aria-label={$i18n.t('Verify Connection')}
@@ -189,7 +189,7 @@
 			</Tooltip>
 		</div>
 		<div>
-			<label for="terminal-auth-type" class="mb-0.5 block text-xs text-gray-500"
+			<label for="terminal-auth-type" class="mb-0.5 block text-xs text-base-500"
 				>{$i18n.t('Auth')}</label
 			>
 			<div class="flex items-start gap-2">
@@ -202,26 +202,26 @@
 				<div class="min-w-0 flex-1">
 					<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} required={false} />
 					{#if auth_type === 'session'}
-						<p class="mt-1 text-xs text-gray-500">
+						<p class="mt-1 text-xs text-base-500">
 							{$i18n.t('Forwards system user session credentials to authenticate')}
 						</p>
 					{:else if auth_type === 'system_oauth'}
-						<p class="mt-1 text-xs text-gray-500">
+						<p class="mt-1 text-xs text-base-500">
 							{$i18n.t('Forwards system user OAuth access token to authenticate')}
 						</p>
 					{:else if auth_type === 'none'}
-						<p class="mt-1 text-xs text-gray-500">{$i18n.t('No authentication')}</p>
+						<p class="mt-1 text-xs text-base-500">{$i18n.t('No authentication')}</p>
 					{/if}
 				</div>
 			</div>
 		</div>
 		{#if serverType === 'orchestrator'}
-			<p class="text-xs text-gray-500">
+			<p class="text-xs text-base-500">
 				{$i18n.t('Create and configure terminals from the terminal selector.')}
 			</p>
 		{/if}
 		<div>
-			<label for="terminal-chat-uploads" class="mb-0.5 block text-xs text-gray-500"
+			<label for="terminal-chat-uploads" class="mb-0.5 block text-xs text-base-500"
 				>{$i18n.t('Chat Uploads')}</label
 			>
 			<select id="terminal-chat-uploads" class="{select} w-full" bind:value={chatUploads}>
@@ -231,7 +231,7 @@
 		</div>
 		<Collapsible
 			title={$i18n.t('Access')}
-			buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+			buttonClassName="flex w-full py-1 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 			chevronClassName="size-3.5"
 			chevronStrokeWidth="2"
 		>
@@ -241,7 +241,7 @@
 		</Collapsible>
 		<Collapsible
 			title={$i18n.t('Advanced')}
-			buttonClassName="flex w-full py-1 text-xs text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+			buttonClassName="flex w-full py-1 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 			chevronClassName="size-3.5"
 			chevronStrokeWidth="2"
 		>
@@ -251,7 +251,7 @@
 						<label for="working-directory-context" class="text-xs font-medium"
 							>{$i18n.t('Working Directory Context')}</label
 						>
-						<p class="text-xs text-gray-500">
+						<p class="text-xs text-base-500">
 							{$i18n.t('Include the current directory in tool instructions.')}
 						</p>
 					</div>
@@ -266,7 +266,7 @@
 						<label for="user-shell-tools" class="text-xs font-medium"
 							>{$i18n.t('User Shell Tools')}</label
 						>
-						<p class="text-xs text-gray-500">
+						<p class="text-xs text-base-500">
 							{#if userShellTools === 'auto'}
 								{$i18n.t('Include tools only while your shell is connected.')}
 							{:else}
@@ -288,7 +288,7 @@
 						<label for="forward-cookies" class="text-xs font-medium"
 							>{$i18n.t('Forward cookies')}</label
 						>
-						<p class="text-xs text-gray-500">
+						<p class="text-xs text-base-500">
 							{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
 						</p>
 					</div>
@@ -308,7 +308,7 @@
 						bind:value={path}
 						placeholder={$i18n.t('openapi.json URL or Path')}
 					/>
-					<p class="mt-1 break-all text-xs text-gray-500">
+					<p class="mt-1 break-all text-xs text-base-500">
 						{$i18n.t('WebUI will make requests to "{{url}}"', {
 							url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
 						})}
@@ -321,14 +321,14 @@
 				{#if edit}
 					<button
 						type="button"
-						class="px-1 py-1.5 text-xs text-gray-500 transition hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-200"
+						class="px-1 py-1.5 text-xs text-base-500 transition hover:text-base-700 hover:underline dark:text-base-400 dark:hover:text-base-200"
 						disabled={busy}
 						on:click={() => (showDelete = true)}>{$i18n.t('Delete')}</button
 					>
 				{/if}
 			</div>
 			<button
-				class="{button} bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+				class="{button} bg-base-900 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 				disabled={busy || !url}
 			>
 				{$i18n.t('Save')}

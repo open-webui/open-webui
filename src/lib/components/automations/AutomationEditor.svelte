@@ -386,10 +386,10 @@
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
 
 	const rowClass =
-		'flex h-7 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-850/50';
+		'flex h-7 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50';
 	const labelClass =
-		'flex w-[5.375rem] shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400';
-	const valueClass = 'text-xs text-gray-700 dark:text-gray-300';
+		'flex w-[5.375rem] shrink-0 items-center gap-1.5 text-xs text-base-500 dark:text-base-400';
+	const valueClass = 'text-xs text-base-700 dark:text-base-300';
 </script>
 
 <!-- LICENSE covers this Open WebUI browser-title identifier.
@@ -402,7 +402,7 @@
 	title={$i18n.t('Delete automation?')}
 	on:confirm={deleteHandler}
 >
-	<div class="text-sm text-gray-500 truncate">
+	<div class="text-sm text-base-500 truncate">
 		{$i18n.t('This will delete')} <span class="">{automation.name}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -418,14 +418,14 @@
 		<!-- One centered column, like an issue: name, prompt, properties, then activity. -->
 		<div>
 			<input
-				class="w-full bg-transparent text-[0.9375rem] font-normal text-gray-800 outline-hidden placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
+				class="w-full bg-transparent text-[0.9375rem] font-normal text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-500"
 				bind:value={name}
 				aria-label={$i18n.t('Name')}
 				placeholder={$i18n.t('Automation name')}
 			/>
 			{#if showPrompt || !prompt.trim()}
 				<Textarea
-					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-gray-500 outline-hidden placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-500"
+					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-base-500 outline-hidden placeholder:text-base-400 dark:text-base-400 dark:placeholder:text-base-500"
 					bind:value={prompt}
 					rows={1}
 					ariaLabel={$i18n.t('Instructions')}
@@ -439,14 +439,14 @@
 					on:click={() => {
 						showPrompt = true;
 					}}
-					class="mt-1 w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400"
+					class="mt-1 w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed text-base-500 dark:text-base-400"
 				>
 					{prompt}
 				</button>
 			{/if}
 			{#if prompt.trim()}
 				<button
-					class="mt-1 block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+					class="mt-1 block text-xs text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 					type="button"
 					aria-expanded={showPrompt}
 					on:click={() => {
@@ -457,7 +457,7 @@
 				</button>
 			{/if}
 
-			<div class="mt-6 mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			<div class="mt-6 mb-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 				{$i18n.t('Properties')}
 			</div>
 			<div class="-mx-2">
@@ -562,8 +562,8 @@
 					-->
 					<span
 						class="min-w-0 flex-1 truncate text-xs {is_active
-							? 'text-gray-700 dark:text-gray-300'
-							: 'text-gray-400 dark:text-gray-500'}"
+							? 'text-base-700 dark:text-base-300'
+							: 'text-base-400 dark:text-base-500'}"
 						>{is_active
 							? formatNextRun(automation.next_runs?.[0] ?? automation.next_run_at)
 							: $i18n.t('Paused')}</span
@@ -571,7 +571,7 @@
 				</div>
 			</div>
 
-			<div class="mt-3 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			<div class="mt-3 text-[0.6875rem] text-base-400 dark:text-base-500">
 				{$i18n.t('Created {{date}}', { date: formatDate(automation.created_at) })} · {$i18n.t(
 					'Updated {{date}}',
 					{ date: formatDate(automation.updated_at) }
@@ -581,7 +581,7 @@
 
 		<!-- What happened: each run, newest first. -->
 		<section class="mt-6">
-			<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			<div class="mb-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 				{$i18n.t('Activity')}
 			</div>
 			<div class="-mx-2">
@@ -592,29 +592,29 @@
 					<button
 						id={run.id === linkedRun?.id ? 'inbox-automation-run' : undefined}
 						type="button"
-						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs transition-colors enabled:hover:bg-gray-50 dark:enabled:hover:bg-gray-850/50 {run.id ===
+						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs transition-colors enabled:hover:bg-base-50 dark:enabled:hover:bg-base-850/50 {run.id ===
 						linkedRun?.id
-							? 'bg-gray-50 dark:bg-gray-850/50'
+							? 'bg-base-50 dark:bg-base-850/50'
 							: ''}"
 						disabled={!run.chat_id}
 						on:click={() => openRun(run)}
 					>
 						<span
-							class="flex shrink-0 text-gray-400 dark:text-gray-500"
+							class="flex shrink-0 text-base-400 dark:text-base-500"
 							aria-label={run.status === 'success' ? $i18n.t('Succeeded') : $i18n.t('Failed')}
 						>
 							{#if run.status === 'success'}<Check className="size-3" />{:else}<XMark
 									className="size-3"
 								/>{/if}
 						</span>
-						<span class="min-w-0 truncate text-gray-700 dark:text-gray-300" title={run.error ?? ''}>
+						<span class="min-w-0 truncate text-base-700 dark:text-base-300" title={run.error ?? ''}>
 							{run.status === 'success'
 								? $i18n.t('Ran')
 								: run.error
 									? `${$i18n.t('Failed')}: ${run.error}`
 									: $i18n.t('Failed')}
 						</span>
-						<span class="shrink-0 tabular-nums text-gray-400 dark:text-gray-500"
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
 							>· {formatTime(run.created_at)}</span
 						>
 					</button>
@@ -624,9 +624,9 @@
 				{/if}
 				{#if !hasMoreRuns || (!runsLoading && runs.length === 0)}
 					<div class="flex h-7 items-center gap-2 px-2 text-xs">
-						<Plus className="size-3 shrink-0 text-gray-400 dark:text-gray-500" strokeWidth="2" />
-						<span class="text-gray-700 dark:text-gray-300">{$i18n.t('Automation created')}</span>
-						<span class="shrink-0 tabular-nums text-gray-400 dark:text-gray-500"
+						<Plus className="size-3 shrink-0 text-base-400 dark:text-base-500" strokeWidth="2" />
+						<span class="text-base-700 dark:text-base-300">{$i18n.t('Automation created')}</span>
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
 							>· {formatTime(automation.created_at)}</span
 						>
 					</div>

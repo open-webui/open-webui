@@ -55,24 +55,24 @@
 		<!-- Grouped: create, manage the folder, read state, then delete on its own. -->
 		<DropdownMenu className="min-w-[10.625rem]">
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={onNewChat}
 			>
 				<EditPencil className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('New Chat')}</div>
 			</button>
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={() => onCreateSubFolder()}
 			>
 				<FolderIcon className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Create Folder')}</div>
 			</button>
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+			<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={() => onEdit()}
 			>
 				<EditPencil className="size-3.5" />
@@ -80,7 +80,7 @@
 			</button>
 			{#if onShare}
 				<button
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 					on:click={() => onShare?.()}
 				>
 					<ShareIcon className="size-3.5" strokeWidth="1.5" />
@@ -89,7 +89,7 @@
 			{/if}
 			{#if $user?.role === 'admin' || ($user?.permissions?.chat?.export ?? true)}
 				<button
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 					on:click={() => onExport()}
 				>
 					<Download className="size-3.5" />
@@ -97,20 +97,20 @@
 				</button>
 			{/if}
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+			<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={() => onMarkAllRead()}
 			>
 				<CheckIcon className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('Mark all as read')}</div>
 			</button>
 
-			<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+			<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 			<button
-				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-900"
+				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={() => onDelete()}
 			>
 				<TrashIcon className="size-3.5" />

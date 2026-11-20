@@ -102,12 +102,12 @@
 >
 	{#if !floatingInput}
 		<div
-			class="flex flex-row flex-wrap shrink-0 p-0.5 bg-white dark:bg-gray-850 dark:text-gray-100 text-medium rounded-xl shadow-xl border border-gray-100 dark:border-gray-800"
+			class="flex flex-row flex-wrap shrink-0 p-0.5 bg-white dark:bg-base-850 dark:text-base-100 text-medium rounded-xl shadow-xl border border-base-100 dark:border-base-800"
 		>
 			{#each displayActions as action}
 				<button
 					aria-label={action.label}
-					class="px-1.5 py-[0.0625rem] min-h-9 sm:min-h-0 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+					class="px-1.5 py-[0.0625rem] min-h-9 sm:min-h-0 hover:bg-base-50 dark:hover:bg-base-800 rounded-xl flex items-center gap-1 min-w-fit transition"
 					on:click={async () => {
 						selectedAction = action;
 
@@ -136,7 +136,7 @@
 			{#if onComment}<button
 					type="button"
 					aria-label={$i18n.t('Comment')}
-					class="px-1.5 py-[0.0625rem] min-h-9 sm:min-h-0 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl flex items-center gap-1 min-w-fit transition"
+					class="px-1.5 py-[0.0625rem] min-h-9 sm:min-h-0 hover:bg-base-50 dark:hover:bg-base-800 rounded-xl flex items-center gap-1 min-w-fit transition"
 					on:mousedown|preventDefault
 					on:click={onComment}
 					><Annotation className="size-3 shrink-0" /><span>{$i18n.t('Comment')}</span></button
@@ -144,7 +144,7 @@
 		</div>
 	{:else}
 		<div
-			class="py-1 flex dark:text-gray-100 bg-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800 w-72 max-w-full rounded-full shadow-xl"
+			class="py-1 flex dark:text-base-100 bg-white dark:bg-base-850 border border-base-100 dark:border-base-800 w-72 max-w-full rounded-full shadow-xl"
 		>
 			<input
 				type="text"
@@ -164,8 +164,8 @@
 				<button
 					aria-label={$i18n.t('Submit question')}
 					class="{floatingInputValue !== ''
-						? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-						: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
+						? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 '
+						: 'text-white bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-1.5 m-0.5 self-center"
 					on:click={() => {
 						actionHandler(selectedAction?.id);
 					}}

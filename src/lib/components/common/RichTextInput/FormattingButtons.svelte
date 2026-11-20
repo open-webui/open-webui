@@ -59,7 +59,7 @@
 />
 
 <div
-	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 min-w-fit border border-gray-100 dark:border-gray-800"
+	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-base-800 dark:text-white dark:bg-base-850 min-w-fit border border-base-100 dark:border-base-800"
 >
 	{#if onComment}
 		<Tooltip placement="top" content={$i18n.t('Comment')}>
@@ -67,13 +67,13 @@
 				aria-label={$i18n.t('Comment')}
 				on:mousedown|preventDefault
 				on:click={() => onComment?.()}
-				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				class="hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>
 				<Annotation className="size-4" />
 			</button>
 		</Tooltip>
-		<div class="my-1 w-px bg-gray-100 dark:bg-gray-800" aria-hidden="true"></div>
+		<div class="my-1 w-px bg-base-100 dark:bg-base-800" aria-hidden="true"></div>
 	{/if}
 
 	<div class="relative flex" bind:this={headingMenuElement}>
@@ -85,8 +85,8 @@
 				on:mousedown|preventDefault
 				on:click={() => (showHeadingMenu = !showHeadingMenu)}
 				class="{activeHeading || showHeadingMenu
-					? 'bg-gray-50 dark:bg-gray-700'
-					: ''} flex items-center gap-0.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+					? 'bg-base-50 dark:bg-base-700'
+					: ''} flex items-center gap-0.5 hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>
 				{#if activeHeading}
@@ -103,7 +103,7 @@
 		{#if showHeadingMenu}
 			<div
 				role="menu"
-				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-white text-gray-800 dark:text-white dark:bg-gray-850 border border-gray-100 dark:border-gray-800"
+				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-white text-base-800 dark:text-white dark:bg-base-850 border border-base-100 dark:border-base-800"
 			>
 				<button
 					role="menuitemradio"
@@ -114,8 +114,8 @@
 						showHeadingMenu = false;
 					}}
 					class="{!activeHeading
-						? 'bg-gray-50 dark:bg-gray-700'
-						: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+						? 'bg-base-50 dark:bg-base-700'
+						: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-base-50 dark:hover:bg-base-700 transition-all"
 					type="button"
 				>
 					<span class="flex size-4 items-center justify-center text-sm font-medium leading-none"
@@ -133,8 +133,8 @@
 							showHeadingMenu = false;
 						}}
 						class="{activeHeading?.level === heading.level
-							? 'bg-gray-50 dark:bg-gray-700'
-							: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
+							? 'bg-base-50 dark:bg-base-700'
+							: ''} flex items-center gap-2 px-2 py-1 rounded-lg text-sm hover:bg-base-50 dark:hover:bg-base-700 transition-all"
 						type="button"
 					>
 						<svelte:component this={heading.icon} />
@@ -160,7 +160,7 @@
 				on:click={() => {
 					editor?.commands.liftListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem');
 				}}
-				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				class="hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>
 				<ArrowLeftTag />
@@ -171,7 +171,7 @@
 				aria-label={$i18n.t('Sink List')}
 				on:click={() =>
 					editor?.commands.sinkListItem(editor?.isActive('taskList') ? 'taskItem' : 'listItem')}
-				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				class="hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>
 				<ArrowRightTag />
@@ -185,8 +185,8 @@
 			aria-pressed={editor?.isActive('bulletList')}
 			on:click={() => editor?.chain().focus().toggleBulletList().run()}
 			class="{editor?.isActive('bulletList')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<ListBullet />
@@ -199,8 +199,8 @@
 			aria-pressed={editor?.isActive('orderedList')}
 			on:click={() => editor?.chain().focus().toggleOrderedList().run()}
 			class="{editor?.isActive('orderedList')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<NumberedList />
@@ -213,8 +213,8 @@
 			aria-pressed={editor?.isActive('taskList')}
 			on:click={() => editor?.chain().focus().toggleTaskList().run()}
 			class="{editor?.isActive('taskList')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<CheckBox />
@@ -227,8 +227,8 @@
 			aria-pressed={editor?.isActive('bold')}
 			on:click={() => editor?.chain().focus().toggleBold().run()}
 			class="{editor?.isActive('bold')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<Bold />
@@ -241,8 +241,8 @@
 			aria-pressed={editor?.isActive('italic')}
 			on:click={() => editor?.chain().focus().toggleItalic().run()}
 			class="{editor?.isActive('italic')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<Italic />
@@ -255,8 +255,8 @@
 			aria-pressed={editor?.isActive('underline')}
 			on:click={() => editor?.chain().focus().toggleUnderline().run()}
 			class="{editor?.isActive('underline')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<Underline />
@@ -269,8 +269,8 @@
 			aria-pressed={editor?.isActive('strike')}
 			on:click={() => editor?.chain().focus().toggleStrike().run()}
 			class="{editor?.isActive('strike')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<Strikethrough />
@@ -283,8 +283,8 @@
 			aria-pressed={editor?.isActive('codeBlock')}
 			on:click={() => editor?.chain().focus().toggleCodeBlock().run()}
 			class="{editor?.isActive('codeBlock')
-				? 'bg-gray-50 dark:bg-gray-700'
-				: ''} hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				? 'bg-base-50 dark:bg-base-700'
+				: ''} hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 			type="button"
 		>
 			<CodeBracket />
@@ -308,7 +308,7 @@
 		<Tooltip placement="top" content={$i18n.t('Emoji')}>
 			<button
 				aria-label={$i18n.t('Emoji')}
-				class="hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg p-1.5 transition-all"
+				class="hover:bg-base-50 dark:hover:bg-base-700 rounded-lg p-1.5 transition-all"
 				type="button"
 			>
 				<FaceSmile className="size-4" />

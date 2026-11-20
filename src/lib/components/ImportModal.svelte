@@ -60,10 +60,10 @@
 
 <Modal ariaLabel={$i18n.t('Import')} size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Import')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -73,7 +73,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -83,14 +83,14 @@
 				>
 					<div class="px-1">
 						<div class="flex flex-col w-full">
-							<label for="import-url" class="block mb-1 text-xs text-gray-500"
+							<label for="import-url" class="block mb-1 text-xs text-base-500"
 								>{$i18n.t('URL')}</label
 							>
 
 							<div class="flex-1">
 								<input
 									id="import-url"
-									class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+									class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 									type="url"
 									bind:value={url}
 									placeholder={$i18n.t('Enter the URL to import')}
@@ -104,7 +104,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

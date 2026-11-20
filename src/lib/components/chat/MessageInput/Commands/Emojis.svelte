@@ -70,7 +70,7 @@
 
 	{#each filteredItems as emoji, emojiIdx}
 		<button
-			class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {emojiIdx ===
+			class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {emojiIdx ===
 			selectedIdx
 				? 'app-interactive-active selected-command-option-button'
 				: ''}"

@@ -129,7 +129,7 @@
 					<h2 class="flex flex-1 h-full">
 						<button
 							type="button"
-							class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-gray-400 hover:text-gray-500 dark:text-gray-500 dark:hover:text-gray-400 transition-colors duration-100 {buttonClassName}"
+							class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-base-400 hover:text-base-500 dark:text-base-500 dark:hover:text-base-400 transition-colors duration-100 {buttonClassName}"
 							id="{id}-button"
 							aria-expanded={open}
 							aria-controls="{id}-content"
@@ -152,7 +152,7 @@
 					{#if onAdd}
 						<button
 							type="button"
-							class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400 transition-colors duration-100"
+							class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
 							aria-label={onAddLabel}
 							on:click={(e) => {
 								e.stopPropagation();

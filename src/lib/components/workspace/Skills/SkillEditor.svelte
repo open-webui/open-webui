@@ -362,7 +362,7 @@
 		>
 			<div class="flex shrink-0 items-center justify-between gap-2">
 				<button
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-base-400 transition-colors duration-75 hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 					type="button"
 					on:click={() => {
 						goto('/workspace/skills');
@@ -392,7 +392,7 @@
 							/>
 						{/if}
 					{:else}
-						<span class="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-500 dark:bg-gray-850">
+						<span class="rounded-lg bg-base-100 px-2 py-1 text-xs text-base-500 dark:bg-base-850">
 							{$i18n.t('Read Only')}
 						</span>
 					{/if}
@@ -412,7 +412,7 @@
 					/>
 				</Tooltip>
 
-				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-base-500">
 					<Tooltip
 						className="flex min-w-0 flex-1 items-center"
 						content={$i18n.t('e.g. Step-by-step instructions for code reviews')}
@@ -440,7 +440,7 @@
 							placement="top-start"
 						>
 							<input
-								class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
+								class="w-full bg-transparent font-mono outline-hidden disabled:text-base-500"
 								type="text"
 								placeholder={$i18n.t('Skill ID')}
 								aria-label={$i18n.t('Skill ID')}
@@ -466,7 +466,7 @@
 					>
 				</div>{/if}
 			<div
-				class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/50 bg-gray-50/60 dark:border-white/[0.025] dark:bg-white/[0.03]"
+				class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-100/50 bg-base-50/60 dark:border-white/[0.025] dark:bg-white/[0.03]"
 			>
 				{#if historyDiff}
 					<VersionDiff
@@ -517,7 +517,7 @@
 										<button
 											type="button"
 											aria-label={$i18n.t('Select version')}
-											class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-gray-500 transition hover:text-gray-900 dark:hover:text-gray-100"
+											class="flex h-7 max-w-full items-center gap-2 rounded-lg bg-transparent px-2 text-xs text-base-500 transition hover:text-base-900 dark:hover:text-base-100"
 										>
 											<span class="truncate"
 												>{historical
@@ -541,10 +541,10 @@
 													onSelect={() => chooseVersion(currentVersionId!)}
 												/>
 												{#if historyLoading || historyError || history.some((entry) => entry.id !== currentVersionId)}
-													<hr class="border-gray-100 dark:border-gray-800" />
+													<hr class="border-base-100 dark:border-base-800" />
 												{/if}
 												{#if historyLoading}
-													<div class="flex items-center gap-2 px-2 py-2 text-xs text-gray-500">
+													<div class="flex items-center gap-2 px-2 py-2 text-xs text-base-500">
 														<Spinner className="size-3" />{$i18n.t('Loading...')}
 													</div>
 												{:else if historyError}
@@ -565,14 +565,14 @@
 														/>
 													{:else}
 														{#if historyPage > 1}
-															<div class="px-2 py-2 text-xs text-gray-500">
+															<div class="px-2 py-2 text-xs text-base-500">
 																{$i18n.t('No more versions')}
 															</div>
 														{/if}
 													{/each}
 												{/if}
 												{#if historyPage > 1 || history.length === 20}
-													<hr class="border-gray-100 dark:border-gray-800" />
+													<hr class="border-base-100 dark:border-base-800" />
 													<div class="flex justify-between px-2 py-1 text-xs">
 														<button
 															type="button"
@@ -616,13 +616,13 @@
 
 			{#if historical}
 				<div
-					class="flex w-full shrink-0 flex-wrap items-center gap-2 px-1 py-2 text-xs text-gray-500"
+					class="flex w-full shrink-0 flex-wrap items-center gap-2 px-1 py-2 text-xs text-base-500"
 				>
 					<span class="mr-auto">{$i18n.t('Read Only')}</span>
 					<div class="ml-auto flex flex-wrap justify-end gap-2">
 						<button
 							type="button"
-							class="flex h-7 items-center rounded-lg bg-gray-100 px-2.5 text-xs text-gray-700 disabled:opacity-60 dark:bg-gray-850 dark:text-gray-200"
+							class="flex h-7 items-center rounded-lg bg-base-100 px-2.5 text-xs text-base-700 disabled:opacity-60 dark:bg-base-850 dark:text-base-200"
 							disabled={comparing || !!historyDiff}
 							on:click={compareToCurrent}
 							>{#if comparing}<Spinner className="mr-1.5 size-3" />{/if}{$i18n.t(
@@ -631,7 +631,7 @@
 						>
 						{#if !disabled}<button
 								type="button"
-								class="flex h-7 items-center rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								class="flex h-7 items-center rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 								on:click={setProductionVersion}>{$i18n.t('Set as Production')}</button
 							>{/if}
 					</div>
@@ -647,7 +647,7 @@
 						bind:value={commitMessage}
 					/>
 					<button
-						class="flex h-7 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						type="submit"
 						disabled={loading || !fileEditor}
 					>

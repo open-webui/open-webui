@@ -36,7 +36,7 @@
 </script>
 
 <div
-	class="group flex h-[1.6875rem] w-full items-center rounded-xl hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+	class="group flex h-[1.6875rem] w-full items-center rounded-xl hover:bg-base-50/60 dark:hover:bg-base-800/60"
 >
 	<div class="ml-2 mr-2 flex shrink-0">
 		<ProfilePreview user={{ id: authorId, name: author }}>
@@ -67,12 +67,12 @@
 				content={date.toLocaleString($i18n.language)}
 				allowHTML={false}
 			>
-				<time datetime={date.toISOString()} class="whitespace-nowrap text-[0.625rem] text-gray-400">
+				<time datetime={date.toISOString()} class="whitespace-nowrap text-[0.625rem] text-base-400">
 					{dayjs(date).locale(getDayjsLocale($i18n.language)).fromNow()}
 				</time>
 			</Tooltip>
 		{/if}
-		{#if status && entry}<span class="shrink-0 text-[0.625rem] text-gray-400">{status}</span>{/if}
+		{#if status && entry}<span class="shrink-0 text-[0.625rem] text-base-400">{status}</span>{/if}
 		{#if selected}<Check className="size-3.5 shrink-0 text-blue-500" />{/if}
 	</button>
 	{#if onDelete || deleteDisabledReason}
@@ -80,7 +80,7 @@
 			<button
 				type="button"
 				aria-label={$i18n.t('More Options')}
-				class="mr-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+				class="mr-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 hover:text-base-900 dark:hover:text-base-100"
 				><EllipsisHorizontal className="size-3.5" /></button
 			>
 			<div slot="content">

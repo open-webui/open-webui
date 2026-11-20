@@ -20,7 +20,7 @@
 
 <div class="fixed w-full h-full flex z-999">
 	<div
-		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-gray-900/50 flex justify-center"
+		class="absolute w-full h-full backdrop-blur-lg bg-white/10 dark:bg-base-900/50 flex justify-center"
 	>
 		<div class="m-auto pb-10 flex flex-col justify-center">
 			<div class="max-w-md">
@@ -37,7 +37,7 @@
 				</div>
 
 				<div
-					class=" mt-4 text-center text-sm dark:text-gray-200 w-full"
+					class=" mt-4 text-center text-sm dark:text-base-200 w-full"
 					style="white-space: pre-wrap;"
 				>
 					{#if ($config?.ui?.pending_user_overlay_content ?? '').trim() !== ''}
@@ -59,7 +59,7 @@
 
 				<div class=" mt-6 mx-auto relative group w-fit">
 					<button
-						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-gray-100 dark:border-none hover:bg-gray-100 text-gray-700 transition font-normal text-sm"
+						class="relative z-20 flex px-5 py-2 rounded-full bg-white border border-base-100 dark:border-none hover:bg-base-100 text-base-700 transition font-normal text-sm"
 						on:click={async () => {
 							location.href = '/';
 						}}
@@ -68,7 +68,7 @@
 					</button>
 
 					<button
-						class="text-xs text-center w-full mt-2 text-gray-400 underline"
+						class="text-xs text-center w-full mt-2 text-base-400 underline"
 						on:click={async () => {
 							const res = await userSignOut().catch((err) => {
 								console.error(err);

@@ -497,7 +497,7 @@
 
 {#if status?.is_repo}
 	<section
-		class="@container relative shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
+		class="@container relative shrink-0 border-t border-base-200/40 dark:border-base-850/20"
 		aria-label={$i18n.t('Git')}
 	>
 		{#if expanded}
@@ -507,7 +507,7 @@
 				aria-orientation="horizontal"
 				aria-valuenow={height}
 				tabindex="0"
-				class="absolute inset-x-0 -top-px h-px z-20 cursor-row-resize touch-none border-t border-transparent hover:border-gray-300/60 dark:hover:border-gray-800 transition"
+				class="absolute inset-x-0 -top-px h-px z-20 cursor-row-resize touch-none border-t border-transparent hover:border-base-300/60 dark:hover:border-base-800 transition"
 				on:pointerdown={(event) => {
 					event.preventDefault();
 					(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -537,22 +537,22 @@
 				<span class="absolute inset-x-0 -top-1.5 -bottom-1.5 bg-transparent"></span>
 			</div>
 		{/if}
-		<div class="flex min-w-0 items-center h-7 pl-3 pr-1 text-gray-400 dark:text-gray-600">
+		<div class="flex min-w-0 items-center h-7 pl-3 pr-1 text-base-400 dark:text-base-600">
 			<Dropdown side="top" maxHeight="15rem" bind:show={showBranches} onOpenChange={loadBranches}>
 				<button
-					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 -ml-1.5 px-1.5 rounded-md hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 -ml-1.5 px-1.5 rounded-md hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
 					aria-label={$i18n.t('Switch branch')}
 					disabled={busy}
 					><Icon name="git-branch" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-600 dark:text-gray-400 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-base-600 dark:text-base-400 group-hover/selector:text-base-700 dark:group-hover/selector:text-base-300"
 						>{branchLabel}</span
 					><Icon name="chevron-down" size={9} /></button
 				>
 				<div slot="content">
 					<DropdownMenu className="w-56 text-xs">
 						<div class="flex items-center gap-1.5 h-6 mt-0.5 mx-2">
-							<Icon name="search" size={13} class="text-gray-300 dark:text-gray-600" /><input
-								class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-500 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 outline-none"
+							<Icon name="search" size={13} class="text-base-300 dark:text-base-600" /><input
+								class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-base-500 dark:text-base-400 placeholder:text-base-300 dark:placeholder:text-base-600 outline-none"
 								aria-label={$i18n.t('Search branches')}
 								placeholder={$i18n.t('Search branches')}
 								bind:value={branchSearch}
@@ -565,8 +565,8 @@
 									.includes(branchSearch.toLowerCase())) as branch}
 								<div
 									class="group flex items-center gap-1 w-full h-6 rounded-xl text-xs transition-colors duration-75 {branch.current
-										? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
-										: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
+										? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-white'
+										: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
 								>
 									<button
 										class="flex items-center gap-2 min-w-0 flex-1 h-full px-2 text-inherit"
@@ -577,12 +577,12 @@
 										>{#if branch.current}<Icon
 												name="check"
 												size={12}
-												class="text-gray-400 dark:text-gray-500"
+												class="text-base-400 dark:text-base-500"
 											/>{/if}</button
 									>
 									<Dropdown side="top" align="end" closeOnSelect>
 										<button
-											class="flex items-center justify-center w-5 h-5 mr-0.5 rounded-lg shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100/30 dark:hover:bg-gray-800/20"
+											class="flex items-center justify-center w-5 h-5 mr-0.5 rounded-lg shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300 hover:bg-base-100/30 dark:hover:bg-base-800/20"
 											aria-label={`${$i18n.t('Branch actions')} ${branch.name}`}
 											><Icon name="three-dots" size={12} /></button
 										>
@@ -621,8 +621,8 @@
 								class="flex items-center gap-2 h-7 px-2"
 								on:submit|preventDefault={() => act('branch', { branch: newBranch })}
 							>
-								<Icon name="git-branch" size={14} class="text-gray-400" /><input
-									class="min-w-0 flex-1 bg-transparent text-xs outline-none text-gray-900 dark:text-white"
+								<Icon name="git-branch" size={14} class="text-base-400" /><input
+									class="min-w-0 flex-1 bg-transparent text-xs outline-none text-base-900 dark:text-white"
 									aria-label={$i18n.t('New branch')}
 									placeholder={$i18n.t('New branch')}
 									bind:value={newBranch}
@@ -636,7 +636,7 @@
 							</form>
 						{:else}<div>
 								<button
-									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5"
 									on:click={() => (creatingBranch = true)}
 									><Icon name="plus" size={14} />{$i18n.t('New branch')}</button
 								>
@@ -646,20 +646,20 @@
 			</Dropdown>
 			<Dropdown side="top" maxHeight="15rem" bind:show={showWorktrees} onOpenChange={loadWorktrees}>
 				<button
-					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 px-1.5 rounded-md hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+					class="group/selector flex min-w-0 max-w-32 shrink items-center gap-1.5 h-6 px-1.5 rounded-md hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
 					aria-label={$i18n.t('Worktrees')}
 					disabled={busy}
 				>
 					<Icon name="folder" size={12} /><span
-						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-gray-500 dark:text-gray-500 group-hover/selector:text-gray-700 dark:group-hover/selector:text-gray-300"
+						class="min-w-0 truncate whitespace-nowrap text-[0.6875rem] text-base-500 dark:text-base-500 group-hover/selector:text-base-700 dark:group-hover/selector:text-base-300"
 						>{status.root?.split('/').pop()}</span
 					><Icon name="chevron-down" size={9} />
 				</button>
 				<div slot="content">
 					<DropdownMenu className="w-56 text-xs">
 						<div class="flex items-center gap-1.5 h-6 mt-0.5 mx-2">
-							<Icon name="search" size={13} class="text-gray-300 dark:text-gray-600" /><input
-								class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-500 dark:text-gray-400 placeholder:text-gray-300 dark:placeholder:text-gray-600 outline-none"
+							<Icon name="search" size={13} class="text-base-300 dark:text-base-600" /><input
+								class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-base-500 dark:text-base-400 placeholder:text-base-300 dark:placeholder:text-base-600 outline-none"
 								aria-label={$i18n.t('Search worktrees')}
 								placeholder={$i18n.t('Search worktrees')}
 								bind:value={worktreeSearch}
@@ -670,8 +670,8 @@
 									.toLowerCase()
 									.includes(worktreeSearch.toLowerCase())) as tree}<button
 									class="flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs {tree.current
-										? 'bg-gray-100 dark:bg-white/6 text-gray-900 dark:text-white'
-										: 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'}"
+										? 'bg-base-100 dark:bg-white/6 text-base-900 dark:text-white'
+										: 'text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5'}"
 									disabled={tree.current}
 									on:click={() => {
 										showWorktrees = false;
@@ -680,7 +680,7 @@
 									><Icon name="folder" size={14} /><span class="min-w-0 flex-1 text-left truncate"
 										>{tree.branch || tree.path.split('/').pop()}</span
 									><span
-										class="min-w-0 max-w-[45%] truncate text-[0.6875rem] text-gray-300 dark:text-gray-600"
+										class="min-w-0 max-w-[45%] truncate text-[0.6875rem] text-base-300 dark:text-base-600"
 										>{tree.path}</span
 									>{#if tree.current}<Icon name="check" size={12} />{/if}</button
 								>{/each}
@@ -711,7 +711,7 @@
 							</form>
 						{:else}<div>
 								<button
-									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5"
+									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5"
 									on:click={() => (creatingWorktree = true)}
 									><Icon name="plus" size={14} />{$i18n.t('New worktree')}</button
 								>
@@ -730,7 +730,7 @@
 					>{/if}
 				{#if additions || deletions}<span class="flex gap-1 shrink-0"
 						><span class="text-green-600 dark:text-green-400">+{additions}</span><span
-							class="text-gray-500 dark:text-gray-400">-{deletions}</span
+							class="text-base-500 dark:text-base-400">-{deletions}</span
 						></span
 					>{/if}
 			</button>
@@ -744,7 +744,7 @@
 			{/if}
 			<span
 				role="status"
-				class="shrink-0 text-[0.625rem] font-mono whitespace-nowrap text-gray-500 dark:text-gray-400 {feedbackMessage
+				class="shrink-0 text-[0.625rem] font-mono whitespace-nowrap text-base-500 dark:text-base-400 {feedbackMessage
 					? 'ml-1.5'
 					: ''}">{feedbackMessage ? $i18n.t(feedbackMessage) : ''}</span
 			>
@@ -755,7 +755,7 @@
 				].join('\n')}
 			>
 				<button
-					class="flex shrink-0 items-center justify-center h-6 w-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-75"
+					class="flex shrink-0 items-center justify-center h-6 w-6 text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-75"
 					aria-label={$i18n.t(busy && syncFeedback ? syncMessage : syncLabel)}
 					aria-busy={busy && !!syncFeedback}
 					on:click={() => act(syncAction)}
@@ -770,30 +770,30 @@
 				>
 			</Tooltip>
 			<button
-				class="flex h-6 w-5 items-center justify-center text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 ml-0.5 shrink-0"
+				class="flex h-6 w-5 items-center justify-center text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 ml-0.5 shrink-0"
 				aria-label={expanded ? $i18n.t('Collapse Git panel') : $i18n.t('Expand Git panel')}
 				on:click={toggle}><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} /></button
 			>
 		</div>
 		{#if error}<div
 				role="alert"
-				class="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 break-words"
+				class="px-3 py-2 text-xs text-base-500 dark:text-base-400 break-words"
 			>
 				{error}
 			</div>{/if}
 		{#if expanded}
 			<div
-				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-gray-100/50 dark:border-white/2"
+				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-base-100/50 dark:border-white/2"
 				style:height={`${height + 32}px`}
 			>
 				<div
-					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-gray-100/50 dark:border-white/2"
+					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-base-100/50 dark:border-white/2"
 				>
 					{#each ['changes', 'history', ...(github?.available ? [...(github.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
-								? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-900 dark:text-white'
-								: 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}"
+								? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-white'
+								: 'text-base-400 hover:text-base-600 dark:hover:text-base-300'}"
 							on:click={() => {
 								view = section as typeof view;
 								resetSelection();
@@ -808,11 +808,11 @@
 											? 'Issues'
 											: 'Pull requests'
 							)}{#if section === 'changes' && status.files.length}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{status.files.length}</span
+									class="ml-1 text-base-400 dark:text-base-500">{status.files.length}</span
 								>{:else if section === 'pull requests' && openPullRequests}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{openPullRequests}</span
+									class="ml-1 text-base-400 dark:text-base-500">{openPullRequests}</span
 								>{:else if section === 'issues' && openIssues}<span
-									class="ml-1 text-gray-400 dark:text-gray-500">{openIssues}</span
+									class="ml-1 text-base-400 dark:text-base-500">{openIssues}</span
 								>{/if}</button
 						>{/each}
 					<div class="flex-1"></div>
@@ -823,46 +823,46 @@
 								target="_blank"
 								rel="noopener noreferrer"
 								aria-label={$i18n.t('View on {{platform}}', { platform: remotePlatform })}
-								class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+								class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-base-400 hover:text-base-600 dark:hover:text-base-300"
 								><Icon name="external-link" size={10} /></a
 							>
 						</Tooltip>
 					{/if}
 					<Dropdown side="top" align="end">
 						<button
-							class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							class="flex items-center justify-center w-5 h-4 py-0.5 rounded-md text-base-400 hover:text-base-600 dark:hover:text-base-300"
 							aria-label={$i18n.t('Diff settings')}><Icon name="settings" size={10} /></button
 						>
 						<div slot="content">
 							<DropdownMenu className="w-48"
 								><div class="py-0.5 text-xs font-normal">
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/6"
+										class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs text-base-500 dark:text-base-400 hover:bg-base-100 dark:hover:bg-white/6"
 										aria-pressed={hideWhitespace}
 										on:click={() => (hideWhitespace = !hideWhitespace)}
 										><Icon name="code" size={13} /><span class="min-w-0 flex-1 truncate"
 											>{$i18n.t('Hide whitespace')}</span
 										><span
 											class="relative h-3.5 w-6 rounded-full {hideWhitespace
-												? 'bg-gray-900 dark:bg-white'
-												: 'bg-gray-300 dark:bg-gray-700'}"
+												? 'bg-base-900 dark:bg-white'
+												: 'bg-base-300 dark:bg-base-700'}"
 											><span
 												class="absolute top-0.5 h-2.5 w-2.5 rounded-full {hideWhitespace
 													? 'left-3 bg-white dark:bg-black'
-													: 'left-0.5 bg-white dark:bg-gray-500'}"
+													: 'left-0.5 bg-white dark:bg-base-500'}"
 											></span></span
 										></button
 									>
 									<div
-										class="px-2 pb-0.5 pt-1 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
+										class="px-2 pb-0.5 pt-1 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
 									>
 										{$i18n.t('Display')}
 									</div>
 									{#each ['unified', 'split'] as mode}<button
 											class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs {diffMode ===
 											mode
-												? 'bg-gray-100 dark:bg-white/6 text-gray-900 dark:text-white'
-												: 'text-gray-500 dark:text-gray-400'}"
+												? 'bg-base-100 dark:bg-white/6 text-base-900 dark:text-white'
+												: 'text-base-500 dark:text-base-400'}"
 											on:click={() => (diffMode = mode as typeof diffMode)}
 											><Icon name={mode === 'unified' ? 'list' : 'split-view'} size={13} /><span
 												class="flex-1">{$i18n.t(mode === 'unified' ? 'Unified' : 'Split')}</span
@@ -912,10 +912,10 @@
 							{#if view === 'changes'}
 								{#if status.files.length}
 									<div
-										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-gray-100/50 dark:border-white/2 shrink-0"
+										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-base-100/50 dark:border-white/2 shrink-0"
 									>
 										<button
-											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-gray-50 dark:hover:bg-white/3"
+											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-base-50 dark:hover:bg-white/3"
 											disabled={busy}
 											role="checkbox"
 											aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
@@ -926,10 +926,10 @@
 										>
 											<span
 												class:opacity-60={!!pendingStaging}
-												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {allStaged
-													? 'bg-gray-800 dark:bg-white'
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-base-300 dark:border-base-600 {allStaged
+													? 'bg-base-800 dark:bg-white'
 													: someStaged
-														? 'bg-gray-400 dark:bg-gray-500'
+														? 'bg-base-400 dark:bg-base-500'
 														: ''}"
 												>{#if allStaged || someStaged}<Icon
 														name={allStaged ? 'check' : 'minus'}
@@ -938,7 +938,7 @@
 													/>{/if}</span
 											>
 											<span
-												class="min-w-0 truncate text-[0.6875rem] text-gray-600 dark:text-gray-400"
+												class="min-w-0 truncate text-[0.6875rem] text-base-600 dark:text-base-400"
 												>{status.files.length}
 												{$i18n.t(
 													status.files.length === 1 ? 'changed file' : 'changed files'
@@ -947,7 +947,7 @@
 										</button>
 										{#if pickedFiles.length > 1}
 											<button
-												class="flex shrink-0 items-center gap-0.5 text-[0.625rem] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+												class="flex shrink-0 items-center gap-0.5 text-[0.625rem] text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200"
 												aria-label={$i18n.t('Clear selection')}
 												on:click={() => {
 													picked = new Set();
@@ -961,7 +961,7 @@
 										{/if}
 										<Dropdown align="end" closeOnSelect>
 											<button
-												class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+												class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 												aria-label={$i18n.t('More options')}
 												><Icon name="three-dots" size={12} /></button
 											>
@@ -993,16 +993,16 @@
 										<div
 											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left select-none transition-colors duration-75 {selected?.path ===
 												file.path || picked.has(file.path)
-												? 'bg-gray-100/40 dark:bg-gray-800/25'
-												: 'hover:bg-gray-50 dark:hover:bg-white/3'}"
+												? 'bg-base-100/40 dark:bg-base-800/25'
+												: 'hover:bg-base-50 dark:hover:bg-white/3'}"
 											class:opacity-60={discarding?.has(file.path)}
 											on:click|capture={(event) => pick(event, file)}
 										>
 											<button
 												data-no-pick
-												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-gray-300 dark:border-gray-600 {checked
-													? 'bg-gray-800 dark:bg-white'
-													: 'hover:border-gray-500 dark:hover:border-gray-400'}"
+												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-base-300 dark:border-base-600 {checked
+													? 'bg-base-800 dark:bg-white'
+													: 'hover:border-base-500 dark:hover:border-base-400'}"
 												disabled={busy}
 												class:opacity-60={staging}
 												role="checkbox"
@@ -1020,13 +1020,13 @@
 											</button>
 											<div class="flex min-w-0 flex-1 items-center gap-0.5 h-full">
 												{#if file.path.includes('/')}<button
-														class="min-w-0 truncate text-[0.625rem] text-gray-400 dark:text-gray-600"
+														class="min-w-0 truncate text-[0.625rem] text-base-400 dark:text-base-600"
 														aria-label={`${$i18n.t('View changes')} ${file.path}`}
 														on:click={() => selectFile(file, file.staged)}
 														>{file.path.slice(0, file.path.lastIndexOf('/') + 1)}</button
 													>{/if}
 												<button
-													class="min-w-0 truncate text-[0.6875rem] text-gray-800 dark:text-gray-200 hover:underline"
+													class="min-w-0 truncate text-[0.6875rem] text-base-800 dark:text-base-200 hover:underline"
 													aria-label={`${$i18n.t('Open file')} ${file.path}`}
 													on:click={() => {
 														if (status?.root)
@@ -1040,7 +1040,7 @@
 												></button>
 											</div>
 											{#if file.binary}<span
-													class="text-[0.625rem] font-mono font-normal text-gray-400"
+													class="text-[0.625rem] font-mono font-normal text-base-400"
 													title={file.status}
 													>{file.status === 'untracked' ? 'U' : file.status[0].toUpperCase()}</span
 												>{:else}<button
@@ -1048,13 +1048,13 @@
 													aria-label={`${$i18n.t('View changes')} ${file.path}`}
 													on:click={() => selectFile(file, file.staged)}
 													><span class="text-green-600 dark:text-green-400">+{file.additions}</span
-													><span class="text-gray-500 dark:text-gray-400">-{file.deletions}</span
+													><span class="text-base-500 dark:text-base-400">-{file.deletions}</span
 													></button
 												>{/if}
 											<Dropdown side="top" align="end" closeOnSelect>
 												<button
 													data-no-pick
-													class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+													class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 													aria-label={`${$i18n.t('File actions')} ${file.path}`}
 													><Icon name="three-dots" size={12} /></button
 												>
@@ -1086,13 +1086,13 @@
 										</div>
 									{/each}
 									{#if !status.files.length}<div
-											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 										>
 											{$i18n.t('No changes')}
 										</div>{/if}
 								</div>
 								<form
-									class="border-t border-gray-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+									class="border-t border-base-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
 									on:submit|preventDefault={() =>
 										act('commit', {
 											message: [summary.trim(), description.trim()].filter(Boolean).join('\n\n')
@@ -1100,13 +1100,13 @@
 								>
 									<div class="rounded-lg overflow-hidden">
 										<input
-											class="w-full h-6 px-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+											class="w-full h-6 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 											aria-label={$i18n.t('Commit summary')}
 											placeholder={$i18n.t('Summary')}
 											bind:value={summary}
 										/>
 										<textarea
-											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100/50 dark:border-white/2"
+											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-white/2"
 											rows="3"
 											aria-label={$i18n.t('Description')}
 											placeholder={$i18n.t('Description')}
@@ -1116,8 +1116,8 @@
 									<button
 										class="w-full h-6 mt-1 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {staged.length &&
 										summary.trim()
-											? 'bg-gray-900 dark:bg-white text-white dark:text-black hover:bg-gray-800 dark:hover:bg-white/90'
-											: 'bg-gray-100 dark:bg-white/6 text-gray-400 dark:text-gray-600 cursor-default'}"
+											? 'bg-base-900 dark:bg-white text-white dark:text-black hover:bg-base-800 dark:hover:bg-white/90'
+											: 'bg-base-100 dark:bg-white/6 text-base-400 dark:text-base-600 cursor-default'}"
 										disabled={busy || !staged.length || !summary.trim()}
 									>
 										{staged.length
@@ -1133,10 +1133,10 @@
 							{:else}
 								<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 									{#each commits as commit, index}<div
-											class="group flex min-w-0 items-center border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selectedCommit?.hash ===
+											class="group flex min-w-0 items-center border-b border-base-50/50 dark:border-white/2 transition-colors duration-75 {selectedCommit?.hash ===
 											commit.hash
-												? 'bg-gray-100/40 dark:bg-gray-800/25'
-												: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
+												? 'bg-base-100/40 dark:bg-base-800/25'
+												: 'hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
 										>
 											<Tooltip content={commit.hash} className="flex min-w-0 flex-1"
 												><button
@@ -1148,17 +1148,17 @@
 															title={$i18n.t('Unpushed')}
 														></span>{/if}
 													<div class="flex flex-col min-w-0 flex-1">
-														<span class="text-xs text-gray-800 dark:text-gray-200 truncate"
+														<span class="text-xs text-base-800 dark:text-base-200 truncate"
 															>{commit.message}</span
 														><span
-															class="text-[0.625rem] text-gray-400 dark:text-gray-600 font-mono truncate"
+															class="text-[0.625rem] text-base-400 dark:text-base-600 font-mono truncate"
 															>{commit.author} · {relativeTime(commit.date)}</span
 														>
 													</div>
 												</button></Tooltip
 											><Dropdown side="top" align="end" closeOnSelect
 												><button
-													class="flex items-center justify-center w-5 h-5 mr-1 rounded shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+													class="flex items-center justify-center w-5 h-5 mr-1 rounded shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 													aria-label={`${$i18n.t('Commit actions')} ${commit.short_hash}`}
 													><Icon name="three-dots" size={12} /></button
 												>
@@ -1180,7 +1180,7 @@
 											>
 										</div>{/each}
 									{#if !commits.length}<div
-											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 										>
 											{$i18n.t('No commits yet')}
 										</div>{/if}
@@ -1200,7 +1200,7 @@
 						>
 							{#if selected || selectedCommit}
 								<div
-									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-white/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 								>
 									<button
 										class="@min-[560px]:hidden"
@@ -1212,13 +1212,13 @@
 									>
 									{#if diff && !loadingDiff}<span class="flex shrink-0 items-center gap-1"
 											><span class="text-green-600 dark:text-green-400">+{diffStats.additions}</span
-											><span class="text-gray-500 dark:text-gray-400">-{diffStats.deletions}</span
+											><span class="text-base-500 dark:text-base-400">-{diffStats.deletions}</span
 											></span
 										>{/if}
 								</div>
 								<div class="min-h-0 flex-1 overflow-auto scrollbar-hidden text-[0.6875rem]">
 									{#if loadingDiff}<p
-											class="flex h-full items-center justify-center p-3 text-center text-gray-400"
+											class="flex h-full items-center justify-center p-3 text-center text-base-400"
 										>
 											{$i18n.t('Loading...')}
 										</p>{:else if diff}<GitDiff
@@ -1226,13 +1226,13 @@
 											mode={diffMode}
 											{hideWhitespace}
 										/>{:else}<div
-											class="flex h-full items-center justify-center p-3 text-center text-gray-400 dark:text-gray-600"
+											class="flex h-full items-center justify-center p-3 text-center text-base-400 dark:text-base-600"
 										>
 											{$i18n.t('No text changes')}
 										</div>{/if}
 								</div>
 							{:else}<div
-									class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+									class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 								>
 									{$i18n.t(
 										view === 'history'
@@ -1248,14 +1248,14 @@
 	</section>
 {:else if detectionError}
 	<div
-		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-gray-100/50 dark:border-white/2 px-3 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-base-100/50 dark:border-white/2 px-3 text-[0.6875rem] text-base-500 dark:text-base-400"
 	>
 		<Icon name="git-branch" size={12} />
 		<Tooltip content={detectionError} className="min-w-0 flex-1"
 			><span>{$i18n.t('Git unavailable')}</span></Tooltip
 		>
 		<button
-			class="flex h-6 w-6 items-center justify-center rounded-md hover:bg-gray-100/30 dark:hover:bg-gray-800/20"
+			class="flex h-6 w-6 items-center justify-center rounded-md hover:bg-base-100/30 dark:hover:bg-base-800/20"
 			aria-label={$i18n.t('Retry Git detection')}
 			on:click={() => refresh(true)}><Icon name="refresh" size={12} /></button
 		>

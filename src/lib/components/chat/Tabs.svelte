@@ -1893,7 +1893,7 @@
 		role="status"
 	>
 		<div
-			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
 		>
 			<Icon name="split-horizontal" size={14} strokeWidth={1.5} />
 			<span class="truncate">{$i18n.t('Open in side panel')}</span>
@@ -1947,14 +1947,14 @@
 	class="h-full w-full min-h-0 flex flex-col {fullWidth
 		? 'absolute inset-0 pointer-events-none'
 		: ''}"
-	style:--chat-tabs-dark-background={'var(--color-gray-900)'}
+	style:--chat-tabs-dark-background={'var(--color-base-900)'}
 	id="controls-container"
 >
 	<div bind:this={paneCanvas} class="relative flex-1 min-h-0 min-w-0">
 		{#if viewError}
 			<div
 				role="alert"
-				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-white dark:bg-gray-900 p-3 text-sm"
+				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-white dark:bg-base-900 p-3 text-sm"
 			>
 				{viewError}
 				<button
@@ -1971,7 +1971,7 @@
 			<div
 				role="status"
 				aria-label={$i18n.t('Loading…')}
-				class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
+				class="absolute inset-0 flex items-center justify-center text-sm text-base-500"
 			>
 				<Spinner className="size-5" />
 			</div>
@@ -1979,7 +1979,7 @@
 		{#if fullWidth && viewReady && !chatLoading}
 			<button
 				type="button"
-				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40 disabled:opacity-30 pointer-events-auto"
+				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-base-500 hover:bg-base-50/40 dark:text-base-400 dark:hover:bg-base-800/40 disabled:opacity-30 pointer-events-auto"
 				aria-label={$i18n.t('Split screen')}
 				title={[
 					$i18n.t('Split screen'),
@@ -2041,7 +2041,7 @@
 				}}
 			>
 				<div
-					class="absolute bg-gray-200/40 dark:bg-gray-850/20 group-hover:bg-gray-300/60 dark:group-hover:bg-gray-800 transition-colors {divider.direction ===
+					class="absolute bg-base-200/40 dark:bg-base-850/20 group-hover:bg-base-300/60 dark:group-hover:bg-base-800 transition-colors {divider.direction ===
 					'horizontal'
 						? 'inset-y-0 left-1/2 w-px'
 						: 'inset-x-0 top-1/2 h-px'}"
@@ -2071,7 +2071,7 @@
 				{#if tab.terminalId && !target}
 					<div
 						role="status"
-						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+						class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
 					>
 						{$i18n.t('Terminal connection unavailable')}
 					</div>
@@ -2168,14 +2168,14 @@
 					{#if chatView.pending.has(tab.id)}
 						<p
 							role="status"
-							class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+							class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
 						>
 							{$i18n.t('Connecting…')}
 						</p>
 					{:else if !tab.sessionId || failure}
 						<div
 							role="status"
-							class="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+							class="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-xs text-base-400 dark:text-base-500"
 						>
 							<p>
 								{failure?.status === 404
@@ -2355,7 +2355,7 @@
 		{/each}
 		<!-- The mobile drawer hides the main chat tab, so count what it actually shows. -->
 		{#if viewReady && !chatLoading && !viewError && !renderedTabs.tabs.length && (canOpenNewTab || !isLargeScreen)}<div
-				class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
+				class="flex h-full items-center justify-center p-3 text-center text-xs text-base-500 dark:text-base-400"
 			>
 				{canOpenNewTab ? $i18n.t('Open a tab using the + menu.') : $i18n.t('No open tabs')}
 			</div>{/if}
@@ -2410,8 +2410,8 @@
 						on:click={() => selectTab(tab.id)}
 						class="panel-tab flex cursor-pointer items-center gap-1.5 ps-2.5 pe-2 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {group.activeId ===
 						tab.id
-							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200'
-							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+							? 'bg-base-100/40 dark:bg-base-800/25 text-base-700 dark:text-base-200'
+							: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20 hover:text-base-600 dark:hover:text-base-300'}"
 					>
 						<button
 							role="tab"
@@ -2467,13 +2467,13 @@
 									>{tab.id === mainChatTabId ? mainTabTitle : tabLabel(tab)}</span
 								>
 							{/if}
-							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
+							{#if tab.kind === 'comments' && commentCount}<span class="text-base-400"
 									>{commentCount}</span
 								>{/if}
 						</button>
 						{@render titleEditor?.()}
 						{#if tab.untitled || dirtyFiles[tab.id]}<span
-								class="ms-1 size-1.5 shrink-0 rounded-full bg-gray-400"
+								class="ms-1 size-1.5 shrink-0 rounded-full bg-base-400"
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.id === mainChatTabId}
@@ -2481,7 +2481,7 @@
 								<input
 									data-folder-tab-rename
 									bind:value={folderNameDraft}
-									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-gray-700 outline-hidden dark:text-gray-300"
+									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-base-700 outline-hidden dark:text-base-300"
 									aria-label={$i18n.t('Folder Name')}
 									on:click|stopPropagation
 									on:keydown={(e) => {
@@ -2502,7 +2502,7 @@
 									>{@render chatTabActions[tab.id]?.()}</span
 								>{/if}<button
 								type="button"
-								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+								class="flex items-center justify-center w-4 h-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-white/10 dark:hover:text-white"
 								title={[
 									$i18n.t('Close'),
 									$settings?.keyboardShortcuts !== false ? formatChord($keybindings.closeTab) : ''
@@ -2522,7 +2522,7 @@
 				<Dropdown align="start" closeOnSelect>
 					<button
 						type="button"
-						class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+						class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
 						aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
 					>
 					<div slot="content">
@@ -2605,7 +2605,7 @@
 		{#if !fullWidth && (!isLargeScreen || group.id === tabs.groups[0].id)}
 			<button
 				type="button"
-				class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+				class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
 				on:click={() => showTabs.set(false)}
 				aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
 			>
@@ -2635,7 +2635,7 @@
 				panelStyle={$mobile ? panelStyle : ''}
 				backdropStyle={$mobile ? backdropStyle : ''}
 				swipeSide={$mobile ? 'right' : undefined}
-				className="min-h-[100dvh] !bg-white dark:!bg-gray-900"
+				className="min-h-[100dvh] !bg-white dark:!bg-base-900"
 			>
 				<div use:preservePanel bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>

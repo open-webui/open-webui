@@ -70,7 +70,7 @@
 <div
 	data-knowledge-row={item.id || file.itemId}
 	class="flex h-7 min-w-0 items-center rounded-xl {active || dragOver
-		? 'bg-gray-100 dark:bg-white/8'
+		? 'bg-base-100 dark:bg-white/8'
 		: ''}"
 	style:padding-left={`${8 + depth * 16}px`}
 	role="presentation"
@@ -150,11 +150,11 @@
 				on:blur={rename}
 			/>
 		{:else}<span class="min-w-0 flex-1 truncate"
-				>{name}{#if search && file.directory_path}<span class="ml-1 text-gray-400"
+				>{name}{#if search && file.directory_path}<span class="ml-1 text-base-400"
 						>{file.directory_path}</span
 					>{/if}</span
 			>{/if}
-		{#if !directory && !renaming}<span class="shrink-0 text-[0.6875rem] text-gray-400"
+		{#if !directory && !renaming}<span class="shrink-0 text-[0.6875rem] text-base-400"
 				>{pending
 					? status === 'uploading'
 						? $i18n.t('Uploading')
@@ -170,7 +170,7 @@
 			><button
 				type="button"
 				aria-label={$i18n.t('More')}
-				class="mr-1 flex size-5 shrink-0 items-center justify-center text-gray-400"
+				class="mr-1 flex size-5 shrink-0 items-center justify-center text-base-400"
 				><Icon name="three-dots" size={12} /></button
 			>
 			<div slot="content">
@@ -179,7 +179,7 @@
 							>{expanded ? $i18n.t('Collapse') : $i18n.t('Expand')}</button
 						>{:else}<button type="button" on:click={onDownload}>{$i18n.t('Download')}</button>{/if}
 					{#if writeAccess}
-						{#if directory}<hr class="border-gray-100 dark:border-gray-800" />
+						{#if directory}<hr class="border-base-100 dark:border-base-800" />
 							<button type="button" on:click={() => onAdd('new_directory')}
 								>{$i18n.t('New folder')}</button
 							><button type="button" on:click={() => onAdd('files')}
@@ -190,7 +190,7 @@
 								>{$i18n.t('Add text content')}</button
 							><button type="button" on:click={() => onAdd('web')}>{$i18n.t('Add webpage')}</button
 							>{/if}
-						<hr class="border-gray-100 dark:border-gray-800" />
+						<hr class="border-base-100 dark:border-base-800" />
 						<button type="button" on:click={startRename}>{$i18n.t('Rename')}</button><button
 							type="button"
 							on:click={onDelete}

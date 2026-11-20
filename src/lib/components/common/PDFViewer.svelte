@@ -777,12 +777,12 @@
 
 	{#if !error && pdfDoc}
 		<div
-			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-gray-850/90 backdrop-blur-sm shadow-lg border border-gray-200/60 dark:border-gray-700/60 px-1 py-0.5"
+			class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-base-850/90 backdrop-blur-sm shadow-lg border border-base-200/60 dark:border-base-700/60 px-1 py-0.5"
 		>
 			{#if singlePage}
 				<button
 					type="button"
-					class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
+					class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 disabled:opacity-30"
 					disabled={selectedPage === 1}
 					on:click={() => selectPage(selectedPage - 1)}
 					aria-label={`Previous ${itemLabel.toLowerCase()}`}
@@ -801,12 +801,12 @@
 					</svg>
 				</button>
 				<span
-					class="shrink-0 min-w-12 text-center text-[0.6875rem] text-gray-500 dark:text-gray-400 tabular-nums"
+					class="shrink-0 min-w-12 text-center text-[0.6875rem] text-base-500 dark:text-base-400 tabular-nums"
 					>{selectedPage} / {pageCount}</span
 				>
 				<button
 					type="button"
-					class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 disabled:opacity-30"
+					class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 disabled:opacity-30"
 					disabled={selectedPage === pageCount}
 					on:click={() => selectPage(selectedPage + 1)}
 					aria-label={`Next ${itemLabel.toLowerCase()}`}
@@ -828,7 +828,7 @@
 			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 pointer-coarse:hidden"
 				on:click={zoomOut}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -847,7 +847,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition tabular-nums"
+				class="shrink-0 min-w-12 h-7 px-1.5 py-1 text-center text-[0.6875rem] font-normal text-base-500 dark:text-base-400 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition tabular-nums"
 				on:click={resetView}
 				aria-label={$i18n.t('Reset zoom')}
 			>
@@ -855,7 +855,7 @@
 			</button>
 			<button
 				type="button"
-				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 pointer-coarse:hidden"
+				class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 pointer-coarse:hidden"
 				on:click={zoomIn}
 				aria-label={$i18n.t('Zoom in')}
 			>

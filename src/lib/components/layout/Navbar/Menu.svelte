@@ -338,7 +338,7 @@
 	<div slot="content">
 		<DropdownMenu className="select-none min-w-[12.5rem] max-w-[12.5rem] transition">
 			<!-- <DropdownMenu.Item draggable="false"
-				class="flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal  cursor-pointer dark:hover:bg-gray-800 rounded-xl"
+				class="flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal  cursor-pointer dark:hover:bg-base-800 rounded-xl"
 				on:click={async () => {
 					await showSettings.set(!$showSettings);
 				}}
@@ -369,7 +369,7 @@
 			{#if scrollToTop}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					on:click={() => {
 						scrollToTop();
 					}}
@@ -393,13 +393,13 @@
 			{/if}
 
 			{#if scrollToTop}
-				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+				<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 			{/if}
 
 			{#if !readOnly && !isTemporary && ($user?.role === 'admin' || ($user.permissions?.chat?.share ?? true))}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					id="chat-share-button"
 					on:click={() => {
 						shareHandler();
@@ -415,7 +415,7 @@
 					<button
 						slot="trigger"
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					>
 						<Download className="size-3.5" strokeWidth="1.5" />
 
@@ -424,7 +424,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							downloadJSONExport();
 						}}
@@ -434,7 +434,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							downloadTxt();
 						}}
@@ -444,7 +444,7 @@
 
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							downloadPdf();
 						}}
@@ -457,7 +457,7 @@
 			{#if (!readOnly || $folders.find((folder) => folder.id === chat?.folder_id)?.user_id === $user?.id) && !isTemporary && chat?.id}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					on:click={() => {
 						renameHandler();
 					}}
@@ -470,7 +470,7 @@
 			{#if $user?.role === 'admin' || ($user.permissions?.chat?.export ?? true)}
 				<button
 					draggable="false"
-					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					id="chat-copy-button"
 					on:click={async () => {
 						const res = await copyToClipboard(await getChatAsText()).catch((e) => {
@@ -488,14 +488,14 @@
 			{/if}
 
 			{#if !readOnly && !isTemporary && chat?.id}
-				<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+				<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 				{#if $folders.length > 0}
 					<DropdownSub contentClass="select-none z-50" maxWidth={200}>
 						<button
 							slot="trigger"
 							draggable="false"
-							class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						>
 							<Folder className="size-3.5" strokeWidth="1.5" />
 
@@ -505,7 +505,7 @@
 							{#if folder?.id}
 								<button
 									draggable="false"
-									class="flex h-[1.6875rem] w-full items-center gap-2 overflow-hidden rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									class="flex h-[1.6875rem] w-full items-center gap-2 overflow-hidden rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 									on:click={() => {
 										moveChatHandler(chat.id, folder.id);
 									}}
@@ -524,7 +524,7 @@
 				{#if $visibleControls['chat.archive']}
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							archiveChatHandler();
 						}}
@@ -539,7 +539,7 @@
 				{#if $user?.role === 'admin' || ($user?.permissions?.chat?.delete ?? true)}
 					<button
 						draggable="false"
-						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							deleteChatHandler();
 						}}
@@ -550,21 +550,21 @@
 				{/if}
 
 				{#if $visibleControls['chat.tags']}
-					<hr class="border-gray-50/30 dark:border-gray-800/30 mx-1 my-0.5" />
+					<hr class="border-base-50/30 dark:border-base-800/30 mx-1 my-0.5" />
 
 					<!-- Same picker as folder chats. -->
 					<DropdownSub contentClass="select-none z-50 w-52" maxWidth={240}>
 						<button
 							slot="trigger"
 							draggable="false"
-							class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						>
 							<Tag className="size-3.5" strokeWidth="1.5" />
 							<div class="flex flex-1 items-center">{$i18n.t('Tags')}</div>
-							{#if chat?.meta?.tags?.length}<span class="text-xs tabular-nums text-gray-400"
+							{#if chat?.meta?.tags?.length}<span class="text-xs tabular-nums text-base-400"
 									>{chat.meta.tags.length}</span
 								>{/if}
-							<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+							<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 						</button>
 						<TagPicker
 							chatId={chat.id}

@@ -121,16 +121,16 @@
 />
 
 <div
-	class="flex h-full min-h-0 flex-col text-xs font-normal text-gray-600 dark:text-gray-400"
+	class="flex h-full min-h-0 flex-col text-xs font-normal text-base-600 dark:text-base-400"
 	aria-label={$i18n.t('Compare')}
 >
 	<div class="flex shrink-0 flex-wrap items-center gap-3 px-5 pt-4 pb-2">
-		<h2 class="min-w-0 flex-1 font-medium text-gray-900 dark:text-gray-100">
+		<h2 class="min-w-0 flex-1 font-medium text-base-900 dark:text-base-100">
 			{$i18n.t('Compare files')}
 		</h2>
 		<Tooltip content={$i18n.t('Swap')}>
 			<button
-				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 				on:click={() => {
 					[original, revised] = [revised, original];
 					void run();
@@ -140,7 +140,7 @@
 		</Tooltip>
 		<Tooltip content={$i18n.t('Refresh')}>
 			<button
-				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+				class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 				on:click={run}
 				disabled={loading}
 				aria-label={$i18n.t('Refresh')}
@@ -155,7 +155,7 @@
 		<Dropdown bind:this={menu} bind:show={menuOpen} align="end" sideOffset={4}>
 			<Tooltip content={$i18n.t('Diff settings')}>
 				<button
-					class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+					class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 					aria-label={$i18n.t('Diff settings')}
 					><Icon
 						name={mode === 'unified' ? 'list' : 'split-horizontal'}
@@ -184,7 +184,7 @@
 							{#if mode === value}<Icon name="check" size={12} strokeWidth={1.4} />{/if}
 						</button>
 					{/each}
-					<hr class="border-gray-100 dark:border-gray-800" />
+					<hr class="border-base-100 dark:border-base-800" />
 					<button
 						type="button"
 						class="select-none font-normal transition"
@@ -202,7 +202,7 @@
 		</Dropdown>
 		<button
 			type="button"
-			class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+			class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
 			on:click|stopPropagation={onClose}
 			aria-label={$i18n.t('Close')}><Icon name="xmark" size={16} /></button
 		>
@@ -210,7 +210,7 @@
 	<div class="grid shrink-0 grid-cols-2 border-b border-black/5 dark:border-white/5">
 		{#each [original, revised] as path}
 			<Tooltip content={path} allowHTML={false} className="min-w-0 px-3 py-2">
-				<div class="truncate font-normal text-gray-700 dark:text-gray-300">{name(path)}</div>
+				<div class="truncate font-normal text-base-700 dark:text-base-300">{name(path)}</div>
 			</Tooltip>
 		{/each}
 	</div>
@@ -234,11 +234,11 @@
 				>+{result.additions}</span
 			>
 			<span
-				class="text-gray-500 dark:text-gray-400"
+				class="text-base-500 dark:text-base-400"
 				aria-label={$i18n.t('{{count}} removed lines', { count: result.deletions })}
 				>−{result.deletions}</span
 			>
-			<span class="ml-auto text-[11px] text-gray-400">
+			<span class="ml-auto text-[11px] text-base-400">
 				<Tooltip
 					content={[
 						...new Set([...(result.original.notices ?? []), ...(result.revised.notices ?? [])])
@@ -264,7 +264,7 @@
 				<div class="diff-content" class:split={mode === 'split'}>
 					{#each result.hunks as hunk}
 						<div
-							class="hunk-header select-none bg-black/[0.025] px-3 text-gray-400 dark:bg-white/[0.025] dark:text-gray-600"
+							class="hunk-header select-none bg-black/[0.025] px-3 text-base-400 dark:bg-white/[0.025] dark:text-base-600"
 						>
 							{hunk.header}
 						</div>
@@ -369,7 +369,7 @@
 	}
 	.number {
 		user-select: none;
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 		padding: 0 0.5rem;
 		text-align: right;
 		border-right: 1px solid rgb(0 0 0 / 0.05);
@@ -394,7 +394,7 @@
 	}
 	.removed {
 		background-color: var(--color-red-100);
-		color: var(--color-gray-600);
+		color: var(--color-base-600);
 		background-image: repeating-linear-gradient(
 			-45deg,
 			#ef4444 0,
@@ -410,7 +410,7 @@
 		color: var(--color-green-600);
 	}
 	.removed .marker {
-		color: var(--color-gray-500);
+		color: var(--color-base-500);
 	}
 	.added .changed {
 		background: rgb(22 163 74 / 0.38);
@@ -427,16 +427,16 @@
 	}
 	:global(.dark) .removed {
 		background-color: color-mix(in oklab, var(--color-red-500) 15%, transparent);
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	:global(.dark) .added .marker {
 		color: var(--color-green-400);
 	}
 	:global(.dark) .removed .marker {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	:global(.dark) .number {
-		color: var(--color-gray-600);
+		color: var(--color-base-600);
 		border-color: rgb(255 255 255 / 0.04);
 	}
 	:global(.dark) .split-cell + .split-cell {

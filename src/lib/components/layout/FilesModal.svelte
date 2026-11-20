@@ -278,11 +278,11 @@
 	}}
 	ariaLabel={$i18n.t('Files')}
 >
-	<div class="px-4 pb-3 pt-3 text-gray-700 dark:text-gray-200">
+	<div class="px-4 pb-3 pt-3 text-base-700 dark:text-base-200">
 		<div class="mb-2 flex h-6 items-center gap-2">
 			<div class="flex flex-1 items-center gap-1.5 text-sm font-medium">
 				{$i18n.t('Files')}
-				{#if shownFileCount !== null}<span class="text-xs font-normal tabular-nums text-gray-400"
+				{#if shownFileCount !== null}<span class="text-xs font-normal tabular-nums text-base-400"
 						>{shownFileCount}</span
 					>{/if}
 			</div>
@@ -291,7 +291,7 @@
 					type="button"
 					aria-label={$i18n.t('Selection actions')}
 					disabled={busy || !selectedIds.size}
-					class="flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs text-gray-500 transition hover:text-gray-900 disabled:opacity-40 dark:text-gray-400 dark:hover:text-gray-100"
+					class="flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs text-base-500 transition hover:text-base-900 disabled:opacity-40 dark:text-base-400 dark:hover:text-base-100"
 				>
 					{$i18n.t('Actions')}<Icon name="chevron-down" size={11} />
 				</button>
@@ -316,7 +316,7 @@
 				type="button"
 				aria-label={$i18n.t('Close')}
 				disabled={!!operation}
-				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
+				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 disabled:opacity-40 dark:hover:text-base-200"
 				on:click={() => {
 					show = false;
 				}}><XMark className="size-3.5" /></button
@@ -326,7 +326,7 @@
 		<div class="mb-1 flex h-7 items-center gap-2 px-1 pb-1">
 			{#if operation}
 				<Spinner className="size-3" />
-				<span class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-400" role="status"
+				<span class="min-w-0 flex-1 truncate text-xs text-base-500 dark:text-base-400" role="status"
 					>{$i18n.t(
 						operation === 'download'
 							? 'Preparing {{processed}} of {{total}}'
@@ -336,16 +336,16 @@
 				>
 				<button
 					type="button"
-					class="text-xs text-gray-500 hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+					class="text-xs text-base-500 hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 					disabled={stopRequested}
 					on:click={() => {
 						stopRequested = true;
 					}}>{stopRequested ? $i18n.t('Stopping...') : $i18n.t('Stop')}</button
 				>
 			{:else}
-				<Icon name="search" size={13} class="shrink-0 text-gray-400" />
+				<Icon name="search" size={13} class="shrink-0 text-base-400" />
 				<input
-					class="min-w-0 flex-1 bg-transparent py-1 text-xs outline-hidden placeholder:text-gray-400"
+					class="min-w-0 flex-1 bg-transparent py-1 text-xs outline-hidden placeholder:text-base-400"
 					bind:value={query}
 					disabled={showDeleteConfirmDialog}
 					placeholder={$i18n.t('Search Files')}
@@ -356,7 +356,7 @@
 						type="button"
 						aria-label={$i18n.t('Clear search')}
 						disabled={showDeleteConfirmDialog}
-						class="flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-600"
+						class="flex size-5 shrink-0 items-center justify-center text-base-400 hover:text-base-600"
 						on:click={() => {
 							query = '';
 						}}><XMark className="size-3" /></button
@@ -364,7 +364,7 @@
 				{#if selectedIds.size}
 					<span
 						role="status"
-						class="shrink-0 text-[0.6875rem] tabular-nums text-gray-500 dark:text-gray-400"
+						class="shrink-0 text-[0.6875rem] tabular-nums text-base-500 dark:text-base-400"
 						>{$i18n.t('{{count}} selected', { count: selectedIds.size })}</span
 					>
 					<button
@@ -372,7 +372,7 @@
 						aria-label={$i18n.t('Clear selection')}
 						title={$i18n.t('Clear selection')}
 						disabled={busy}
-						class="flex size-5 shrink-0 items-center justify-center text-gray-400 hover:text-gray-600 disabled:opacity-40 dark:hover:text-gray-200"
+						class="flex size-5 shrink-0 items-center justify-center text-base-400 hover:text-base-600 disabled:opacity-40 dark:hover:text-base-200"
 						on:click={() => {
 							selectedIds = new Set();
 							selectionStatus = 'idle';
@@ -383,11 +383,11 @@
 		</div>
 
 		{#if selectionStatus === 'loading'}
-			<div class="flex h-6 items-center gap-1.5 px-1 text-[0.6875rem] text-gray-500" role="status">
+			<div class="flex h-6 items-center gap-1.5 px-1 text-[0.6875rem] text-base-500" role="status">
 				<Spinner className="size-3" /><span>{$i18n.t('Selecting all matching files...')}</span>
 			</div>
 		{:else if selectionStatus === 'error'}
-			<div class="flex items-center gap-2 px-1 py-1 text-[0.6875rem] text-gray-500" role="alert">
+			<div class="flex items-center gap-2 px-1 py-1 text-[0.6875rem] text-base-500" role="alert">
 				<span
 					>{$i18n.t('Could not select all matching files. Your selection has not changed.')}</span
 				><button disabled={busy} class="shrink-0 underline" on:click={selectAllMatching}
@@ -396,7 +396,7 @@
 			</div>
 		{:else if allLoadedSelected && !allFilesLoaded && selectionStatus !== 'all' && !operation}
 			<button
-				class="h-6 px-1 text-[0.6875rem] text-gray-500 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+				class="h-6 px-1 text-[0.6875rem] text-base-500 transition hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
 				disabled={busy}
 				on:click={selectAllMatching}>{$i18n.t('Select all matching files')}</button
 			>
@@ -405,7 +405,7 @@
 		{#if files !== null}
 			{#if files.length}
 				<div
-					class="grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 text-[0.6875rem] text-gray-400 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
+					class="grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 text-[0.6875rem] text-base-400 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
 				>
 					<div class="flex justify-center">
 						<Checkbox
@@ -422,7 +422,7 @@
 					</div>
 					<button
 						disabled={busy}
-						class="flex items-center gap-1 text-left hover:text-gray-700 dark:hover:text-gray-200"
+						class="flex items-center gap-1 text-left hover:text-base-700 dark:hover:text-base-200"
 						on:click={() => {
 							direction = orderBy === 'filename' && direction === 'asc' ? 'desc' : 'asc';
 							orderBy = 'filename';
@@ -436,7 +436,7 @@
 					<span class="text-right">{$i18n.t('Size')}</span>
 					<button
 						disabled={busy}
-						class="hidden items-center justify-end gap-1 hover:text-gray-700 dark:hover:text-gray-200 sm:flex"
+						class="hidden items-center justify-end gap-1 hover:text-base-700 dark:hover:text-base-200 sm:flex"
 						on:click={() => {
 							direction = orderBy === 'created_at' && direction === 'asc' ? 'desc' : 'asc';
 							orderBy = 'created_at';
@@ -451,13 +451,13 @@
 			{/if}
 			<div class="max-h-[min(28rem,calc(100dvh-12rem))] overflow-y-auto">
 				{#if !files.length && !loadError}<div
-						class="flex min-h-20 items-center justify-center text-xs text-gray-400"
+						class="flex min-h-20 items-center justify-center text-xs text-base-400"
 					>
 						{$i18n.t('No files found')}
 					</div>{/if}
 				{#each sortedFiles as file (file.id)}
 					<div
-						class="group grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 rounded-xl text-xs transition-colors hover:bg-gray-50/40 dark:hover:bg-white/4 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
+						class="group grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 rounded-xl text-xs transition-colors hover:bg-base-50/40 dark:hover:bg-white/4 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
 					>
 						<div class="flex justify-center">
 							<Checkbox
@@ -486,11 +486,11 @@
 								>{file.filename}</span
 							>
 						</button>
-						<span class="truncate text-right text-[0.6875rem] tabular-nums text-gray-400"
+						<span class="truncate text-right text-[0.6875rem] tabular-nums text-base-400"
 							>{formatFileSize(file.meta?.size ?? 0)}</span
 						>
 						<span
-							class="hidden text-right text-[0.6875rem] tabular-nums text-gray-400 sm:block"
+							class="hidden text-right text-[0.6875rem] tabular-nums text-base-400 sm:block"
 							title={dayjs(file.created_at * 1000)
 								.locale($i18n.language)
 								.format('MMM D, YYYY h:mm A')}
@@ -503,7 +503,7 @@
 								type="button"
 								aria-label={$i18n.t('Actions for {{filename}}', { filename: file.filename })}
 								disabled={busy}
-								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 disabled:opacity-40 dark:hover:text-gray-200"
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 disabled:opacity-40 dark:hover:text-base-200"
 								><Icon name="three-dots" size={14} /></button
 							>
 							<div slot="content">
@@ -531,7 +531,7 @@
 					</div>
 				{/each}
 				{#if loadError}
-					<div role="alert" class="py-2 text-center text-xs text-gray-500">
+					<div role="alert" class="py-2 text-center text-xs text-base-500">
 						{$i18n.t('Could not load files.')}
 						<button disabled={busy} class="underline" on:click={() => loadFiles()}
 							>{$i18n.t('Retry')}</button

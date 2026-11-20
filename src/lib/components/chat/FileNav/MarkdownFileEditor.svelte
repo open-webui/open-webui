@@ -395,7 +395,7 @@
 >
 	{#if pendingImages.length}<div
 			role="status"
-			class="flex items-center gap-1.5 px-3 py-1 text-xs text-gray-500"
+			class="flex items-center gap-1.5 px-3 py-1 text-xs text-base-500"
 		>
 			<Spinner className="size-3" />{$i18n.t('Uploading image...')}
 		</div>{/if}

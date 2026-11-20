@@ -173,14 +173,14 @@
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div class="grid grid-cols-7">
 				{#each DAY_NAMES as day}
-					<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500 text-left truncate">
+					<div class="px-2 py-1.5 text-xs text-base-400 dark:text-base-500 text-left truncate">
 						{day}
 					</div>
 				{/each}
 			</div>
 
 			<div
-				class="flex-1 grid grid-cols-7 auto-rows-fr min-h-0 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-100/30 dark:border-gray-850/30"
+				class="flex-1 grid grid-cols-7 auto-rows-fr min-h-0 rounded-2xl overflow-hidden bg-white dark:bg-base-900 border border-base-100/30 dark:border-base-850/30"
 			>
 				{#each monthDays as day, i}
 					{@const dayKey = new Date(day.getFullYear(), day.getMonth(), day.getDate())
@@ -192,9 +192,9 @@
 					<div
 						class="relative p-1 min-h-0 text-left overflow-hidden transition cursor-pointer flex flex-col
 							{isCurrentMonth(day) ? '' : ($settings?.highContrastMode ?? false) ? 'opacity-80' : 'opacity-40'}
-							hover:bg-gray-50/80 dark:hover:bg-gray-850/30
-							{col > 0 ? 'border-l border-gray-100/20 dark:border-gray-850/20' : ''}
-							{row > 0 ? 'border-t border-gray-100/20 dark:border-gray-850/20' : ''}"
+							hover:bg-base-50/80 dark:hover:bg-base-850/30
+							{col > 0 ? 'border-l border-base-100/20 dark:border-base-850/20' : ''}
+							{row > 0 ? 'border-t border-base-100/20 dark:border-base-850/20' : ''}"
 					>
 						<button
 							type="button"
@@ -209,7 +209,7 @@
 									? ($settings?.highContrastMode ?? false)
 										? 'bg-blue-600 text-white'
 										: 'bg-blue-500 text-white'
-									: 'text-gray-500 dark:text-gray-400'}"
+									: 'text-base-500 dark:text-base-400'}"
 							>
 								{day.getDate()}
 							</span>
@@ -225,7 +225,7 @@
 							{#if dayEvents.length > 3}
 								<button
 									type="button"
-									class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+									class="pointer-events-auto text-[0.625rem] text-base-400 dark:text-base-500 px-1 mt-auto hover:text-base-700 dark:hover:text-base-200 text-left w-full truncate z-10"
 									on:click={() => goToDayView(day)}
 								>
 									{$i18n.t('and {{COUNT}} more', { COUNT: dayEvents.length - 3 })}
@@ -241,21 +241,21 @@
 	{:else if view === 'week'}
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div
-				class="flex-1 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100/30 dark:border-gray-850/30 overflow-hidden relative"
+				class="flex-1 rounded-2xl bg-white dark:bg-base-900 border border-base-100/30 dark:border-base-850/30 overflow-hidden relative"
 			>
 				<div class="absolute inset-0 overflow-x-auto flex flex-col">
 					<div class="min-w-[43.75rem] flex flex-col flex-1">
 						<div
-							class="grid grid-cols-[52px_repeat(7,1fr)] shrink-0 border-b border-gray-100/30 dark:border-gray-850/30"
+							class="grid grid-cols-[52px_repeat(7,1fr)] shrink-0 border-b border-base-100/30 dark:border-base-850/30"
 						>
 							<div></div>
 							{#each weekDays as day}
 								<div
 									class="text-center py-2.5 {day.getDay() > 0
-										? 'border-l border-gray-100/20 dark:border-gray-850/20'
+										? 'border-l border-base-100/20 dark:border-base-850/20'
 										: ''}"
 								>
-									<div class="text-[0.6875rem] text-gray-400 dark:text-gray-500">
+									<div class="text-[0.6875rem] text-base-400 dark:text-base-500">
 										{DAY_NAMES[day.getDay()]}
 									</div>
 									<div
@@ -277,11 +277,11 @@
 							{#each hours as hour}
 								<div
 									class="grid grid-cols-[52px_repeat(7,1fr)] min-h-[3.25rem] {hour > 0
-										? 'border-t border-gray-100/15 dark:border-gray-850/15'
+										? 'border-t border-base-100/15 dark:border-base-850/15'
 										: ''}"
 								>
 									<div
-										class="text-[0.625rem] text-gray-400 dark:text-gray-500 text-right pr-2 select-none -mt-1.5 z-10"
+										class="text-[0.625rem] text-base-400 dark:text-base-500 text-right pr-2 select-none -mt-1.5 z-10"
 									>
 										{hour > 0 ? formatHour(hour) : ''}
 									</div>
@@ -289,8 +289,8 @@
 										{@const hourEvents = getEventsForHour(day, hour, filteredEvents)}
 										<div
 											class="relative px-0.5 py-0.5 {day.getDay() > 0
-												? 'border-l border-gray-100/15 dark:border-gray-850/15'
-												: ''} hover:bg-gray-50/50 dark:hover:bg-gray-850/20 transition cursor-pointer min-w-0 flex flex-col"
+												? 'border-l border-base-100/15 dark:border-base-850/15'
+												: ''} hover:bg-base-50/50 dark:hover:bg-base-850/20 transition cursor-pointer min-w-0 flex flex-col"
 										>
 											<button
 												type="button"
@@ -311,7 +311,7 @@
 												{#if hourEvents.length > 3}
 													<button
 														type="button"
-														class="pointer-events-auto text-[0.625rem] text-gray-400 dark:text-gray-500 px-1 mt-auto hover:text-gray-700 dark:hover:text-gray-200 text-left w-full truncate z-10"
+														class="pointer-events-auto text-[0.625rem] text-base-400 dark:text-base-500 px-1 mt-auto hover:text-base-700 dark:hover:text-base-200 text-left w-full truncate z-10"
 														on:click={() => goToDayView(day)}
 													>
 														{$i18n.t('and {{COUNT}} more', { COUNT: hourEvents.length - 3 })}
@@ -332,23 +332,23 @@
 	{:else}
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div
-				class="flex-1 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-100/30 dark:border-gray-850/30 overflow-y-auto"
+				class="flex-1 rounded-2xl overflow-hidden bg-white dark:bg-base-900 border border-base-100/30 dark:border-base-850/30 overflow-y-auto"
 			>
 				{#each hours as hour}
 					{@const hourEvents = getEventsForHour(currentDate, hour, filteredEvents)}
 					<div
 						class="flex min-h-[3.25rem] {hour > 0
-							? 'border-t border-gray-100/15 dark:border-gray-850/15'
+							? 'border-t border-base-100/15 dark:border-base-850/15'
 							: ''}"
 					>
 						<div
-							class="w-14 shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-500 text-right pr-3 mt-1 select-none"
+							class="w-14 shrink-0 text-[0.625rem] text-base-400 dark:text-base-500 text-right pr-3 mt-1 select-none"
 						>
 							{formatHour(hour)}
 						</div>
 						<div
-							class="relative flex-1 border-l border-gray-100/15 dark:border-gray-850/15 px-1.5 py-0.5
-								hover:bg-gray-50/50 dark:hover:bg-gray-850/20 transition cursor-pointer flex flex-col text-left justify-start"
+							class="relative flex-1 border-l border-base-100/15 dark:border-base-850/15 px-1.5 py-0.5
+								hover:bg-base-50/50 dark:hover:bg-base-850/20 transition cursor-pointer flex flex-col text-left justify-start"
 						>
 							<button
 								type="button"

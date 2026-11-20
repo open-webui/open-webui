@@ -2374,12 +2374,12 @@
 		}
 	}}
 >
-	<p class="mb-2 text-sm text-gray-700 dark:text-gray-300 [overflow-wrap:anywhere]">
+	<p class="mb-2 text-sm text-base-700 dark:text-base-300 [overflow-wrap:anywhere]">
 		{$i18n.t('Are you sure you want to delete "{{NAME}}"?', {
 			NAME: deleteTarget?.name ?? ''
 		})}
 	</p>
-	<p class="text-sm text-gray-500">
+	<p class="text-sm text-base-500">
 		{$i18n.t('This action cannot be undone. Do you wish to continue?')}
 	</p>
 </ConfirmDialog>
@@ -2440,9 +2440,9 @@
 			name="terminal"
 			size={24}
 			strokeWidth={1.4}
-			class="text-gray-300 dark:text-gray-600 mb-2"
+			class="text-base-300 dark:text-base-600 mb-2"
 		/>
-		<div class="text-xs text-gray-500 dark:text-gray-400">
+		<div class="text-xs text-base-500 dark:text-base-400">
 			{$i18n.t('Start the chat to use this terminal.')}
 		</div>
 	</div>
@@ -2452,12 +2452,12 @@
 			name="terminal"
 			size={24}
 			strokeWidth={1.4}
-			class="text-gray-300 dark:text-gray-600 mb-2"
+			class="text-base-300 dark:text-base-600 mb-2"
 		/>
-		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+		<div class="text-xs text-base-500 dark:text-base-400 mb-1">
 			{$i18n.t('No Terminal connection configured.')}
 		</div>
-		<div class="text-[0.625rem] text-gray-400 dark:text-gray-500">
+		<div class="text-[0.625rem] text-base-400 dark:text-base-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}
 		</div>
 	</div>
@@ -2482,7 +2482,7 @@
 				role="status"
 			>
 				<div
-					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
 				>
 					<Icon name="upload-tray" size={14} strokeWidth={1.5} />
 					<span class="truncate">{$i18n.t('Drop to upload')}</span>
@@ -2552,7 +2552,7 @@
 				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
 					<Tooltip content={$i18n.t(mode.label)}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 aria-pressed:text-gray-900 dark:aria-pressed:text-white disabled:opacity-30"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 aria-pressed:text-base-900 dark:aria-pressed:text-white disabled:opacity-30"
 							aria-label={$i18n.t(mode.label)}
 							aria-pressed={showRaw === mode.raw}
 							on:click={() => {
@@ -2568,7 +2568,7 @@
 						<Tooltip content={$i18n.t('Outline')}>
 							<button
 								type="button"
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 								aria-label={$i18n.t('Outline')}
 							>
 								<Icon name="list" size={11} strokeWidth={1.4} />
@@ -2582,7 +2582,7 @@
 								{#each viewerRoot.querySelectorAll('h1, h2, h3, h4, h5, h6') as heading}
 									<button
 										type="button"
-										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
 										on:click={() => heading.scrollIntoView()}
 									>
 										<span
@@ -2592,7 +2592,7 @@
 										>
 									</button>
 								{:else}
-									<div class="px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+									<div class="px-2 py-1.5 text-xs text-base-500 dark:text-base-400">
 										{$i18n.t('No results')}
 									</div>
 								{/each}
@@ -2603,7 +2603,7 @@
 			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 						on:click={async () => {
 							if (!(await protectBuffer())) return;
 							showRaw = !showRaw;
@@ -2621,7 +2621,7 @@
 			{#if fileContent !== null}
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 						on:click={async () => {
 							if (await copyToClipboard(fileContent ?? '')) {
 								toast.success($i18n.t('Copied to clipboard'));
@@ -2635,7 +2635,7 @@
 			{/if}
 			<Tooltip content={$i18n.t('Download')}>
 				<button
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 					on:click={() => selectedFile && downloadFile(selectedFile)}
 					aria-label={$i18n.t('Download')}
 				>
@@ -2647,7 +2647,7 @@
 				<Tooltip content={$i18n.t('Save')}>
 					<button
 						type="button"
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 						on:click={() => commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
 						disabled={saving || !dirty || !selectedFileWritable}
 						aria-label={$i18n.t('Save')}
@@ -2665,7 +2665,7 @@
 				{#if isHtml && showRaw}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2683,7 +2683,7 @@
 				{:else if isMarkdown}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2699,7 +2699,7 @@
 				{:else if showRaw || (!isCsv && !isJson && !isSvg && !isNotebook) || dirty}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2718,13 +2718,13 @@
 
 		{#if !selectedFile && showSearch}
 			<div
-				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-200/40 px-3 dark:border-gray-850/20"
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-base-200/40 px-3 dark:border-base-850/20"
 			>
-				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
+				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-base-400" />
 				<input
 					bind:this={searchInput}
 					type="text"
-					class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
+					class="min-w-0 flex-1 border-none bg-transparent text-xs text-base-800 outline-none placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-600"
 					placeholder={$i18n.t('Search files and contents')}
 					aria-label={$i18n.t('Search files and contents')}
 					bind:value={searchQuery}
@@ -2738,7 +2738,7 @@
 				/>
 				{#if searchQuery}
 					<button
-						class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+						class="flex shrink-0 items-center text-base-400 transition hover:text-base-600 dark:hover:text-base-300"
 						on:click={() => (searchQuery = '')}
 						aria-label={$i18n.t('Clear search')}
 					>
@@ -2749,7 +2749,7 @@
 		{/if}
 
 		{#if pinnedComparison}
-			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-base-500">
 				<Tooltip content={pinnedComparison.path}>
 					<span class="block max-w-[16rem] truncate"
 						>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
@@ -2757,7 +2757,7 @@
 				</Tooltip>
 				<button
 					type="button"
-					class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+					class="shrink-0 hover:text-base-900 dark:hover:text-white"
 					aria-label={$i18n.t('Clear comparison selection')}
 					on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
 				>
@@ -2766,7 +2766,7 @@
 
 		{#if diskChanged}<div
 				role="status"
-				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
+				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-base-500 dark:text-base-400"
 			>
 				{$i18n.t('File updated on disk. Your local changes are preserved.')}
 				<button
@@ -2883,33 +2883,33 @@
 				{#if isSearching}
 					{#if matchLoading}
 						<div class="flex h-full items-center justify-center">
-							<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+							<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 						</div>
 					{:else if matchError}
 						<div class="flex h-full items-center justify-center p-6 text-center">
-							<div class="text-xs text-gray-400 dark:text-gray-500">{matchError}</div>
+							<div class="text-xs text-base-400 dark:text-base-500">{matchError}</div>
 						</div>
 					{:else if !matchResults?.length}
 						<div class="flex h-full items-center justify-center p-6 text-center">
-							<div class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('No matches')}</div>
+							<div class="text-xs text-base-400 dark:text-base-500">{$i18n.t('No matches')}</div>
 						</div>
 					{:else}
 						{#if filenameMatches.length > 0}
 							<div
-								class="px-2 pt-1 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-600"
+								class="px-2 pt-1 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-base-400 dark:text-base-600"
 							>
 								{$i18n.t('Filename matches')}
 							</div>
 							{#each filenameMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
-									<span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
+									<span class="min-w-0 flex-1 truncate text-xs text-base-800 dark:text-base-200">
 										{match.name}
 										{#if relativeParentPath(match.relative_path)}
-											<span class="ml-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+											<span class="ml-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 												{relativeParentPath(match.relative_path)}
 											</span>
 										{/if}
@@ -2918,19 +2918,19 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
-											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 											>{preview.line}</span
 										>
 										<span
-											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-gray-500 dark:text-gray-500"
+											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-base-500 dark:text-base-500"
 											>{preview.text}</span
 										>
 										{#if match.content_matches.length > 1}
-											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600">
 												+{match.content_matches.length - 1}
 											</span>
 										{/if}
@@ -2941,20 +2941,20 @@
 
 						{#if contentOnlyMatches.length > 0}
 							<div
-								class="px-2 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-600"
+								class="px-2 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-base-400 dark:text-base-600"
 							>
 								{$i18n.t('Content matches')}
 							</div>
 							{#each contentOnlyMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
-									<span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
+									<span class="min-w-0 flex-1 truncate text-xs text-base-800 dark:text-base-200">
 										{match.name}
 										{#if relativeParentPath(match.relative_path)}
-											<span class="ml-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+											<span class="ml-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 												{relativeParentPath(match.relative_path)}
 											</span>
 										{/if}
@@ -2963,19 +2963,19 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
-											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 											>{preview.line}</span
 										>
 										<span
-											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-gray-500 dark:text-gray-500"
+											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-base-500 dark:text-base-500"
 											>{preview.text}</span
 										>
 										{#if match.content_matches.length > 1}
-											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600">
 												+{match.content_matches.length - 1}
 											</span>
 										{/if}
@@ -2990,7 +2990,7 @@
 									<Spinner className="size-3" />
 								{:else if matchLoadMoreError}
 									<button
-										class="text-[0.6875rem] text-gray-400 transition-colors duration-75 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400"
+										class="text-[0.6875rem] text-base-400 transition-colors duration-75 hover:text-base-600 dark:text-base-600 dark:hover:text-base-400"
 										on:click={() => {
 											matchLoadMoreError = false;
 											void loadMoreMatches();
@@ -3002,20 +3002,20 @@
 					{/if}
 				{:else if uploading}
 					<div
-						class="flex h-full items-center justify-center gap-2 p-4 text-center text-xs text-gray-500"
+						class="flex h-full items-center justify-center gap-2 p-4 text-center text-xs text-base-500"
 					>
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
 				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
 					<div class="flex h-full items-center justify-center">
-						<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+						<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 					</div>
 				{:else if error}
 					<div class="flex h-full items-center justify-center p-4 text-center text-xs">{error}</div>
 				{:else if visibleEntries.length === 0 && !creatingFolder && !creatingFile}
 					<div class="flex h-full items-center justify-center p-6 text-center">
-						<div class="text-xs text-gray-400 dark:text-gray-500">
+						<div class="text-xs text-base-400 dark:text-base-500">
 							{$i18n.t('This folder is empty')}
 						</div>
 					</div>
@@ -3047,7 +3047,7 @@
 										bind:this={newFolderInput}
 										bind:value={newFolderName}
 										class={viewMode === 'grid'
-											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-base-800 outline-hidden ring-1 ring-blue-500 dark:text-base-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('Folder name')}
 										aria-label={$i18n.t('Folder name')}
@@ -3077,7 +3077,7 @@
 										bind:this={newFileInput}
 										bind:value={newFileName}
 										class={viewMode === 'grid'
-											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-base-800 outline-hidden ring-1 ring-blue-500 dark:text-base-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('File name')}
 										aria-label={$i18n.t('File name')}
@@ -3151,7 +3151,7 @@
 		<!-- Float above the list footer without moving the rows. -->
 		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
 			<div class="relative z-10 h-0 shrink-0">
-				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-900">
+				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-base-900">
 					<BulkActionBar
 						count={selectedCount}
 						{canCompare}
@@ -3176,7 +3176,7 @@
 		{/if}
 
 		{#if onSelectDirectory}
-			<div class="shrink-0 border-t border-gray-200/40 pt-3 dark:border-gray-850/20">
+			<div class="shrink-0 border-t border-base-200/40 pt-3 dark:border-base-850/20">
 				{#if gitAvailable && showCloneRepository && selectedTerminal}
 					{#key `${effectiveTerminalId}:${chatId}`}
 						<CloneRepository
@@ -3199,7 +3199,7 @@
 						{#if gitAvailable}
 							<button
 								type="button"
-								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-850"
+								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-base-850"
 								disabled={loading ||
 									!!error ||
 									!savedPathLoaded ||
@@ -3213,7 +3213,7 @@
 						{/if}
 						<button
 							type="button"
-							class="flex h-7 items-center rounded-lg bg-gray-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 items-center rounded-lg bg-base-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
 							on:click={() => onSelectDirectory?.(currentPath)}
 							>{$i18n.t('Use this directory')}</button
@@ -3227,7 +3227,7 @@
 		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
-				class="shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
+				class="shrink-0 border-t border-base-200/40 dark:border-base-850/20"
 			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
@@ -3276,7 +3276,7 @@
 				<DropdownMenu className="min-w-[9.375rem]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							refreshBrowser();
@@ -3287,7 +3287,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3299,7 +3299,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3311,7 +3311,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3323,7 +3323,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3335,7 +3335,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							downloadFile(currentPath);
@@ -3346,7 +3346,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							toggleHidden();
@@ -3366,13 +3366,13 @@
 		<form
 			use:positionFileAsk={fileAsk.anchor}
 			data-file-ask
-			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-gray-850 dark:text-white dark:ring-white/10"
+			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-base-850 dark:text-white dark:ring-white/10"
 			aria-label={$i18n.t('Ask about this file')}
 			on:submit|preventDefault={submitFileAsk}
 		>
 			{#if fileAsk.text}
 				<blockquote
-					class="mb-2 border-l-2 border-gray-200 pl-2 text-xs leading-4 text-gray-500 dark:border-gray-700 dark:text-gray-400"
+					class="mb-2 border-l-2 border-base-200 pl-2 text-xs leading-4 text-base-500 dark:border-base-700 dark:text-base-400"
 				>
 					<span class="line-clamp-3 whitespace-pre-wrap break-words">{fileAsk.text}</span>
 				</blockquote>
@@ -3381,7 +3381,7 @@
 				<textarea
 					id="file-ask-input"
 					rows="1"
-					class="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-5 text-gray-700 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-300 dark:placeholder:text-gray-500"
+					class="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-5 text-base-700 outline-none placeholder:text-base-400 focus:ring-0 dark:text-base-300 dark:placeholder:text-base-500"
 					placeholder={$i18n.t('Ask or edit…')}
 					aria-label={$i18n.t('Ask or edit…')}
 					bind:value={fileAskInput}
@@ -3401,8 +3401,8 @@
 					disabled={asking || !fileAskInput.trim()}
 					aria-label={$i18n.t('Send')}
 					class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors {fileAskInput.trim()
-						? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'
-						: 'bg-gray-200 text-white dark:bg-gray-700 dark:text-gray-900'}"
+						? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100'
+						: 'bg-base-200 text-white dark:bg-base-700 dark:text-base-900'}"
 				>
 					{#if asking}<Spinner className="size-3.5" />{:else}<ArrowRight
 							className="size-3.5 -rotate-90"

@@ -32,15 +32,15 @@
 	ariaLabel={$i18n.t('Quick Actions')}
 	size="sm"
 	bind:show
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-white dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class=" flex justify-between text-gray-900 dark:text-white px-4 pt-3 pb-1">
+		<div class=" flex justify-between text-base-900 dark:text-white px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Quick Actions')}
 			</h1>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close modal')}
 				on:click={() => {
 					show = false;
@@ -51,7 +51,7 @@
 		</div>
 
 		<div
-			class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 text-gray-600 dark:text-gray-400"
+			class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 text-base-600 dark:text-base-400"
 		>
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
@@ -65,7 +65,7 @@
 						<div class="text-xs flex items-center justify-between mb-2">
 							<div class="font-normal">{$i18n.t('Actions')}</div>
 
-							<div class="flex items-center gap-2 text-gray-500 dark:text-gray-500">
+							<div class="flex items-center gap-2 text-base-500 dark:text-base-500">
 								<button
 									type="button"
 									on:click={() => {
@@ -128,7 +128,7 @@
 						</div>
 
 						{#if floatingActionButtons === null || floatingActionButtons.length === 0}
-							<div class="text-gray-500 dark:text-gray-400 text-xs w-full text-center py-5">
+							<div class="text-base-500 dark:text-base-400 text-xs w-full text-center py-5">
 								{$i18n.t('Default action buttons will be used.')}
 							</div>
 						{:else}
@@ -143,7 +143,7 @@
 										/>
 
 										<input
-											class=" self-center text-xs outline-none w-20 text-gray-600 dark:text-gray-400"
+											class=" self-center text-xs outline-none w-20 text-base-600 dark:text-base-400"
 											placeholder={$i18n.t('Button ID')}
 											aria-label={$i18n.t('Button ID')}
 											bind:value={button.id}
@@ -173,14 +173,14 @@
 									</button>
 								</div>
 
-								<hr class="border-gray-50 dark:border-gray-850/30 my-2" />
+								<hr class="border-base-50 dark:border-base-850/30 my-2" />
 							{/each}
 						{/if}
 					</div>
 
 					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							type="submit"
 						>
 							{$i18n.t('Save')}

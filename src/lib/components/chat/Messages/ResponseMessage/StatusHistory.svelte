@@ -54,13 +54,13 @@
 										<div class="pt-3 px-1 mb-1.5">
 											<span class="relative flex size-1.5 rounded-full justify-center items-center">
 												<span
-													class="relative inline-flex size-1.5 rounded-full bg-gray-500 dark:bg-gray-400"
+													class="relative inline-flex size-1.5 rounded-full bg-base-500 dark:bg-base-400"
 												></span>
 											</span>
 										</div>
 										{#if idx !== history.length - 1}
 											<div
-												class="w-[0.03125rem] ml-[0.40625rem] h-[calc(100%-14px)] bg-gray-300 dark:bg-gray-700"
+												class="w-[0.03125rem] ml-[0.40625rem] h-[calc(100%-14px)] bg-base-300 dark:bg-base-700"
 											/>
 										{/if}
 									</div>

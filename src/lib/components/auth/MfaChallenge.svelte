@@ -62,7 +62,7 @@
 	};
 </script>
 
-<div class="space-y-3 text-left text-xs text-gray-700 dark:text-gray-300">
+<div class="space-y-3 text-left text-xs text-base-700 dark:text-base-300">
 	{#if result}
 		<MfaRecoveryCodes
 			codes={result.recovery_codes}
@@ -74,14 +74,14 @@
 		/>
 	{:else}
 		<div>
-			<h2 class="text-base font-medium tracking-tight text-gray-700 dark:text-gray-300">
+			<h2 class="text-base font-medium tracking-tight text-base-700 dark:text-base-300">
 				{challenge.next_step === 'enroll'
 					? $i18n.t('Set up your authenticator')
 					: challenge.next_step === 'recover'
 						? $i18n.t('Recover your authenticator')
 						: $i18n.t('Verify your sign-in')}
 			</h2>
-			<p class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400">
+			<p class="mt-1 text-xs leading-5 text-base-500 dark:text-base-400">
 				{challenge.next_step === 'enroll'
 					? $i18n.t('Scan the QR code, then enter the six-digit code from your authenticator app.')
 					: challenge.next_step === 'recover'
@@ -98,29 +98,29 @@
 					src={setup.qr_code}
 					alt={$i18n.t('Authenticator setup QR code')}
 				/>
-				<details class="group text-[0.6875rem] text-gray-500 dark:text-gray-400">
+				<details class="group text-[0.6875rem] text-base-500 dark:text-base-400">
 					<summary
-						class="flex cursor-pointer list-none items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 [&::-webkit-details-marker]:hidden"
+						class="flex cursor-pointer list-none items-center gap-1 hover:text-base-700 dark:hover:text-base-200 [&::-webkit-details-marker]:hidden"
 					>
 						{$i18n.t('Enter the key manually')}
 						<ChevronRight className="size-2.5 shrink-0 transition-transform group-open:rotate-90" />
 					</summary>
 					<code
-						class="mt-2 block break-all rounded-md bg-gray-50 px-2 py-1.5 font-mono text-gray-700 select-all dark:bg-white/[0.03] dark:text-gray-300"
+						class="mt-2 block break-all rounded-md bg-base-50 px-2 py-1.5 font-mono text-base-700 select-all dark:bg-white/[0.03] dark:text-base-300"
 						>{setup.manual_key}</code
 					>
 				</details>
-			{:else if busy}<p role="status" class="py-2 text-gray-400">
+			{:else if busy}<p role="status" class="py-2 text-base-400">
 					{$i18n.t('Preparing your authenticator…')}
 				</p>
 			{:else}<button
 					type="button"
-					class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+					class="text-base-500 hover:text-base-700 dark:hover:text-base-200"
 					on:click={loadSetup}>{$i18n.t('Retry setup')}</button
 				>{/if}
 		{/if}
 		<label
-			class="block text-[0.8125rem] leading-5 font-normal text-left text-gray-600 dark:text-gray-400"
+			class="block text-[0.8125rem] leading-5 font-normal text-left text-base-600 dark:text-base-400"
 		>
 			{challenge.next_step === 'recover'
 				? $i18n.t('Operator recovery token')
@@ -128,7 +128,7 @@
 					? $i18n.t('Recovery code')
 					: $i18n.t('Authenticator code')}
 			<input
-				class="my-0.5 w-full text-[0.8125rem] leading-5 outline-hidden bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-600"
+				class="my-0.5 w-full text-[0.8125rem] leading-5 outline-hidden bg-transparent placeholder:text-base-300 dark:placeholder:text-base-600"
 				bind:value={code}
 				readonly={busy}
 				placeholder={challenge.next_step === 'recover'
@@ -152,10 +152,10 @@
 		{#if error}<p role="alert" class="text-xs leading-4 text-red-600 dark:text-red-400">
 				{error}
 			</p>{/if}
-		<div class="flex justify-end text-gray-700 dark:text-gray-300">
+		<div class="flex justify-end text-base-700 dark:text-base-300">
 			<button
 				type="button"
-				class="bg-gray-700/5 hover:bg-gray-700/10 dark:bg-gray-100/5 dark:hover:bg-gray-100/10 dark:text-gray-300 dark:hover:text-gray-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex items-center justify-center gap-1.5"
+				class="bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-200 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 disabled:opacity-50 flex items-center justify-center gap-1.5"
 				disabled={busy || !code.trim() || (challenge.next_step === 'enroll' && !setup)}
 				aria-busy={busy}
 				on:click={verify}
@@ -165,17 +165,17 @@
 			</button>
 		</div>
 		<div
-			class="flex flex-wrap items-center justify-between gap-2 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+			class="flex flex-wrap items-center justify-between gap-2 text-[0.6875rem] text-base-500 dark:text-base-400"
 		>
 			<button
 				type="button"
-				class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+				class="transition-colors hover:text-base-700 dark:hover:text-base-200"
 				disabled={busy}
 				on:click={onCancel}>{$i18n.t('Back to sign in')}</button
 			>
 			{#if challenge.next_step === 'verify'}<button
 					type="button"
-					class="transition-colors hover:text-gray-700 dark:hover:text-gray-200"
+					class="transition-colors hover:text-base-700 dark:hover:text-base-200"
 					disabled={busy}
 					on:click={() => {
 						recovery = !recovery;

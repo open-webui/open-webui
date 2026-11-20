@@ -98,7 +98,7 @@
 
 <Modal ariaLabel={citation?.source?.name ?? $i18n.t('Citation')} size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4.5 pt-3 pb-2">
+		<div class=" flex justify-between dark:text-base-300 px-4.5 pt-3 pb-2">
 			<div class=" text-sm font-medium self-center flex items-center">
 				{#if citation?.source?.name}
 					{@const document = mergedDocuments?.[0]}
@@ -112,7 +112,7 @@
 							tippyOptions={{ duration: [500, 0] }}
 						>
 							<a
-								class="hover:text-gray-500 dark:hover:text-gray-100 underline grow line-clamp-1"
+								class="hover:text-base-500 dark:hover:text-base-100 underline grow line-clamp-1"
 								href={document?.metadata?.file_id
 									? `${WEBUI_API_BASE_URL}/files/${document?.metadata?.file_id}/content${document?.metadata?.page !== undefined ? `#page=${document.metadata.page + 1}` : ''}`
 									: isValidHttpUrl(document.source?.url)
@@ -131,7 +131,7 @@
 				{/if}
 			</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close citation modal')}
 				on:click={() => {
 					show = false;
@@ -143,13 +143,13 @@
 
 		<div class="flex flex-col md:flex-row w-full px-5 pb-5 md:space-x-4">
 			<div
-				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-thin gap-1"
+				class="flex flex-col w-full dark:text-base-200 overflow-y-scroll max-h-[22rem] scrollbar-thin gap-1"
 			>
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full gap-2">
 						{#if document.metadata?.parameters}
 							<div>
-								<div class="text-sm font-normal dark:text-gray-300 mb-1">
+								<div class="text-sm font-normal dark:text-base-300 mb-1">
 									{$i18n.t('Parameters')}
 								</div>
 
@@ -160,7 +160,7 @@
 
 						<div>
 							<div
-								class=" text-sm font-normal dark:text-gray-300 flex items-center gap-2 w-fit mb-1"
+								class=" text-sm font-normal dark:text-base-300 flex items-center gap-2 w-fit mb-1"
 							>
 								{#if isValidHttpUrl(document.source?.url)}
 									{@const snippetUrl = getTextFragmentUrl(document)}
@@ -168,7 +168,7 @@
 										<a
 											href={snippetUrl}
 											target="_blank"
-											class="underline hover:text-gray-500 dark:hover:text-gray-100"
+											class="underline hover:text-base-500 dark:hover:text-base-100"
 											>{$i18n.t('Content')}</a
 										>
 									{:else}
@@ -185,7 +185,7 @@
 										placement="top-start"
 										tippyOptions={{ duration: [500, 0] }}
 									>
-										<div class="text-sm my-1 dark:text-gray-400 flex items-center gap-2 w-fit">
+										<div class="text-sm my-1 dark:text-base-400 flex items-center gap-2 w-fit">
 											{#if showPercentage}
 												{@const percentage = calculatePercentage(document.distance)}
 
@@ -197,7 +197,7 @@
 													</span>
 												{/if}
 											{:else if typeof document?.distance === 'number'}
-												<span class="text-gray-500 dark:text-gray-500">
+												<span class="text-base-500 dark:text-base-500">
 													({(document?.distance ?? 0).toFixed(4)})
 												</span>
 											{/if}
@@ -206,7 +206,7 @@
 								{/if}
 
 								{#if Number.isInteger(document?.metadata?.page)}
-									<span class="text-sm text-gray-500 dark:text-gray-400">
+									<span class="text-sm text-base-500 dark:text-base-400">
 										({$i18n.t('page')}
 										{document.metadata.page + 1})
 									</span>
@@ -247,7 +247,7 @@
 									</div>
 									{#if isTruncated}
 										<button
-											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											class="mt-1 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 											on:click={() => {
 												expandedDocs.add(documentIdx);
 												expandedDocs = expandedDocs;
@@ -259,7 +259,7 @@
 										</button>
 									{/if}
 								{:else}
-									<pre class="text-sm dark:text-gray-400 whitespace-pre-line">{rawContent}</pre>
+									<pre class="text-sm dark:text-base-400 whitespace-pre-line">{rawContent}</pre>
 								{/if}
 							{/if}
 						</div>

@@ -115,10 +115,10 @@
 {#snippet columnHeader(column: BoardGroup)}
 	<header class="flex h-9 shrink-0 items-center gap-2 px-3">
 		{@render groupIcon(column)}
-		<h3 class="min-w-0 truncate text-xs text-gray-700 dark:text-gray-200">
+		<h3 class="min-w-0 truncate text-xs text-base-700 dark:text-base-200">
 			{column.label}
 		</h3>
-		<span class="text-xs tabular-nums text-gray-400 dark:text-gray-500"
+		<span class="text-xs tabular-nums text-base-400 dark:text-base-500"
 			>{column.page?.total ?? ''}</span
 		>
 	</header>
@@ -128,7 +128,7 @@
 	{#if column.page?.has_more}
 		<button
 			type="button"
-			class="flex h-7 w-full items-center justify-center rounded-lg text-xs text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800/60 dark:hover:text-gray-300"
+			class="flex h-7 w-full items-center justify-center rounded-lg text-xs text-base-400 transition-colors hover:bg-base-100 hover:text-base-700 dark:text-base-500 dark:hover:bg-base-800/60 dark:hover:text-base-300"
 			disabled={loading || !!loadingGroup}
 			on:click={() => onMore(column.id)}
 		>
@@ -146,7 +146,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 	<article
 		data-folder-item
-		class="group cursor-pointer rounded-xl border border-black/[0.06] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition hover:border-black/[0.09] dark:border-white/[0.06] dark:bg-gray-900 dark:hover:border-white/[0.09] {saving ===
+		class="group cursor-pointer rounded-xl border border-black/[0.06] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition hover:border-black/[0.09] dark:border-white/[0.06] dark:bg-base-900 dark:hover:border-white/[0.09] {saving ===
 			chat.id || dragged?.id === chat.id
 			? 'opacity-40'
 			: ''}"
@@ -200,13 +200,13 @@
 				side="right"
 				disabled={!!dragged}
 				className="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-					? 'text-gray-900 dark:text-white'
-					: 'text-gray-700 dark:text-gray-200'}"
+					? 'text-base-900 dark:text-white'
+					: 'text-base-700 dark:text-base-200'}"
 				onclick={(event) => openFolderChat(chat, appLayout, event)}
 			/>
 			{#if chat.automation_id}
 				<span
-					class="mt-1 flex shrink-0 text-gray-400 dark:text-gray-500"
+					class="mt-1 flex shrink-0 text-base-400 dark:text-base-500"
 					title={$i18n.t('Made by an automation')}
 					aria-label={$i18n.t('Made by an automation')}><Icon name="clock" size={12} /></span
 				>
@@ -214,7 +214,7 @@
 		</div>
 
 		{#if chat.search_snippet}
-			<p class="mt-1 line-clamp-2 pl-6 text-xs leading-4 text-gray-500 dark:text-gray-400">
+			<p class="mt-1 line-clamp-2 pl-6 text-xs leading-4 text-base-500 dark:text-base-400">
 				{chat.search_snippet}
 			</p>
 		{/if}
@@ -234,7 +234,7 @@
 				content={formatDateDetails(chat.updated_at, $i18n.language)}
 			>
 				<time
-					class="shrink-0 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500"
+					class="shrink-0 text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
 					datetime={new Date(chat.updated_at * 1000).toISOString()}
 					>{formatShortDate(chat.updated_at, $i18n.language)}</time
 				>
@@ -245,10 +245,10 @@
 
 {#snippet emptyCell(column: string, row: string | null)}
 	<div
-		class="flex h-20 items-center justify-center rounded-xl border border-dashed text-xs text-gray-400 transition-colors dark:text-gray-500 {over ===
+		class="flex h-20 items-center justify-center rounded-xl border border-dashed text-xs text-base-400 transition-colors dark:text-base-500 {over ===
 		cellKey(column, row)
-			? 'border-gray-300 dark:border-gray-700'
-			: 'border-gray-200/70 dark:border-gray-800'}"
+			? 'border-base-300 dark:border-base-700'
+			: 'border-base-200/70 dark:border-base-800'}"
 	>
 		{$i18n.t('No conversations')}
 	</div>
@@ -258,7 +258,7 @@
 	{#if onAddStatus}
 		<button
 			type="button"
-			class="flex h-9 w-36 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-xs text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-850/40 dark:hover:text-gray-200"
+			class="flex h-9 w-36 shrink-0 items-center gap-1.5 rounded-2xl px-3 text-xs text-base-400 transition-colors hover:bg-base-50 hover:text-base-700 dark:text-base-500 dark:hover:bg-base-850/40 dark:hover:text-base-200"
 			on:click={onAddStatus}
 		>
 			<Plus className="size-3" strokeWidth="2" />{$i18n.t('Add status')}
@@ -278,8 +278,8 @@
 			<section
 				class="flex min-h-0 w-72 min-w-64 flex-1 flex-col rounded-2xl transition-colors {over ===
 				cellKey(column.id, null)
-					? 'bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-850 dark:ring-gray-800'
-					: 'bg-gray-50/80 dark:bg-gray-850/40'}"
+					? 'bg-base-100 ring-1 ring-base-200 dark:bg-base-850 dark:ring-base-800'
+					: 'bg-base-50/80 dark:bg-base-850/40'}"
 				aria-label={column.label}
 				on:dragover={zone.dragover}
 				on:dragleave={zone.dragleave}
@@ -311,10 +311,10 @@
 	>
 		<div class="inline-flex min-w-full flex-col">
 			<div
-				class="sticky top-0 z-[2] flex gap-2 bg-white/80 pb-1 backdrop-blur-md dark:bg-gray-900/80"
+				class="sticky top-0 z-[2] flex gap-2 bg-white/80 pb-1 backdrop-blur-md dark:bg-base-900/80"
 			>
 				{#each columns as column (column.id)}
-					<div class="w-72 shrink-0 rounded-2xl bg-gray-50/80 dark:bg-gray-850/40">
+					<div class="w-72 shrink-0 rounded-2xl bg-base-50/80 dark:bg-base-850/40">
 						{@render columnHeader(column)}
 					</div>
 				{/each}
@@ -327,7 +327,7 @@
 					<div class="sticky left-0 z-[1] flex h-8 w-fit items-center gap-2 pr-3">
 						<button
 							type="button"
-							class="flex size-5 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+							class="flex size-5 items-center justify-center rounded-md text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 							aria-expanded={!collapsed[row.id]}
 							aria-label={collapsed[row.id]
 								? $i18n.t('Expand {{name}}', { name: row.label })
@@ -340,8 +340,8 @@
 							/>
 						</button>
 						{@render groupIcon(row)}
-						<span class="text-xs text-gray-700 dark:text-gray-200">{row.label}</span>
-						<span class="text-xs tabular-nums text-gray-400 dark:text-gray-500">{count}</span>
+						<span class="text-xs text-base-700 dark:text-base-200">{row.label}</span>
+						<span class="text-xs tabular-nums text-base-400 dark:text-base-500">{count}</span>
 					</div>
 
 					{#if !collapsed[row.id]}
@@ -354,8 +354,8 @@
 									aria-label={`${column.label} · ${row.label}`}
 									class="w-72 shrink-0 space-y-1.5 rounded-2xl p-1.5 transition-colors {over ===
 									cellKey(column.id, row.id)
-										? 'bg-gray-100 ring-1 ring-gray-200 dark:bg-gray-850 dark:ring-gray-800'
-										: 'bg-gray-50/80 dark:bg-gray-850/40'}"
+										? 'bg-base-100 ring-1 ring-base-200 dark:bg-base-850 dark:ring-base-800'
+										: 'bg-base-50/80 dark:bg-base-850/40'}"
 									on:dragover={zone.dragover}
 									on:dragleave={zone.dragleave}
 									on:drop={zone.drop}

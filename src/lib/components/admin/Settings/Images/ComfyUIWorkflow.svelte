@@ -17,7 +17,7 @@
 	export let requiredNote = '';
 
 	const inputClass =
-		'w-full bg-transparent text-sm outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'w-full bg-transparent text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700';
 
 	let showEditor = false;
 	let fileInputElement: HTMLInputElement;
@@ -45,16 +45,16 @@
 
 	<div class="flex justify-between items-center">
 		<div>
-			<div class="text-xs text-gray-500">{label}</div>
+			<div class="text-xs text-base-500">{label}</div>
 			{#if description}
-				<div class="text-xs text-gray-400 dark:text-gray-600">{description}</div>
+				<div class="text-xs text-base-400 dark:text-base-600">{description}</div>
 			{/if}
 		</div>
 
 		<div class="flex items-center gap-2 shrink-0">
 			<!-- Always available, so a workflow can be pasted in as well as uploaded. -->
 			<button
-				class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:hover:text-white"
+				class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-white"
 				type="button"
 				aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
 				on:click={() => {
@@ -66,7 +66,7 @@
 
 			<Tooltip content={$i18n.t('settings.admin.images.clickHereToUploadAWorkflowJsonFile.label')}>
 				<button
-					class="text-xs text-gray-500 transition-colors hover:text-gray-900 hover:underline dark:hover:text-white"
+					class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-white"
 					type="button"
 					aria-label={$i18n.t('settings.admin.images.clickHereToUploadAWorkflowJsonFile.label')}
 					on:click={() => {
@@ -96,7 +96,7 @@
 				<div class="flex w-full items-center">
 					<label
 						for={`${id}-node-${node.type}-key`}
-						class="capitalize line-clamp-1 w-20 shrink-0 text-gray-400 dark:text-gray-500"
+						class="capitalize line-clamp-1 w-20 shrink-0 text-base-400 dark:text-base-500"
 					>
 						{node.type}{requiredTypes.includes(node.type) ? '*' : ''}
 					</label>
@@ -111,7 +111,7 @@
 						/>
 					</Tooltip>
 
-					<div class="px-2 text-gray-400 dark:text-gray-500">:</div>
+					<div class="px-2 text-base-400 dark:text-base-500">:</div>
 
 					<Tooltip
 						className="w-full"
@@ -129,7 +129,7 @@
 			{/each}
 		</div>
 
-		<div class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+		<div class="mt-1 text-xs text-base-400 dark:text-base-500">
 			{requiredNote || $i18n.t('*Prompt node ID(s) are required for image generation')}
 		</div>
 	{/if}

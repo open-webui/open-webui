@@ -125,10 +125,10 @@
 
 <Modal ariaLabel={$i18n.t('Share Chat')} bind:show size="md">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Share Chat')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -140,7 +140,7 @@
 
 		{#if chat}
 			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				<div class="text-sm dark:text-gray-300">
+				<div class="text-sm dark:text-base-300">
 					{#if chat.share_id}
 						<a href="/s/{chat.share_id}" target="_blank"
 							>{$i18n.t('You have shared this chat')}
@@ -167,7 +167,7 @@
 
 				<div class="mt-3">
 					{#if shareMode === 'continue'}
-						<p class="mb-3 text-xs text-gray-500">
+						<p class="mb-3 text-xs text-base-500">
 							{$i18n.t('People who can reply can also use this chat’s own terminal.')}
 						</p>
 					{/if}
@@ -201,7 +201,7 @@
 				<div class="flex justify-end gap-1 mt-3">
 					{#if $config?.features.enable_community_sharing}
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-800"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-200 text-base-800 dark:bg-base-850 dark:text-white dark:hover:bg-base-800"
 							type="button"
 							on:click={() => {
 								shareChat();
@@ -215,7 +215,7 @@
 					{/if}
 
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 						type="button"
 						id="copy-and-share-chat-button"
 						on:click={async () => {

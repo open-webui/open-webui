@@ -143,10 +143,10 @@
 
 <Modal ariaLabel={$i18n.t('Add User')} size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Add User')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -156,7 +156,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -165,12 +165,12 @@
 					}}
 				>
 					<div
-						class="flex -mt-2 mb-1.5 gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent dark:text-gray-200"
+						class="flex -mt-2 mb-1.5 gap-1 scrollbar-none overflow-x-auto w-fit text-center text-sm font-normal bg-transparent dark:text-base-200"
 					>
 						<button
 							class="min-w-fit p-1.5 {tab === ''
 								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
 								tab = '';
@@ -180,7 +180,7 @@
 						<button
 							class="min-w-fit p-1.5 {tab === 'import'
 								? ''
-								: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
 							type="button"
 							on:click={() => {
 								tab = 'import';
@@ -191,11 +191,11 @@
 					<div class="px-1">
 						{#if tab === ''}
 							<div class="flex flex-col w-full mb-3">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+								<div class=" mb-1 text-xs text-base-500">{$i18n.t('Role')}</div>
 
 								<div class="flex-1">
 									<select
-										class="w-full capitalize rounded-lg text-sm bg-transparent dark:disabled:text-gray-500 outline-hidden"
+										class="w-full capitalize rounded-lg text-sm bg-transparent dark:disabled:text-base-500 outline-hidden"
 										bind:value={_user.role}
 										aria-label={$i18n.t('Role')}
 										placeholder={$i18n.t('Enter Your Role')}
@@ -209,11 +209,11 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+								<div class=" mb-1 text-xs text-base-500">{$i18n.t('Name')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 										type="text"
 										bind:value={_user.name}
 										aria-label={$i18n.t('Name')}
@@ -224,14 +224,14 @@
 								</div>
 							</div>
 
-							<hr class=" border-gray-100/30 dark:border-gray-850/30 my-2.5 w-full" />
+							<hr class=" border-base-100/30 dark:border-base-850/30 my-2.5 w-full" />
 
 							<div class="flex flex-col w-full">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+								<div class=" mb-1 text-xs text-base-500">{$i18n.t('Email')}</div>
 
 								<div class="flex-1">
 									<input
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 										type="text"
 										inputmode="email"
 										bind:value={_user.email}
@@ -243,11 +243,11 @@
 							</div>
 
 							<div class="flex flex-col w-full mt-1">
-								<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Password')}</div>
+								<div class=" mb-1 text-xs text-base-500">{$i18n.t('Password')}</div>
 
 								<div class="flex-1">
 									<SensitiveInput
-										class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+										class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 										type="password"
 										bind:value={_user.password}
 										aria-label={$i18n.t('Password')}
@@ -269,7 +269,7 @@
 									/>
 
 									<button
-										class="w-full text-sm font-normal py-3 bg-transparent hover:bg-gray-100 border border-dashed dark:border-gray-850 dark:hover:bg-gray-850 text-center rounded-xl"
+										class="w-full text-sm font-normal py-3 bg-transparent hover:bg-base-100 border border-dashed dark:border-base-850 dark:hover:bg-base-850 text-center rounded-xl"
 										type="button"
 										on:click={() => {
 											document.getElementById('upload-user-csv-input')?.click();
@@ -283,12 +283,12 @@
 									</button>
 								</div>
 
-								<div class=" text-xs text-gray-500">
+								<div class=" text-xs text-base-500">
 									ⓘ {$i18n.t(
 										'Ensure your CSV file includes 4 columns in this order: Name, Email, Password, Role.'
 									)}
 									<a
-										class="underline dark:text-gray-200"
+										class="underline dark:text-base-200"
 										href="{WEBUI_BASE_URL}/static/user-import.csv"
 									>
 										{$i18n.t('Click here to download user import template file.')}
@@ -300,7 +300,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

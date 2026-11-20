@@ -64,7 +64,7 @@
 		tabindex="-1"
 		class="min-h-dvh w-full p-6 flex flex-col items-center justify-center text-center"
 	>
-		<div class="my-auto w-full sm:max-w-md py-20 sm:pb-10 sm:pt-0 dark:text-gray-100">
+		<div class="my-auto w-full sm:max-w-md py-20 sm:pb-10 sm:pt-0 dark:text-base-100">
 			{#if $config?.metadata?.auth_logo_position === 'center'}
 				<div class="flex justify-center mb-6">
 					<img
@@ -79,13 +79,13 @@
 			{#if error}
 				<h1 class="text-xl font-normal">{$i18n.t('Could not complete sign-in')}</h1>
 				<p role="alert" class="mt-4 text-xs leading-4 text-red-600 dark:text-red-400">{error}</p>
-				<p class="mt-2 text-xs leading-5 text-gray-500 dark:text-gray-400">
+				<p class="mt-2 text-xs leading-5 text-base-500 dark:text-base-400">
 					{$i18n.t('Return to the app and sign in again.')}
 				</p>
 			{:else}
 				<div role="status">
 					<h1 class="text-xl font-normal">{$i18n.t('Completing sign-in…')}</h1>
-					<div class="mt-5 flex justify-center text-gray-500 dark:text-gray-400">
+					<div class="mt-5 flex justify-center text-base-500 dark:text-base-400">
 						<Spinner className="size-5" />
 					</div>
 				</div>

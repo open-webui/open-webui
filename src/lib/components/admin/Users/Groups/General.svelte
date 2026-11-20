@@ -79,12 +79,12 @@
 
 <div class="flex gap-2">
 	<div class="flex flex-col w-full">
-		<label for="group-name" class="block mb-0.5 text-xs text-gray-500">{$i18n.t('Name')}</label>
+		<label for="group-name" class="block mb-0.5 text-xs text-base-500">{$i18n.t('Name')}</label>
 
 		<div class="flex-1">
 			<input
 				id="group-name"
-				class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+				class="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 				type="text"
 				bind:value={name}
 				placeholder={$i18n.t('Group Name')}
@@ -98,7 +98,7 @@
 <div class="my-3 space-y-1">
 	<div class="flex items-center justify-between gap-3">
 		<Tooltip content={$i18n.t('Members of this group inherit access from its parent groups.')}>
-			<label for="group-parent" class="text-xs shrink-0 text-gray-500"
+			<label for="group-parent" class="text-xs shrink-0 text-base-500"
 				>{$i18n.t('Parent group')}</label
 			>
 		</Tooltip>
@@ -116,15 +116,15 @@
 				type="button"
 				aria-haspopup="menu"
 				aria-expanded={showParents}
-				class="flex max-w-64 items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-900"
+				class="flex max-w-64 items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm text-base-700 transition hover:bg-base-50 dark:text-base-200 dark:hover:bg-base-900"
 			>
 				<span class="min-w-0 flex-1 truncate">{selectedParent?.name ?? $i18n.t('No parent')}</span>
-				<ChevronDown className="size-3.5 shrink-0 text-gray-400" />
+				<ChevronDown className="size-3.5 shrink-0 text-base-400" />
 			</button>
 			<div slot="content">
 				<DropdownMenu className="w-full">
 					<div class="flex items-center gap-2 px-2 py-2">
-						<Search className="size-3.5 shrink-0 text-gray-400" />
+						<Search className="size-3.5 shrink-0 text-base-400" />
 						<input
 							aria-label={$i18n.t('Search parent groups')}
 							placeholder={$i18n.t('Search parent groups')}
@@ -136,7 +136,7 @@
 						type="button"
 						role="menuitemradio"
 						aria-checked={!parent_group_id}
-						class="my-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+						class="my-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-base-100 dark:hover:bg-base-800"
 						on:click={() => {
 							parent_group_id = null;
 							showParents = false;
@@ -150,7 +150,7 @@
 							type="button"
 							role="menuitemradio"
 							aria-checked={candidate.id === parent_group_id}
-							class="relative flex w-full items-center gap-2 rounded-lg py-2 pr-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+							class="relative flex w-full items-center gap-2 rounded-lg py-2 pr-2 text-left text-sm hover:bg-base-100 dark:hover:bg-base-800"
 							title={candidate.path}
 							on:click={() => {
 								parent_group_id = candidate.id;
@@ -159,7 +159,7 @@
 						>
 							{#if candidate.ancestor_ids.length}<span
 									aria-hidden="true"
-									class="absolute top-0 h-1/2 w-2 border-b border-l border-gray-200 dark:border-gray-700"
+									class="absolute top-0 h-1/2 w-2 border-b border-l border-base-200 dark:border-base-700"
 									style:left={`${Math.min(candidate.ancestor_ids.length, 6) * 16 - 4}px`}
 								></span>{/if}
 							<span
@@ -169,7 +169,7 @@
 							>
 							{#if candidate.id === parent_group_id}<Check className="size-4 shrink-0" />{/if}
 						</button>
-					{:else}<p class="px-2 py-3 text-xs text-gray-500">{$i18n.t('No groups found')}</p>{/each}
+					{:else}<p class="px-2 py-3 text-xs text-base-500">{$i18n.t('No groups found')}</p>{/each}
 				</DropdownMenu>
 			</div>
 		</Dropdown>
@@ -183,7 +183,7 @@
 				'Leave unset to inherit default models. Personal model selections take precedence.'
 			)}
 		>
-			<label for="model-selector-group-defaults-button" class="shrink-0 text-xs text-gray-500"
+			<label for="model-selector-group-defaults-button" class="shrink-0 text-xs text-base-500"
 				>{$i18n.t('Default models')}</label
 			>
 		</Tooltip>
@@ -191,7 +191,7 @@
 			{#if data?.config?.default_models?.length}
 				<button
 					type="button"
-					class="shrink-0 whitespace-nowrap text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="shrink-0 whitespace-nowrap text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300"
 					on:click={() => {
 						data = { ...data, config: { ...data.config, default_models: [] } };
 					}}
@@ -216,7 +216,7 @@
 		</div>
 	</div>
 	{#if !data?.config?.default_models?.length}
-		<p class="text-xs text-gray-500">
+		<p class="text-xs text-base-500">
 			{inheritedModelSource}{inheritedModelIds.length ? ': ' : ''}{inheritedModelIds
 				.map((id) => $baseModels.find((model) => model.id === id)?.name || id)
 				.join(', ')}
@@ -225,15 +225,15 @@
 </div>
 
 <!-- <div class="flex flex-col w-full mt-2">
-	<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Color')}</div>
+	<div class=" mb-1 text-xs text-base-500">{$i18n.t('Color')}</div>
 
 	<div class="flex-1">
 		<Tooltip content={$i18n.t('Hex Color - Leave empty for default color')} placement="top-start">
 			<div class="flex gap-0.5">
-				<div class="text-gray-500">#</div>
+				<div class="text-base-500">#</div>
 
 				<input
-					class="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+					class="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 					type="text"
 					bind:value={color}
 					placeholder={$i18n.t('Hex Color')}
@@ -245,11 +245,11 @@
 </div> -->
 
 <div class="flex flex-col w-full mt-2">
-	<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Description')}</div>
+	<div class=" mb-1 text-xs text-base-500">{$i18n.t('Description')}</div>
 
 	<div class="flex-1">
 		<Textarea
-			className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden resize-none"
+			className="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden resize-none"
 			rows={4}
 			bind:value={description}
 			placeholder={$i18n.t('Group Description')}
@@ -257,10 +257,10 @@
 	</div>
 </div>
 
-<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+<hr class="border-base-50 dark:border-base-850/30 my-1" />
 
 <div class="flex flex-col w-full mt-2">
-	<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Setting')}</div>
+	<div class=" mb-1 text-xs text-base-500">{$i18n.t('Setting')}</div>
 
 	<div>
 		<div class=" flex w-full justify-between">
@@ -297,7 +297,7 @@
 
 {#if edit}
 	<div class="flex flex-col w-full mt-2">
-		<div class=" mb-0.5 text-xs text-gray-500">{$i18n.t('Actions')}</div>
+		<div class=" mb-0.5 text-xs text-base-500">{$i18n.t('Actions')}</div>
 
 		<div class="flex-1">
 			<button

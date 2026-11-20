@@ -60,7 +60,7 @@
 
 	$: if (!open) expandedResult = false;
 	export let buttonClassName =
-		'py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'py-1 text-[0.9375rem] text-base-500 hover:text-base-700 dark:hover:text-base-300 transition';
 
 	const componentId = id || uuidv4();
 
@@ -246,7 +246,7 @@
 	{#if allowEmbeds && !grouped && embeds && Array.isArray(embeds) && embeds.length > 0}
 		<!-- Embed Mode: Show iframes without collapsible behavior -->
 		<div class="py-1 w-full cursor-pointer">
-			<div class="w-full text-xs text-gray-500">
+			<div class="w-full text-xs text-base-500">
 				{attributes.name}
 			</div>
 			{#each embeds as embed, idx}
@@ -299,7 +299,7 @@
 						<CheckCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
+					<div class="text-base-400 dark:text-base-500">
 						<WrenchSolid className="size-3.5" />
 					</div>
 				{/if}
@@ -350,7 +350,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-white/8 hover:bg-base-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={resolving}
 							on:click|stopPropagation={() => onResolve(true)}
 						>
@@ -358,7 +358,7 @@
 						</button>
 						<button
 							type="button"
-							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={resolving}
 							on:click|stopPropagation={() => onResolve(false)}
 						>
@@ -381,22 +381,22 @@
 		{#if open}
 			<div transition:slide={{ duration: 300, easing: quintOut, axis: 'y' }}>
 				<div
-					class="border border-gray-50 dark:border-gray-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
+					class="border border-base-50 dark:border-base-850/30 rounded-2xl my-1.5 p-2.5 space-y-2"
 				>
 					{#if view && view.kind !== 'edit'}
 						{@const isTruncated = viewOutput.length > RESULT_PREVIEW_LIMIT && !expandedResult}
 						{#if view.kind === 'command' || viewOutput}
 							<pre
-								class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono max-h-80 overflow-y-auto">{#if view.kind === 'command'}<span
-										class="text-gray-400 dark:text-gray-500 select-none"
-										>$ </span><span class="text-gray-900 dark:text-gray-100">{view.command}</span
+								class="text-xs text-base-600 dark:text-base-300 whitespace-pre-wrap break-words font-mono max-h-80 overflow-y-auto">{#if view.kind === 'command'}<span
+										class="text-base-400 dark:text-base-500 select-none"
+										>$ </span><span class="text-base-900 dark:text-base-100">{view.command}</span
 									>{viewOutput ? '\n' : ''}{/if}{isTruncated
 									? viewOutput.slice(0, RESULT_PREVIEW_LIMIT)
 									: viewOutput}</pre>
 						{/if}
 						{#if isTruncated}
 							<button
-								class="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								class="text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 								on:click|stopPropagation={() => {
 									expandedResult = true;
 								}}
@@ -416,7 +416,7 @@
 							{@const stats = diffStats(file.diff)}
 							<div>
 								<div class="flex items-baseline gap-1.5 text-xs mb-1 px-1 min-w-0">
-									<span class="font-mono text-gray-500 dark:text-gray-400 truncate"
+									<span class="font-mono text-base-500 dark:text-base-400 truncate"
 										>{file.path}</span
 									>
 									{#if stats.additions}<span class="shrink-0 text-green-600 dark:text-green-400"
@@ -441,7 +441,7 @@
 						<!-- Input -->
 						<div>
 							<div
-								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-base-400 dark:text-base-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Input')}
 							</div>
@@ -450,10 +450,10 @@
 								<div class="px-1 space-y-0.5">
 									{#each Object.entries(parsedArgs) as [key, value]}
 										<div class="flex gap-2 text-xs py-0.5">
-											<span class="font-normal text-gray-600 dark:text-gray-400 shrink-0"
+											<span class="font-normal text-base-600 dark:text-base-400 shrink-0"
 												>{key}</span
 											>
-											<span class="text-gray-800 dark:text-gray-200 break-all"
+											<span class="text-base-800 dark:text-base-200 break-all"
 												>{typeof value === 'object' ? JSON.stringify(value) : value}</span
 											>
 										</div>
@@ -462,7 +462,7 @@
 							{:else}
 								<div class="tool-call-body w-full max-w-none!">
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2 overflow-x-auto">{formatJSONString(
+										class="text-xs text-base-600 dark:text-base-300 whitespace-pre font-mono bg-base-50 dark:bg-base-900 rounded-lg p-2 overflow-x-auto">{formatJSONString(
 											args
 										)}</pre>
 								</div>
@@ -474,14 +474,14 @@
 					{#if !view && isDone && result}
 						<div>
 							<div
-								class="text-[0.625rem] uppercase tracking-wider font-normal text-gray-400 dark:text-gray-500 mb-1.5 px-1"
+								class="text-[0.625rem] uppercase tracking-wider font-normal text-base-400 dark:text-base-500 mb-1.5 px-1"
 							>
 								{$i18n.t('Output')}
 							</div>
 							<div class="w-full max-w-none!">
 								{#if typeof parsedResult === 'object' && parsedResult !== null}
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre font-mono bg-gray-50 dark:bg-gray-900 rounded-lg p-2 overflow-x-auto">{JSON.stringify(
+										class="text-xs text-base-600 dark:text-base-300 whitespace-pre font-mono bg-base-50 dark:bg-base-900 rounded-lg p-2 overflow-x-auto">{JSON.stringify(
 											parsedResult,
 											null,
 											2
@@ -490,12 +490,12 @@
 									{@const resultStr = String(parsedResult)}
 									{@const isTruncated = resultStr.length > RESULT_PREVIEW_LIMIT && !expandedResult}
 									<pre
-										class="text-xs text-gray-600 dark:text-gray-300 whitespace-pre-wrap break-words font-mono">{isTruncated
+										class="text-xs text-base-600 dark:text-base-300 whitespace-pre-wrap break-words font-mono">{isTruncated
 											? resultStr.slice(0, RESULT_PREVIEW_LIMIT)
 											: resultStr}</pre>
 									{#if isTruncated}
 										<button
-											class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+											class="mt-1 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 											on:click|stopPropagation={() => {
 												expandedResult = true;
 											}}

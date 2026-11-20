@@ -42,7 +42,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 text-[0.90625rem] line-clamp-1 text-wrap"
+						: ''} text-base-500 dark:text-base-500 text-[0.90625rem] line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Searching Knowledge for "{{searchQuery}}"`, {
 						searchQuery: status.query
@@ -54,7 +54,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 text-[0.90625rem] line-clamp-1 text-wrap"
+						: ''} text-base-500 dark:text-base-500 text-[0.90625rem] line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Searching`)}
 				</div>
@@ -62,7 +62,7 @@
 				<div class=" flex gap-1 flex-wrap mt-2">
 					{#each status.queries as query, idx (query)}
 						<div
-							class="bg-gray-50 dark:bg-gray-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
+							class="bg-base-50 dark:bg-base-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
 						>
 							<div>
 								<Search className="size-3" />
@@ -80,7 +80,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 text-[0.90625rem] line-clamp-1 text-wrap"
+						: ''} text-base-500 dark:text-base-500 text-[0.90625rem] line-clamp-1 text-wrap"
 				>
 					{$i18n.t(`Querying`)}
 				</div>
@@ -88,7 +88,7 @@
 				<div class=" flex gap-1 flex-wrap mt-2">
 					{#each status.queries as query, idx (query)}
 						<div
-							class="bg-gray-50 dark:bg-gray-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
+							class="bg-base-50 dark:bg-base-850 flex rounded-lg py-1 px-2 items-center gap-1 text-xs"
 						>
 							<div>
 								<Search className="size-3" />
@@ -106,7 +106,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 text-[0.90625rem] line-clamp-1 text-wrap"
+						: ''} text-base-500 dark:text-base-500 text-[0.90625rem] line-clamp-1 text-wrap"
 				>
 					{#if status.count === 0}
 						{$i18n.t('No sources found')}
@@ -128,7 +128,7 @@
 				<div
 					class="{(done || status?.done) === false
 						? 'shimmer'
-						: ''} text-gray-500 dark:text-gray-500 text-[0.90625rem] text-wrap"
+						: ''} text-base-500 dark:text-base-500 text-[0.90625rem] text-wrap"
 					class:line-clamp-1={clamp}
 				>
 					<!-- $i18n.t(`Searching "{{searchQuery}}"`) -->

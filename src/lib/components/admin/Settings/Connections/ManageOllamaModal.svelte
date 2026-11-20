@@ -15,10 +15,10 @@
 	ariaLabel={$i18n.t('Manage Ollama')}
 	size="sm"
 	bind:show
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-white dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<div class="flex w-full justify-between items-center text-sm font-medium self-center">
 				<div class=" shrink-0">
 					{$i18n.t('Manage Ollama')}
@@ -26,7 +26,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -35,7 +35,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<ManageOllama {urlIdx} />
 		</div>
 	</div>

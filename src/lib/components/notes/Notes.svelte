@@ -424,7 +424,7 @@
 				showDeleteConfirm = false;
 			}}
 		>
-			<div class=" text-sm text-gray-500 truncate">
+			<div class=" text-sm text-base-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
 			</div>
 		</DeleteConfirmDialog>
@@ -438,7 +438,7 @@
 					>
 						<button
 							id="sidebar-toggle-button"
-							class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+							class="cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition"
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
@@ -455,7 +455,7 @@
 			<div class="flex w-full items-center">
 				<div class="flex items-center gap-1 py-1 min-w-0">
 					<span class="min-w-fit px-1 text-sm select-none">{$i18n.t('Notes')}</span>
-					<span class="text-sm text-gray-500 dark:text-gray-500">
+					<span class="text-sm text-base-500 dark:text-base-500">
 						{total === null ? '' : formatNumber(total)}
 					</span>
 				</div>
@@ -504,7 +504,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -584,7 +584,7 @@
 						<div>
 							{#if displayOption === null}
 								<div
-									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-gray-400 dark:text-gray-600"
+									class="flex w-full items-center gap-2 px-2 pb-2 text-xs text-base-400 dark:text-base-600"
 								>
 									<div class="flex min-w-0 flex-1 items-center">
 										<button
@@ -625,7 +625,7 @@
 							{/if}
 
 							{#each groupedNotes as [timeRange, notesList], idx}
-								<div class="w-full px-2 pb-1 text-xs text-gray-500 dark:text-gray-500">
+								<div class="w-full px-2 pb-1 text-xs text-base-500 dark:text-base-500">
 									{$i18n.t(timeRange)}
 								</div>
 
@@ -636,7 +636,7 @@
 										<!-- Preserve the former row label for i18n extraction: $i18n.t('Open note') -->
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-900 dark:focus-within:bg-gray-900"
+												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-900 dark:focus-within:bg-base-900"
 												role="presentation"
 												on:click={(e) => {
 													if (e.target instanceof Element && e.target.closest('a')) return;
@@ -648,7 +648,7 @@
 														<a
 															href={noteUrl(note)}
 															dir="auto"
-															class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+															class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 														>
 															{note.title}
 														</a>
@@ -660,7 +660,7 @@
 															.format('LLLL')}
 													>
 														<div
-															class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
+															class="shrink-0 truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
 														>
 															{dayjs(note.updated_at / 1000000)
 																.locale($i18n.language)
@@ -671,7 +671,7 @@
 
 												<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
 													<div
-														class="hidden max-w-44 shrink-0 truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+														class="hidden max-w-44 shrink-0 truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
 													>
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
@@ -699,7 +699,7 @@
 															<button
 																class="flex {($settings?.highContrastMode ?? false)
 																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 																type="button"
 																aria-label={$i18n.t('Delete')}
 																on:click={(e) => {
@@ -753,7 +753,7 @@
 															<button
 																class="flex {($settings?.highContrastMode ?? false)
 																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 																type="button"
 																aria-label={$i18n.t('Note Menu')}
 																on:click={(e) => {
@@ -778,13 +778,13 @@
 									>
 										{#each notesList as note, idx (note.id)}
 											<div
-												class="group relative flex h-26 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-gray-50/40 p-2 text-left transition-colors duration-75 hover:bg-gray-50/40 focus-within:bg-gray-50/40 dark:border-white/[0.06] dark:bg-gray-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
+												class="group relative flex h-26 min-w-0 w-full flex-col rounded-md border border-black/[0.06] bg-base-50/40 p-2 text-left transition-colors duration-75 hover:bg-base-50/40 focus-within:bg-base-50/40 dark:border-white/[0.06] dark:bg-base-900 dark:hover:bg-white/4 dark:focus-within:bg-white/4"
 											>
 												<div class="flex min-w-0 items-start">
 													<a href={noteUrl(note)} class="min-w-0 flex-1 pr-5">
 														<Tooltip content={note.title} placement="top-start">
 															<div
-																class="line-clamp-2 break-words text-xs text-gray-800 dark:text-gray-200"
+																class="line-clamp-2 break-words text-xs text-base-800 dark:text-base-200"
 															>
 																{note.title}
 															</div>
@@ -797,7 +797,7 @@
 																class="absolute right-1 top-1 flex {($settings?.highContrastMode ??
 																false)
 																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-white/4 dark:hover:text-gray-400"
+																	: 'size-5'} shrink-0 items-center justify-center rounded text-base-400 transition hover:bg-base-50/40 hover:text-base-600 dark:text-base-500 dark:hover:bg-white/4 dark:hover:text-base-400"
 																type="button"
 																aria-label={$i18n.t('Delete')}
 																on:click={(e) => {
@@ -848,7 +848,7 @@
 																class="absolute right-1 top-1 flex {($settings?.highContrastMode ??
 																false)
 																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded text-gray-400 transition hover:bg-gray-50/40 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-white/4 dark:hover:text-gray-400"
+																	: 'size-5'} shrink-0 items-center justify-center rounded text-base-400 transition hover:bg-base-50/40 hover:text-base-600 dark:text-base-500 dark:hover:bg-white/4 dark:hover:text-base-400"
 																type="button"
 																aria-label={$i18n.t('Note Menu')}
 															>
@@ -860,7 +860,7 @@
 
 												<a
 													href={noteUrl(note)}
-													class="mt-2 min-h-0 flex-1 overflow-hidden text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+													class="mt-2 min-h-0 flex-1 overflow-hidden text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
 													style="mask-image: linear-gradient(to bottom, black 65%, transparent 100%);"
 												>
 													<div class="line-clamp-4 whitespace-pre-line break-words">
@@ -870,7 +870,7 @@
 
 												<a href={noteUrl(note)} class="mt-2 block min-w-0">
 													<div
-														class="flex min-w-0 w-full items-center justify-between gap-1 text-[0.5625rem] leading-3 text-gray-500 dark:text-gray-400"
+														class="flex min-w-0 w-full items-center justify-between gap-1 text-[0.5625rem] leading-3 text-base-500 dark:text-base-400"
 													>
 														<Tooltip
 															content={note?.user?.email ?? $i18n.t('Deleted User')}
@@ -931,12 +931,12 @@
 					</div>
 				{:else}
 					<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
-						<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+						<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 							<div class="mb-1.5 text-sm">
 								{$i18n.t('No Notes')}
 							</div>
 
-							<div class="text-xs leading-5 text-gray-500">
+							<div class="text-xs leading-5 text-base-500">
 								{$i18n.t('Create your first note from the Create menu.')}
 							</div>
 						</div>

@@ -17,7 +17,7 @@
 	export let collapsible = true;
 
 	export let className = '';
-	export let buttonClassName = 'text-gray-600 dark:text-gray-400';
+	export let buttonClassName = 'text-base-600 dark:text-base-400';
 
 	export let chevron = true;
 	export let onAddLabel: string = '';
@@ -154,7 +154,7 @@
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<div
 					id="sidebar-folder-button"
-					class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-900 transition {buttonClassName}"
+					class=" w-full group rounded-xl relative flex items-center justify-between hover:bg-base-100 dark:hover:bg-base-900 transition {buttonClassName}"
 				>
 					<h3 class="w-full">
 						<button
@@ -179,7 +179,7 @@
 
 					{#if onAdd}
 						<button
-							class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
+							class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-base-300"
 							on:pointerup={(e) => {
 								e.stopPropagation();
 							}}
@@ -190,7 +190,7 @@
 						>
 							<Tooltip content={onAddLabel}>
 								<button
-									class="p-0.5 dark:hover:bg-gray-850 rounded-lg touch-auto"
+									class="p-0.5 dark:hover:bg-base-850 rounded-lg touch-auto"
 									on:click={(e) => {}}
 								>
 									<Plus className=" size-3" strokeWidth="2.5" />

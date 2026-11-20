@@ -115,14 +115,14 @@
 			{#if config.ENABLE_VIDEO_GENERATION}
 				<div>
 					<div class="mb-2 flex items-center justify-between gap-4">
-						<div class="text-xs text-gray-600 dark:text-gray-400">
+						<div class="text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('settings.admin.videos.manageVideoConnections.label')}
 						</div>
 
 						<Tooltip content={$i18n.t('settings.admin.videos.addConnection.label')}>
 							<button
 								aria-label={$i18n.t('settings.admin.videos.addConnection.label')}
-								class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-base-300"
 								on:click={() => {
 									showAddConnectionModal = true;
 								}}

@@ -61,11 +61,11 @@
 	class="min-h-0 overflow-y-auto scrollbar-hover @container {className}"
 >
 	{#if loading}<div
-			class="flex h-full min-h-20 items-center justify-center text-gray-500 dark:text-gray-400"
+			class="flex h-full min-h-20 items-center justify-center text-base-500 dark:text-base-400"
 		>
 			<Spinner className="size-4" />
 		</div>
-	{:else if error}<div class="px-3 py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+	{:else if error}<div class="px-3 py-6 text-center text-xs text-base-500 dark:text-base-400">
 			<p>{$i18n.t('Failed to load chat preview')}</p>
 			<button
 				class="mt-2 underline underline-offset-2"
@@ -74,7 +74,7 @@
 		</div>
 	{:else if history}<Messages
 			bind:this={messagesComponent}
-			className="flex w-full pt-2 pb-0 [&_.message-listitem]:!mb-1 [&_.message-listitem]:!max-w-none [&_.message-listitem]:!px-3 [&_.pb-18]:!pb-1.5 [&_.markdown-prose]:!text-xs [&_.markdown-prose]:!leading-snug [&_.whitespace-pre-wrap]:!text-xs [&_.whitespace-pre-wrap]:!leading-snug [&_.text-\[0\.9375rem\]]:!text-xs [&_.text-sm]:!text-xs [&_.tool-call-body_pre]:!text-[0.6875rem] [&_.rounded-3xl]:!rounded-2xl [&_.chat-user_.rounded-3xl]:!bg-gray-50 dark:[&_.chat-user_.rounded-3xl]:!bg-gray-800 [&_.px-4]:!px-3 [&_.py-3]:!py-2 [&_.py-1\.5]:!py-1 [&_button]:!pointer-events-none [&_.font-medium]:!font-normal [&_.font-semibold]:!font-normal"
+			className="flex w-full pt-2 pb-0 [&_.message-listitem]:!mb-1 [&_.message-listitem]:!max-w-none [&_.message-listitem]:!px-3 [&_.pb-18]:!pb-1.5 [&_.markdown-prose]:!text-xs [&_.markdown-prose]:!leading-snug [&_.whitespace-pre-wrap]:!text-xs [&_.whitespace-pre-wrap]:!leading-snug [&_.text-\[0\.9375rem\]]:!text-xs [&_.text-sm]:!text-xs [&_.tool-call-body_pre]:!text-[0.6875rem] [&_.rounded-3xl]:!rounded-2xl [&_.chat-user_.rounded-3xl]:!bg-base-50 dark:[&_.chat-user_.rounded-3xl]:!bg-base-800 [&_.px-4]:!px-3 [&_.py-3]:!py-2 [&_.py-1\.5]:!py-1 [&_button]:!pointer-events-none [&_.font-medium]:!font-normal [&_.font-semibold]:!font-normal"
 			chatId={containerId}
 			user={$user}
 			prompt=""

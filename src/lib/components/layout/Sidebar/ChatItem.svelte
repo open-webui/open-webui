@@ -188,7 +188,7 @@
 					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
 				: $mobile
 					? ''
-					: ' hover:bg-gray-100 dark:hover:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-900'
+					: ' hover:bg-base-100 dark:hover:bg-base-900 group-hover:bg-base-100 dark:group-hover:bg-base-900'
 	}  whitespace-nowrap text-ellipsis transition`;
 
 	const selectChatHandler = (event?: MouseEvent) => {
@@ -630,7 +630,7 @@
 		<div
 			dir="auto"
 			class="text-left self-center overflow-hidden w-full h-5 truncate {unread
-				? 'font-normal text-gray-800 dark:text-gray-200'
+				? 'font-normal text-base-800 dark:text-base-200'
 				: ''} {($mobile || showInlineActions) && (!readonly || canRename) && !selecting
 				? 'pr-12'
 				: ''}"
@@ -650,7 +650,7 @@
 	<!-- Time ago indicator -->
 	{#if (updatedAt ?? createdAt) && !showInlineActions && !($mobile && (!readonly || canRename))}
 		<div
-			class="shrink-0 self-center text-[0.625rem] text-gray-400 dark:text-gray-500 pl-2"
+			class="shrink-0 self-center text-[0.625rem] text-base-400 dark:text-base-500 pl-2"
 			aria-hidden="true"
 		>
 			{formatTimeAgo((updatedAt ?? createdAt) as number)}
@@ -667,7 +667,7 @@
 		deleteChatHandler(id);
 	}}
 >
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	<div class=" text-sm text-base-500 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-normal">{title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -675,7 +675,7 @@
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div
-			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
 		>
 			<div class="flex items-center gap-1.5">
 				<ChatIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
@@ -719,7 +719,7 @@
 					? ($settings?.highContrastMode ?? false)
 						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
 						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
-					: 'hover:bg-gray-100 dark:hover:bg-gray-900 group-hover:bg-gray-100 dark:group-hover:bg-gray-900'}  whitespace-nowrap text-ellipsis relative transition {generating
+					: 'hover:bg-base-100 dark:hover:bg-base-900 group-hover:bg-base-100 dark:group-hover:bg-base-900'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
 		>
@@ -758,8 +758,8 @@
 					disabled={readonly || $selectionBusy}
 					aria-label={$i18n.t('Select {{name}}', { name: title })}
 					class="mr-2 flex size-3.5 shrink-0 self-center items-center justify-center rounded border disabled:opacity-40 {multiSelected
-						? 'border-gray-900 bg-gray-900 text-white dark:border-gray-200 dark:bg-gray-200 dark:text-gray-900'
-						: 'border-gray-300 dark:border-gray-600'}"
+						? 'border-base-900 bg-base-900 text-white dark:border-base-200 dark:bg-base-200 dark:text-base-900'
+						: 'border-base-300 dark:border-base-600'}"
 					on:click|stopPropagation={(event) => chatSelection?.select(id, event.shiftKey)}
 				>
 					{#if multiSelected}<CheckIcon className="size-2.5" strokeWidth="2" />{/if}

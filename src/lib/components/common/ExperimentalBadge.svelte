@@ -16,7 +16,7 @@
 </script>
 
 <Tooltip {content} className="inline-flex">
-	<span class="text-[0.625rem] font-normal uppercase leading-none text-gray-400 dark:text-gray-600">
+	<span class="text-[0.625rem] font-normal uppercase leading-none text-base-400 dark:text-base-600">
 		{label}
 	</span>
 </Tooltip>

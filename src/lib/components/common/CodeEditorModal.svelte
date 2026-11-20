@@ -58,14 +58,14 @@
 </script>
 
 <Modal bind:show size="lg" ariaLabel={title || $i18n.t('Code Editor')}>
-	<div class="flex h-[min(80dvh,46rem)] flex-col dark:text-gray-200">
+	<div class="flex h-[min(80dvh,46rem)] flex-col dark:text-base-200">
 		<div class="flex items-start justify-between gap-4 px-4 pt-3 pb-2">
 			<div class="min-w-0">
-				<h1 class="text-sm font-medium text-gray-900 dark:text-gray-100">
+				<h1 class="text-sm font-medium text-base-900 dark:text-base-100">
 					{title || $i18n.t('Code Editor')}
 				</h1>
 				{#if description}
-					<div class="text-xs text-gray-500 line-clamp-1">{description}</div>
+					<div class="text-xs text-base-500 line-clamp-1">{description}</div>
 				{/if}
 			</div>
 
@@ -82,7 +82,7 @@
 		</div>
 
 		<div
-			class="code-editor-modal mx-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-gray-100/80 bg-gray-50/60 py-1 dark:border-gray-850 dark:bg-gray-950/40"
+			class="code-editor-modal mx-4 min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-100/80 bg-base-50/60 py-1 dark:border-base-850 dark:bg-base-950/40"
 		>
 			<CodeEditor
 				value={draft}
@@ -100,7 +100,7 @@
 			<div class="min-w-0 flex items-center gap-3 text-xs">
 				{#if lang === 'json'}
 					<button
-						class="shrink-0 text-gray-500 transition hover:text-gray-900 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed dark:hover:text-white"
+						class="shrink-0 text-base-500 transition hover:text-base-900 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed dark:hover:text-white"
 						type="button"
 						disabled={!draft.trim() || !!jsonError}
 						onclick={format}
@@ -118,7 +118,7 @@
 
 			<div class="flex shrink-0 items-center gap-2">
 				<button
-					class="px-1 py-1.5 text-xs text-gray-500 transition hover:text-gray-700 hover:underline dark:text-gray-400 dark:hover:text-gray-200"
+					class="px-1 py-1.5 text-xs text-base-500 transition hover:text-base-700 hover:underline dark:text-base-400 dark:hover:text-base-200"
 					type="button"
 					onclick={() => {
 						show = false;
@@ -128,7 +128,7 @@
 				</button>
 
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 					type="button"
 					disabled={!!jsonError}
 					onclick={save}
@@ -148,7 +148,7 @@
 	}
 
 	.code-editor-modal :global(.cm-gutters) {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 
 	.code-editor-modal :global(.cm-activeLine),

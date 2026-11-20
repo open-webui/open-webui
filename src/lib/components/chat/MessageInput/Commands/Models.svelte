@@ -66,7 +66,7 @@
 	};
 </script>
 
-<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+<div class="px-2 py-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 	{$i18n.t('Models')}
 </div>
 
@@ -74,9 +74,9 @@
 	{#each filteredItems as model, modelIdx}
 		<Tooltip content={model.id} placement="top-start">
 			<button
-				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {modelIdx ===
+				class="flex h-[1.6875rem] w-full items-center rounded-xl px-2 text-left text-[0.8125rem] hover:bg-base-50/40 dark:hover:bg-base-800/40 {modelIdx ===
 				selectedIdx
-					? 'bg-gray-50/40 dark:bg-gray-800/40 selected-command-option-button'
+					? 'bg-base-50/40 dark:bg-base-800/40 selected-command-option-button'
 					: ''}"
 				type="button"
 				on:click={() => {
@@ -88,7 +88,7 @@
 				on:focus={() => {}}
 				data-selected={modelIdx === selectedIdx}
 			>
-				<div class="flex min-w-0 items-center text-black dark:text-gray-100">
+				<div class="flex min-w-0 items-center text-black dark:text-base-100">
 					<img
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 						alt={resolveLocalizedModelName(model, $i18n.language) ?? model.id}

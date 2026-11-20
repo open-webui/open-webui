@@ -53,7 +53,7 @@
 	};
 
 	const inputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	$: events = eventItems.map((item) => item.event);
 	$: eventDetails = Object.fromEntries(eventItems.map((item) => [item.event, item]));
@@ -397,16 +397,16 @@
 	ariaLabel={editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 	bind:show={showWebhookModal}
 	size="sm"
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-white dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 			</h1>
 
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={resetForm}
@@ -415,11 +415,11 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+		<div class="flex flex-col w-full px-5 pb-4 dark:text-base-200">
 			<form class="flex flex-col w-full" on:submit|preventDefault={saveWebhook}>
 				<div class="flex gap-3">
 					<div class="flex flex-col w-full">
-						<label for="event-webhook-name" class={`text-xs mb-0.5 text-gray-500`}
+						<label for="event-webhook-name" class={`text-xs mb-0.5 text-base-500`}
 							>{$i18n.t('Name')}</label
 						>
 						<input
@@ -435,7 +435,7 @@
 
 				<div class="flex gap-3 mt-2">
 					<div class="flex flex-col w-full">
-						<label for="event-webhook-url" class={`text-xs mb-0.5 text-gray-500`}
+						<label for="event-webhook-url" class={`text-xs mb-0.5 text-base-500`}
 							>{$i18n.t('URL')}</label
 						>
 						<div class="flex items-center gap-2">
@@ -457,7 +457,7 @@
 
 				<div class="mt-3">
 					<div class="flex justify-between items-center gap-3">
-						<div class={`text-xs text-gray-500`}>
+						<div class={`text-xs text-base-500`}>
 							{$i18n.t('Send events for')}
 						</div>
 						<SettingsSelect bind:value={targetMode}>
@@ -467,7 +467,7 @@
 						</SettingsSelect>
 					</div>
 
-					<div class="mt-1 text-xs text-gray-500">
+					<div class="mt-1 text-xs text-base-500">
 						{#if targetMode === 'all'}
 							{$i18n.t(
 								'Receives matching events across the instance, including system/config events and events associated with any user.'
@@ -487,10 +487,10 @@
 								<div class="flex flex-wrap gap-1 mb-2">
 									{#each targetGroupIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedGroups[id]?.name ?? id}</span>
-											<span class="text-gray-500">{$i18n.t('group')}</span>
+											<span class="text-base-500">{$i18n.t('group')}</span>
 											<button
 												type="button"
 												aria-label={$i18n.t('Remove')}
@@ -503,10 +503,10 @@
 
 									{#each targetUserIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedUsers[id]?.name ?? id}</span>
-											<span class="text-gray-500">{$i18n.t('user')}</span>
+											<span class="text-base-500">{$i18n.t('user')}</span>
 											<button
 												type="button"
 												aria-label={$i18n.t('Remove')}
@@ -532,32 +532,32 @@
 
 								{#if targetQuery.trim() && (targetGroupResults.length > 0 || targetUserResults.length > 0)}
 									<div
-										class="absolute z-10 mt-1 w-full rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-850 shadow-lg py-1 max-h-48 overflow-y-auto"
+										class="absolute z-10 mt-1 w-full rounded-lg bg-white dark:bg-base-900 border border-base-100 dark:border-base-850 shadow-lg py-1 max-h-48 overflow-y-auto"
 									>
 										{#each targetGroupResults as group}
 											<button
 												type="button"
-												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-base-50/70 dark:hover:bg-base-850/50"
 												on:click={() => addTargetGroup(group)}
 											>
 												<span class="truncate">{group.name}</span>
-												<span class="text-gray-500">{$i18n.t('Group')}</span>
+												<span class="text-base-500">{$i18n.t('Group')}</span>
 											</button>
 										{/each}
 
 										{#each targetUserResults as user}
 											<button
 												type="button"
-												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+												class="w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs text-left hover:bg-base-50/70 dark:hover:bg-base-850/50"
 												on:click={() => addTargetUser(user)}
 											>
 												<span class="truncate">
 													{user.name}
 													{#if user.email}
-														<span class="text-gray-500">({user.email})</span>
+														<span class="text-base-500">({user.email})</span>
 													{/if}
 												</span>
-												<span class="text-gray-500">{$i18n.t('User')}</span>
+												<span class="text-base-500">{$i18n.t('User')}</span>
 											</button>
 										{/each}
 									</div>
@@ -569,10 +569,10 @@
 
 				<div class="mt-3">
 					<div class="flex justify-between items-center">
-						<label for="event-webhook-all-events" class={`text-xs text-gray-500`}
+						<label for="event-webhook-all-events" class={`text-xs text-base-500`}
 							>{$i18n.t('settings.admin.general.events.events.label')}</label
 						>
-						<label class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+						<label class="flex items-center gap-1.5 text-xs text-base-700 dark:text-base-300">
 							<input
 								id="event-webhook-all-events"
 								type="checkbox"
@@ -589,7 +589,7 @@
 								<div class="flex flex-wrap gap-1">
 									{#each form.events as event}
 										<div
-											class="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="font-mono break-all">{event}</span>
 											<button
@@ -620,7 +620,7 @@
 								/>
 								<button
 									type="button"
-									class="text-xs text-gray-700 dark:text-gray-300 hover:underline"
+									class="text-xs text-base-700 dark:text-base-300 hover:underline"
 									on:click={addPattern}
 								>
 									{$i18n.t('Add')}
@@ -630,7 +630,7 @@
 							<div class="max-h-36 overflow-y-auto pb-0.5">
 								{#each filteredEvents as event}
 									<label
-										class="flex items-start gap-2 py-0.5 text-xs text-gray-700 dark:text-gray-300"
+										class="flex items-start gap-2 py-0.5 text-xs text-base-700 dark:text-base-300"
 									>
 										<input
 											class="mt-0.5"
@@ -640,13 +640,13 @@
 										/>
 										<span class="min-w-0">
 											<span class="font-mono break-all">{event}</span>
-											<span class="ml-1 text-gray-500">{eventDetails[event]?.message}</span>
+											<span class="ml-1 text-base-500">{eventDetails[event]?.message}</span>
 										</span>
 									</label>
 								{/each}
 							</div>
 
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-base-500">
 								<!-- LICENSE covers this Open WebUI wordmark.
 									Do not alter, remove, obscure, or replace it except as LICENSE permits:
 									https://docs.openwebui.com/license. -->
@@ -662,7 +662,7 @@
 					<div>
 						{#if editing}
 							<button
-								class="px-1 py-1.5 text-xs font-normal text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+								class="px-1 py-1.5 text-xs font-normal text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 hover:underline transition"
 								type="button"
 								on:click={() => {
 									showDeleteConfirmDialog = true;
@@ -675,7 +675,7 @@
 
 					<button
 						type="submit"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 					>
 						{$i18n.t('Save')}
 					</button>
@@ -695,24 +695,24 @@
 />
 
 <div class="mt-5">
-	<div class="mb-2 text-xs text-gray-400 dark:text-gray-600">
+	<div class="mb-2 text-xs text-base-400 dark:text-base-600">
 		{$i18n.t('settings.admin.general.events.events.label')}
 	</div>
 
 	<div class="flex flex-col w-full justify-between gap-2.5">
 		<div class="flex w-full items-start justify-between gap-4">
 			<div class="min-w-0">
-				<div class="text-xs text-gray-600 dark:text-gray-400">
+				<div class="text-xs text-base-600 dark:text-base-400">
 					{$i18n.t('settings.admin.general.events.webhooks.label')}
 				</div>
-				<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<div class="mt-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 					{$i18n.t('settings.admin.general.events.webhooks.description')}
 				</div>
 			</div>
 			<Tooltip content={$i18n.t('Add webhook')}>
 				<button
 					aria-label={$i18n.t('Add webhook')}
-					class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
 					on:click={newWebhook}
 					type="button"
 				>
@@ -730,11 +730,11 @@
 						<div class="outline-hidden w-full bg-transparent text-sm truncate">
 							<label
 								for={`webhook-${webhook.id}-control`}
-								class="font-normal text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+								class="font-normal text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 							>
 								{webhook.id === 'default' ? $i18n.t('Default webhook') : webhook.name}
 							</label>
-							<span class="text-xs text-gray-500">
+							<span class="text-xs text-base-500">
 								- {urlHost(webhook.url)} - {eventSummary(webhook)} - {targetSummary(webhook)}
 							</span>
 						</div>
@@ -744,7 +744,7 @@
 						<Tooltip content={$i18n.t('Configure')}>
 							<button
 								aria-label={$i18n.t('Configure')}
-								class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+								class="self-center p-1 bg-transparent hover:bg-base-50/70 dark:hover:bg-base-850/50 rounded-lg transition"
 								on:click={() => editWebhook(webhook)}
 								type="button"
 							>
@@ -767,7 +767,7 @@
 		</div>
 
 		{#if webhooks.length === 0}
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-base-400 dark:text-base-500">
 				{$i18n.t('No event webhooks configured.')}
 			</div>
 		{/if}

@@ -141,7 +141,7 @@
 		<div
 			class="{swipeSide
 				? 'relative'
-				: ''} mt-auto w-full bg-gray-50 dark:bg-gray-900 dark:text-gray-100 {className} scrollbar-hidden max-h-[100dvh] overflow-y-auto"
+				: ''} mt-auto w-full bg-base-50 dark:bg-base-900 dark:text-base-100 {className} scrollbar-hidden max-h-[100dvh] overflow-y-auto"
 			style={panelStyle}
 			on:mousedown={(e) => {
 				e.stopPropagation();

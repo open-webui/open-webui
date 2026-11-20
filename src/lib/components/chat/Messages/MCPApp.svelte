@@ -221,7 +221,7 @@
 
 <div class="relative" out:teardown|global>
 	{#if status}
-		<p role="status" class="text-sm text-gray-500">{$i18n.t(status)}</p>
+		<p role="status" class="text-sm text-base-500">{$i18n.t(status)}</p>
 	{:else if !initialized && !closing}
 		<div
 			class="absolute inset-0 grid place-items-center pointer-events-none"

@@ -210,7 +210,7 @@
 
 {#if loaded}
 	<div
-		class="h-screen max-h-[100dvh] w-full flex flex-col text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900"
+		class="h-screen max-h-[100dvh] w-full flex flex-col text-base-700 dark:text-base-100 bg-white dark:bg-base-900"
 	>
 		<div class="flex flex-col flex-auto justify-center relative">
 			<div
@@ -218,20 +218,20 @@
 				id="messages-container"
 			>
 				<header
-					class="sticky top-0 z-30 mx-auto w-full max-w-[58rem] shrink-0 bg-white px-2 dark:bg-gray-900"
+					class="sticky top-0 z-30 mx-auto w-full max-w-[58rem] shrink-0 bg-white px-2 dark:bg-base-900"
 				>
 					<div
-						class="pointer-events-none absolute inset-x-0 top-full h-10 z-[-1] bg-linear-to-b from-white to-transparent dark:from-gray-900"
+						class="pointer-events-none absolute inset-x-0 top-full h-10 z-[-1] bg-linear-to-b from-white to-transparent dark:from-base-900"
 					></div>
 					<div class="flex items-center gap-3 px-3 py-2">
 						<h1
-							class="min-w-0 truncate text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+							class="min-w-0 truncate text-[0.9375rem] font-normal text-base-700 dark:text-base-300"
 							{title}
 						>
 							{title}
 						</h1>
 						<time
-							class="ms-auto shrink-0 whitespace-nowrap text-xs text-gray-400 dark:text-gray-500"
+							class="ms-auto shrink-0 whitespace-nowrap text-xs text-base-400 dark:text-base-500"
 							datetime={dayjs(chat.chat.timestamp || chat.created_at * 1000)
 								.locale($i18n.language)
 								.toISOString()}
@@ -268,10 +268,10 @@
 
 			{#if canClone}
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-base-900 to-transparent pb-5 pt-10"
 				>
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white pointer-events-auto"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white pointer-events-auto"
 						on:click={cloneSharedChat}
 					>
 						{$i18n.t('Clone Chat')}

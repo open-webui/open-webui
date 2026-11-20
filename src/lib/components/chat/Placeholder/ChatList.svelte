@@ -139,7 +139,7 @@
 				<div class="group-header flex h-8 items-center gap-2 rounded-xl pl-2 pr-3 backdrop-blur-md">
 					<button
 						type="button"
-						class="flex size-5 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+						class="flex size-5 items-center justify-center rounded-md text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 						aria-expanded={!collapsed[group.id]}
 						aria-label={collapsed[group.id]
 							? $i18n.t('Expand {{name}}', { name: group.label })
@@ -162,10 +162,10 @@
 							><span class="size-2 rounded-full {group.dot}"></span></span
 						>
 					{/if}
-					<h3 class="text-xs text-gray-700 dark:text-gray-200">
+					<h3 class="text-xs text-base-700 dark:text-base-200">
 						{group.label}
 					</h3>
-					<span class="text-xs tabular-nums text-gray-400 dark:text-gray-500"
+					<span class="text-xs tabular-nums text-base-400 dark:text-base-500"
 						>{group.page?.total ?? ''}</span
 					>
 				</div>
@@ -179,7 +179,7 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 					<li
 						data-folder-item
-						class="group flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-850/50 dark:focus-within:bg-gray-850/50 {saving ===
+						class="group flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-850/50 dark:focus-within:bg-base-850/50 {saving ===
 						chat.id
 							? 'opacity-60'
 							: ''}"
@@ -221,7 +221,7 @@
 							{#if renaming === chat.id}
 								<input
 									data-rename-input
-									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-gray-900 outline-none dark:text-white"
+									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-white"
 									aria-label={$i18n.t('Rename')}
 									bind:value={renameValue}
 									on:blur={() => saveRename(chat)}
@@ -243,14 +243,14 @@
 									title={chat.title}
 									disabled={!!menuOpen[chat.id]}
 									className="min-w-0 shrink truncate rounded text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-										? 'text-gray-900 dark:text-white'
-										: 'text-gray-700 dark:text-gray-200'}"
+										? 'text-base-900 dark:text-white'
+										: 'text-base-700 dark:text-base-200'}"
 									onclick={(event) => openFolderChat(chat, appLayout, event)}
 								/>
 							{/if}
 							{#if chat.automation_id}
 								<span
-									class="flex shrink-0 text-gray-400 dark:text-gray-500"
+									class="flex shrink-0 text-base-400 dark:text-base-500"
 									title={$i18n.t('Made by an automation')}
 									aria-label={$i18n.t('Made by an automation')}
 									><Icon name="clock" size={12} /></span
@@ -258,7 +258,7 @@
 							{/if}
 							{#if chat.search_snippet}
 								<span
-									class="hidden min-w-0 flex-1 truncate text-xs text-gray-400 @lg:block dark:text-gray-500"
+									class="hidden min-w-0 flex-1 truncate text-xs text-base-400 @lg:block dark:text-base-500"
 									>{chat.search_snippet}</span
 								>
 							{/if}
@@ -288,7 +288,7 @@
 									content={formatDateDetails(chat.updated_at, $i18n.language)}
 								>
 									<time
-										class="w-14 text-right text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500"
+										class="w-14 text-right text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
 										datetime={new Date(chat.updated_at * 1000).toISOString()}
 										>{formatShortDate(chat.updated_at, $i18n.language)}</time
 									>
@@ -313,7 +313,7 @@
 				{#if group.label}
 					<button
 						type="button"
-						class="flex w-full items-center rounded-xl py-1.5 pl-9.5 text-xs text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700 disabled:pointer-events-none dark:text-gray-500 dark:hover:bg-gray-850/50 dark:hover:text-gray-300"
+						class="flex w-full items-center rounded-xl py-1.5 pl-9.5 text-xs text-base-400 transition-colors hover:bg-base-50 hover:text-base-700 disabled:pointer-events-none dark:text-base-500 dark:hover:bg-base-850/50 dark:hover:text-base-300"
 						disabled={loading || !!loadingGroup}
 						on:click={() => onMore(group.id)}
 					>
@@ -336,10 +336,10 @@
 <style>
 	/* A translucent tint, so the frosted header picks up the page background. */
 	.group-header {
-		background: color-mix(in oklab, var(--color-gray-50) 80%, transparent);
+		background: color-mix(in oklab, var(--color-base-50) 80%, transparent);
 	}
 	:global(.dark) .group-header {
-		background: color-mix(in oklab, var(--color-gray-850) 60%, transparent);
+		background: color-mix(in oklab, var(--color-base-850) 60%, transparent);
 	}
 
 	/* The menu replaces the date on hover, focus, or while open; touch shows the menu. */

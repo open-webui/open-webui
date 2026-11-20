@@ -18,12 +18,12 @@
 
 {#if tasks.length > 0 && hasActive}
 	<div
-		class="my-2 rounded-2xl border border-gray-50 dark:border-gray-850 bg-white dark:bg-gray-900"
+		class="my-2 rounded-2xl border border-base-50 dark:border-base-850 bg-white dark:bg-base-900"
 		transition:slide={{ duration: 200 }}
 	>
 		<!-- Header -->
 		<div class="flex items-center justify-between px-3.5 py-2">
-			<div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+			<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 				<TaskListIcon className="w-3.5 h-3.5" />
 				<span>
 					{completedCount}
@@ -35,7 +35,7 @@
 
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+				class="p-1 text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors"
 				on:click={() => (collapsed = !collapsed)}
 				aria-label={collapsed ? 'Expand' : 'Collapse'}
 			>
@@ -55,7 +55,7 @@
 			>
 				{#each tasks as task, idx (task.id)}
 					<div class="flex items-start gap-2 py-0.5 text-xs">
-						<span class="flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500">
+						<span class="flex-shrink-0 mt-0.5 text-base-400 dark:text-base-500">
 							{#if task.status === 'completed'}
 								<svg
 									class="w-3.5 h-3.5"
@@ -100,10 +100,10 @@
 						</span>
 						<span
 							class="line-clamp-2 {task.status === 'completed'
-								? 'line-through text-gray-400 dark:text-gray-500'
+								? 'line-through text-base-400 dark:text-base-500'
 								: task.status === 'cancelled'
-									? 'line-through text-gray-400 dark:text-gray-600'
-									: 'text-gray-700 dark:text-gray-300'}"
+									? 'line-through text-base-400 dark:text-base-600'
+									: 'text-base-700 dark:text-base-300'}"
 						>
 							{idx + 1}. {task.content}
 						</span>

@@ -33,7 +33,7 @@
 <div class="w-full min-w-0 pb-1">
 	<button
 		type="button"
-		class="w-full min-w-0 flex items-center gap-2 text-left text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+		class="w-full min-w-0 flex items-center gap-2 text-left text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-300 transition-colors"
 		aria-expanded={expanded}
 		on:click={() => (expanded = !expanded)}
 	>
@@ -45,20 +45,20 @@
 		{/if}
 		{#if delegationLabel}
 			<span
-				class="hidden sm:inline text-[0.6875rem] font-mono text-gray-400 dark:text-gray-600 shrink-0"
+				class="hidden sm:inline text-[0.6875rem] font-mono text-base-400 dark:text-base-600 shrink-0"
 			>
 				{delegationLabel}
 			</span>
 		{/if}
 		<ChevronDown
-			className="size-3 text-gray-400 dark:text-gray-600 shrink-0 transition-transform duration-150 {expanded
+			className="size-3 text-base-400 dark:text-base-600 shrink-0 transition-transform duration-150 {expanded
 				? 'rotate-180'
 				: ''}"
 		/>
 	</button>
 	{#if expanded}
 		<div
-			class="mt-2 ml-3 border-l border-gray-100 dark:border-white/8 pl-3 text-[0.78125rem] leading-relaxed text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words"
+			class="mt-2 ml-3 border-l border-base-100 dark:border-white/8 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:text-base-400 whitespace-pre-wrap break-words"
 		>
 			{content}
 		</div>

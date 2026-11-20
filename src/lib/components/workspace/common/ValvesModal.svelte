@@ -161,11 +161,11 @@
 
 <Modal ariaLabel={$i18n.t('Valves')} size="sm" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<div class="self-center text-sm font-medium">{$i18n.t('Valves')}</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -174,7 +174,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-3 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -192,7 +192,7 @@
 
 					<div class="flex justify-end pt-2.5 text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={saving}
 						>

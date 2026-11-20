@@ -11,7 +11,7 @@
 
 	$: rowClass = `flex w-full min-w-0 items-center gap-1.5 pt-0.5 pb-0.5 ${
 		compactPreview ? 'text-xs' : 'text-[0.90625rem]'
-	} text-gray-400 dark:text-gray-500`;
+	} text-base-400 dark:text-base-500`;
 </script>
 
 {#if status}
@@ -30,13 +30,13 @@
 		<Collapsible
 			title={$i18n.t('Context compacted')}
 			chevronClassName="hidden"
-			buttonClassName="{rowClass} cursor-pointer outline-offset-4 transition-colors hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-gray-400 dark:hover:text-gray-400"
+			buttonClassName="{rowClass} cursor-pointer outline-offset-4 transition-colors hover:text-base-500 focus-visible:outline-2 focus-visible:outline-base-400 dark:hover:text-base-400"
 		>
 			<div
 				slot="content"
 				role="region"
 				aria-label={$i18n.t('Compaction summary')}
-				class="my-1.5 max-h-80 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-5 text-gray-600 dark:text-gray-300"
+				class="my-1.5 max-h-80 overflow-y-auto whitespace-pre-wrap break-words text-xs leading-5 text-base-600 dark:text-base-300"
 			>
 				{summary}
 			</div>

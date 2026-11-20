@@ -221,9 +221,9 @@
 
 <Modal ariaLabel={title || $i18n.t('Event')} size="md" bind:show onRequestClose={close}>
 	<div>
-		<div class="dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="dark:text-base-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-base bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-base bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 				type="text"
 				bind:value={title}
 				placeholder={$i18n.t('Event title')}
@@ -234,7 +234,7 @@
 		<div class="px-4 pb-2 flex flex-col gap-2.5">
 			<!-- Calendar -->
 			<div>
-				<div id="event-calendar-label" class="mb-1 text-xs text-gray-500">
+				<div id="event-calendar-label" class="mb-1 text-xs text-base-500">
 					{$i18n.t('Calendar')}
 				</div>
 				<select
@@ -250,7 +250,7 @@
 
 			<!-- Date / Time -->
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('When')}</div>
+				<div class="mb-1 text-xs text-base-500">{$i18n.t('When')}</div>
 				<div class="flex items-center gap-2 text-sm flex-wrap">
 					<input
 						type="date"
@@ -265,7 +265,7 @@
 							bind:value={startTime}
 							aria-label={$i18n.t('Start time')}
 						/>
-						<span class="text-gray-300 dark:text-gray-600">–</span>
+						<span class="text-base-300 dark:text-base-600">–</span>
 						<input
 							type="time"
 							class="bg-transparent outline-hidden dark:scheme-dark"
@@ -273,7 +273,7 @@
 							aria-label={$i18n.t('End time')}
 						/>
 					{/if}
-					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-gray-400 ml-auto">
+					<label class="flex items-center gap-1.5 cursor-pointer text-xs text-base-400 ml-auto">
 						<input type="checkbox" class="accent-blue-500" bind:checked={allDay} />
 						{$i18n.t('All day')}
 					</label>
@@ -282,12 +282,12 @@
 
 			<!-- Location -->
 			<div>
-				<div id="event-location-label" class="mb-1 text-xs text-gray-500">
+				<div id="event-location-label" class="mb-1 text-xs text-base-500">
 					{$i18n.t('Location')}
 				</div>
 				<input
 					aria-labelledby="event-location-label"
-					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+					class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 					placeholder={$i18n.t('Add location')}
 					bind:value={location}
 				/>
@@ -295,7 +295,7 @@
 
 			<!-- Reminder -->
 			<div>
-				<div id="event-reminder-label" class="mb-1 text-xs text-gray-500">
+				<div id="event-reminder-label" class="mb-1 text-xs text-base-500">
 					{$i18n.t('Reminder')}
 				</div>
 				<select
@@ -315,7 +315,7 @@
 
 			<!-- Repeat -->
 			<div>
-				<div id="event-repeat-label" class="mb-1 text-xs text-gray-500">{$i18n.t('Repeat')}</div>
+				<div id="event-repeat-label" class="mb-1 text-xs text-base-500">{$i18n.t('Repeat')}</div>
 				<select
 					aria-labelledby="event-repeat-label"
 					class="w-full text-sm bg-transparent outline-hidden cursor-pointer"
@@ -332,12 +332,12 @@
 
 			<!-- Description -->
 			<div>
-				<div id="event-description-label" class="mb-1 text-xs text-gray-500">
+				<div id="event-description-label" class="mb-1 text-xs text-base-500">
 					{$i18n.t('Description')}
 				</div>
 				<textarea
 					aria-labelledby="event-description-label"
-					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[4rem]"
+					class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 resize-none min-h-[4rem]"
 					placeholder={$i18n.t('Add description')}
 					bind:value={description}
 					rows="3"
@@ -349,7 +349,7 @@
 			<div class="flex items-center gap-0.5 flex-1 min-w-0">
 				{#if event && !event.meta?.automation_id}
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 						type="button"
 						on:click={() => (showDeleteConfirmDialog = true)}
 						disabled={loading}
@@ -361,14 +361,14 @@
 
 			<div class="flex items-center gap-2 shrink-0">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 					type="button"
 					on:click={close}
 				>
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 					on:click={submitHandler}
 					type="button"
 					disabled={loading}

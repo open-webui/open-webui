@@ -5909,8 +5909,8 @@
 		<button
 			type="button"
 			class="flex shrink-0 cursor-pointer items-center justify-center {tabbed || fullWidthTabs
-				? 'size-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white'
-				: 'size-6 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+				? 'size-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-white/10 dark:hover:text-white'
+				: 'size-6 rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200'}"
 			id={embedded ? undefined : 'chat-context-menu-button'}
 			aria-label={$i18n.t('Chat actions')}
 		>
@@ -5928,7 +5928,7 @@
 		bind:value={titleDraft}
 		class="min-w-0 flex-1 bg-transparent {tabbed || fullWidthTabs
 			? 'text-sm'
-			: 'md:py-1 text-[0.9375rem]'} font-normal text-gray-700 outline-hidden dark:text-gray-300"
+			: 'md:py-1 text-[0.9375rem]'} font-normal text-base-700 outline-hidden dark:text-base-300"
 		aria-label={$i18n.t('Title')}
 		placeholder={generatingTitle ? $i18n.t('Generating...') : ''}
 		disabled={generatingTitle}
@@ -5949,7 +5949,7 @@
 
 	<Tooltip content={$i18n.t('Generate')}>
 		<button
-			class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+			class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 disabled:cursor-not-allowed dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 			aria-label={$i18n.t('Generate')}
 			disabled={generatingTitle}
 			on:mousedown={(e) => e.preventDefault()}
@@ -5967,11 +5967,11 @@
 {#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
 	<Modal ariaLabel={$i18n.t('Chat Variables')} bind:show={showChatVariablesModal} size="md">
 		<div>
-			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
+			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-base-300">
 				<div class="self-center text-sm font-medium">{$i18n.t('Chat Variables')}</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => {
 						showChatVariablesModal = false;
 					}}
@@ -5980,15 +5980,15 @@
 				</button>
 			</div>
 
-			<div class="px-5 pb-4 text-sm text-gray-600 dark:text-gray-300">
-				<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+			<div class="px-5 pb-4 text-sm text-base-600 dark:text-base-300">
+				<div class="mb-2 text-xs text-base-500 dark:text-base-400">
 					{$i18n.t('Selected models define incompatible Chat Variables.')}
 				</div>
 				<div class="flex flex-col gap-1">
 					{#each getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts as conflict}
 						<div class="rounded-lg border border-red-200 px-3 py-2 text-xs dark:border-red-900/60">
 							<div class="font-medium text-red-600 dark:text-red-400">{conflict.key}</div>
-							<div class="mt-1 text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-base-500 dark:text-base-400">
 								{conflict.modelIds.join(', ')}
 							</div>
 						</div>
@@ -6022,7 +6022,7 @@
 	}}
 	on:cancel={() => (pendingUrlActions = null)}
 >
-	<div class="text-sm text-gray-500 space-y-2 max-h-60 overflow-auto break-words">
+	<div class="text-sm text-base-500 space-y-2 max-h-60 overflow-auto break-words">
 		{#if pendingUrlActions?.urls.length}
 			<p>{$i18n.t('Load content from these URLs?')}</p>
 			{#each pendingUrlActions.urls as url}
@@ -6061,7 +6061,7 @@
 		confirmDeleteChat();
 	}}
 >
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	<div class=" text-sm text-base-500 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-normal">{$chatTitle}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -6110,7 +6110,7 @@
 			on:confirm={() => resolveBrowserInteraction(interaction, true)}
 			on:cancel={() => resolveBrowserInteraction(interaction, false)}
 		>
-			<div class="text-sm text-gray-500">
+			<div class="text-sm text-base-500">
 				<div class="font-medium break-all">{interaction.data.tool_call.name}</div>
 				<pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(
 						interaction.data.tool_call.arguments,
@@ -6143,7 +6143,7 @@
 				style="background-image: url({backgroundImage})"
 			/>
 			<div
-				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white/90 to-white/55 dark:from-gray-900/90 dark:to-gray-900/65 z-0"
+				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white/90 to-white/55 dark:from-base-900/90 dark:to-base-900/65 z-0"
 			></div>
 		{/if}
 
@@ -6171,7 +6171,7 @@
 					<FilesOverlay show={dragged} />
 					{#if embedded && !tabbed}
 						<div
-							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
+							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-base-50/80 px-3 pb-1 text-base-700 dark:border-base-850/40 dark:text-base-200"
 						>
 							<div class="flex min-w-0 items-center gap-2">
 								<EmbeddedChatHistoryDropdown
@@ -6188,7 +6188,7 @@
 							{#if onCloseEmbedded}<Tooltip content={$i18n.t('Close')} placement="bottom">
 									<button
 										type="button"
-										class="rounded-md py-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-white px-0"
+										class="rounded-md py-1 text-base-500 transition hover:text-base-900 dark:hover:text-white px-0"
 										on:click={() => onCloseEmbedded?.()}
 										aria-label={$i18n.t('Close')}
 									>
@@ -6329,10 +6329,10 @@
 							{#if isShared && !chat?.write_access}
 								{#if canClone}
 									<div
-										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-base-900 to-transparent pb-5 pt-10"
 									>
 										<button
-											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white pointer-events-auto"
+											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white pointer-events-auto"
 											disabled={cloning}
 											on:click={cloneSharedChat}
 										>
@@ -6422,7 +6422,7 @@
 									/>
 
 									<div
-										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+										class="absolute bottom-1 text-xs text-base-500 text-center line-clamp-1 right-0 left-0"
 									>
 										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 									</div>
@@ -6433,10 +6433,10 @@
 								{#if tabbed}
 									<div class="flex flex-1 items-center justify-center px-6">
 										<div class="max-w-56 text-center">
-											<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
+											<p class="text-sm font-normal text-base-600 dark:text-base-300">
 												{$temporaryChat ? $i18n.t('Temporary chat') : $i18n.t('New Chat')}
 											</p>
-											<p class="mt-1.5 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
+											<p class="mt-1.5 text-xs leading-relaxed text-base-400 dark:text-base-500">
 												{$temporaryChat
 													? $i18n.t('Messages disappear when you close this tab.')
 													: $i18n.t('Messages are saved to your chats.')}
@@ -6446,14 +6446,14 @@
 								{:else if suggestedPrompts.length > 0}
 									<div class="flex flex-1 items-end px-5 pb-8">
 										<div class="w-full">
-											<div class="mb-2 text-[0.75rem] text-gray-300 dark:text-gray-700">
+											<div class="mb-2 text-[0.75rem] text-base-300 dark:text-base-700">
 												{$i18n.t('Suggested prompts')}
 											</div>
 											<div class="flex flex-col">
 												{#each suggestedPrompts as suggestion}
 													<button
 														type="button"
-														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[0.8125rem] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[0.8125rem] leading-5 text-base-500 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 														on:click={async () => {
 															await tick();
 															await submitHandler(withSelectedText(suggestion));

@@ -457,7 +457,7 @@
 	});
 </script>
 
-<div class="relative h-full w-full overflow-hidden bg-gray-50 dark:bg-gray-950">
+<div class="relative h-full w-full overflow-hidden bg-base-50 dark:bg-base-950">
 	<canvas
 		bind:this={canvas}
 		class="block h-full w-full touch-none"
@@ -478,22 +478,22 @@
 		</div>
 	{:else}
 		<div
-			class="absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-gray-200/60 bg-white/90 p-1 text-xs text-gray-500 shadow-lg dark:border-gray-700/60 dark:bg-gray-850/90 dark:text-gray-400"
+			class="absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-base-200/60 bg-white/90 p-1 text-xs text-base-500 shadow-lg dark:border-base-700/60 dark:bg-base-850/90 dark:text-base-400"
 		>
 			<button
 				type="button"
-				class="rounded px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+				class="rounded px-2 py-1.5 hover:bg-base-100 dark:hover:bg-base-800"
 				aria-label={$i18n.t('Zoom out')}
 				on:click={() => preview?.zoom(1.25)}>−</button
 			>
 			<button
 				type="button"
-				class="whitespace-nowrap rounded px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+				class="whitespace-nowrap rounded px-2 py-1.5 hover:bg-base-100 dark:hover:bg-base-800"
 				on:click={() => preview?.reset()}>{$i18n.t('Reset view')}</button
 			>
 			<button
 				type="button"
-				class="rounded px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+				class="rounded px-2 py-1.5 hover:bg-base-100 dark:hover:bg-base-800"
 				aria-label={$i18n.t('Zoom in')}
 				on:click={() => preview?.zoom(0.8)}>+</button
 			>
@@ -508,7 +508,7 @@
 				</select>
 				<button
 					type="button"
-					class="rounded px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-800"
+					class="rounded px-2 py-1.5 hover:bg-base-100 dark:hover:bg-base-800"
 					on:click={() => {
 						playing = !playing;
 						preview?.setPlaying(playing);

@@ -322,7 +322,7 @@
 			tabindex="0"
 			class="flex-1 min-w-0 py-0.5 text-left {compactPreview
 				? 'text-xs'
-				: 'text-[0.90625rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+				: 'text-[0.90625rem]'} text-base-500 hover:text-base-700 dark:hover:text-base-300 transition cursor-pointer"
 			aria-label={$i18n.t('Toggle details')}
 			aria-expanded={open}
 			on:click={() => {
@@ -354,7 +354,7 @@
 						<CheckCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
+					<div class="text-base-400 dark:text-base-500">
 						<Sparkles className="size-3.5" />
 					</div>
 				{/if}
@@ -363,22 +363,22 @@
 				<div class="flex-1 line-clamp-1">
 					{#if groupLabel}
 						<span
-							class="text-gray-400 dark:text-gray-500 {hasActiveDetails ? 'shimmer' : ''}"
+							class="text-base-400 dark:text-base-500 {hasActiveDetails ? 'shimmer' : ''}"
 							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
 						>
 					{:else if actionText}
-						<span class="text-gray-500 dark:text-gray-400 {hasActiveDetails ? 'shimmer' : ''}"
+						<span class="text-base-500 dark:text-base-400 {hasActiveDetails ? 'shimmer' : ''}"
 							>{actionText}</span
 						>
 						{#if summaryText}
-							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+							<span class="text-base-400 dark:text-base-500">{summaryText}</span>
 						{/if}
 					{:else}
-						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+						<span class="text-base-600 dark:text-base-300 {hasActiveDetails ? 'shimmer' : ''}"
 							>{prefixText}</span
 						>
 						{#if summaryText}
-							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+							<span class="text-base-400 dark:text-base-500">{summaryText}</span>
 						{/if}
 					{/if}
 				</div>
@@ -388,7 +388,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-white/8 hover:bg-base-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, true)}
 						>
@@ -396,7 +396,7 @@
 						</button>
 						<button
 							type="button"
-							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, false)}
 						>
@@ -405,7 +405,7 @@
 					</span>
 				{:else}
 					<!-- Chevron -->
-					<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
+					<div class="flex shrink-0 self-center text-base-400 dark:text-base-500">
 						{#if open}
 							<ChevronUp strokeWidth="3.5" className="size-3" />
 						{:else}
@@ -422,14 +422,14 @@
 			{#each pendingToolTokens as token}
 				{@const pendingCallId = token?.attributes?.id ?? ''}
 				<div class="flex items-center gap-2 py-1 px-1">
-					<span class="text-xs text-gray-500 dark:text-gray-400 flex-1 min-w-0 line-clamp-1">
+					<span class="text-xs text-base-500 dark:text-base-400 flex-1 min-w-0 line-clamp-1">
 						{token?.attributes?.name ?? $i18n.t('tool')}
 					</span>
 					{#if token?.attributes?.name !== 'ask_user'}
 						<span class="flex gap-1 shrink-0">
 							<button
 								type="button"
-								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-white/8 hover:bg-base-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, true)}
 							>
@@ -437,7 +437,7 @@
 							</button>
 							<button
 								type="button"
-								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, false)}
 							>

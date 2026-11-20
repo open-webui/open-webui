@@ -118,7 +118,7 @@
 		ariaLabel={$i18n.t('Compare files')}
 		size="full"
 		containerClassName="p-2 sm:p-4"
-		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 !border-0"
+		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-base-900 !border-0"
 		onRequestClose={close}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -137,7 +137,7 @@
 						<h2 class="font-medium">{$i18n.t('Compare files')}</h2>
 						<button
 							type="button"
-							class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+							class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
 							aria-label={$i18n.t('Close')}
 							on:click|stopPropagation={close}><XMark className="size-4" /></button
 						>
@@ -147,24 +147,24 @@
 							<Tooltip
 								content={file.path}
 								allowHTML={false}
-								className="min-w-0 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
+								className="min-w-0 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-white/[0.03]"
 							>
 								<p class="truncate font-medium">{file.name}</p>
 							</Tooltip>
 						{/each}
 					</div>
 					{#if loading}
-						<div class="flex flex-1 items-center justify-center gap-2 text-gray-500" role="status">
+						<div class="flex flex-1 items-center justify-center gap-2 text-base-500" role="status">
 							<Spinner className="size-4" />{$i18n.t('Loading...')}
 						</div>
 					{:else if error}
 						<div class="flex flex-1 flex-col items-center justify-center gap-2 p-5 text-center">
-							<p class="break-words text-gray-500 dark:text-gray-400" role="alert">
+							<p class="break-words text-base-500 dark:text-base-400" role="alert">
 								{error}
 							</p>
 							<button
 								type="button"
-								class="shrink-0 rounded-lg bg-gray-100 dark:bg-gray-850 px-2.5 h-7"
+								class="shrink-0 rounded-lg bg-base-100 dark:bg-base-850 px-2.5 h-7"
 								on:click={load}>{$i18n.t('Retry')}</button
 							>
 						</div>

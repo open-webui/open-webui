@@ -309,7 +309,7 @@
 			{runtimeError || $i18n.t('Visualization arguments are incomplete or invalid.')}
 		</p>
 	{:else if enabled && !initialized}
-		<p role="status" class="mt-1 text-xs text-gray-500">
+		<p role="status" class="mt-1 text-xs text-base-500">
 			{messageDone && !accepted
 				? $i18n.t('Visualization incomplete.')
 				: accepted
@@ -317,7 +317,7 @@
 					: $i18n.t('Drawing preview…')}
 		</p>
 	{:else if enabled && !execute}
-		<p class="mt-1 text-xs text-gray-500">{$i18n.t('Interactive scripts are disabled.')}</p>
+		<p class="mt-1 text-xs text-base-500">{$i18n.t('Interactive scripts are disabled.')}</p>
 	{/if}
 </section>
 

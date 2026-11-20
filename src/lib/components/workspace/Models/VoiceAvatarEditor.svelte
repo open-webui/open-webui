@@ -78,7 +78,7 @@
 	// $i18n.t('A character for bridge voice calls. The orb is used by default.');
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	let input: HTMLInputElement;
 	let error = '';
 	let ready = false;
@@ -134,8 +134,8 @@
 </script>
 
 <fieldset {disabled} class="avatar-editor my-4 min-w-0 w-full">
-	<legend class="text-xs text-gray-500">{$i18n.t('Voice avatar')}</legend>
-	<p class="text-xs text-gray-500 mt-1 mb-3">
+	<legend class="text-xs text-base-500">{$i18n.t('Voice avatar')}</legend>
+	<p class="text-xs text-base-500 mt-1 mb-3">
 		{$i18n.t('A character for voice calls. The default visualization is used without an avatar.')}
 	</p>
 	<input
@@ -149,7 +149,7 @@
 	{#if value}
 		<div
 			bind:this={previewContainer}
-			class="preview rounded-xl bg-gray-50 dark:bg-gray-900"
+			class="preview rounded-xl bg-base-50 dark:bg-base-900"
 			aria-label={$i18n.t('Avatar preview')}
 		>
 			{#key file ?? value.file_id}
@@ -179,7 +179,7 @@
 					}}
 				/>
 			{/key}
-			{#if !ready && !error}<span class="preview-message text-xs text-gray-500" role="status"
+			{#if !ready && !error}<span class="preview-message text-xs text-base-500" role="status"
 					>{$i18n.t('Loading avatar…')}</span
 				>{/if}
 		</div>
@@ -205,7 +205,7 @@
 				</button>
 			{/each}
 		</div>
-		<p class="text-xs text-gray-500 text-center mb-3">
+		<p class="text-xs text-base-500 text-center mb-3">
 			{$i18n.t('Silent motion preview. During calls, the mouth follows assistant audio.')}
 		</p>
 		{#if ready && (!capabilities.mouth || !capabilities.blink)}
@@ -227,7 +227,7 @@
 		/>
 		<section class="my-4 text-xs" aria-label={$i18n.t('State animations')}>
 			<div class="font-medium mb-1">{$i18n.t('State animations')}</div>
-			<p class="text-gray-500 mb-2">
+			<p class="text-base-500 mb-2">
 				{$i18n.t('Optional clips replace the built-in movement for each state.')}
 			</p>
 			{#each ['idle', 'listening', 'speaking'] as mode}
@@ -241,13 +241,13 @@
 									? $i18n.t('Listening')
 									: $i18n.t('Speaking')}
 						</div>
-						<div class="text-gray-500 truncate max-w-44">
+						<div class="text-base-500 truncate max-w-44">
 							{asset
 								? (animationFiles[asset.file_id]?.name ?? $i18n.t('Custom animation'))
 								: $i18n.t('Built-in')}
 						</div>
 					</div>
-					<div class="flex shrink-0 items-center gap-3 text-gray-500">
+					<div class="flex shrink-0 items-center gap-3 text-base-500">
 						<button
 							type="button"
 							aria-label={`${$i18n.t('Preview')} ${mode}`}
@@ -280,12 +280,12 @@
 				<div class="font-medium">{$i18n.t('Named gestures')}</div>
 				<button
 					type="button"
-					class="text-gray-500"
+					class="text-base-500"
 					disabled={gestures.length >= 16}
 					on:click={addGesture}>{$i18n.t('Add gesture')}</button
 				>
 			</div>
-			<p class="text-gray-500 mt-1">
+			<p class="text-base-500 mt-1">
 				{$i18n.t('The voice model chooses when to play a gesture using its name and description.')}
 			</p>
 			{#each gestures as gesture, i}
@@ -304,7 +304,7 @@
 						{#if gesture.file_id}
 							<button
 								type="button"
-								class="shrink-0 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+								class="shrink-0 text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 								aria-label={`${$i18n.t('Preview gesture')} ${i + 1}`}
 								disabled={!ready || animationsLoading || !!animationErrors[gesture.file_id]}
 								on:click={() => previewGesture(gesture.name)}>{$i18n.t('Preview')}</button
@@ -312,14 +312,14 @@
 						{/if}
 						<button
 							type="button"
-							class="shrink-0 whitespace-nowrap text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+							class="shrink-0 whitespace-nowrap text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 							aria-label={`${$i18n.t('Upload gesture')} ${i + 1} VRMA`}
 							on:click={() => uploadAnimation(i)}
 							>{gesture.file_id ? $i18n.t('Replace clip') : $i18n.t('Upload VRMA')}</button
 						>
 						<button
 							type="button"
-							class="shrink-0 m-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+							class="shrink-0 m-1 text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 							title={$i18n.t('Remove gesture')}
 							aria-label={`${$i18n.t('Remove gesture')} ${i + 1}`}
 							on:click={() => {
@@ -346,18 +346,18 @@
 						</p>{/if}
 				</div>
 			{/each}
-			{#if !namesValid}<p class="mt-2 text-gray-500">
+			{#if !namesValid}<p class="mt-2 text-base-500">
 					{$i18n.t(
 						'Each gesture needs a clip, a description, and a unique lowercase name using letters, numbers or underscores.'
 					)}
 				</p>{/if}
 		</section>
-		<p class="text-xs text-gray-500 mb-4">
+		<p class="text-xs text-base-500 mb-4">
 			{$i18n.t(
 				'VRMA 1.0 · 10 MiB max · 60 seconds max. Body motion only, played in place. Mouth, blinking and gaze remain automatic.'
 			)}
 		</p>
-		{#if animationsLoading}<p class="text-xs text-gray-500" role="status">
+		{#if animationsLoading}<p class="text-xs text-base-500" role="status">
 				{$i18n.t('Loading animations…')}
 			</p>{/if}
 	{/if}
@@ -365,16 +365,16 @@
 	<div class="flex gap-3 items-center mt-3 text-xs">
 		<button
 			type="button"
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
 			on:click={() => input.click()}
 			>{value ? $i18n.t('Replace avatar') : $i18n.t('Upload VRM')}</button
 		>
-		{#if value}<button type="button" class="text-gray-500" on:click={remove}
+		{#if value}<button type="button" class="text-base-500" on:click={remove}
 				>{$i18n.t('Use orb')}</button
 			>{/if}
-		{#if file}<span class="text-gray-500 truncate">{file.name}</span>{/if}
+		{#if file}<span class="text-base-500 truncate">{file.name}</span>{/if}
 	</div>
-	<p class="text-xs text-gray-500 mt-2">
+	<p class="text-xs text-base-500 mt-2">
 		{$i18n.t(
 			'VRM 0.x or 1.0 · 25 MiB max · Embedded textures. Upload a character you have permission to use.'
 		)}

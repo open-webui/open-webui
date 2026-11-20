@@ -95,7 +95,7 @@
 				bind:value={inputValue}
 				class="w-full {tags.length > 0
 					? 'px-0.5'
-					: ''} text-xs bg-transparent outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+					: ''} text-xs bg-transparent outline-hidden placeholder:text-base-400 dark:placeholder:text-base-500"
 				placeholder={$i18n.t('Add a tag...')}
 				aria-label={$i18n.t('Add a tag')}
 				role="combobox"
@@ -160,7 +160,7 @@
 					use:portal
 					bind:this={popupElement}
 					id={listboxId}
-					class="fixed w-48 max-h-48 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-0.5 shadow-lg dark:border-gray-800 dark:bg-gray-850"
+					class="fixed w-48 max-h-48 overflow-y-auto rounded-2xl border border-base-200 bg-white p-0.5 shadow-lg dark:border-base-800 dark:bg-base-850"
 					role="listbox"
 					style="z-index: 9999; top: 0; left: 0;"
 				>
@@ -168,9 +168,9 @@
 						<button
 							type="button"
 							id="{listboxId}-{index}"
-							class="flex w-full items-center rounded-xl px-2 py-[0.3125rem] text-left text-xs text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800 {suggestionIndex ===
+							class="flex w-full items-center rounded-xl px-2 py-[0.3125rem] text-left text-xs text-base-700 transition-colors hover:bg-base-50 dark:text-base-200 dark:hover:bg-base-800 {suggestionIndex ===
 							index
-								? 'bg-gray-50 dark:bg-gray-800'
+								? 'bg-base-50 dark:bg-base-800'
 								: ''}"
 							role="option"
 							aria-selected={suggestionIndex === index}

@@ -20,7 +20,7 @@
 
 <Tooltip
 	content={$i18n.t('Editing language')}
-	className="relative inline-flex max-w-full shrink-0 rounded-lg bg-gray-50 text-gray-900 transition ring-1 ring-inset ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800 {className ||
+	className="relative inline-flex max-w-full shrink-0 rounded-lg bg-base-50 text-base-900 transition ring-1 ring-inset ring-base-200 hover:bg-base-100 dark:bg-base-850 dark:text-base-100 dark:ring-base-800 dark:hover:bg-base-800 {className ||
 		'w-fit'}"
 >
 	<GlobeAlt className="pointer-events-none absolute start-2 top-1/2 size-3 -translate-y-1/2" />

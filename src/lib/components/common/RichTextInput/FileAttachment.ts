@@ -10,7 +10,7 @@ export const fileUploadsKey = new PluginKey<DecorationSet>('fileUploads');
 const fileItemStyle = {
 	small: true,
 	className: 'w-56 max-w-full',
-	colorClassName: 'bg-gray-50/60 dark:bg-white/[0.03] border border-gray-100/80 dark:border-white/5'
+	colorClassName: 'bg-base-50/60 dark:bg-white/[0.03] border border-base-100/80 dark:border-white/5'
 };
 
 export default Node.create<{ context: Map<any, any> }>({

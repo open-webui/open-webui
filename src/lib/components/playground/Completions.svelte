@@ -132,7 +132,7 @@
 						<textarea
 							id="text-completion-textarea"
 							bind:this={textCompletionAreaElement}
-							class="w-full h-full p-3 bg-transparent border border-gray-100/30 dark:border-gray-850/30 outline-hidden resize-none rounded-lg text-sm"
+							class="w-full h-full p-3 bg-transparent border border-base-100/30 dark:border-base-850/30 outline-hidden resize-none rounded-lg text-sm"
 							bind:value={text}
 							placeholder={$i18n.t("You're a helpful assistant.")}
 							aria-label={$i18n.t('Completions')}
@@ -144,12 +144,12 @@
 			<div class="pb-3 flex justify-between items-center">
 				<div class="flex-1">
 					<select
-						class="bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+						class="bg-transparent border border-base-100/30 dark:border-base-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 						aria-label={$i18n.t('Model')}
 						bind:value={selectedModelId}
 					>
 						{#each $baseModels as model}
-							<option value={model.id} class="bg-gray-50 dark:bg-gray-700">{model.name}</option>
+							<option value={model.id} class="bg-base-50 dark:bg-base-700">{model.name}</option>
 						{/each}
 					</select>
 				</div>
@@ -157,7 +157,7 @@
 				<div class="flex gap-2 shrink-0 ml-2">
 					{#if !loading}
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							on:click={() => {
 								submitHandler();
 							}}
@@ -166,7 +166,7 @@
 						</button>
 					{:else}
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 							on:click={() => {
 								stopResponse();
 							}}

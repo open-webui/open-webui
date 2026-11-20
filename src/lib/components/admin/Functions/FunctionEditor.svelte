@@ -464,7 +464,7 @@ class Pipe:
 		<div class="flex shrink-0 items-center justify-between gap-2">
 			<div class="flex min-w-0 items-center gap-3">
 				<button
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 transition-colors duration-75 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-base-400 transition-colors duration-75 hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 					type="button"
 					on:click={() => {
 						goto('/admin/functions');
@@ -521,7 +521,7 @@ class Pipe:
 					{/if}
 				</Tooltip>
 
-				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-base-500">
 					{#if edit}
 						<div class="shrink-0 truncate font-mono" title={id}>
 							{id}
@@ -533,7 +533,7 @@ class Pipe:
 							placement="top-start"
 						>
 							<input
-								class="w-full bg-transparent font-mono outline-hidden disabled:text-gray-500"
+								class="w-full bg-transparent font-mono outline-hidden disabled:text-base-500"
 								type="text"
 								placeholder={$i18n.t('Function ID')}
 								aria-label={$i18n.t('Function ID')}
@@ -578,7 +578,7 @@ class Pipe:
 			<div class="flex shrink-0 items-center gap-1">
 				{#if !edit}
 					<select
-						class="h-7 rounded-lg border border-gray-100 bg-transparent px-2 text-xs outline-hidden dark:border-gray-800"
+						class="h-7 rounded-lg border border-base-100 bg-transparent px-2 text-xs outline-hidden dark:border-base-800"
 						bind:value={starterType}
 						on:change={(event) => selectStarterType(event.currentTarget.value)}
 						aria-label={$i18n.t('Function starter')}
@@ -676,7 +676,7 @@ class Pipe:
 			</div>
 		</div>
 
-		<div class="shrink-0 py-2 text-xs text-gray-500">
+		<div class="shrink-0 py-2 text-xs text-base-500">
 			<div class="flex items-center justify-between gap-3">
 				<Tooltip
 					className="min-w-0 flex-1"
@@ -692,7 +692,7 @@ class Pipe:
 						{#if !comparison}
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+								class="flex h-7 shrink-0 items-center gap-1.5 text-xs text-base-500 hover:text-base-900 dark:hover:text-base-100"
 								disabled={comparing || promoting || selecting}
 								on:click={compareToCurrent}
 							>
@@ -701,7 +701,7 @@ class Pipe:
 						{/if}
 						<button
 							type="button"
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-base-100 dark:text-base-900"
 							disabled={promoting || selecting}
 							on:click={() => historyControl?.requestPromotion()}
 						>
@@ -709,14 +709,14 @@ class Pipe:
 						</button>
 					{:else}
 						<input
-							class="w-32 min-w-0 flex-1 border-0 bg-transparent text-xs outline-hidden placeholder:text-gray-400"
+							class="w-32 min-w-0 flex-1 border-0 bg-transparent text-xs outline-hidden placeholder:text-base-400"
 							aria-label={$i18n.t('Describe this change')}
 							placeholder={$i18n.t('Describe this change')}
 							bind:value={commitMessage}
 							disabled={loading}
 						/>
 						<button
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 							type="submit"
 							disabled={loading || selecting || promoting || (edit && !changed)}
 						>
@@ -738,7 +738,7 @@ class Pipe:
 		submitHandler();
 	}}
 >
-	<div class="text-sm text-gray-500">
+	<div class="text-sm text-base-500">
 		<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
 			<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 

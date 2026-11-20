@@ -21,7 +21,7 @@
 {#if model}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class=" flex justify-center text-gray-800 dark:text-gray-200 cursor-grab relative group"
+		class=" flex justify-center text-base-800 dark:text-base-200 cursor-grab relative group"
 		role="listitem"
 		data-id={model?.id}
 		on:mouseenter={(e) => {
@@ -32,7 +32,7 @@
 		}}
 	>
 		<a
-			class="grow flex items-center space-x-2 rounded-xl px-2 py-[0.4375rem] group-hover:bg-gray-100 dark:group-hover:bg-gray-900 transition"
+			class="grow flex items-center space-x-2 rounded-xl px-2 py-[0.4375rem] group-hover:bg-base-100 dark:group-hover:bg-base-900 transition"
 			href="/?model={model?.id}"
 			on:click={onClick}
 			draggable="true"

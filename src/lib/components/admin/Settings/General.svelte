@@ -84,9 +84,9 @@
 		BANNERS: $i18n.t('settings.admin.general.banners.label')
 	};
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
@@ -175,7 +175,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('settings.admin.general.title')}
 	</h2>
 
@@ -184,22 +184,22 @@
 			<AdminSettingSection first>
 				<div class="flex items-start justify-between gap-4">
 					<div class="min-w-0 text-xs">
-						<div class="text-gray-600 dark:text-gray-400">
+						<div class="text-base-600 dark:text-base-400">
 							{$i18n.t('settings.admin.general.version.label')}
 						</div>
-						<div class="mt-1 flex flex-wrap gap-x-1 text-gray-700 dark:text-gray-200">
+						<div class="mt-1 flex flex-wrap gap-x-1 text-base-700 dark:text-base-200">
 							<BuildVersion />
 
 							{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 								{#if version.latest === null}
-									<span class="text-gray-500 dark:text-gray-500"
+									<span class="text-base-500 dark:text-base-500"
 										>{$i18n.t('Could not check for updates')}</span
 									>
 								{:else}
 									<a
 										href="https://github.com/open-webui/open-webui/releases/tag/v{version.latest}"
 										target="_blank"
-										class="text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+										class="text-base-500 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 									>
 										{updateAvailable === null
 											? $i18n.t('Checking for updates...')
@@ -212,7 +212,7 @@
 						</div>
 
 						<button
-							class="mt-0.5 text-xs text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="mt-0.5 text-xs text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 							type="button"
 							on:click={() => {
 								showChangelog.set(true);
@@ -224,7 +224,7 @@
 
 					{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 						<button
-							class="shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							class="shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
 							type="button"
 							on:click={() => {
 								checkForVersionUpdates();
@@ -238,10 +238,10 @@
 				<div class="text-xs">
 					<div class="flex items-start justify-between gap-4">
 						<div class="min-w-0">
-							<div class="text-gray-600 dark:text-gray-400">
+							<div class="text-base-600 dark:text-base-400">
 								{$i18n.t('settings.admin.general.help.label')}
 							</div>
-							<div class="mt-0.5 text-gray-400 dark:text-gray-600">
+							<div class="mt-0.5 text-base-400 dark:text-base-600">
 								<!-- LICENSE covers this Open WebUI wordmark.
 								Do not alter, remove, obscure, or replace it except as LICENSE permits:
 								https://docs.openwebui.com/license. -->
@@ -250,7 +250,7 @@
 						</div>
 
 						<a
-							class="shrink-0 text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+							class="shrink-0 text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
 							href="https://docs.openwebui.com/"
 							target="_blank"
 						>
@@ -258,19 +258,19 @@
 						</a>
 					</div>
 
-					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-gray-400 dark:text-gray-600">
+					<div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-base-400 dark:text-base-600">
 						<a
-							class="hover:text-gray-700 dark:hover:text-gray-300"
+							class="hover:text-base-700 dark:hover:text-base-300"
 							href="https://discord.gg/5rJgQTnV4s"
 							target="_blank">Discord</a
 						>
 						<a
-							class="hover:text-gray-700 dark:hover:text-gray-300"
+							class="hover:text-base-700 dark:hover:text-base-300"
 							href="https://twitter.com/OpenWebUI"
 							target="_blank">X</a
 						>
 						<a
-							class="hover:text-gray-700 dark:hover:text-gray-300"
+							class="hover:text-base-700 dark:hover:text-base-300"
 							href="https://github.com/open-webui/open-webui"
 							target="_blank">GitHub</a
 						>
@@ -281,7 +281,7 @@
 					<!-- LICENSE covers this Open WebUI license attribution.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
-					<div class="text-gray-600 dark:text-gray-400">
+					<div class="text-base-600 dark:text-base-400">
 						{$i18n.t('settings.admin.general.license.label')}
 					</div>
 
@@ -289,7 +289,7 @@
 						<a
 							href="https://docs.openwebui.com/enterprise"
 							target="_blank"
-							class="mt-0.5 block text-gray-500"
+							class="mt-0.5 block text-base-500"
 						>
 							<span class="capitalize text-black dark:text-white"
 								>{$config?.license_metadata?.type} license</span
@@ -304,13 +304,13 @@
 							>
 						</a>
 						{#if $config?.license_metadata?.html}
-							<div class="mt-0.5 text-gray-500">
+							<div class="mt-0.5 text-base-500">
 								{@html DOMPurify.sanitize($config?.license_metadata?.html)}
 							</div>
 						{/if}
 					{:else}
 						<a
-							class="mt-0.5 block text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="mt-0.5 block text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 							href="https://docs.openwebui.com/enterprise"
 							target="_blank"
 						>
@@ -376,7 +376,7 @@
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.memorySystemContext.label')}
 						description={$i18n.t('settings.admin.general.memorySystemContext.description')}
-						labelClassName="text-gray-500 dark:text-gray-500"
+						labelClassName="text-base-500 dark:text-base-500"
 						let:labelId
 					>
 						<Switch
@@ -484,7 +484,7 @@
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.encryptedChannels.label')}
 						description={$i18n.t('settings.admin.general.encryptedChannels.description')}
-						labelClassName="text-gray-500 dark:text-gray-500"
+						labelClassName="text-base-500 dark:text-base-500"
 						let:labelId
 					>
 						<Switch bind:state={adminConfig.ENABLE_ENCRYPTED_CHANNELS} ariaLabelledbyId={labelId} />
@@ -492,7 +492,7 @@
 					<AdminSettingRow
 						label={$i18n.t('settings.admin.general.modelResponseMode.label')}
 						description={$i18n.t('settings.admin.general.modelResponseMode.description')}
-						labelClassName="text-gray-500 dark:text-gray-500"
+						labelClassName="text-base-500 dark:text-base-500"
 						let:labelId
 					>
 						<SettingsSelect
@@ -576,14 +576,14 @@
 				<div class="shrink-0">
 					<div class="flex items-center justify-between gap-4 py-0.5">
 						<button
-							class="min-w-0 flex-1 text-left text-xs text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+							class="min-w-0 flex-1 text-left text-xs text-base-600 transition hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
 							type="button"
 							on:click={() => {
 								showUserUiDefaults = !showUserUiDefaults;
 							}}
 						>
 							<div>{$i18n.t('Default Interface Settings')}</div>
-							<div class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="mt-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t(
 									'Set system-wide interface defaults for every account. Personal settings override these defaults.'
 								)}
@@ -591,7 +591,7 @@
 						</button>
 
 						<button
-							class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="shrink-0 text-[0.6875rem] text-base-400 transition hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 							type="button"
 							on:click={() => {
 								showUserUiDefaults = !showUserUiDefaults;
@@ -604,14 +604,14 @@
 					{#if showUserUiDefaults}
 						<div class="mt-0.5 space-y-2">
 							<div class="flex items-center justify-between gap-4 py-0.5">
-								<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+								<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 									{Object.keys(defaultInterfaceSettings).length}
 									{$i18n.t('settings configured')}
 								</div>
 
 								{#if Object.keys(defaultInterfaceSettings).length > 0}
 									<button
-										class="shrink-0 text-[0.6875rem] text-gray-400 transition hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+										class="shrink-0 text-[0.6875rem] text-base-400 transition hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 										type="button"
 										on:click={() => {
 											defaultInterfaceSettings = {};
@@ -634,7 +634,7 @@
 
 				<div>
 					<div class="mb-1 flex min-h-7 w-full items-center justify-between gap-2">
-						<div class="min-w-0 text-xs text-gray-600 dark:text-gray-400">
+						<div class="min-w-0 text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('settings.admin.general.banners.label')}
 						</div>
 						<div class="flex shrink-0 items-center gap-1">
@@ -642,7 +642,7 @@
 								<LanguageModeSelect bind:value={bannerLocale} className="w-fit" />
 							{/if}
 							<button
-								class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
+								class="flex size-6 items-center justify-center text-base-400 dark:text-base-600"
 								type="button"
 								aria-label={$i18n.t('settings.admin.general.addBanner.label')}
 								on:click={() => {
@@ -665,7 +665,7 @@
 							</button>
 						</div>
 					</div>
-					<div class="mb-2 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="mb-2 text-[0.6875rem] text-base-400 dark:text-base-600">
 						{$i18n.t('Create announcements shown to users in the app.')}
 					</div>
 					<Banners bind:banners locale={bannerLocale} />

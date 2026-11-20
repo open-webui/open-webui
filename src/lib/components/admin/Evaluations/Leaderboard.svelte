@@ -123,7 +123,7 @@
 <ModelModal bind:show={showModal} model={selectedModel} onClose={closeModal} />
 
 <div>
-	<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+	<div class="sticky top-0 z-10 bg-white dark:bg-base-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -139,7 +139,7 @@
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+							class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
@@ -158,22 +158,22 @@
 	>
 		{#if loading}
 			<div
-				class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-gray-900/50"
+				class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-base-900/50"
 			>
 				<Spinner className="size-5" />
 			</div>
 		{/if}
 
 		{#if !rankedModels.length && !loading}
-			<div class="text-center text-xs text-gray-500 py-1">{$i18n.t('No models found')}</div>
+			<div class="text-center text-xs text-base-500 py-1">{$i18n.t('No models found')}</div>
 		{:else if rankedModels.length}
 			<table
-				class="w-full text-sm text-left text-gray-500 dark:text-gray-400 {loading
+				class="w-full text-sm text-left text-base-500 dark:text-base-400 {loading
 					? 'opacity-20'
 					: ''}"
 			>
-				<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-					<tr class="border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
+				<thead class="text-xs text-base-800 uppercase bg-transparent dark:text-base-200">
+					<tr class="border-b-[1.5px] border-base-50 dark:border-base-850/30">
 						{#each [{ key: 'rating', label: 'RK', class: 'w-3' }, { key: 'name', label: $i18n.t('Model'), class: '' }, { key: 'rating', label: $i18n.t('Rating'), class: 'text-right w-fit' }, { key: 'won', label: $i18n.t('Won'), class: 'text-right w-5' }, { key: 'lost', label: $i18n.t('Lost'), class: 'text-right w-5' }] as col}
 							<th
 								scope="col"
@@ -209,10 +209,10 @@
 				<tbody>
 					{#each sortedModels as model, idx (model.id)}
 						<tr
-							class="text-xs group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition"
+							class="text-xs group cursor-pointer hover:bg-base-50 dark:hover:bg-base-850/50 transition"
 							on:click={() => openModal(model)}
 						>
-							<td class="px-3 py-1.5 font-normal text-gray-900 dark:text-white">
+							<td class="px-3 py-1.5 font-normal text-base-900 dark:text-white">
 								{model.rating !== '-' ? idx + 1 : '-'}
 							</td>
 							<td class="px-3 py-1.5">
@@ -231,13 +231,13 @@
 									<Tooltip content={`${model.name} (${model.id})`} placement="top-start">
 										<button
 											type="button"
-											class="cursor-pointer font-normal text-left text-gray-800 dark:text-gray-200 line-clamp-1"
+											class="cursor-pointer font-normal text-left text-base-800 dark:text-base-200 line-clamp-1"
 											on:click={() => openModal(model)}>{model.name}</button
 										>
 									</Tooltip>
 								</div>
 							</td>
-							<td class="px-3 py-1.5 text-right font-normal text-gray-900 dark:text-white">
+							<td class="px-3 py-1.5 text-right font-normal text-base-900 dark:text-white">
 								{model.rating}
 							</td>
 							<td class="px-3 py-1.5 text-right font-normal text-green-500 w-10">
@@ -264,7 +264,7 @@
 	</div>
 </div>
 
-<div class="text-gray-500 text-xs mt-1.5 w-full flex justify-end">
+<div class="text-base-500 text-xs mt-1.5 w-full flex justify-end">
 	<div class="text-right">
 		<div class="line-clamp-1">
 			ⓘ {$i18n.t(

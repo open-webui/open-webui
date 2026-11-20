@@ -132,9 +132,9 @@
 	};
 	const sensitiveKeys = ['app_dn_password', 'OAUTH_CLIENT_SECRET'];
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const updateLdapServerHandler = async () => {
 		await updateLdapConfig(localStorage.token, ENABLE_LDAP);
@@ -230,7 +230,7 @@
 </script>
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={submitHandler}>
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
 		{$i18n.t('settings.admin.authentication.title')}
 	</h2>
 
@@ -327,7 +327,7 @@
 							<a
 								href="https://docs.openwebui.com/reference/api-endpoints"
 								target="_blank"
-								class="mt-1 block text-[0.6875rem] text-gray-400 underline hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+								class="mt-1 block text-[0.6875rem] text-base-400 underline hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 							>
 								{$i18n.t('To learn more about available endpoints, visit our documentation.')}
 							</a>
@@ -368,7 +368,7 @@
 						ariaLabel={$i18n.t('Require an authenticator for all users')}
 					/>
 				</AdminSettingRow>
-				<p class="-mt-1 text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600">
+				<p class="-mt-1 text-[0.6875rem] leading-4 text-base-400 dark:text-base-600">
 					{$i18n.t('Changes sign out all devices. Users enroll on their next sign-in.')}
 				</p>
 				{#if adminConfig.ENABLE_MFA}
@@ -631,7 +631,7 @@
 						bind:value={LDAP_SERVER.search_filters}
 					/>
 					<a
-						class="mt-1 block text-[0.6875rem] text-gray-400 underline hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						class="mt-1 block text-[0.6875rem] text-base-400 underline hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 						href="https://ldap.com/ldap-filters/"
 						target="_blank"
 					>
@@ -751,7 +751,7 @@
 					</AdminSettingRow>
 
 					{#if oauthConfig.ENABLE_OAUTH}
-						<p class="text-xs text-gray-500 dark:text-gray-400">
+						<p class="text-xs text-base-500 dark:text-base-400">
 							{$i18n.t(
 								'Restart all Open WebUI instances to apply changes to the provider connection settings.'
 							)}

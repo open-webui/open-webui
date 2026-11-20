@@ -73,7 +73,7 @@
 
 <div class="w-full max-h-full">
 	{#if modal}
-		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-2">
+		<div class="flex justify-between items-center dark:text-base-100 px-4 pt-3 pb-2">
 			<h3 class="text-sm font-medium">
 				{$i18n.t(edit ? 'Settings' : 'Create a knowledge base')}
 			</h3>
@@ -130,7 +130,7 @@
 				<div class="w-full">
 					<label
 						for="knowledge-name"
-						class="block {modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2"
+						class="block {modal ? 'text-xs text-base-500' : 'text-sm'} mb-2"
 					>
 						{$i18n.t('What are you working on?')}
 					</label>
@@ -139,8 +139,8 @@
 						<input
 							id="knowledge-name"
 							class={modal
-								? 'w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
-								: 'w-full rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
+								? 'w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700'
+								: 'w-full rounded-lg py-2 px-4 text-sm bg-base-50 dark:text-base-300 dark:bg-base-850 outline-hidden'}
 							type="text"
 							bind:value={name}
 							placeholder={$i18n.t('Name your knowledge base')}
@@ -152,7 +152,7 @@
 				<div>
 					<label
 						for="knowledge-description"
-						class="block {modal ? 'text-xs text-gray-500' : 'text-sm'} mb-2"
+						class="block {modal ? 'text-xs text-base-500' : 'text-sm'} mb-2"
 					>
 						{$i18n.t('What are you trying to achieve?')}
 					</label>
@@ -161,8 +161,8 @@
 						<textarea
 							id="knowledge-description"
 							class={modal
-								? 'w-full resize-none text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'
-								: 'w-full resize-none rounded-lg py-2 px-4 text-sm bg-gray-50 dark:text-gray-300 dark:bg-gray-850 outline-hidden'}
+								? 'w-full resize-none text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700'
+								: 'w-full resize-none rounded-lg py-2 px-4 text-sm bg-base-50 dark:text-base-300 dark:bg-base-850 outline-hidden'}
 							rows={modal ? 6 : 4}
 							bind:value={description}
 							placeholder={$i18n.t('Describe your knowledge base and objectives')}
@@ -190,7 +190,7 @@
 
 		<button
 			type="button"
-			class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-3 self-start"
+			class="flex items-center gap-1 text-xs text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 transition mt-3 self-start"
 			aria-expanded={showAdvanced}
 			aria-controls="knowledge-advanced"
 			on:click={() => (showAdvanced = !showAdvanced)}
@@ -203,7 +203,7 @@
 			<div id="knowledge-advanced" class="mt-3 space-y-3">
 				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 					<div>
-						<label for="knowledge-max-file-count" class="block text-xs text-gray-500 mb-2">
+						<label for="knowledge-max-file-count" class="block text-xs text-base-500 mb-2">
 							{$i18n.t('File count limit')}
 						</label>
 						<input
@@ -211,14 +211,14 @@
 							type="number"
 							min="1"
 							step="1"
-							class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+							class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 							placeholder={$i18n.t('Use global setting')}
 							bind:value={maxFileCount}
 						/>
-						<p class="mt-1 text-xs text-gray-500">{$i18n.t('Maximum total files.')}</p>
+						<p class="mt-1 text-xs text-base-500">{$i18n.t('Maximum total files.')}</p>
 					</div>
 					<div>
-						<label for="knowledge-max-file-size" class="block text-xs text-gray-500 mb-2"
+						<label for="knowledge-max-file-size" class="block text-xs text-base-500 mb-2"
 							>{$i18n.t('File size limit (MB)')}</label
 						>
 						<input
@@ -226,14 +226,14 @@
 							type="number"
 							min="1"
 							step="1"
-							class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+							class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 							placeholder={$i18n.t('Use global setting')}
 							bind:value={maxFileSize}
 						/>
-						<p class="mt-1 text-xs text-gray-500">{$i18n.t('Maximum size per file.')}</p>
+						<p class="mt-1 text-xs text-base-500">{$i18n.t('Maximum size per file.')}</p>
 					</div>
 				</div>
-				<p class="text-xs text-gray-500">
+				<p class="text-xs text-base-500">
 					{$i18n.t('Global limits always apply.')}
 				</p>
 			</div>
@@ -242,7 +242,7 @@
 		<div class="flex justify-end {modal ? 'pt-3 gap-2' : 'mt-2'}">
 			{#if modal}
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 					type="button"
 					on:click={() => {
 						onBack();
@@ -255,8 +255,8 @@
 			<div>
 				<button
 					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 disabled:cursor-not-allowed {modal
-						? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
-						: 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800'}"
+						? 'bg-base-900 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white'
+						: 'bg-base-50 hover:bg-base-100 dark:bg-base-850 dark:hover:bg-base-800'}"
 					type="submit"
 					disabled={loading}
 				>

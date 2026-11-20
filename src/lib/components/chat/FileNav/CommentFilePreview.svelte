@@ -358,7 +358,7 @@
 	on:click={(e) => reveal(e, touchInteraction || e.detail === 0)}
 >
 	{#if loading}<div class="flex h-full items-center justify-center">
-			<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+			<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 		</div>
 	{:else if pdf}
 		<PdfPagesPreview
@@ -383,7 +383,7 @@
 	{:else if ext === 'pptx' && slides.length}
 		<PptxPreview bind:currentSlide {slides} {targetPage} className="h-full" {comments} />
 	{:else if workbook}
-		{#if editingError}<p role="status" class="px-2 py-1 text-xs text-gray-500">
+		{#if editingError}<p role="status" class="px-2 py-1 text-xs text-base-500">
 				{editingError}
 			</p>{/if}
 		<ExcelPreview
@@ -397,7 +397,7 @@
 			onSave={save}
 		/>
 	{:else if previewError}<p
-			class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+			class="flex h-full items-center justify-center p-4 text-center text-sm text-base-500 dark:text-base-400"
 		>
 			{$i18n.t('Preview failed')}
 		</p>{/if}
@@ -405,7 +405,7 @@
 		<button
 			type="button"
 			data-file-comment-id="__unplaced"
-			class="absolute right-3 top-3 z-10 flex h-6 items-center gap-1 rounded px-1.5 text-xs text-gray-400 dark:text-gray-500 bg-white/95 dark:bg-gray-850/95 hover:text-gray-600 dark:hover:text-gray-300 focus-visible:outline focus-visible:outline-2"
+			class="absolute right-3 top-3 z-10 flex h-6 items-center gap-1 rounded px-1.5 text-xs text-base-400 dark:text-base-500 bg-white/95 dark:bg-base-850/95 hover:text-base-600 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
 			aria-label={$i18n.t('Document comments')}
 			aria-haspopup="dialog"
 			><Icon name="chat-bubble" size={12} strokeWidth={1.5} />{unplaced.length || '!'}</button
@@ -420,7 +420,7 @@
 		role="dialog"
 		aria-label={$i18n.t('Comment')}
 		tabindex="-1"
-		class="file-comment-popover fixed z-[9999] w-72 max-w-[calc(100vw-1rem)] max-h-[50vh] overflow-y-auto rounded-2xl bg-white px-3 py-2 text-[0.8125rem] font-normal leading-5 text-gray-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-gray-850 dark:text-gray-100 dark:ring-white/10"
+		class="file-comment-popover fixed z-[9999] w-72 max-w-[calc(100vw-1rem)] max-h-[50vh] overflow-y-auto rounded-2xl bg-white px-3 py-2 text-[0.8125rem] font-normal leading-5 text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-base-850 dark:text-base-100 dark:ring-white/10"
 		style:left={`${popoverX}px`}
 		style:top={`${popoverY}px`}
 		on:mouseenter={keepOpen}
@@ -430,7 +430,7 @@
 	>
 		<button
 			type="button"
-			class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 focus-visible:outline focus-visible:outline-2"
+			class="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
 			aria-label={$i18n.t('Close comment')}
 			on:click={() => {
 				hoveredId = null;
@@ -443,21 +443,21 @@
 		{#each warnings as warning}<p class="text-xs text-amber-700">{warning}</p>{/each}
 		{#each hoveredThreads as thread (thread[0].id)}
 			<div class="comment-thread">
-				{#if thread[0].status === 'resolved'}<span class="text-xs text-gray-500"
+				{#if thread[0].status === 'resolved'}<span class="text-xs text-base-500"
 						>{$i18n.t('Resolved')}</span
 					>{/if}
 				{#each thread as comment (comment.id)}
 					<div class="comment-message">
-						<div class="pr-6 text-xs font-medium text-gray-900 dark:text-gray-100">
+						<div class="pr-6 text-xs font-medium text-base-900 dark:text-base-100">
 							{comment.author || $i18n.t('Unknown author')}
 						</div>
-						{#if comment.date}<div class="text-[11px] leading-4 text-gray-500 dark:text-gray-400">
+						{#if comment.date}<div class="text-[11px] leading-4 text-base-500 dark:text-base-400">
 								{displayDate(comment.date)}
 							</div>{/if}
 						<p class="mt-1.5 whitespace-pre-wrap break-words text-[0.8125rem] leading-5">
 							{comment.text || $i18n.t('Annotation without text')}
 						</p>
-						{#if hoveredId === '__unplaced'}<p class="mt-1 text-xs text-gray-500">
+						{#if hoveredId === '__unplaced'}<p class="mt-1 text-xs text-base-500">
 								{comment.location?.kind === 'cell'
 									? `${comment.location.sheet}!${comment.location.cell}`
 									: comment.location?.kind === 'slide'

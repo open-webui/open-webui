@@ -26,7 +26,7 @@
 <Drawer bind:show ariaLabel={$i18n.t('Input')}>
 	<div class="flex h-full min-h-screen flex-col" {oninput}>
 		<div
-			class=" sticky top-0 z-30 flex justify-between bg-white px-4 pt-3 pb-2 dark:bg-gray-900 dark:text-gray-100"
+			class=" sticky top-0 z-30 flex justify-between bg-white px-4 pt-3 pb-2 dark:bg-base-900 dark:text-base-100"
 		>
 			<div class="text-sm font-medium self-center">
 				{$i18n.t('Input')}
@@ -52,7 +52,7 @@
 			</button>
 		</div>
 
-		<div class="flex w-full px-4 dark:text-gray-200 min-h-full flex-1">
+		<div class="flex w-full px-4 dark:text-base-200 min-h-full flex-1">
 			<div class="flex-1 w-full min-h-full">
 				<RichTextInput
 					bind:this={inputElement}

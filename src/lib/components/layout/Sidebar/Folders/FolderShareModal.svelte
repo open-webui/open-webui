@@ -80,13 +80,13 @@
 
 <Modal ariaLabel={`${$i18n.t('Access')}: ${folder?.name ?? ''}`} size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-100 px-5 pt-3 pb-1">
 			<div class=" text-sm self-center">
 				{$i18n.t('Access')}: {folder?.name ?? ''}
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -112,7 +112,7 @@
 					($user?.permissions?.access_grants?.allow_groups ?? true)}
 			>
 				{#if folder?.parent_id}
-					<p class="text-xs text-gray-500 dark:text-gray-400">
+					<p class="text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('Access granted to parent folders also applies here.')}
 					</p>
 				{/if}

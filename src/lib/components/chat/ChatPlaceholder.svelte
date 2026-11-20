@@ -110,14 +110,14 @@
 				className="w-full flex justify-start mb-0.5"
 				placement="top"
 			>
-				<div class="flex items-center gap-1.5 text-gray-500 text-xs mt-1 w-fit">
+				<div class="flex items-center gap-1.5 text-base-500 text-xs mt-1 w-fit">
 					<EyeSlash strokeWidth="2" className="size-3.5" />{$i18n.t('Temporary Chat')}
 				</div>
 			</Tooltip>
 		{/if}
 
 		<div
-			class=" mt-2 mb-4 text-3xl text-gray-800 dark:text-gray-100 text-left flex items-center gap-4"
+			class=" mt-2 mb-4 text-3xl text-base-800 dark:text-base-100 text-left flex items-center gap-4"
 		>
 			<div>
 				<h2 class=" capitalize line-clamp-1" in:fade={{ duration: 200 }}>
@@ -131,7 +131,7 @@
 				<div in:fade={{ duration: 200, delay: 200 }}>
 					{#if selectedModelDescription}
 						<div
-							class="mt-0.5 text-base font-normal text-gray-500 dark:text-gray-400 line-clamp-3 markdown"
+							class="mt-0.5 text-base font-normal text-base-500 dark:text-base-400 line-clamp-3 markdown"
 						>
 							{@html DOMPurify.sanitize(
 								marked.parse(
@@ -140,7 +140,7 @@
 							)}
 						</div>
 						{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
-							<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+							<div class="mt-0.5 text-sm font-normal text-base-400 dark:text-base-500">
 								{$i18n.t('By')}
 								{#if models[selectedModelIdx]?.info?.meta?.user.community}
 									<a
@@ -156,7 +156,7 @@
 							</div>
 						{/if}
 					{:else}
-						<div class=" text-gray-400 dark:text-gray-500 line-clamp-1 font-p">
+						<div class=" text-base-400 dark:text-base-500 line-clamp-1 font-p">
 							{$i18n.t('How can I help you today?')}
 						</div>
 					{/if}

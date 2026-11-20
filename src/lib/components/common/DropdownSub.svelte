@@ -6,7 +6,7 @@
 
 	/** CSS classes for the sub-content container */
 	export let contentClass =
-		'select-none rounded-2xl p-1 z-50 bg-white dark:bg-gray-850 dark:text-white shadow-lg border border-gray-100 dark:border-gray-800';
+		'select-none rounded-2xl p-1 z-50 bg-white dark:bg-base-850 dark:text-white shadow-lg border border-base-100 dark:border-base-800';
 
 	/** Max width at the default 16px root size; scales with the interface. */
 	export let maxWidth = 200;
@@ -207,8 +207,8 @@
 <div
 	use:trigger={open}
 	class="w-full {($settings?.highContrastMode ?? false)
-		? '[&>button:hover]:bg-gray-200! dark:[&>button:hover]:bg-gray-800!'
-		: '[&>button:hover]:bg-gray-50/60 dark:[&>button:hover]:bg-gray-800/60'}"
+		? '[&>button:hover]:bg-base-200! dark:[&>button:hover]:bg-base-800!'
+		: '[&>button:hover]:bg-base-50/60 dark:[&>button:hover]:bg-base-800/60'}"
 	on:mouseenter={handleMouseEnter}
 	on:mouseleave={handleMouseLeave}
 >

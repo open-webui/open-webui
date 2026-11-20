@@ -479,7 +479,7 @@
 	bind:this={containerElement}
 	bind:clientWidth={containerWidth}
 	class="{loading
-		? ' bg-gray-100/50 dark:bg-gray-850/50'
+		? ' bg-base-100/50 dark:bg-base-850/50'
 		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
 >
 	<div class="flex items-center mr-1">
@@ -488,7 +488,7 @@
 			class="p-1.5
 
             {loading
-				? ' bg-gray-200 dark:bg-gray-700/50'
+				? ' bg-base-200 dark:bg-base-700/50'
 				: 'bg-indigo-400/20 text-indigo-600 dark:text-indigo-300 '} 
 
 
@@ -516,7 +516,7 @@
 						class="w-[0.125rem] shrink-0
                     
                     {loading
-							? ' bg-gray-500 dark:bg-gray-400   '
+							? ' bg-base-500 dark:bg-base-400   '
 							: 'bg-indigo-500 dark:bg-indigo-400  '} 
                     
                     inline-block h-full"
@@ -533,7 +533,7 @@
 				class="text-sm
         
         
-        {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
+        {loading ? ' text-base-500  dark:text-base-400  ' : ' text-indigo-400 '} 
        font-normal flex-1 mx-auto text-center"
 			>
 				{formatSeconds(durationSeconds)}
@@ -542,7 +542,7 @@
 
 		<div class="flex items-center">
 			{#if loading}
-				<div class=" text-gray-500 rounded-full cursor-not-allowed">
+				<div class=" text-base-500 rounded-full cursor-not-allowed">
 					<svg
 						width="24"
 						height="24"

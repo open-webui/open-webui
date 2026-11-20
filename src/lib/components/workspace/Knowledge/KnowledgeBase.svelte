@@ -979,7 +979,7 @@
 			<div class="flex min-h-7 shrink-0 items-center justify-between gap-2 pr-0.5">
 				<button
 					type="button"
-					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-gray-400 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+					class="flex h-6 w-fit shrink-0 items-center gap-1 whitespace-nowrap rounded-md text-xs text-base-400 hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 					on:click={() => goto('/workspace/knowledge')}
 					><ChevronLeft className="size-3" strokeWidth="2" />{$i18n.t('Back')}</button
 				>
@@ -995,7 +995,7 @@
 							<button
 								type="button"
 								aria-label={$i18n.t('More Options')}
-								class="flex size-6 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+								class="flex size-6 items-center justify-center rounded-lg text-base-500 hover:bg-base-100 dark:hover:bg-base-800"
 							>
 								<EllipsisHorizontal className="size-4" />
 							</button>
@@ -1003,7 +1003,7 @@
 								<DropdownMenu className="min-w-36">
 									<button
 										type="button"
-										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 										on:click={() => {
 											showSettings = true;
 										}}
@@ -1025,7 +1025,7 @@
 							/>
 						{/if}
 					{:else}
-						<span class="text-xs text-gray-500">{$i18n.t('Read Only')}</span>
+						<span class="text-xs text-base-500">{$i18n.t('Read Only')}</span>
 					{/if}
 				</div>
 			</div>
@@ -1038,7 +1038,7 @@
 					disabled={!knowledge.write_access}
 					on:input={changeDebounceHandler}
 				/>
-				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-gray-500">
+				<div class="mt-0.5 flex min-w-0 items-center gap-2 text-xs text-base-500">
 					<input
 						class="min-w-0 flex-1 bg-transparent outline-hidden"
 						bind:value={knowledge.description}
@@ -1060,40 +1060,40 @@
 			</div>
 			<div class="mb-2 min-h-0 flex-1">
 				{#if isExternalKnowledge}<div
-						class="h-full overflow-auto rounded-2xl border border-gray-100/80 dark:border-white/[0.04]"
+						class="h-full overflow-auto rounded-2xl border border-base-100/80 dark:border-white/[0.04]"
 					>
 						<div class="p-5 flex flex-col gap-4">
 							<div class="flex flex-wrap gap-2 text-xs">
-								<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="px-2 py-1 rounded-lg bg-base-50 dark:bg-base-850">
 									{$i18n.t('Connected')}
 								</div>
-								<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="px-2 py-1 rounded-lg bg-base-50 dark:bg-base-850">
 									{$i18n.t('Read Only')}
 								</div>
-								<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="px-2 py-1 rounded-lg bg-base-50 dark:bg-base-850">
 									{knowledge?.meta?.external?.provider ?? $i18n.t('Provider')}
 								</div>
-								<div class="px-2 py-1 rounded-lg bg-gray-50 dark:bg-gray-850">
+								<div class="px-2 py-1 rounded-lg bg-base-50 dark:bg-base-850">
 									{$i18n.t('Service Account')}
 								</div>
 							</div>
 
 							<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
 								<div>
-									<div class="text-xs text-gray-500 mb-1">{$i18n.t('Mapped Source')}</div>
-									<div class="rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2">
+									<div class="text-xs text-base-500 mb-1">{$i18n.t('Mapped Source')}</div>
+									<div class="rounded-xl bg-base-50 dark:bg-base-850 px-3 py-2">
 										{knowledge?.meta?.external?.source?.name ?? $i18n.t('Not configured')}
 									</div>
 								</div>
 								<div>
-									<div class="text-xs text-gray-500 mb-1">{$i18n.t('Auth Mode')}</div>
-									<div class="rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2">
+									<div class="text-xs text-base-500 mb-1">{$i18n.t('Auth Mode')}</div>
+									<div class="rounded-xl bg-base-50 dark:bg-base-850 px-3 py-2">
 										{$i18n.t('Admin-managed service account')}
 									</div>
 								</div>
 							</div>
 
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-base-500">
 								<!-- LICENSE covers this Open WebUI wordmark.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
@@ -1107,12 +1107,12 @@
 								<div class="flex gap-2">
 									<input
 										aria-label={$i18n.t('Test Query')}
-										class="w-full text-xs rounded-xl bg-gray-50 dark:bg-gray-850 px-3 py-2 outline-hidden"
+										class="w-full text-xs rounded-xl bg-base-50 dark:bg-base-850 px-3 py-2 outline-hidden"
 										bind:value={externalTestQuery}
 										placeholder={$i18n.t('Ask this knowledge source a test question')}
 									/>
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
 										on:click={externalTestHandler}
 									>
 										{$i18n.t('Test')}
@@ -1121,12 +1121,12 @@
 							</div>
 
 							{#if externalTestResult}
-								<div class="rounded-xl bg-gray-50 dark:bg-gray-850 p-3 text-xs">
+								<div class="rounded-xl bg-base-50 dark:bg-base-850 p-3 text-xs">
 									<div class="mb-2">{$i18n.t('Preview')}</div>
 									{#each externalTestResult.documents ?? [] as document, idx}
-										<div class="border-t border-gray-100 dark:border-gray-800 py-2">
+										<div class="border-t border-base-100 dark:border-base-800 py-2">
 											<div class="line-clamp-4">{document}</div>
-											<div class="text-gray-500 mt-1">
+											<div class="text-base-500 mt-1">
 												{externalTestResult.metadatas?.[idx]?.source ?? ''}
 											</div>
 										</div>
@@ -1186,7 +1186,7 @@
 		init();
 	}}
 >
-	<div class="text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3">
+	<div class="text-sm text-base-700 dark:text-base-300 flex-1 line-clamp-3">
 		{$i18n.t(
 			'This will remove all files and directories from this knowledge base. This action cannot be undone.'
 		)}

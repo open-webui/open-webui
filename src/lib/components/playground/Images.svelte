@@ -144,7 +144,7 @@
 										<img
 											src={image.url}
 											alt=""
-											class="w-full aspect-square object-cover rounded-lg border border-gray-100/30 dark:border-gray-850/30"
+											class="w-full aspect-square object-cover rounded-lg border border-base-100/30 dark:border-base-850/30"
 										/>
 										<div
 											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition rounded-lg flex items-center justify-center"
@@ -167,7 +167,7 @@
 							</div>
 						{:else}
 							<div
-								class="h-full flex items-center justify-center text-gray-400 dark:text-gray-600 text-sm"
+								class="h-full flex items-center justify-center text-base-400 dark:text-base-600 text-sm"
 							>
 								{$i18n.t('Generated images will appear here')}
 							</div>
@@ -179,7 +179,7 @@
 			<!-- Input Area -->
 			<div class="pb-3">
 				<div
-					class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl"
+					class="border border-base-100/30 dark:border-base-850/30 w-full px-3 py-2.5 rounded-xl"
 				>
 					<!-- Source Images -->
 					{#if sourceImages.length > 0}
@@ -251,7 +251,7 @@
 							/>
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
 								on:click={() => fileInputElement?.click()}
 								on:dragover|preventDefault
 								on:drop={handleDrop}
@@ -264,14 +264,14 @@
 							{#if !loading}
 								<button
 									disabled={prompt.trim() === ''}
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 									on:click={submitHandler}
 								>
 									{$i18n.t('Run')}
 								</button>
 							{:else}
 								<button
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
 									disabled
 								>
 									<Spinner className="size-4" />

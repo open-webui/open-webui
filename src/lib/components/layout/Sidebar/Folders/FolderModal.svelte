@@ -210,7 +210,7 @@
 
 <Modal ariaLabel={edit ? $i18n.t('Edit Folder') : $i18n.t('Create Folder')} size="md" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
 				{#if edit}
 					{$i18n.t('Edit Folder')}
@@ -224,7 +224,7 @@
 				{/if}
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => {
 						show = false;
 					}}
@@ -234,7 +234,7 @@
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -243,7 +243,7 @@
 					}}
 				>
 					<div class="flex flex-col w-full mt-1">
-						<label for="folder-name" class="block mb-1 text-xs text-gray-500"
+						<label for="folder-name" class="block mb-1 text-xs text-base-500"
 							>{$i18n.t('Folder Name')}</label
 						>
 
@@ -257,7 +257,7 @@
 							>
 								<button
 									type="button"
-									class="flex size-7 shrink-0 items-center justify-center rounded-full text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40"
+									class="flex size-7 shrink-0 items-center justify-center rounded-full text-base-500 hover:bg-base-50/40 dark:text-base-400 dark:hover:bg-base-800/40"
 									aria-label={$i18n.t('Change folder icon')}
 									title={$i18n.t('Change folder icon')}
 									disabled={loading}
@@ -271,7 +271,7 @@
 							</EmojiPicker>
 							<input
 								id="folder-name"
-								class="min-w-0 flex-1 text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+								class="min-w-0 flex-1 text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 								type="text"
 								bind:value={name}
 								placeholder={$i18n.t('Enter folder name')}
@@ -281,13 +281,13 @@
 					</div>
 
 					<div class="my-2">
-						<label for="folder-description" class="mb-1 block text-xs text-gray-500">
+						<label for="folder-description" class="mb-1 block text-xs text-base-500">
 							{$i18n.t('Description')}
 						</label>
 						<Textarea
 							id="folder-description"
 							ariaLabel={$i18n.t('Description')}
-							className="w-full text-sm bg-transparent placeholder:text-gray-300 dark:placeholder:text-gray-700 outline-hidden"
+							className="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
 							placeholder={$i18n.t('Enter description')}
 							maxSize={200}
 							bind:value={data.description}
@@ -326,7 +326,7 @@
 					/>
 
 					<div class="flex justify-between w-full mt-1 items-center">
-						<div id="folder-background-image-label" class="text-xs text-gray-500">
+						<div id="folder-background-image-label" class="text-xs text-base-500">
 							{$i18n.t('Folder Background Image')}
 						</div>
 
@@ -355,16 +355,16 @@
 						</div>
 					</div>
 
-					<hr class=" border-gray-50 dark:border-gray-850/30 my-2.5 w-full" />
+					<hr class=" border-base-50 dark:border-base-850/30 my-2.5 w-full" />
 
 					<Collapsible
 						title={$i18n.t('Advanced')}
 						bind:open={showAdvanced}
-						buttonClassName="w-full py-1 text-xs font-normal text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 transition"
+						buttonClassName="w-full py-1 text-xs font-normal text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100 transition"
 					>
 						<div slot="content" class="space-y-0.5 pt-1">
 							<div
-								class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs font-normal text-gray-600 dark:text-gray-400 sm:grid-cols-[8rem_minmax(0,1fr)]"
+								class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs font-normal text-base-600 dark:text-base-400 sm:grid-cols-[8rem_minmax(0,1fr)]"
 							>
 								<ModelSettingsLabel
 									label={$i18n.t('Default terminal')}
@@ -377,7 +377,7 @@
 										{#snippet trigger(selected: string | null, label: string)}
 											<button
 												type="button"
-												class="flex w-fit max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 text-left text-xs font-normal text-gray-900 dark:text-gray-100"
+												class="flex w-fit max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 text-left text-xs font-normal text-base-900 dark:text-base-100"
 											>
 												<span class="sr-only">{$i18n.t('Default terminal')}: </span>
 												<span class="truncate">{selected ? label : $i18n.t('None')}</span>
@@ -393,7 +393,7 @@
 								>
 									<label
 										for="folder-working-directory"
-										class="block text-xs font-normal text-gray-600 dark:text-gray-400"
+										class="block text-xs font-normal text-base-600 dark:text-base-400"
 									>
 										<ModelSettingsLabel
 											label={$i18n.t('Working directory')}
@@ -405,7 +405,7 @@
 									<div class="flex min-w-0 items-center gap-2">
 										<input
 											id="folder-working-directory"
-											class="min-w-0 flex-1 bg-transparent text-xs font-normal text-gray-900 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-600"
+											class="min-w-0 flex-1 bg-transparent text-xs font-normal text-base-900 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-600"
 											bind:value={data.working_directory}
 											placeholder={$i18n.t('Use the terminal’s default directory')}
 										/>
@@ -413,7 +413,7 @@
 											type="button"
 											aria-label={$i18n.t('Browse directories')}
 											title={$i18n.t('Browse directories')}
-											class="shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+											class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-100"
 											on:click={() => (showDirectoryPicker = true)}
 											><FolderOpen className="size-3.5" /></button
 										>
@@ -426,7 +426,7 @@
 							>
 								<label
 									for="model-selector-folder-default-button"
-									class="shrink-0 text-xs font-normal text-gray-600 dark:text-gray-400"
+									class="shrink-0 text-xs font-normal text-base-600 dark:text-base-400"
 								>
 									<ModelSettingsLabel
 										label={$i18n.t('Default Model')}
@@ -446,7 +446,7 @@
 												label: model.name,
 												model
 											}))}
-											triggerClassName="text-xs font-normal text-gray-900 dark:text-gray-100"
+											triggerClassName="text-xs font-normal text-base-900 dark:text-base-100"
 											placement="auto"
 											align="start"
 											selectionOnly
@@ -459,7 +459,7 @@
 										<button
 											type="button"
 											aria-label={$i18n.t('Reset')}
-											class="shrink-0 py-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 px-0"
+											class="shrink-0 py-1 text-base-500 hover:text-base-700 dark:hover:text-base-200 px-0"
 											on:click={() => (data.model_ids = [])}
 										>
 											<XMark className="size-3" />
@@ -474,7 +474,7 @@
 								>
 									<label
 										for="folder-system-prompt"
-										class="block text-xs font-normal text-gray-600 dark:text-gray-400"
+										class="block text-xs font-normal text-base-600 dark:text-base-400"
 									>
 										<ModelSettingsLabel
 											label={$i18n.t('System Prompt')}
@@ -487,7 +487,7 @@
 										<Textarea
 											id="folder-system-prompt"
 											ariaLabel={$i18n.t('System Prompt')}
-											className="w-full resize-none bg-transparent text-xs font-normal text-gray-900 outline-hidden placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-600"
+											className="w-full resize-none bg-transparent text-xs font-normal text-base-900 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-600"
 											placeholder={$i18n.t(
 												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
 											)}
@@ -512,7 +512,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>
@@ -543,7 +543,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="text-base-500 hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => (showDirectoryPicker = false)}><XMark className="size-4" /></button
 				>
 			</div>

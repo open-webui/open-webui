@@ -2016,7 +2016,7 @@
 				<div class="relative">
 					{#if typingUsers.length > 0}
 						<div
-							class="absolute -top-7 inset-x-0 pointer-events-none select-none bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-2.5"
+							class="absolute -top-7 inset-x-0 pointer-events-none select-none bg-linear-to-t from-white dark:from-base-900 to-transparent pb-2.5"
 						>
 							<div class="text-xs px-1 mt-1.5 flex items-center gap-1.5">
 								<Skeleton size="xs" />
@@ -2035,7 +2035,7 @@
 						>
 							<button
 								aria-label={$i18n.t('Scroll to bottom')}
-								class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+								class=" bg-white border border-base-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
 								on:click={() => {
 									autoScroll = true;
 									scrollToBottom();
@@ -2159,7 +2159,7 @@
 						<!-- Queued messages display -->
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-base-900/60 border border-base-100 dark:border-base-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
 							>
 								{#each messageQueue as queuedMessage (queuedMessage.id)}
 									<QueuedMessageItem
@@ -2176,15 +2176,15 @@
 						{/if}
 
 						{#if showStatusPanel}
-							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-gray-900">
+							<div class="mx-1 rounded-2xl bg-white text-xs dark:bg-base-900">
 								<div class="flex items-center justify-between px-3 py-1.5">
-									<div class="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300">
+									<div class="flex items-center gap-1.5 text-xs text-base-700 dark:text-base-300">
 										<span>{$i18n.t('Status')}</span>
 									</div>
 
 									<button
 										type="button"
-										class="text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+										class="text-xs text-base-400 transition-colors hover:text-base-600 dark:hover:text-base-300"
 										on:click={() => {
 											showStatusPanel = false;
 										}}
@@ -2194,21 +2194,21 @@
 								</div>
 
 								<div class="space-y-0.5 px-3 pb-2">
-									<div class="rounded-xl py-0.5 text-gray-600 dark:text-gray-400">
+									<div class="rounded-xl py-0.5 text-base-600 dark:text-base-400">
 										<div class="flex min-h-4 items-center gap-3">
 											<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
 											<span
-												class="shrink-0 font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+												class="shrink-0 font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 											>
 												{contextValue}
 											</span>
 										</div>
 										{#if contextHasThreshold}
 											<div
-												class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-gray-100 dark:bg-white/8"
+												class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-base-100 dark:bg-white/8"
 											>
 												<div
-													class="h-full rounded-full bg-gray-300 dark:bg-white/20"
+													class="h-full rounded-full bg-base-300 dark:bg-white/20"
 													style={`width: ${contextBarPercent}%`}
 												></div>
 											</div>
@@ -2216,35 +2216,35 @@
 									</div>
 
 									{#if messageQueue.length}
-										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+										<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
 											<span class="min-w-0 flex-1 truncate">{$i18n.t('Queued messages')}</span>
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
 												{messageQueue.length}
 											</span>
 										</div>
 									{/if}
 
 									{#if chatTasks.length}
-										<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+										<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
 											<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
 												{chatTasks.length}
 											</span>
 										</div>
 									{/if}
 
-									<div class="flex min-h-5 items-center gap-3 text-gray-600 dark:text-gray-400">
+									<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
 										<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
 										{#if chatId}
 											<button
 												type="button"
-												class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-gray-400 underline-offset-2 transition-colors duration-75 hover:text-gray-700 hover:underline dark:text-gray-600 dark:hover:text-gray-200"
+												class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-base-400 underline-offset-2 transition-colors duration-75 hover:text-base-700 hover:underline dark:text-base-600 dark:hover:text-base-200"
 												on:click={copyStatusChatId}
 											>
 												{copiedStatusChatId ? $i18n.t('Copied') : chatId}
 											</button>
 										{:else}
-											<span class="font-mono text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
 												none
 											</span>
 										{/if}
@@ -2257,17 +2257,17 @@
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
 							data-composer-id={inputId}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
-								? 'border-dashed border-gray-300/70 dark:border-gray-700/70'
-								: ' border-gray-200/60 dark:border-gray-800/40'} {($settings?.highContrastMode ??
+								? 'border-dashed border-base-300/70 dark:border-base-700/70'
+								: ' border-base-200/60 dark:border-base-800/40'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-gray-100"
+								: ''}  transition px-0.5 bg-white/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-base-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
 								<div class="px-2.5 pt-2.5 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
-										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm dark:text-gray-500">
+										<div class="pl-[0.0625rem] flex items-center gap-2 text-sm dark:text-base-500">
 											<img
 												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
@@ -2279,7 +2279,7 @@
 										</div>
 										<div>
 											<button
-												class="flex items-center dark:text-gray-500"
+												class="flex items-center dark:text-base-500"
 												aria-label={$i18n.t('Remove Selected Model')}
 												on:click={() => {
 													atSelectedModel = undefined;
@@ -2391,7 +2391,7 @@
 								{#if prompt.split('\n').length > 2}
 									<button
 										type="button"
-										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+										class="absolute top-2.5 right-3 z-20 p-1 rounded-lg hover:bg-base-100/50 dark:hover:bg-base-800/50"
 										aria-label={$i18n.t('Expand input')}
 										on:click={() => {
 											showInputModal = true;
@@ -2402,7 +2402,7 @@
 								{/if}
 
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto {files.length ===
 									0
 										? atSelectedModel !== undefined
 											? 'pt-1'
@@ -2667,7 +2667,7 @@
 										<button
 											type="button"
 											id="input-menu-button"
-											class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+											class="bg-transparent hover:bg-base-100/40 text-base-700 dark:text-white dark:hover:bg-base-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 											aria-label={$i18n.t('More')}
 										>
 											<PlusAlt className="size-5" />
@@ -2685,7 +2685,7 @@
 													disabled={isActive || !terminalSelectionEnabled}
 												/>
 												{#if inputMenuTab === ''}
-													<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+													<div class="h-px mx-1 my-1 bg-base-100 dark:bg-base-800"></div>
 												{/if}
 											{/if}
 										</svelte:fragment>
@@ -2733,7 +2733,7 @@
 
 									<div
 										aria-hidden="true"
-										class="flex self-center w-[0.0625rem] h-4 mx-1 bg-gray-200/50 dark:bg-gray-800/50 shrink-0"
+										class="flex self-center w-[0.0625rem] h-4 mx-1 bg-base-200/50 dark:bg-base-800/50 shrink-0"
 									></div>
 
 									{#if hasChatVariables}
@@ -2741,7 +2741,7 @@
 											<button
 												type="button"
 												id="chat-variables-button"
-												class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+												class="bg-transparent hover:bg-base-100 text-base-700 dark:text-white dark:hover:bg-base-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 												aria-label={$i18n.t('Chat Variables')}
 												on:click={() => {
 													dispatch('chatVariables');
@@ -2764,7 +2764,7 @@
 													type="button"
 													id="model-valves-button"
 													aria-label={$i18n.t('Valves')}
-													class="bg-transparent hover:bg-gray-100 text-gray-700 dark:text-white dark:hover:bg-gray-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden"
+													class="bg-transparent hover:bg-base-100 text-base-700 dark:text-white dark:hover:bg-base-800 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden"
 													on:click={() => {
 														selectedValvesType = 'function';
 														selectedValvesItemId = selectedModelIds[0]?.split('.')[0];
@@ -2785,7 +2785,7 @@
 												})}
 											>
 												<button
-													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
+													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-base-600 dark:text-base-300 hover:text-base-700 dark:hover:text-base-200 rounded-lg self-center transition"
 													aria-label={$i18n.t('Available Tools')}
 													type="button"
 													on:click={() => {
@@ -2808,7 +2808,7 @@
 												})}
 											>
 												<button
-													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg self-center transition"
+													class="translate-y-[0.5px] px-1 flex gap-1 items-center text-base-600 dark:text-base-300 hover:text-base-700 dark:hover:text-base-200 rounded-lg self-center transition"
 													aria-label={$i18n.t('Available Skills')}
 													type="button"
 													on:click={() => {
@@ -2856,7 +2856,7 @@
 															filterId
 														)
 															? 'text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-															: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '} capitalize"
+															: 'bg-transparent text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-800 '} capitalize"
 													>
 														{#if filter?.icon}
 															<div class="size-4 items-center flex justify-center">
@@ -2905,7 +2905,7 @@
 													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {webSearchEnabled ||
 													($settings?.webSearch ?? false) === 'always'
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-600/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+														: 'bg-transparent text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-800 '}"
 												>
 													<GlobeAlt className="size-4" strokeWidth="1.75" />
 												</button>
@@ -2926,7 +2926,7 @@
 													type="button"
 													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {imageGenerationEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+														: 'bg-transparent text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-800 '}"
 												>
 													<Photo className="size-4" strokeWidth="1.75" />
 												</button>
@@ -2947,7 +2947,7 @@
 													type="button"
 													class="group p-[0.375rem] flex gap-1.5 items-center text-sm rounded-full transition-colors duration-300 focus:outline-hidden max-w-full overflow-hidden {videoGenerationEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '}"
+														: 'bg-transparent text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-800 '}"
 												>
 													<VideoCamera className="size-4" strokeWidth="1.75" />
 												</button>
@@ -2966,7 +2966,7 @@
 													type="button"
 													class=" group p-[0.375rem] flex gap-1.5 items-center text-sm transition-colors duration-300 max-w-full overflow-hidden {codeInterpreterEnabled
 														? ' text-sky-500 dark:text-sky-300 bg-sky-50 hover:bg-sky-100 dark:bg-sky-400/10 dark:hover:bg-sky-700/10 border border-sky-200/40 dark:border-sky-500/20'
-														: 'bg-transparent text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 '} {($settings?.highContrastMode ??
+														: 'bg-transparent text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-800 '} {($settings?.highContrastMode ??
 													false)
 														? 'm-1'
 														: 'focus:outline-hidden rounded-full'}"
@@ -2998,7 +2998,7 @@
 														oauthRedirectHandler(pendingTool, chatInputDraft);
 													}}
 													type="button"
-													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-[0.0625rem] items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-gray-600 transition-colors duration-150 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-400 dark:text-gray-300 dark:hover:text-gray-100 dark:focus-visible:outline-gray-500"
+													class="flex h-[1.875rem] min-w-0 max-w-full translate-y-[0.0625rem] items-center self-center gap-1 bg-transparent px-1 text-[0.8125rem] leading-none text-base-600 transition-colors duration-150 hover:text-base-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-400 dark:text-base-300 dark:hover:text-base-100 dark:focus-visible:outline-base-500"
 												>
 													<span class="truncate">{pendingTool.name}</span>
 													<ArrowUpLeft className="size-3 shrink-0 rotate-90" strokeWidth="1.5" />
@@ -3018,7 +3018,7 @@
 											showSetDefault={!history?.currentId}
 											placement="auto"
 											align="end"
-											triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-300 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+											triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-base-600 transition-colors duration-100 hover:bg-base-50/40 hover:text-base-700 dark:text-base-300 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 										/>
 									</div>
 									<ModelControls
@@ -3033,7 +3033,7 @@
 											<Tooltip content={$i18n.t('Stop')}>
 												<button
 													aria-label={$i18n.t('Stop')}
-													class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-[0.3125rem]"
+													class="bg-white hover:bg-base-100 text-base-800 dark:bg-base-700 dark:text-white dark:hover:bg-base-800 transition rounded-full p-[0.3125rem]"
 													on:click={() => {
 														stopResponse();
 													}}
@@ -3062,7 +3062,7 @@
 														id={inputId === 'chat-input'
 															? 'voice-input-button'
 															: `${inputId}-voice-input-button`}
-														class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
+														class=" text-base-600 dark:text-base-300 hover:text-base-700 dark:hover:text-base-200 transition rounded-full p-1.5 self-center mr-0.5"
 														type="button"
 														on:click={async () => {
 															try {
@@ -3105,7 +3105,7 @@
 													content={callActive ? $i18n.t('Call in progress') : $i18n.t('Voice mode')}
 												>
 													<button
-														class=" bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 transition rounded-full p-[0.3125rem] self-center"
+														class=" bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 transition rounded-full p-[0.3125rem] self-center"
 														class:call-active={callActive}
 														type="button"
 														on:click={async () => {
@@ -3180,8 +3180,8 @@
 															: `${inputId}-send-message-button`}
 														aria-label={$i18n.t('Send message')}
 														class="{!(prompt === '' && files.length === 0)
-															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
+															? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 '
+															: 'text-white bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
 														disabled={prompt === '' && files.length === 0}
 													>
@@ -3207,7 +3207,7 @@
 						</div>
 
 						{#if $config?.license_metadata?.input_footer}
-							<div class=" text-xs text-gray-500 text-center line-clamp-1 marked">
+							<div class=" text-xs text-base-500 text-center line-clamp-1 marked">
 								{@html DOMPurify.sanitize(marked($config?.license_metadata?.input_footer))}
 							</div>
 						{:else}

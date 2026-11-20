@@ -37,10 +37,10 @@
 	};
 </script>
 
-<div class="relative group my-2 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3">
+<div class="relative group my-2 rounded-2xl border border-base-100 dark:border-base-800 px-4 py-3">
 	<div class="flex items-center justify-between gap-2 mb-2">
 		<span
-			class="text-xs font-normal text-gray-500 dark:text-gray-400 truncate"
+			class="text-xs font-normal text-base-500 dark:text-base-400 truncate"
 			dir="auto"
 			title={header}
 		>

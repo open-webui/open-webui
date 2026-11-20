@@ -133,12 +133,12 @@
 
 <div id="tab-shortcuts" class="flex h-full flex-col overflow-y-auto text-sm">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+		<h2 class="text-sm font-medium text-base-900 dark:text-white">
 			{$i18n.t('settings.personal.shortcuts.title')}
 		</h2>
 
 		<button
-			class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+			class="text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
 			on:click={resetBindings}
 		>
 			{$i18n.t('settings.personal.shortcuts.resetDefaults.label')}
@@ -162,17 +162,17 @@
 				/>
 			</div>
 		</UserSettingRow>
-		<p class="mt-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<p class="mt-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 			{$i18n.t('settings.personal.shortcuts.enableKeyboardShortcuts.description')}
 		</p>
 	</div>
 
 	<div class="flex-1 min-h-24 overflow-y-auto scrollbar-hover pr-1.5">
 		<div class="flex items-center gap-2 px-1 pb-1">
-			<span class="flex-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+			<span class="flex-1 text-[0.625rem] text-base-400 dark:text-base-600">
 				{$i18n.t('settings.personal.shortcuts.command.label')}
 			</span>
-			<span class="w-[9.5rem] shrink-0 text-right text-[0.625rem] text-gray-400 dark:text-gray-600">
+			<span class="w-[9.5rem] shrink-0 text-right text-[0.625rem] text-base-400 dark:text-base-600">
 				{$i18n.t('Key')}
 			</span>
 		</div>
@@ -181,14 +181,14 @@
 			<div class={categoryIndex > 0 ? 'mt-3' : ''}>
 				<h3
 					id="shortcut-category-{categoryIndex}"
-					class="px-1 pb-0.5 pt-1 text-xs text-gray-400 dark:text-gray-600"
+					class="px-1 pb-0.5 pt-1 text-xs text-base-400 dark:text-base-600"
 				>
 					{$i18n.t(category)}
 				</h3>
 				<div
 					role="list"
 					aria-labelledby="shortcut-category-{categoryIndex}"
-					class="divide-y divide-gray-100/70 dark:divide-white/[0.03]"
+					class="divide-y divide-base-100/70 dark:divide-white/[0.03]"
 				>
 					<!-- {$i18n.t('Chat')} -->
 					<!-- {$i18n.t('Global')} -->
@@ -249,7 +249,7 @@
 										<span
 											id="shortcut-binding-{id}"
 											tabindex="-1"
-											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-gray-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-gray-500 dark:bg-white/6 dark:text-gray-400"
+											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-base-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-base-500 dark:bg-white/6 dark:text-base-400"
 										>
 											{$i18n.t('Press keys...')}
 										</span>
@@ -263,7 +263,7 @@
 											<KeyPill text={formatChord(chord)} />
 										</button>
 										<button
-											class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+											class="rounded-lg p-0.5 text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 											type="button"
 											aria-label={$i18n.t('Remove')}
 											title={$i18n.t('Remove')}
@@ -277,7 +277,7 @@
 									{:else}
 										<button
 											id="shortcut-binding-{id}"
-											class="text-[0.625rem] text-gray-500 transition hover:text-gray-400 dark:text-gray-600"
+											class="text-[0.625rem] text-base-500 transition hover:text-base-400 dark:text-base-600"
 											on:click={() => startRecording(id)}
 										>
 											{$i18n.t('Unassigned')}

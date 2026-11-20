@@ -62,18 +62,18 @@
 	aria-selected={isSelected}
 	aria-label={$i18n.t('Select {{modelName}} model', { modelName: item.label })}
 	aria-describedby={localizedDescription ? `model-description-${index}` : undefined}
-	class="focus-ring group/item relative flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 {($settings?.highContrastMode ??
+	class="focus-ring group/item relative flex h-8 w-full cursor-pointer select-none items-center rounded-xl px-2 text-left text-[0.8125rem] font-normal text-base-700 outline-hidden transition-colors duration-75 dark:text-base-100 {($settings?.highContrastMode ??
 	false)
-		? 'hover:bg-gray-200 dark:hover:bg-gray-800'
-		: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'} {index === selectedModelIdx &&
+		? 'hover:bg-base-200 dark:hover:bg-base-800'
+		: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'} {index === selectedModelIdx &&
 	!compareEnabled
 		? ($settings?.highContrastMode ?? false)
-			? 'bg-gray-200 dark:bg-gray-800'
-			: 'bg-gray-50/70 dark:bg-gray-800/60'
+			? 'bg-base-200 dark:bg-base-800'
+			: 'bg-base-50/70 dark:bg-base-800/60'
 		: ''} {isSelected
 		? ($settings?.highContrastMode ?? false)
-			? 'bg-gray-200 dark:bg-gray-800'
-			: 'bg-gray-50/70 dark:bg-gray-800/60'
+			? 'bg-base-200 dark:bg-base-800'
+			: 'bg-base-50/70 dark:bg-base-800/60'
 		: ''}"
 	data-arrow-selected={index === selectedModelIdx}
 	data-value={item.value}
@@ -92,7 +92,7 @@
 				{#each item.model?.tags.sort((a, b) => a.name.localeCompare(b.name)) as tag}
 					<Tooltip content={tag.name} className="flex-shrink-0">
 						<div
-							class=" text-xs font-normal px-1 rounded-sm uppercase bg-gray-500/20 text-gray-700 dark:text-gray-200"
+							class=" text-xs font-normal px-1 rounded-sm uppercase bg-base-500/20 text-base-700 dark:text-base-200"
 						>
 							{tag.name}
 						</div>
@@ -144,7 +144,7 @@
 								className="self-end"
 							>
 								<span
-									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+									class="line-clamp-1 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
 									>{item.model.ollama?.details?.parameter_size ?? ''}</span
 								>
 							</Tooltip>
@@ -163,7 +163,7 @@
 								className="self-end"
 							>
 								<span
-									class="line-clamp-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400"
+									class="line-clamp-1 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
 								>
 									{parameterSize || quantization || formatSize(size)}
 								</span>

@@ -45,7 +45,7 @@
 
 					<div class=" mt-6 mx-auto relative group w-fit">
 						<button
-							class="relative z-20 flex px-5 py-2 rounded-full bg-gray-100 hover:bg-gray-200 transition font-normal text-sm text-black"
+							class="relative z-20 flex px-5 py-2 rounded-full bg-base-100 hover:bg-base-200 transition font-normal text-sm text-black"
 							on:click={() => {
 								location.href = '/';
 							}}

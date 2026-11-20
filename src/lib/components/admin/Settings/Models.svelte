@@ -152,7 +152,7 @@
 		if (isSharedModel(model)) {
 			return 'text-[#4f6f93] dark:text-[#8ba6c6]';
 		}
-		return 'text-gray-500 dark:text-gray-400';
+		return 'text-base-500 dark:text-base-400';
 	};
 
 	$: defaultModelIdSet = new Set(defaultModelIds);
@@ -764,9 +764,9 @@
 	{#if selectedModelId === null}
 		<div class="flex h-full min-h-0 flex-col text-sm">
 			<div class="mb-0.5 flex items-center justify-between">
-				<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+				<h2 class="text-sm font-medium text-base-900 dark:text-white">
 					{$i18n.t('settings.admin.models.title')}
-					<span class="ml-2 font-normal text-gray-500 dark:text-gray-500">
+					<span class="ml-2 font-normal text-base-500 dark:text-base-500">
 						{filteredModels.length}
 					</span>
 				</h2>
@@ -831,7 +831,7 @@
 						{#if searchValue}
 							<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 								<button
-									class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+									class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 									aria-label={$i18n.t('Clear search')}
 									on:click={() => {
 										searchValue = '';
@@ -872,7 +872,7 @@
 						<Dropdown closeOnSelect align="end">
 							<Tooltip content={$i18n.t('Actions')}>
 								<button
-									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+									class="flex h-8 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-base-700 transition hover:text-base-900 dark:text-base-200 dark:hover:text-base-100"
 									type="button"
 								>
 									<span>{$i18n.t('Actions')}</span>
@@ -884,7 +884,7 @@
 								<DropdownMenu className="min-w-[10.625rem] shadow-sm">
 									{#if $user?.role === 'admin'}
 										<button
-											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] disabled:pointer-events-none disabled:opacity-40 hover:text-gray-900 dark:hover:text-gray-100"
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] disabled:pointer-events-none disabled:opacity-40 hover:text-base-900 dark:hover:text-base-100"
 											type="button"
 											disabled={modelsImportInProgress}
 											on:click={() => {
@@ -898,7 +898,7 @@
 										</button>
 
 										<button
-											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 											type="button"
 											on:click={() => {
 												downloadModels(
@@ -916,7 +916,7 @@
 									{/if}
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											showManageModal = true;
@@ -929,7 +929,7 @@
 									</button>
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											showResetModal = true;
@@ -941,10 +941,10 @@
 										</div>
 									</button>
 
-									<hr class="mx-1 my-0.5 border-gray-100 dark:border-gray-800" />
+									<hr class="mx-1 my-0.5 border-base-100 dark:border-base-800" />
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											enableAllHandler();
@@ -957,7 +957,7 @@
 									</button>
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											disableAllHandler();
@@ -969,10 +969,10 @@
 										</div>
 									</button>
 
-									<hr class="mx-1 my-0.5 border-gray-100 dark:border-gray-800" />
+									<hr class="mx-1 my-0.5 border-base-100 dark:border-base-800" />
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											showAllHandler();
@@ -985,7 +985,7 @@
 									</button>
 
 									<button
-										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+										class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											hideAllHandler();
@@ -1012,13 +1012,13 @@
 					{#if filteredModels.length > 0}
 						{#each filteredModels as model, modelIdx (`${model.id}-${modelIdx}`)}
 							<div
-								class="group/setting-row flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-gray-50/70 dark:hover:bg-gray-850/50 {model
+								class="group/setting-row flex cursor-pointer transition w-full px-2 py-1 rounded-xl hover:bg-base-50/70 dark:hover:bg-base-850/50 {model
 									?.meta?.hidden
 									? 'opacity-50 dark:opacity-50'
 									: ''}"
 								id="model-item-{model.id}"
 							>
-								<div class="self-center pr-1 -ml-1 text-gray-400 dark:text-gray-600">
+								<div class="self-center pr-1 -ml-1 text-base-400 dark:text-base-600">
 									<Tooltip content={$i18n.t('Drag to reorder')}>
 										<EllipsisVertical className="size-4 cursor-move model-item-handle" />
 									</Tooltip>
@@ -1058,7 +1058,7 @@
 									<div
 										class="flex min-w-0 flex-1 pr-1 self-center {(model?.is_active ?? true)
 											? ''
-											: 'text-gray-500'}"
+											: 'text-base-500'}"
 									>
 										<Tooltip
 											content={marked.parse(
@@ -1076,7 +1076,7 @@
 												class="flex min-w-0 items-center gap-1.5 text-[0.8125rem] font-normal leading-4"
 											>
 												<span
-													class="min-w-0 truncate text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+													class="min-w-0 truncate text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
 													>{model.name}</span
 												>
 
@@ -1090,7 +1090,7 @@
 
 												{#if defaultModelIdSet.has(model.id)}
 													<span
-														class="shrink-0 text-[0.6875rem] font-normal leading-4 text-gray-500 dark:text-gray-400"
+														class="shrink-0 text-[0.6875rem] font-normal leading-4 text-base-500 dark:text-base-400"
 													>
 														{$i18n.t('Selected')}
 													</span>
@@ -1098,7 +1098,7 @@
 
 												{#if defaultPinnedModelIdSet.has(model.id)}
 													<span
-														class="shrink-0 text-[0.6875rem] font-normal leading-4 text-gray-500 dark:text-gray-400"
+														class="shrink-0 text-[0.6875rem] font-normal leading-4 text-base-500 dark:text-base-400"
 													>
 														{$i18n.t('Pinned')}
 													</span>
@@ -1112,7 +1112,7 @@
 										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 											<button
 												aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
-												class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 												type="button"
 												on:click={() => {
 													hideModelHandler(model);
@@ -1135,8 +1135,8 @@
 												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultModelIdSet.has(
 													model.id
 												)
-													? 'text-gray-900 dark:text-white'
-													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+													? 'text-base-900 dark:text-white'
+													: 'text-base-500 dark:text-base-400 dark:hover:text-white'}"
 												type="button"
 												aria-label={defaultModelIdSet.has(model.id)
 													? $i18n.t('Remove Selected Model')
@@ -1158,8 +1158,8 @@
 												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultPinnedModelIdSet.has(
 													model.id
 												)
-													? 'text-gray-900 dark:text-white'
-													: 'text-gray-500 dark:text-gray-400 dark:hover:text-white'}"
+													? 'text-base-900 dark:text-white'
+													: 'text-base-500 dark:text-base-400 dark:hover:text-white'}"
 												type="button"
 												aria-label={defaultPinnedModelIdSet.has(model.id)
 													? $i18n.t('Remove Pinned Model')
@@ -1182,7 +1182,7 @@
 												: $i18n.t('Make Public')}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 rounded-xl text-gray-500 hover:bg-black/5 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-white"
+												class="self-center w-fit text-sm p-1.5 rounded-xl text-base-500 hover:bg-black/5 dark:text-base-400 dark:hover:bg-white/5 dark:hover:text-white"
 												type="button"
 												aria-label={isPublicModel(model)
 													? $i18n.t('Make Private')
@@ -1201,7 +1201,7 @@
 									{/if}
 
 									<button
-										class="hidden sm:flex self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="hidden sm:flex self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 										type="button"
 										aria-label={$i18n.t('Edit')}
 										on:click={() => {
@@ -1262,7 +1262,7 @@
 										onClose={() => {}}
 									>
 										<button
-											class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
 											type="button"
 											aria-label={$i18n.t('More Options')}
 										>
@@ -1292,10 +1292,10 @@
 						<div class="flex h-full w-full items-center justify-center py-10">
 							<div class="max-w-md text-center">
 								<div class="mb-2 text-xl">😕</div>
-								<div class="mb-1 text-sm text-gray-700 dark:text-gray-300">
+								<div class="mb-1 text-sm text-base-700 dark:text-base-300">
 									{$i18n.t('No models found')}
 								</div>
-								<div class=" text-gray-500 text-center text-xs">
+								<div class=" text-base-500 text-center text-xs">
 									{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 								</div>
 							</div>
@@ -1305,7 +1305,7 @@
 
 				<div class="flex justify-end pt-6 text-sm font-normal">
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
 						type="button"
 						disabled={(!modelOrderDirty && !modelDefaultsDirty) ||
 							savingModelOrder ||

@@ -110,7 +110,7 @@
 
 <button
 	type="button"
-	class="absolute top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-gray-400/70 hover:bg-white/80 hover:text-gray-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-gray-900/80 dark:hover:text-gray-200 dark:focus-visible:bg-gray-900/80 {fullscreenEnabled
+	class="absolute top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-base-400/70 hover:bg-white/80 hover:text-base-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-base-900/80 dark:hover:text-base-200 dark:focus-visible:bg-base-900/80 {fullscreenEnabled
 		? 'right-9'
 		: 'right-1.5'}"
 	aria-label={$i18n.t('Desktop audio')}

@@ -103,7 +103,7 @@
 <ShareChatModal bind:show={showShare} chatId={chat.id} />
 
 <DeleteConfirmDialog bind:show={showDelete} title={$i18n.t('Delete chat?')} on:confirm={remove}>
-	<div class="flex-1 line-clamp-3 text-sm text-gray-500">
+	<div class="flex-1 line-clamp-3 text-sm text-base-500">
 		{$i18n.t('This will delete')} <span class="font-normal">{chat.title}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -125,7 +125,7 @@
 	<button
 		type="button"
 		aria-label={$i18n.t('Chat Menu')}
-		class="flex size-5 items-center justify-center rounded-md text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-white"
+		class="flex size-5 items-center justify-center rounded-md text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-white"
 		disabled={busy}
 	>
 		<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />

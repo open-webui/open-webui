@@ -394,7 +394,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -436,7 +436,7 @@
 			{#if (filteredItems ?? []).length !== 0}
 				<div class="@container">
 					<div
-						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-gray-500 dark:text-gray-400"
+						class="grid grid-cols-[minmax(0,1fr)_9rem_8rem_9.5rem] items-center gap-x-4 px-2 @max-[48rem]:grid-cols-[minmax(0,1fr)_7rem_9.5rem] @max-[48rem]:gap-x-3 @max-[36rem]:grid-cols-[minmax(0,1fr)_9.5rem] @max-[36rem]:gap-x-2 min-h-6 text-xs text-base-500 dark:text-base-400"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -492,12 +492,12 @@
 													{#if tool.write_access}
 														<a
 															href={`/workspace/tools/edit?id=${encodeURIComponent(tool.id)}`}
-															class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+															class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 															>{resolveLocalizedResource(tool, $i18n.language)}</a
 														>
 													{:else}
 														<span
-															class="block truncate text-[0.8125rem] leading-5 text-gray-800 dark:text-gray-200"
+															class="block truncate text-[0.8125rem] leading-5 text-base-800 dark:text-base-200"
 															>{resolveLocalizedResource(tool, $i18n.language)}</span
 														>
 													{/if}
@@ -508,7 +508,7 @@
 
 												{#if tool?.meta?.manifest?.version}
 													<div
-														class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
+														class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-base-500"
 													>
 														v{tool?.meta?.manifest?.version ?? ''}
 													</div>
@@ -523,7 +523,7 @@
 													className="min-w-0"
 													placement="top-start"
 												>
-													<div class="truncate text-xs leading-4 text-gray-500 dark:text-gray-400">
+													<div class="truncate text-xs leading-4 text-base-500 dark:text-base-400">
 														{resolveLocalizedResource(tool, $i18n.language, 'description')}
 													</div>
 												</Tooltip>
@@ -532,7 +532,7 @@
 									</div>
 								</div>
 
-								<div class="@max-[48rem]:hidden min-w-0 text-xs text-gray-600 dark:text-gray-400">
+								<div class="@max-[48rem]:hidden min-w-0 text-xs text-base-600 dark:text-base-400">
 									<ProfilePreview
 										user={tool?.user ?? null}
 										side="bottom"
@@ -559,7 +559,7 @@
 										.format('LLLL')}
 									className="@max-[36rem]:hidden min-w-0"
 								>
-									<div class="shrink-0 truncate text-xs leading-5 text-gray-500 dark:text-gray-400">
+									<div class="shrink-0 truncate text-xs leading-5 text-base-500 dark:text-base-400">
 										{dayjs(tool.updated_at * 1000)
 											.locale($i18n.language)
 											.fromNow()}
@@ -571,7 +571,7 @@
 											{#if shiftKey}
 												<Tooltip content={$i18n.t('Delete')}>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Delete')}
 														on:click={(e) => {
@@ -587,7 +587,7 @@
 												{#if tool?.meta?.manifest?.funding_url ?? false}
 													<Tooltip content="Support">
 														<button
-															class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+															class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 															type="button"
 															aria-label={$i18n.t('Support')}
 															on:click={(e) => {
@@ -604,7 +604,7 @@
 
 												<Tooltip content={$i18n.t('Valves')}>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Valves')}
 														on:click={(e) => {
@@ -639,7 +639,7 @@
 												<CommentButton
 													onComment={(request) => (comments = request)}
 													modal
-													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													className="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 													resource={{ resource_type: 'tool', resource_id: tool.id }}
 												/>
 												<ToolMenu
@@ -671,7 +671,7 @@
 													}}
 												>
 													<button
-														class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+														class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 														type="button"
 														aria-label={$i18n.t('Tool Menu')}
 														on:click={(e) => {
@@ -704,7 +704,7 @@
 										<CommentButton
 											onComment={(request) => (comments = request)}
 											modal
-											className="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+											className="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 											resource={{ resource_type: 'tool', resource_id: tool.id }}
 										/>
 										<span class="size-6 shrink-0" aria-hidden="true"></span>
@@ -731,11 +731,11 @@
 				</div>
 			{:else}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 						<div class="mb-1.5 text-sm">
 							{hasFilters ? $i18n.t('No tools found') : $i18n.t('No tools yet')}
 						</div>
-						<div class="text-center text-xs leading-5 text-gray-500">
+						<div class="text-center text-xs leading-5 text-base-500">
 							{hasFilters
 								? $i18n.t('Try adjusting your search or filter to find what you are looking for.')
 								: $i18n.t('Items you create or that are shared with you will appear here.')}
@@ -760,7 +760,7 @@
 				deleteHandler(selectedTool);
 			}}
 		>
-			<div class=" text-sm text-gray-500 truncate">
+			<div class=" text-sm text-base-500 truncate">
 				{$i18n.t('This will delete')}
 				<span class="  font-normal">{resolveLocalizedResource(selectedTool, $i18n.language)}</span>.
 			</div>
@@ -798,7 +798,7 @@
 				reader.readAsText(importFiles[0]);
 			}}
 		>
-			<div class="text-sm text-gray-500">
+			<div class="text-sm text-base-500">
 				<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
 					<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 
