@@ -2722,7 +2722,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
                             tool_function = await make_tool_function(client, tool_spec['name'])
 
-                            tool_name = f'{server_id}_{tool_spec["name"]}'
+                            tool_name = re.sub(r'[^a-zA-Z0-9_-]', '_', f'{server_id}_{tool_spec["name"]}')
                             # Providers reject tool names over 64 characters
                             if len(tool_name) > 64:
                                 tool_name = f'{tool_name[:55]}_{hashlib.sha256(tool_name.encode()).hexdigest()[:8]}'
