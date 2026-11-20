@@ -5238,10 +5238,10 @@
     },
     "xlsxwriter": {
       "name": "xlsxwriter",
-      "version": "3.3.1",
-      "file_name": "xlsxwriter-3.3.1-py3-none-any.whl",
+      "version": "3.3.3",
+      "file_name": "xlsxwriter-3.3.3-py3-none-any.whl",
       "install_dir": "site",
-      "sha256": "8e2c89e59d733fe59e112317218c64fbbc276d90a8c144ebd6f7fa15e7ab184a",
+      "sha256": "2b83c5e184d872275e87718ebc88688acc258a50fc84dcad965b3d10be6e345f",
       "package_type": "package",
       "imports": [
         "xlsxwriter"
