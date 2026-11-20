@@ -9,7 +9,8 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { toast } from 'svelte-sonner';
+	import Toaster from '$lib/components/common/Toaster.svelte';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -1295,22 +1296,5 @@
 {/if}
 
 <div aria-live="polite">
-	<Toaster
-		theme={$theme.includes('dark')
-			? 'dark'
-			: $theme === 'system'
-				? window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light'
-				: 'light'}
-		richColors
-		position="top-right"
-		closeButton
-		toastOptions={{
-			classes: {
-				closeButton:
-					'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
-			}
-		}}
-	/>
+	<Toaster />
 </div>
