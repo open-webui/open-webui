@@ -490,7 +490,9 @@
 						{middleTruncate(comment.meta.anchor.quote)}
 					</div>
 				{/if}
-				<div class="mt-2 text-[0.8125rem] text-base-600 dark:text-base-300 break-words">
+				<div
+					class="scrollbar-hidden mt-2 max-h-40 overflow-y-auto text-[0.8125rem] text-base-600 dark:text-base-300 break-words"
+				>
 					<Markdown
 						id={`comment-preview-${comment.id}`}
 						content={comment.content}
@@ -509,6 +511,7 @@
 					<CommentReplyComposer
 						{comment}
 						autofocus={false}
+						compact={true}
 						className=""
 						onCancel={null}
 						onSubmitted={hide}

@@ -29,6 +29,7 @@
 	export let onSubmit: (content: string, tempId: string) => Promise<void>;
 	export let onCancel: (() => void) | null = null;
 	export let cancelOnOutsideClick = false;
+	export let compact = false;
 	const i18n = getContext<any>('i18n');
 	let root: HTMLDivElement;
 	const outsidePointer = (event: PointerEvent) => {
@@ -152,10 +153,15 @@
 						</div>{/if}
 				</div>
 			{/if}
-			<div class={embedded ? 'min-h-6 py-0.5 pe-9' : submitLabel === 'Save' ? 'pe-16' : 'pe-12'}>
+			<div class={embedded ? 'min-h-6 py-0.5' : ''}>
+				<!-- Padding lives inside the scroller so its scrollbar sits in the send-button column. -->
 				<div
-					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full resize-none h-fit {scrollable
-						? `${embedded ? 'max-h-40' : 'max-h-96'} overflow-auto`
+					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full resize-none h-fit {embedded
+						? 'pe-9'
+						: submitLabel === 'Save'
+							? 'pe-16'
+							: 'pe-12'} {scrollable
+						? `${embedded || compact ? 'max-h-40' : 'max-h-96'} overflow-auto`
 						: ''}"
 				>
 					<RichTextInput
