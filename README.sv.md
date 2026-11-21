@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI is <a href="https://docs.openwebui.com/"><strong>a home for AI</strong></a>: an extensible, easy-to-use, self-hosted platform built to run entirely offline. Connect local models through Ollama or use OpenAI-compatible APIs for local and cloud models.</p>
+<p>Open WebUI är <a href="https://docs.openwebui.com/"><strong>ett hem för AI</strong></a>: en ut-bygg-bar, lätt-användlig och egen-hostad plattform byggd för att köras helt offline. Anslut lokala modeller via Ollama eller använd OpenAI-kompatibla API'er för både lokala och molnbaserade modeller.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |
@@ -28,32 +28,32 @@
 
 [![Open WebUI Demo](https://cdn.openwebui.com/open-webui-demo.gif)](https://docs.openwebui.com/)
 
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
+![GitHub stjärnor](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
 ![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
+![GitHub repo storlek](https://img.shields.io/github/repo-size/open-webui/open-webui)
+![GitHub antal nummer av språk](https://img.shields.io/github/languages/count/open-webui/open-webui)
+![GitHub top språk](https://img.shields.io/github/languages/top/open-webui/open-webui)
+![GitHub senaste commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
 [![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
 
-[Explore Open WebUI →](https://docs.openwebui.com/)
+[Utforska Open WebUI →](https://docs.openwebui.com/)
 
 ### Installation
 
 #### Python
 
 ```bash
-# With uv installed (macOS/Linux)
+# Med uv installerat (macOS/Linux)
 DATA_DIR=~/.open-webui uvx --python 3.12 open-webui@latest serve
 
-# Or install and run with pip (Python 3.12)
+# Eller installera och kör med pip (Python 3.12)
 pip install open-webui
 open-webui serve
 ```
 
-Then open [http://localhost:8080](http://localhost:8080).
+Sedan öppna [http://localhost:8080](http://localhost:8080).
 
 #### Docker
 
@@ -61,24 +61,25 @@ Then open [http://localhost:8080](http://localhost:8080).
 docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Sedan öppna [http://localhost:3000](http://localhost:3000).
 
-| Image tag | Includes                                                                                 |
+| Bild tag | Inkluderar                                                                                 |
 | --------- | ---------------------------------------------------------------------------------------- |
-| `:main`   | Standard image with local AI dependencies                                                |
-| `:slim`   | Lightweight image using external services for embeddings, document extraction, and voice |
-| `:cuda`   | Open WebUI with CUDA acceleration                                                        |
-| `:ollama` | Open WebUI bundled with Ollama                                                           |
-| `:dev`    | Latest development build                                                                 |
+| `:main`   | Standard bild med lokala AI beroenden                                                |
+| `:slim`   | Lightweight bild med externa servicer för embeddings, dokument extraction, och tal |
+| `:cuda`   | Öppna WebUI med CUDA acceleration                                                        |
+| `:ollama` | Öppna WebUI bundled med Ollama                                                           |
+| `:dev`    | Senaste development bygg                                                                 |
 
-Add these options to `docker run` before the image name as needed:
+
+Lägg till dessa flaggor till `docker run` innan bildens namn om det behövs:
 
 | Option                                               | Purpose                                                                                  |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Connect to Ollama on another server                                                      |
-| `-e OPENAI_API_KEY=your_secret_key`                  | Set your OpenAI API key                                                                  |
-| `-e HF_HUB_OFFLINE=1`                                | Disable Hugging Face model downloads for offline use                                     |
-| `--gpus all`                                         | Enable Nvidia GPU access for `:cuda` or `:ollama`; requires the Nvidia Container Toolkit |
+| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Anslut till Ollama på en annan server                                                      |
+| `-e OPENAI_API_KEY=your_secret_key`                  | Sätt in din OpenAI API key                                                                  |
+| `-e HF_HUB_OFFLINE=1`                                | Disablea Hugging Face model nedladdningar för att använda offline                                     |
+| `--gpus all`                                         | Enablea Nvidia GPU åtkomst för `:cuda` eller `:ollama`; Du behöver Nvidia Container Toolkit |
 
 See the [Docker installation guide](https://docs.openwebui.com/getting-started/quick-start/) for setup instructions and configuration options.
 
