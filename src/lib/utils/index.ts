@@ -488,11 +488,14 @@ export const generateInitialsImage = (name) => {
 
 	const sanitizedName = (name ?? '').trim();
 	const words = sanitizedName.split(/\s+/).filter(Boolean);
+	const first = Array.from(words[0] ?? '')[0] ?? '';
+	// CJK names show one character (the family name comes first): two full-width glyphs
+	// crowd the circle, and pairing across a space splits names like 欧阳 娜娜 meaninglessly.
+	const isCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(
+		first
+	);
 	const initials = (
-		words.length > 0
-			? (Array.from(words[0])[0] ?? '') +
-				(words.length > 1 ? (Array.from(words[words.length - 1])[0] ?? '') : '')
-			: ''
+		!isCJK && words.length > 1 ? first + (Array.from(words[words.length - 1])[0] ?? '') : first
 	).toUpperCase();
 
 	// Same name, same color, so regenerating it (e.g. on rename checks) stays stable.
@@ -512,9 +515,19 @@ export const generateInitialsImage = (name) => {
 	ctx.fillRect(0, 0, size, size);
 
 	ctx.fillStyle = '#FFFFFF';
-	ctx.font = `600 104px -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif`;
 	ctx.textAlign = 'center';
 	ctx.textBaseline = 'alphabetic';
+
+	// Shrink wide initials (e.g. "WM") so they stay inside the circle.
+	const fontFamily = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif`;
+	let fontSize = 104;
+	ctx.font = `600 ${fontSize}px ${fontFamily}`;
+	const maxWidth = size * 0.66;
+	const width = ctx.measureText(initials).width;
+	if (width > maxWidth) {
+		fontSize = Math.floor((fontSize * maxWidth) / width);
+		ctx.font = `600 ${fontSize}px ${fontFamily}`;
+	}
 
 	// Center on the glyphs' actual bounds; 'middle' sits capitals visibly high.
 	const metrics = ctx.measureText(initials);
