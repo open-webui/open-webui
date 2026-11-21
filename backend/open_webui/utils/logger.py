@@ -197,18 +197,15 @@ def start_logger():
             diagnose=LOGURU_DIAGNOSE,
         )
     if AUDIT_LOG_LEVEL != 'NONE' and ENABLE_AUDIT_LOGS_FILE:
-        try:
-            logger.add(
-                AUDIT_LOGS_FILE_PATH,
-                level='INFO',
-                rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
-                compression='zip',
-                format=file_format,
-                filter=lambda record: record['extra'].get('auditable') is True,
-                diagnose=LOGURU_DIAGNOSE,
-            )
-        except Exception as e:
-            logger.error(f'Failed to initialize audit log file handler: {str(e)}')
+        logger.add(
+            AUDIT_LOGS_FILE_PATH,
+            level='INFO',
+            rotation=AUDIT_LOG_FILE_ROTATION_SIZE,
+            compression='zip',
+            format=file_format,
+            filter=lambda record: record['extra'].get('auditable') is True,
+            diagnose=LOGURU_DIAGNOSE,
+        )
 
     logging.basicConfig(handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True)
 
