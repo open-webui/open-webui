@@ -119,7 +119,7 @@
 				<label class="flex w-full items-center justify-between mt-3 mb-1 text-xs">
 					<span>{$i18n.t('Sharing mode')}</span>
 					<select
-						class="bg-transparent text-xs outline-none"
+						class="bg-transparent text-xs outline-none pr-5"
 						bind:value={shareMode}
 						disabled={loading}
 						on:change={handleAccessChange}

@@ -139,8 +139,8 @@
 		</div>
 
 		{#if chat}
-			<div class="px-5 pt-4 pb-5 w-full flex flex-col">
-				<div class="text-sm dark:text-base-300">
+			<div class="px-5 pt-1 pb-5 w-full flex flex-col">
+				<div class="text-xs dark:text-base-300">
 					{#if chat.share_id}
 						<a href="/s/{chat.share_id}" target="_blank"
 							>{$i18n.t('You have shared this chat')}
@@ -186,7 +186,7 @@
 							<label class="flex w-full items-center justify-between mt-3 mb-1 text-xs">
 								<span>{$i18n.t('Sharing mode')}</span>
 								<select
-									class="bg-transparent text-xs outline-none"
+									class="bg-transparent text-xs outline-none pr-5"
 									bind:value={shareMode}
 									on:change={saveAccessGrants}
 								>
