@@ -95,29 +95,29 @@ Se [Docker installations guiden](https://docs.openwebui.com/getting-started/quic
 - [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Spegla mappar, repos, buckets, och wikis i Open WebUI Knowledge Baser med inkrementell sync.
 - [Open WebUI Computer](https://github.com/open-webui/computer): Din dator i vilken webbläsare som hellst: filer, editors, terminaler, git, och friviliga AI agenter, körs på ditt lokala system.
 
-Se [ecosystemets dokumentation](https://docs.openwebui.com/ecosystem/) för detaljer.
+Se [ecosystemets dokumentationen](https://docs.openwebui.com/ecosystem/) för detaljer.
 
-### Troubleshooting and Updates
+### Troubleshooting och Uppdateringar
 
-See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
+Se [troubleshooting guiden](https://docs.openwebui.com/troubleshooting/) för anslutnings problem och [updatings guiden](https://docs.openwebui.com/getting-started/updating) för att uppdatera din installation.
 
-### Documentation
+### Dokumentation
 
-See the [docs](https://docs.openwebui.com/) for configuration and usage, and the [roadmap](https://docs.openwebui.com/roadmap/) for planned work.
+Se [Dokumentationen](https://docs.openwebui.com/) för konfiguration och användning, och [roadmappen](https://docs.openwebui.com/roadmap/) för planerat arbete.
 
-For Docker Compose, Kubernetes, and other setups, see the [installation docs](https://docs.openwebui.com/getting-started/).
+För Docker Compose, Kubernetes, och andra setups, se [installationens dokumentation](https://docs.openwebui.com/getting-started/).
 
 ### Support
 
-[Open an issue](https://github.com/open-webui/open-webui/issues) or [start a discussion](https://github.com/open-webui/open-webui/discussions).
+[Öppna en issue](https://github.com/open-webui/open-webui/issues) eller [skapa en diskussion](https://github.com/open-webui/open-webui/discussions).
 
-Find us on [Reddit](https://www.reddit.com/r/OpenWebUI/), [X](https://x.com/OpenWebUI), and [Discord](https://discord.gg/5rJgQTnV4s).
+Hitta oss på [Reddit](https://www.reddit.com/r/OpenWebUI/), [X](https://x.com/OpenWebUI), och [Discord](https://discord.gg/5rJgQTnV4s).
 
-### Security
+### Säkerhet
 
-Report vulnerabilities privately through [GitHub security advisories](https://github.com/open-webui/open-webui/security). Security reports are accepted only through GitHub.
+Rapportera säkerhetshål privat genom [GitHub security advisories](https://github.com/open-webui/open-webui/security). Säkerhets rapporter är enbart accepterade via GitHub.
 
-### Star History
+### Stjärn Historik
 
 <a href="https://star-history.com/#open-webui/open-webui&Date">
   <picture>
@@ -129,8 +129,8 @@ Report vulnerabilities privately through [GitHub security advisories](https://gi
 
 #### License
 
-Includes code under the Open WebUI License, which requires preserving the Open WebUI branding, and prior contributions under their original licenses. See [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) for terms and history.
+Innehåller kod under Open WebUI License, vilket kräver att Open WebUI-varumärket bevaras, samt tidigare kontributioner under sina ursprungliga licenser. Se [LICENSE](./LICENSE) och [LICENSE_HISTORY](./LICENSE_HISTORY) för villkor och historik.
 
-[Enterprise](https://docs.openwebui.com/enterprise) · [Careers](https://careers.openwebui.com/) · [Sponsor](https://github.com/sponsors/open-webui)
+[Enterprise](https://docs.openwebui.com/enterprise) · [Karriär](https://careers.openwebui.com/) · [Sponsra](https://github.com/sponsors/open-webui)
 
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck).
+Skapad av [Timothy Jaeryang Baek](https://github.com/tjbck).
