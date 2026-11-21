@@ -100,7 +100,7 @@ async def run(request, form_data, user, metadata, model):
     if any(f.get('terminal_error') for f in uploads):
         raise ValueError('An attachment could not be uploaded to the agent environment')
     paths = [f['terminal_path'] for f in uploads]
-    for file in files:
+    for file in (metadata.get('user_message') or {}).get('files') or files:
         if file.get('type') == 'filesystem':
             if file.get('terminal_id') != agent['terminal_id']:
                 raise ValueError('Attachment belongs to another terminal')
