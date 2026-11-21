@@ -52,20 +52,22 @@
 				</Tooltip>
 
 				{#if connection?.info?.name}
-					<label
-						for={`${settingId}-control`}
-						class="w-full bg-transparent capitalize outline-hidden text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+					<button
+						type="button"
+						on:click={() => (showConfigModal = true)}
+						class="w-full min-w-0 truncate text-left cursor-pointer bg-transparent capitalize outline-hidden text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
 					>
 						{connection?.info?.name ?? connection?.url}
 						<span class="text-base-500">{connection?.info?.id ?? ''}</span>
-					</label>
+					</button>
 				{:else}
-					<label
-						for={`${settingId}-control`}
-						class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+					<button
+						type="button"
+						on:click={() => (showConfigModal = true)}
+						class="w-full min-w-0 truncate text-left cursor-pointer outline-hidden text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
 					>
 						{connection?.url}
-					</label>
+					</button>
 				{/if}
 			</div>
 		</div>

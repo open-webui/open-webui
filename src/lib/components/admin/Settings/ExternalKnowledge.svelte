@@ -1156,10 +1156,11 @@
 						<DatabaseSettings className="size-4" strokeWidth="1.5" />
 					</Tooltip>
 					<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-						<label
-							for={`knowledge-connection-${connection.id}-control`}
-							class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 dark:group-hover/setting-row:text-white"
-							>{connection.name}</label
+						<button
+							type="button"
+							on:click={() => openEditConnection(connection)}
+							class="text-left cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 dark:group-hover/setting-row:text-white"
+							>{connection.name}</button
 						>
 						{' '}
 						<span class="text-base-500">
@@ -1212,10 +1213,12 @@
 							</Tooltip>
 
 							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-								<label
-									for={`knowledge-${item.id}-control`}
-									class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
-									>{item.name}</label
+								<button
+									type="button"
+									disabled={!connection}
+									on:click={() => openEditSource(item)}
+									class="text-left cursor-pointer disabled:cursor-default text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+									>{item.name}</button
 								>
 								{' '}
 								<span class="text-base-500">

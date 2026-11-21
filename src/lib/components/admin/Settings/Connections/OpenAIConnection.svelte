@@ -52,21 +52,20 @@
 	>
 		{#if !(config?.enable ?? true)}
 			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
+				class="pointer-events-none absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
 			></div>
 		{/if}
 		<div class="flex w-full gap-2">
 			<div class="flex-1 relative">
-				<input
-					class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white outline-hidden w-full bg-transparent {pipeline
+				<button
+					type="button"
+					class="block text-left truncate cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white outline-hidden w-full bg-transparent {pipeline
 						? 'pr-8'
 						: ''}"
-					placeholder={$i18n.t('API Base URL')}
-					aria-label={$i18n.t('API Base URL')}
-					bind:value={url}
-					autocomplete="off"
-					readonly={true}
-				/>
+					on:click={() => (showConfigModal = true)}
+				>
+					{url || $i18n.t('API Base URL')}
+				</button>
 
 				{#if pipeline}
 					<div class=" absolute top-0.5 right-2.5">

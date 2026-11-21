@@ -55,17 +55,17 @@
 	>
 		{#if !(config?.enable ?? true)}
 			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
+				class="pointer-events-none absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
 			></div>
 		{/if}
 
-		<input
-			class="text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white w-full text-sm bg-transparent outline-hidden"
-			placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-			aria-label={$i18n.t('URL')}
-			bind:value={url}
-			readonly={true}
-		/>
+		<button
+			type="button"
+			class="block text-left truncate cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white w-full text-sm bg-transparent outline-hidden"
+			on:click={() => (showConfigModal = true)}
+		>
+			{url || $i18n.t('Enter URL (e.g. http://localhost:11434)')}
+		</button>
 	</Tooltip>
 
 	<div class="flex gap-1 items-center">

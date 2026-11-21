@@ -319,14 +319,18 @@
 													<Cloud className="size-4" strokeWidth="1.5" />
 												</Tooltip>
 
-												<label
-													for={`terminal-${idx}-control`}
-													class="outline-hidden w-full bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+												<button
+													type="button"
+													on:click={() => {
+														editTerminalIdx = idx;
+														showAddTerminalModal = true;
+													}}
+													class="outline-hidden w-full min-w-0 truncate text-left cursor-pointer bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
 												>
 													{connection.name ||
 														(connection.local ? $i18n.t('Local') : connection.url) ||
 														$i18n.t('New Machine')}
-												</label>
+												</button>
 											</div>
 										</div>
 									</Tooltip>
