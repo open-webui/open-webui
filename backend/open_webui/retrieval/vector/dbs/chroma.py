@@ -105,7 +105,10 @@ class ChromaClient(VectorDBBase):
                     }
                 )
             return None
+        except NotFoundError:
+            return None
         except Exception as e:
+            log.exception('Error searching collection %s: %s', collection_name, e)
             return None
 
     def query(self, collection_name: str, filter: dict, limit: Optional[int] = None) -> Optional[GetResult]:
