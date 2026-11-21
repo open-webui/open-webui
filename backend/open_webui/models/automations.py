@@ -457,15 +457,13 @@ class AutomationRunTable:
         automation_id: str,
         skip: int = 0,
         limit: int = 50,
+        direction: str = 'desc',
         db: Optional[AsyncSession] = None,
     ) -> list[AutomationRunModel]:
+        order = AutomationRun.created_at.asc() if direction == 'asc' else AutomationRun.created_at.desc()
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AutomationRun)
-                .filter_by(automation_id=automation_id)
-                .order_by(AutomationRun.created_at.desc())
-                .offset(skip)
-                .limit(limit)
+                select(AutomationRun).filter_by(automation_id=automation_id).order_by(order).offset(skip).limit(limit)
             )
             rows = result.scalars().all()
             return [AutomationRunModel.model_validate(r) for r in rows]

@@ -296,12 +296,13 @@ export const getAutomationRuns = async (
 	token: string,
 	id: string,
 	skip: number = 0,
-	limit: number = 50
+	limit: number = 50,
+	direction: 'asc' | 'desc' = 'desc'
 ) => {
 	let error = null;
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/automations/${id}/runs?skip=${skip}&limit=${limit}`,
+		`${WEBUI_API_BASE_URL}/automations/${id}/runs?skip=${skip}&limit=${limit}&direction=${direction}`,
 		{
 			method: 'GET',
 			headers: {

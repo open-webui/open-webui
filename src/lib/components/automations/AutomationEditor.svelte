@@ -59,6 +59,8 @@
 	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 
 	dayjs.extend(localizedFormat);
 
@@ -181,11 +183,15 @@
 		}
 	};
 
+	const RUNS_PAGE_SIZE = 20;
 	let runs: AutomationRunModel[] = [];
+	let runsDirection: 'desc' | 'asc' = 'desc';
 	let linkedRun: AutomationRunModel | null = null;
 	$: visibleRuns =
 		linkedRun && !runs.some((run) => run.id === linkedRun?.id)
-			? [...runs, linkedRun].sort((a, b) => b.created_at - a.created_at)
+			? [...runs, linkedRun].sort((a, b) =>
+					runsDirection === 'asc' ? a.created_at - b.created_at : b.created_at - a.created_at
+				)
 			: runs;
 	let linkedRunId = '';
 	let alive = true;
@@ -217,6 +223,8 @@
 	let runsLoading = false;
 	let hasMoreRuns = true;
 	let runsPage = 0;
+	// Bumped on every fresh load so a slower, older response can't overwrite a newer one.
+	let runsRequest = 0;
 	let foldersLoaded = false;
 	let channelsLoaded = false;
 
@@ -328,8 +336,9 @@
 	};
 
 	const loadRuns = async (loadMore = false) => {
-		if (runsLoading || (!hasMoreRuns && loadMore)) return;
+		if (loadMore && (runsLoading || !hasMoreRuns)) return;
 
+		const request = loadMore ? runsRequest : ++runsRequest;
 		runsLoading = true;
 
 		if (!loadMore) {
@@ -339,30 +348,34 @@
 
 		try {
 			const fetchedRuns =
-				(await getAutomationRuns(localStorage.token, automation.id, runsPage * 50, 50)) ?? [];
-			if (loadMore) {
-				runs = [...runs, ...fetchedRuns];
-			} else {
-				runs = fetchedRuns;
-			}
-
-			if (fetchedRuns.length < 50) {
-				hasMoreRuns = false;
-			}
+				(await getAutomationRuns(
+					localStorage.token,
+					automation.id,
+					runsPage * RUNS_PAGE_SIZE,
+					RUNS_PAGE_SIZE,
+					runsDirection
+				)) ?? [];
+			if (request !== runsRequest) return;
+			runs = loadMore ? [...runs, ...fetchedRuns] : fetchedRuns;
+			hasMoreRuns = fetchedRuns.length === RUNS_PAGE_SIZE;
 			runsPage++;
 		} catch {
+			if (request !== runsRequest) return;
 			if (!loadMore) runs = [];
 		}
 		runsLoading = false;
 	};
 
-	const onScroll = (e: Event) => {
-		const target = e.target as HTMLElement;
-		if (target.scrollTop + target.clientHeight >= target.scrollHeight - 50) {
-			if (!runsLoading && hasMoreRuns) {
-				loadRuns(true);
-			}
-		}
+	let runsSortMenuOpen = false;
+	$: runsSortOptions = [
+		{ value: 'desc' as const, label: $i18n.t('Newest first') },
+		{ value: 'asc' as const, label: $i18n.t('Oldest first') }
+	];
+	const setRunsDirection = (direction: 'desc' | 'asc') => {
+		runsSortMenuOpen = false;
+		if (runsDirection === direction) return;
+		runsDirection = direction;
+		void loadRuns();
 	};
 
 	onMount(async () => {
@@ -406,7 +419,7 @@
 	on:save={(e) => e.detail?.id && goto(`/automations/${e.detail.id}`)}
 />
 
-<div class="h-full overflow-y-auto scrollbar-hidden" on:scroll={onScroll}>
+<div class="h-full overflow-y-auto scrollbar-hidden">
 	<div class="w-full px-2.5 pb-12 md:px-3.5">
 		<!-- One centered column, like an issue: name, prompt, properties, then activity. -->
 		<div>
@@ -601,12 +614,51 @@
 			</div>
 		</div>
 
-		<!-- What happened: each run, newest first. -->
+		<!-- What happened: the latest runs (newest first by default), a page at a time. -->
 		<section class="mt-6">
-			<div class="mb-1 text-[0.6875rem] text-base-400 dark:text-base-500">
-				{$i18n.t('Activity')}
+			<div class="mb-1 flex items-center justify-between gap-2">
+				<div class="text-[0.6875rem] text-base-400 dark:text-base-500">
+					{$i18n.t('Activity')}
+				</div>
+				<Dropdown bind:show={runsSortMenuOpen} align="end" sideOffset={4}>
+					<Tooltip content={$i18n.t('Sort')}>
+						<button
+							type="button"
+							class="flex size-5 shrink-0 items-center justify-center rounded text-base-500 transition-colors duration-100 hover:text-base-800 dark:text-base-400 dark:hover:text-base-200"
+							aria-label={$i18n.t('Sort')}
+						>
+							<Icon name="sort" size={11} strokeWidth={1.4} />
+						</button>
+					</Tooltip>
+
+					<div slot="content">
+						<DropdownMenu className="min-w-[9.375rem]">
+							{#each runsSortOptions as option (option.value)}
+								<button
+									type="button"
+									class="flex h-7 w-full select-none items-center gap-2 rounded-lg px-2 text-xs transition hover:bg-base-50/40 dark:hover:bg-base-0/4"
+									on:click={() => setRunsDirection(option.value)}
+								>
+									<span class="flex-1 text-left">{option.label}</span>
+									{#if runsDirection === option.value}
+										<Check className="size-3 text-base-500 dark:text-base-400" />
+									{/if}
+								</button>
+							{/each}
+						</DropdownMenu>
+					</div>
+				</Dropdown>
 			</div>
 			<div class="-mx-2">
+				{#if runsDirection === 'asc'}
+					<div class="flex h-7 items-center gap-2 px-2 text-xs">
+						<Plus className="size-3 shrink-0 text-base-400 dark:text-base-500" strokeWidth="2" />
+						<span class="text-base-700 dark:text-base-300">{$i18n.t('Automation created')}</span>
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
+							>· {formatTime(automation.created_at)}</span
+						>
+					</div>
+				{/if}
 				{#if runsLoading && visibleRuns.length === 0}
 					<div class="flex px-2 py-3"><Spinner className="size-3.5" /></div>
 				{/if}
@@ -643,8 +695,16 @@
 				{/each}
 				{#if runsLoading && runs.length > 0}
 					<div class="flex px-2 py-2"><Spinner className="size-3.5" /></div>
+				{:else if hasMoreRuns && runs.length > 0}
+					<button
+						type="button"
+						class="flex h-7 w-full items-center rounded-lg px-2 text-left text-xs text-base-500 transition-colors hover:bg-base-50 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-850/50 dark:hover:text-base-300"
+						on:click={() => loadRuns(true)}
+					>
+						{$i18n.t('Show more')}
+					</button>
 				{/if}
-				{#if !hasMoreRuns || (!runsLoading && runs.length === 0)}
+				{#if runsDirection === 'desc' && (!hasMoreRuns || (!runsLoading && runs.length === 0))}
 					<div class="flex h-7 items-center gap-2 px-2 text-xs">
 						<Plus className="size-3 shrink-0 text-base-400 dark:text-base-500" strokeWidth="2" />
 						<span class="text-base-700 dark:text-base-300">{$i18n.t('Automation created')}</span>

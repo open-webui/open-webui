@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from open_webui.constants import ERROR_MESSAGES
@@ -416,13 +416,14 @@ async def get_automation_runs(
     id: str,
     skip: int = 0,
     limit: int = 50,
+    direction: Literal['asc', 'desc'] = 'desc',
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
     automation = await Automations.get_by_id(id, db=db)
     await check_automation_manage_access(automation, user, db)
-    return await AutomationRuns.get_by_automation(id, skip=skip, limit=limit, db=db)
+    return await AutomationRuns.get_by_automation(id, skip=skip, limit=limit, direction=direction, db=db)
 
 
 @router.get('/{id}/runs/{run_id}', response_model=AutomationRunModel)
