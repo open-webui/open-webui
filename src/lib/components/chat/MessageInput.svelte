@@ -1170,16 +1170,6 @@
 		captureAudio: () => {
 			audioRecordingDisplayMedia = true;
 			audioRecording = true;
-		},
-		upload: () => {
-			const input = document.createElement('input');
-			input.type = 'file';
-			input.accept = 'audio/*';
-			input.onchange = async () => {
-				const file = input.files?.[0];
-				if (file) await recordedAudioHandler(file);
-			};
-			input.click();
 		}
 	};
 

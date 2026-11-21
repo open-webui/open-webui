@@ -30,7 +30,6 @@
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
 	import Mic from '$lib/components/icons/Mic.svelte';
 	import CursorArrowRays from '$lib/components/icons/CursorArrowRays.svelte';
-	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -56,7 +55,6 @@
 	export let recordActions: {
 		record: () => void;
 		captureAudio: () => void;
-		upload: () => void;
 	} | null = null;
 
 	export let show = false;
@@ -354,7 +352,7 @@
 						<div>{$i18n.t('Record')}</div>
 					</button>
 
-					{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }, { label: 'Upload Audio', icon: CloudArrowUp, action: recordActions.upload }] as item}
+					{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
 						<button
 							role="menuitem"
 							type="button"
