@@ -42,6 +42,7 @@ from open_webui.utils.json_codec import JSONCodec
 
 async def seed_registered_defaults():
     await Config.rename_prefix('rag.web', 'web')
+    await Config.rename_prefix('terminal_server', 'machines')  # Terminals became Machines
     await Config.repair_config_rows()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
@@ -370,11 +371,11 @@ TOOL_SERVER_CONNECTIONS = tool_server_connections
 
 OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 
-# TERMINAL_SERVER
+# MACHINES (formerly TERMINAL_SERVER: stored rows are renamed on load; TERMINAL_SERVER_CONNECTIONS is a fallback)
 
-terminal_server_connections = JSONCodec.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
-
-TERMINAL_SERVER_CONNECTIONS = terminal_server_connections
+MACHINE_CONNECTIONS = JSONCodec.loads(
+    os.getenv('MACHINE_CONNECTIONS') or os.getenv('TERMINAL_SERVER_CONNECTIONS') or '[]'
+)
 
 try:
     TERMINAL_PROXY_HEADERS = JSONCodec.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
@@ -2990,7 +2991,7 @@ DEFAULT_CONFIG = {
     'models.base_models_cache': ENABLE_BASE_MODELS_CACHE,
     'tool_server.connections': TOOL_SERVER_CONNECTIONS,
     'oauth.client.timeout': OAUTH_CLIENT_TIMEOUT,
-    'terminal_server.connections': TERMINAL_SERVER_CONNECTIONS,
+    'machines.connections': MACHINE_CONNECTIONS,
     'code_execution.enable': ENABLE_CODE_EXECUTION,
     'code_execution.engine': CODE_EXECUTION_ENGINE,
     'code_execution.jupyter.url': CODE_EXECUTION_JUPYTER_URL,

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget;
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Readable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
-	import { compareFiles, type TerminalComparison, type TerminalDiffLine } from '$lib/apis/terminal';
+	import { compareFiles, type TerminalComparison, type TerminalDiffLine } from '$lib/apis/machines';
 	import Icon from './Icon.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';

@@ -878,7 +878,7 @@ async def _verify_version_dependencies(request, form, user, db):
     from open_webui.models.knowledge import Knowledges
     from open_webui.models.notes import Notes
     from open_webui.models.skills import Skills
-    from open_webui.routers.terminals import list_terminal_servers
+    from open_webui.routers.machines import list_terminal_servers
     from open_webui.routers.tools import get_tools
 
     async def require_resource(resource_type, resource_id, resource):

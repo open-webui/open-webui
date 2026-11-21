@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/machines';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
@@ -8,7 +8,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
-	import { searchFiles, filesystemFile } from '$lib/apis/terminal';
+	import { searchFiles, filesystemFile } from '$lib/apis/machines';
 	import { decodeString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,

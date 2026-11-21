@@ -13,7 +13,7 @@
 	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { getUserSettings } from '$lib/apis/users';
 	import { setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
@@ -110,7 +110,7 @@
 		terminalServers.set(
 			systemTerminals.map((terminal) => ({
 				...terminal,
-				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
+				url: `${WEBUI_API_BASE_URL}/machines/${terminal.id}`,
 				key: localStorage.token
 			}))
 		);
@@ -164,7 +164,7 @@
 			);
 		};
 		const eventHandler = (event: { data?: { type?: string } }) => {
-			if (event?.data?.type === 'terminals:changed') {
+			if (event?.data?.type === 'machines:changed') {
 				changed();
 				// Tether devices also bring the user's own models and tool servers.
 				void setModels().catch((error) => console.error('Unable to refresh models', error));

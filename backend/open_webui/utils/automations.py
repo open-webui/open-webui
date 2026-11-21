@@ -48,7 +48,7 @@ from open_webui.utils.recurrence import (
 )
 from open_webui.utils.task import prompt_template
 from open_webui.utils.agents.discovery import get_models as get_agent_models
-from open_webui.utils.terminals import initialize_terminal_directory, resolve_terminal_connection
+from open_webui.utils.machines import initialize_terminal_directory, resolve_terminal_connection
 from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
@@ -208,7 +208,7 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
             raise HTTPException(400, 'Select a terminal for the agent.')
         return
     if terminal['server_id'].startswith('template:'):
-        from open_webui.utils.terminals import template_connection, require_model_access
+        from open_webui.utils.machines import template_connection, require_model_access
 
         _, template = await template_connection(user, terminal['server_id'])
         scope = (template.get('data') or {}).get('scope')

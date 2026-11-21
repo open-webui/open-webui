@@ -4,7 +4,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 
 	const i18n = getContext<any>('i18n');
 
@@ -49,9 +49,9 @@
 		>
 			<span class="text-base-600 dark:text-base-400"
 				><ModelSettingsLabel
-					label={label || $i18n.t('Default terminal')}
+					label={label || $i18n.t('Default machine')}
 					description={description ||
-						$i18n.t('Choose the terminal server selected by default for chats with this model.')}
+						$i18n.t('Choose the machine selected by default for chats with this model.')}
 				/></span
 			>
 			<span bind:this={valueElement} class="min-w-0 truncate text-base-900 dark:text-base-100"
@@ -86,13 +86,12 @@
 	>
 		<span class="text-base-600 dark:text-base-400"
 			><ModelSettingsLabel
-				label={label || $i18n.t('Default terminal')}
+				label={label || $i18n.t('Default machine')}
 				description={description ||
-					$i18n.t('Choose the terminal server selected by default for chats with this model.')}
+					$i18n.t('Choose the machine selected by default for chats with this model.')}
 			/></span
 		>
-		<span class="truncate text-base-500 dark:text-base-400"
-			>{$i18n.t('No terminal servers available')}</span
+		<span class="truncate text-base-500 dark:text-base-400">{$i18n.t('No machines available')}</span
 		>
 	</div>
 {/if}

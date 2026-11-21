@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { TerminalContext } from '$lib/types';
-import type { TerminalTarget } from '$lib/apis/terminal';
+import type { TerminalTarget } from '$lib/apis/machines';
 
 export type TabKind =
 	| 'chat'

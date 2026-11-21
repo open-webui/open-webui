@@ -1,8 +1,8 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget;
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import { readComparisonSource } from '$lib/apis/terminal';
+	import { readComparisonSource } from '$lib/apis/machines';
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

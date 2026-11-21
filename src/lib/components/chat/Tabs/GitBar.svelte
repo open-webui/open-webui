@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import { getTerminalFeatures, type TerminalTarget } from '$lib/apis/terminal';
-	import { watchTerminalFiles } from '$lib/apis/terminal/events';
+	import { getTerminalFeatures, type TerminalTarget } from '$lib/apis/machines';
+	import { watchTerminalFiles } from '$lib/apis/machines/events';
 	import {
 		gitRequest,
 		gitAction,
@@ -10,7 +10,7 @@
 		type GitFile,
 		type GitCommit,
 		type GitBranch
-	} from '$lib/apis/terminal/git';
+	} from '$lib/apis/machines/git';
 	import { copyToClipboard } from '$lib/utils';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';

@@ -1,17 +1,17 @@
 <script lang="ts">
 	export let modelId: string | null = null;
 	export let target: TerminalTarget | null | undefined = undefined;
-	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget } from '$lib/apis/machines';
 	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
 	import type { TerminalContext } from '$lib/types';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
-	import { watchTerminalFiles } from '$lib/apis/terminal/events';
+	import type { TerminalTarget } from '$lib/apis/machines';
+	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/machines/git';
+	import { watchTerminalFiles } from '$lib/apis/machines/events';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import CloneRepository from './FileNav/CloneRepository.svelte';
 	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
-	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
+	import { filesystemFile, type FilesystemFile } from '$lib/apis/machines';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
 	import { toast } from 'svelte-sonner';
@@ -44,7 +44,7 @@
 		type TerminalFileMatch,
 		type TerminalFileRoot,
 		type TerminalCwd
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
 	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
@@ -1242,8 +1242,7 @@
 		loading = false;
 
 		if (result === null) {
-			error =
-				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
+			error = 'Failed to load directory. Check the machine in Settings → Integrations.';
 			entries = [];
 		} else {
 			currentWritable = result.writable !== false;
@@ -1285,8 +1284,7 @@
 			currentWritable = listings[0].writable !== false;
 			entries = normalizeEntries(listings[0].entries);
 		} else {
-			error =
-				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
+			error = 'Failed to load directory. Check the machine in Settings → Integrations.';
 			entries = [];
 			clearSelection();
 		}
@@ -2455,7 +2453,7 @@
 			class="text-base-300 dark:text-base-600 mb-2"
 		/>
 		<div class="text-xs text-base-500 dark:text-base-400 mb-1">
-			{$i18n.t('No Terminal connection configured.')}
+			{$i18n.t('No machine configured.')}
 		</div>
 		<div class="text-[0.625rem] text-base-400 dark:text-base-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}

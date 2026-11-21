@@ -4,7 +4,7 @@
 		terminalRequest,
 		type TerminalTarget,
 		type TerminalSystemInfo
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import Icon from './FileNav/Icon.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';

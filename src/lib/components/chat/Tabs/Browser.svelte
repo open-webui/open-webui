@@ -10,8 +10,8 @@
 		browserViewUrl,
 		browserFrameUrl,
 		type BrowserSession
-	} from '$lib/apis/terminal/browser';
-	import { getPortProxyUrl, TerminalRequestError, type TerminalTarget } from '$lib/apis/terminal';
+	} from '$lib/apis/machines/browser';
+	import { getPortProxyUrl, TerminalRequestError, type TerminalTarget } from '$lib/apis/machines';
 	import PortList from '../FileNav/PortList.svelte';
 	import { settings } from '$lib/stores';
 	import Icon from '../FileNav/Icon.svelte';
@@ -138,7 +138,7 @@
 			return browserFrameUrl(browserViewUrl(sessionTarget, session), url.href);
 		const port = localPort(url);
 		if (port === null) return url.href;
-		if (!baseUrl) throw new Error($i18n.t('Select a terminal to open localhost URLs.'));
+		if (!baseUrl) throw new Error($i18n.t('Select a machine to open localhost URLs.'));
 		return getPortProxyUrl(baseUrl, port, url.pathname.slice(1) + url.search + url.hash);
 	};
 	const remember = (url: string, replace = false) => {

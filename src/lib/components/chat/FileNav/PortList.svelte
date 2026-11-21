@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget;
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
-	import type { ListeningPort } from '$lib/apis/terminal';
-	import { getListeningPorts, getPortProxyUrl, getTerminalFeatures } from '$lib/apis/terminal';
-	import { watchTerminalPorts } from '$lib/apis/terminal/events';
+	import type { ListeningPort } from '$lib/apis/machines';
+	import { getListeningPorts, getPortProxyUrl, getTerminalFeatures } from '$lib/apis/machines';
+	import { watchTerminalPorts } from '$lib/apis/machines/events';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Icon from './Icon.svelte';
 

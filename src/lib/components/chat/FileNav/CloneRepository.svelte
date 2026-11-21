@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { cloneRepository } from '$lib/apis/terminal/git';
+	import type { TerminalTarget } from '$lib/apis/machines';
+	import { cloneRepository } from '$lib/apis/machines/git';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Icon from './Icon.svelte';
 

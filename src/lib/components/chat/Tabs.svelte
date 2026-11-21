@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AppLayoutContext, TerminalContext } from '$lib/types';
-	import type { GitStatus } from '$lib/apis/terminal/git';
+	import type { GitStatus } from '$lib/apis/machines/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
@@ -80,7 +80,7 @@
 		terminalRequest,
 		TerminalRequestError,
 		type TerminalTarget
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -139,7 +139,7 @@
 	export let eventTarget = new EventTarget();
 	export let submitPrompt: Function = () => {};
 	export let onAskFile:
-		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
+		| ((instruction: string, file: import('$lib/apis/machines').FilesystemFile) => Promise<void>)
 		| null = null;
 	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let stopResponse: Function = () => {};
@@ -1606,7 +1606,7 @@
 					)
 					.map((terminal) => ({
 						id: terminal.id,
-						label: terminal.name || $i18n.t('Terminal'),
+						label: terminal.name || $i18n.t('Machine'),
 						device: terminal.id.startsWith('tether:')
 					}))
 			]
@@ -2073,7 +2073,7 @@
 						role="status"
 						class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
 					>
-						{$i18n.t('Terminal connection unavailable')}
+						{$i18n.t('Machine unavailable')}
 					</div>
 				{:else if tab.kind === 'page' && tab.href}
 					<Page

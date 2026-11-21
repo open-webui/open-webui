@@ -1,8 +1,11 @@
-"""Reverse proxy for admin-configured terminal servers.
+"""Machines: Open Terminal servers that Open WebUI reaches and proxies.
+
+Mounted at /api/v1/machines (and, deprecated, /api/v1/terminals).
 
 Routes:
-  GET  /                         — list terminals the user has access to
-  *    /{server_id}/{path:path}  — proxy request to terminal server
+  /ssh/...                       — add, upgrade, restart and remove machines over SSH (admin)
+  GET  /                         — list machines the user has access to
+  *    /{server_id}/{path:path}  — proxy request to the machine's Open Terminal
 """
 
 import asyncio
@@ -24,17 +27,21 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.models.groups import Groups
 from open_webui.routers.templates import router as templates_router
 from open_webui.utils.access_control import has_connection_access
-from open_webui.utils.auth import get_verified_user, get_verified_user_by_token
+from open_webui.utils.auth import get_admin_user, get_verified_user, get_verified_user_by_token
 from open_webui.utils.browser import browser_access, create_browser_token
-from open_webui.utils.tether import RelayInterrupted, get_terminal_connections, get_terminal_client
+from open_webui.utils.tether import RelayInterrupted, get_terminal_connections
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.terminals import (
+from open_webui.utils.machines import ssh as ssh_machines
+from open_webui.utils.machines.ssh import MachineError, describe
+from open_webui.utils.machines import (
+    get_machine_client,
     find_terminal_connection,
     terminal_headers,
     get_terminal_server_url,
     terminal_chat_uploads,
 )
+from pydantic import BaseModel, Field
 from starlette.background import BackgroundTask
 from starlette.requests import ClientDisconnect
 from yarl import URL
@@ -50,6 +57,130 @@ ADMIN_API_PATHS = ('api/v1/policies', 'api/v1/status', 'api/v1/terminals')
 STRIPPED_RESPONSE_HEADERS = frozenset(
     ('transfer-encoding', 'connection', 'content-encoding', 'content-length', 'server', 'date')
 )
+
+
+# ---------------------------------------------------------------------------
+# SSH machines (admin): add a machine by SSH and let Open WebUI install Open Terminal on it.
+# Registered before the /{server_id}/... proxy routes so they are not forwarded upstream.
+# ---------------------------------------------------------------------------
+
+_ssh_tasks: set[asyncio.Task] = set()  # keep provisioning tasks referenced until they finish
+
+SSH_HOST = r'^[A-Za-z0-9.\-:\[\]]{1,253}$'
+SSH_USER = r'^[a-z_][a-z0-9_.\-]{0,31}$'
+SSH_MACHINE_ID = r'^m_[0-9a-f]{8}$'
+
+
+class SSHTarget(BaseModel):
+    host: str = Field(pattern=SSH_HOST)
+    port: int = Field(22, ge=1, le=65535)
+    username: str = Field(pattern=SSH_USER)
+
+
+class Pinned(SSHTarget):
+    host_key: str = Field(pattern=r'^ssh-[a-z0-9-]+ [A-Za-z0-9+/=]+$|^ecdsa-sha2-nistp\d+ [A-Za-z0-9+/=]+$')
+
+
+class InstallKeyForm(Pinned):
+    id: str = Field(pattern=SSH_MACHINE_ID)
+    public_key: str
+    # One of these logs in once to add Open WebUI's key. Neither is stored.
+    password: str = Field('', max_length=1024)
+    private_key: str = Field('', max_length=16384)
+    passphrase: str = Field('', max_length=1024)
+
+
+class CreateForm(Pinned):
+    id: str = Field(pattern=SSH_MACHINE_ID)
+    name: str = Field('', max_length=100)
+
+
+def _ssh_fail(error: BaseException):
+    status = 404 if str(error) == 'Unknown machine.' else 400
+    raise HTTPException(status, describe(error))
+
+
+def _ssh_start(coroutine):
+    task = asyncio.create_task(coroutine)
+    _ssh_tasks.add(task)
+    task.add_done_callback(_ssh_tasks.discard)
+
+
+@router.post('/ssh/keypair')
+async def create_keypair(user=Depends(get_admin_user)):
+    machine_id, public_key = await ssh_machines.new_keypair()
+    return {'id': machine_id, 'public_key': public_key}
+
+
+@router.post('/ssh/probe')
+async def probe(form: SSHTarget, user=Depends(get_admin_user)):
+    try:
+        host_key, fingerprint = await ssh_machines.probe_host_key(form.host, form.port)
+    except (TimeoutError, MachineError, OSError) as error:
+        _ssh_fail(error)
+    return {'host_key': host_key, 'fingerprint': fingerprint}
+
+
+@router.post('/ssh/install-key')
+async def install_key(form: InstallKeyForm, user=Depends(get_admin_user)):
+    try:
+        await ssh_machines.install_public_key(
+            form.model_dump(include={'host', 'port', 'username', 'host_key'}),
+            form.id,
+            form.public_key,
+            password=form.password,
+            private_key=form.private_key,
+            passphrase=form.passphrase,
+        )
+    except Exception as error:
+        _ssh_fail(error)
+    return {'status': True}  # the password or private key is not stored anywhere
+
+
+@router.post('/ssh')
+async def create_machine(request: Request, form: CreateForm, user=Depends(get_admin_user)):
+    target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
+    _ssh_start(ssh_machines.provision(request, form.id, user.id, name=form.name or form.host, ssh=target))
+    return {'id': form.id, 'status': 'installing'}
+
+
+@router.post('/ssh/{machine_id}/upgrade')
+async def upgrade_machine(request: Request, machine_id: str, user=Depends(get_admin_user)):
+    try:
+        await ssh_machines.get_machine(machine_id)
+    except MachineError as error:
+        _ssh_fail(error)
+    _ssh_start(ssh_machines.provision(request, machine_id, user.id))  # also repairs a broken install
+    return {'id': machine_id, 'status': 'installing'}
+
+
+@router.post('/ssh/{machine_id}/restart')
+async def restart_machine(machine_id: str, user=Depends(get_admin_user)):
+    try:
+        await ssh_machines.restart(machine_id)
+    except Exception as error:
+        _ssh_fail(error)
+    return {'status': True}
+
+
+@router.get('/ssh/{machine_id}/logs')
+async def machine_logs(machine_id: str, lines: int = 200, user=Depends(get_admin_user)):
+    try:
+        return {'logs': await ssh_machines.logs(machine_id, min(max(lines, 1), 2000))}
+    except Exception as error:
+        _ssh_fail(error)
+
+
+@router.delete('/ssh/{machine_id}')
+async def uninstall_machine(machine_id: str, force: bool = False, user=Depends(get_admin_user)):
+    """Uninstall from the machine and remove it. With force, remove it even if the machine is unreachable."""
+    try:
+        await ssh_machines.uninstall(machine_id)
+    except Exception as error:
+        if not force or str(error) == 'Unknown machine.':
+            _ssh_fail(error)
+        await ssh_machines.remove(machine_id)
+    return {'status': True}
 
 
 def _port_browser_html(body: bytes, prefix: str, port: int) -> bytes:
@@ -239,7 +370,7 @@ async def browser_ws(ws: WebSocket, server_id: str, sid: str, browser_token: str
         headers['Authorization'] = data['relay']['authorization']
     tasks = []
     try:
-        async with get_terminal_client(
+        async with get_machine_client(
             base,
             connection.get('instance_user_id', user.id),
             service=connection.get('service', 'open_terminal'),
@@ -412,7 +543,7 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
         base = request.url.path.removesuffix('/files/preview')
         return {'url': f'{base}/browser/view/files/{quote(browser_token, safe="")}/'}
 
-    session = get_terminal_client(
+    session = get_machine_client(
         base_url,
         connection.get('instance_user_id', user.id),
         service=connection.get('service', 'open_terminal'),
@@ -667,7 +798,7 @@ async def _proxy_terminal_websocket(
 
     request = Request({**ws.scope, 'type': 'http', 'method': 'GET'})
     opened = False
-    session = get_terminal_client(
+    session = get_machine_client(
         base_url, connection.get('instance_user_id', user.id), service=connection.get('service', 'open_terminal')
     )
     try:

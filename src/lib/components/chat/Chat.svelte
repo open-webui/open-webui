@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { resolveToolApprovalMode } from '$lib/utils/toolPermissions';
 	import type { AppLayoutContext, TerminalContext } from '$lib/types';
 	import { setChatContext } from './context';
@@ -127,7 +127,7 @@
 		resolveTerminalTarget,
 		setCwd,
 		type FilesystemFile
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
@@ -4537,12 +4537,10 @@
 			localStorage.token,
 			{ chatId: id, modelId: selectedModels[0] ?? null }
 		);
-		if (!target) throw new Error($i18n.t('Terminal Not Found'));
+		if (!target) throw new Error($i18n.t('Machine Not Found'));
 		const result = await setCwd(target, context.currentDirectory);
 		if (!result?.cwd)
-			throw new Error(
-				$i18n.t('Working directory is unavailable. Check the terminal connection and path.')
-			);
+			throw new Error($i18n.t('Working directory is unavailable. Check the machine and path.'));
 		initializedTerminalChatId = id;
 	};
 

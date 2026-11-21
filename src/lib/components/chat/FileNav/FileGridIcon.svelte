@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
-	import { downloadFileBlob, type FileEntry } from '$lib/apis/terminal';
+	import { downloadFileBlob, type FileEntry } from '$lib/apis/machines';
 	import { fileIconName } from './fileIcon';
 	import Icon from './Icon.svelte';
 

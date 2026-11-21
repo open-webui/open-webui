@@ -9,8 +9,7 @@ import aiohttp
 from fastapi import HTTPException
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-from open_webui.utils.terminals import get_terminal_server_url, resolve_terminal_connection
-from open_webui.utils.tether import get_terminal_client
+from open_webui.utils.machines import get_machine_client, get_terminal_server_url, resolve_terminal_connection
 
 
 class TerminalTransport:
@@ -38,7 +37,7 @@ class TerminalTransport:
         return cls(*resolved, resolved[0].get('instance_user_id', user.id))
 
     async def request(self, method, path, body=None):
-        async with get_terminal_client(
+        async with get_machine_client(
             self.url, self.user_id, service=self.service, timeout=aiohttp.ClientTimeout(total=30), trust_env=True
         ) as client:
             async with client.request(
@@ -75,7 +74,7 @@ class TerminalTransport:
         try:
             while not self.closed:
                 try:
-                    async with get_terminal_client(
+                    async with get_machine_client(
                         self.url,
                         self.user_id,
                         service=self.service,

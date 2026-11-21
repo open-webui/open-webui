@@ -129,8 +129,9 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     set_tool_module_in_cache,
 )
-from open_webui.utils.tether import RelayInterrupted, get_tether_connections, get_terminal_client
-from open_webui.utils.terminals import (
+from open_webui.utils.tether import RelayInterrupted, get_tether_connections
+from open_webui.utils.machines import (
+    get_machine_client,
     get_terminal_server_url,
 )
 from open_webui.utils.voice_avatar import avatar_animation_tools
@@ -1432,7 +1433,7 @@ async def get_terminal_cwd(
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
-        async with get_terminal_client(
+        async with get_machine_client(
             base_url,
             headers.get('X-User-Id'),
             service=service,
@@ -1464,7 +1465,7 @@ async def get_terminal_system_prompt(
     """
     base = base_url.rstrip('/')
     try:
-        async with get_terminal_client(
+        async with get_machine_client(
             base_url,
             headers.get('X-User-Id'),
             service=service,
@@ -1494,11 +1495,11 @@ async def get_terminal_system_prompt(
 
 
 async def set_terminal_servers(request: Request):
-    """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
+    """Load and cache OpenAPI specs from all machine connections."""
     if not ENABLE_TOOL_SERVERS:
         return []
 
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await Config.get('machines.connections', []) or []
 
     # Build server configs compatible with get_tool_servers_data
     # Terminal connections store id/name at top level; translate to info dict
@@ -1572,7 +1573,7 @@ async def get_terminal_servers(request: Request):
             data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
             if data is not None:
                 terminal_servers = JSONCodec.loads(data)
-                connections = await Config.get('terminal_server.connections', []) or []
+                connections = await Config.get('machines.connections', []) or []
                 if terminal_servers or not any(
                     connection.get('url') and connection.get('enabled', True) for connection in connections
                 ):
@@ -1596,7 +1597,7 @@ async def get_terminal_tools(
 ) -> dict[str, dict] | tuple[dict[str, dict], str | None]:
     """Resolve tools for a terminal server identified by terminal_id.
 
-    - Finds the connection in TERMINAL_SERVER_CONNECTIONS
+    - Finds the connection in machines.connections
     - Checks access_grants
     - Loads specs from cache
     - Builds callables that route through the terminal proxy
@@ -1604,7 +1605,7 @@ async def get_terminal_tools(
     if not ENABLE_TOOL_SERVERS:
         return {}
 
-    from open_webui.utils.terminals import find_terminal_connection, terminal_headers
+    from open_webui.utils.machines import find_terminal_connection, terminal_headers
 
     connection = await find_terminal_connection(
         user, terminal_id, extra_params.get('__metadata__', {}), request=request
@@ -1756,7 +1757,7 @@ async def get_tool_server_data(
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with get_terminal_client(
+        async with get_machine_client(
             url, user_id or _headers.get('X-User-Id'), service=service, timeout=timeout, trust_env=True
         ) as session:
             async with session.get(url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL) as response:
@@ -2039,7 +2040,7 @@ async def execute_tool_server(
             else:
                 body_params = params
 
-        async with get_terminal_client(
+        async with get_machine_client(
             url,
             server_data.get('user_id') or (headers or {}).get('X-User-Id'),
             service=server_data.get('service', 'open_terminal'),

@@ -238,7 +238,7 @@
 					<TerminalSelector
 						bind:terminalId
 						description={$i18n.t(
-							'Choose the terminal server selected by default for chats with models that do not set their own.'
+							'Choose the machine selected by default for chats with models that do not set their own.'
 						)}
 					/>
 				{/if}

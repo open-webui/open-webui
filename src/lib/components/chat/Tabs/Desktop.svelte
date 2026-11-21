@@ -5,8 +5,8 @@
 	import { toast } from 'svelte-sonner';
 	import type RFB from '@novnc/novnc';
 	import Icon from '../FileNav/Icon.svelte';
-	import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
-	import { openTerminalSocket } from '$lib/apis/terminal/socket';
+	import { terminalRequest, type TerminalTarget } from '$lib/apis/machines';
+	import { openTerminalSocket } from '$lib/apis/machines/socket';
 
 	const i18n = getContext<any>('i18n');
 	export let target: TerminalTarget;

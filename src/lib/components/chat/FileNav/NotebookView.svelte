@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 
 	import { getContext, onMount, onDestroy } from 'svelte';
@@ -10,7 +10,7 @@
 		createNotebookSession,
 		executeNotebookCell,
 		stopNotebookSession
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import CellEditor from './CellEditor.svelte';

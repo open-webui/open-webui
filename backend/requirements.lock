@@ -280,6 +280,10 @@ asgiref==3.11.1 \
     # via
     #   -r requirements.txt
     #   opentelemetry-instrumentation-asgi
+asyncssh==2.24.1 \
+    --hash=sha256:efcd36e9b35f79873535b06444a7c9b0a3c61d97081b208c7fdd3fd8a40f1eca \
+    --hash=sha256:fc560b4f43be0f0c602d184783e5e3876f5d24d933a25359d86e5a50a5f46fe5
+    # via -r requirements.txt
 attrs==26.1.0 \
     --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309 \
     --hash=sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32
@@ -1310,6 +1314,7 @@ cryptography==48.0.1 \
     --hash=sha256:fe0180af5bf9236518a087e35bf2d9a347d5f5f51e63c579d683ddff424e3d46
     # via
     #   -r requirements.txt
+    #   asyncssh
     #   authlib
     #   azure-identity
     #   azure-storage-blob
@@ -6487,6 +6492,7 @@ typing-extensions==4.16.0 \
     #   alembic
     #   anthropic
     #   anyio
+    #   asyncssh
     #   azure-ai-documentintelligence
     #   azure-core
     #   azure-identity

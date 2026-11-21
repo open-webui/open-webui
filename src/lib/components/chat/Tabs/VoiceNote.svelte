@@ -2,7 +2,7 @@
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { getCwd, uploadNewFileToTerminal, type TerminalTarget } from '$lib/apis/terminal';
+	import { getCwd, uploadNewFileToTerminal, type TerminalTarget } from '$lib/apis/machines';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import Icon from '../FileNav/Icon.svelte';
 	type VoiceNoteDraft = {

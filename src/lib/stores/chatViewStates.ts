@@ -2,8 +2,8 @@ import { browser } from '$app/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { writable } from 'svelte/store';
 import { getChatView, updateChatView } from '$lib/apis/chats/view';
-import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
-import { createBrowserSession } from '$lib/apis/terminal/browser';
+import { terminalRequest, type TerminalTarget } from '$lib/apis/machines';
+import { createBrowserSession } from '$lib/apis/machines/browser';
 import { isSavedChatId } from '$lib/utils/chatId';
 import {
 	createTabsState,

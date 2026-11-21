@@ -9,7 +9,7 @@
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
 	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';

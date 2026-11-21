@@ -5,8 +5,8 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
-	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/terminal';
-	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
+	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/machines';
+	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/machines/socket';
 
 	export let target: TerminalTarget;
 

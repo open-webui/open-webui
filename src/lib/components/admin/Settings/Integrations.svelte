@@ -10,7 +10,7 @@
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { config, models, settings, user, terminalServers } from '$lib/stores';
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -78,19 +78,19 @@
 		const res = await setTerminalServerConnections(localStorage.token, {
 			TERMINAL_SERVER_CONNECTIONS: terminalConnections
 		}).catch((err) => {
-			toast.error($i18n.t('Failed to save terminal servers'));
+			toast.error($i18n.t('Failed to save machines'));
 			return null;
 		});
 
 		if (res) {
-			toast.success($i18n.t('Terminal servers saved'));
+			toast.success($i18n.t('Machines saved'));
 			await config.set(await getBackendConfig());
 
 			// Refresh the terminalServers store so changes are reflected immediately
 			const systemTerminals = await getTerminalServers(localStorage.token);
 			const systemEntries = systemTerminals.map((t) => ({
 				...t,
-				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
+				url: `${WEBUI_API_BASE_URL}/machines/${t.id}`,
 				name: t.name,
 				key: localStorage.token,
 				config: t.config ?? {}
@@ -99,7 +99,19 @@
 		}
 	};
 
-	const addTerminalConnection = (server: TerminalConnection) => {
+	const addTerminalConnection = async (server: TerminalConnection) => {
+		if (String(server.url ?? '').startsWith('ssh://')) {
+			// Installed over SSH: the backend already saved the machine. Reload the list,
+			// then apply the rest of the form (name, access, options) to it.
+			const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
+			terminalConnections = (res?.TERMINAL_SERVER_CONNECTIONS ??
+				terminalConnections) as TerminalConnection[];
+			terminalConnections = terminalConnections.map((c) =>
+				c.id === server.id ? { ...c, ...server, url: c.url, key: c.key, ssh: c.ssh } : c
+			);
+			await saveTerminalServers();
+			return;
+		}
 		terminalConnections = [...terminalConnections, { ...server, id: server.id ?? uuidv4() }];
 		saveTerminalServers();
 	};
@@ -230,7 +242,7 @@
 							<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 								<Tooltip
 									content={$i18n.t(
-										'Connect to Open Terminal servers. Admins and users granted access can use file browsing and terminal tools through these servers.'
+										'Machines run Open Terminal. Admins and users granted access can browse files and use terminal tools on them.'
 									)}
 									placement="top-start"
 									className="w-fit"
@@ -288,7 +300,7 @@
 													for={`terminal-${idx}-control`}
 													class="outline-hidden w-full bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 												>
-													{connection.name || connection.url || $i18n.t('New Terminal')}
+													{connection.name || connection.url || $i18n.t('New Machine')}
 												</label>
 											</div>
 										</div>
@@ -332,7 +344,7 @@
 
 						{#if terminalConnections.length === 0}
 							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
-								{$i18n.t('No terminal connections configured.')}
+								{$i18n.t('No machines configured.')}
 							</div>
 						{/if}
 					</div>

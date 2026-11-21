@@ -75,7 +75,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import get_terminal_file, upload_files_to_terminal
+from open_webui.utils.machines import get_terminal_file, upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -3848,7 +3848,7 @@ async def view_skill(
     try:
         terminal_skill_prefix = 'terminal:'
         if isinstance(id, str) and id.startswith(terminal_skill_prefix):
-            from open_webui.utils.terminals import get_terminal_skill
+            from open_webui.utils.machines import get_terminal_skill
 
             skill_name = unquote(id.removeprefix(terminal_skill_prefix))
             skill = await get_terminal_skill(
@@ -3920,7 +3920,7 @@ async def read_skill_file(
         if not __user__ or __request__ is None:
             raise ValueError('Request and user context required')
         if id.startswith('terminal:'):
-            from open_webui.utils.terminals import get_terminal_skill
+            from open_webui.utils.machines import get_terminal_skill
 
             if path != 'SKILL.md':
                 raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
@@ -4002,7 +4002,7 @@ async def grep_skill_files(
             raise ValueError('Request and user context required')
         metadata = __metadata__ if __metadata__ is not None else {}
         if id.startswith('terminal:'):
-            from open_webui.utils.terminals import load_terminal_skill
+            from open_webui.utils.machines import load_terminal_skill
 
             if path is not None and path != 'SKILL.md':
                 raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')

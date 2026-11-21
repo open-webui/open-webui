@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget;
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import type { WorkBook } from 'xlsx';
@@ -15,7 +15,7 @@
 	};
 	$: (loading, previewError, reportReady());
 
-	import { downloadFileBlob, downloadFilePreview, uploadToTerminal } from '$lib/apis/terminal';
+	import { downloadFileBlob, downloadFilePreview, uploadToTerminal } from '$lib/apis/machines';
 	import { readOfficeComments } from '$lib/utils/comments/office';
 	import {
 		commentThreads,

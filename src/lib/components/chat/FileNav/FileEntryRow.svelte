@@ -3,15 +3,15 @@
 </script>
 
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 	import { toast } from 'svelte-sonner';
 	import { LinkPreview } from 'bits-ui';
 	import { mobile, settings } from '$lib/stores';
 	import { getContext, tick, onDestroy } from 'svelte';
 	import { copyToClipboard, formatFileSize } from '$lib/utils';
-	import { listFiles, type FileEntry } from '$lib/apis/terminal';
-	import type { GitFile } from '$lib/apis/terminal/git';
+	import { listFiles, type FileEntry } from '$lib/apis/machines';
+	import type { GitFile } from '$lib/apis/machines/git';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';

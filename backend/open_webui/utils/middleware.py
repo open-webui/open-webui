@@ -161,7 +161,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
+from open_webui.utils.machines import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
     ToolApprovalRequired,
@@ -2516,7 +2516,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if skill_ids or (use_builtin_tools and model_builtin_tools.get('skills', True)):
         from open_webui.models.skills import Skills as SkillsModel
         from open_webui.utils.skill_files import format_skill_content, skill_overview
-        from open_webui.utils.terminals import (
+        from open_webui.utils.machines import (
             format_terminal_skill_context,
             format_terminal_skill_manifest_entry,
             get_terminal_json,
@@ -2800,7 +2800,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 raise HTTPException(status_code=503, detail=f'Terminal unavailable: {e}') from e
 
         if terminal_id and terminal_capability:
-            from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
+            from open_webui.utils.machines import add_terminal_agents_md, get_terminal_agents_md
 
             agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
             if agents_md:

@@ -9,7 +9,7 @@
 		joinTerminalPath,
 		type FileEntry,
 		type TerminalTarget
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import FileCodeEditor from '../FileNav/FileCodeEditor.svelte';
 	import Icon from '../FileNav/Icon.svelte';
 	import FileTypeIcon from '../FileNav/FileTypeIcon.svelte';

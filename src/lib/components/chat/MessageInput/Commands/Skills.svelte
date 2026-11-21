@@ -8,7 +8,7 @@
 		listTerminalSkills,
 		resolveTerminalTarget,
 		type TerminalSkill
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { settings, terminalServers } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
@@ -136,7 +136,7 @@
 						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
 					<div class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">
-						{skill.source === 'terminal' ? $i18n.t('Terminal') : skill.id}
+						{skill.source === 'terminal' ? $i18n.t('Machine') : skill.id}
 					</div>
 				</div>
 			</button>

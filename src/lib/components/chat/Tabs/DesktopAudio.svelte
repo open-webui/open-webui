@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { openTerminalSocket } from '$lib/apis/terminal/socket';
+	import type { TerminalTarget } from '$lib/apis/machines';
+	import { openTerminalSocket } from '$lib/apis/machines/socket';
 	import Icon from '../FileNav/Icon.svelte';
 
 	const i18n = getContext<any>('i18n');

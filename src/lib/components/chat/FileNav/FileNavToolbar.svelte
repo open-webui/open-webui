@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, afterUpdate, tick } from 'svelte';
-	import type { GitFile } from '$lib/apis/terminal/git';
+	import type { GitFile } from '$lib/apis/machines/git';
 	export let gitFile: GitFile | null = null;
 	export let gitDiffOpen = false;
 	export let onToggleGitDiff: () => void = () => {};

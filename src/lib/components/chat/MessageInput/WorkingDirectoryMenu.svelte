@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getCwd, setCwd, type TerminalTarget } from '$lib/apis/terminal';
-	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/terminal/recentFolders';
+	import { getCwd, setCwd, type TerminalTarget } from '$lib/apis/machines';
+	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/machines/recentFolders';
 	import { selectedFolder, showFileNav } from '$lib/stores';
 	import type { TerminalContext } from '$lib/types';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';

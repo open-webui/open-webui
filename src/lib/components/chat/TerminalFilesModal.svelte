@@ -3,7 +3,7 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FileNav from '$lib/components/chat/FileNav.svelte';
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 
 	const i18n = getContext<any>('i18n');
 

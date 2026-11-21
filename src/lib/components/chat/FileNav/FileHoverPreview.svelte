@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget;
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
-	import { readFile, downloadFileBlob, type FileEntry } from '$lib/apis/terminal';
+	import { readFile, downloadFileBlob, type FileEntry } from '$lib/apis/machines';
 	import { formatFileSize } from '$lib/utils';
 	import { supportsComments } from '$lib/utils/comments/types';
 	import FilePreview from './FilePreview.svelte';

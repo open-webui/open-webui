@@ -25,7 +25,7 @@
 		showSidebar,
 		type AgentModel
 	} from '$lib/stores';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
 
@@ -550,7 +550,7 @@
 
 				<div class={rowClass}>
 					<span class={labelClass}
-						><Icon name="terminal" size={12} class="shrink-0" />{$i18n.t('Terminal')}</span
+						><Icon name="terminal" size={12} class="shrink-0" />{$i18n.t('Machine')}</span
 					>
 					<div class="min-w-0 flex-1">
 						<TerminalDropdown

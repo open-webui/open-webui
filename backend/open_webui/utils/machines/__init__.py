@@ -6,7 +6,7 @@ import logging
 import ntpath
 import posixpath
 from pathlib import Path
-from urllib.parse import quote, unquote
+from urllib.parse import quote, unquote, urlsplit
 
 import aiohttp
 
@@ -27,6 +27,34 @@ TERMINAL_CHAT_UPLOAD_MODES = {'default', 'filesystem'}
 MAX_AGENTS_MD_BYTES = 32 * 1024
 
 log = logging.getLogger(__name__)
+
+
+def get_machine_client(url, user_id=None, service='open_terminal', **kwargs):
+    """Return an aiohttp-like client for any machine URL.
+
+    tether:// goes through the user's device relay, ssh:// through the machine's SSH tunnel,
+    anything else is a plain aiohttp session. Callers use `await`/`async with` the same way.
+    """
+    if str(url).startswith('tether://'):
+        from open_webui.utils.tether import RelayClient
+
+        return RelayClient(user_id, service=service, timeout=kwargs.get('timeout'))
+    if str(url).startswith('ssh://'):
+        from open_webui.utils.machines.ssh import MachineClient
+
+        return MachineClient(urlsplit(str(url)).hostname, **kwargs)
+    return aiohttp.ClientSession(**kwargs)
+
+
+async def notify_machines_changed(user_ids) -> None:
+    """Tell these users' open pages that their machines changed.
+
+    'terminals:changed' is the deprecated name, still sent for clients that listen for it.
+    """
+    from open_webui.socket.main import emit_to_users
+
+    for event_type in ('machines:changed', 'terminals:changed'):
+        await emit_to_users('events', {'data': {'type': event_type}}, list(user_ids))
 
 
 def is_terminal_orchestrator(connection: dict) -> bool:
@@ -75,7 +103,7 @@ async def get_connection(user, connection_id):
 
     if not ENABLE_TOOL_SERVERS:
         raise HTTPException(403, 'Tool servers are disabled')
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await Config.get('machines.connections', []) or []
     connection = next((c for c in connections if c.get('id') == connection_id), None)
     if not connection or not connection.get('enabled', True) or connection.get('server_type') != 'orchestrator':
         raise HTTPException(404, 'Managed terminal connection not found')
@@ -431,7 +459,6 @@ async def get_terminal_json(
 
     import aiohttp
     from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-    from open_webui.utils.tether import get_terminal_client
 
     resolved = await resolve_terminal_connection(request, user, metadata)
     if resolved:
@@ -456,7 +483,7 @@ async def get_terminal_json(
             headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
         try:
-            async with get_terminal_client(
+            async with get_machine_client(
                 get_terminal_server_url(connection),
                 connection.get('instance_user_id') or (user.id if hasattr(user, 'id') else user['id']),
                 service=connection.get('service', 'open_terminal'),
@@ -603,14 +630,13 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
     """Read a bounded file through the authorized terminal connection."""
     import aiohttp
     from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-    from open_webui.utils.tether import get_terminal_client
 
     resolved = await resolve_terminal_connection(request, user, metadata)
     if not resolved:
         raise ValueError('Reading files requires a terminal connection reachable by Open WebUI.')
     connection, headers, cookies = resolved
     base_url = get_terminal_server_url(connection)
-    async with get_terminal_client(
+    async with get_machine_client(
         base_url,
         connection.get('instance_user_id') or (user.id if hasattr(user, 'id') else user['id']),
         service=connection.get('service', 'open_terminal'),

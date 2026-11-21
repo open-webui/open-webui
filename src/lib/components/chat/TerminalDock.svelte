@@ -9,8 +9,8 @@
 		type TerminalTarget,
 		type TerminalProcess,
 		type TerminalProcessOutput
-	} from '$lib/apis/terminal';
-	import { readTerminalStream } from '$lib/apis/terminal/socket';
+	} from '$lib/apis/machines';
+	import { readTerminalStream } from '$lib/apis/machines/socket';
 	import XTerminal from './XTerminal.svelte';
 	import Icon from './FileNav/Icon.svelte';
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { gitRequest, type GitFile } from '$lib/apis/terminal/git';
+	import type { TerminalTarget } from '$lib/apis/machines';
+	import { gitRequest, type GitFile } from '$lib/apis/machines/git';
 	import GitDiff from '../Tabs/GitDiff.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 

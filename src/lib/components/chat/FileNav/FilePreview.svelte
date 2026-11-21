@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
 	import { getContext, tick, onDestroy } from 'svelte';
-	import { downloadFileBlob, terminalRequest } from '$lib/apis/terminal';
+	import { downloadFileBlob, terminalRequest } from '$lib/apis/machines';
 	import MarkdownFileEditor from './MarkdownFileEditor.svelte';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';

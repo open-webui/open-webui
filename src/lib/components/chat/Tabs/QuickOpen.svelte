@@ -4,7 +4,7 @@
 		searchFiles,
 		type TerminalTarget,
 		type TerminalFileSearchResult
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { settings } from '$lib/stores';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import Modal from '$lib/components/common/Modal.svelte';

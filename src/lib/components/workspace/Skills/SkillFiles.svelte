@@ -31,7 +31,7 @@
 		type SkillFileSummary,
 		type SkillFileOperation
 	} from '$lib/apis/skills';
-	import type { FileEntry } from '$lib/apis/terminal';
+	import type { FileEntry } from '$lib/apis/machines';
 	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 

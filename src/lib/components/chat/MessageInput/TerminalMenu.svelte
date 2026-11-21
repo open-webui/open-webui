@@ -2,7 +2,7 @@
 	export let modelId: string | null = null;
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
-	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/machines';
 	import UserTerminalsModal from '../UserTerminalsModal.svelte';
 	import { updateChatById } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
@@ -142,7 +142,7 @@
 	$: selectedLabel =
 		selectedSystemTerminal?.name ||
 		selectedSystemTerminal?.id ||
-		($selectedTerminalId ? $i18n.t('Unavailable terminal') : $i18n.t('Terminal'));
+		($selectedTerminalId ? $i18n.t('Unavailable machine') : $i18n.t('Machine'));
 	$: if (disabled && (show || (inMenu && tab === 'terminal'))) closeMenu();
 
 	let showTerminals = false;
@@ -209,10 +209,10 @@
 			{#if !section.devices}
 				<div class="flex items-center gap-0.5">
 					{#if writable.length}
-						<Tooltip content={$i18n.t('New terminal')} placement="top">
+						<Tooltip content={$i18n.t('New machine')} placement="top">
 							<button
 								type="button"
-								aria-label={$i18n.t('New terminal')}
+								aria-label={$i18n.t('New machine')}
 								class={headerButtonClass}
 								on:click|stopPropagation={() => openTerminalDialog(null)}
 							>
@@ -240,7 +240,7 @@
 		</div>
 
 		{#each section.terminals as terminal}
-			{@const label = terminal.name || $i18n.t('Terminal')}
+			{@const label = terminal.name || $i18n.t('Machine')}
 			{@const owned = canManage(terminal, manageable)}
 			{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
 			<div class="group/terminal relative rounded-xl">

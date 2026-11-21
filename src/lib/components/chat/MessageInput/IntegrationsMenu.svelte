@@ -25,7 +25,7 @@
 		listTerminalSkills,
 		resolveTerminalTarget,
 		type TerminalSkill
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 
 	import { toast } from 'svelte-sonner';
 
@@ -124,7 +124,7 @@
 		[$i18n.t('Workspace'), skillIds.filter((id) => skills?.[id]?.source !== 'terminal')],
 		[
 			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.name ||
-				$i18n.t('Terminal'),
+				$i18n.t('Machine'),
 			skillIds.filter((id) => skills?.[id]?.source === 'terminal')
 		]
 	].filter(([, ids]) => ids.length > 0);

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 
-	import type { TerminalServer } from '$lib/apis/terminal/index';
+	import type { TerminalServer } from '$lib/apis/machines/index';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import Cloud from '$lib/components/icons/Cloud.svelte';
@@ -23,8 +23,8 @@
 	let showDropdown = false;
 
 	$: terminalLabel = terminalServerId
-		? terminalServers.find((s) => s.id === terminalServerId)?.name || 'Terminal'
-		: $i18n.t('Terminal');
+		? terminalServers.find((s) => s.id === terminalServerId)?.name || 'Machine'
+		: $i18n.t('Machine');
 </script>
 
 {#if terminalServers.length > 0}
@@ -64,7 +64,7 @@
 			class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 min-w-56 max-w-56 p-0.5"
 		>
 			<div class="px-2 text-[0.6875rem] text-base-500 py-0.5">
-				{$i18n.t('Terminal')}
+				{$i18n.t('Machine')}
 			</div>
 
 			{#each terminalServers as server (server.id)}

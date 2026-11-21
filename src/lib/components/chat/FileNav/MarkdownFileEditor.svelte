@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 	import { v4 as uuidv4 } from 'uuid';
 	import { getAllContexts, getContext, mount, unmount, onDestroy, tick } from 'svelte';
@@ -14,7 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { downloadFileBlob, uploadNewFileToTerminal } from '$lib/apis/terminal';
+	import { downloadFileBlob, uploadNewFileToTerminal } from '$lib/apis/machines';
 	import MarkdownDocument, { resolveDocumentPath } from './MarkdownDocument.svelte';
 	import KatexRenderer from '../Messages/Markdown/KatexRenderer.svelte';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';

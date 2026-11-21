@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -7,12 +7,28 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ArrowPath from '$lib/components/icons/ArrowPath.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import { verifyTerminalServerConnection } from '$lib/apis/configs';
+	import {
+		createSSHKeypair,
+		formatSSHUrl,
+		getSSHMachineLogs,
+		installSSHKey,
+		installSSHMachine,
+		parseSSHUrl,
+		probeSSHMachine,
+		removeSSHMachine,
+		restartSSHMachine,
+		upgradeSSHMachine,
+		type SSHMachineInfo
+	} from '$lib/apis/machines';
+	import { socket } from '$lib/stores';
+	import { copyToClipboard } from '$lib/utils';
 	const i18n = getContext<any>('i18n');
 	export let show = false;
 	export let edit = false;
@@ -35,12 +51,34 @@
 	let busy = false;
 	let error = '';
 	let showDelete = false;
+	// SSH: an ssh://user@host URL installs Open Terminal on that machine instead of connecting to one.
+	const SSH_STEPS = ['connect', 'detect', 'install', 'configure', 'start', 'health', 'ready'];
+	// How Open WebUI logs in the first time to add its own key. Nothing here is stored.
+	let signIn: 'password' | 'key' | 'manual' = 'password';
+	let password = '';
+	let privateKey = '';
+	let passphrase = '';
+	let keyFileInput: HTMLInputElement;
+	let sshPhase: 'form' | 'fingerprint' | 'authorize' | 'installing' = 'form';
+	let hostKey: { host_key: string; fingerprint: string } | null = null;
+	let keypair: { id: string; public_key: string } | null = null;
+	let steps: string[] = [];
+	let running = false;
+	let logs: string | null = null;
+	let showForceDelete = false;
+	let stopListening: (() => void) | null = null;
 	const input =
 		'w-full min-w-0 bg-transparent py-0.5 text-sm text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-100 dark:placeholder:text-base-700';
 	const select =
 		'min-w-0 bg-transparent pr-5 text-sm text-base-900 outline-hidden dark:text-base-100';
+	// Quiet text actions, matching the Delete and Back links.
+	const action =
+		'text-xs text-base-500 transition hover:text-base-800 hover:underline disabled:opacity-50 disabled:no-underline dark:text-base-400 dark:hover:text-base-200';
 	const button =
 		'flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-50';
+	$: sshMachine = (connection?.ssh ?? null) as SSHMachineInfo | null;
+	$: installingSSH = !sshMachine && url.trim().toLowerCase().startsWith('ssh://');
+	$: sshTarget = installingSSH ? parseSSHUrl(url) : null;
 	$: if (show && !initialized) {
 		url = connection?.url ?? '';
 		key = connection?.key ?? '';
@@ -55,9 +93,81 @@
 		workingDirectoryContext = connection?.config?.working_directory_context ?? true;
 		userShellTools = connection?.config?.user_shell_tools ?? 'auto';
 		error = '';
+		signIn = 'password';
+		password = '';
+		privateKey = '';
+		passphrase = '';
+		resetSSH();
+		logs = null;
 		initialized = true;
 	}
-	$: if (!show) initialized = false;
+	$: if (!show) {
+		initialized = false;
+		stopListening?.();
+	}
+	onDestroy(() => stopListening?.());
+	function resetSSH() {
+		sshPhase = 'form';
+		hostKey = null;
+		keypair = null;
+		steps = [];
+	}
+	function stepLabel(step: string) {
+		switch (step) {
+			case 'connect':
+				return $i18n.t('Connecting');
+			case 'detect':
+				return $i18n.t('Checking the machine');
+			case 'install':
+				return $i18n.t('Installing Open Terminal');
+			case 'configure':
+				return $i18n.t('Configuring');
+			case 'start':
+				return $i18n.t('Starting Open Terminal');
+			case 'health':
+				return $i18n.t('Checking that it responds');
+			default:
+				return $i18n.t('Ready');
+		}
+	}
+	// Follow `machines:progress` events for one machine until it is ready or fails.
+	function follow(machineId: string, onDone: (ok: boolean, message?: string) => void) {
+		stopListening?.();
+		steps = [];
+		running = true;
+		const handler = (event: any) => {
+			const data = event?.data;
+			if (data?.type !== 'machines:progress' || data.id !== machineId) return;
+			if (data.step === 'error') {
+				stop();
+				onDone(false, data.message);
+				return;
+			}
+			steps = [...steps.filter((step) => step !== data.step), data.step];
+			if (data.step === 'ready') {
+				stop();
+				onDone(true);
+			}
+		};
+		const stop = () => {
+			$socket?.off('events', handler);
+			running = false;
+			stopListening = null;
+		};
+		$socket?.on('events', handler);
+		stopListening = stop;
+	}
+	function configuration() {
+		const result = {
+			...(connection?.config ?? {}),
+			chat_uploads: chatUploads,
+			working_directory_context: workingDirectoryContext,
+			user_shell_tools: userShellTools
+		};
+		delete result.contexts;
+		result.access_grants = accessGrants;
+		return result;
+	}
 	async function verify(announce = false) {
 		busy = true;
 		error = '';
@@ -65,7 +175,7 @@
 			const type = (
 				await verifyTerminalServerConnection(localStorage.token, { url, key, auth_type })
 			).type;
-			if (!type) throw new Error('Failed to connect to the terminal server');
+			if (!type) throw new Error('Failed to connect to the machine');
 			serverType = type;
 			if (announce) toast.success($i18n.t('Server connection verified'));
 			return true;
@@ -81,14 +191,6 @@
 		busy = true;
 		error = '';
 		try {
-			const configuration = {
-				...(connection?.config ?? {}),
-				chat_uploads: chatUploads,
-				working_directory_context: workingDirectoryContext,
-				user_shell_tools: userShellTools
-			};
-			delete configuration.contexts;
-			configuration.access_grants = accessGrants;
 			const result = {
 				...(connection ?? {}),
 				url: url.trim().replace(/\/$/, ''),
@@ -99,7 +201,7 @@
 				enabled: connection?.enabled ?? true,
 				forward_cookies: forwardCookies,
 				server_type: serverType,
-				config: configuration
+				config: configuration()
 			};
 			for (const old of ['instances', 'policy_id', 'policy', 'lifecycle']) delete result[old];
 			result.id = connection?.id || id.trim() || uuidv4();
@@ -111,16 +213,152 @@
 			busy = false;
 		}
 	}
+	async function submit() {
+		if (!installingSSH) return save();
+		if (sshPhase === 'form') return hostKey ? authorize() : checkHost();
+		if (sshPhase === 'fingerprint') return authorize();
+		if (sshPhase === 'authorize') return startInstall();
+	}
+	async function run(action: () => Promise<void>) {
+		busy = true;
+		error = '';
+		try {
+			await action();
+		} catch (e) {
+			error = e instanceof Error ? e.message : String(e);
+		} finally {
+			busy = false;
+		}
+	}
+	// 1. Show the host key so the admin can confirm it is the machine they expect.
+	const checkHost = () =>
+		run(async () => {
+			if (!sshTarget) throw new Error($i18n.t('Use ssh://user@host or ssh://user@host:port'));
+			hostKey = await probeSSHMachine(localStorage.token, sshTarget);
+			sshPhase = 'fingerprint';
+		});
+	// 2. Log in once with the password or private key to add Open WebUI's key, then install.
+	//    With "Add key myself", show the command to run on the machine instead.
+	const authorize = () =>
+		run(async () => {
+			if (!sshTarget || !hostKey) return;
+			keypair ??= await createSSHKeypair(localStorage.token);
+			if (signIn === 'manual') {
+				sshPhase = 'authorize';
+				return;
+			}
+			try {
+				await installSSHKey(localStorage.token, {
+					...sshTarget,
+					host_key: hostKey.host_key,
+					id: keypair.id,
+					public_key: keypair.public_key,
+					...(signIn === 'key' ? { private_key: privateKey, passphrase } : { password })
+				});
+			} catch (e) {
+				// Refused: show the error, and the command that adds the key by hand. Back returns to the form.
+				sshPhase = 'authorize';
+				throw e;
+			}
+			password = privateKey = passphrase = '';
+			await startInstall();
+		});
+	async function loadKeyFile(event: Event) {
+		const file = (event.currentTarget as HTMLInputElement).files?.[0];
+		if (file) privateKey = (await file.text()).trim();
+		(event.currentTarget as HTMLInputElement).value = '';
+	}
+	// 3. Install Open Terminal and follow its progress.
+	async function startInstall() {
+		if (!sshTarget || !hostKey || !keypair) return;
+		const machine = keypair;
+		sshPhase = 'installing';
+		error = '';
+		follow(machine.id, async (ok, message) => {
+			if (!ok) {
+				error = message ?? $i18n.t('Installation failed');
+				sshPhase = 'form';
+				return;
+			}
+			try {
+				// The machine is saved; apply the rest of this form to it.
+				await onSubmit({
+					id: machine.id,
+					url: `ssh://${machine.id}`,
+					name: name.trim(),
+					path: '/openapi.json',
+					auth_type: 'bearer',
+					enabled: true,
+					forward_cookies: forwardCookies,
+					server_type: 'terminal',
+					config: configuration(),
+					ssh: {}
+				});
+				show = false;
+			} catch (e) {
+				error = e instanceof Error ? e.message : String(e);
+				sshPhase = 'form';
+			}
+		});
+		try {
+			await installSSHMachine(localStorage.token, {
+				...sshTarget,
+				host_key: hostKey.host_key,
+				id: machine.id,
+				name: name.trim()
+			});
+		} catch (e) {
+			stopListening?.();
+			error = e instanceof Error ? e.message : String(e);
+			sshPhase = 'form';
+		}
+	}
+	const authorizeCommand = (publicKey: string) =>
+		`mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${publicKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
+	// Existing SSH machines
+	const upgrade = () =>
+		run(async () => {
+			follow(connection.id, (ok, message) => {
+				if (ok) toast.success($i18n.t('Machine upgraded'));
+				else error = message ?? $i18n.t('Upgrade failed');
+			});
+			try {
+				await upgradeSSHMachine(localStorage.token, connection.id);
+			} catch (e) {
+				stopListening?.();
+				throw e;
+			}
+		});
+	const restart = () =>
+		run(async () => {
+			await restartSSHMachine(localStorage.token, connection.id);
+			toast.success($i18n.t('Machine restarted'));
+		});
+	const toggleLogs = () =>
+		run(async () => {
+			logs =
+				logs === null ? (await getSSHMachineLogs(localStorage.token, connection.id)).logs : null;
+		});
+	const remove = (force = false) =>
+		run(async () => {
+			if (sshMachine) {
+				try {
+					await removeSSHMachine(localStorage.token, connection.id, force);
+				} catch (e) {
+					if (force) throw e;
+					showForceDelete = true;
+					return;
+				}
+			}
+			onDelete();
+			show = false;
+		});
 </script>
 
-<Modal
-	bind:show
-	size="sm"
-	ariaLabel={$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
->
+<Modal bind:show size="sm" ariaLabel={edit ? $i18n.t('Edit Machine') : $i18n.t('Add Machine')}>
 	<div class="flex items-center justify-between px-4 pb-2 pt-3 dark:text-base-100">
 		<h2 class="text-sm font-medium">
-			{$i18n.t(edit ? 'Edit Terminal Connection' : 'Add Terminal Connection')}
+			{edit ? $i18n.t('Edit Machine') : $i18n.t('Add Machine')}
 		</h2>
 		<button
 			type="button"
@@ -131,7 +369,7 @@
 	</div>
 	<form
 		class="space-y-2 px-4 pb-4 text-base-900 dark:text-base-100"
-		on:submit|preventDefault={save}
+		on:submit|preventDefault={submit}
 	>
 		{#if error}<p role="alert" class="text-sm text-base-700 dark:text-base-300">{error}</p>{/if}
 		<div class="flex gap-2">
@@ -143,78 +381,253 @@
 					id="terminal-name"
 					class={input}
 					bind:value={name}
-					placeholder={$i18n.t('My Terminal')}
+					placeholder={$i18n.t('My Machine')}
 					required
 				/>
 			</div>
-			<div class="min-w-0 flex-1">
-				<label for="terminal-id" class="mb-0.5 block text-xs text-base-500">
-					{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
-				</label>
-				<input
-					id="terminal-id"
-					class="{input} font-mono"
-					bind:value={id}
-					placeholder="auto"
-					disabled={!!connection?.id}
-					autocomplete="off"
-				/>
-			</div>
+			{#if !installingSSH && !sshMachine}
+				<div class="min-w-0 flex-1">
+					<label for="terminal-id" class="mb-0.5 block text-xs text-base-500">
+						{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
+					</label>
+					<input
+						id="terminal-id"
+						class="{input} font-mono"
+						bind:value={id}
+						placeholder="auto"
+						disabled={!!connection?.id}
+						autocomplete="off"
+					/>
+				</div>
+			{/if}
 		</div>
 		<div class="flex items-end gap-2">
 			<div class="min-w-0 flex-1">
 				<label for="terminal-url" class="mb-0.5 block text-xs text-base-500">{$i18n.t('URL')}</label
 				>
-				<input
-					id="terminal-url"
-					class={input}
-					bind:value={url}
-					type="url"
-					placeholder="https://terminal.example.com"
-					required
-					on:input={() => (serverType = null)}
-				/>
+				{#if sshMachine}
+					<input id="terminal-url" class={input} value={formatSSHUrl(sshMachine)} disabled />
+				{:else}
+					<input
+						id="terminal-url"
+						class={input}
+						bind:value={url}
+						type="url"
+						placeholder="https://terminal.example.com or ssh://user@host"
+						required
+						disabled={sshPhase !== 'form'}
+						on:input={() => {
+							serverType = null;
+							resetSSH();
+						}}
+					/>
+				{/if}
 			</div>
-			<Tooltip content={$i18n.t('Verify Connection')}>
-				<button
-					type="button"
-					class="rounded-lg p-1 transition hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
-					disabled={busy || !url}
-					on:click={() => verify(true)}
-					aria-label={$i18n.t('Verify Connection')}
-					>{#if busy}<Spinner className="size-4" />{:else}<ArrowPath
-							className="size-4"
-						/>{/if}</button
-				>
-			</Tooltip>
+			{#if !installingSSH}
+				<Tooltip content={$i18n.t('Verify Connection')}>
+					<button
+						type="button"
+						class="rounded-lg p-1 transition hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
+						disabled={busy || !url}
+						on:click={() => verify(true)}
+						aria-label={$i18n.t('Verify Connection')}
+						>{#if busy}<Spinner className="size-4" />{:else}<ArrowPath
+								className="size-4"
+							/>{/if}</button
+					>
+				</Tooltip>
+			{/if}
 		</div>
-		<div>
-			<label for="terminal-auth-type" class="mb-0.5 block text-xs text-base-500"
-				>{$i18n.t('Auth')}</label
-			>
-			<div class="flex items-start gap-2">
-				<select id="terminal-auth-type" class="{select} shrink-0 py-0.5" bind:value={auth_type}>
-					<option value="bearer">{$i18n.t('Bearer')}</option>
-					<option value="none">{$i18n.t('None')}</option>
-					<option value="session">{$i18n.t('Session')}</option>
-					<option value="system_oauth">{$i18n.t('OAuth')}</option>
-				</select>
-				<div class="min-w-0 flex-1">
-					<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} required={false} />
-					{#if auth_type === 'session'}
+		{#if installingSSH}
+			{#if sshPhase === 'form'}
+				<div>
+					<label for="ssh-sign-in" class="mb-0.5 block text-xs text-base-500"
+						>{$i18n.t('Sign in with')}</label
+					>
+					<div class="flex items-start gap-2">
+						<select id="ssh-sign-in" class="{select} shrink-0 py-0.5" bind:value={signIn}>
+							<option value="password">{$i18n.t('Password')}</option>
+							<option value="key">{$i18n.t('Private key')}</option>
+							<option value="manual">{$i18n.t('Add key myself')}</option>
+						</select>
+						<div class="min-w-0 flex-1">
+							{#if signIn === 'password'}
+								<SensitiveInput
+									id="ssh-password"
+									bind:value={password}
+									placeholder={$i18n.t('SSH password')}
+								/>
+							{:else if signIn === 'key'}
+								<textarea
+									id="ssh-private-key"
+									class="{input} h-16 resize-none font-mono text-xs"
+									bind:value={privateKey}
+									placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+									aria-label={$i18n.t('Private key')}
+									spellcheck="false"
+									autocomplete="off"
+									required
+								></textarea>
+								<div class="flex items-center gap-2">
+									<SensitiveInput
+										id="ssh-passphrase"
+										bind:value={passphrase}
+										placeholder={$i18n.t('Passphrase (if the key has one)')}
+										required={false}
+									/>
+									<button
+										type="button"
+										class="shrink-0 text-xs text-base-500 hover:text-base-800 hover:underline dark:hover:text-base-200"
+										on:click={() => keyFileInput.click()}>{$i18n.t('Upload')}</button
+									>
+									<input
+										bind:this={keyFileInput}
+										type="file"
+										class="hidden"
+										accept=".pem,.key,.ppk,text/plain,application/x-pem-file"
+										on:change={loadKeyFile}
+									/>
+								</div>
+							{:else}
+								<p class="py-0.5 text-xs text-base-500">
+									{$i18n.t('You will get a command to run on the machine.')}
+								</p>
+							{/if}
+						</div>
+					</div>
+					{#if signIn !== 'manual'}
 						<p class="mt-1 text-xs text-base-500">
-							{$i18n.t('Forwards system user session credentials to authenticate')}
+							{$i18n.t('Used once to authorize Open WebUI, never stored.')}
 						</p>
-					{:else if auth_type === 'system_oauth'}
-						<p class="mt-1 text-xs text-base-500">
-							{$i18n.t('Forwards system user OAuth access token to authenticate')}
-						</p>
-					{:else if auth_type === 'none'}
-						<p class="mt-1 text-xs text-base-500">{$i18n.t('No authentication')}</p>
 					{/if}
 				</div>
+			{:else if sshPhase === 'fingerprint' && hostKey}
+				<div class="rounded-lg bg-base-50 p-2.5 text-xs dark:bg-base-850">
+					<p class="text-base-600 dark:text-base-300">
+						{$i18n.t('Confirm this is the machine you expect. Its host key fingerprint is:')}
+					</p>
+					<p class="mt-1 break-all font-mono">{hostKey.fingerprint}</p>
+				</div>
+			{:else if sshPhase === 'authorize' && keypair}
+				<div class="rounded-lg bg-base-50 p-2.5 text-xs dark:bg-base-850">
+					<p class="text-base-600 dark:text-base-300">
+						{signIn === 'manual'
+							? $i18n.t('Run this on the machine as {{user}}, then continue:', {
+									user: sshTarget?.username ?? ''
+								})
+							: $i18n.t('Or run this on the machine as {{user}}, then continue:', {
+									user: sshTarget?.username ?? ''
+								})}
+					</p>
+					<pre
+						class="mt-1.5 whitespace-pre-wrap break-all font-mono text-[0.6875rem]">{authorizeCommand(
+							keypair.public_key
+						)}</pre>
+					<button
+						type="button"
+						class="mt-1.5 text-xs text-base-500 hover:text-base-800 hover:underline dark:hover:text-base-200"
+						on:click={async () => {
+							if (keypair && (await copyToClipboard(authorizeCommand(keypair.public_key))))
+								toast.success($i18n.t('Copied to clipboard'));
+						}}>{$i18n.t('Copy')}</button
+					>
+				</div>
+			{/if}
+		{:else if sshMachine}
+			<div>
+				<div class="mb-0.5 text-xs text-base-500">{$i18n.t('Status')}</div>
+				<div class="flex items-center justify-between gap-3">
+					<div class="flex min-w-0 items-center gap-1.5 py-0.5 text-sm">
+						<span
+							class="size-1.5 shrink-0 rounded-full {sshMachine.status === 'error'
+								? 'bg-red-500'
+								: running || sshMachine.status === 'installing'
+									? 'bg-yellow-500'
+									: 'bg-green-500'}"
+						></span>
+						<span
+							>{sshMachine.status === 'error'
+								? $i18n.t('Error')
+								: running || sshMachine.status === 'installing'
+									? $i18n.t('Installing')
+									: $i18n.t('Ready')}</span
+						>
+						<span class="truncate text-xs text-base-500"
+							>{$i18n.t('Open Terminal {{version}}', { version: sshMachine.version ?? '' })}</span
+						>
+					</div>
+					<div class="flex shrink-0 items-center gap-3">
+						{#if busy}<Spinner className="size-3" />{/if}
+						<button type="button" class={action} disabled={busy || running} on:click={upgrade}
+							>{$i18n.t('Upgrade')}</button
+						>
+						<button type="button" class={action} disabled={busy || running} on:click={restart}
+							>{$i18n.t('Restart')}</button
+						>
+						<button type="button" class={action} disabled={busy || running} on:click={toggleLogs}
+							>{logs === null ? $i18n.t('Logs') : $i18n.t('Hide logs')}</button
+						>
+					</div>
+				</div>
+				{#if sshMachine.status === 'error' && sshMachine.error}
+					<p class="mt-0.5 text-xs text-base-700 dark:text-base-300">{sshMachine.error}</p>
+				{/if}
+				{#if logs !== null}
+					<pre
+						class="mt-2 max-h-48 overflow-auto whitespace-pre rounded-lg bg-base-50 p-2 font-mono text-[0.6875rem] leading-relaxed text-base-600 dark:bg-base-850 dark:text-base-400">{logs ||
+							$i18n.t('No logs yet.')}</pre>
+				{/if}
 			</div>
-		</div>
+		{:else}
+			<div>
+				<label for="terminal-auth-type" class="mb-0.5 block text-xs text-base-500"
+					>{$i18n.t('Auth')}</label
+				>
+				<div class="flex items-start gap-2">
+					<select id="terminal-auth-type" class="{select} shrink-0 py-0.5" bind:value={auth_type}>
+						<option value="bearer">{$i18n.t('Bearer')}</option>
+						<option value="none">{$i18n.t('None')}</option>
+						<option value="session">{$i18n.t('Session')}</option>
+						<option value="system_oauth">{$i18n.t('OAuth')}</option>
+					</select>
+					<div class="min-w-0 flex-1">
+						<SensitiveInput bind:value={key} placeholder={$i18n.t('API Key')} required={false} />
+						{#if auth_type === 'session'}
+							<p class="mt-1 text-xs text-base-500">
+								{$i18n.t('Forwards system user session credentials to authenticate')}
+							</p>
+						{:else if auth_type === 'system_oauth'}
+							<p class="mt-1 text-xs text-base-500">
+								{$i18n.t('Forwards system user OAuth access token to authenticate')}
+							</p>
+						{:else if auth_type === 'none'}
+							<p class="mt-1 text-xs text-base-500">{$i18n.t('No authentication')}</p>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
+		{#if sshPhase === 'installing' || running || steps.length}
+			<ol class="space-y-1 text-xs" aria-live="polite">
+				{#each SSH_STEPS as step}
+					{@const index = steps.indexOf(step)}
+					{@const current = running && index === steps.length - 1}
+					<li
+						class="flex items-center gap-1.5 {index < 0
+							? 'text-base-400 dark:text-base-600'
+							: 'text-base-700 dark:text-base-300'}"
+					>
+						<span class="flex size-3.5 items-center justify-center">
+							{#if current}<Spinner className="size-3" />{:else if index >= 0}<Check
+									className="size-3"
+									strokeWidth="2.5"
+								/>{/if}
+						</span>
+						{stepLabel(step)}
+					</li>
+				{/each}
+			</ol>
+		{/if}
 		{#if serverType === 'orchestrator'}
 			<p class="text-xs text-base-500">
 				{$i18n.t('Create and configure terminals from the terminal selector.')}
@@ -298,22 +711,24 @@
 						bind:state={forwardCookies}
 					/>
 				</div>
-				<div>
-					<label for="openapi-path" class="mb-0.5 block text-xs font-medium"
-						>{$i18n.t('OpenAPI Spec')}</label
-					>
-					<input
-						id="openapi-path"
-						class={input}
-						bind:value={path}
-						placeholder={$i18n.t('openapi.json URL or Path')}
-					/>
-					<p class="mt-1 break-all text-xs text-base-500">
-						{$i18n.t('WebUI will make requests to "{{url}}"', {
-							url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
-						})}
-					</p>
-				</div>
+				{#if !installingSSH && !sshMachine}
+					<div>
+						<label for="openapi-path" class="mb-0.5 block text-xs font-medium"
+							>{$i18n.t('OpenAPI Spec')}</label
+						>
+						<input
+							id="openapi-path"
+							class={input}
+							bind:value={path}
+							placeholder={$i18n.t('openapi.json URL or Path')}
+						/>
+						<p class="mt-1 break-all text-xs text-base-500">
+							{$i18n.t('WebUI will make requests to "{{url}}"', {
+								url: path.includes('://') ? path : `${url}${path.startsWith('/') ? '' : '/'}${path}`
+							})}
+						</p>
+					</div>
+				{/if}
 			</div>
 		</Collapsible>
 		<div class="flex items-center justify-between pt-3">
@@ -325,24 +740,48 @@
 						disabled={busy}
 						on:click={() => (showDelete = true)}>{$i18n.t('Delete')}</button
 					>
+				{:else if installingSSH && (sshPhase === 'fingerprint' || sshPhase === 'authorize')}
+					<button
+						type="button"
+						class="px-1 py-1.5 text-xs text-base-500 transition hover:text-base-700 hover:underline dark:text-base-400 dark:hover:text-base-200"
+						disabled={busy}
+						on:click={() => (sshPhase = 'form')}>{$i18n.t('Back')}</button
+					>
 				{/if}
 			</div>
 			<button
 				class="{button} bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
-				disabled={busy || !url}
+				disabled={busy || !url || sshPhase === 'installing'}
 			>
-				{$i18n.t('Save')}
-				{#if busy}<Spinner className="size-3" />{/if}
+				{#if !installingSSH}
+					{$i18n.t('Save')}
+				{:else if sshPhase === 'fingerprint'}
+					{$i18n.t('Trust and install')}
+				{:else if sshPhase === 'authorize'}
+					{$i18n.t('Continue')}
+				{:else if sshPhase === 'installing'}
+					{$i18n.t('Installing')}
+				{:else}
+					{$i18n.t('Install')}
+				{/if}
+				{#if busy || sshPhase === 'installing'}<Spinner className="size-3" />{/if}
 			</button>
 		</div>
 	</form>
 </Modal>
 <ConfirmDialog
 	bind:show={showDelete}
-	message={$i18n.t('Delete this connection?')}
+	message={sshMachine
+		? $i18n.t('Remove this machine? This also uninstalls Open Terminal from it.')
+		: $i18n.t('Delete this connection?')}
 	confirmLabel={$i18n.t('Delete')}
-	on:confirm={() => {
-		onDelete();
-		show = false;
-	}}
+	on:confirm={() => remove()}
+/>
+<ConfirmDialog
+	bind:show={showForceDelete}
+	message={$i18n.t(
+		"Couldn't reach the machine to uninstall Open Terminal. Remove it from Open WebUI anyway?"
+	)}
+	confirmLabel={$i18n.t('Remove')}
+	on:confirm={() => remove(true)}
 />

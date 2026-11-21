@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget } from '$lib/apis/machines';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Terminal unavailable");
 	// $i18n.t("No preview available");
@@ -15,7 +15,7 @@
 		showFileNavPath,
 		terminalServers
 	} from '$lib/stores';
-	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/terminal';
+	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/machines';
 	import { getFileContentById } from '$lib/apis/files';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
@@ -276,7 +276,7 @@
 	{#if expanded}
 		{#if unavailable}
 			<div class="px-4 py-3 text-xs text-base-500 dark:text-base-400">
-				{t('Terminal unavailable')}
+				{t('Machine unavailable')}
 			</div>
 		{:else if error}
 			<div class="px-4 py-3 text-xs text-red-500 dark:text-red-400">{error}</div>

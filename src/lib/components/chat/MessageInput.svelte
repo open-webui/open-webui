@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget } from '$lib/apis/machines';
 	import type { TerminalContext } from '$lib/types';
 	import {
 		estimateTokens,
@@ -77,7 +77,7 @@
 		getCwd,
 		templatesApi,
 		uploadNewFileToTerminal
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
