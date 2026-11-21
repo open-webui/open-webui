@@ -30,8 +30,8 @@
 	}
 
 	// An existing automation opens as its own page, in a tab beside the folder like chats do.
+	// Anyone who can see the folder can open it; the page is read-only for what they can't change.
 	function edit(automation: FolderAutomation) {
-		if (!automation.can_edit) return;
 		const href = `/automations/${automation.id}`;
 		if (appLayout?.openPageTab) appLayout.openPageTab({ href, label: automation.name });
 		else void goto(href);
@@ -87,9 +87,7 @@
 		{#each automations as automation (automation.id)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 			<li
-				class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50 {automation.can_edit
-					? 'cursor-pointer'
-					: ''}"
+				class="flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50"
 				on:click={() => edit(automation)}
 			>
 				<Icon name="clock" size={14} class="text-base-400 dark:text-base-500" />

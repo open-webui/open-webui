@@ -224,6 +224,7 @@ _SHARING_PERMISSION_KEYS = {
     'skill': ('sharing.skills', 'sharing.public_skills', None),
     'note': ('sharing.notes', 'sharing.public_notes', None),
     'folder': ('sharing.folders', None, None),
+    'automation': ('sharing.automations', None, None),
     'channel': (None, 'sharing.public_channels', None),
     'calendar': (None, 'sharing.public_calendars', None),
     'shared_chat': (None, 'sharing.public_chats', 'sharing.open_chats'),

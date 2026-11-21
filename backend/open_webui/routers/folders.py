@@ -750,7 +750,8 @@ async def check_folder_read_access(request: Request, id: str, user, db: AsyncSes
 async def get_folder_automations(
     request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    """The folder's automations, whoever made them. Only creators edit; folder editors may pause and run."""
+    """The folder's automations, whoever made them. Only creators edit; folder editors, and anyone
+    an automation is shared with for editing, may rename, reschedule, pause and run it."""
     folder = await check_folder_read_access(request, id, user, db)
     automations = await Automations.get_by_folder(id, db=db)
     if not automations:
@@ -759,6 +760,17 @@ async def get_folder_automations(
     creators = {u.id: u.name for u in await Users.get_users_by_user_ids(list({a.user_id for a in automations}), db=db)}
     has_write = (
         user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    )
+    shared_write = (
+        set()
+        if has_write
+        else await AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type='automation',
+            resource_ids=[item.id for item in automations],
+            permission='write',
+            db=db,
+        )
     )
     return [
         {
@@ -771,7 +783,7 @@ async def get_folder_automations(
             ).model_dump(),
             'user_name': creators.get(item.user_id) or 'Unknown',
             'can_edit': item.user_id == user.id,
-            'can_manage': item.user_id == user.id or has_write,
+            'can_manage': item.user_id == user.id or has_write or item.id in shared_write,
         }
         for item in automations
     ]

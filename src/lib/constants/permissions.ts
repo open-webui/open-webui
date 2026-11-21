@@ -29,6 +29,7 @@ export const DEFAULT_PERMISSIONS = {
 		notes: false,
 		public_notes: false,
 		folders: false,
+		automations: false,
 		public_chats: false,
 		open_chats: false,
 		public_calendars: false

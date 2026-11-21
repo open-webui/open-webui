@@ -5,6 +5,8 @@ from typing import Literal, Optional
 from uuid import uuid4
 
 from open_webui.models.notifications import emit_changes
+from open_webui.models.access_grants import AccessGrant, AccessGrantResponse, AccessGrants
+from open_webui.models.users import UserResponse
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.misc import json_text_variants
 from pydantic import BaseModel, ConfigDict
@@ -166,6 +168,10 @@ class AutomationForm(BaseModel):
 class AutomationResponse(AutomationModel):
     last_run: Optional[AutomationRunModel] = None
     next_runs: Optional[list[int]] = None
+    user: Optional[UserResponse] = None  # the owner, shown like on workspace items
+    # Rename, reschedule, pause and run. What a run does stays the owner's: it runs as them.
+    write_access: Optional[bool] = None
+    access_grants: Optional[list[AccessGrantResponse]] = None  # for the owner or an admin
 
 
 class AutomationListResponse(BaseModel):
@@ -238,10 +244,25 @@ class AutomationTable:
         folder_id: Optional[str] = None,
         skip: int = 0,
         limit: int = 30,
+        view: Literal['all', 'mine', 'shared'] = 'mine',
+        group_ids: Optional[list[str]] = None,
         db: Optional[AsyncSession] = None,
     ) -> 'AutomationListResponse':
         async with get_async_db_context(db) as db:
-            stmt = select(Automation).filter_by(user_id=user_id)
+            if view == 'mine':
+                stmt = select(Automation).filter_by(user_id=user_id)
+            else:
+                # Owned plus shared directly; folder-shared ones are listed in their folder.
+                stmt = AccessGrants.has_permission_filter(
+                    select(Automation),
+                    Automation,
+                    {'user_id': user_id, 'group_ids': group_ids or []},
+                    'automation',
+                    'read',
+                    db=db,
+                )
+                if view == 'shared':
+                    stmt = stmt.filter(Automation.user_id != user_id)
 
             if folder_id:
                 stmt = stmt.filter(Automation.folder_id == folder_id)
@@ -377,6 +398,7 @@ class AutomationTable:
             from open_webui.models.notifications import delete_notifications
 
             recipients = await delete_notifications(resource_type='automation', resource_ids=[id], db=db)
+            await db.execute(delete(AccessGrant).filter_by(resource_type='automation', resource_id=id))
             await db.delete(row)
             await db.commit()
             await emit_changes(recipients)

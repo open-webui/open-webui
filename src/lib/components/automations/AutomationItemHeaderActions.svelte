@@ -10,6 +10,7 @@
 	import GarbageBin from '$lib/components/icons/GarbageBin.svelte';
 	import Link from '$lib/components/icons/Link.svelte';
 	import Play from '$lib/components/icons/Play.svelte';
+	import Share from '$lib/components/icons/Share.svelte';
 	import type i18nType from '$lib/i18n';
 
 	const i18n: typeof i18nType = getContext('i18n');
@@ -17,11 +18,13 @@
 	export let loading = false;
 	export let dirty = false;
 	export let saving = false;
-	export let runNowHandler = () => {};
+	export let runNowHandler: (() => void) | null = () => {};
 	export let copyLinkHandler = () => {};
 	export let saveHandler = () => {};
 	export let duplicateHandler = () => {};
-	export let deleteHandler = () => {};
+	// Null hides the action: sharing and deleting are the owner's (or an admin's).
+	export let shareHandler: (() => void) | null = null;
+	export let deleteHandler: (() => void) | null = () => {};
 
 	// Same soft round buttons as the folder view's top bar.
 	const iconButton =
@@ -41,21 +44,36 @@
 		</button>
 	{/if}
 
-	<Tooltip content={$i18n.t('Run now')}>
-		<button
-			class={iconButton}
-			on:click={runNowHandler}
-			type="button"
-			aria-disabled={loading}
-			aria-label={$i18n.t('Run now')}
-		>
-			{#if loading}
-				<Spinner className="size-3" />
-			{:else}
-				<Play className="size-3" strokeWidth="1.5" />
-			{/if}
-		</button>
-	</Tooltip>
+	{#if runNowHandler}
+		<Tooltip content={$i18n.t('Run now')}>
+			<button
+				class={iconButton}
+				on:click={runNowHandler}
+				type="button"
+				aria-disabled={loading}
+				aria-label={$i18n.t('Run now')}
+			>
+				{#if loading}
+					<Spinner className="size-3" />
+				{:else}
+					<Play className="size-3" strokeWidth="1.5" />
+				{/if}
+			</button>
+		</Tooltip>
+	{/if}
+
+	{#if shareHandler}
+		<Tooltip content={$i18n.t('Share')}>
+			<button
+				class={iconButton}
+				on:click={shareHandler}
+				type="button"
+				aria-label={$i18n.t('Share')}
+			>
+				<Share className="size-3.5" strokeWidth="1.5" />
+			</button>
+		</Tooltip>
+	{/if}
 
 	<Tooltip content={$i18n.t('Copy link')}>
 		<button
@@ -76,9 +94,11 @@
 			<button type="button" on:click={duplicateHandler}>
 				<DocumentDuplicate className="size-3.5" />{$i18n.t('Duplicate')}
 			</button>
-			<button type="button" on:click={deleteHandler}>
-				<GarbageBin className="size-3.5" />{$i18n.t('Delete')}
-			</button>
+			{#if deleteHandler}
+				<button type="button" on:click={deleteHandler}>
+					<GarbageBin className="size-3.5" />{$i18n.t('Delete')}
+				</button>
+			{/if}
 		</DropdownMenu>
 	</Dropdown>
 </div>

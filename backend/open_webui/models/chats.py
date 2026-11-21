@@ -2110,6 +2110,19 @@ class ChatTable:
                 and await has_folder_access(user.id, folder, 'read', db)
             ):
                 return True
+        # A run chat is readable by anyone the automation is shared with.
+        automation_id = (chat.meta or {}).get('automation_id')
+        if automation_id and permission == 'read':
+            from open_webui.models.automations import Automations
+            from open_webui.utils.access_control.automations import has_automation_access
+
+            automation = await Automations.get_by_id(automation_id, db=db)
+            if (
+                automation
+                and automation.user_id == chat.user_id
+                and await has_automation_access(user, automation, 'read', db=db)
+            ):
+                return True
         return False
 
     async def filter_task_ids_by_user_id(self, chat, user_id: str, task_ids: list[str]) -> list[str]:

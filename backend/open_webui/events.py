@@ -668,6 +668,11 @@ class EventDefinitions(BaseModel):
     AUTOMATION_DELETED: EventDefinition = EventDefinition(
         name='automation.deleted', description='An automation was deleted.', message='Automation deleted'
     )
+    AUTOMATION_ACCESS_UPDATED: EventDefinition = EventDefinition(
+        name='automation.access_updated',
+        description='Automation access was updated.',
+        message='Automation access updated',
+    )
     AUTOMATION_RUN_STARTED: EventDefinition = EventDefinition(
         name='automation.run_started', description='An automation run started.', message='Automation run started'
     )

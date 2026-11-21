@@ -48,6 +48,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
+	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
 
 	dayjs.extend(relativeTime);
 
@@ -70,6 +71,10 @@
 
 	let query = '';
 	let statusFilter = 'all';
+	let ownerFilter: 'all' | 'mine' | 'shared' = 'all';
+	// Sharing and deleting are the owner's or an admin's.
+	const canShare = (automation: AutomationResponse) =>
+		automation.user_id === $user?.id || $user?.role === 'admin';
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 
 	let page = 1;
@@ -102,7 +107,7 @@
 	};
 
 	// Immediate response to page/filter changes (gate behind loaded)
-	$: if (loaded && $active && page && statusFilter !== undefined) {
+	$: if (loaded && $active && page && statusFilter !== undefined && ownerFilter) {
 		getAutomationList();
 	}
 
@@ -115,12 +120,17 @@
 
 		loading = true;
 		try {
-			const res = await getAutomationItems(localStorage.token, query, statusFilter, page).catch(
-				(error) => {
-					toast.error(`${error}`);
-					return null;
-				}
-			);
+			const res = await getAutomationItems(
+				localStorage.token,
+				query,
+				statusFilter,
+				page,
+				null,
+				ownerFilter
+			).catch((error) => {
+				toast.error(`${error}`);
+				return null;
+			});
 
 			if (res) {
 				automations = res.items;
@@ -164,7 +174,10 @@
 		});
 		if (!allAutomations) return;
 
-		const targets = allAutomations.filter((a) => a.is_active !== enable);
+		// Shared automations you can only view are left as they are.
+		const targets = allAutomations.filter(
+			(a) => a.is_active !== enable && a.write_access !== false
+		);
 		if (targets.length === 0) return;
 
 		try {
@@ -250,7 +263,14 @@
 		let totalAutomations = 0;
 
 		do {
-			const res = await getAutomationItems(localStorage.token, query, status, currentPage);
+			const res = await getAutomationItems(
+				localStorage.token,
+				query,
+				status,
+				currentPage,
+				null,
+				ownerFilter
+			);
 			const pageItems = res?.items ?? [];
 			totalAutomations = res?.total ?? pageItems.length;
 			allAutomations = [...allAutomations, ...pageItems];
@@ -487,7 +507,7 @@
 					<Dropdown align="end">
 						<button
 							type="button"
-							class="{iconButton} {statusFilter !== 'all'
+							class="{iconButton} {statusFilter !== 'all' || ownerFilter !== 'all'
 								? 'text-base-800 dark:text-base-100'
 								: ''}"
 							aria-label={$i18n.t('Filter')}
@@ -502,7 +522,7 @@
 								stroke-linecap="round"
 								aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" /></svg
 							>
-							{#if statusFilter !== 'all'}
+							{#if statusFilter !== 'all' || ownerFilter !== 'all'}
 								<span
 									class="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-base-800 dark:bg-base-100"
 								></span>
@@ -523,6 +543,21 @@
 								>
 									<span class="flex-1 text-left">{$i18n.t(label)}</span>
 									{#if statusFilter === value}<Check className="size-3! shrink-0" />{/if}
+								</button>
+							{/each}
+							<div class={menuLabel}>{$i18n.t('Owner')}</div>
+							{#each [['all', 'All'], ['mine', 'Mine'], ['shared', 'Shared with me']] as const as [value, label]}
+								<button
+									type="button"
+									role="menuitemradio"
+									aria-checked={ownerFilter === value}
+									on:click={() => {
+										ownerFilter = value;
+										page = 1;
+									}}
+								>
+									<span class="flex-1 text-left">{$i18n.t(label)}</span>
+									{#if ownerFilter === value}<Check className="size-3! shrink-0" />{/if}
 								</button>
 							{/each}
 						</DropdownMenu>
@@ -613,16 +648,13 @@
 											</Tooltip>
 
 											<Tooltip
-												content={automation.last_run_at
-													? dayjs(automation.last_run_at / 1000000)
-															.locale($i18n.language)
-															.format('LLLL')
-													: $i18n.t('Never')}
+												content={`${formatTrigger(automation.data, $i18n)} · ${formatDestination(automation)}`}
+												className="hidden min-w-0 md:block"
 											>
 												<div
-													class="shrink-0 truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
+													class="truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
 												>
-													{formatLastRun(automation)}
+													{formatTrigger(automation.data, $i18n)} · {formatDestination(automation)}
 												</div>
 											</Tooltip>
 										</div>
@@ -630,21 +662,33 @@
 								</div>
 							</div>
 
-							<div
-								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
-							>
+							<!-- The owner's avatar beside the last run, like chats in the folder view. -->
+							<div class="flex w-28 shrink-0 items-center justify-end gap-2 self-center">
+								<div class="hidden shrink-0 md:flex" role="presentation" on:click|stopPropagation>
+									<ChatParticipants
+										owner={{ id: automation.user_id, name: automation.user?.name ?? null }}
+									/>
+								</div>
+
 								<Tooltip
-									content={`${formatTrigger(automation.data, $i18n)} · ${formatDestination(automation)}`}
+									content={automation.last_run_at
+										? dayjs(automation.last_run_at / 1000000)
+												.locale($i18n.language)
+												.format('LLLL')
+										: $i18n.t('Never')}
 									className="min-w-0"
 								>
-									<div class="truncate">
-										{formatTrigger(automation.data, $i18n)} · {formatDestination(automation)}
+									<div class="truncate text-[0.6875rem] leading-5 text-base-500 dark:text-base-500">
+										{formatLastRun(automation)}
 									</div>
 								</Tooltip>
 							</div>
 
 							<div class="flex shrink-0 flex-row items-center self-center">
-								{#if shiftKey}
+								{#if shiftKey && !canShare(automation)}
+									<!-- Same space as the delete button, so the columns stay lined up. -->
+									<div class="size-6"></div>
+								{:else if shiftKey}
 									<Tooltip content={$i18n.t('Delete')}>
 										<button
 											class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
@@ -669,13 +713,17 @@
 											cloneHandler={() => {
 												cloneHandler(automation);
 											}}
-											runHandler={() => {
-												runNowHandler(automation);
-											}}
-											deleteHandler={() => {
-												deleteTarget = automation;
-												showDeleteConfirm = true;
-											}}
+											runHandler={automation.write_access !== false
+												? () => {
+														runNowHandler(automation);
+													}
+												: null}
+											deleteHandler={canShare(automation)
+												? () => {
+														deleteTarget = automation;
+														showDeleteConfirm = true;
+													}
+												: null}
 											onClose={() => {
 												openAutomationMenuId = null;
 											}}
@@ -708,6 +756,7 @@
 											>
 												<Switch
 													bind:state={automation.is_active}
+													disabled={automation.write_access === false}
 													ariaLabel={$i18n.t('Enabled')}
 													on:change={() => {
 														toggleHandler(automation);

@@ -4743,15 +4743,19 @@ async def toggle_automation(
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
 
+        from open_webui.utils.access_control.automations import has_automation_access
+
         automation = await Automations.get_by_id(automation_id)
         if not automation:
             return JSONCodec.dumps({'error': 'Automation not found'})
-        if automation.user_id != user_id:
+        # Anyone it's shared with for editing may pause it; it keeps the owner's schedule timezone.
+        if not await has_automation_access(user, automation, 'write'):
             return JSONCodec.dumps({'error': 'Access denied'})
+        owner = user if automation.user_id == user_id else await Users.get_user_by_id(automation.user_id)
 
         toggled = await Automations.toggle(
             automation_id,
-            await schedule_next_run(automation.data, tz=user.timezone if user else None),
+            await schedule_next_run(automation.data, tz=owner.timezone if owner else None),
         )
 
         return JSONCodec.dumps(

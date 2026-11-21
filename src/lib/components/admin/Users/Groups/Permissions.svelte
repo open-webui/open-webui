@@ -490,6 +490,27 @@
 			</div>
 		{/if}
 
+		{#if $config?.features?.enable_automations}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-normal">
+						{$i18n.t('Automations Sharing')}
+					</div>
+					<Switch
+						bind:state={permissions.sharing.automations}
+						ariaLabel={$i18n.t('Automations Sharing')}
+					/>
+				</div>
+				{#if defaultPermissions?.sharing?.automations && !permissions.sharing.automations}
+					<div>
+						<div class="text-xs text-base-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
 		{#if permissions.chat.share}
 			<div class="flex flex-col w-full">
 				<div class="flex w-full justify-between my-1">
