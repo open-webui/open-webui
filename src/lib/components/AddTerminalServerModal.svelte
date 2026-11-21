@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getContext, onDestroy } from 'svelte';
+	import { getContext, onDestroy, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -65,6 +65,7 @@
 	let steps: string[] = [];
 	let running = false;
 	let logs: string | null = null;
+	let logsElement: HTMLPreElement;
 	let showForceDelete = false;
 	let stopListening: (() => void) | null = null;
 	const input =
@@ -338,6 +339,8 @@
 		run(async () => {
 			logs =
 				logs === null ? (await getSSHMachineLogs(localStorage.token, connection.id)).logs : null;
+			await tick();
+			if (logsElement) logsElement.scrollTop = logsElement.scrollHeight; // show the newest lines
 		});
 	const remove = (force = false) =>
 		run(async () => {
@@ -574,6 +577,7 @@
 				{/if}
 				{#if logs !== null}
 					<pre
+						bind:this={logsElement}
 						class="mt-2 max-h-48 overflow-auto whitespace-pre rounded-lg bg-base-50 p-2 font-mono text-[0.6875rem] leading-relaxed text-base-600 dark:bg-base-850 dark:text-base-400">{logs ||
 							$i18n.t('No logs yet.')}</pre>
 				{/if}
