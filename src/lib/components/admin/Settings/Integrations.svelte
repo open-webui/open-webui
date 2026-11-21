@@ -276,9 +276,9 @@
 								</Tooltip>
 							</div>
 
-							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
+							<Tooltip content={$i18n.t('Add Machine')}>
 								<button
-									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
+									aria-label={$i18n.t('Add Machine')}
 									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										editTerminalIdx = null;
