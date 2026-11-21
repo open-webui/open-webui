@@ -2318,7 +2318,7 @@
 								: ' border-base-200/60 dark:border-base-800/40'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-base-0/80 dark:bg-[oklch(0.24_0_0)]/90 backdrop-blur-md dark:text-base-100"
+								: ''}  transition px-0.5 bg-base-0/80 dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))]/90 backdrop-blur-md dark:text-base-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}
