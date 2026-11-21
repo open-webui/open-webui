@@ -4,6 +4,7 @@ import hashlib
 import re
 from urllib.parse import quote
 
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import ChatModel, Chats
 from open_webui.utils.auth import decode_token
 
@@ -75,7 +76,9 @@ async def get_session(chat, message_id=None):
     )
     if not message_id:
         return None
-    messages = await Chats.get_messages_map_by_chat_id(chat.id) or {}
+    messages = await ChatMessages.get_message_parents_map_by_chat_id(chat.id)
+    if not messages or Chats.get_unresolved_parent_ids(messages):
+        messages = await Chats.get_messages_map_by_chat_id(chat.id) or {}
     return _find(chat, messages, message_id)[0]
 
 

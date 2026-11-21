@@ -296,19 +296,22 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
     instance_user = user
     chat_id = metadata.get('chat_id')
     if chat_id and is_saved_chat_id(chat_id):
-        chat = await Chats.get_accessible_chat_by_id(chat_id, user, permission='write')
-        if chat is None:
-            other = await Chats.get_chat_by_id(chat_id)
-            if other is None or not await has_terminal_write_access(user, terminal_id):
+        chat = await Chats.get_chat_without_history_by_id(chat_id)
+        if chat is None or not await Chats.has_chat_access(chat_id, user, permission='write', chat=chat):
+            if chat is None or not await has_terminal_write_access(user, terminal_id):
                 raise HTTPException(403, 'Chat access denied')
-            return await find_instance_user_connection(other.user_id)
+            return await find_instance_user_connection(chat.user_id)
         if chat.meta.get('internal') is True and chat.meta.get('type') == 'subagent':
             # A sub-agent shares the instance and files of its parent chat.
             metadata['chat_id'] = chat.meta.get('parent_chat_id')
             return await find_terminal_connection(user, terminal_id, metadata, request=request)
         from open_webui.utils.agents.session import get_session, model_id
 
-        shared_session = await get_session(chat)
+        # Without a current message id only the full chat knows where the history ends.
+        session_chat = chat if chat.current_message_id else await Chats.get_chat_by_id(chat_id)
+        if session_chat is None:
+            raise HTTPException(403, 'Chat access denied')
+        shared_session = await get_session(session_chat)
         if shared_session and shared_session['terminal_id'] != terminal_id:
             shared_session = None
         if shared_session:
@@ -342,7 +345,10 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
     scope = (template.get('data') or {}).get('scope')
 
     if chat and not shared_session:
-        stored = (chat.chat or {}).get('terminal_id')
+        full_chat = await Chats.get_chat_by_id(chat_id)
+        if full_chat is None:
+            raise HTTPException(403, 'Chat access denied')
+        stored = (full_chat.chat or {}).get('terminal_id')
         if chat.user_id != user.id and stored != terminal_id:
             raise HTTPException(403, 'Use the terminal selected by the chat owner')
         if stored and stored != terminal_id:
