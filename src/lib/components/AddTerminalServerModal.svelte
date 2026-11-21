@@ -13,7 +13,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
-	import { verifyTerminalServerConnection } from '$lib/apis/configs';
+	import { getTerminalServerConnections, verifyTerminalServerConnection } from '$lib/apis/configs';
 	import {
 		createSSHKeypair,
 		formatSSHUrl,
@@ -57,6 +57,7 @@
 	let signIn: 'password' | 'key' | 'manual' = 'password';
 	let password = '';
 	let privateKey = '';
+	let openTerminalVersion = ''; // empty means latest
 	let passphrase = '';
 	let keyFileInput: HTMLInputElement;
 	let sshPhase: 'form' | 'fingerprint' | 'authorize' | 'installing' = 'form';
@@ -91,6 +92,10 @@
 		serverType = connection?.server_type ?? null;
 		accessGrants = connection?.config?.access_grants ?? [];
 		chatUploads = connection ? (connection.config?.chat_uploads ?? 'default') : 'filesystem';
+		openTerminalVersion =
+			connection?.ssh?.requested_version && connection.ssh.requested_version !== 'latest'
+				? connection.ssh.requested_version
+				: '';
 		workingDirectoryContext = connection?.config?.working_directory_context ?? true;
 		userShellTools = connection?.config?.user_shell_tools ?? 'auto';
 		error = '';
@@ -306,7 +311,8 @@
 				...sshTarget,
 				host_key: hostKey.host_key,
 				id: machine.id,
-				name: name.trim()
+				name: name.trim(),
+				version: openTerminalVersion.trim() || 'latest'
 			});
 		} catch (e) {
 			stopListening?.();
@@ -319,12 +325,23 @@
 	// Existing SSH machines
 	const upgrade = () =>
 		run(async () => {
-			follow(connection.id, (ok, message) => {
-				if (ok) toast.success($i18n.t('Machine upgraded'));
-				else error = message ?? $i18n.t('Upgrade failed');
+			follow(connection.id, async (ok, message) => {
+				if (!ok) {
+					error = message ?? $i18n.t('Upgrade failed');
+					return;
+				}
+				toast.success($i18n.t('Machine upgraded'));
+				// Show the version that is now installed.
+				const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
+				const updated = res?.TERMINAL_SERVER_CONNECTIONS?.find((c: any) => c.id === connection.id);
+				if (updated?.ssh) connection = { ...connection, ssh: updated.ssh };
 			});
 			try {
-				await upgradeSSHMachine(localStorage.token, connection.id);
+				await upgradeSSHMachine(
+					localStorage.token,
+					connection.id,
+					openTerminalVersion.trim() || 'latest'
+				);
 			} catch (e) {
 				stopListening?.();
 				throw e;
@@ -609,6 +626,24 @@
 						{/if}
 					</div>
 				</div>
+			</div>
+		{/if}
+		{#if (installingSSH && sshPhase === 'form') || sshMachine}
+			<div>
+				<label for="open-terminal-version" class="mb-0.5 block text-xs text-base-500"
+					>{$i18n.t('Open Terminal version')}</label
+				>
+				<input
+					id="open-terminal-version"
+					class="{input} font-mono"
+					bind:value={openTerminalVersion}
+					placeholder="latest"
+					pattern="latest|\d+\.\d+\.\d+"
+					autocomplete="off"
+				/>
+				<p class="mt-1 text-xs text-base-500">
+					{$i18n.t('Leave empty for the latest release. Upgrade installs this version.')}
+				</p>
 			</div>
 		{/if}
 		{#if sshPhase === 'installing' || running || steps.length}

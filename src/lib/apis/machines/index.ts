@@ -874,6 +874,7 @@ export type SSHMachineInfo = {
 	host_key: string;
 	root?: string;
 	version?: string;
+	requested_version?: string; // 'latest' or an exact version
 	transport?: 'streamlocal' | 'stdio';
 	status?: 'installing' | 'ready' | 'error';
 	error?: string | null;
@@ -947,11 +948,17 @@ export const installSSHKey = (
 /** Start installing Open Terminal. Progress arrives as `machines:progress` socket events. */
 export const installSSHMachine = (
 	token: string,
-	form: SSHTarget & { host_key: string; id: string; name: string }
+	form: SSHTarget & { host_key: string; id: string; name: string; version?: string }
 ) => sshRequest<{ id: string; status: string }>(token, '', 'POST', form);
 
-export const upgradeSSHMachine = (token: string, id: string) =>
-	sshRequest<{ id: string; status: string }>(token, `/${encodeURIComponent(id)}/upgrade`, 'POST');
+/** Install the machine's Open Terminal again: `version` is 'latest' or an exact version (omit to keep the current choice). */
+export const upgradeSSHMachine = (token: string, id: string, version?: string) =>
+	sshRequest<{ id: string; status: string }>(
+		token,
+		`/${encodeURIComponent(id)}/upgrade`,
+		'POST',
+		version === undefined ? undefined : { version }
+	);
 
 export const restartSSHMachine = (token: string, id: string) =>
 	sshRequest<{ status: boolean }>(token, `/${encodeURIComponent(id)}/restart`, 'POST');

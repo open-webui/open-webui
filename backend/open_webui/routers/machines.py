@@ -93,6 +93,11 @@ class InstallKeyForm(Pinned):
 class CreateForm(Pinned):
     id: str = Field(pattern=SSH_MACHINE_ID)
     name: str = Field('', max_length=100)
+    version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
+
+
+class UpgradeForm(BaseModel):
+    version: str | None = Field(None, max_length=20)  # omitted: keep the machine's current choice
 
 
 def _ssh_fail(error: BaseException):
@@ -139,18 +144,28 @@ async def install_key(form: InstallKeyForm, user=Depends(get_admin_user)):
 
 @router.post('/ssh')
 async def create_machine(request: Request, form: CreateForm, user=Depends(get_admin_user)):
+    try:
+        version = ssh_machines.requested_version(form.version)
+    except MachineError as error:
+        _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
-    _ssh_start(ssh_machines.provision(request, form.id, user.id, name=form.name or form.host, ssh=target))
+    _ssh_start(
+        ssh_machines.provision(request, form.id, user.id, name=form.name or form.host, ssh=target, version=version)
+    )
     return {'id': form.id, 'status': 'installing'}
 
 
 @router.post('/ssh/{machine_id}/upgrade')
-async def upgrade_machine(request: Request, machine_id: str, user=Depends(get_admin_user)):
+async def upgrade_machine(
+    request: Request, machine_id: str, form: UpgradeForm | None = None, user=Depends(get_admin_user)
+):
+    """Install the machine's chosen Open Terminal version again ('latest' fetches the newest); also repairs."""
     try:
         await ssh_machines.get_machine(machine_id)
+        version = ssh_machines.requested_version(form.version) if form and form.version is not None else None
     except MachineError as error:
         _ssh_fail(error)
-    _ssh_start(ssh_machines.provision(request, machine_id, user.id))  # also repairs a broken install
+    _ssh_start(ssh_machines.provision(request, machine_id, user.id, version=version))
     return {'id': machine_id, 'status': 'installing'}
 
 

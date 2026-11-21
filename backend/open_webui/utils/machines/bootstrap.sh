@@ -21,12 +21,18 @@ export UV_INSTALL_DIR="$ROOT/bin" UV_TOOL_DIR="$ROOT/tools" UV_TOOL_BIN_DIR="$RO
 if [ ! -x "$ROOT/bin/uv" ]; then
   curl -LsSf "https://astral.sh/uv/__OPEN_WEBUI_UV_VERSION__/install.sh" | sh >/dev/null
 fi
-if [ "$(cat "$ROOT/version" 2>/dev/null || true)" != "$VERSION" ]; then
-  if [ -x "$ROOT/stop.sh" ]; then "$ROOT/stop.sh"; fi
-  "$ROOT/bin/uv" tool install --quiet --force --python 3.12 "open-terminal==$VERSION"
-  "$ROOT/bin/open-terminal" --version >/dev/null   # prove it runs here before recording it
-  echo "$VERSION" > "$ROOT/version"
+# VERSION is "latest" (newest release, at least the minimum Open WebUI needs) or an exact version.
+INSTALLED="$(cat "$ROOT/version" 2>/dev/null || true)"
+if [ "$VERSION" = latest ] || [ "$INSTALLED" != "$VERSION" ]; then
+  if [ "$VERSION" = latest ]; then SPEC="open-terminal>=__OPEN_WEBUI_MIN_VERSION__"; else SPEC="open-terminal==$VERSION"; fi
+  "$ROOT/bin/uv" tool install --quiet --force --upgrade --python 3.12 "$SPEC"
+  NEW="$("$ROOT/bin/open-terminal" --version | awk '{print $NF}')"   # also proves it runs here
+  if [ "$NEW" != "$INSTALLED" ]; then
+    if [ -x "$ROOT/stop.sh" ]; then "$ROOT/stop.sh"; fi   # start.sh below brings up the new version
+    echo "$NEW" > "$ROOT/version"
+  fi
 fi
+echo "OPEN_WEBUI:version:$(cat "$ROOT/version")"
 
 echo "OPEN_WEBUI:step:configure"
 umask 077

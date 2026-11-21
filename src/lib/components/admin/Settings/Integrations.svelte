@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount, getContext, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 	import type { Writable } from 'svelte/store';
@@ -9,7 +9,7 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { config, models, settings, user, terminalServers } from '$lib/stores';
+	import { config, models, settings, user, terminalServers, socket } from '$lib/stores';
 	import { getTerminalServers } from '$lib/apis/machines';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -140,7 +140,19 @@
 		} catch {
 			// Not configured yet
 		}
+		$socket?.on('events', machinesChanged);
 	});
+
+	// An SSH install or upgrade finished (here or in another tab): show the machine's new state.
+	const machinesChanged = async (event: { data?: { type?: string } }) => {
+		if (event?.data?.type !== 'machines:changed') return;
+		const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
+		if (res?.TERMINAL_SERVER_CONNECTIONS) {
+			terminalConnections = res.TERMINAL_SERVER_CONNECTIONS as TerminalConnection[];
+		}
+	};
+
+	onDestroy(() => $socket?.off('events', machinesChanged));
 </script>
 
 <AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />

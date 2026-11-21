@@ -31,7 +31,9 @@ from open_webui.models.config import Config
 
 log = logging.getLogger(__name__)
 
-OPEN_TERMINAL_VERSION = '0.17.21'  # 0.17.21+ ships `open-terminal bridge`; bump with Open WebUI releases
+# Machines install the latest Open Terminal by default, or a version the admin pins.
+# This is the oldest one Open WebUI works with (first with `open-terminal bridge`).
+MIN_OPEN_TERMINAL_VERSION = '0.17.21'
 UV_VERSION = '0.13.9'
 CONNECTIONS = 'machines.connections'
 SECRETS = 'machines.secrets'  # never returned to the browser
@@ -42,7 +44,8 @@ ID_RE = re.compile(r'm_[0-9a-f]{8}')
 ROOT_RE = re.compile(r'/[A-Za-z0-9._/@+-]+/\.open-webui/m_[0-9a-f]{8}')
 TOKENS = {
     'ID': ID_RE,
-    'VERSION': re.compile(r'\d+\.\d+\.\d+'),
+    'VERSION': re.compile(r'latest|\d+\.\d+\.\d+'),
+    'MIN_VERSION': re.compile(r'\d+\.\d+\.\d+'),
     'UV_VERSION': re.compile(r'\d+\.\d+\.\d+'),
     'API_KEY': re.compile(r'[A-Za-z0-9_-]{32,64}'),
 }
@@ -217,6 +220,18 @@ async def install_public_key(
         pass
 
 
+def requested_version(value: str | None) -> str:
+    """Normalize the admin's choice: 'latest' (default) or an exact version no older than the minimum."""
+    value = (value or '').strip() or 'latest'
+    if value == 'latest':
+        return value
+    if not re.fullmatch(r'\d+\.\d+\.\d+', value):
+        raise MachineError('Use "latest" or a version like 0.17.21.')
+    if tuple(map(int, value.split('.'))) < tuple(map(int, MIN_OPEN_TERMINAL_VERSION.split('.'))):
+        raise MachineError(f'Open WebUI needs Open Terminal {MIN_OPEN_TERMINAL_VERSION} or newer.')
+    return value
+
+
 def render(template: str, **values: str) -> str:
     for name, value in values.items():
         if not TOKENS[name].fullmatch(value):
@@ -224,13 +239,20 @@ def render(template: str, **values: str) -> str:
     return re.sub(r'__OPEN_WEBUI_([A-Z_]+)__', lambda m: values[m.group(1)], template)
 
 
-async def run_bootstrap(conn, machine_id: str, api_key: str, on_step) -> str:
-    """Install or upgrade Open Terminal and start it. Returns the absolute install root."""
-    script = render(BOOTSTRAP, ID=machine_id, VERSION=OPEN_TERMINAL_VERSION, UV_VERSION=UV_VERSION, API_KEY=api_key)
+async def run_bootstrap(conn, machine_id: str, api_key: str, on_step, version: str = 'latest') -> tuple[str, str]:
+    """Install or upgrade Open Terminal and start it. Returns (install root, installed version)."""
+    script = render(
+        BOOTSTRAP,
+        ID=machine_id,
+        VERSION=requested_version(version),
+        MIN_VERSION=MIN_OPEN_TERMINAL_VERSION,
+        UV_VERSION=UV_VERSION,
+        API_KEY=api_key,
+    )
     proc = await conn.create_process(LOGIN, stderr=asyncssh.STDOUT)
     proc.stdin.write(script)  # stdin, not argv: the API key never shows up in `ps`
     proc.stdin.write_eof()
-    root, error, tail = None, None, deque(maxlen=80)
+    root, installed, error, tail = None, None, None, deque(maxlen=80)
     try:
         async with asyncio.timeout(900):  # a cold install downloads Python and the package
             async for line in proc.stdout:
@@ -243,6 +265,8 @@ async def run_bootstrap(conn, machine_id: str, api_key: str, on_step) -> str:
                     await on_step(value)
                 elif kind == 'root':
                     root = value
+                elif kind == 'version':
+                    installed = value
                 elif kind == 'error':
                     error = value
             await proc.wait()
@@ -252,7 +276,7 @@ async def run_bootstrap(conn, machine_id: str, api_key: str, on_step) -> str:
         raise MachineError(error or '\n'.join(tail) or 'Setup failed.')
     if not ROOT_RE.fullmatch(root):
         raise MachineError(f'Unexpected install path: {root}')
-    return root
+    return root, installed or ''
 
 
 async def detect_transport(conn, root: str) -> str:
@@ -524,8 +548,20 @@ class MachineClient:
 # ---------------------------------------------------------------------------
 
 
-async def provision(request, machine_id: str, admin_id: str, *, name: str | None = None, ssh: dict | None = None):
-    """Create (ssh given) or upgrade/repair (ssh omitted) a machine, streaming progress to the admin."""
+async def provision(
+    request,
+    machine_id: str,
+    admin_id: str,
+    *,
+    name: str | None = None,
+    ssh: dict | None = None,
+    version: str | None = None,
+):
+    """Create (ssh given) or upgrade/repair (ssh omitted) a machine, streaming progress to the admin.
+
+    `version` is 'latest' or an exact Open Terminal version. When omitted, the machine keeps
+    the version the admin chose last time ('latest' if none).
+    """
     from open_webui.socket.main import emit_to_users
     from open_webui.utils.machines import notify_machines_changed
     from open_webui.utils.tools import set_terminal_servers
@@ -544,6 +580,7 @@ async def provision(request, machine_id: str, admin_id: str, *, name: str | None
     if not ssh:
         raise MachineError('Unknown machine.')
     api_key = (existing or {}).get('key') or secrets.token_urlsafe(32)
+    requested = requested_version(version if version is not None else ssh.get('requested_version'))
 
     try:
         if existing:
@@ -551,7 +588,7 @@ async def provision(request, machine_id: str, admin_id: str, *, name: str | None
             await tunnels.drop(machine_id)
         await step('connect')
         async with await connect(ssh, key=await _private_key(machine_id)) as conn:
-            root = await run_bootstrap(conn, machine_id, api_key, step)
+            root, installed = await run_bootstrap(conn, machine_id, api_key, step, requested)
             transport = await detect_transport(conn, root)
 
         entry = existing or {
@@ -566,7 +603,8 @@ async def provision(request, machine_id: str, admin_id: str, *, name: str | None
         entry['ssh'] = {
             **{k: ssh[k] for k in ('host', 'port', 'username', 'host_key')},
             'root': root,
-            'version': OPEN_TERMINAL_VERSION,
+            'version': installed,
+            'requested_version': requested,
             'transport': transport,
             'status': 'ready',
             'error': None,
