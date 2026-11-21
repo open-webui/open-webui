@@ -192,8 +192,8 @@
 				{/if}
 			</div>
 			{#if chat.pending_approval || chat.active || unread}
-				<!-- Centered on the title's first line, like the list's marker slot. -->
-				<span class="flex h-5 w-3 shrink-0 items-center justify-center">
+				<!-- Centered on the title's first line; same distance from the icons as in the list. -->
+				<span class="-ml-0.5 flex h-5 w-3 shrink-0 items-center justify-center">
 					{#if chat.pending_approval}
 						<span
 							class="size-1.5 rounded-full bg-yellow-500"

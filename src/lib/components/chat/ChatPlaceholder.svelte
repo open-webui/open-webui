@@ -3,12 +3,13 @@
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 
-	import { config, user } from '$lib/stores';
+	import { config, user, recentChats, refreshRecentChats } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 
 	import { blur, fade } from 'svelte/transition';
 
 	import Suggestions from './Suggestions.svelte';
+	import RecentChats from './RecentChats.svelte';
 	import { sanitizeResponseContent } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,
@@ -52,9 +53,15 @@
 	$: firstName = firstNameOf($user?.name);
 	$: showGreeting = !!firstName && !selectedModelDescription;
 	$: greeting = getGreeting((key, options) => $i18n.t(key, options), firstName);
-	$: selectedSuggestionPrompts =
+	// The model's own suggestions come first, then recent chats, then the default suggestions.
+	$: modelSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
-		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
+		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language);
+	$: showRecentChats = !modelSuggestionPrompts?.length && ($recentChats?.length ?? 0) > 0;
+	// Until recent chats first load, show neither rather than flash the defaults.
+	$: waitingForRecentChats = !modelSuggestionPrompts?.length && $recentChats === null;
+	$: selectedSuggestionPrompts =
+		modelSuggestionPrompts ??
 		resolveLocalizedPromptSuggestions(
 			$config?.default_prompt_suggestions,
 			$config?.default_prompt_suggestions_i18n ?? {},
@@ -64,6 +71,7 @@
 
 	onMount(() => {
 		mounted = true;
+		refreshRecentChats(localStorage.token);
 	});
 </script>
 
@@ -172,11 +180,15 @@
 		</div>
 
 		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
-			<Suggestions
-				className="grid grid-cols-2"
-				suggestionPrompts={selectedSuggestionPrompts}
-				{onSelect}
-			/>
+			{#if showRecentChats}
+				<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+			{:else if !waitingForRecentChats}
+				<Suggestions
+					className="grid grid-cols-2"
+					suggestionPrompts={selectedSuggestionPrompts}
+					{onSelect}
+				/>
+			{/if}
 		</div>
 	</div>
 {/key}

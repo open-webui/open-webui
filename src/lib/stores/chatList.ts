@@ -15,6 +15,19 @@ const pinnedChatsStore = writable<ChatListItem[]>([]);
 export const chats = readonly(chatsStore);
 export const pinnedChats = readonly(pinnedChatsStore);
 
+// Latest few chats for the new-chat landing, from folders and pins too (the sidebar's
+// list leaves those out). Null until the first load, so the landing can wait for it.
+const recentChatsStore = writable<ChatListItem[] | null>(null);
+export const recentChats = readonly(recentChatsStore);
+
+export const refreshRecentChats = async (token: string = '') => {
+	const list = (await getChatList(token, 1, true, true, {
+		sortBy: 'updated_at',
+		status: 'active'
+	}).catch(() => [])) as ChatListItem[];
+	recentChatsStore.set((list ?? []).slice(0, 5));
+};
+
 // How the sidebar's chat list is filtered and sorted; remembered per browser.
 export type ChatListView = {
 	status: 'active' | 'archived' | 'all';

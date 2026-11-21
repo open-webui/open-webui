@@ -206,8 +206,8 @@
 						on:dragstart={(event) => chatDragStartHandler(event, chat)}
 						on:click={(event) => open(event, chat)}
 					>
-						<div class="flex shrink-0 items-center gap-2">
-							<!-- Status, its time, then priority, kept close together. -->
+						<!-- Status, its time, priority, then the marker dot a little apart. -->
+						<div class="flex shrink-0 items-center gap-1">
 							<div class="flex items-center gap-0.5">
 								<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
 								{#if showStatusTime}

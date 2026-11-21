@@ -12,7 +12,7 @@
 
 	import { updateFolderById } from '$lib/apis/folders';
 
-	import { config, user, selectedFolder } from '$lib/stores';
+	import { config, user, selectedFolder, recentChats, refreshRecentChats } from '$lib/stores';
 	import { sanitizeResponseContent, extractCurlyBraceWords } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,
@@ -24,6 +24,7 @@
 	import { firstNameOf, getGreeting } from '$lib/utils/greeting';
 
 	import Suggestions from './Suggestions.svelte';
+	import RecentChats from './RecentChats.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
 	import MessageInput from './MessageInput.svelte';
@@ -121,15 +122,25 @@
 	$: firstName = firstNameOf($user?.name);
 	$: showGreeting = !!firstName && !selectedModelDescription;
 	$: greeting = getGreeting((key, options) => $i18n.t(key, options), firstName);
-	$: selectedSuggestionPrompts =
+	// The model's own suggestions come first, then recent chats, then the default suggestions.
+	$: modelSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
-		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
+		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language);
+	$: showRecentChats = !modelSuggestionPrompts?.length && ($recentChats?.length ?? 0) > 0;
+	// Until recent chats first load, show neither rather than flash the defaults.
+	$: waitingForRecentChats = !modelSuggestionPrompts?.length && $recentChats === null;
+	$: selectedSuggestionPrompts =
+		modelSuggestionPrompts ??
 		resolveLocalizedPromptSuggestions(
 			$config?.default_prompt_suggestions,
 			$config?.default_prompt_suggestions_i18n ?? {},
 			$i18n.language,
 			(key) => $i18n.t(key)
 		);
+
+	onMount(() => {
+		refreshRecentChats(localStorage.token);
+	});
 
 	// True when viewing a shared folder the current user doesn't own AND lacks write access
 	$: folderReadOnly =
@@ -374,7 +385,15 @@
 
 		<div class="mx-auto max-w-2xl mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
-				<Suggestions suggestionPrompts={selectedSuggestionPrompts} inputValue={prompt} {onSelect} />
+				{#if showRecentChats}
+					<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+				{:else if !waitingForRecentChats}
+					<Suggestions
+						suggestionPrompts={selectedSuggestionPrompts}
+						inputValue={prompt}
+						{onSelect}
+					/>
+				{/if}
 			</div>
 		</div>
 	{/if}
