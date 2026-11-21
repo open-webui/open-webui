@@ -5,7 +5,7 @@ import copy
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64
-from open_webui.utils.misc import get_message_list
+from open_webui.utils.misc import get_message_list, is_raster_image_content_type
 from open_webui.utils.terminals import get_terminal_json, upload_files_to_terminal
 
 from .session import get_resume_point
@@ -136,10 +136,19 @@ async def run(request, form_data, user, metadata, model):
         prompt += f'\n\n{form_data["regeneration_prompt"]}'
     if paths:
         prompt += '\n\nAttached files in this environment:\n' + '\n'.join(paths)
-    await convert_url_images_to_base64(form_data, user=user)
+    # Saved chats send a message's images only as its files.
+    attached_images = {
+        'content': [
+            {'type': 'image_url', 'image_url': {'url': file['url']}}
+            for file in user_message.get('files') or []
+            if file.get('url')
+            and (file.get('type') == 'image' or is_raster_image_content_type(file.get('content_type')))
+        ]
+    }
+    await convert_url_images_to_base64({'messages': [*messages, attached_images]}, user=user)
     images = [
         p['image_url']['url']
-        for m in [user_message, *messages[-1:]]
+        for m in [user_message, *messages[-1:], attached_images]
         for p in (m.get('content') if isinstance(m.get('content'), list) else [])
         if p.get('type') == 'image_url' and p.get('image_url', {}).get('url', '').startswith('data:image/')
     ]
