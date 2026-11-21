@@ -421,6 +421,7 @@
 	}
 
 	export let messageInput = false;
+	export let autofocus = true;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
@@ -1106,7 +1107,7 @@
 			],
 			content: provider ? undefined : content,
 			editable,
-			autofocus: messageInput && !$mobile && !$voiceCall,
+			autofocus: autofocus && messageInput && !$mobile && !$voiceCall,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 

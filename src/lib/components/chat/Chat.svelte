@@ -173,6 +173,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
 	import EmbeddedChatHistoryDropdown from './EmbeddedChatHistoryDropdown.svelte';
 	import ChatMenu from '$lib/components/layout/Navbar/Menu.svelte';
 	import ShareChatModal from './ShareChatModal.svelte';
@@ -239,6 +240,11 @@
 	export let onBeforeNoteSubmit: (() => Promise<void>) | null = null;
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
+	// Collapsed embedded chats render only the composer; the host expands them on demand.
+	export let embeddedCollapsed = false;
+	export let onCollapseEmbedded: (() => void) | null = null;
+	// Pads the header and messages when the host draws the composer flush to its frame.
+	export let embeddedInset = false;
 	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
 	export let onCreateEmbeddedChat:
 		| ((chat: {
@@ -6170,9 +6176,11 @@
 					{/if}
 				{:else}
 					<FilesOverlay show={dragged} />
-					{#if embedded && !tabbed}
+					{#if embedded && !tabbed && !embeddedCollapsed}
 						<div
-							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-base-50/80 px-3 pb-1 text-base-700 dark:border-base-850/40 dark:text-base-200"
+							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-base-50/80 pb-1 text-base-700 dark:border-base-850/40 dark:text-base-200 {embeddedInset
+								? 'px-4'
+								: 'px-3'}"
 						>
 							<div class="flex min-w-0 items-center gap-2">
 								<EmbeddedChatHistoryDropdown
@@ -6186,6 +6194,16 @@
 									onDeleteChat={onDeleteEmbeddedChat}
 								/>
 							</div>
+							{#if onCollapseEmbedded}<Tooltip content={$i18n.t('Collapse')} placement="bottom">
+									<button
+										type="button"
+										class="rounded-md py-1 text-base-500 transition hover:text-base-900 dark:hover:text-base-0 px-0"
+										on:click={() => onCollapseEmbedded?.()}
+										aria-label={$i18n.t('Collapse')}
+									>
+										<ChevronDown className="size-4" strokeWidth="2" />
+									</button>
+								</Tooltip>{/if}
 							{#if onCloseEmbedded}<Tooltip content={$i18n.t('Close')} placement="bottom">
 									<button
 										type="button"
@@ -6270,12 +6288,16 @@
 					{/if}
 					<div
 						id="chat-pane"
-						class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto"
+						class="flex min-h-0 flex-col flex-auto z-10 w-full @container {embeddedCollapsed
+							? 'overflow-visible'
+							: 'overflow-auto'}"
 					>
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
 						{#if (!tabbed && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+								class:hidden={embeddedCollapsed}
+								class:px-2={embeddedInset}
 								id={messagesContainerId}
 								bind:this={messagesContainerElement}
 								on:scroll={(e) => {
@@ -6387,6 +6409,7 @@
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
+										autofocus={!embeddedCollapsed}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -6444,7 +6467,7 @@
 											</p>
 										</div>
 									</div>
-								{:else if suggestedPrompts.length > 0}
+								{:else if suggestedPrompts.length > 0 && !embeddedCollapsed}
 									<div class="flex flex-1 items-end px-5 pb-8">
 										<div class="w-full">
 											<div class="mb-2 text-[0.75rem] text-base-300 dark:text-base-700">
@@ -6509,6 +6532,7 @@
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
+										autofocus={!embeddedCollapsed}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
