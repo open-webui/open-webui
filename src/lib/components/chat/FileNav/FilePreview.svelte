@@ -558,16 +558,16 @@
 	.csv-table thead th {
 		position: sticky;
 		top: 0;
-		background: rgba(243, 244, 246, 0.95);
+		background: color-mix(in oklab, var(--color-base-100) 95%, transparent);
 		backdrop-filter: blur(4px);
 		font-weight: 600;
-		color: #374151;
+		color: var(--color-base-700);
 		border-bottom: 2px solid rgba(128, 128, 128, 0.25);
 		z-index: 1;
 	}
 	:global(.dark) .csv-table thead th {
-		background: rgba(31, 41, 55, 0.95);
-		color: #d1d5db;
+		background: color-mix(in oklab, var(--color-base-800) 95%, transparent);
+		color: var(--color-base-300);
 	}
 	.csv-table tbody tr:nth-child(even) {
 		background: rgba(128, 128, 128, 0.04);
@@ -579,13 +579,13 @@
 		background: rgba(59, 130, 246, 0.1);
 	}
 	.csv-table td {
-		color: #374151;
+		color: var(--color-base-700);
 	}
 	:global(.dark) .csv-table td {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.csv-row-num {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-size: 0.6rem;
 		text-align: right !important;
 		user-select: none;
@@ -593,7 +593,7 @@
 		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .csv-row-num {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	/* DOCX / generic office styles */
 	:global(.office-preview img) {

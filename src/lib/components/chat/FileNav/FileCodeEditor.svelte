@@ -318,14 +318,14 @@
 
 <style>
 	.file-code-editor {
-		--editor-bg: #fff;
-		--editor-fg: #525252;
+		--editor-bg: var(--color-base-0);
+		--editor-fg: var(--color-base-700);
 		width: 100%;
 		height: 100%;
 	}
 	:global(.dark) .file-code-editor {
-		--editor-bg: #121212;
-		--editor-fg: #d4d4d4;
+		--editor-bg: color-mix(in oklab, var(--color-base-900) 50%, var(--color-base-950));
+		--editor-fg: var(--color-base-300);
 	}
 	.file-code-editor :global(.cm-editor) {
 		height: 100%;

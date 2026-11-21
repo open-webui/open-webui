@@ -115,10 +115,10 @@
 		],
 		[
 			'bg-base-100 dark:bg-base-800',
-			'bg-neutral-200 dark:bg-neutral-800',
-			'bg-neutral-400 dark:bg-neutral-600',
-			'bg-neutral-600 dark:bg-neutral-400',
-			'bg-neutral-800 dark:bg-neutral-200'
+			'bg-base-200 dark:bg-base-850',
+			'bg-base-500 dark:bg-base-700',
+			'bg-base-700 dark:bg-base-500',
+			'bg-base-850 dark:bg-base-200'
 		]
 	];
 

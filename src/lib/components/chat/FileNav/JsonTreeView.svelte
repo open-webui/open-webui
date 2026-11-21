@@ -98,7 +98,7 @@
 		width: 1em;
 		font-size: 0.55em;
 		transition: transform 0.15s ease;
-		color: #9ca3af;
+		color: var(--color-base-500);
 		vertical-align: middle;
 	}
 	.json-expanded {
@@ -119,7 +119,7 @@
 		color: #79c0ff;
 	}
 	.json-colon {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	.json-string {
 		color: #0a3069;
@@ -140,20 +140,20 @@
 		color: #ff7b72;
 	}
 	.json-null {
-		color: #6b7280;
+		color: var(--color-base-600);
 		font-style: italic;
 	}
 	.json-bracket {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	.json-comma {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	.json-preview {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-size: 0.85em;
 	}
 	:global(.dark) .json-preview {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 </style>

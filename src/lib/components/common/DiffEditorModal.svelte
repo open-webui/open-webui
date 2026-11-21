@@ -1033,10 +1033,10 @@
 		background: #3e9c89;
 	}
 	:global(.dark) .merge-container :global(.cm-editor) {
-		background: #101413;
+		background: var(--color-base-950);
 	}
 	:global(.dark) .merge-container :global(.cm-gutters) {
-		background: #101413 !important;
+		background: var(--color-base-950) !important;
 	}
 	.merge-container :global(.cm-mergeViewEditors) {
 		height: 100%;

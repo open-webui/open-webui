@@ -192,7 +192,7 @@
 	}
 
 	input[type='checkbox'] {
-		@apply appearance-none size-3.5 align-middle bg-white border border-base-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-base-800 dark:border-base-600 self-center;
+		@apply appearance-none size-3.5 align-middle bg-base-0 border border-base-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-base-800 dark:border-base-600 self-center;
 		/* Center the custom mark */
 		display: inline-block;
 		position: relative;

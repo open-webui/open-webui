@@ -334,16 +334,16 @@
 	.sqlite-table thead th {
 		position: sticky;
 		top: 0;
-		background: rgba(243, 244, 246, 0.95);
+		background: color-mix(in oklab, var(--color-base-100) 95%, transparent);
 		backdrop-filter: blur(4px);
 		font-weight: 600;
-		color: #374151;
+		color: var(--color-base-700);
 		border-bottom: 2px solid rgba(128, 128, 128, 0.25);
 		z-index: 1;
 	}
 	:global(.dark) .sqlite-table thead th {
-		background: rgba(31, 41, 55, 0.95);
-		color: #d1d5db;
+		background: color-mix(in oklab, var(--color-base-800) 95%, transparent);
+		color: var(--color-base-300);
 	}
 	.sqlite-table tbody tr:nth-child(even) {
 		background: rgba(128, 128, 128, 0.04);
@@ -355,16 +355,16 @@
 		background: rgba(59, 130, 246, 0.1);
 	}
 	.sqlite-table td {
-		color: #374151;
+		color: var(--color-base-700);
 		max-width: 18.75rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 	:global(.dark) .sqlite-table td {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.sqlite-row-num {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-size: 0.6rem;
 		text-align: right !important;
 		user-select: none;
@@ -372,19 +372,19 @@
 		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .sqlite-row-num {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	.sqlite-null {
-		color: #9ca3af !important;
+		color: var(--color-base-500) !important;
 		font-style: italic;
 	}
 	:global(.dark) .sqlite-null {
-		color: #6b7280 !important;
+		color: var(--color-base-600) !important;
 	}
 	.query-editor::placeholder {
-		color: #9ca3af;
+		color: var(--color-base-500);
 	}
 	:global(.dark) .query-editor::placeholder {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 </style>

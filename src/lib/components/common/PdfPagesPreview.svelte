@@ -229,14 +229,14 @@
 	:global(:where(html:not(.native-scrollbars))) .thumbnail-sidebar:focus,
 	:global(:where(html:not(.native-scrollbars))) .thumbnail-sidebar:focus-within,
 	:global(:where(html:not(.native-scrollbars))) .thumbnail-sidebar:active {
-		scrollbar-color: rgba(215, 215, 215, 0.6) transparent;
+		scrollbar-color: color-mix(in oklab, var(--color-base-300) 60%, transparent) transparent;
 	}
 
 	:global(:where(html:not(.native-scrollbars)).dark) .thumbnail-sidebar:hover,
 	:global(:where(html:not(.native-scrollbars)).dark) .thumbnail-sidebar:focus,
 	:global(:where(html:not(.native-scrollbars)).dark) .thumbnail-sidebar:focus-within,
 	:global(:where(html:not(.native-scrollbars)).dark) .thumbnail-sidebar:active {
-		scrollbar-color: rgba(67, 67, 67, 0.6) transparent;
+		scrollbar-color: color-mix(in oklab, var(--color-base-700) 60%, transparent) transparent;
 	}
 
 	:global(:where(html:not(.native-scrollbars))) .thumbnail-sidebar::-webkit-scrollbar-thumb {

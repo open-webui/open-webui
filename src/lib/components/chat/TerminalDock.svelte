@@ -329,7 +329,7 @@
 		color: var(--color-base-900, #171717);
 	}
 	:global(.dark) .terminal-tab.selected {
-		color: #e5e5e5;
+		color: var(--color-base-200);
 	}
 	.tab-button,
 	.tab-close {
@@ -346,7 +346,7 @@
 	}
 	:global(.dark) .tab-button:hover,
 	:global(.dark) .tab-close:hover {
-		color: #f5f5f5;
+		color: var(--color-base-100);
 	}
 	.tab-close {
 		opacity: 0;
