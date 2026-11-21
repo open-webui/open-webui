@@ -2561,7 +2561,7 @@
 	"Only visible to you": "Viditeľné iba pre vás",
 	"Only when away": "Iba v neprítomnosti",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Jejda! Vyzerá to, že URL adresa je neplatná. Prosím, skontrolujte ju a skúste to znova.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Jejda! Používate nepodporovanú metódu (iba frontend). Prosím, spustite WebUI zo serverovej časti (backendu).",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Používate nepodporovanú metódu (iba frontend). Prosím, spustite WebUI zo serverovej časti (backendu).",
 	"Open": "Otvoriť",
 	"Open a tab using the + menu.": "Otvorte kartu pomocou ponuky +.",
 	"Open automation": "Otvoriť automatizáciu",

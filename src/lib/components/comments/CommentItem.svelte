@@ -182,7 +182,7 @@
 				{#if comment.meta?.anchor}
 					<button
 						type="button"
-						class="my-1 max-h-24 w-full overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-left text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+						class="my-1 w-full border-l-2 border-base-200 dark:border-base-700 ps-2 text-left text-xs text-base-500 dark:text-base-400 break-words"
 						title={comment.meta.anchor.quote}
 						on:click={() =>
 							(unavailable = !highlightAnchor(

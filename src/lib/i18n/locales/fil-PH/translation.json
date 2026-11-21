@@ -2518,7 +2518,7 @@
 	"Only visible to you": "Ikaw lang ang makakakita",
 	"Only when away": "Kapag wala ka lang",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ay! Mukhang hindi wasto ang URL. Pakisuring mabuti at subukan muli.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ay! Gumagamit ka ng hindi sinusuportahang paraan (frontend lang). Paki-serve ang WebUI mula sa backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Gumagamit ka ng hindi sinusuportahang paraan (frontend lang). Paki-serve ang WebUI mula sa backend.",
 	"Open": "Buksan",
 	"Open a tab using the + menu.": "Magbukas ng tab gamit ang + menu.",
 	"Open automation": "Buksan ang automation",

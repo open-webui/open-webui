@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Diňe size görünýär",
 	"Only when away": "Diňe uzakda bolanyňyzda",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Wah! URL salgysy nädogry ýaly. Täzeden barlaň we gaýtadan synanyşyň.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Wah! Siz goldanylmaýan usuly ulanýarsyňyz (diňe brauzer bölegi). WebUI-ny serwer böleginden işlediň.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Siz goldanylmaýan usuly ulanýarsyňyz (diňe brauzer bölegi). WebUI-ny serwer böleginden işlediň.",
 	"Open": "Aç",
 	"Open a tab using the + menu.": "+ menýusy arkaly goýma açyň.",
 	"Open automation": "Awtomatlaşdyrmany aç",

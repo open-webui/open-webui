@@ -2517,7 +2517,7 @@
 	"Only visible to you": "",
 	"Only when away": "",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Вой! УРЛ нотўғри кўринади. Илтимос, икки марта текширинг ва қайта уриниб кўринг.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Вой! Сиз қўллаб-қувватланмайдиган усулдан фойдаланмоқдасиз (фақат фронтенд). Илтимос, WебУИ-га баcкенд орқали хизмат кўрсатинг.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Сиз қўллаб-қувватланмайдиган усулдан фойдаланмоқдасиз (фақат фронтенд). Илтимос, WебУИ-га баcкенд орқали хизмат кўрсатинг.",
 	"Open": "",
 	"Open a tab using the + menu.": "",
 	"Open automation": "",

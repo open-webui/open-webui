@@ -2539,7 +2539,7 @@
 	"Only visible to you": "Vidljivo samo vama",
 	"Only when away": "Samo kada ste odsutni",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! Izgleda da je URL nevažeći. Molimo provjerite ponovno i pokušajte ponovo.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Koristite nepodržanu metodu (samo frontend). Molimo poslužite WebUI s backend-a.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Koristite nepodržanu metodu (samo frontend). Molimo poslužite WebUI s backend-a.",
 	"Open": "Otvori",
 	"Open a tab using the + menu.": "Otvorite karticu pomoću menija +.",
 	"Open automation": "Otvori automatizaciju",

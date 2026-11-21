@@ -2539,7 +2539,7 @@
 	"Only visible to you": "Solo visible para ti",
 	"Only when away": "Solo cuando estés ausente",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "¡vaya! Parece que la URL es inválida. Por favor, revisala y reintenta de nuevo.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "¡vaya! Estás usando un método no soportado (solo interfaz frontal-frontend). Por favor sirve WebUI desde el interfaz trasero (servidor backend).",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Estás usando un método no soportado (solo interfaz frontal-frontend). Por favor sirve WebUI desde el interfaz trasero (servidor backend).",
 	"Open": "Abrir",
 	"Open a tab using the + menu.": "Abre una pestaña desde el menú +.",
 	"Open automation": "Abrir automatización",

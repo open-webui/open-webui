@@ -2505,7 +2505,7 @@
 	"Only visible to you": "",
 	"Only when away": "仅离开时",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "此链接似乎为无效链接。请检查后重试。",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "您正在使用不受支持的方法（仅运行前端服务）。请通过后端服务提供 WebUI。",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "您正在使用不受支持的方法（仅运行前端服务）。请通过后端服务提供 WebUI。",
 	"Open": "打开",
 	"Open a tab using the + menu.": "",
 	"Open automation": "打开自动化任务",

@@ -2517,7 +2517,7 @@
 	"Only visible to you": "فقط برای شما قابل مشاهده است",
 	"Only when away": "فقط هنگام عدم حضور",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "اوه! به نظر می\u200cرسد URL نامعتبر است. لطفاً دوباره بررسی کنید و دوباره امتحان کنید.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "اوه! شما از یک روش پشتیبانی نشده (فقط فرانت\u200cاند) استفاده می\u200cکنید. لطفاً WebUI را از بک\u200cاند اجرا کنید.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "شما از یک روش پشتیبانی نشده (فقط فرانت‌اند) استفاده می‌کنید. لطفاً WebUI را از بک‌اند اجرا کنید.",
 	"Open": "باز",
 	"Open a tab using the + menu.": "با استفاده از منوی + یک زبانه باز کنید.",
 	"Open automation": "باز کردن خودکارسازی",

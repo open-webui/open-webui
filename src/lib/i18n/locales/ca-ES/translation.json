@@ -2539,7 +2539,7 @@
 	"Only visible to you": "Només visible per a tu",
 	"Only when away": "Només quan no hi siguis",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ui! Sembla que la URL no és vàlida. Si us plau, revisa-la i torna-ho a provar.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ui! Estàs utilitzant un mètode no suportat (només frontend). Si us plau, serveix la WebUI des del backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Estàs utilitzant un mètode no suportat (només frontend). Si us plau, serveix la WebUI des del backend.",
 	"Open": "Obert",
 	"Open a tab using the + menu.": "Obrir una pestanya amb el menú +.",
 	"Open automation": "Automatització oberta",

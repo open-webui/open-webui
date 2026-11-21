@@ -2561,7 +2561,7 @@
 	"Only visible to you": "Widoczne tylko dla Ciebie",
 	"Only when away": "Tylko gdy nieobecny",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! URL wygląda na nieprawidłowy. Sprawdź i spróbuj ponownie.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Używasz nieobsługiwanej metody (tylko frontend). Uruchom WebUI z backendu.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Używasz nieobsługiwanej metody (tylko frontend). Uruchom WebUI z backendu.",
 	"Open": "Otwórz",
 	"Open a tab using the + menu.": "Otwórz kartę za pomocą menu +.",
 	"Open automation": "Otwórz automatyzację",

@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Csak te láthatod",
 	"Only when away": "Csak távollét esetén",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hoppá! Úgy tűnik, az URL érvénytelen. Kérjük, ellenőrizze és próbálja újra.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hoppá! Nem támogatott módszert használ (csak frontend). Kérjük, szolgálja ki a WebUI-t a backend-ről.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Nem támogatott módszert használ (csak frontend). Kérjük, szolgálja ki a WebUI-t a backend-ről.",
 	"Open": "Megnyitás",
 	"Open a tab using the + menu.": "Nyiss meg egy lapot a + menü segítségével.",
 	"Open automation": "Automatizálás megnyitása",

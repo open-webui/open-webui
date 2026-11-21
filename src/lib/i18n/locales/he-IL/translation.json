@@ -2539,7 +2539,7 @@
 	"Only visible to you": "גלוי רק לך",
 	"Only when away": "רק בזמן היעדרות",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "אופס! נראה שהכתובת URL אינה תקינה. אנא בדוק שוב ונסה שנית.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "אופס! אתה משתמש בשיטה לא נתמכת (רק חזית). אנא שרת את ממשק המשתמש האינטרנטי מהשרת האחורי.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "אתה משתמש בשיטה לא נתמכת (רק חזית). אנא שרת את ממשק המשתמש האינטרנטי מהשרת האחורי.",
 	"Open": "פתח",
 	"Open a tab using the + menu.": "פתח כרטיסייה באמצעות התפריט +.",
 	"Open automation": "פתח אוטומציה",

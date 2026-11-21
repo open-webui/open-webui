@@ -143,9 +143,9 @@
 						</div>
 					{/if}
 					{#if quote}<div
-							class="{embedded ? '' : 'mb-1 mt-1'} {scrollable
-								? 'max-h-20 overflow-auto'
-								: ''} border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 whitespace-pre-wrap break-words"
+							class="{embedded
+								? ''
+								: 'mb-1 mt-1'} border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 break-words"
 							title={quote}
 						>
 							{middleTruncate(quote)}
@@ -155,7 +155,7 @@
 			<div class={embedded ? 'min-h-6 py-0.5 pe-9' : submitLabel === 'Save' ? 'pe-16' : 'pe-12'}>
 				<div
 					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full resize-none h-fit {scrollable
-						? 'max-h-96 overflow-auto'
+						? `${embedded ? 'max-h-40' : 'max-h-96'} overflow-auto`
 						: ''}"
 				>
 					<RichTextInput

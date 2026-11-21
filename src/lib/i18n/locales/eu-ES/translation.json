@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Zuretzat soilik ikusgai",
 	"Only when away": "Kanpoan zaudenean soilik",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ui! URLa ez da baliozkoa. Mesedez, egiaztatu eta saiatu berriro.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ui! Onartzen ez den metodo bat erabiltzen ari zara (frontend soilik). Mesedez, zerbitzatu WebUI-a backendetik.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Onartzen ez den metodo bat erabiltzen ari zara (frontend soilik). Mesedez, zerbitzatu WebUI-a backendetik.",
 	"Open": "Ireki",
 	"Open a tab using the + menu.": "Ireki fitxa bat + menua erabiliz.",
 	"Open automation": "Ireki automatizazioa",

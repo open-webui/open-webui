@@ -2561,7 +2561,7 @@
 	"Only visible to you": "Matoma tik jums",
 	"Only when away": "Tik kai nesate vietoje",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Regis nuoroda nevalidi. Prašau patikrtinkite ir pabandykite iš naujo.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Naudojate nepalaikomą (front-end) web ui rėžimą. Prašau serviruokite WebUI iš back-end",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Naudojate nepalaikomą (front-end) web ui rėžimą. Prašau serviruokite WebUI iš back-end",
 	"Open": "Atidaryti",
 	"Open a tab using the + menu.": "Atidarykite skirtuką naudodami meniu +.",
 	"Open automation": "Atidaryti automatizavimą",

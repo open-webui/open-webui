@@ -2561,7 +2561,7 @@
 	"Only visible to you": "Видно лише вам",
 	"Only when away": "Лише коли відсутній",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Упс! Схоже, що URL-адреса невірна. Будь ласка, перевірте ще раз та спробуйте ще раз.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Упс! Ви використовуєте непідтримуваний метод (тільки для фронтенду). Будь ласка, обслуговуйте WebUI з бекенду.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ви використовуєте непідтримуваний метод (тільки для фронтенду). Будь ласка, обслуговуйте WebUI з бекенду.",
 	"Open": "Відкрити",
 	"Open a tab using the + menu.": "Відкрийте вкладку за допомогою меню +.",
 	"Open automation": "Відкрити автоматизацію",

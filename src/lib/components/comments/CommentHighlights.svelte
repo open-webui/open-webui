@@ -359,6 +359,11 @@
 			hideOnClick: false,
 			offset: [0, 0]
 		});
+		// Popper only re-measures on scroll/resize; re-place (flip) as soon as the composer grows.
+		const resizeObserver = new ResizeObserver(() => {
+			if (popup?.state.isVisible) void popup.popperInstance?.update();
+		});
+		resizeObserver.observe(preview);
 		mounted = true;
 		document.addEventListener('mousemove', move);
 		document.addEventListener('mouseleave', leave);
@@ -371,6 +376,7 @@
 		window.addEventListener('focus', refresh);
 		window.addEventListener('comments:updated', refresh);
 		return () => {
+			resizeObserver.disconnect();
 			mounted = false;
 			clearTimeout(refreshTimer);
 			for (const request of requests.values()) request.abort();
@@ -419,7 +425,7 @@
 					>
 				</div>
 				<div
-					class="my-1 max-h-24 overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+					class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 break-words"
 					title={draft.anchor.quote}
 				>
 					{middleTruncate(draft.anchor.quote)}
@@ -429,7 +435,6 @@
 						<CommentComposer
 							bind:this={composer}
 							resource={draft.options}
-							scrollable={false}
 							embedded={true}
 							draftKey={`${$user?.id}:${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.source}:${draft.anchor.start}:${draft.anchor.end}`}
 							onCancel={dismissDraft}
@@ -479,7 +484,7 @@
 				</div>
 				{#if comment.meta?.anchor}
 					<div
-						class="my-1 max-h-24 overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+						class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 break-words"
 						title={comment.meta.anchor.quote}
 					>
 						{middleTruncate(comment.meta.anchor.quote)}

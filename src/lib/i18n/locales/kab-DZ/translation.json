@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Yettban-d i kečč·mm kan",
 	"Only when away": "Ala mi ara tebɛdeḍ",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ayhuh! Yettban-d dakken URL-nni ur tṣeḥḥa ara. Ttxil-k, ssefqed snat n tikkal yernu ɛreḍ tikkelt niḍen.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ayhuh! Aql-ik tesseqdaceḍ tarrayt ur yettwasefraken ara (mazwar kan). Ma ulac aɣilif, mudd-d WebUI seg uɛrur.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Aql-ik tesseqdaceḍ tarrayt ur yettwasefraken ara (mazwar kan). Ma ulac aɣilif, mudd-d WebUI seg uɛrur.",
 	"Open": "Ldi",
 	"Open a tab using the + menu.": "Ldi iccer s useqdec n wumuɣ +.",
 	"Open automation": "Ldi tawurmant",

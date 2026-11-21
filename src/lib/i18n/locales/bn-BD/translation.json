@@ -2517,7 +2517,7 @@
 	"Only visible to you": "শুধু আপনার কাছে দৃশ্যমান",
 	"Only when away": "শুধু অনুপস্থিত থাকলে",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "ওহ, মনে হচ্ছে ইউআরএলটা ইনভ্যালিড। দয়া করে আর চেক করে চেষ্টা করুন।",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "আপনি একটা আনসাপোর্টেড পদ্ধতি (শুধু ফ্রন্টএন্ড) ব্যবহার করছেন। দয়া করে WebUI ব্যাকএন্ড থেকে চালনা করুন।",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "আপনি একটা আনসাপোর্টেড পদ্ধতি (শুধু ফ্রন্টএন্ড) ব্যবহার করছেন। দয়া করে WebUI ব্যাকএন্ড থেকে চালনা করুন।",
 	"Open": "খোলা",
 	"Open a tab using the + menu.": "+ মেনু ব্যবহার করে একটি ট্যাব খুলুন।",
 	"Open automation": "অটোমেশন খুলুন",

@@ -2561,7 +2561,7 @@
 	"Only visible to you": "Vidno samo vam",
 	"Only when away": "Samo ko sem odsoten",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Oops! Looks like the URL is invalid. Please double-check and try again.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "You're using an unsupported method (frontend only). Please serve the WebUI from the backend.",
 	"Open": "Odpri",
 	"Open a tab using the + menu.": "Odprite zavihek z menijem +.",
 	"Open automation": "Odpri avtomatizacijo",

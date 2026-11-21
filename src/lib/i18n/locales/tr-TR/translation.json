@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Yalnızca size görünür",
 	"Only when away": "Yalnızca uzaktayken",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hay aksi! URL geçersiz gibi görünüyor. Lütfen tekrar kontrol edin ve yeniden deneyin.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hay aksi! Desteklenmeyen bir yöntem kullanıyorsunuz (yalnızca önyüz). Lütfen WebUI'yi arka uçtan sunun.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Desteklenmeyen bir yöntem kullanıyorsunuz (yalnızca önyüz). Lütfen WebUI'yi arka uçtan sunun.",
 	"Open": "Aç",
 	"Open a tab using the + menu.": "+ menüsünü kullanarak bir sekme açın.",
 	"Open automation": "Otomasyonu aç",

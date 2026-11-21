@@ -2495,7 +2495,7 @@
 	"Only visible to you": "Chỉ hiển thị với bạn",
 	"Only when away": "Chỉ khi vắng mặt",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Rất tiếc! URL dường như không hợp lệ. Vui lòng kiểm tra lại và thử lại.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Rất tiếc! Bạn đang sử dụng một phương thức không được hỗ trợ (chỉ dành cho frontend). Vui lòng cung cấp phương thức cho WebUI từ phía backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Bạn đang sử dụng một phương thức không được hỗ trợ (chỉ dành cho frontend). Vui lòng cung cấp phương thức cho WebUI từ phía backend.",
 	"Open": "Mở",
 	"Open a tab using the + menu.": "Mở tab bằng menu +.",
 	"Open automation": "Mở tự động hóa",

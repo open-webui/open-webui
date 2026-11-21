@@ -2495,7 +2495,7 @@
 	"Only visible to you": "มองเห็นได้เฉพาะคุณ",
 	"Only when away": "เฉพาะเมื่อไม่อยู่",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "ขออภัย! ดูเหมือนว่า URL ไม่ถูกต้อง กรุณาตรวจสอบและลองใหม่อีกครั้ง",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "ขออภัย! คุณกำลังใช้วิธีที่ไม่รองรับ (เฉพาะ Frontend) กรุณาให้บริการ WebUI จากฝั่ง Backend",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "คุณกำลังใช้วิธีที่ไม่รองรับ (เฉพาะ Frontend) กรุณาให้บริการ WebUI จากฝั่ง Backend",
 	"Open": "เปิด",
 	"Open a tab using the + menu.": "เปิดแท็บโดยใช้เมนู +",
 	"Open automation": "เปิดระบบอัตโนมัติ",

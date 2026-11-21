@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Le feiceáil agatsa amháin",
 	"Only when away": "Nuair a bhíonn tú ar shiúl amháin",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! Is cosúil go bhfuil an URL neamhbhailí. Seiceáil faoi dhó le do thoil agus iarracht arís.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Tá modh gan tacaíocht á úsáid agat (tosaigh amháin). Freastal ar an WebUI ón gcúltaca le do thoil.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Tá modh gan tacaíocht á úsáid agat (tosaigh amháin). Freastal ar an WebUI ón gcúltaca le do thoil.",
 	"Open": "Oscail",
 	"Open a tab using the + menu.": "Oscail cluaisín leis an roghchlár +.",
 	"Open automation": "Uathoibriú oscailte",

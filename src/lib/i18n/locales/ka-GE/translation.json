@@ -2517,7 +2517,7 @@
 	"Only visible to you": "ხილულია მხოლოდ თქვენთვის",
 	"Only when away": "მხოლოდ არყოფნისას",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "უი! როგორც ჩანს, მისამართი არასწორია. გთხოვთ, გადაამოწმოთ და ისევ სცადოთ.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "ვაი! იყენებთ მხარდაუჭერელ მეთოდს (მხოლოდ წინაბოლო). შედით WebUI-ზე უკანაბოლოდან.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "იყენებთ მხარდაუჭერელ მეთოდს (მხოლოდ წინაბოლო). შედით WebUI-ზე უკანაბოლოდან.",
 	"Open": "გახსნა",
 	"Open a tab using the + menu.": "გახსენით ჩანართი + მენიუს გამოყენებით.",
 	"Open automation": "ავტომატიზაციის გახსნა",

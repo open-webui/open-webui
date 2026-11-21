@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Ορατό μόνο σε εσάς",
 	"Only when away": "Μόνο όταν απουσιάζετε",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ωχ! Φαίνεται ότι το URL είναι μη έγκυρο. Παρακαλώ ελέγξτε ξανά και δοκιμάστε.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ωχ! Χρησιμοποιείτε μια μη υποστηριζόμενη μέθοδο (μόνο frontend). Παρακαλώ σερβίρετε το WebUI από το backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Χρησιμοποιείτε μια μη υποστηριζόμενη μέθοδο (μόνο frontend). Παρακαλώ σερβίρετε το WebUI από το backend.",
 	"Open": "Άνοιγμα",
 	"Open a tab using the + menu.": "Ανοίξτε μια καρτέλα χρησιμοποιώντας το μενού +.",
 	"Open automation": "Άνοιγμα αυτοματισμού",

@@ -2605,7 +2605,7 @@
 	"Only visible to you": "",
 	"Only when away": "عند الغياب فقط",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "خطاء! يبدو أن عنوان URL غير صالح. يرجى التحقق مرة أخرى والمحاولة مرة أخرى.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "خطاء! أنت تستخدم طريقة غير مدعومة (الواجهة الأمامية فقط). يرجى تقديم واجهة WebUI من الواجهة الخلفية.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "أنت تستخدم طريقة غير مدعومة (الواجهة الأمامية فقط). يرجى تقديم واجهة WebUI من الواجهة الخلفية.",
 	"Open": "فتح",
 	"Open a tab using the + menu.": "",
 	"Open automation": "فتح المهمة الآلية",

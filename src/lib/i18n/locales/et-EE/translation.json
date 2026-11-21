@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Nähtav ainult teile",
 	"Only when away": "Ainult eemal olles",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Oih! URL tundub olevat vigane. Palun kontrollige ja proovige uuesti.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oih! Kasutate toetamatut meetodit (ainult kasutajaliides). Palun serveerige WebUI tagarakendusest.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Kasutate toetamatut meetodit (ainult kasutajaliides). Palun serveerige WebUI tagarakendusest.",
 	"Open": "Ava",
 	"Open a tab using the + menu.": "Avage vahekaart menüü + kaudu.",
 	"Open automation": "Ava automatiseering",

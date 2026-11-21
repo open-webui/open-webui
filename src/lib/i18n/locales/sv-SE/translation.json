@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Synligt endast för dig",
 	"Only when away": "Endast när du är borta",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Hoppsan! Det ser ut som om URL:en är ogiltig. Dubbelkolla gärna och försök igen.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Hoppsan! Du använder en ej stödd metod (endast frontend). servera WebUI från backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Du använder en ej stödd metod (endast frontend). servera WebUI från backend.",
 	"Open": "Öppna",
 	"Open a tab using the + menu.": "Öppna en flik via +-menyn.",
 	"Open automation": "Öppna automatisering",

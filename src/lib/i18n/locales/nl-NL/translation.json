@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Alleen zichtbaar voor jou",
 	"Only when away": "Alleen bij afwezigheid",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Oeps! Het lijkt erop dat de URL ongeldig is. Controleer het nogmaals en probeer opnieuw.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Oeps! Je gebruikt een niet-ondersteunde methode (alleen frontend). Serveer de WebUI vanuit de backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Je gebruikt een niet-ondersteunde methode (alleen frontend). Serveer de WebUI vanuit de backend.",
 	"Open": "Open",
 	"Open a tab using the + menu.": "Open een tabblad via het +-menu.",
 	"Open automation": "Automatisering openen",

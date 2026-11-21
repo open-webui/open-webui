@@ -2508,7 +2508,7 @@
 	"Only visible to you": "Hanya kelihatan kepada anda",
 	"Only when away": "Hanya apabila tiada",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Maaf, didapati URL tidak sah. Sila semak semula dan cuba lagi.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Maaf, anda menggunakan kaedah yang tidak disokong (bahagian 'frontend' sahaja). Sila sediakan WebUI daripada 'backend'.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Anda menggunakan kaedah yang tidak disokong (bahagian 'frontend' sahaja). Sila sediakan WebUI daripada 'backend'.",
 	"Open": "Buka",
 	"Open a tab using the + menu.": "Buka tab menggunakan menu +.",
 	"Open automation": "Buka automasi",

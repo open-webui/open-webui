@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Kun synlig for dig",
 	"Only when away": "Kun ved fravær",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! URL'en ser ud til at være ugyldig. Tjek den igen, og prøv igen.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Du bruger en metode, der ikke understøttes (kun frontend). Kør WebUI fra backend.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Du bruger en metode, der ikke understøttes (kun frontend). Kør WebUI fra backend.",
 	"Open": "Åbn",
 	"Open a tab using the + menu.": "Åbn en fane via +-menuen.",
 	"Open automation": "Åbn automatisering",

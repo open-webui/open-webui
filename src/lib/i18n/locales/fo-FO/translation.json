@@ -2517,7 +2517,7 @@
 	"Only visible to you": "Bara sjónligt fyri tær",
 	"Only when away": "Bara tá burturstadd/ur",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "Ups! URL-ið tykist vera ógildugt. Kanna tað og royn aftur.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Ups! Tú brúkar ein hátt, sum ikki verður stuðlaður (bara frontend). Koyr WebUI frá bakendanum.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "Tú brúkar ein hátt, sum ikki verður stuðlaður (bara frontend). Koyr WebUI frá bakendanum.",
 	"Open": "Lat upp",
 	"Open a tab using the + menu.": "Lat ein fana upp við + valmyndini.",
 	"Open automation": "Lat sjálvvirkning upp",

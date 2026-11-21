@@ -2517,7 +2517,7 @@
 	"Only visible to you": "உங்களுக்கு மட்டுமே தெரியும்",
 	"Only when away": "விலகியிருக்கும்போது மட்டும்",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "அச்சச்சோ! URL தவறானது போல் தெரிகிறது. இருமுறை சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "அச்சச்சோ! நீங்கள் ஆதரிக்கப்படாத முறையைப் பயன்படுத்துகிறீர்கள் (முன்புறம் மட்டும்). பின்தளத்தில் இருந்து WebUI ஐ வழங்கவும்.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "நீங்கள் ஆதரிக்கப்படாத முறையைப் பயன்படுத்துகிறீர்கள் (முன்புறம் மட்டும்). பின்தளத்தில் இருந்து WebUI ஐ வழங்கவும்.",
 	"Open": "திற",
 	"Open a tab using the + menu.": "+ மெனுவைப் பயன்படுத்தி ஒரு தாவலைத் திறக்கவும்.",
 	"Open automation": "தானியக்கத்தைத் திறக்கவும்",

@@ -2517,7 +2517,7 @@
 	"Only visible to you": "پەقەت سىزگىلا كۆرۈنىدۇ",
 	"Only when away": "پەقەت يوق ۋاقتىڭىزدا",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "URL خاتا بولۇشى مۇمكىن. قايتا تەكشۈرۈپ سىناڭ.",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "قوللىمايدىغان ئۇسۇل ئىشلىتىلدى (پەقەت ئالدى كۆرۈنۈش). WebUI نى ئارقا سۇپىدىن قوزغىتىڭ.",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "قوللىمايدىغان ئۇسۇل ئىشلىتىلدى (پەقەت ئالدى كۆرۈنۈش). WebUI نى ئارقا سۇپىدىن قوزغىتىڭ.",
 	"Open": "ئېچىش",
 	"Open a tab using the + menu.": "+ مېنيۇسى ئارقىلىق بەتكۈچ ئېچىڭ.",
 	"Open automation": "ئاپتوماتلاشتۇرۇش ئېچىش",

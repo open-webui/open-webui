@@ -2495,7 +2495,7 @@
 	"Only visible to you": "僅您可見",
 	"Only when away": "僅在離開時",
 	"Oops! Looks like the URL is invalid. Please double-check and try again.": "哎呀！這個 URL 似乎無效。請仔細檢查並再試一次。",
-	"Oops! You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "哎呀！您使用了不支援的方法（僅限前端）。請從後端提供 WebUI。",
+	"You're using an unsupported method (frontend only). Please serve the WebUI from the backend.": "您使用了不支援的方法（僅限前端）。請從後端提供 WebUI。",
 	"Open": "開啟",
 	"Open a tab using the + menu.": "",
 	"Open automation": "開啟自動化流程",
