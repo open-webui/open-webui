@@ -131,6 +131,7 @@ ADMIN_CONFIG_KEYS = {
     'AUTOMATION_MAX_COUNT': 'automations.max_count',
     'AUTOMATION_MIN_INTERVAL': 'automations.min_interval',
     'ENABLE_AUTOMATIONS': 'automations.enable',
+    'ENABLE_AUTOMATION_WEBHOOKS': 'automations.webhooks.enable',
     'ENABLE_CHANNELS': 'channels.enable',
     'ENABLE_COMMENTS': 'comments.enable',
     'ENABLE_NOTIFICATIONS': 'notifications.enable',
@@ -1184,6 +1185,7 @@ class AdminConfig(MfaConfigForm):
     AUTOMATION_MAX_COUNT: int | str | None = None
     AUTOMATION_MIN_INTERVAL: int | str | None = None
     ENABLE_AUTOMATIONS: bool
+    ENABLE_AUTOMATION_WEBHOOKS: bool = True
     ENABLE_CHANNELS: bool
     ENABLE_COMMENTS: bool = False
     ENABLE_NOTIFICATIONS: bool = True

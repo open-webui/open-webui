@@ -6,7 +6,7 @@
 	import { socket } from '$lib/stores';
 	import { toggleAutomationById, type FolderAutomation } from '$lib/apis/automations';
 	import { formatShortDate } from '$lib/utils';
-	import { formatSchedule } from '$lib/utils/schedule';
+	import { formatTrigger } from '$lib/utils/schedule';
 	import AutomationModal from '$lib/components/AutomationModal.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -98,7 +98,7 @@
 					>{automation.name}</span
 				>
 				<span class="hidden min-w-0 truncate text-xs text-base-400 @md:block dark:text-base-500"
-					>{formatSchedule(automation.data.rrule, $i18n)}</span
+					>{formatTrigger(automation.data, $i18n)}</span
 				>
 				<span class="flex-1"></span>
 				<span class="text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"

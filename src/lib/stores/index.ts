@@ -464,6 +464,7 @@ type Config = {
 		enable_channels?: boolean;
 		enable_user_webhooks?: boolean;
 		enable_automations?: boolean;
+		enable_automation_webhooks?: boolean;
 		enable_calendar?: boolean;
 		enable_subagents?: boolean;
 		enable_plugins?: boolean;

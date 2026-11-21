@@ -1,4 +1,5 @@
 import logging
+import secrets
 import time
 from typing import Literal, Optional
 from uuid import uuid4
@@ -92,12 +93,38 @@ def keep_target_refs(target: Optional[dict], previous: Optional[dict]) -> Option
     return target
 
 
+class AutomationWebhook(BaseModel):
+    token: Optional[str] = None  # server-owned
+    allow_get: bool = False
+
+
+def has_webhook(data: Optional[dict]) -> bool:
+    return bool((data or {}).get('webhook'))
+
+
+def hide_webhook_token(data: dict) -> dict:
+    if not (data.get('webhook') or {}).get('token'):
+        return data
+    return {**data, 'webhook': {**data['webhook'], 'token': None}}
+
+
+def new_webhook_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def keep_webhook_token(webhook: Optional[dict], previous: Optional[dict]) -> Optional[dict]:
+    if not webhook:
+        return None
+    return {**webhook, 'token': (previous or {}).get('token') or new_webhook_token()}
+
+
 class AutomationData(BaseModel):
     prompt: str
     model_id: str
-    rrule: str
+    rrule: str = ''  # empty: no schedule
     terminal: Optional[AutomationTerminalConfig] = None
     target: Optional[AutomationTarget] = None
+    webhook: Optional[AutomationWebhook] = None
 
 
 class AutomationModel(BaseModel):
@@ -159,12 +186,14 @@ class AutomationTable:
     ) -> AutomationModel:
         async with get_async_db_context(db) as db:
             now = int(time.time_ns())
+            data = form.data.model_dump()
+            data['webhook'] = keep_webhook_token(data.get('webhook'), None)
             row = Automation(
                 id=str(uuid4()),
                 user_id=user_id,
                 folder_id=form.folder_id,
                 name=form.name,
-                data=form.data.model_dump(),
+                data=data,
                 meta=form.meta,
                 is_active=form.is_active,
                 next_run_at=next_run_at,
@@ -265,6 +294,7 @@ class AutomationTable:
             row.folder_id = form.folder_id
             data = form.data.model_dump()
             data['target'] = keep_target_refs(data.get('target'), (row.data or {}).get('target'))
+            data['webhook'] = keep_webhook_token(data.get('webhook'), (row.data or {}).get('webhook'))
             row.data = data
             row.meta = form.meta
             if form.is_active is not None:
@@ -284,6 +314,18 @@ class AutomationTable:
             data['target'] = {**(data.get('target') or {'type': 'chat'}), key: value}
             row.data = data
             await db.commit()
+
+    async def regenerate_webhook_token(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id, with_for_update=True)
+            if not row or not has_webhook(row.data):
+                return None
+            data = dict(row.data or {})
+            data['webhook'] = {**data['webhook'], 'token': new_webhook_token()}
+            row.data = data
+            row.updated_at = int(time.time_ns())
+            await db.commit()
+            return AutomationModel.model_validate(row)
 
     async def update_last_run_at(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
         async with get_async_db_context(db) as db:

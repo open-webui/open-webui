@@ -20,6 +20,7 @@
 		WEBUI_NAME,
 		baseModels,
 		channels,
+		config,
 		folders,
 		mobile,
 		showSidebar,
@@ -39,6 +40,9 @@
 		startsNew,
 		repliesInThread,
 		updateAutomationById,
+		regenerateAutomationToken,
+		getAutomationHookUrl,
+		getRunVariables,
 		type AutomationForm,
 		type AutomationResponse,
 		type AutomationRunModel
@@ -63,6 +67,9 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import LinkIcon from '$lib/components/icons/Link.svelte';
+	import WebhookDropdown from '$lib/components/automations/WebhookDropdown.svelte';
+	import InputVariablesModal from '$lib/components/chat/MessageInput/InputVariablesModal.svelte';
 
 	dayjs.extend(localizedFormat);
 
@@ -113,6 +120,10 @@
 	let scheduleTick = 0;
 	// The stored rule as the schedule fields rebuild it, so an untouched schedule is not a change.
 	let savedRrule = '';
+	let webhookEnabled = false;
+	let webhookAllowGet = false;
+	$: allowWebhook = !!$config?.features?.enable_automation_webhooks;
+	$: hookUrl = getAutomationHookUrl(automation);
 	let saving = false;
 	let fieldsReady = false;
 
@@ -127,6 +138,8 @@
 		reply_in_thread = repliesInThread(source.data.target);
 		terminalServerId = source.data.terminal?.server_id ?? '';
 		terminalCwd = source.data.terminal?.cwd ?? '';
+		webhookEnabled = !!source.data.webhook;
+		webhookAllowGet = !!source.data.webhook?.allow_get;
 		await tick();
 		scheduleDropdown?.parseRrule(source.data.rrule);
 		savedRrule = scheduleDropdown?.buildRrule?.() ?? source.data.rrule;
@@ -147,7 +160,9 @@
 			reply_in_thread !== repliesInThread(automation.data.target) ||
 			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
 			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
-			rruleNow(scheduleTick) !== savedRrule);
+			rruleNow(scheduleTick) !== savedRrule ||
+			webhookEnabled !== !!automation.data.webhook ||
+			(webhookEnabled && webhookAllowGet !== !!automation.data.webhook?.allow_get));
 
 	// Agent models depend on the chosen terminal, as in the automation modal.
 	let modelRequest = 0;
@@ -178,9 +193,13 @@
 			toast.error($i18n.t('Channel is required'));
 			return;
 		}
+		const rrule = scheduleDropdown.buildRrule();
+		if (!rrule && !webhookEnabled) {
+			toast.error($i18n.t('Add a schedule or a webhook'));
+			return;
+		}
 		saving = true;
 		try {
-			const rrule = scheduleDropdown.buildRrule();
 			const form: AutomationForm = {
 				name: name.trim(),
 				folder_id: target_type === 'channel' ? null : folder_id || null,
@@ -189,6 +208,7 @@
 					model_id: model_id.trim(),
 					// An untouched schedule keeps its stored start date.
 					rrule: rrule === savedRrule ? automation.data.rrule : rrule,
+					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
 					terminal: terminalServerId
 						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
 						: undefined,
@@ -324,13 +344,38 @@
 		}
 	};
 
+	let showVariablesModal = false;
+	let runVariables: Record<string, any> = {};
+
 	const runNowHandler = async () => {
 		if (loading) return;
-		loading = true;
-		const res = await runAutomationById(localStorage.token, automation.id).catch((err) => {
+		runVariables = getRunVariables(automation.data.prompt);
+		if (Object.keys(runVariables).length > 0) {
+			showVariablesModal = true;
+			return;
+		}
+		await run();
+	};
+
+	const regenerateHookUrlHandler = async () => {
+		const res = await regenerateAutomationToken(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);
 			return null;
 		});
+		if (res) {
+			automation = res;
+			toast.success($i18n.t('New URL created. The old one no longer works.'));
+		}
+	};
+
+	const run = async (variables?: Record<string, any>) => {
+		loading = true;
+		const res = await runAutomationById(localStorage.token, automation.id, variables).catch(
+			(err) => {
+				toast.error(`${err}`);
+				return null;
+			}
+		);
 		if (res) {
 			automation = res;
 			toast.success($i18n.t('Automation triggered'));
@@ -444,6 +489,13 @@
 		{$i18n.t('This will delete')} <span class="">{automation.name}</span>.
 	</div>
 </DeleteConfirmDialog>
+
+<InputVariablesModal
+	bind:show={showVariablesModal}
+	variables={runVariables}
+	title={$i18n.t('Run {{name}}', { name: automation.name })}
+	onSave={(values) => run(values)}
+/>
 
 <AutomationModal
 	bind:show={showCloneModal}
@@ -563,6 +615,7 @@
 					<div class="min-w-0 flex-1">
 						<ScheduleDropdown
 							bind:this={scheduleDropdown}
+							allowNone={webhookEnabled}
 							plain
 							side="bottom"
 							align="start"
@@ -570,6 +623,25 @@
 						/>
 					</div>
 				</div>
+
+				{#if allowWebhook || automation.data.webhook}
+					<div class={rowClass}>
+						<span class={labelClass}
+							><LinkIcon className="size-3 shrink-0" />{$i18n.t('Webhook')}</span
+						>
+						<div class="min-w-0 flex-1">
+							<WebhookDropdown
+								bind:enabled={webhookEnabled}
+								bind:allowGet={webhookAllowGet}
+								url={webhookEnabled && automation.data.webhook ? hookUrl : ''}
+								onRegenerate={regenerateHookUrlHandler}
+								plain
+								side="bottom"
+								align="start"
+							/>
+						</div>
+					</div>
+				{/if}
 
 				<div class={rowClass}>
 					<span class={labelClass}><Sparkles className="size-3 shrink-0" />{$i18n.t('Model')}</span>
@@ -620,7 +692,7 @@
 					</div>
 				</div>
 
-				<div class={rowClass}>
+				<div class={rowClass} class:hidden={!automation.data.rrule}>
 					<span class={labelClass}>
 						<svg
 							class="size-3 shrink-0"

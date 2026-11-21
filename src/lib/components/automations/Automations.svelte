@@ -2,7 +2,7 @@
 	import { getPageContext } from '$lib/utils/page';
 	const { goto, active, tab: pageTab } = getPageContext();
 
-	import { formatSchedule } from '$lib/utils/schedule';
+	import { formatTrigger } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext } from 'svelte';
 
 	import dayjs from '$lib/dayjs';
@@ -20,6 +20,7 @@
 		toggleAutomationById,
 		runAutomationById,
 		deleteAutomationById,
+		getRunVariables,
 		startsNew,
 		type AutomationForm,
 		type AutomationResponse
@@ -29,6 +30,7 @@
 	import fileSaver from 'file-saver';
 
 	import AutomationModal from '$lib/components/AutomationModal.svelte';
+	import InputVariablesModal from '$lib/components/chat/MessageInput/InputVariablesModal.svelte';
 	import AutomationMenu from '$lib/components/automations/AutomationMenu.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
@@ -175,11 +177,27 @@
 		}
 	};
 
+	let runTarget: AutomationResponse | null = null;
+	let runVariables: Record<string, any> = {};
+	let showVariablesModal = false;
+
 	const runNowHandler = async (automation: AutomationResponse) => {
-		const res = await runAutomationById(localStorage.token, automation.id).catch((err) => {
-			toast.error(`${err}`);
-			return null;
-		});
+		runVariables = getRunVariables(automation.data.prompt);
+		if (Object.keys(runVariables).length > 0) {
+			runTarget = automation;
+			showVariablesModal = true;
+			return;
+		}
+		await run(automation);
+	};
+
+	const run = async (automation: AutomationResponse, variables?: Record<string, any>) => {
+		const res = await runAutomationById(localStorage.token, automation.id, variables).catch(
+			(err) => {
+				toast.error(`${err}`);
+				return null;
+			}
+		);
 		if (res) {
 			toast.success($i18n.t('Automation triggered'));
 		}
@@ -389,6 +407,13 @@
 			automationsImportInputElement.value = '';
 		}
 	}}
+/>
+
+<InputVariablesModal
+	bind:show={showVariablesModal}
+	variables={runVariables}
+	title={runTarget ? $i18n.t('Run {{name}}', { name: runTarget.name }) : undefined}
+	onSave={(values) => runTarget && run(runTarget, values)}
 />
 
 <AutomationModal
@@ -609,11 +634,11 @@
 								class="hidden max-w-56 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
 							>
 								<Tooltip
-									content={`${formatSchedule(automation.data.rrule, $i18n)} · ${formatDestination(automation)}`}
+									content={`${formatTrigger(automation.data, $i18n)} · ${formatDestination(automation)}`}
 									className="min-w-0"
 								>
 									<div class="truncate">
-										{formatSchedule(automation.data.rrule, $i18n)} · {formatDestination(automation)}
+										{formatTrigger(automation.data, $i18n)} · {formatDestination(automation)}
 									</div>
 								</Tooltip>
 							</div>

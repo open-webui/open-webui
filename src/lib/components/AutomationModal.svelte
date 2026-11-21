@@ -9,11 +9,12 @@
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
 	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
+	import WebhookDropdown from '$lib/components/automations/WebhookDropdown.svelte';
 	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
-	import { baseModels, channels, folders, type AgentModel } from '$lib/stores';
+	import { baseModels, channels, config, folders, type AgentModel } from '$lib/stores';
 
 	import {
 		createAutomation,
@@ -51,6 +52,8 @@
 	let start_new = true;
 	let reply_in_thread = true;
 	let is_active = true;
+	let webhookEnabled = false;
+	let webhookAllowGet = false;
 
 	let loading = false;
 	let foldersLoaded = false;
@@ -106,6 +109,7 @@
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
+	$: allowWebhook = !!$config?.features?.enable_automation_webhooks;
 
 	const submitHandler = async () => {
 		if (!name.trim() || !prompt.trim() || !model_id.trim()) {
@@ -114,6 +118,10 @@
 		}
 		if (target_type === 'channel' && !channel_id) {
 			toast.error($i18n.t('Channel is required'));
+			return;
+		}
+		if (!scheduleDropdown.buildRrule() && !webhookEnabled) {
+			toast.error($i18n.t('Add a schedule or a webhook'));
 			return;
 		}
 		if (scheduleDropdown?.frequency === 'ONCE') {
@@ -132,6 +140,7 @@
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
 					rrule: scheduleDropdown.buildRrule(),
+					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
 					terminal: terminalServerId
 						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
 						: undefined,
@@ -188,9 +197,9 @@
 			start_new = startsNew(automation.data.target);
 			reply_in_thread = repliesInThread(automation.data.target);
 			is_active = automation.is_active;
-			if (scheduleDropdown) {
-				scheduleDropdown.parseRrule(automation.data.rrule);
-			}
+			webhookEnabled = !!automation.data.webhook;
+			webhookAllowGet = !!automation.data.webhook?.allow_get;
+			scheduleDropdown?.parseRrule(automation.data.rrule);
 		} else if (cloneFrom) {
 			name = cloneFrom.name;
 			prompt = cloneFrom.data.prompt;
@@ -207,9 +216,9 @@
 			start_new = startsNew(cloneFrom.data.target);
 			reply_in_thread = repliesInThread(cloneFrom.data.target);
 			is_active = true;
-			if (scheduleDropdown) {
-				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
-			}
+			webhookEnabled = !!cloneFrom.data.webhook;
+			webhookAllowGet = !!cloneFrom.data.webhook?.allow_get;
+			scheduleDropdown?.parseRrule(cloneFrom.data.rrule);
 		} else {
 			name = '';
 			prompt = '';
@@ -220,6 +229,8 @@
 			start_new = true;
 			reply_in_thread = true;
 			is_active = true;
+			webhookEnabled = false;
+			webhookAllowGet = false;
 		}
 		initialized = true;
 	};
@@ -268,7 +279,21 @@
 			class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 pb-3.5 pt-1 gap-2"
 		>
 			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
-				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
+				<ScheduleDropdown
+					bind:this={scheduleDropdown}
+					allowNone={webhookEnabled}
+					side="top"
+					align="start"
+				/>
+
+				{#if allowWebhook || webhookEnabled}
+					<WebhookDropdown
+						bind:enabled={webhookEnabled}
+						bind:allowGet={webhookAllowGet}
+						side="top"
+						align="start"
+					/>
+				{/if}
 
 				<ModelDropdown
 					bind:model_id

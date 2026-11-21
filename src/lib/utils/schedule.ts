@@ -1,5 +1,13 @@
 import type { i18n as I18n } from 'i18next';
 
+export const formatTrigger = (
+	data: { rrule: string; webhook?: object | null },
+	i18n: I18n
+): string =>
+	[data.rrule ? formatSchedule(data.rrule, i18n) : '', data.webhook ? i18n.t('Webhook') : '']
+		.filter(Boolean)
+		.join(' + ') || i18n.t('None');
+
 export const formatSchedule = (rrule: string, i18n: I18n): string => {
 	const match = rrule.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 	if (/COUNT=1(?!\d)/.test(rrule)) {

@@ -13,7 +13,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.automations import AutomationResponse, AutomationRuns, Automations
+from open_webui.models.automations import AutomationResponse, AutomationRuns, Automations, hide_webhook_token
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import FOLDER_PRIORITIES, NO_FOLDER_PRIORITY, Chats
 from open_webui.models.config import Config
@@ -762,7 +762,13 @@ async def get_folder_automations(
     )
     return [
         {
-            **AutomationResponse(**item.model_dump(), last_run=latest.get(item.id)).model_dump(),
+            **AutomationResponse(
+                **{
+                    **item.model_dump(),
+                    'data': item.data if item.user_id == user.id else hide_webhook_token(item.data),
+                },
+                last_run=latest.get(item.id),
+            ).model_dump(),
             'user_name': creators.get(item.user_id) or 'Unknown',
             'can_edit': item.user_id == user.id,
             'can_manage': item.user_id == user.id or has_write,

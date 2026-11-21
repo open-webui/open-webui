@@ -47,6 +47,7 @@ from open_webui.utils.recurrence import (
     rrule_interval_seconds,
     validate_rrule,
 )
+from open_webui.utils.prompt_variables import fill_variables
 from open_webui.utils.task import prompt_template
 from open_webui.utils.agents.discovery import get_models as get_agent_models
 from open_webui.utils.machines import initialize_terminal_directory, resolve_terminal_connection
@@ -57,6 +58,17 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
+
+
+# Schedule
+
+
+async def schedule_next_run(data: dict, tz: str = None) -> Optional[int]:
+    return await next_run_ns(data['rrule'], tz=tz) if data.get('rrule') else None
+
+
+async def schedule_next_runs(data: dict, tz: str = None) -> list[int]:
+    return await next_n_runs_ns(data['rrule'], tz=tz) if data.get('rrule') else []
 
 
 # Worker Loop
@@ -368,7 +380,7 @@ async def _execute_channel_automation(
     )
 
 
-async def execute_automation(app, automation: AutomationModel) -> None:
+async def execute_automation(app, automation: AutomationModel, variables: Optional[dict] = None) -> None:
     """Execute an automation through the full chat completion pipeline.
 
     Creates a real chat or channel message, then calls chat_completion exactly like the frontend:
@@ -394,7 +406,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _record_run(request, automation.id, 'error', error=error, actor=user)
             return
 
-        prompt = await prompt_template(automation.data['prompt'], user)
+        prompt = fill_variables(await prompt_template(automation.data['prompt'], user), variables, strict=False)
         model_id = automation.data['model_id']
         try:
             expires_delta = parse_duration(str(await Config.get('automations.auth_token_expires_in', '1h')))

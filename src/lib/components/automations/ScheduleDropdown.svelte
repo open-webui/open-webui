@@ -16,6 +16,8 @@
 	export let onceDate = '';
 	export let onceTime = '09:00';
 	export let customRrule = '';
+	/** Offer "None", for automations that run only on a webhook. */
+	export let allowNone = false;
 
 	export let side: 'top' | 'bottom' = 'top';
 	export let align: 'start' | 'end' = 'start';
@@ -28,6 +30,7 @@
 	let showDropdown = false;
 
 	$: FREQUENCIES = [
+		...(allowNone || frequency === 'NONE' ? [{ key: 'NONE', label: $i18n.t('None') }] : []),
 		{ key: 'ONCE', label: $i18n.t('Once') },
 		{ key: 'HOURLY', label: $i18n.t('Hourly') },
 		{ key: 'DAILY', label: $i18n.t('Daily') },
@@ -49,7 +52,7 @@
 	let lastVisualFrequency = 'DAILY';
 	let prevFrequency = 'DAILY';
 
-	$: if (frequency !== 'CUSTOM') {
+	$: if (frequency !== 'CUSTOM' && frequency !== 'NONE') {
 		lastVisualFrequency = frequency;
 	}
 
@@ -87,6 +90,7 @@
 	};
 
 	export const buildRrule = (): string => {
+		if (frequency === 'NONE') return '';
 		if (frequency === 'CUSTOM') return customRrule;
 		if (frequency === 'ONCE') {
 			const dt = onceDate.replace(/-/g, '') + 'T' + onceTime.replace(/:/g, '') + '00';
@@ -108,6 +112,11 @@
 	};
 
 	export const parseRrule = (s: string) => {
+		if (!s.trim()) {
+			frequency = 'NONE';
+			prevFrequency = 'NONE';
+			return;
+		}
 		const match = s.match(/DTSTART[^:]*:(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/i);
 		// Detect ONCE (COUNT=1 with DTSTART)
 		if (/COUNT=1(?!\d)/.test(s)) {
@@ -225,7 +234,7 @@
 					on:input={onChange}
 				/>
 			</div>
-		{:else if frequency !== 'HOURLY'}
+		{:else if frequency !== 'HOURLY' && frequency !== 'NONE'}
 			<div class="flex gap-2 flex-wrap items-center px-3 pb-2 text-[0.8125rem]">
 				{#if frequency === 'ONCE'}
 					<div class="flex items-center gap-1.5">

@@ -4552,10 +4552,18 @@ async def update_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
+        from open_webui.models.automations import (
+            AutomationData,
+            AutomationForm,
+            Automations,
+            AutomationTarget,
+            AutomationTerminalConfig,
+            AutomationWebhook,
+            has_webhook,
+        )
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
-        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
+        from open_webui.utils.automations import schedule_next_run, schedule_next_runs, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4583,15 +4591,18 @@ async def update_automation(
             except ValueError as e:
                 return JSONCodec.dumps({'error': str(e)})
 
+        if not new_rrule and not has_webhook(automation.data):
+            return JSONCodec.dumps({'error': 'An automation without a webhook needs a schedule'})
+
         # Validate RRULE if changed
-        if rrule is not None:
+        if rrule:
             try:
                 await validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
                 return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
-            await check_automation_limits(__request__, user, new_rrule, None)
+            await check_automation_limits(__request__, user, new_rrule or None, None)
         except HTTPException as e:
             return JSONCodec.dumps({'error': e.detail})
 
@@ -4604,11 +4615,17 @@ async def update_automation(
                 model_id=new_model_id,
                 rrule=new_rrule,
                 target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
+                terminal=AutomationTerminalConfig(**automation.data['terminal'])
+                if automation.data.get('terminal')
+                else None,
+                webhook=AutomationWebhook(**automation.data['webhook']) if automation.data.get('webhook') else None,
             ),
             is_active=automation.is_active,
         )
 
-        updated = await Automations.update_by_id(automation_id, form, await next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update_by_id(
+            automation_id, form, await schedule_next_run(form.data.model_dump(), tz=tz)
+        )
 
         return JSONCodec.dumps(
             {
@@ -4619,7 +4636,7 @@ async def update_automation(
                 'model_id': new_model_id,
                 'target': updated.data.get('target'),
                 'is_active': updated.is_active,
-                'next_runs': await next_n_runs_ns(new_rrule, tz=tz),
+                'next_runs': await schedule_next_runs(updated.data, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -4650,9 +4667,9 @@ async def list_automations(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations
+        from open_webui.models.automations import Automations, has_webhook
         from open_webui.models.users import Users
-        from open_webui.utils.automations import next_n_runs_ns
+        from open_webui.utils.automations import schedule_next_runs
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4685,9 +4702,10 @@ async def list_automations(
                     'model_id': item.data.get('model_id', ''),
                     'target': item.data.get('target'),
                     'rrule': rrule,
+                    'webhook': has_webhook(item.data),
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
-                    'next_runs': await next_n_runs_ns(rrule, tz=user.timezone if user else None),
+                    'next_runs': await schedule_next_runs(item.data, tz=user.timezone if user else None),
                 }
             )
 
@@ -4720,7 +4738,7 @@ async def toggle_automation(
     try:
         from open_webui.models.automations import Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import next_run_ns
+        from open_webui.utils.automations import schedule_next_run
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4731,10 +4749,9 @@ async def toggle_automation(
         if automation.user_id != user_id:
             return JSONCodec.dumps({'error': 'Access denied'})
 
-        rrule = automation.data.get('rrule', '')
         toggled = await Automations.toggle(
             automation_id,
-            await next_run_ns(rrule, tz=user.timezone if user else None),
+            await schedule_next_run(automation.data, tz=user.timezone if user else None),
         )
 
         return JSONCodec.dumps(

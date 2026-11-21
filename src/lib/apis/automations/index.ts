@@ -1,5 +1,6 @@
 import type { AgentModel } from '$lib/stores';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
+import { extractInputVariables } from '$lib/utils';
 
 export type AutomationTerminalConfig = {
 	server_id: string;
@@ -27,13 +28,35 @@ export const startsNew = (target?: AutomationTarget | null) =>
 export const repliesInThread = (target?: AutomationTarget | null) =>
 	target?.reply_in_thread !== false;
 
+export type AutomationWebhook = {
+	/** Set by the server. */
+	token?: string | null;
+	allow_get?: boolean;
+};
+
 export type AutomationData = {
 	prompt: string;
 	model_id: string;
+	/** Empty: no schedule. */
 	rrule: string;
 	terminal?: AutomationTerminalConfig;
 	target?: AutomationTarget | null;
+	webhook?: AutomationWebhook | null;
 };
+
+// Filled by the server, not the Run form.
+const BUILTIN_VARIABLE = /^(CURRENT_[A-Z_]+|USER_[A-Z_]+|CLIPBOARD)$/;
+
+/** The prompt's input variables a manual run asks for. */
+export const getRunVariables = (prompt: string): Record<string, any> =>
+	Object.fromEntries(
+		Object.entries(extractInputVariables(prompt)).filter(([name]) => !BUILTIN_VARIABLE.test(name))
+	);
+
+export const getAutomationHookUrl = (automation: { id: string; data: AutomationData }) =>
+	automation.data.webhook?.token
+		? `${window.location.origin}${WEBUI_API_BASE_URL}/automations/hooks/${automation.id}/${automation.data.webhook.token}`
+		: '';
 
 export type AutomationForm = {
 	name: string;
@@ -252,10 +275,43 @@ export const toggleAutomationById = async (token: string, id: string) => {
 	return res;
 };
 
-export const runAutomationById = async (token: string, id: string) => {
+export const runAutomationById = async (
+	token: string,
+	id: string,
+	variables?: Record<string, any>
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/automations/${id}/run`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		...(variables ? { body: JSON.stringify({ variables }) } : {})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const regenerateAutomationToken = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/automations/${id}/token/regenerate`, {
 		method: 'POST',
 		headers: {
 			Accept: 'application/json',

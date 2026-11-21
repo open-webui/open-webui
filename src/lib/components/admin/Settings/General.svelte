@@ -75,6 +75,7 @@
 		ENABLE_APPS: $i18n.t('settings.admin.general.apps.label'),
 		ENABLE_CALENDAR: $i18n.t('settings.admin.general.calendar.label'),
 		ENABLE_AUTOMATIONS: $i18n.t('settings.admin.general.automations.label'),
+		ENABLE_AUTOMATION_WEBHOOKS: $i18n.t('settings.admin.general.automationWebhooks.label'),
 		ENABLE_USER_WEBHOOKS: $i18n.t('settings.admin.general.userWebhooks.label'),
 		ENABLE_USER_STATUS: $i18n.t('settings.admin.general.userStatus.label'),
 		RESPONSE_WATERMARK: $i18n.t('settings.admin.general.responseWatermark.label'),
@@ -525,6 +526,18 @@
 				>
 					<Switch bind:state={adminConfig.ENABLE_AUTOMATIONS} ariaLabelledbyId={labelId} />
 				</AdminSettingRow>
+				{#if adminConfig.ENABLE_AUTOMATIONS}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.general.automationWebhooks.label')}
+						description={$i18n.t('settings.admin.general.automationWebhooks.description')}
+						let:labelId
+					>
+						<Switch
+							bind:state={adminConfig.ENABLE_AUTOMATION_WEBHOOKS}
+							ariaLabelledbyId={labelId}
+						/>
+					</AdminSettingRow>
+				{/if}
 				<AdminSettingRow
 					label={$i18n.t('settings.admin.general.userWebhooks.label')}
 					description={$i18n.t('settings.admin.general.userWebhooks.description')}
