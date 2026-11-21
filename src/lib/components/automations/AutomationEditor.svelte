@@ -80,6 +80,23 @@
 	let prompt = '';
 	// Like the model editor's system prompt: a saved prompt starts collapsed.
 	let showPrompt = true;
+	// Collapsing (and its Show more / Show less toggle) only applies when the prompt is longer
+	// than the five-line preview; a hidden copy of the preview tells us whether it gets cut off.
+	let promptMeasureEl: HTMLDivElement | null = null;
+	let promptClamped = false;
+	const measurePrompt = () => {
+		if (!promptMeasureEl) return;
+		promptClamped = promptMeasureEl.scrollHeight > promptMeasureEl.clientHeight + 1;
+	};
+	$: if (promptMeasureEl) {
+		void prompt;
+		tick().then(measurePrompt);
+	}
+	onMount(() => {
+		const observer = new ResizeObserver(measurePrompt);
+		if (promptMeasureEl) observer.observe(promptMeasureEl);
+		return () => observer.disconnect();
+	});
 	let model_id = '';
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
@@ -341,10 +358,9 @@
 		const request = loadMore ? runsRequest : ++runsRequest;
 		runsLoading = true;
 
-		if (!loadMore) {
-			runsPage = 0;
-			hasMoreRuns = true;
-		}
+		// hasMoreRuns keeps its value until the response arrives, so the "Automation created"
+		// row doesn't blink out on every reload.
+		if (!loadMore) runsPage = 0;
 
 		try {
 			const fetchedRuns =
@@ -352,16 +368,21 @@
 					localStorage.token,
 					automation.id,
 					runsPage * RUNS_PAGE_SIZE,
-					RUNS_PAGE_SIZE,
+					// One extra row tells us whether another page exists without an empty "Show more".
+					RUNS_PAGE_SIZE + 1,
 					runsDirection
 				)) ?? [];
 			if (request !== runsRequest) return;
-			runs = loadMore ? [...runs, ...fetchedRuns] : fetchedRuns;
-			hasMoreRuns = fetchedRuns.length === RUNS_PAGE_SIZE;
+			const pageRuns = fetchedRuns.slice(0, RUNS_PAGE_SIZE);
+			runs = loadMore ? [...runs, ...pageRuns] : pageRuns;
+			hasMoreRuns = fetchedRuns.length > RUNS_PAGE_SIZE;
 			runsPage++;
 		} catch {
 			if (request !== runsRequest) return;
-			if (!loadMore) runs = [];
+			if (!loadMore) {
+				runs = [];
+				hasMoreRuns = false;
+			}
 		}
 		runsLoading = false;
 	};
@@ -458,7 +479,16 @@
 					deleteHandler={() => (showDeleteConfirm = true)}
 				/>
 			</div>
-			{#if showPrompt || !prompt.trim()}
+			<div class="relative">
+				<div
+					bind:this={promptMeasureEl}
+					aria-hidden="true"
+					class="pointer-events-none invisible absolute inset-x-0 top-0 line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed"
+				>
+					{prompt}
+				</div>
+			</div>
+			{#if showPrompt || !promptClamped}
 				<Textarea
 					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-base-500 outline-hidden placeholder:text-base-400 dark:text-base-400 dark:placeholder:text-base-500"
 					bind:value={prompt}
@@ -479,7 +509,7 @@
 					{prompt}
 				</button>
 			{/if}
-			{#if prompt.trim()}
+			{#if promptClamped}
 				<button
 					class="mt-1 block text-xs text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 					type="button"
