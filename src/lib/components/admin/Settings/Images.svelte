@@ -40,6 +40,7 @@
 	let videoConfig: any = null;
 	let videoSavedConfig: any = null;
 
+	// Settings search reads these keys from the locale file, which i18n:parse cannot see: $i18n.t('settings.admin.images.title')
 	$: settingLabels = {
 		ENABLE_VIDEO_GENERATION: $i18n.t('settings.admin.videos.videoGeneration.label'),
 		VIDEO_GENERATION_DEFAULT_MODEL: $i18n.t('settings.admin.videos.defaultVideoModel.label'),

@@ -103,6 +103,7 @@
 
 {#if config}
 	<div class="flex flex-col">
+		<!-- Settings search reads these keys from the locale file, which i18n:parse cannot see: $i18n.t('settings.admin.videos.sections.defaultModels.title') -->
 		<AdminSettingSection title={$i18n.t('settings.admin.videos.title')}>
 			<AdminSettingRow
 				label={$i18n.t('settings.admin.videos.videoGeneration.label')}

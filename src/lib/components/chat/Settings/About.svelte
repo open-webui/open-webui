@@ -22,6 +22,7 @@
 		current: '',
 		latest: ''
 	};
+	// Settings search reads these keys from the locale file, which i18n:parse cannot see: $i18n.t('settings.personal.about.sections.community.title')
 	const communityLinks = [
 		['GitHub', 'https://github.com/open-webui/open-webui'],
 		['Enterprise', 'https://docs.openwebui.com/enterprise'],

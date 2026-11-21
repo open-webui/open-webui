@@ -352,6 +352,8 @@
 						<div>{$i18n.t('Record')}</div>
 					</button>
 
+					<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Capture Audio') -->
+					<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
 					{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
 						<button
 							role="menuitem"

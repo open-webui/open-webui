@@ -609,6 +609,7 @@
 
 						<DropdownMenu slot="content" className="w-48">
 							<div class={menuLabel}>{$i18n.t('Layout')}</div>
+							<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('List') $i18n.t('Grid') -->
 							{#each [[null, 'List', 'list'], ['grid', 'Grid', 'grid']] as const as [value, label, icon]}
 								<button
 									type="button"
@@ -906,6 +907,7 @@
 														<span
 															class="relative h-[5.75rem] w-[4.75rem] overflow-hidden rounded-lg border border-base-200 bg-base-0 shadow-xs dark:border-base-700 dark:bg-base-850"
 														>
+															<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('No content') -->
 															{#if note.data?.content?.md?.trim()}
 																<span
 																	dir="auto"

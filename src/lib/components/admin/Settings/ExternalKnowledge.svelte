@@ -414,6 +414,7 @@
 		}
 
 		if (!testResult?.documents?.length) {
+			// Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Test must pass before a source is created.')
 			toast.error($i18n.t('Test the source before creating it.'));
 			return;
 		}

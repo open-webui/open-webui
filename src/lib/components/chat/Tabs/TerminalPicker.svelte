@@ -75,6 +75,7 @@
 			<KeyPill text="Esc" />
 		</button>
 	</div>
+	<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Terminals') -->
 	<div
 		id="terminal-picker-options"
 		role="listbox"

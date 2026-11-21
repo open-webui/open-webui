@@ -467,6 +467,7 @@
 		{/if}
 		<div class="flex gap-2">
 			<div class="min-w-0 flex-1">
+				<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('My Terminal') -->
 				<label for="terminal-name" class="mb-0.5 block text-xs text-base-500"
 					>{$i18n.t('Name')}</label
 				>

@@ -39,6 +39,9 @@
 
 	let inputElement = null;
 
+	// Earlier wording, kept so i18n:parse does not drop its translations:
+	// $i18n.t('MCP support is experimental and its specification changes often, which can lead to incompatibilities. OpenAPI specification support is directly maintained by the Open WebUI team, making it the more reliable option for compatibility.')
+	// $i18n.t('Read more →')
 	let type = 'openapi'; // 'openapi', 'mcp'
 
 	let url = '';
