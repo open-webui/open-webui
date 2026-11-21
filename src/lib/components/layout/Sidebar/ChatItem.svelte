@@ -97,6 +97,7 @@
 	export let createdAt: number | null = null;
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
+	export let archived = false;
 	export let active = false;
 	export let pendingApproval = false;
 
@@ -368,16 +369,17 @@
 		archiving = true;
 
 		try {
+			// The endpoint toggles, so an archived chat (shown under Archived or All) is unarchived.
 			await archiveChatById(localStorage.token, id);
 			updateFolderChatLists({ id }, undefined, true);
 
-			if ($chatId === id) {
+			if (!archived && $chatId === id) {
 				await goto('/');
 				chatId.set('');
 			}
 
 			await refreshAfterChange(null, true);
-			toast.success($i18n.t('Chat archived.'));
+			toast.success(archived ? $i18n.t('Chat unarchived.') : $i18n.t('Chat archived.'));
 		} catch (error) {
 			console.error('Error archiving chat:', error);
 			toast.error($i18n.t('Failed to archive chat.'));
@@ -862,9 +864,12 @@
 			{:else if !readonly && shiftKey && mouseOver && !chatSelection}
 				<div class=" flex items-center self-center space-x-1.5">
 					{#if $visibleControls['chat.archive']}
-						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
+						<Tooltip
+							content={archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
+							className="flex items-center"
+						>
 							<button
-								aria-label={$i18n.t('Archive')}
+								aria-label={archived ? $i18n.t('Unarchive') : $i18n.t('Archive')}
 								class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition disabled:cursor-not-allowed"
 								disabled={archiving}
 								on:click={() => {
@@ -897,6 +902,7 @@
 				<div class="flex self-center z-10 items-end">
 					<ChatMenu
 						{readonly}
+						{archived}
 						chatId={id}
 						cloneChatHandler={() => {
 							cloneChatHandler(id);

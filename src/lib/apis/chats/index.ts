@@ -203,13 +203,25 @@ export const getChatList = async (
 	token: string = '',
 	page: number | null = null,
 	include_pinned: boolean = false,
-	include_folders: boolean = false
+	include_folders: boolean = false,
+	view: {
+		sortBy?: 'updated_at' | 'created_at';
+		status?: 'active' | 'archived' | 'all';
+	} = {}
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
 
 	if (page !== null) {
 		searchParams.append('page', `${page}`);
+	}
+
+	if (view.sortBy) {
+		searchParams.append('sort_by', view.sortBy);
+	}
+
+	if (view.status) {
+		searchParams.append('status', view.status);
 	}
 
 	if (include_folders) {
@@ -249,9 +261,10 @@ export const getChatList = async (
 		return [];
 	}
 
+	// Date headings follow the date the list is sorted by.
 	return res.map((chat) => ({
 		...chat,
-		time_range: getTimeRange(chat.updated_at)
+		time_range: getTimeRange(view.sortBy === 'created_at' ? chat.created_at : chat.updated_at)
 	}));
 };
 

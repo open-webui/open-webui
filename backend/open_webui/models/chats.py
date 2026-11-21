@@ -184,7 +184,7 @@ def chat_search_message_content_match_sql(dialect_name: str, key: str) -> str:
 
 def chat_list_order(sort_by: str = 'updated_at', sort_dir: str = 'desc', user_id: str | None = None):
     if sort_by != 'unread_updated_at':
-        sort_column = Chat.title if sort_by == 'title' else Chat.updated_at
+        sort_column = {'title': Chat.title, 'created_at': Chat.created_at}.get(sort_by, Chat.updated_at)
         order_clause = sort_column.asc() if sort_dir == 'asc' else sort_column.desc()
         return order_clause, Chat.id
 
@@ -1817,7 +1817,7 @@ class ChatTable:
     async def get_chat_title_id_list_by_user_id(
         self,
         user_id: str,
-        include_archived: bool = False,
+        status: str = 'active',  # 'active', 'archived' or 'all'
         include_folders: bool = False,
         include_pinned: bool = False,
         sort_by: str = 'updated_at',
@@ -1827,9 +1827,9 @@ class ChatTable:
         db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         async with get_async_db_context(db) as session:
-            stmt = select(Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at).filter_by(
-                user_id=user_id
-            )
+            stmt = select(
+                Chat.id, Chat.title, Chat.updated_at, Chat.created_at, Chat.last_read_at, Chat.archived
+            ).filter_by(user_id=user_id)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
 
             if not include_folders:
@@ -1838,7 +1838,9 @@ class ChatTable:
             if not include_pinned:
                 stmt = stmt.filter(or_(Chat.pinned == False, Chat.pinned == None))
 
-            if not include_archived:
+            if status == 'archived':
+                stmt = stmt.filter_by(archived=True)
+            elif status != 'all':
                 stmt = stmt.filter_by(archived=False)
 
             stmt = stmt.order_by(*chat_list_order(sort_by, sort_dir))
@@ -1859,6 +1861,7 @@ class ChatTable:
                         'updated_at': chat[2],
                         'created_at': chat[3],
                         'last_read_at': chat[4],
+                        'archived': bool(chat[5]),
                     }
                 )
                 for chat in all_chats

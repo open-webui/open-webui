@@ -344,6 +344,7 @@ async def get_session_user_chat_list(
     include_folders: bool | None = False,
     sort_by: str = 'updated_at',
     sort_dir: str = 'desc',
+    status: Literal['active', 'archived', 'all'] = 'active',
     db: AsyncSession = Depends(get_async_session),
 ):
     try:
@@ -359,6 +360,7 @@ async def get_session_user_chat_list(
                 sort_dir=sort_dir,
                 skip=skip,
                 limit=limit,
+                status=status,
                 db=db,
             )
         else:
@@ -368,12 +370,14 @@ async def get_session_user_chat_list(
                 include_pinned=include_pinned,
                 sort_by=sort_by,
                 sort_dir=sort_dir,
+                status=status,
                 db=db,
             )
         return await add_active_state_to_chat_list(request, chats, db=db)
     except Exception as e:
         log.exception(e)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+        # `status` here is the query parameter, so the code is written out.
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT())
 
 
 @router.post('/read')

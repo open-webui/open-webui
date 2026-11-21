@@ -39,7 +39,9 @@
 		registerFolderRefreshHandler,
 		setAllChatsRead,
 		setChatActive,
-		setChatReadAt
+		setChatReadAt,
+		chatListView,
+		setChatListView
 	} from '$lib/stores/chatList';
 	import {
 		folderStates,
@@ -120,6 +122,8 @@
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
 	import CheckIcon from '../icons/Check.svelte';
+	import ChevronRight from '../icons/ChevronRight.svelte';
+	import DropdownSub from '../common/DropdownSub.svelte';
 	import ArchiveBoxIcon from '../icons/ArchiveBox.svelte';
 	import GarbageBinIcon from '../icons/GarbageBin.svelte';
 	import XMarkIcon from '../icons/XMark.svelte';
@@ -267,6 +271,25 @@
 	let showFolders = false;
 	let showSharedFolders = false;
 	let showChatsMenu = false;
+	$: chatListMenus = [
+		{
+			label: $i18n.t('Status'),
+			key: 'status',
+			choices: [
+				{ value: 'active', label: $i18n.t('Active') },
+				{ value: 'archived', label: $i18n.t('Archived') },
+				{ value: 'all', label: $i18n.t('All') }
+			]
+		},
+		{
+			label: $i18n.t('Sort by'),
+			key: 'sortBy',
+			choices: [
+				{ value: 'updated_at', label: $i18n.t('Last activity') },
+				{ value: 'created_at', label: $i18n.t('Created') }
+			]
+		}
+	] as const;
 
 	let folders: Record<string, any> = {};
 	type SelectedSidebarFolder = { id: string } | null;
@@ -1804,6 +1827,51 @@
 
 								<div slot="content">
 									<DropdownMenu className="min-w-[10.625rem]">
+										{#each chatListMenus as menu (menu.key)}
+											{@const current = menu.choices.find(
+												(choice) => choice.value === $chatListView[menu.key]
+											)}
+											<DropdownSub
+												contentClass="select-none z-50 max-h-80 overflow-y-auto"
+												maxWidth={320}
+												sideOffset={6}
+											>
+												<button
+													slot="trigger"
+													type="button"
+													class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
+												>
+													<span class="min-w-0 flex-1 truncate text-left">{menu.label}</span>
+													<span class="truncate text-base-500 dark:text-base-400"
+														>{current?.label}</span
+													>
+													<ChevronRight
+														className="size-3.5 shrink-0 text-base-400 rtl:rotate-180"
+													/>
+												</button>
+												{#each menu.choices as choice (choice.value)}
+													<button
+														type="button"
+														role="menuitemradio"
+														aria-checked={choice.value === current?.value}
+														on:click={() => {
+															showChatsMenu = false;
+															if (choice.value !== current?.value) {
+																setChatListView(localStorage.token, {
+																	[menu.key]: choice.value
+																});
+															}
+														}}
+													>
+														<span class="flex-1 text-left">{choice.label}</span>
+														{#if choice.value === current?.value}<CheckIcon
+																className="size-3! shrink-0"
+															/>{/if}
+													</button>
+												{/each}
+											</DropdownSub>
+										{/each}
+										<hr class="border-base-50/30 dark:border-base-800/30" />
 										<button
 											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 											on:click={markAllChatsReadHandler}
@@ -1964,6 +2032,7 @@
 													createdAt={chat.created_at}
 													updatedAt={chat.updated_at}
 													lastReadAt={chat.last_read_at}
+													archived={chat.archived === true}
 													active={chat.active ?? false}
 													pendingApproval={chat.pending_approval ?? false}
 													{shiftKey}
