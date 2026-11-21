@@ -115,6 +115,65 @@
 	$: selectedModelDescription =
 		$config?.license_metadata?.chat_placeholder_description ||
 		resolveLocalizedModelDescription(selectedModel, $i18n.language);
+
+	// Time-of-day greeting, unless the model (or license) gives the placeholder a description.
+	const greetingPeriod = (hour: number) =>
+		hour < 5
+			? 'lateNight'
+			: hour < 7
+				? 'superEarly'
+				: hour < 11
+					? 'morning'
+					: hour < 13
+						? 'noon'
+						: hour < 17
+							? 'afternoon'
+							: hour < 21
+								? 'evening'
+								: 'night';
+	const greetingDate = new Date();
+	$: firstName = ($user?.name ?? '').trim().split(/\s+/)[0];
+	$: showGreeting = !!firstName && !selectedModelDescription;
+	// Keys are written out so `i18n:parse` keeps them.
+	$: greetings = {
+		lateNight: [
+			$i18n.t('chat.placeholder.greeting.lateNight.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.lateNight.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.lateNight.2', { name: firstName })
+		],
+		superEarly: [
+			$i18n.t('chat.placeholder.greeting.superEarly.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.superEarly.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.superEarly.2', { name: firstName })
+		],
+		morning: [
+			$i18n.t('chat.placeholder.greeting.morning.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.morning.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.morning.2', { name: firstName })
+		],
+		noon: [
+			$i18n.t('chat.placeholder.greeting.noon.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.noon.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.noon.2', { name: firstName })
+		],
+		afternoon: [
+			$i18n.t('chat.placeholder.greeting.afternoon.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.afternoon.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.afternoon.2', { name: firstName })
+		],
+		evening: [
+			$i18n.t('chat.placeholder.greeting.evening.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.evening.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.evening.2', { name: firstName })
+		],
+		night: [
+			$i18n.t('chat.placeholder.greeting.night.0', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.night.1', { name: firstName }),
+			$i18n.t('chat.placeholder.greeting.night.2', { name: firstName })
+		]
+	};
+	// Same phrasing all day, a different one tomorrow.
+	$: greeting = greetings[greetingPeriod(greetingDate.getHours())][greetingDate.getDate() % 3];
 	$: selectedSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
@@ -240,64 +299,70 @@
 			class="w-full shrink-0 text-3xl text-base-800 dark:text-base-100 text-center flex items-center gap-4"
 		>
 			<div class="w-full flex flex-col justify-center items-center">
-				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
-						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
-							{#each models as model, modelIdx}
-								<Tooltip
-									content={(models[modelIdx]?.info?.meta?.tags ?? [])
-										.map((tag) => tag.name.toUpperCase())
-										.join(', ')}
-									placement="top"
-								>
-									<button
-										aria-hidden={models.length <= 1}
-										tabindex={models.length > 1 ? 0 : -1}
-										aria-label={$i18n.t('Get information on {{name}} in the UI', {
-											name: models[modelIdx]?.name
-										})}
-										on:click={() => {
-											selectedModelIdx = modelIdx;
-										}}
-									>
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-2xl"
-											aria-hidden="true"
-											draggable="false"
-											on:error={(e) => {
-												// LICENSE covers this Open WebUI fallback logo.
-												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-												// https://docs.openwebui.com/license.
-												e.currentTarget.src = '/favicon.png';
-											}}
-										/>
-									</button>
-								</Tooltip>
-							{/each}
-						</div>
-					</div>
-
-					<h2
-						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
-						in:fade={{ duration: 100 }}
-					>
-						{#if selectedModelName}
-							<Tooltip
-								as="span"
-								content={selectedModelName}
-								placement="top"
-								className=" flex items-center "
-							>
-								<span class="line-clamp-1">
-									{selectedModelName}
-								</span>
-							</Tooltip>
-						{:else}
-							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
-						{/if}
+				{#if showGreeting}
+					<h2 class="px-5 max-w-xl text-2xl line-clamp-1" in:fade={{ duration: 100 }}>
+						{greeting}
 					</h2>
-				</div>
+				{:else}
+					<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
+						<div class="flex shrink-0 justify-center">
+							<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
+								{#each models as model, modelIdx}
+									<Tooltip
+										content={(models[modelIdx]?.info?.meta?.tags ?? [])
+											.map((tag) => tag.name.toUpperCase())
+											.join(', ')}
+										placement="top"
+									>
+										<button
+											aria-hidden={models.length <= 1}
+											tabindex={models.length > 1 ? 0 : -1}
+											aria-label={$i18n.t('Get information on {{name}} in the UI', {
+												name: models[modelIdx]?.name
+											})}
+											on:click={() => {
+												selectedModelIdx = modelIdx;
+											}}
+										>
+											<img
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
+												class=" size-9 @sm:size-10 rounded-2xl"
+												aria-hidden="true"
+												draggable="false"
+												on:error={(e) => {
+													// LICENSE covers this Open WebUI fallback logo.
+													// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+													// https://docs.openwebui.com/license.
+													e.currentTarget.src = '/favicon.png';
+												}}
+											/>
+										</button>
+									</Tooltip>
+								{/each}
+							</div>
+						</div>
+
+						<h2
+							class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
+							in:fade={{ duration: 100 }}
+						>
+							{#if selectedModelName}
+								<Tooltip
+									as="span"
+									content={selectedModelName}
+									placement="top"
+									className=" flex items-center "
+								>
+									<span class="line-clamp-1">
+										{selectedModelName}
+									</span>
+								</Tooltip>
+							{:else}
+								{$i18n.t('Hello, {{name}}', { name: $user?.name })}
+							{/if}
+						</h2>
+					</div>
+				{/if}
 
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
