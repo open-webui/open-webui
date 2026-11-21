@@ -2087,7 +2087,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     chat_id = metadata.get('chat_id')
     user_message_id = metadata.get('user_message_id')
     pending_assistant_message = None
-    chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+    chat = await Chats.get_chat_without_history_by_id(chat_id) if is_saved_chat_id(chat_id) else None
     is_note_chat = bool(chat and (chat.meta or {}).get('internal') is True and (chat.meta or {}).get('type') == 'note')
     use_builtin_tools = is_note_chat or (
         bool(metadata.get('session_id'))
