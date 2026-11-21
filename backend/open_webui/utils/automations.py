@@ -57,8 +57,6 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
-# How long a run into an ongoing chat waits for a reply already running there.
-AUTOMATION_CHAT_BUSY_TIMEOUT = 600
 
 
 # Worker Loop
@@ -444,6 +442,15 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # An ongoing chat gets this run at its end; the first run, or a run after the chat was deleted, starts it.
         ongoing = target.get('new_chat', True) is False
         if ongoing and target.get('chat_id'):
+            from open_webui.utils.subagents import queue_user_message
+
+            current = await Chats.get_chat_by_id_and_user_id(target['chat_id'], automation.user_id)
+            current_id = ((current.chat or {}).get('history') or {}).get('currentId') if current else None
+            # While a reply runs there, the prompt waits in the chat's queue like a message sent meanwhile.
+            if current_id and await queue_user_message(
+                request, current.id, user, {'id': user_msg_id, 'content': prompt}, current_id
+            ):
+                return
             parent_id = await _append_run_to_chat(
                 app, target['chat_id'], automation, prompt, model_id, user_msg_id, assistant_msg_id
             )
@@ -605,64 +612,54 @@ async def _insert_run_chat(automation, folder_id, prompt: str, model_id: str, us
 async def _append_run_to_chat(
     app, chat_id: str, automation, prompt: str, model_id: str, user_msg_id: str, assistant_msg_id: str
 ):
-    """Add this run's prompt and its pending reply at the end of the ongoing chat, after any reply still running there.
+    """Add this run's prompt and its pending reply at the end of the ongoing chat.
 
     Returns the message the prompt follows, or False when the chat is gone or no longer the owner's.
     """
     from open_webui.models.chat_messages import ChatMessages
-    from open_webui.tasks import has_active_tasks
     from open_webui.utils.subagents import _parent_locks
 
-    deadline = time.monotonic() + AUTOMATION_CHAT_BUSY_TIMEOUT
-    while True:
-        while await has_active_tasks(app.state.redis, chat_id):
-            if time.monotonic() > deadline:
-                raise ValueError('The ongoing chat is still busy with another reply')
-            await asyncio.sleep(1)
-        # The lock and check match how queued messages wait, so a reply can't start between them.
-        async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-            if await has_active_tasks(app.state.redis, chat_id):
-                continue
-            async with Chats._chat_transaction(chat_id) as (_, chat):
-                if not chat or chat.user_id != automation.user_id:
-                    return False
-                chat_data = copy.deepcopy(chat.chat or {})
-                history = chat_data.setdefault('history', {})
-                messages = history.setdefault('messages', {})
-                current_id = history.get('currentId')
-                parent_id = Chats._last_descendant_id(messages, current_id) if current_id in messages else None
-                now = int(time.time())
-                user_message = {
-                    'id': user_msg_id,
-                    'parentId': parent_id,
-                    'childrenIds': [assistant_msg_id],
-                    'role': 'user',
-                    'content': prompt,
-                    'models': [model_id],
-                    'meta': {'automation_id': automation.id},
-                    'timestamp': now,
-                }
-                assistant_message = {
-                    'id': assistant_msg_id,
-                    'parentId': user_msg_id,
-                    'childrenIds': [],
-                    'role': 'assistant',
-                    'content': '',
-                    'done': False,
-                    'model': model_id,
-                    'timestamp': now,
-                }
-                messages[user_msg_id] = user_message
-                messages[assistant_msg_id] = assistant_message
-                if parent_id:
-                    messages[parent_id].setdefault('childrenIds', []).append(user_msg_id)
-                history['currentId'] = assistant_msg_id
-                chat.chat = chat_data
-                chat.current_message_id = assistant_msg_id
-                chat.updated_at = now
-            await ChatMessages.upsert_message(user_msg_id, chat_id, automation.user_id, user_message)
-            await ChatMessages.upsert_message(assistant_msg_id, chat_id, automation.user_id, assistant_message)
-            return parent_id
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        async with Chats._chat_transaction(chat_id) as (_, chat):
+            if not chat or chat.user_id != automation.user_id:
+                return False
+            chat_data = copy.deepcopy(chat.chat or {})
+            history = chat_data.setdefault('history', {})
+            messages = history.setdefault('messages', {})
+            current_id = history.get('currentId')
+            parent_id = Chats._last_descendant_id(messages, current_id) if current_id in messages else None
+            now = int(time.time())
+            user_message = {
+                'id': user_msg_id,
+                'parentId': parent_id,
+                'childrenIds': [assistant_msg_id],
+                'role': 'user',
+                'content': prompt,
+                'models': [model_id],
+                'meta': {'automation_id': automation.id},
+                'timestamp': now,
+            }
+            assistant_message = {
+                'id': assistant_msg_id,
+                'parentId': user_msg_id,
+                'childrenIds': [],
+                'role': 'assistant',
+                'content': '',
+                'done': False,
+                'model': model_id,
+                'timestamp': now,
+            }
+            messages[user_msg_id] = user_message
+            messages[assistant_msg_id] = assistant_message
+            if parent_id:
+                messages[parent_id].setdefault('childrenIds', []).append(user_msg_id)
+            history['currentId'] = assistant_msg_id
+            chat.chat = chat_data
+            chat.current_message_id = assistant_msg_id
+            chat.updated_at = now
+        await ChatMessages.upsert_message(user_msg_id, chat_id, automation.user_id, user_message)
+        await ChatMessages.upsert_message(assistant_msg_id, chat_id, automation.user_id, assistant_message)
+        return parent_id
 
 
 async def _check_calendar_alerts(app) -> None:
