@@ -21,6 +21,7 @@
 		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { firstNameOf, getGreeting } from '$lib/utils/greeting';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -117,63 +118,9 @@
 		resolveLocalizedModelDescription(selectedModel, $i18n.language);
 
 	// Time-of-day greeting, unless the model (or license) gives the placeholder a description.
-	const greetingPeriod = (hour: number) =>
-		hour < 5
-			? 'lateNight'
-			: hour < 7
-				? 'superEarly'
-				: hour < 11
-					? 'morning'
-					: hour < 13
-						? 'noon'
-						: hour < 17
-							? 'afternoon'
-							: hour < 21
-								? 'evening'
-								: 'night';
-	const greetingDate = new Date();
-	$: firstName = ($user?.name ?? '').trim().split(/\s+/)[0];
+	$: firstName = firstNameOf($user?.name);
 	$: showGreeting = !!firstName && !selectedModelDescription;
-	// Keys are written out so `i18n:parse` keeps them.
-	$: greetings = {
-		lateNight: [
-			$i18n.t('chat.placeholder.greeting.lateNight.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.lateNight.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.lateNight.2', { name: firstName })
-		],
-		superEarly: [
-			$i18n.t('chat.placeholder.greeting.superEarly.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.superEarly.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.superEarly.2', { name: firstName })
-		],
-		morning: [
-			$i18n.t('chat.placeholder.greeting.morning.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.morning.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.morning.2', { name: firstName })
-		],
-		noon: [
-			$i18n.t('chat.placeholder.greeting.noon.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.noon.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.noon.2', { name: firstName })
-		],
-		afternoon: [
-			$i18n.t('chat.placeholder.greeting.afternoon.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.afternoon.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.afternoon.2', { name: firstName })
-		],
-		evening: [
-			$i18n.t('chat.placeholder.greeting.evening.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.evening.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.evening.2', { name: firstName })
-		],
-		night: [
-			$i18n.t('chat.placeholder.greeting.night.0', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.night.1', { name: firstName }),
-			$i18n.t('chat.placeholder.greeting.night.2', { name: firstName })
-		]
-	};
-	// Same phrasing all day, a different one tomorrow.
-	$: greeting = greetings[greetingPeriod(greetingDate.getHours())][greetingDate.getDate() % 3];
+	$: greeting = getGreeting((key, options) => $i18n.t(key, options), firstName);
 	$: selectedSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
