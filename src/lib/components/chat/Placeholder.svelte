@@ -247,7 +247,7 @@
 		>
 			<div class="w-full flex flex-col justify-center items-center">
 				{#if showGreeting}
-					<h2 class="px-5 max-w-xl text-2xl line-clamp-1" in:fade={{ duration: 100 }}>
+					<h2 class="px-5 max-w-xl mb-1.5 text-2xl line-clamp-1" in:fade={{ duration: 100 }}>
 						{greeting}
 					</h2>
 				{:else}
@@ -372,7 +372,7 @@
 			</div>
 		</div>
 
-		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-2xl mt-3.5" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions suggestionPrompts={selectedSuggestionPrompts} inputValue={prompt} {onSelect} />
 			</div>
