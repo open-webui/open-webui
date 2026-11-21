@@ -245,6 +245,7 @@
 	export let onCollapseEmbedded: (() => void) | null = null;
 	// Pads the header and messages when the host draws the composer flush to its frame.
 	export let embeddedInset = false;
+	export let onRecordedAudio: ((file: File) => unknown) | null = null;
 	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
 	export let onCreateEmbeddedChat:
 		| ((chat: {
@@ -6169,7 +6170,7 @@
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
 			>
 				{#if loading}
-					{#if !fullWidthTabs}
+					{#if !fullWidthTabs && !embeddedCollapsed}
 						<div class="flex items-center justify-center h-full w-full">
 							<Spinner className="size-5" />
 						</div>
@@ -6410,6 +6411,7 @@
 										{contextCompactionEnabled}
 										{embedded}
 										autofocus={!embeddedCollapsed}
+										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -6533,6 +6535,7 @@
 										{contextCompactionEnabled}
 										{embedded}
 										autofocus={!embeddedCollapsed}
+										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}

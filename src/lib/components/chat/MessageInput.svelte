@@ -180,6 +180,8 @@
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
 	export let autofocus = true;
+	// Recorded audio goes to the host when given (note chats), otherwise it is attached to the message.
+	export let onRecordedAudio: ((file: File) => unknown) | null = null;
 	export let callActive = false;
 	export let callEnabled = true;
 
@@ -788,6 +790,8 @@
 
 	let loaded = false;
 	let recording = false;
+	let audioRecording = false;
+	let audioRecordingDisplayMedia = false;
 
 	let isComposing = false;
 	// Safari has a bug where compositionend is not triggered correctly #16615
@@ -1137,6 +1141,46 @@
 			}
 		}
 		return !files.some((item) => item.status === 'pending' && item.file instanceof File);
+	};
+
+	const recordedAudioHandler = async (file: File) => {
+		if (onRecordedAudio) await onRecordedAudio(file);
+		else await uploadFileHandler(file);
+	};
+
+	const recordActions = {
+		record: async () => {
+			try {
+				let stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch((err) => {
+					toast.error(
+						$i18n.t(`Permission denied when accessing microphone: {{error}}`, { error: err })
+					);
+					return null;
+				});
+				if (stream) {
+					stream.getTracks().forEach((track) => track.stop());
+					audioRecordingDisplayMedia = false;
+					audioRecording = true;
+				}
+				stream = null;
+			} catch {
+				toast.error($i18n.t('Permission denied when accessing microphone'));
+			}
+		},
+		captureAudio: () => {
+			audioRecordingDisplayMedia = true;
+			audioRecording = true;
+		},
+		upload: () => {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.accept = 'audio/*';
+			input.onchange = async () => {
+				const file = input.files?.[0];
+				if (file) await recordedAudioHandler(file);
+			};
+			input.click();
+		}
 	};
 
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
@@ -1726,6 +1770,7 @@
 							'fork',
 							'status',
 							'comments',
+							'record',
 							'side',
 							'model',
 							'compare',
@@ -1773,6 +1818,7 @@
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onComments: openComments,
+					onRecord: () => recordActions.record(),
 					onSide: () => {
 						if (!canSide) return;
 						chatTabRequest.set({ parentChatId: chatId, prompt: '' });
@@ -2086,36 +2132,56 @@
 						}}
 					/>
 
-					<div class={recording ? '' : 'hidden'}>
-						<VoiceRecording
-							confirmButtonId={inputId === 'chat-input'
-								? 'confirm-recording-button'
-								: `${inputId}-confirm-recording-button`}
-							bind:recording
-							onCancel={async () => {
-								recording = false;
+					<!-- pb-2 matches the form's gap-1.5 + mb-0.5 below the composer card. -->
+					<div class={recording || audioRecording ? 'pb-2' : 'hidden'}>
+						<div class={recording ? '' : 'hidden'}>
+							<VoiceRecording
+								confirmButtonId={inputId === 'chat-input'
+									? 'confirm-recording-button'
+									: `${inputId}-confirm-recording-button`}
+								bind:recording
+								onCancel={async () => {
+									recording = false;
 
-								await tick();
-								focus({ preventScroll: true });
-							}}
-							onConfirm={async (data) => {
-								const { text, filename } = data;
+									await tick();
+									focus({ preventScroll: true });
+								}}
+								onConfirm={async (data) => {
+									const { text, filename } = data;
 
-								recording = false;
+									recording = false;
 
-								await tick();
-								await insertTextAtCursor(`${text}`);
-								await tick();
-								focus({ preventScroll: true });
+									await tick();
+									await insertTextAtCursor(`${text}`);
+									await tick();
+									focus({ preventScroll: true });
 
-								if ($settings?.speechAutoSend ?? false) {
-									dispatch('submit', prompt);
-								}
-							}}
-						/>
+									if ($settings?.speechAutoSend ?? false) {
+										dispatch('submit', prompt);
+									}
+								}}
+							/>
+						</div>
+						{#if audioRecording}
+							<VoiceRecording
+								confirmButtonId={`${inputId}-confirm-audio-recording-button`}
+								bind:recording={audioRecording}
+								transcribe={false}
+								displayMedia={audioRecordingDisplayMedia}
+								echoCancellation={false}
+								noiseSuppression={false}
+								onCancel={() => {
+									audioRecording = false;
+								}}
+								onConfirm={async (data) => {
+									audioRecording = false;
+									if (data?.file) await recordedAudioHandler(data.file);
+								}}
+							/>
+						{/if}
 					</div>
 					<form
-						class="w-full flex flex-col gap-1.5 {recording ? 'hidden' : ''}"
+						class="w-full flex flex-col gap-1.5 {recording || audioRecording ? 'hidden' : ''}"
 						on:submit|preventDefault={() => {
 							dispatch('submit', prompt);
 						}}
@@ -2616,6 +2682,7 @@
 										{visionCapableModels}
 										{toolApprovalMode}
 										{onToolApprovalModeChange}
+										{recordActions}
 										{screenCaptureHandler}
 										{inputFilesHandler}
 										uploadFilesHandler={() => {

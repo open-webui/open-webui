@@ -20,6 +20,7 @@
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { chatId } = getChatContext();
@@ -35,6 +36,7 @@
 	export let compactDisabled = false;
 	export let canStatus = false;
 	export let canComments = false;
+	export let canRecord = false;
 	export let canSide = false;
 	export let canFork = false;
 	export let forkDisabled = false;
@@ -75,6 +77,9 @@
 			: []),
 		...(canComments && 'comments'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'comments' } }]
+			: []),
+		...(canRecord && 'record'.startsWith(query.toLowerCase())
+			? [{ type: 'command', data: { id: 'record' } }]
 			: []),
 		...($visibleControls['chat.model_command'] && 'model'.startsWith(query.toLowerCase())
 			? [{ type: 'command', data: { id: 'model' } }]
@@ -377,10 +382,14 @@
 					</span>
 				</button>
 			</Tooltip>
-		{:else if item.data.id === 'comments' || item.data.id === 'side'}
+		{:else if item.data.id === 'comments' || item.data.id === 'side' || item.data.id === 'record'}
 			<button
 				type="button"
-				aria-label={item.data.id === 'side' ? $i18n.t('Side chat') : $i18n.t('Comments')}
+				aria-label={item.data.id === 'side'
+					? $i18n.t('Side chat')
+					: item.data.id === 'record'
+						? $i18n.t('Record')
+						: $i18n.t('Comments')}
 				class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 					{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 				on:mousedown={(e) => e.preventDefault()}
@@ -392,13 +401,19 @@
 				<span class="app-icon-muted flex items-center justify-center w-4 shrink-0">
 					{#if item.data.id === 'side'}
 						<Icon name="chat-lines" class="size-3.5" />
+					{:else if item.data.id === 'record'}
+						<Mic className="size-3.5" />
 					{:else}
 						<Annotation className="size-3.5" />
 					{/if}
 				</span>
 				<span class="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
 					<span class="min-w-0 flex-1 truncate"
-						>{item.data.id === 'side' ? $i18n.t('Side chat') : $i18n.t('Comments')}</span
+						>{item.data.id === 'side'
+							? $i18n.t('Side chat')
+							: item.data.id === 'record'
+								? $i18n.t('Record')
+								: $i18n.t('Comments')}</span
 					>
 					<span class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">/{item.data.id}</span>
 				</span>

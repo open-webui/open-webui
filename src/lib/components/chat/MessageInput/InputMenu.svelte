@@ -28,6 +28,9 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
+	import CursorArrowRays from '$lib/components/icons/CursorArrowRays.svelte';
+	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -49,6 +52,12 @@
 	export let onClose: Function;
 	export let toolApprovalMode = 'full';
 	export let onToolApprovalModeChange: Function = () => {};
+	// Audio recording actions; the composer decides where the recording goes.
+	export let recordActions: {
+		record: () => void;
+		captureAudio: () => void;
+		upload: () => void;
+	} | null = null;
 
 	export let show = false;
 	export let tab = '';
@@ -297,6 +306,23 @@
 						</Tooltip>
 					{/if}
 
+					{#if recordActions}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								tab = 'record';
+							}}
+						>
+							<Mic />
+							<div class="flex items-center w-full justify-between">
+								<div>{$i18n.t('Record')}</div>
+								<div class="text-base-500"><ChevronRight /></div>
+							</div>
+						</button>
+					{/if}
+
 					{#if showAddContext}
 						<button
 							role="menuitem"
@@ -313,6 +339,35 @@
 							</div>
 						</button>
 					{/if}
+				</div>
+			{:else if tab === 'record' && recordActions}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						role="menuitem"
+						type="button"
+						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div>{$i18n.t('Record')}</div>
+					</button>
+
+					{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }, { label: 'Upload Audio', icon: CloudArrowUp, action: recordActions.upload }] as item}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								show = false;
+								item.action();
+							}}
+						>
+							<svelte:component this={item.icon} className="size-4" />
+							<div class="line-clamp-1">{$i18n.t(item.label)}</div>
+						</button>
+					{/each}
 				</div>
 			{:else if tab === 'attachments'}
 				<div in:fly={{ x: 20, duration: 150 }}>

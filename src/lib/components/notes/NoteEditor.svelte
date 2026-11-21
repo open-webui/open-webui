@@ -88,15 +88,12 @@
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import { fileUploadsKey } from '../common/RichTextInput/FileAttachment';
 	import Spinner from '../common/Spinner.svelte';
-	import Mic from '../icons/Mic.svelte';
-	import VoiceRecording from '../chat/MessageInput/VoiceRecording.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 
 	import AccessButton from '../common/AccessButton.svelte';
 	import ChatParticipants from '../common/ChatParticipants.svelte';
 
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
-	import RecordMenu from './RecordMenu.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import Sparkles from '../icons/Sparkles.svelte';
@@ -348,9 +345,6 @@
 	let versionIdx = null;
 	let selectedModelId = null;
 
-	let recording = false;
-	let displayMediaRecord = false;
-
 	$: commentsEnabled = !!($config?.features?.enable_comments && $user && note?.id);
 	let currentNoteComments: CommentsRequest | null = null;
 	let linkedComment = '';
@@ -381,6 +375,8 @@
 	};
 	let noteChatId = null;
 	let noteChatExpanded = false;
+	// The chat composer records audio; in a note chat it lands in the note instead of the message.
+	$: noteAudioHandler = note?.write_access ? (file: File) => inputFileHandler(file) : null;
 	// Opening a note lands in its body; the docked chat composer no longer takes focus.
 	let focusedNoteId = '';
 	const focusOpenedNote = (instance) => {
@@ -1260,7 +1256,7 @@ ${content}
 										show={!!currentNoteComments}
 										align="end"
 										maxHeight="min(36rem, calc(100dvh - 6rem))"
-										contentClass="w-[min(24rem,calc(100vw-2rem))] h-[min(36rem,calc(100dvh-6rem))] rounded-2xl border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-900 shadow-lg overflow-hidden! z-50"
+										contentClass="w-[min(24rem,calc(100vw-2rem))] h-[min(36rem,calc(100dvh-6rem))] rounded-3xl border border-base-100/50 dark:border-base-800/50 bg-base-0 dark:bg-base-900 shadow-lg overflow-hidden! z-50"
 										onOpenChange={(open) => {
 											if (!open) currentNoteComments = null;
 											else currentNoteComments ??= { resource_type: 'note', resource_id: note.id };
@@ -1283,66 +1279,6 @@ ${content}
 											{/if}
 										</div>
 									</Dropdown>
-								{/if}
-
-								{#if note?.write_access}
-									<RecordMenu
-										onRecord={async () => {
-											displayMediaRecord = false;
-
-											try {
-												let stream = await navigator.mediaDevices
-													.getUserMedia({ audio: true })
-													.catch(function (err) {
-														toast.error(
-															$i18n.t(`Permission denied when accessing microphone: {{error}}`, {
-																error: err
-															})
-														);
-														return null;
-													});
-
-												if (stream) {
-													recording = true;
-													const tracks = stream.getTracks();
-													tracks.forEach((track) => track.stop());
-												}
-												stream = null;
-											} catch {
-												toast.error($i18n.t('Permission denied when accessing microphone'));
-											}
-										}}
-										onCaptureAudio={async () => {
-											displayMediaRecord = true;
-
-											recording = true;
-										}}
-										onUpload={async () => {
-											const input = document.createElement('input');
-											input.type = 'file';
-											input.accept = 'audio/*';
-											input.multiple = false;
-											input.click();
-
-											input.onchange = async (e) => {
-												const files = e.target.files;
-
-												if (files && files.length > 0) {
-													await inputFileHandler(files[0]);
-												}
-											};
-										}}
-									>
-										<Tooltip content={$i18n.t('Record')} placement="top">
-											<button
-												type="button"
-												class="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
-												aria-label={$i18n.t('Record')}
-											>
-												<Mic className="size-4" />
-											</button>
-										</Tooltip>
-									</RecordMenu>
 								{/if}
 
 								<NoteMenu
@@ -1667,7 +1603,7 @@ ${content}
 									{/each}
 								</div>
 							</div>
-							{#if note && !noteChatLoading && (noteChatId || noteChatDraftKey)}
+							{#if note}
 								<!-- The composer keeps its position; expanding only grows the conversation above it. -->
 								<div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col">
 									{#if !noteChatExpanded}
@@ -1702,48 +1638,51 @@ ${content}
 												</button>
 											{/if}
 											<div class="flex min-h-0 flex-1 flex-col">
-												{#key note.id}
-													<Chat
-														embedded={true}
-														chatIdProp={noteChatId ?? ''}
-														embeddedChats={noteChats}
-														embeddedDraftKey={noteChatDraftKey}
-														suggestedPrompts={noteChatSuggestedPrompts}
-														selectedText={selectedContent?.text ?? ''}
-														notePageId={activePageId}
-														noteFiles={noteAttachmentFiles}
-														embeddedCollapsed={!noteChatExpanded}
-														embeddedInset
-														onCollapseEmbedded={() => (noteChatExpanded = false)}
-														onBeforeNoteSubmit={async () => {
-															noteChatExpanded = true;
-															await flushActivePage();
-														}}
-														onInsertToNote={note?.write_access ? insertHandler : null}
-														onNewEmbeddedChat={createNoteChat}
-														onCreateEmbeddedChat={createNoteChatOnFirstMessage}
-														onSelectEmbeddedChat={(chatId) => {
-															if (!chatId || chatId === noteChatId) return;
-															noteChatId = chatId;
-															noteChatDraftKey = '';
-														}}
-														onDeleteEmbeddedChat={deleteNoteChat}
-														onEmbeddedChatTitle={(chatId, title) => {
-															noteChats = noteChats.map((chat) =>
-																chat.id === chatId
-																	? {
-																			...chat,
-																			title,
-																			chat: {
-																				...(chat.chat ?? {}),
-																				title
+												{#if !noteChatLoading && (noteChatId || noteChatDraftKey)}
+													{#key note.id}
+														<Chat
+															embedded={true}
+															chatIdProp={noteChatId ?? ''}
+															embeddedChats={noteChats}
+															embeddedDraftKey={noteChatDraftKey}
+															suggestedPrompts={noteChatSuggestedPrompts}
+															selectedText={selectedContent?.text ?? ''}
+															notePageId={activePageId}
+															noteFiles={noteAttachmentFiles}
+															embeddedCollapsed={!noteChatExpanded}
+															embeddedInset
+															onRecordedAudio={noteAudioHandler}
+															onCollapseEmbedded={() => (noteChatExpanded = false)}
+															onBeforeNoteSubmit={async () => {
+																noteChatExpanded = true;
+																await flushActivePage();
+															}}
+															onInsertToNote={note?.write_access ? insertHandler : null}
+															onNewEmbeddedChat={createNoteChat}
+															onCreateEmbeddedChat={createNoteChatOnFirstMessage}
+															onSelectEmbeddedChat={(chatId) => {
+																if (!chatId || chatId === noteChatId) return;
+																noteChatId = chatId;
+																noteChatDraftKey = '';
+															}}
+															onDeleteEmbeddedChat={deleteNoteChat}
+															onEmbeddedChatTitle={(chatId, title) => {
+																noteChats = noteChats.map((chat) =>
+																	chat.id === chatId
+																		? {
+																				...chat,
+																				title,
+																				chat: {
+																					...(chat.chat ?? {}),
+																					title
+																				}
 																			}
-																		}
-																	: chat
-															);
-														}}
-													/>
-												{/key}
+																		: chat
+																);
+															}}
+														/>
+													{/key}
+												{/if}
 											</div>
 										</div>
 									</div>
@@ -1754,31 +1693,5 @@ ${content}
 				</div>
 			{/if}
 		</div>
-		{#if recording}
-			<div class="absolute z-50 bottom-0 right-0 p-3.5 flex select-none">
-				<div class="flex-1 w-full">
-					<VoiceRecording
-						bind:recording
-						className="p-1 w-full max-w-full"
-						transcribe={false}
-						displayMedia={displayMediaRecord}
-						echoCancellation={false}
-						noiseSuppression={false}
-						onCancel={() => {
-							recording = false;
-							displayMediaRecord = false;
-						}}
-						onConfirm={(data) => {
-							if (data?.file) {
-								inputFileHandler(data?.file);
-							}
-
-							recording = false;
-							displayMediaRecord = false;
-						}}
-					/>
-				</div>
-			</div>
-		{/if}
 	</div>
 </div>
