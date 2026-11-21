@@ -4407,6 +4407,7 @@ async def create_automation(
     prompt: str,
     rrule: str,
     folder_id: Optional[str] = None,
+    new_chat: bool = True,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -4430,6 +4431,7 @@ async def create_automation(
     :param prompt: The prompt/instructions to execute on each run
     :param rrule: An iCalendar RRULE string defining the schedule
     :param folder_id: Optional owner-owned folder ID for generated chats
+    :param new_chat: True starts each run in a new chat. False continues this chat on every run (in a channel, one thread), so each run sees the earlier ones.
     :return: JSON with the created automation details including id, next scheduled runs
     """
     if __request__ is None:
@@ -4473,6 +4475,22 @@ async def create_automation(
         except HTTPException as e:
             return JSONCodec.dumps({'error': e.detail})
 
+        current_chat_id = metadata.get('chat_id') or ''
+        if current_chat_id.startswith('channel:'):
+            target = AutomationTarget(
+                type='channel', channel_id=current_chat_id.removeprefix('channel:'), new_thread=new_chat
+            )
+        elif not new_chat:
+            # Continue the chat it was asked from, when that chat is the user's own saved chat.
+            chat = (
+                await Chats.get_chat_by_id_and_user_id(current_chat_id, user_id)
+                if current_chat_id and not current_chat_id.startswith('local:')
+                else None
+            )
+            target = AutomationTarget(new_chat=False, chat_id=chat.id if chat else None)
+        else:
+            target = None
+
         tz = user.timezone
         form = AutomationForm(
             name=name,
@@ -4481,11 +4499,7 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
-                target=(
-                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
-                    if metadata.get('chat_id', '').startswith('channel:')
-                    else None
-                ),
+                target=target,
             ),
             is_active=True,
         )

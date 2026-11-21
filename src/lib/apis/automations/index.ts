@@ -9,7 +9,17 @@ export type AutomationTerminalConfig = {
 export type AutomationTarget = {
 	type: 'chat' | 'channel';
 	channel_id?: string | null;
+	/** Off: every run continues one chat, which the first run creates (chat_id is set by the server). */
+	new_chat?: boolean;
+	chat_id?: string | null;
+	/** Off: every run continues one channel thread, which the first run starts (thread_id is set by the server). */
+	new_thread?: boolean;
+	thread_id?: string | null;
 };
+
+/** Whether each run starts a new chat (or channel thread); targets saved before the option existed do. */
+export const startsNew = (target?: AutomationTarget | null) =>
+	(target?.type === 'channel' ? target?.new_thread : target?.new_chat) !== false;
 
 export type AutomationData = {
 	prompt: string;

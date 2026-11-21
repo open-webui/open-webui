@@ -20,6 +20,7 @@
 		toggleAutomationById,
 		runAutomationById,
 		deleteAutomationById,
+		startsNew,
 		type AutomationForm,
 		type AutomationResponse
 	} from '$lib/apis/automations';
@@ -221,7 +222,8 @@
 			);
 			return channel?.name ? `#${channel.name}` : $i18n.t('Channel');
 		}
-		return automation.folder_id ? $i18n.t('Folder') : $i18n.t('New chat');
+		if (automation.folder_id) return $i18n.t('Folder');
+		return startsNew(automation.data.target) ? $i18n.t('New chat') : $i18n.t('Ongoing chat');
 	};
 
 	const getAllAutomations = async (query: string | null = null, status = 'all') => {

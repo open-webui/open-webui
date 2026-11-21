@@ -250,6 +250,10 @@ async def create_new_automation(
     await check_automation_folder_access(form_data.folder_id, user, db)
     await check_automation_channel_access(form_data, user, db)
     await validate_automation_terminal(request, user, form_data.data.model_dump())
+    # The first run creates the ongoing chat or thread; a form can't point at one.
+    if form_data.data.target:
+        form_data.data.target.chat_id = None
+        form_data.data.target.thread_id = None
     try:
         await validate_rrule(form_data.data.rrule, tz=user.timezone)
     except ValueError as e:

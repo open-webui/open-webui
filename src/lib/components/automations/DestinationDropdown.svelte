@@ -14,12 +14,15 @@
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Hashtag from '$lib/components/icons/Hashtag.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
+	import Switch from '$lib/components/common/Switch.svelte';
 
 	const i18n = getContext('i18n');
 
 	export let target_type: 'chat' | 'channel' = 'chat';
 	export let channel_id = '';
 	export let folder_id = '';
+	/** Off: every run continues one chat (or channel thread) instead of starting a new one. */
+	export let start_new = true;
 	export let folders: any[] = [];
 	export let channels: any[] = [];
 	export let side: 'top' | 'bottom' = 'top';
@@ -69,7 +72,9 @@
 				: $i18n.t('Choose channel')
 			: selectedFolder
 				? folderName(selectedFolder)
-				: $i18n.t('New chat');
+				: start_new
+					? $i18n.t('New chat')
+					: $i18n.t('Ongoing chat');
 	$: normalizedFolderSearch = folderSearch.trim().toLowerCase();
 	$: filteredFolderOptions = normalizedFolderSearch
 		? folderOptions.filter((folder) =>
@@ -209,6 +214,23 @@
 							<ChevronRight />
 						</div>
 					</button>
+
+					<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
+
+					<div
+						class="flex h-[1.6875rem] w-full items-center justify-between gap-2 px-2 text-[0.8125rem] text-base-700 dark:text-base-300"
+					>
+						<span id="automation-start-new" class="min-w-0 truncate">
+							{target_type === 'channel'
+								? $i18n.t('Start each run in new thread')
+								: $i18n.t('Start each run in new chat')}
+						</span>
+						<Switch
+							bind:state={start_new}
+							ariaLabelledbyId="automation-start-new"
+							on:change={() => onChange()}
+						/>
+					</div>
 				</div>
 			{:else if tab === 'folders'}
 				<div class="flex max-h-72 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>

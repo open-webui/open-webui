@@ -36,6 +36,7 @@
 		deleteAutomationById,
 		getAutomationRuns,
 		getAutomationModels,
+		startsNew,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse,
@@ -101,6 +102,7 @@
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
+	let start_new = true;
 	let terminalServerId = '';
 	let terminalCwd = '';
 	let terminalServers: TerminalServer[] = [];
@@ -119,6 +121,7 @@
 		folder_id = source.folder_id ?? '';
 		target_type = source.data.target?.type === 'channel' ? 'channel' : 'chat';
 		channel_id = source.data.target?.channel_id ?? '';
+		start_new = startsNew(source.data.target);
 		terminalServerId = source.data.terminal?.server_id ?? '';
 		terminalCwd = source.data.terminal?.cwd ?? '';
 		await tick();
@@ -137,6 +140,7 @@
 			(folder_id || '') !== (automation.folder_id ?? '') ||
 			target_type !== (automation.data.target?.type === 'channel' ? 'channel' : 'chat') ||
 			channel_id !== (automation.data.target?.channel_id ?? '') ||
+			start_new !== startsNew(automation.data.target) ||
 			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
 			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
 			rruleNow(scheduleTick) !== savedRrule);
@@ -184,7 +188,10 @@
 					terminal: terminalServerId
 						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
 						: undefined,
-					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
+					target:
+						target_type === 'channel'
+							? { type: 'channel', channel_id, new_thread: start_new }
+							: { type: 'chat', new_chat: start_new }
 				},
 				meta: automation.meta ?? undefined,
 				is_active
@@ -582,6 +589,7 @@
 							bind:target_type
 							bind:channel_id
 							bind:folder_id
+							bind:start_new
 							folders={$folders}
 							channels={$channels}
 							plain
