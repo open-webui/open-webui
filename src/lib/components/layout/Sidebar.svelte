@@ -1814,7 +1814,7 @@
 						}}
 					>
 						<svelte:fragment slot="action">
-							<Dropdown bind:show={showChatsMenu} align="end">
+							<Dropdown bind:show={showChatsMenu} align="start">
 								<Tooltip content={$i18n.t('More')}>
 									<button
 										type="button"
