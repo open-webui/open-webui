@@ -74,7 +74,7 @@ Sedan öppna [http://localhost:3000](http://localhost:3000).
 
 Lägg till dessa flaggor till `docker run` innan bildens namn om det behövs:
 
-| Option                                               | Purpose                                                                                  |
+| Flaggor                                               | Syfte                                                                                  |
 | ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Anslut till Ollama på en annan server                                                      |
 | `-e OPENAI_API_KEY=your_secret_key`                  | Sätt in din OpenAI API key                                                                  |
