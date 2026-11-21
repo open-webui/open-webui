@@ -304,6 +304,12 @@
 		init();
 	}
 
+	const handleUrlInput = () => {
+		if (!ollama && url.includes('api.openai.com')) {
+			apiType = 'responses';
+		}
+	};
+
 	$: azure =
 		provider === 'azure' ||
 		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
@@ -386,6 +392,7 @@
 										class={`w-full text-sm ${inputClass}`}
 										type="text"
 										bind:value={url}
+										on:input={handleUrlInput}
 										placeholder={$i18n.t('API Base URL')}
 										autocomplete="off"
 										list={ollama ? undefined : 'suggestions'}
