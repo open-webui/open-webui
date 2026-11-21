@@ -1306,7 +1306,7 @@ ${content}
 								</Tooltip>
 
 								<CommentButton
-									className="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
+									className="flex items-center justify-center p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 									onComment={(request) => (currentNoteComments = request)}
 									resource={{ resource_type: 'note', resource_id: note.id }}
 								/>
