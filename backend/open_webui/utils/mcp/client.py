@@ -3,7 +3,7 @@ import base64
 import logging
 import math
 from contextlib import AsyncExitStack
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 from urllib.parse import urlsplit
 
 import httpx2
@@ -56,8 +56,9 @@ class OAuthTokenAuth(httpx2.Auth):
 
     requires_request_body = True
 
-    def __init__(self, get_headers):
+    def __init__(self, get_headers, refresh_headers: Optional[Callable[[], Awaitable[dict]]] = None):
         self.get_headers = get_headers
+        self.refresh_headers = refresh_headers
 
     async def async_auth_flow(self, request):
         headers = httpx2.Headers(await self.get_headers())
@@ -69,6 +70,8 @@ class OAuthTokenAuth(httpx2.Auth):
 
         if response.status_code == 401:
             headers = httpx2.Headers(await self.get_headers())
+            if self.refresh_headers and headers.get('Authorization') == authorization:
+                headers = httpx2.Headers(await self.refresh_headers())
             if headers.get('Authorization') and headers['Authorization'] != authorization:
                 request.headers.update(headers)
                 yield request
