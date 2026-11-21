@@ -642,7 +642,9 @@
 					autocomplete="off"
 				/>
 				<p class="mt-1 text-xs text-base-500">
-					{$i18n.t('Leave empty for the latest release. Upgrade installs this version.')}
+					{sshMachine
+						? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
+						: $i18n.t('Leave empty for the latest release.')}
 				</p>
 			</div>
 		{/if}
