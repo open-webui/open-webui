@@ -15,7 +15,11 @@ const period = (hour: number) =>
 							? 'evening'
 							: 'night';
 
-export const firstNameOf = (name?: string | null) => (name ?? '').trim().split(/\s+/)[0];
+// First word of the name with its first letter upper-cased, so "tim" greets as "Tim".
+export const firstNameOf = (name?: string | null) => {
+	const first = (name ?? '').trim().split(/\s+/)[0];
+	return first.charAt(0).toLocaleUpperCase() + first.slice(1);
+};
 
 /**
  * Time-of-day greeting for the new-chat screens. The same phrasing all day, a different one
