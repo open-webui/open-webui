@@ -13,18 +13,23 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import { getTerminalServerConnections, verifyTerminalServerConnection } from '$lib/apis/configs';
 	import {
 		createSSHKeypair,
 		formatSSHUrl,
-		getSSHMachineLogs,
+		getLocalMachineDefaults,
+		getMachineLogs,
+		installLocalMachine,
 		installSSHKey,
 		installSSHMachine,
 		parseSSHUrl,
 		probeSSHMachine,
-		removeSSHMachine,
-		restartSSHMachine,
-		upgradeSSHMachine,
+		removeMachine,
+		restartMachine,
+		setMachineFolder,
+		upgradeMachine,
+		type ManagedMachineInfo,
 		type SSHMachineInfo
 	} from '$lib/apis/machines';
 	import { socket } from '$lib/stores';
@@ -35,6 +40,8 @@
 	export let connection: any = null;
 	export let onSubmit: Function = () => {};
 	export let onDelete: () => void = () => {};
+	// Offer the Local type (experimental): Open WebUI runs Open Terminal on its own server.
+	export let allowLocal = true;
 	let initialized = false;
 	let url = '';
 	let key = '';
@@ -58,6 +65,10 @@
 	let password = '';
 	let privateKey = '';
 	let openTerminalVersion = ''; // empty means latest
+	// Type when adding: Remote (a URL or ssh://) or Local (the server Open WebUI runs on).
+	let target: 'url' | 'local' = 'url';
+	let folder = ''; // where terminal sessions start; empty is the default
+	let localDefaults: { folder: string; added: boolean } | null = null;
 	let passphrase = '';
 	let keyFileInput: HTMLInputElement;
 	let sshPhase: 'form' | 'fingerprint' | 'authorize' | 'installing' = 'form';
@@ -78,9 +89,15 @@
 		'text-xs text-base-500 transition hover:text-base-800 hover:underline disabled:opacity-50 disabled:no-underline dark:text-base-400 dark:hover:text-base-200';
 	const button =
 		'flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-50';
+	// Machines Open WebUI installed Open Terminal on: over SSH, or on this computer.
+	$: managed = (connection?.ssh ?? connection?.local ?? null) as ManagedMachineInfo | null;
 	$: sshMachine = (connection?.ssh ?? null) as SSHMachineInfo | null;
-	$: installingSSH = !sshMachine && url.trim().toLowerCase().startsWith('ssh://');
+	$: localMachine = !!connection?.local;
+	$: installingLocal = !connection && target === 'local';
+	$: installingSSH = !managed && !installingLocal && url.trim().toLowerCase().startsWith('ssh://');
+	$: installing = installingSSH || installingLocal;
 	$: sshTarget = installingSSH ? parseSSHUrl(url) : null;
+	$: showLocalOption = allowLocal && !connection && localDefaults !== null && !localDefaults.added;
 	$: if (show && !initialized) {
 		url = connection?.url ?? '';
 		key = connection?.key ?? '';
@@ -92,10 +109,19 @@
 		serverType = connection?.server_type ?? null;
 		accessGrants = connection?.config?.access_grants ?? [];
 		chatUploads = connection ? (connection.config?.chat_uploads ?? 'default') : 'filesystem';
+		const current = connection?.ssh ?? connection?.local;
 		openTerminalVersion =
-			connection?.ssh?.requested_version && connection.ssh.requested_version !== 'latest'
-				? connection.ssh.requested_version
+			current?.requested_version && current.requested_version !== 'latest'
+				? current.requested_version
 				: '';
+		folder = current?.folder ?? '';
+		target = 'url';
+		localDefaults = null;
+		if (allowLocal && !connection) {
+			getLocalMachineDefaults(localStorage.token)
+				.then((defaults) => (localDefaults = defaults))
+				.catch(() => {});
+		}
 		workingDirectoryContext = connection?.config?.working_directory_context ?? true;
 		userShellTools = connection?.config?.user_shell_tools ?? 'auto';
 		error = '';
@@ -197,6 +223,9 @@
 		busy = true;
 		error = '';
 		try {
+			if (managed && folder.trim() !== (managed.folder ?? '')) {
+				await setMachineFolder(localStorage.token, connection.id, folder.trim());
+			}
 			const result = {
 				...(connection ?? {}),
 				url: url.trim().replace(/\/$/, ''),
@@ -220,6 +249,7 @@
 		}
 	}
 	async function submit() {
+		if (installingLocal) return startLocalInstall();
 		if (!installingSSH) return save();
 		if (sshPhase === 'form') return hostKey ? authorize() : checkHost();
 		if (sshPhase === 'fingerprint') return authorize();
@@ -278,9 +308,36 @@
 	async function startInstall() {
 		if (!sshTarget || !hostKey || !keypair) return;
 		const machine = keypair;
+		await install(machine.id, 'ssh', () =>
+			installSSHMachine(localStorage.token, {
+				...sshTarget!,
+				host_key: hostKey!.host_key,
+				id: machine.id,
+				name: name.trim(),
+				version: openTerminalVersion.trim() || 'latest'
+			})
+		);
+	}
+	// Local: no sign-in, install right away.
+	async function startLocalInstall() {
+		const machineId = `m_${uuidv4().replace(/-/g, '').slice(0, 8)}`;
+		await install(machineId, 'local', () =>
+			installLocalMachine(localStorage.token, {
+				id: machineId,
+				name: name.trim(),
+				version: openTerminalVersion.trim() || 'latest',
+				folder: folder.trim()
+			})
+		);
+	}
+	async function install(
+		machineId: string,
+		kind: 'ssh' | 'local',
+		request: () => Promise<unknown>
+	) {
 		sshPhase = 'installing';
 		error = '';
-		follow(machine.id, async (ok, message) => {
+		follow(machineId, async (ok, message) => {
 			if (!ok) {
 				error = message ?? $i18n.t('Installation failed');
 				sshPhase = 'form';
@@ -289,8 +346,8 @@
 			try {
 				// The machine is saved; apply the rest of this form to it.
 				await onSubmit({
-					id: machine.id,
-					url: `ssh://${machine.id}`,
+					id: machineId,
+					url: `${kind}://${machineId}`,
 					name: name.trim(),
 					path: '/openapi.json',
 					auth_type: 'bearer',
@@ -298,7 +355,7 @@
 					forward_cookies: forwardCookies,
 					server_type: 'terminal',
 					config: configuration(),
-					ssh: {}
+					[kind]: {}
 				});
 				show = false;
 			} catch (e) {
@@ -307,13 +364,7 @@
 			}
 		});
 		try {
-			await installSSHMachine(localStorage.token, {
-				...sshTarget,
-				host_key: hostKey.host_key,
-				id: machine.id,
-				name: name.trim(),
-				version: openTerminalVersion.trim() || 'latest'
-			});
+			await request();
 		} catch (e) {
 			stopListening?.();
 			error = e instanceof Error ? e.message : String(e);
@@ -322,7 +373,7 @@
 	}
 	const authorizeCommand = (publicKey: string) =>
 		`mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${publicKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
-	// Existing SSH machines
+	// Existing machines Open WebUI installed (SSH or this computer)
 	const upgrade = () =>
 		run(async () => {
 			follow(connection.id, async (ok, message) => {
@@ -335,9 +386,10 @@
 				const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
 				const updated = res?.TERMINAL_SERVER_CONNECTIONS?.find((c: any) => c.id === connection.id);
 				if (updated?.ssh) connection = { ...connection, ssh: updated.ssh };
+				if (updated?.local) connection = { ...connection, local: updated.local };
 			});
 			try {
-				await upgradeSSHMachine(
+				await upgradeMachine(
 					localStorage.token,
 					connection.id,
 					openTerminalVersion.trim() || 'latest'
@@ -349,21 +401,20 @@
 		});
 	const restart = () =>
 		run(async () => {
-			await restartSSHMachine(localStorage.token, connection.id);
+			await restartMachine(localStorage.token, connection.id);
 			toast.success($i18n.t('Machine restarted'));
 		});
 	const toggleLogs = () =>
 		run(async () => {
-			logs =
-				logs === null ? (await getSSHMachineLogs(localStorage.token, connection.id)).logs : null;
+			logs = logs === null ? (await getMachineLogs(localStorage.token, connection.id)).logs : null;
 			await tick();
 			if (logsElement) logsElement.scrollTop = logsElement.scrollHeight; // show the newest lines
 		});
 	const remove = (force = false) =>
 		run(async () => {
-			if (sshMachine) {
+			if (managed) {
 				try {
-					await removeSSHMachine(localStorage.token, connection.id, force);
+					await removeMachine(localStorage.token, connection.id, force);
 				} catch (e) {
 					if (force) throw e;
 					showForceDelete = true;
@@ -392,6 +443,28 @@
 		on:submit|preventDefault={submit}
 	>
 		{#if error}<p role="alert" class="text-sm text-base-700 dark:text-base-300">{error}</p>{/if}
+		{#if showLocalOption || localMachine}
+			<div class="flex items-center justify-between">
+				<div class="text-xs text-base-500">{$i18n.t('Type')}</div>
+				<button
+					type="button"
+					class="flex items-center gap-1.5 text-xs text-base-700 dark:text-base-300"
+					disabled={localMachine || sshPhase !== 'form'}
+					on:click={() => {
+						target = target === 'local' ? 'url' : 'local';
+						error = '';
+						resetSSH();
+					}}
+				>
+					{#if localMachine || target === 'local'}
+						{$i18n.t('Local')}
+						<ExperimentalBadge />
+					{:else}
+						{$i18n.t('Remote')}
+					{/if}
+				</button>
+			</div>
+		{/if}
 		<div class="flex gap-2">
 			<div class="min-w-0 flex-1">
 				<label for="terminal-name" class="mb-0.5 block text-xs text-base-500"
@@ -401,11 +474,11 @@
 					id="terminal-name"
 					class={input}
 					bind:value={name}
-					placeholder={$i18n.t('My Machine')}
-					required
+					placeholder={installingLocal ? $i18n.t('Local') : $i18n.t('My Machine')}
+					required={!installingLocal}
 				/>
 			</div>
-			{#if !installingSSH && !sshMachine}
+			{#if !installing && !managed}
 				<div class="min-w-0 flex-1">
 					<label for="terminal-id" class="mb-0.5 block text-xs text-base-500">
 						{$i18n.t('ID')} <span class="opacity-50">({$i18n.t('optional')})</span>
@@ -421,43 +494,46 @@
 				</div>
 			{/if}
 		</div>
-		<div class="flex items-end gap-2">
-			<div class="min-w-0 flex-1">
-				<label for="terminal-url" class="mb-0.5 block text-xs text-base-500">{$i18n.t('URL')}</label
-				>
-				{#if sshMachine}
-					<input id="terminal-url" class={input} value={formatSSHUrl(sshMachine)} disabled />
-				{:else}
-					<input
-						id="terminal-url"
-						class={input}
-						bind:value={url}
-						type="url"
-						placeholder="https://terminal.example.com or ssh://user@host"
-						required
-						disabled={sshPhase !== 'form'}
-						on:input={() => {
-							serverType = null;
-							resetSSH();
-						}}
-					/>
+		{#if !installingLocal && !localMachine}
+			<div class="flex items-end gap-2">
+				<div class="min-w-0 flex-1">
+					<label for="terminal-url" class="mb-0.5 block text-xs text-base-500"
+						>{$i18n.t('URL')}</label
+					>
+					{#if sshMachine}
+						<input id="terminal-url" class={input} value={formatSSHUrl(sshMachine)} disabled />
+					{:else}
+						<input
+							id="terminal-url"
+							class={input}
+							bind:value={url}
+							type="url"
+							placeholder="https://terminal.example.com or ssh://user@host"
+							required
+							disabled={sshPhase !== 'form'}
+							on:input={() => {
+								serverType = null;
+								resetSSH();
+							}}
+						/>
+					{/if}
+				</div>
+				{#if !installingSSH}
+					<Tooltip content={$i18n.t('Verify Connection')}>
+						<button
+							type="button"
+							class="rounded-lg p-1 transition hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
+							disabled={busy || !url}
+							on:click={() => verify(true)}
+							aria-label={$i18n.t('Verify Connection')}
+							>{#if busy}<Spinner className="size-4" />{:else}<ArrowPath
+									className="size-4"
+								/>{/if}</button
+						>
+					</Tooltip>
 				{/if}
 			</div>
-			{#if !installingSSH}
-				<Tooltip content={$i18n.t('Verify Connection')}>
-					<button
-						type="button"
-						class="rounded-lg p-1 transition hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
-						disabled={busy || !url}
-						on:click={() => verify(true)}
-						aria-label={$i18n.t('Verify Connection')}
-						>{#if busy}<Spinner className="size-4" />{:else}<ArrowPath
-								className="size-4"
-							/>{/if}</button
-					>
-				</Tooltip>
-			{/if}
-		</div>
+		{/if}
 		{#if installingSSH}
 			{#if sshPhase === 'form'}
 				<div>
@@ -553,27 +629,27 @@
 					>
 				</div>
 			{/if}
-		{:else if sshMachine}
+		{:else if managed}
 			<div>
 				<div class="mb-0.5 text-xs text-base-500">{$i18n.t('Status')}</div>
 				<div class="flex items-center justify-between gap-3">
 					<div class="flex min-w-0 items-center gap-1.5 py-0.5 text-sm">
 						<span
-							class="size-1.5 shrink-0 rounded-full {sshMachine.status === 'error'
+							class="size-1.5 shrink-0 rounded-full {managed.status === 'error'
 								? 'bg-red-500'
-								: running || sshMachine.status === 'installing'
+								: running || managed.status === 'installing'
 									? 'bg-yellow-500'
 									: 'bg-green-500'}"
 						></span>
 						<span
-							>{sshMachine.status === 'error'
+							>{managed.status === 'error'
 								? $i18n.t('Error')
-								: running || sshMachine.status === 'installing'
+								: running || managed.status === 'installing'
 									? $i18n.t('Installing')
 									: $i18n.t('Ready')}</span
 						>
 						<span class="truncate text-xs text-base-500"
-							>{$i18n.t('Open Terminal {{version}}', { version: sshMachine.version ?? '' })}</span
+							>{$i18n.t('Open Terminal {{version}}', { version: managed.version ?? '' })}</span
 						>
 					</div>
 					<div class="flex shrink-0 items-center gap-3">
@@ -589,8 +665,8 @@
 						>
 					</div>
 				</div>
-				{#if sshMachine.status === 'error' && sshMachine.error}
-					<p class="mt-0.5 text-xs text-base-700 dark:text-base-300">{sshMachine.error}</p>
+				{#if managed.status === 'error' && managed.error}
+					<p class="mt-0.5 text-xs text-base-700 dark:text-base-300">{managed.error}</p>
 				{/if}
 				{#if logs !== null}
 					<pre
@@ -599,7 +675,7 @@
 							$i18n.t('No logs yet.')}</pre>
 				{/if}
 			</div>
-		{:else}
+		{:else if !installingLocal}
 			<div>
 				<label for="terminal-auth-type" class="mb-0.5 block text-xs text-base-500"
 					>{$i18n.t('Auth')}</label
@@ -628,7 +704,23 @@
 				</div>
 			</div>
 		{/if}
-		{#if (installingSSH && sshPhase === 'form') || sshMachine}
+		{#if (installing && sshPhase === 'form') || managed}
+			<div>
+				<label for="machine-folder" class="mb-0.5 block text-xs text-base-500"
+					>{$i18n.t('Folder')}</label
+				>
+				<input
+					id="machine-folder"
+					class={input}
+					bind:value={folder}
+					placeholder={installingLocal || localMachine
+						? (localDefaults?.folder ?? $i18n.t('Project folder'))
+						: $i18n.t('Home folder')}
+					autocomplete="off"
+					spellcheck="false"
+				/>
+				<p class="mt-1 text-xs text-base-500">{$i18n.t('Where terminal sessions start.')}</p>
+			</div>
 			<div>
 				<label for="open-terminal-version" class="mb-0.5 block text-xs text-base-500"
 					>{$i18n.t('Open Terminal version')}</label
@@ -642,11 +734,18 @@
 					autocomplete="off"
 				/>
 				<p class="mt-1 text-xs text-base-500">
-					{sshMachine
+					{managed
 						? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
 						: $i18n.t('Leave empty for the latest release.')}
 				</p>
 			</div>
+			{#if installingLocal || localMachine}
+				<p class="text-xs text-base-500">
+					{$i18n.t(
+						'Runs on the server Open WebUI runs on. Anyone you share it with can run commands there.'
+					)}
+				</p>
+			{/if}
 		{/if}
 		{#if sshPhase === 'installing' || running || steps.length}
 			<ol class="space-y-1 text-xs" aria-live="polite">
@@ -752,7 +851,7 @@
 						bind:state={forwardCookies}
 					/>
 				</div>
-				{#if !installingSSH && !sshMachine}
+				{#if !installing && !managed}
 					<div>
 						<label for="openapi-path" class="mb-0.5 block text-xs font-medium"
 							>{$i18n.t('OpenAPI Spec')}</label
@@ -792,9 +891,9 @@
 			</div>
 			<button
 				class="{button} bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
-				disabled={busy || !url || sshPhase === 'installing'}
+				disabled={busy || (!url && !installingLocal) || sshPhase === 'installing'}
 			>
-				{#if !installingSSH}
+				{#if !installing}
 					{$i18n.t('Save')}
 				{:else if sshPhase === 'fingerprint'}
 					{$i18n.t('Trust and install')}
@@ -812,7 +911,7 @@
 </Modal>
 <ConfirmDialog
 	bind:show={showDelete}
-	message={sshMachine
+	message={managed
 		? $i18n.t('Remove this machine? This also uninstalls Open Terminal from it.')
 		: $i18n.t('Delete this connection?')}
 	confirmLabel={$i18n.t('Delete')}

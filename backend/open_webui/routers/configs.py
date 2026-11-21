@@ -13,6 +13,7 @@ from open_webui.models.config import Config
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
+from open_webui.utils.machines import MANAGED_SCHEMES
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAUTH_MAX_FIELD_SIZE,
@@ -350,17 +351,19 @@ async def set_terminal_servers_config(
         connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.TERMINAL_SERVER_CONNECTIONS
     ]
 
-    # SSH machines are managed by /api/v1/machines: the browser can rename or disable them,
-    # but never change where they point or their key.
+    # Managed machines (SSH, this computer) are run by /api/v1/machines: the browser can rename
+    # or disable them, but never change where they point or their key.
     stored = await Config.get('machines.connections', []) or []
-    machines = {c['id']: c for c in stored if c.get('ssh') and c.get('id')}
+    machines = {c['id']: c for c in stored if (c.get('ssh') or c.get('local')) and c.get('id')}
     for connection in connections:
         machine = machines.get(connection.get('id'))
         if machine:
-            connection.update({k: machine[k] for k in ('url', 'key', 'ssh')})
-    # ssh:// entries that are not stored machines were removed elsewhere; never re-create them.
+            connection.pop('ssh', None)
+            connection.pop('local', None)
+            connection.update({k: machine[k] for k in ('url', 'key', 'ssh', 'local') if k in machine})
+    # ssh:// and local:// entries that are not stored machines were removed elsewhere; never re-create them.
     connections = [
-        c for c in connections if c.get('id') in machines or not str(c.get('url') or '').startswith('ssh://')
+        c for c in connections if c.get('id') in machines or not str(c.get('url') or '').startswith(MANAGED_SCHEMES)
     ]
     # A page opened before a machine was added does not know about it, so keep machines the
     # form left out. Removing a machine goes through DELETE /api/v1/machines/{id}.
@@ -405,10 +408,10 @@ async def verify_terminal_server_connection(
         headers.update(bearer_auth_header(form_data.key))
 
     timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
-    if base_url.startswith('ssh://'):
+    if base_url.startswith(MANAGED_SCHEMES):
         from open_webui.utils.machines import get_machine_client
 
-        client = get_machine_client(base_url, timeout=timeout)  # through the machine's SSH tunnel
+        client = get_machine_client(base_url, timeout=timeout)  # through the machine's socket
     else:
         client = aiohttp.ClientSession(trust_env=True, timeout=timeout)
 

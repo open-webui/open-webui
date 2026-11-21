@@ -1,7 +1,9 @@
-# Sent over SSH stdin by utils/machines/ssh.py. Tokens (__OPEN_WEBUI_*__) are validated before rendering.
+# Run by utils/machines/managed.py on stdin, over SSH or on this computer. Tokens (__OPEN_WEBUI_*__) are
+# validated before rendering; FOLDER (where sessions start, empty for home) is set on the line above.
 # Output lines starting with OPEN_WEBUI: drive the progress UI; everything else is log.
 set -eu
-ROOT="$HOME/.open-webui/__OPEN_WEBUI_ID__"
+ROOT="${OPEN_WEBUI_MACHINES_DIR:-$HOME/.open-webui}/__OPEN_WEBUI_ID__"
+FOLDER="${FOLDER:-}"
 VERSION="__OPEN_WEBUI_VERSION__"
 
 echo "OPEN_WEBUI:step:detect"
@@ -11,6 +13,7 @@ case "$(uname -s) $(uname -m)" in
 esac
 command -v curl >/dev/null 2>&1 || { echo "OPEN_WEBUI:error:curl is required on the machine"; exit 2; }
 command -v tar >/dev/null 2>&1 || { echo "OPEN_WEBUI:error:tar is required on the machine"; exit 2; }
+if [ -n "$FOLDER" ] && [ ! -d "$FOLDER" ]; then echo "OPEN_WEBUI:error:Folder not found: $FOLDER"; exit 2; fi
 mkdir -p "$ROOT/run"
 chmod 700 "$ROOT" "$ROOT/run"
 echo "OPEN_WEBUI:root:$ROOT"
@@ -62,7 +65,8 @@ echo $$ > "$ROOT/start.lock/pid"
 trap 'rm -rf "$ROOT/start.lock"' EXIT
 if [ -z "$(ours)" ]; then               # nothing running: launch (a running server just needs time)
   rm -f "$SOCK"
-  cd "$HOME"
+  FOLDER="$(cat "$ROOT/folder" 2>/dev/null || true)"
+  cd "${FOLDER:-$HOME}" 2>/dev/null || cd "$HOME"
   OPEN_TERMINAL_API_KEY_FILE="$ROOT/api-key" nohup "$ROOT/bin/open-terminal" run \
     --ipc "$SOCK" >>"$ROOT/server.log" 2>&1 </dev/null &
   echo $! > "$ROOT/pid"
@@ -86,6 +90,10 @@ exit 0
 EOF
 
 chmod 700 "$ROOT/start.sh" "$ROOT/stop.sh"
+if [ "$(cat "$ROOT/folder" 2>/dev/null || true)" != "$FOLDER" ]; then
+  printf '%s' "$FOLDER" > "$ROOT/folder"
+  "$ROOT/stop.sh"   # start.sh below brings it up in the new folder
+fi
 
 echo "OPEN_WEBUI:step:start"
 "$ROOT/start.sh"

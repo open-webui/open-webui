@@ -28,19 +28,27 @@ MAX_AGENTS_MD_BYTES = 32 * 1024
 
 log = logging.getLogger(__name__)
 
+# Machines Open WebUI installed Open Terminal on itself (see managed.py).
+MANAGED_SCHEMES = ('ssh://', 'local://')
+
+
+class MachineError(Exception):
+    pass
+
 
 def get_machine_client(url, user_id=None, service='open_terminal', **kwargs):
     """Return an aiohttp-like client for any machine URL.
 
     tether:// goes through the user's device relay, ssh:// through the machine's SSH tunnel,
-    anything else is a plain aiohttp session. Callers use `await`/`async with` the same way.
+    local:// to Open Terminal on this computer, anything else is a plain aiohttp session.
+    Callers use `await`/`async with` the same way.
     """
     if str(url).startswith('tether://'):
         from open_webui.utils.tether import RelayClient
 
         return RelayClient(user_id, service=service, timeout=kwargs.get('timeout'))
-    if str(url).startswith('ssh://'):
-        from open_webui.utils.machines.ssh import MachineClient
+    if str(url).startswith(MANAGED_SCHEMES):
+        from open_webui.utils.machines.managed import MachineClient
 
         return MachineClient(urlsplit(str(url)).hostname, **kwargs)
     return aiohttp.ClientSession(**kwargs)

@@ -100,14 +100,24 @@
 	};
 
 	const addTerminalConnection = async (server: TerminalConnection) => {
-		if (String(server.url ?? '').startsWith('ssh://')) {
-			// Installed over SSH: the backend already saved the machine. Reload the list,
-			// then apply the rest of the form (name, access, options) to it.
+		if (/^(ssh|local):\/\//.test(String(server.url ?? ''))) {
+			// Installed over SSH or on this computer: the backend already saved the machine.
+			// Reload the list, then apply the rest of the form (name, access, options) to it.
 			const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
 			terminalConnections = (res?.TERMINAL_SERVER_CONNECTIONS ??
 				terminalConnections) as TerminalConnection[];
 			terminalConnections = terminalConnections.map((c) =>
-				c.id === server.id ? { ...c, ...server, url: c.url, key: c.key, ssh: c.ssh } : c
+				c.id === server.id
+					? {
+							...c,
+							...server,
+							name: server.name || c.name, // an empty Name keeps the default the backend picked
+							url: c.url,
+							key: c.key,
+							ssh: c.ssh,
+							local: c.local
+						}
+					: c
 			);
 			await saveTerminalServers();
 			return;
@@ -161,6 +171,7 @@
 	bind:show={showAddTerminalModal}
 	edit={editTerminalIdx !== null}
 	connection={editTerminalIdx !== null ? terminalConnections[editTerminalIdx] : null}
+	allowLocal={!terminalConnections.some((c) => c.local)}
 	onSubmit={(c: TerminalConnection) => {
 		if (editTerminalIdx !== null) {
 			updateTerminalConnection(editTerminalIdx, c);
@@ -312,7 +323,9 @@
 													for={`terminal-${idx}-control`}
 													class="outline-hidden w-full bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 												>
-													{connection.name || connection.url || $i18n.t('New Machine')}
+													{connection.name ||
+														(connection.local ? $i18n.t('Local') : connection.url) ||
+														$i18n.t('New Machine')}
 												</label>
 											</div>
 										</div>

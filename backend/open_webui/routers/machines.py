@@ -32,8 +32,8 @@ from open_webui.utils.browser import browser_access, create_browser_token
 from open_webui.utils.tether import RelayInterrupted, get_terminal_connections
 from open_webui.utils.headers import bearer_auth_header, normalize_bearer_token
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.machines import ssh as ssh_machines
-from open_webui.utils.machines.ssh import MachineError, describe
+from open_webui.utils.machines import MachineError, managed, local as local_machines, ssh as ssh_machines
+from open_webui.utils.machines.managed import describe
 from open_webui.utils.machines import (
     get_machine_client,
     find_terminal_connection,
@@ -60,7 +60,8 @@ STRIPPED_RESPONSE_HEADERS = frozenset(
 
 
 # ---------------------------------------------------------------------------
-# SSH machines (admin): add a machine by SSH and let Open WebUI install Open Terminal on it.
+# Managed machines (admin): Open WebUI installs Open Terminal on a machine it reaches by SSH,
+# or on this computer (experimental). /managed/{id}/... works for both kinds.
 # Registered before the /{server_id}/... proxy routes so they are not forwarded upstream.
 # ---------------------------------------------------------------------------
 
@@ -96,8 +97,19 @@ class CreateForm(Pinned):
     version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
 
 
+class LocalForm(BaseModel):
+    id: str = Field(pattern=SSH_MACHINE_ID)  # picked by the browser so it can follow progress from the start
+    name: str = Field('', max_length=100)
+    version: str = Field('latest', max_length=20)
+    folder: str = Field('', max_length=1024)  # empty: the project folder Open WebUI picks
+
+
 class UpgradeForm(BaseModel):
     version: str | None = Field(None, max_length=20)  # omitted: keep the machine's current choice
+
+
+class FolderForm(BaseModel):
+    folder: str = Field('', max_length=1024)  # empty: the default (home over SSH)
 
 
 def _ssh_fail(error: BaseException):
@@ -145,56 +157,95 @@ async def install_key(form: InstallKeyForm, user=Depends(get_admin_user)):
 @router.post('/ssh')
 async def create_machine(request: Request, form: CreateForm, user=Depends(get_admin_user)):
     try:
-        version = ssh_machines.requested_version(form.version)
+        version = managed.requested_version(form.version)
     except MachineError as error:
         _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
     _ssh_start(
-        ssh_machines.provision(request, form.id, user.id, name=form.name or form.host, ssh=target, version=version)
+        managed.provision(request, form.id, user.id, name=form.name or form.host, target=target, version=version)
     )
     return {'id': form.id, 'status': 'installing'}
 
 
-@router.post('/ssh/{machine_id}/upgrade')
+@router.get('/local')
+async def get_local_machine_defaults(user=Depends(get_admin_user)):
+    """What adding this computer would do: where sessions start by default, and whether it is already added."""
+    connections = await managed.list_connections()
+    return {
+        'folder': local_machines.default_folder(),
+        'added': any(managed.kind(c) == 'local' for c in connections),
+    }
+
+
+@router.post('/local')
+async def create_local_machine(request: Request, form: LocalForm, user=Depends(get_admin_user)):
+    """Install Open Terminal on the computer Open WebUI runs on. Experimental; single instance only."""
+    connections = await managed.list_connections()
+    if any(managed.kind(c) == 'local' for c in connections):
+        raise HTTPException(409, 'A local machine is already added.')
+    if any(c.get('id') == form.id for c in connections):
+        raise HTTPException(409, 'A machine with this id already exists.')
+    try:
+        version = managed.requested_version(form.version)
+        folder = managed.clean_folder(form.folder) or None
+    except MachineError as error:
+        _ssh_fail(error)
+    _ssh_start(
+        managed.provision(request, form.id, user.id, name=form.name, is_local=True, version=version, folder=folder)
+    )
+    return {'id': form.id, 'status': 'installing'}
+
+
+@router.post('/managed/{machine_id}/upgrade')
 async def upgrade_machine(
     request: Request, machine_id: str, form: UpgradeForm | None = None, user=Depends(get_admin_user)
 ):
     """Install the machine's chosen Open Terminal version again ('latest' fetches the newest); also repairs."""
     try:
-        await ssh_machines.get_machine(machine_id)
-        version = ssh_machines.requested_version(form.version) if form and form.version is not None else None
+        await managed.get_machine(machine_id)
+        version = managed.requested_version(form.version) if form and form.version is not None else None
     except MachineError as error:
         _ssh_fail(error)
-    _ssh_start(ssh_machines.provision(request, machine_id, user.id, version=version))
+    _ssh_start(managed.provision(request, machine_id, user.id, version=version))
     return {'id': machine_id, 'status': 'installing'}
 
 
-@router.post('/ssh/{machine_id}/restart')
-async def restart_machine(machine_id: str, user=Depends(get_admin_user)):
+@router.post('/managed/{machine_id}/folder')
+async def set_machine_folder(machine_id: str, form: FolderForm, user=Depends(get_admin_user)):
+    """Change where terminal sessions start, then restart Open Terminal there."""
     try:
-        await ssh_machines.restart(machine_id)
+        await managed.set_folder(machine_id, form.folder)
     except Exception as error:
         _ssh_fail(error)
     return {'status': True}
 
 
-@router.get('/ssh/{machine_id}/logs')
+@router.post('/managed/{machine_id}/restart')
+async def restart_machine(machine_id: str, user=Depends(get_admin_user)):
+    try:
+        await managed.restart(machine_id)
+    except Exception as error:
+        _ssh_fail(error)
+    return {'status': True}
+
+
+@router.get('/managed/{machine_id}/logs')
 async def machine_logs(machine_id: str, lines: int = 200, user=Depends(get_admin_user)):
     try:
-        return {'logs': await ssh_machines.logs(machine_id, min(max(lines, 1), 2000))}
+        return {'logs': await managed.logs(machine_id, min(max(lines, 1), 2000))}
     except Exception as error:
         _ssh_fail(error)
 
 
-@router.delete('/ssh/{machine_id}')
+@router.delete('/managed/{machine_id}')
 async def uninstall_machine(machine_id: str, force: bool = False, user=Depends(get_admin_user)):
     """Uninstall from the machine and remove it. With force, remove it even if the machine is unreachable."""
     try:
-        await ssh_machines.uninstall(machine_id)
+        await managed.uninstall(machine_id)
     except Exception as error:
         if not force or str(error) == 'Unknown machine.':
             _ssh_fail(error)
-        await ssh_machines.remove(machine_id)
+        await managed.remove(machine_id)
     return {'status': True}
 
 

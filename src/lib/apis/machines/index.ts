@@ -863,22 +863,26 @@ export async function templatesApi(path = '', method = 'GET', body?: unknown) {
 	return data;
 }
 
-// Machines added over SSH: Open WebUI installs and runs Open Terminal on them.
+// Managed machines: Open WebUI installs and runs Open Terminal on them, over SSH or on
+// this computer (experimental).
 
 export type SSHTarget = { host: string; port: number; username: string };
 
-export type SSHMachineInfo = {
-	host: string;
-	port: number;
-	username: string;
-	host_key: string;
+/** Install state shared by both kinds (`connection.ssh` or `connection.local`). */
+export type ManagedMachineInfo = {
 	root?: string;
+	folder?: string; // where terminal sessions start; empty is home
 	version?: string;
 	requested_version?: string; // 'latest' or an exact version
-	transport?: 'streamlocal' | 'stdio';
 	status?: 'installing' | 'ready' | 'error';
 	error?: string | null;
 };
+
+export type SSHMachineInfo = ManagedMachineInfo &
+	SSHTarget & {
+		host_key: string;
+		transport?: 'streamlocal' | 'stdio';
+	};
 
 /** Parse `ssh://user@host[:port]`. Returns null for anything else. */
 export const parseSSHUrl = (value: string): SSHTarget | null => {
@@ -896,13 +900,13 @@ export const parseSSHUrl = (value: string): SSHTarget | null => {
 export const formatSSHUrl = ({ username, host, port }: SSHTarget) =>
 	`ssh://${username}@${host.includes(':') ? `[${host}]` : host}${port === 22 ? '' : `:${port}`}`;
 
-const sshRequest = async <T>(
+const machineRequest = async <T>(
 	token: string,
 	path: string,
 	method = 'GET',
 	body?: unknown
 ): Promise<T> => {
-	const res = await fetch(`${WEBUI_API_BASE_URL}/machines/ssh${path}`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/machines${path}`, {
 		method,
 		headers: {
 			Authorization: `Bearer ${token}`,
@@ -924,13 +928,15 @@ const sshRequest = async <T>(
 	return data as T;
 };
 
+const managedPath = (id: string, action = '') => `/managed/${encodeURIComponent(id)}${action}`;
+
 /** Fetch the machine's host key without logging in, so the admin can confirm it. */
 export const probeSSHMachine = (token: string, target: SSHTarget) =>
-	sshRequest<{ host_key: string; fingerprint: string }>(token, '/probe', 'POST', target);
+	machineRequest<{ host_key: string; fingerprint: string }>(token, '/ssh/probe', 'POST', target);
 
 /** Create the machine's id and the key Open WebUI will log in with. */
 export const createSSHKeypair = (token: string) =>
-	sshRequest<{ id: string; public_key: string }>(token, '/keypair', 'POST');
+	machineRequest<{ id: string; public_key: string }>(token, '/ssh/keypair', 'POST');
 
 /** Log in once with a password or private key to add Open WebUI's key. Neither is stored. */
 export const installSSHKey = (
@@ -943,33 +949,43 @@ export const installSSHKey = (
 		private_key?: string;
 		passphrase?: string;
 	}
-) => sshRequest<{ status: boolean }>(token, '/install-key', 'POST', form);
+) => machineRequest<{ status: boolean }>(token, '/ssh/install-key', 'POST', form);
 
 /** Start installing Open Terminal. Progress arrives as `machines:progress` socket events. */
 export const installSSHMachine = (
 	token: string,
 	form: SSHTarget & { host_key: string; id: string; name: string; version?: string }
-) => sshRequest<{ id: string; status: string }>(token, '', 'POST', form);
+) => machineRequest<{ id: string; status: string }>(token, '/ssh', 'POST', form);
+
+/** Where sessions on this computer start by default, and whether it is already added. */
+export const getLocalMachineDefaults = (token: string) =>
+	machineRequest<{ folder: string; added: boolean }>(token, '/local');
+
+/** Install Open Terminal on the computer Open WebUI runs on (experimental). Empty folder: the project folder Open WebUI picks. */
+export const installLocalMachine = (
+	token: string,
+	form: { id: string; name?: string; version?: string; folder?: string }
+) => machineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
 
 /** Install the machine's Open Terminal again: `version` is 'latest' or an exact version (omit to keep the current choice). */
-export const upgradeSSHMachine = (token: string, id: string, version?: string) =>
-	sshRequest<{ id: string; status: string }>(
+export const upgradeMachine = (token: string, id: string, version?: string) =>
+	machineRequest<{ id: string; status: string }>(
 		token,
-		`/${encodeURIComponent(id)}/upgrade`,
+		managedPath(id, '/upgrade'),
 		'POST',
 		version === undefined ? undefined : { version }
 	);
 
-export const restartSSHMachine = (token: string, id: string) =>
-	sshRequest<{ status: boolean }>(token, `/${encodeURIComponent(id)}/restart`, 'POST');
+/** Change where terminal sessions start, then restart Open Terminal there. */
+export const setMachineFolder = (token: string, id: string, folder: string) =>
+	machineRequest<{ status: boolean }>(token, managedPath(id, '/folder'), 'POST', { folder });
 
-export const getSSHMachineLogs = (token: string, id: string, lines = 200) =>
-	sshRequest<{ logs: string }>(token, `/${encodeURIComponent(id)}/logs?lines=${lines}`);
+export const restartMachine = (token: string, id: string) =>
+	machineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');
+
+export const getMachineLogs = (token: string, id: string, lines = 200) =>
+	machineRequest<{ logs: string }>(token, managedPath(id, `/logs?lines=${lines}`));
 
 /** Uninstall Open Terminal and remove the machine. `force` removes it even if it is unreachable. */
-export const removeSSHMachine = (token: string, id: string, force = false) =>
-	sshRequest<{ status: boolean }>(
-		token,
-		`/${encodeURIComponent(id)}${force ? '?force=true' : ''}`,
-		'DELETE'
-	);
+export const removeMachine = (token: string, id: string, force = false) =>
+	machineRequest<{ status: boolean }>(token, managedPath(id, force ? '?force=true' : ''), 'DELETE');
