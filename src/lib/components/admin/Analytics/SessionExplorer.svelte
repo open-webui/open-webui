@@ -212,7 +212,7 @@
 						<button
 							type="button"
 							aria-label={$i18n.t('Session options')}
-							class="flex items-center justify-center p-1.5 text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-white"
+							class="flex items-center justify-center p-1.5 text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0"
 						>
 							<EllipsisHorizontal className="size-4" />
 						</button>
@@ -256,7 +256,7 @@
 			{:else}
 				<div class="max-h-[22rem] overflow-auto scrollbar-hover">
 					<table class="session-table w-full text-left text-xs tabular-nums whitespace-nowrap">
-						<thead class="sticky top-0 z-10 bg-white dark:bg-base-900 text-[0.6875rem]">
+						<thead class="sticky top-0 z-10 bg-base-0 dark:bg-base-900 text-[0.6875rem]">
 							<tr>
 								{#each columns as column}
 									<th

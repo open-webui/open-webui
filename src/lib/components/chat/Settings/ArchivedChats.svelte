@@ -215,7 +215,7 @@
 
 <div id="tab-archived-chats" class="flex flex-col h-full overflow-y-auto text-sm">
 	<div class="mb-3 flex items-center justify-between">
-		<h2 class="text-sm font-medium text-base-900 dark:text-white">
+		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.archivedChats.title')}
 			{#if chatCount !== null}
 				<span class="ml-2 font-normal text-base-500 dark:text-base-500">
@@ -258,7 +258,7 @@
 		<Dropdown closeOnSelect align="end">
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
-					class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
+					class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 					type="button"
 				>
 					<span>{$i18n.t('Actions')}</span>
@@ -388,7 +388,7 @@
 						<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs" role="row">
 							<div class="mr-auto min-w-0 max-w-xl flex-1 self-center" role="cell">
 								<a
-									class="block truncate text-base-800 hover:text-black dark:text-base-200 dark:hover:text-white"
+									class="block truncate text-base-800 hover:text-base-1000 dark:text-base-200 dark:hover:text-base-0"
 									href={`/c/${chat.id}`}
 									title={chat?.title}
 									on:click={(event) => {

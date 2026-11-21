@@ -279,7 +279,7 @@
 							<tr class="text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="px-3! py-2! text-base-900 dark:text-white w-max {token.rows.length -
+										class="px-3! py-2! text-base-900 dark:text-base-0 w-max {token.rows.length -
 											1 ===
 										rowIdx
 											? ''

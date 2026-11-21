@@ -34,7 +34,7 @@
 	ariaLabel={labels.title ?? $i18n.t('Access Control')}
 	size="sm"
 	bind:show
-	className="rounded-2xl bg-white dark:bg-base-900"
+	className="rounded-2xl bg-base-0 dark:bg-base-900"
 >
 	<div>
 		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-2">
@@ -52,7 +52,7 @@
 			</button>
 		</div>
 
-		<div class="w-full px-4 pb-3 dark:text-white" inert={disabled} aria-busy={disabled}>
+		<div class="w-full px-4 pb-3 dark:text-base-0" inert={disabled} aria-busy={disabled}>
 			<AccessControl
 				bind:accessGrants
 				bind:accessControl

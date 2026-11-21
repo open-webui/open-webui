@@ -18,11 +18,11 @@
 	];
 </script>
 
-<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-white/[0.03]">
+<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-base-0/[0.03]">
 	<Dropdown closeOnSelect>
 		<button
 			type="button"
-			class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-white"
+			class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-base-0"
 		>
 			{#if state === 'private'}
 				<LockClosed className="size-3.5 text-base-500 dark:text-base-400" />

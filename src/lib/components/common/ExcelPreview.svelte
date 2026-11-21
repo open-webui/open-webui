@@ -746,7 +746,7 @@
 	</div>
 	{#if searchOpen}
 		<div
-			class="excel-find flex items-center gap-1 rounded-lg border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 shadow-sm"
+			class="excel-find flex items-center gap-1 rounded-lg border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 shadow-sm"
 			role="search"
 			aria-label={t('Find in sheet')}
 		>

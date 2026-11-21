@@ -34,7 +34,7 @@
 		<button
 			id={`${labelId}-control`}
 			type="button"
-			class="focus-ring text-xs text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-white"
+			class="focus-ring text-xs text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0"
 			aria-expanded={expanded}
 			aria-controls="interface-visible-controls"
 			on:click={() => (expanded = !expanded)}

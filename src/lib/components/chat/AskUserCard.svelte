@@ -174,7 +174,7 @@
 {#if show}
 	<section
 		dir={$settings?.chatDirection ?? 'auto'}
-		class="my-1 rounded-2xl bg-base-50/70 px-3.5 py-3 dark:bg-white/[0.035]"
+		class="my-1 rounded-2xl bg-base-50/70 px-3.5 py-3 dark:bg-base-0/[0.035]"
 	>
 		<div class="space-y-2">
 			{#if question}
@@ -207,8 +207,8 @@
 											question,
 											optionIndex
 										)
-											? 'text-base-950 dark:text-white'
-											: 'text-base-700 hover:text-base-950 dark:text-base-300 dark:hover:text-white'}"
+											? 'text-base-950 dark:text-base-0'
+											: 'text-base-700 hover:text-base-950 dark:text-base-300 dark:hover:text-base-0'}"
 										on:click={() => selectOption(question, option, optionIndex)}
 									>
 										<span class="min-w-0 shrink-0 text-xs">{option.label}</span>
@@ -226,7 +226,7 @@
 										</Tooltip>
 										{#if optionIndex === 0}
 											<span
-												class="shrink-0 rounded-full bg-base-200/70 px-1.5 py-0.5 text-[0.625rem] text-base-500 dark:bg-white/[0.08] dark:text-base-400"
+												class="shrink-0 rounded-full bg-base-200/70 px-1.5 py-0.5 text-[0.625rem] text-base-500 dark:bg-base-0/[0.08] dark:text-base-400"
 											>
 												{$i18n.t('Recommended')}
 											</span>
@@ -239,7 +239,7 @@
 								<div class="flex min-w-0 items-baseline gap-2 rounded-lg py-1.5">
 									<div
 										class="shrink-0 text-xs {isSelectedOther(question)
-											? 'text-base-950 dark:text-white'
+											? 'text-base-950 dark:text-base-0'
 											: 'text-base-700 dark:text-base-300'}"
 									>
 										{$i18n.t('Other')}
@@ -288,7 +288,7 @@
 				{#if questionIndex < questions.length - 1}
 					<button
 						type="button"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						on:click={() => (questionIndex += 1)}
 					>
 						{$i18n.t('Next')}
@@ -296,7 +296,7 @@
 				{:else}
 					<button
 						type="button"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 						disabled={!complete}
 						on:click={() => submit()}
 					>

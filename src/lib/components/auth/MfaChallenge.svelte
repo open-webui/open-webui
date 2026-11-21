@@ -94,7 +94,7 @@
 		{#if challenge.next_step === 'enroll'}
 			{#if setup}
 				<img
-					class="mx-auto size-40 bg-white p-1"
+					class="mx-auto size-40 bg-base-0 p-1"
 					src={setup.qr_code}
 					alt={$i18n.t('Authenticator setup QR code')}
 				/>
@@ -106,7 +106,7 @@
 						<ChevronRight className="size-2.5 shrink-0 transition-transform group-open:rotate-90" />
 					</summary>
 					<code
-						class="mt-2 block break-all rounded-md bg-base-50 px-2 py-1.5 font-mono text-base-700 select-all dark:bg-white/[0.03] dark:text-base-300"
+						class="mt-2 block break-all rounded-md bg-base-50 px-2 py-1.5 font-mono text-base-700 select-all dark:bg-base-0/[0.03] dark:text-base-300"
 						>{setup.manual_key}</code
 					>
 				</details>

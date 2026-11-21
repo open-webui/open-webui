@@ -59,7 +59,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('More Options')}
-					class="flex size-5 items-center justify-center self-center transition dark:hover:text-white"
+					class="flex size-5 items-center justify-center self-center transition dark:hover:text-base-0"
 					on:click={(e) => {
 						e.preventDefault();
 						e.stopPropagation();

@@ -113,10 +113,10 @@
 </script>
 
 <section
-	class="flex h-full min-h-0 flex-col bg-white text-xs dark:bg-base-900"
+	class="flex h-full min-h-0 flex-col bg-base-0 text-xs dark:bg-base-900"
 	aria-label={$i18n.t('Compare to current')}
 >
-	<div class="flex shrink-0 items-center gap-2 bg-base-50/60 px-3 py-1.5 dark:bg-black">
+	<div class="flex shrink-0 items-center gap-2 bg-base-50/60 px-3 py-1.5 dark:bg-base-1000">
 		<span class="min-w-0 flex-1 font-medium">{$i18n.t('Compare to current')}</span>
 		<Dropdown bind:show={showMode} align="end">
 			<button
@@ -163,7 +163,7 @@
 			on:click={onClose}><XMark className="size-3.5" /></button
 		>
 	</div>
-	<div class="grid shrink-0 grid-cols-2 border-b border-base-100 dark:border-white/5">
+	<div class="grid shrink-0 grid-cols-2 border-b border-base-100 dark:border-base-0/5">
 		<div class="min-w-0 px-3 py-2 text-base-500">
 			{$i18n.t('Selected version')} <span class="font-mono">{diff.fromId.slice(0, 7)}</span>
 		</div>
@@ -173,7 +173,7 @@
 	</div>
 	<div class="min-h-0 flex-1 overflow-auto">
 		{#each metadata as change}
-			<div class="border-b border-base-100 dark:border-white/5">
+			<div class="border-b border-base-100 dark:border-base-0/5">
 				<div class="px-3 py-1.5 font-medium text-base-600 dark:text-base-300">
 					{change.path.map((key) => labels[key] || $i18n.t(key)).join(' / ')}
 				</div>
@@ -192,7 +192,7 @@
 			</div>
 		{/each}
 		{#each diff.files as file, index}
-			<div class="border-b border-base-100 dark:border-white/5">
+			<div class="border-b border-base-100 dark:border-base-0/5">
 				{#if showFileHeaders}<button
 						type="button"
 						class="flex w-full items-center gap-2 px-3 py-2 text-left"

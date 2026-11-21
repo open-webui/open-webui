@@ -30,7 +30,7 @@
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-base-100 dark:border-base-900 w-60 h-20 group"
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-base-1000 bg-base-0 border border-base-100 dark:border-base-900 w-60 h-20 group"
 >
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : messageContent}
@@ -45,7 +45,7 @@
 				/>
 				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
+						<div class="text-xs text-base-1000 dark:text-base-0 font-normal line-clamp-1">
 							{data?.user?.name ?? 'User'}
 						</div>
 					</div>
@@ -70,7 +70,7 @@
 
 				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
+						<div class="text-xs text-base-1000 dark:text-base-0 font-normal line-clamp-1">
 							{modelName}
 						</div>
 

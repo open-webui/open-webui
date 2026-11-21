@@ -186,7 +186,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="sticky top-0 z-10 bg-white dark:bg-base-900">
+	<div class="sticky top-0 z-10 bg-base-0 dark:bg-base-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -376,7 +376,7 @@
 			<tbody class="">
 				{#each users as user (user.id)}
 					<tr class="dark:border-base-850 text-xs">
-						<td class="px-3 py-1 font-normal text-base-900 dark:text-white max-w-48">
+						<td class="px-3 py-1 font-normal text-base-900 dark:text-base-0 max-w-48">
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
@@ -444,7 +444,7 @@
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
@@ -459,7 +459,7 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Preview Access')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 											aria-label={$i18n.t('Preview Access')}
 											on:click={() => {
 												selectedUser = user;
@@ -473,7 +473,7 @@
 
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
-										class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
@@ -487,7 +487,7 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;

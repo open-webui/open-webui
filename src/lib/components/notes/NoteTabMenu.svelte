@@ -23,7 +23,7 @@
 
 <Dropdown align="start" closeOnSelect>
 	<button
-		class="{className} flex size-5 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+		class="{className} flex size-5 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5"
 		disabled={busy}
 		aria-label={$i18n.t('Page menu')}><EllipsisHorizontal className="size-3.5" /></button
 	>

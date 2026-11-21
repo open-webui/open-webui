@@ -67,7 +67,7 @@
 
 		<div slot="content">
 			<div
-				class="flex max-h-64 w-56 max-w-[calc(100vw-2rem)] flex-col gap-0.5 overflow-y-auto rounded-xl border border-base-200 bg-white p-1 text-base-900 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-100"
+				class="flex max-h-64 w-56 max-w-[calc(100vw-2rem)] flex-col gap-0.5 overflow-y-auto rounded-xl border border-base-200 bg-base-0 p-1 text-base-900 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-100"
 			>
 				{#each items as item (item.value)}
 					<button

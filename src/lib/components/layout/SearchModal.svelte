@@ -329,7 +329,7 @@
 	size={preview ? 'xl' : 'lg'}
 	ariaLabel={$i18n.t('Search workspace')}
 	onRequestClose={close}
-	className="bg-white dark:bg-base-850 rounded-2xl !border-base-100 dark:!border-base-800"
+	className="bg-base-0 dark:bg-base-850 rounded-2xl !border-base-100 dark:!border-base-800"
 >
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div

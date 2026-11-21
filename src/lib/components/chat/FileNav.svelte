@@ -2478,11 +2478,11 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="pointer-events-none absolute inset-0 z-10 bg-black/[0.02] dark:bg-white/[0.02]"
+				class="pointer-events-none absolute inset-0 z-10 bg-base-1000/[0.02] dark:bg-base-0/[0.02]"
 				role="status"
 			>
 				<div
-					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
+					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 				>
 					<Icon name="upload-tray" size={14} strokeWidth={1.5} />
 					<span class="truncate">{$i18n.t('Drop to upload')}</span>
@@ -2552,7 +2552,7 @@
 				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
 					<Tooltip content={$i18n.t(mode.label)}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 aria-pressed:text-base-900 dark:aria-pressed:text-white disabled:opacity-30"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 aria-pressed:text-base-900 dark:aria-pressed:text-base-0 disabled:opacity-30"
 							aria-label={$i18n.t(mode.label)}
 							aria-pressed={showRaw === mode.raw}
 							on:click={() => {
@@ -2582,7 +2582,7 @@
 								{#each viewerRoot.querySelectorAll('h1, h2, h3, h4, h5, h6') as heading}
 									<button
 										type="button"
-										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 										on:click={() => heading.scrollIntoView()}
 									>
 										<span
@@ -2757,7 +2757,7 @@
 				</Tooltip>
 				<button
 					type="button"
-					class="shrink-0 hover:text-base-900 dark:hover:text-white"
+					class="shrink-0 hover:text-base-900 dark:hover:text-base-0"
 					aria-label={$i18n.t('Clear comparison selection')}
 					on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
 				>
@@ -2902,7 +2902,7 @@
 							</div>
 							{#each filenameMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
@@ -2918,7 +2918,7 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
@@ -2947,7 +2947,7 @@
 							</div>
 							{#each contentOnlyMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
@@ -2963,7 +2963,7 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
@@ -3151,7 +3151,7 @@
 		<!-- Float above the list footer without moving the rows. -->
 		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
 			<div class="relative z-10 h-0 shrink-0">
-				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-base-900">
+				<div class="absolute inset-x-0 bottom-0 bg-base-0 dark:bg-base-900">
 					<BulkActionBar
 						count={selectedCount}
 						{canCompare}
@@ -3213,7 +3213,7 @@
 						{/if}
 						<button
 							type="button"
-							class="flex h-7 items-center rounded-lg bg-base-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 items-center rounded-lg bg-base-900 px-2 text-xs text-base-0 hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
 							on:click={() => onSelectDirectory?.(currentPath)}
 							>{$i18n.t('Use this directory')}</button
@@ -3234,7 +3234,7 @@
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
 						<div
-							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+							class="h-px bg-transparent group-hover:bg-base-1000/10 dark:group-hover:bg-base-0/10 transition"
 						/>
 						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
 					</div>
@@ -3276,7 +3276,7 @@
 				<DropdownMenu className="min-w-[9.375rem]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							refreshBrowser();
@@ -3311,7 +3311,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3323,7 +3323,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3335,7 +3335,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							downloadFile(currentPath);
@@ -3346,7 +3346,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							toggleHidden();
@@ -3366,7 +3366,7 @@
 		<form
 			use:positionFileAsk={fileAsk.anchor}
 			data-file-ask
-			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-base-850 dark:text-white dark:ring-white/10"
+			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-base-0 pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-0 dark:ring-base-0/10"
 			aria-label={$i18n.t('Ask about this file')}
 			on:submit|preventDefault={submitFileAsk}
 		>
@@ -3401,8 +3401,8 @@
 					disabled={asking || !fileAskInput.trim()}
 					aria-label={$i18n.t('Send')}
 					class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors {fileAskInput.trim()
-						? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100'
-						: 'bg-base-200 text-white dark:bg-base-700 dark:text-base-900'}"
+						? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100'
+						: 'bg-base-200 text-base-0 dark:bg-base-700 dark:text-base-900'}"
 				>
 					{#if asking}<Spinner className="size-3.5" />{:else}<ArrowRight
 							className="size-3.5 -rotate-90"

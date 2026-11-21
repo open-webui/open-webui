@@ -130,7 +130,7 @@
 							}}
 							data-selected={idx === selectedIdx}
 						>
-							<div class="text-black dark:text-base-100 flex items-center gap-1.5 overflow-hidden">
+							<div class="text-base-1000 dark:text-base-100 flex items-center gap-1.5 overflow-hidden">
 								<Tooltip content={$i18n.t('File')} placement="top">
 									<DocumentPage className="size-3.5 shrink-0" />
 								</Tooltip>

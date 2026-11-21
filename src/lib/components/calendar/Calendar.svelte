@@ -353,7 +353,7 @@
 
 					<div class="ml-auto flex items-center gap-1">
 						<button
-							class="hidden sm:inline text-xs px-2 py-1 rounded-lg hover:bg-base-50 dark:hover:bg-base-850 transition text-base-500 hover:text-base-700 dark:hover:text-white"
+							class="hidden sm:inline text-xs px-2 py-1 rounded-lg hover:bg-base-50 dark:hover:bg-base-850 transition text-base-500 hover:text-base-700 dark:hover:text-base-0"
 							on:click={goToToday}
 						>
 							{$i18n.t('Today')}
@@ -367,8 +367,8 @@
 								{ value: 'month', label: $i18n.t('Month') }
 							]}
 							onChange={() => handleNavigate()}
-							triggerClass="relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-base-500 transition hover:bg-base-50 hover:text-base-700 dark:hover:bg-base-850 dark:hover:text-white"
-							contentClass="rounded-xl w-28 p-1 border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 dark:text-white shadow-lg"
+							triggerClass="relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-base-500 transition hover:bg-base-50 hover:text-base-700 dark:hover:bg-base-850 dark:hover:text-base-0"
+							contentClass="rounded-xl w-28 p-1 border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 dark:text-base-0 shadow-lg"
 							align="end"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>

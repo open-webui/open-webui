@@ -66,13 +66,13 @@
 <div class="git-diff font-mono text-[0.6875rem] leading-[1.125rem]" class:split={mode === 'split'}>
 	{#each files as file}
 		{#if files.length > 1}<div
-				class="sticky top-0 z-10 bg-white dark:bg-[var(--chat-tabs-dark-background,var(--color-base-900))] px-2 py-1 text-[0.625rem] text-base-500 dark:text-base-400 border-b border-base-100/50 dark:border-white/2"
+				class="sticky top-0 z-10 bg-base-0 dark:bg-[var(--chat-tabs-dark-background,var(--color-base-900))] px-2 py-1 text-[0.625rem] text-base-500 dark:text-base-400 border-b border-base-100/50 dark:border-base-0/2"
 			>
 				{file.path}
 			</div>{/if}
 		{#each file.hunks as hunk, index}
 			<div
-				class="border-b border-base-100/50 bg-base-50 px-2 py-0.5 text-base-400 dark:border-white/2 dark:bg-white/3 dark:text-base-600"
+				class="border-b border-base-100/50 bg-base-50 px-2 py-0.5 text-base-400 dark:border-base-0/2 dark:bg-base-0/3 dark:text-base-600"
 			>
 				{file.headers[index]}
 			</div>

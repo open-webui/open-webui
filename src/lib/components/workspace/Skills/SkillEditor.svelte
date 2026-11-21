@@ -466,7 +466,7 @@
 					>
 				</div>{/if}
 			<div
-				class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-100/50 bg-base-50/60 dark:border-white/[0.025] dark:bg-white/[0.03]"
+				class="min-h-0 flex-1 overflow-hidden rounded-2xl border border-base-100/50 bg-base-50/60 dark:border-base-0/[0.025] dark:bg-base-0/[0.03]"
 			>
 				{#if historyDiff}
 					<VersionDiff
@@ -631,7 +631,7 @@
 						>
 						{#if !disabled}<button
 								type="button"
-								class="flex h-7 items-center rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+								class="flex h-7 items-center rounded-lg bg-base-900 px-2.5 text-xs text-base-0 transition hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 								on:click={setProductionVersion}>{$i18n.t('Set as Production')}</button
 							>{/if}
 					</div>
@@ -647,7 +647,7 @@
 						bind:value={commitMessage}
 					/>
 					<button
-						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						type="submit"
 						disabled={loading || !fileEditor}
 					>

@@ -489,7 +489,7 @@
 																<Tooltip content={$i18n.t('Unarchive Chat')}>
 																	<button
 																		aria-label={$i18n.t('Unarchive Chat')}
-																		class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		class="self-center w-fit text-sm px-2 py-2 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 																		on:click={async () => {
 																			unarchiveHandler(chat.id);
 																		}}
@@ -515,7 +515,7 @@
 															<Tooltip content={$i18n.t('Delete Chat')}>
 																<button
 																	aria-label={$i18n.t('Delete Chat')}
-																	class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	class="self-center w-fit text-sm px-2 py-2 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 																	on:click={async () => {
 																		deleteHandler(chat.id);
 																	}}

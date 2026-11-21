@@ -8,7 +8,7 @@
 	const dispatch = createEventDispatcher();
 
 	import { config, models, settings, theme, user } from '$lib/stores';
-	import { setTheme } from '$lib/utils/theme';
+	import { DEFAULT_THEME_COLORS, getThemeColors, setTheme, setThemeColors } from '$lib/utils/theme';
 
 	const i18n: any = getContext('i18n');
 
@@ -25,6 +25,18 @@
 	let selectedTheme = 'system';
 	$: selectedTheme = $theme;
 
+	// Background and text colour for the current mode; the rest of the palette is mixed from them.
+	let themeColors = getThemeColors();
+	$: mode = ($theme, document.documentElement.classList.contains('dark') ? 'dark' : 'light') as
+		| 'light'
+		| 'dark';
+	$: modeColors = themeColors[mode] ?? DEFAULT_THEME_COLORS[mode];
+
+	const setModeColor = (key: 'bg' | 'fg', value: string) => {
+		themeColors = { ...themeColors, [mode]: { ...modeColors, [key]: value } };
+		setThemeColors(themeColors);
+	};
+
 	let languages: Awaited<ReturnType<typeof getLanguages>> = [];
 	let lang = $i18n.language;
 	let system = '';
@@ -32,9 +44,9 @@
 	let showAdvanced = false;
 
 	const systemPromptTextareaClass =
-		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	let params = {
 		// Advanced
@@ -146,7 +158,7 @@
 </script>
 
 <div class="flex flex-col h-full justify-between text-sm" id="tab-general">
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.general.title')}
 	</h2>
 
@@ -174,6 +186,38 @@
 					{/if}
 				</SettingsSelect>
 			</UserSettingRow>
+
+			{#if selectedTheme !== 'her'}
+				<UserSettingRow
+					label={$i18n.t('settings.personal.general.themeColors.label')}
+					description={$i18n.t('settings.personal.general.themeColors.description')}
+				>
+					<div class="flex items-center gap-2">
+						{#if themeColors[mode]}
+							<button
+								type="button"
+								class="text-xs text-base-500 transition-colors hover:text-base-900 dark:hover:text-base-0"
+								on:click={() => {
+									themeColors = { ...themeColors, [mode]: undefined };
+									setThemeColors(themeColors);
+								}}
+							>
+								{$i18n.t('Reset')}
+							</button>
+						{/if}
+						{#each [{ key: 'bg', label: $i18n.t('settings.personal.general.themeColors.background') }, { key: 'fg', label: $i18n.t('settings.personal.general.themeColors.text') }] as item (item.key)}
+							<input
+								type="color"
+								class="size-5 cursor-pointer appearance-none rounded-full border border-base-200 bg-transparent p-0 dark:border-base-700 [&::-webkit-color-swatch]:rounded-full [&::-webkit-color-swatch]:border-none [&::-webkit-color-swatch-wrapper]:p-0 [&::-moz-color-swatch]:rounded-full [&::-moz-color-swatch]:border-none"
+								title={item.label}
+								aria-label={item.label}
+								value={modeColors[item.key]}
+								on:input={(e) => setModeColor(item.key, e.currentTarget.value)}
+							/>
+						{/each}
+					</div>
+				</UserSettingRow>
+			{/if}
 
 			<UserSettingRow
 				label={$i18n.t('settings.personal.general.language.label')}
@@ -253,7 +297,7 @@
 
 	<div class="shrink-0 flex justify-end pt-3 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			on:click={() => {
 				saveHandler();
 			}}

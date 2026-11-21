@@ -186,7 +186,7 @@
 					: null}
 			>
 				<div
-					class="flex size-4 items-center justify-center rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-white/10 dark:hover:text-white"
+					class="flex size-4 items-center justify-center rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-base-0/10 dark:hover:text-base-0"
 				>
 					<EllipsisHorizontal className="size-3" strokeWidth="1.5" />
 				</div>

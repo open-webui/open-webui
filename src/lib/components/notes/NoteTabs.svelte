@@ -213,7 +213,7 @@
 		<span>{$i18n.t('Pages')}</span>
 
 		<button
-			class="flex size-5 items-center justify-center rounded-lg hover:text-base-900 dark:hover:text-white"
+			class="flex size-5 items-center justify-center rounded-lg hover:text-base-900 dark:hover:text-base-0"
 			aria-label={$i18n.t('Close pages')}
 			on:click={onClose}><XMark className="size-3.5" /></button
 		>
@@ -284,7 +284,7 @@
 					{/if}
 					{#if editable}
 						<button
-							class="flex size-5 shrink-0 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-white {activeId ===
+							class="flex size-5 shrink-0 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-base-0 {activeId ===
 							page.id
 								? ''
 								: 'sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100'}"

@@ -272,7 +272,7 @@
 				{#if total > 0}
 					<Dropdown align="end">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 						>
 							{$i18n.t('Export')}
 							<ChevronDown className="size-3" strokeWidth="2.5" />
@@ -515,7 +515,7 @@
 								</td>
 
 								{#if feedback?.data?.rating}
-									<td class="px-3 py-1 text-right font-normal text-base-900 dark:text-white w-max">
+									<td class="px-3 py-1 text-right font-normal text-base-900 dark:text-base-0 w-max">
 										<div class=" flex justify-end">
 											{#if feedback?.data?.rating.toString() === '1'}
 												<Badge type="info" content={$i18n.t('Won')} />
@@ -541,7 +541,7 @@
 										}}
 									>
 										<button
-											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 											aria-label={$i18n.t('More')}
 										>
 											<EllipsisHorizontal />

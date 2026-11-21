@@ -173,7 +173,7 @@
 						<textarea
 							rows="1"
 							readonly={readOnly}
-							class="block min-h-7 max-h-40 min-w-0 w-full resize-none rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-500 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-400 dark:focus:border-blue-500 [field-sizing:content]"
+							class="block min-h-7 max-h-40 min-w-0 w-full resize-none rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-500 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-400 dark:focus:border-blue-500 [field-sizing:content]"
 							aria-label={key}
 							placeholder={$i18n.t('Translation')}
 							value={value?.[key] ?? ''}

@@ -58,7 +58,7 @@
 	const inputClass =
 		'w-full min-w-0 bg-transparent text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 disabled:text-base-400 dark:disabled:text-base-600';
 	const buttonClass =
-		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white';
+		'flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0';
 	// Keep the dynamic scope label visible to i18next-parser.
 	// $i18n.t('Read messages and history in joined channels');
 	const scopeLabels: Record<string, string> = {
@@ -395,7 +395,7 @@
 						</AdminSettingField>
 						<button
 							type="button"
-							class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
+							class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0 hover:underline"
 							on:click={() => {
 								scopeQuery = '';
 								scopeMode = 'requested';
@@ -439,7 +439,7 @@
 							<button
 								type="button"
 								disabled={busy}
-								class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
+								class="mt-2 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0 hover:underline"
 								on:click={editDetailsManually}>{$i18n.t('Edit details manually')}</button
 							>
 						{/if}
@@ -479,7 +479,7 @@
 								<button
 									id={`${labelId}-control`}
 									type="button"
-									class="text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-white hover:underline"
+									class="text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0 hover:underline"
 									on:click={() => {
 										scopeQuery = '';
 										scopeMode = 'granted';
@@ -514,7 +514,7 @@
 							>{:else if manifest && !app}<button
 								type="button"
 								disabled={busy}
-								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-white"
+								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-base-0"
 								on:click={() => {
 									manifest = null;
 									manual = false;
@@ -522,7 +522,7 @@
 							>{:else if !manifest}<button
 								type="button"
 								disabled={busy}
-								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-white"
+								class="text-xs text-base-500 hover:text-base-900 dark:hover:text-base-0"
 								on:click={(event) => {
 									if (event.currentTarget.form?.reportValidity()) editDetailsManually();
 								}}>{$i18n.t('Enter details manually')}</button

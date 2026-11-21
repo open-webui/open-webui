@@ -273,7 +273,7 @@
 				<div class="absolute right-1 -top-3">
 					<div
 						use:trackActions={showButtons}
-						class="absolute right-0 top-0 z-20 flex w-max gap-1 rounded-lg bg-white dark:bg-base-850 shadow-md p-0.5 border border-base-100/30 dark:border-base-850/30"
+						class="absolute right-0 top-0 z-20 flex w-max gap-1 rounded-lg bg-base-0 dark:bg-base-850 shadow-md p-0.5 border border-base-100/30 dark:border-base-850/30"
 						style="opacity: 0; pointer-events: none;"
 					>
 						<slot name="actions">
@@ -639,7 +639,7 @@
 								<div class="flex space-x-1.5">
 									<button
 										id="close-edit-message-button"
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 										on:click={() => {
 											cancelEditMessage();
 										}}
@@ -649,7 +649,7 @@
 
 									<button
 										id="confirm-edit-message-button"
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 										on:click={() => {
 											editMessageConfirmHandler();
 										}}

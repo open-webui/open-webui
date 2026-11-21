@@ -94,14 +94,14 @@
 					<button
 						class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
 				       px-2.5 py-1.5 rounded-lg bg-transparent transition-colors
-				       hover:text-base-950 dark:hover:text-white group"
+				       hover:text-base-950 dark:hover:text-base-0 group"
 						style="animation-delay: {idx * 45}ms"
 						on:click={() => onSelect({ type: 'prompt', data: prompt.content })}
 					>
 						<div class="flex flex-col text-left leading-snug">
 							{#if prompt.title && prompt.title[0] !== ''}
 								<div
-									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-white transition line-clamp-1"
+									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-base-0 transition line-clamp-1"
 								>
 									{prompt.title[0]}
 								</div>
@@ -112,7 +112,7 @@
 								</div>
 							{:else}
 								<div
-									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-white transition line-clamp-1"
+									class="text-sm font-normal group-hover:text-base-950 dark:text-base-300 dark:group-hover:text-base-0 transition line-clamp-1"
 								>
 									{prompt.content}
 								</div>

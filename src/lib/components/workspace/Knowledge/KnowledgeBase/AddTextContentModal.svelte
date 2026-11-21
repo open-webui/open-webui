@@ -23,13 +23,13 @@
 	ariaLabel={$i18n.t('Add text content')}
 	size="full"
 	containerClassName=""
-	className="h-full bg-white dark:bg-base-900"
+	className="h-full bg-base-0 dark:bg-base-900"
 	bind:show
 >
 	<div class="absolute top-0 right-0 p-5">
 		<button
 			aria-label={$i18n.t('Close')}
-			class="self-center dark:text-white"
+			class="self-center dark:text-base-0"
 			type="button"
 			on:click={() => {
 				show = false;
@@ -105,7 +105,7 @@
 						<Tooltip content={$i18n.t('Voice Input')}>
 							<button
 								aria-label={$i18n.t('Voice Input')}
-								class=" p-2 bg-base-50 text-base-700 dark:bg-base-700 dark:text-white transition rounded-full"
+								class=" p-2 bg-base-50 text-base-700 dark:bg-base-700 dark:text-base-0 transition rounded-full"
 								type="button"
 								on:click={async () => {
 									try {
@@ -140,7 +140,7 @@
 				<div class=" shrink-0">
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 						>
 							{$i18n.t('Save')}

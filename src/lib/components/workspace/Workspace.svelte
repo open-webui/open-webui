@@ -176,7 +176,7 @@
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'models'
 										? 'text-base-900 dark:text-base-100'
-										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/models"
 								>
 									<span>{$i18n.t('Models')}</span>
@@ -194,7 +194,7 @@
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'knowledge'
 										? 'text-base-900 dark:text-base-100'
-										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/knowledge"
 								>
 									<span>{$i18n.t('Knowledge')}</span>
@@ -212,7 +212,7 @@
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'prompts'
 										? 'text-base-900 dark:text-base-100'
-										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/prompts"
 								>
 									<span>{$i18n.t('Prompts')}</span>
@@ -230,7 +230,7 @@
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'skills'
 										? 'text-base-900 dark:text-base-100'
-										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/skills"
 								>
 									<span>{$i18n.t('Skills')}</span>
@@ -248,7 +248,7 @@
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'tools'
 										? 'text-base-900 dark:text-base-100'
-										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/tools"
 								>
 									<span>{$i18n.t('Tools')}</span>

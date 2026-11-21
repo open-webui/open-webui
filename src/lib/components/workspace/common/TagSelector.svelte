@@ -74,7 +74,7 @@
 <!-- <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}
@@ -85,7 +85,7 @@
 <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}
@@ -96,7 +96,7 @@
 <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}

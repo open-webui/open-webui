@@ -38,7 +38,7 @@
 </script>
 
 <div
-	class="my-1.5 flex w-full items-start gap-2 rounded-2xl bg-black/[0.03] px-3 py-2 text-base-500 dark:bg-white/[0.04] dark:text-base-400"
+	class="my-1.5 flex w-full items-start gap-2 rounded-2xl bg-base-1000/[0.03] px-3 py-2 text-base-500 dark:bg-base-0/[0.04] dark:text-base-400"
 >
 	<Info className="mt-0.5 size-4 shrink-0 text-base-400 dark:text-base-500" strokeWidth="1.8" />
 

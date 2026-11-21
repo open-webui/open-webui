@@ -112,7 +112,7 @@
 			style="left:clamp(0px, calc({(mouseX / w) * 100}% - 7rem), max(0px, calc(100% - 14rem)))"
 		>
 			<div
-				class="rounded border border-base-100 bg-white px-2.5 py-1.5 shadow-sm dark:border-base-800 dark:bg-base-900"
+				class="rounded border border-base-100 bg-base-0 px-2.5 py-1.5 shadow-sm dark:border-base-800 dark:bg-base-900"
 			>
 				<div class="mb-1.5 text-[0.625rem] text-base-400">
 					{#if hovered.date?.includes(':')}
@@ -128,7 +128,7 @@
 					.slice(0, 5) as [n, c]}
 					<div class="flex items-center justify-between gap-2 py-0.5">
 						<span class="min-w-0 truncate text-base-600 dark:text-base-300">{n}</span>
-						<span class="shrink-0 text-base-900 tabular-nums dark:text-white"
+						<span class="shrink-0 text-base-900 tabular-nums dark:text-base-0"
 							>{c.toLocaleString()}
 							<span class="text-base-400">({total > 0 ? ((c / total) * 100).toFixed(0) : 0}%)</span
 							></span

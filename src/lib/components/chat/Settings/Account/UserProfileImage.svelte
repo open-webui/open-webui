@@ -85,7 +85,7 @@
 	<div class="mb-2 flex items-center gap-4">
 		<button
 			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-base-100
-			ring-1 ring-inset ring-base-200 transition-all duration-200 hover:ring-2 hover:ring-base-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
+			ring-1 ring-inset ring-base-200 transition-all duration-200 hover:ring-2 hover:ring-base-300 dark:bg-base-0/8 dark:ring-base-0/10 dark:hover:ring-base-0/20"
 			type="button"
 			on:click={() => {
 				profileImageInputElement.click();
@@ -98,7 +98,7 @@
 			/>
 
 			<div
-				class="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40"
+				class="absolute inset-0 flex items-center justify-center bg-base-1000/0 transition-colors duration-200 group-hover:bg-base-1000/40"
 			>
 				<svg
 					class="h-4 w-4 text-white opacity-0 drop-shadow-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
@@ -190,7 +190,7 @@
 				<div
 					class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition"
 				>
-					<div class="p-1 rounded-full bg-white text-black border-base-100 shadow">
+					<div class="p-1 rounded-full bg-base-0 text-base-1000 border-base-100 shadow">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"

@@ -114,7 +114,7 @@
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 											alt={u.name}
-											class=" size-5.5 rounded-full object-cover border border-white dark:border-base-900 {index ===
+											class=" size-5.5 rounded-full object-cover border border-base-0 dark:border-base-900 {index ===
 											1
 												? '-ml-2'
 												: ''}"
@@ -128,7 +128,7 @@
 													class="relative inline-flex size-2 rounded-full {channelMembers[0]
 														?.is_active
 														? 'bg-green-500'
-														: 'bg-base-300 dark:bg-base-700'} border-[1.5px] border-white dark:border-base-900"
+														: 'bg-base-300 dark:bg-base-700'} border-[1.5px] border-base-0 dark:border-base-900"
 												></span>
 											</span>
 										</div>

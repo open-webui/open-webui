@@ -119,7 +119,7 @@
 	}}
 />
 <div
-	class="flex h-full min-h-0 overflow-hidden rounded-2xl border border-base-100/80 bg-base-50/60 dark:border-white/[0.04] dark:bg-white/[0.03]"
+	class="flex h-full min-h-0 overflow-hidden rounded-2xl border border-base-100/80 bg-base-50/60 dark:border-base-0/[0.04] dark:bg-base-0/[0.03]"
 >
 	{#if $mobile}{@render sidebar()}
 	{:else}<ResizableSidePanel
@@ -238,7 +238,7 @@
 				onSaved={refresh}
 			/>{/key}
 	{:else}<div
-			class="flex min-w-0 flex-1 items-center justify-center bg-white text-xs text-base-400 dark:bg-base-900"
+			class="flex min-w-0 flex-1 items-center justify-center bg-base-0 text-xs text-base-400 dark:bg-base-900"
 		>
 			{$i18n.t('Select a file to preview')}
 		</div>{/if}

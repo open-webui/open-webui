@@ -17,7 +17,7 @@
 <button
 	class="focus-ring outline -outline-offset-1 outline-[1.5px] outline-base-200 dark:outline-base-600 {state !==
 	'unchecked'
-		? 'bg-black outline-black '
+		? 'bg-base-1000 outline-base-1000 '
 		: 'hover:outline-base-500 hover:bg-base-50 dark:hover:bg-base-800'} text-white transition-all rounded-sm inline-block w-3.5 h-3.5 relative {disabled
 		? disabledClassName
 		: ''}"
@@ -62,7 +62,7 @@
 			</svg>
 		{:else if indeterminate}
 			<svg
-				class="w-3 h-3.5 text-base-800 dark:text-white"
+				class="w-3 h-3.5 text-base-800 dark:text-base-0"
 				aria-hidden="true"
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"

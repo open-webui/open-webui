@@ -12,7 +12,7 @@
 	let newPassword = '';
 	let newPasswordConfirm = '';
 	const actionButtonClass =
-		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	const updatePasswordHandler = async () => {
 		if (newPassword === newPasswordConfirm) {

@@ -57,7 +57,7 @@
 	>
 </svelte:head>
 
-<div class="min-h-dvh bg-white text-black dark:bg-black dark:text-white relative">
+<div class="min-h-dvh bg-base-0 text-base-1000 dark:bg-base-1000 dark:text-base-0 relative">
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region"></div>
 	<main
 		id="main-content"

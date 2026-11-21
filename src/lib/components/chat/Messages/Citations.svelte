@@ -187,7 +187,7 @@
 						<img
 							src="https://www.google.com/s2/favicons?sz=32&domain={citation.source.name}"
 							alt="favicon"
-							class="size-4 rounded-full shrink-0 border border-white dark:border-base-850 bg-white dark:bg-base-900"
+							class="size-4 rounded-full shrink-0 border border-base-0 dark:border-base-850 bg-base-0 dark:bg-base-900"
 							on:error={(e) => {
 								// LICENSE covers this Open WebUI fallback logo.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -198,7 +198,7 @@
 					{/each}
 					{#if citations.length > 3}
 						<div
-							class="size-4 rounded-full shrink-0 border border-white dark:border-base-850 bg-base-100 dark:bg-base-800 flex items-center justify-center text-[0.5rem] font-normal text-base-500 dark:text-base-400 whitespace-nowrap tracking-tighter"
+							class="size-4 rounded-full shrink-0 border border-base-0 dark:border-base-850 bg-base-100 dark:bg-base-800 flex items-center justify-center text-[0.5rem] font-normal text-base-500 dark:text-base-400 whitespace-nowrap tracking-tighter"
 							aria-hidden="true"
 						>
 							+{citations.length - Math.min(urlCitations.length, 3)}
@@ -238,7 +238,7 @@
 						{idx + 1}
 					</div>
 					<div
-						class="flex-1 truncate hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
+						class="flex-1 truncate hover:text-base-1000 dark:text-base-0/60 dark:hover:text-base-0 transition text-left"
 					>
 						{decodeString(citation.source.name)}
 					</div>

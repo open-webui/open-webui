@@ -78,6 +78,26 @@
 					metaThemeColorTag.setAttribute('content', '#171717');
 				}
 
+				// User theme colours; keep in sync with applyThemeColors in $lib/utils/theme.
+				const applyThemeColors = () => {
+					const root = document.documentElement;
+					let colors;
+					try {
+						colors = JSON.parse(localStorage.themeColors ?? '{}')[
+							root.classList.contains('dark') ? 'dark' : 'light'
+						];
+					} catch {}
+					if (colors && !root.classList.contains('her')) {
+						root.style.setProperty('--app-bg', colors.bg);
+						root.style.setProperty('--app-fg', colors.fg);
+						metaThemeColorTag.setAttribute('content', colors.bg);
+					} else {
+						root.style.removeProperty('--app-bg');
+						root.style.removeProperty('--app-fg');
+					}
+				};
+				applyThemeColors();
+
 				// LICENSE covers these Open WebUI splash logo assets.
 				// Do not alter, remove, obscure, or replace them except as LICENSE permits:
 				// https://docs.openwebui.com/license.
@@ -102,6 +122,7 @@
 							document.documentElement.classList.remove('dark');
 							metaThemeColorTag.setAttribute('content', '#ffffff');
 						}
+						applyThemeColors();
 					}
 				});
 				const isDarkMode = document.documentElement.classList.contains('dark');

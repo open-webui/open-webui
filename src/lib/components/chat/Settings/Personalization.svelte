@@ -38,7 +38,7 @@
 	let showDeleteConfirm = false;
 	let query = '';
 	const actionButtonClass =
-		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
+		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	type Memory = {
 		id: string;
@@ -109,7 +109,7 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.personalization.title')}
 	</h2>
 
@@ -191,7 +191,7 @@
 							<Dropdown closeOnSelect align="end">
 								<Tooltip content={$i18n.t('Actions')}>
 									<button
-										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
+										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 										type="button"
 									>
 										<span>{$i18n.t('Actions')}</span>
@@ -276,7 +276,7 @@
 
 	<div class="shrink-0 flex justify-end text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}
@@ -318,7 +318,7 @@
 	<div class="text-sm text-base-500 flex-1">
 		{$i18n.t('Are you sure you want to delete this memory? This action cannot be undone.')}
 		<div
-			class="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-base-100/50 bg-base-50/40 p-2 text-xs text-base-600 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-400"
+			class="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-base-100/50 bg-base-50/40 p-2 text-xs text-base-600 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-400"
 		>
 			{selectedMemory?.content}
 		</div>

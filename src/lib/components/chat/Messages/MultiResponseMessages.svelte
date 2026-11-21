@@ -454,7 +454,7 @@
 									id="merge-response-button"
 									class="{true
 										? 'visible'
-										: 'hover-reveal'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										: 'hover-reveal'} p-1 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg dark:hover:text-base-0 hover:text-base-1000 transition"
 									on:click={() => {
 										mergeResponsesHandler();
 									}}

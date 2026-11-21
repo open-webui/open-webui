@@ -928,7 +928,7 @@
 		>
 			<div
 				class="z-40 {className ??
-					'w-[20rem]'} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-base-100 bg-white p-0.5 shadow-lg outline-hidden dark:border-base-800 dark:bg-base-850 dark:text-white flex flex-col overflow-hidden"
+					'w-[20rem]'} max-w-[calc(100vw-1rem)] justify-start rounded-xl border border-base-100 bg-base-0 p-0.5 shadow-lg outline-hidden dark:border-base-800 dark:bg-base-850 dark:text-base-0 flex flex-col overflow-hidden"
 				transition:flyAndScale
 			>
 				<slot>

@@ -90,7 +90,7 @@
 								type="button"
 								class="rounded-lg transition-all duration-200 px-2.5 py-0.5 text-xs font-normal {selectedRange ===
 								range.key
-									? 'bg-white text-base-900 shadow-sm dark:bg-base-700 dark:text-white'
+									? 'bg-base-0 text-base-900 shadow-sm dark:bg-base-700 dark:text-base-0'
 									: 'text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200'}"
 								on:click={() => selectRange(range.key)}
 							>
@@ -125,7 +125,7 @@
 
 			<div class="flex justify-end pt-2">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					type="button"
 					on:click={close}
 				>

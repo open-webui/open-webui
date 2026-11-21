@@ -45,7 +45,7 @@
 <div class="flex items-center gap-2">
 	{#if changedKeys.length > 0}
 		<button
-			class="h-7 shrink-0 rounded-lg px-2 text-xs text-base-500 transition hover:text-base-900 dark:text-base-400 dark:hover:text-white"
+			class="h-7 shrink-0 rounded-lg px-2 text-xs text-base-500 transition hover:text-base-900 dark:text-base-400 dark:hover:text-base-0"
 			type="button"
 			{disabled}
 			on:click={() => {
@@ -58,7 +58,7 @@
 
 	<button
 		bind:this={saveButton}
-		class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+		class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 		type="submit"
 		{disabled}
 		on:click={(event) => {

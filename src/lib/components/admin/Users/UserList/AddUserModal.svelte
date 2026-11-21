@@ -170,7 +170,7 @@
 						<button
 							class="min-w-fit p-1.5 {tab === ''
 								? ''
-								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								tab = '';
@@ -180,7 +180,7 @@
 						<button
 							class="min-w-fit p-1.5 {tab === 'import'
 								? ''
-								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								tab = 'import';
@@ -300,7 +300,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

@@ -53,7 +53,7 @@
 	};
 
 	const inputClass =
-		'rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	$: events = eventItems.map((item) => item.event);
 	$: eventDetails = Object.fromEntries(eventItems.map((item) => [item.event, item]));
@@ -397,7 +397,7 @@
 	ariaLabel={editing ? $i18n.t('Edit webhook') : $i18n.t('Add webhook')}
 	bind:show={showWebhookModal}
 	size="sm"
-	className="bg-white dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div>
 		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
@@ -487,7 +487,7 @@
 								<div class="flex flex-wrap gap-1 mb-2">
 									{#each targetGroupIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-base-0/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedGroups[id]?.name ?? id}</span>
 											<span class="text-base-500">{$i18n.t('group')}</span>
@@ -503,7 +503,7 @@
 
 									{#each targetUserIds as id}
 										<div
-											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-base-0/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="truncate max-w-36">{selectedUsers[id]?.name ?? id}</span>
 											<span class="text-base-500">{$i18n.t('user')}</span>
@@ -532,7 +532,7 @@
 
 								{#if targetQuery.trim() && (targetGroupResults.length > 0 || targetUserResults.length > 0)}
 									<div
-										class="absolute z-10 mt-1 w-full rounded-lg bg-white dark:bg-base-900 border border-base-100 dark:border-base-850 shadow-lg py-1 max-h-48 overflow-y-auto"
+										class="absolute z-10 mt-1 w-full rounded-lg bg-base-0 dark:bg-base-900 border border-base-100 dark:border-base-850 shadow-lg py-1 max-h-48 overflow-y-auto"
 									>
 										{#each targetGroupResults as group}
 											<button
@@ -589,7 +589,7 @@
 								<div class="flex flex-wrap gap-1">
 									{#each form.events as event}
 										<div
-											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-white/[0.03] px-2 py-1 text-xs"
+											class="flex items-center gap-1 rounded-full bg-base-100 dark:bg-base-0/[0.03] px-2 py-1 text-xs"
 										>
 											<span class="font-mono break-all">{event}</span>
 											<button
@@ -675,7 +675,7 @@
 
 					<button
 						type="submit"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					>
 						{$i18n.t('Save')}
 					</button>
@@ -712,7 +712,7 @@
 			<Tooltip content={$i18n.t('Add webhook')}>
 				<button
 					aria-label={$i18n.t('Add webhook')}
-					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
+					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 					on:click={newWebhook}
 					type="button"
 				>

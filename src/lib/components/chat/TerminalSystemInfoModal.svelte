@@ -114,7 +114,7 @@
 	>
 		<div class="flex items-start gap-3 px-4 pt-3 pb-1">
 			<div class="min-w-0 flex-1">
-				<h2 class="truncate text-sm font-medium text-base-900 dark:text-white" title={label}>
+				<h2 class="truncate text-sm font-medium text-base-900 dark:text-base-0" title={label}>
 					{label}
 				</h2>
 				{#if data}<div

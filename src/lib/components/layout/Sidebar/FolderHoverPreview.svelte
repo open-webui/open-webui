@@ -45,7 +45,7 @@
 
 <LinkPreview.Portal>
 	<LinkPreview.Content
-		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-white text-[0.8125rem] font-normal text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 md:block dark:bg-base-850 dark:text-base-100 dark:ring-white/10"
+		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-1.5rem)] overflow-y-auto rounded-2xl bg-base-0 text-[0.8125rem] font-normal text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 md:block dark:bg-base-850 dark:text-base-100 dark:ring-base-0/10"
 		side="right"
 		align="start"
 		sideOffset={12}

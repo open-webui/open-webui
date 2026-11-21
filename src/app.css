@@ -169,16 +169,16 @@ li p {
 
 :where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(215, 215, 215, 0.6);
-	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+	border-color: var(--color-base-0);
 	border-radius: 9999px;
 	border-width: 1px;
 }
 
 /* Dark theme scrollbar styles */
 :where(html:not(.native-scrollbars)).dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
-	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
+	background-color: color-mix(in oklab, var(--color-base-700) 60%, transparent);
+	border-color: var(--color-base-1000);
 }
 
 :where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar {
@@ -215,7 +215,7 @@ select {
 }
 
 .dark select option {
-	@apply bg-base-850 text-white;
+	@apply bg-base-850 text-base-0;
 }
 
 @keyframes shimmer {
@@ -231,11 +231,11 @@ select {
 	position: relative;
 	overflow: hidden;
 	clip-path: inset(0);
-	-webkit-text-fill-color: #b4b4b4;
-	color: #b4b4b4;
+	-webkit-text-fill-color: var(--color-base-400);
+	color: var(--color-base-400);
 }
 
-/* Brightens #b4b4b4 text to #e8e8e8. */
+/* Brightens the base-400 text towards base-100. */
 .shimmer::after {
 	content: '';
 	position: absolute;
@@ -381,11 +381,11 @@ input[type='number'] {
 }
 
 .cm-gutters {
-	@apply !bg-white dark:!bg-black !border-none;
+	@apply !bg-base-0 dark:!bg-base-1000 !border-none;
 }
 
 .cm-editor {
-	@apply bg-white dark:bg-black;
+	@apply bg-base-0 dark:bg-base-1000;
 }
 
 .tippy-box[data-theme~='dark'] {
@@ -416,7 +416,7 @@ input[type='number'] {
 }
 
 .bg-base-950-90 {
-	background-color: rgba(var(--color-base-950, #0d0d0d), 0.9);
+	background-color: color-mix(in oklab, var(--color-base-950) 90%, transparent);
 }
 
 .ProseMirror {
@@ -451,15 +451,13 @@ html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	/* Below color is from tailwind, and has the proper contrast
-	text-base-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: var(--color-base-600);
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
 }
 
-/* #676767 is 3.17:1 on the dark canvas; the light value already passes. */
+/* base-600 is about 3.2:1 on the dark canvas; the light value already passes. */
 html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	color: var(--color-base-500);
 }
@@ -554,7 +552,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 .tiptap .suggestion.is-empty::after {
 	content: '\00A0';
-	border-bottom: 1px dotted rgba(31, 41, 55, 0.12);
+	border-bottom: 1px dotted color-mix(in oklab, var(--color-base-800) 12%, transparent);
 }
 
 .input-prose .tiptap ul[data-type='taskList'] {
@@ -625,13 +623,13 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 @media (prefers-color-scheme: dark) {
 	.ProseMirror p.is-editor-empty:first-child::before {
-		color: #757575;
+		color: var(--color-base-600);
 	}
 }
 
 .ProseMirror p.is-editor-empty.ai-autocompletion:first-child::before {
 	content: attr(data-suggestion);
-	color: #a0a0a0;
+	color: var(--color-base-500);
 }
 
 .ProseMirror p.is-editor-empty.ai-autocompletion:first-child::after {
@@ -639,7 +637,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .ai-autocompletion::after {
-	color: #a0a0a0;
+	color: var(--color-base-500);
 
 	content: attr(data-suggestion);
 	pointer-events: none;
@@ -696,7 +694,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .tiptap td {
-	@apply text-base-900 dark:text-white w-max;
+	@apply text-base-900 dark:text-base-0 w-max;
 }
 
 .tiptap tr {
@@ -852,13 +850,13 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 body {
-	background: #fff;
-	color: #000;
+	background: var(--color-base-0);
+	color: var(--color-base-1000);
 }
 
 .dark body {
-	background: #171717;
-	color: #eee;
+	background: var(--color-base-900);
+	color: var(--color-base-100);
 }
 
 /* Position the handle relative to each LI */
@@ -903,7 +901,7 @@ body {
 	opacity: 1;
 }
 .pm-list-drag-handle:hover {
-	background: rgba(0, 0, 0, 0.06);
+	background: color-mix(in oklab, var(--color-base-1000) 6%, transparent);
 }
 
 :root {
@@ -1004,7 +1002,7 @@ body {
 			.dark\:hover\:text-base-300:hover,
 			.dark\:hover\:text-base-400:hover
 		) {
-		color: #fff;
+		color: var(--color-base-0);
 	}
 
 	/* Elements that hover to a lighter grey than the new resting colour. */
@@ -1091,7 +1089,7 @@ html.high-contrast.dark
 			.dark\:group-hover\:text-base-300,
 			.dark\:group-hover\:text-base-400
 		) {
-		color: #fff;
+		color: var(--color-base-0);
 	}
 }
 
@@ -1115,7 +1113,7 @@ html.high-contrast:not(.dark) .shimmer::after {
 	font-size: 0.875rem;
 	line-height: 1.6;
 	color: var(--color-base-800);
-	background: #fff;
+	background: var(--color-base-0);
 	border-radius: 0.25rem;
 }
 .dark .office-preview {
@@ -1193,10 +1191,10 @@ html.high-contrast:not(.dark) .shimmer::after {
 }
 /* Row hover and selection */
 .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
-	background: rgba(0, 0, 0, 0.015);
+	background: color-mix(in oklab, var(--color-base-1000) 1.5%, transparent);
 }
 .dark .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
-	background: rgba(255, 255, 255, 0.02);
+	background: color-mix(in oklab, var(--color-base-0) 2%, transparent);
 }
 .office-preview table tbody tr:hover td:not(.excel-row-num) {
 	background: rgba(59, 130, 246, 0.06);

@@ -28,10 +28,10 @@
 	ariaLabel={$i18n.t('Image Max Compression Size')}
 	size="sm"
 	bind:show
-	className="bg-white dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class=" flex justify-between text-base-900 dark:text-white px-4 pt-3 pb-1">
+		<div class=" flex justify-between text-base-900 dark:text-base-0 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Manage')}
 			</h1>
@@ -76,7 +76,7 @@
 											id="image-comp-width"
 											bind:value={size.width}
 											type="number"
-											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Width')}
 										/>
@@ -94,7 +94,7 @@
 											id="image-comp-height"
 											bind:value={size.height}
 											type="number"
-											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
+											class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-center text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
 											min="0"
 											placeholder={$i18n.t('Height')}
 										/>
@@ -106,7 +106,7 @@
 
 					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 						>
 							{$i18n.t('Save')}

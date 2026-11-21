@@ -118,7 +118,7 @@
 			>
 				<span
 					class="mr-1 flex size-3 shrink-0 items-center justify-center rounded-[0.25rem] border transition-colors {checked
-						? 'border-base-800 bg-base-800 text-white dark:border-base-100 dark:bg-base-100 dark:text-base-900'
+						? 'border-base-800 bg-base-800 text-base-0 dark:border-base-100 dark:bg-base-100 dark:text-base-900'
 						: 'border-base-300 dark:border-base-600'}"
 				>
 					{#if checked}<Check className="size-2" strokeWidth="3.5" />{/if}
@@ -139,7 +139,7 @@
 					disabled={busy}
 					on:click={() => (coloring = coloring === tag.id ? '' : tag.id)}
 				>
-					<span class="size-2 rounded-full ring-2 ring-white dark:ring-base-850 {tagDot(tag)}"
+					<span class="size-2 rounded-full ring-2 ring-base-0 dark:ring-base-850 {tagDot(tag)}"
 					></span>
 				</button>
 			{/if}
@@ -165,7 +165,7 @@
 					>
 						<span
 							class="size-2 rounded-full {colorDot(color)} {tagColor(tag) === color
-								? 'ring-2 ring-base-300 ring-offset-1 ring-offset-white dark:ring-base-600 dark:ring-offset-base-850'
+								? 'ring-2 ring-base-300 ring-offset-1 ring-offset-base-0 dark:ring-base-600 dark:ring-offset-base-850'
 								: ''}"
 						></span>
 					</button>

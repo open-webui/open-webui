@@ -148,7 +148,7 @@
 						class="aspect-square w-full text-sm border border-base-100/30 dark:border-base-850/30 hover:bg-base-50 dark:hover:bg-base-850 {detailedRating ===
 						rating
 							? 'bg-base-100 dark:bg-base-800'
-							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-base-500 disabled:bg-white dark:disabled:bg-base-900"
+							: ''} transition rounded-full disabled:cursor-not-allowed disabled:text-base-500 disabled:bg-base-0 dark:disabled:bg-base-900"
 						on:click={() => {
 							detailedRating = rating;
 						}}
@@ -252,7 +252,7 @@
 		</div>
 
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			on:click={() => {
 				saveHandler();
 			}}

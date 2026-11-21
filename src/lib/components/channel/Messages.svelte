@@ -110,7 +110,7 @@
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 										alt={u.name}
-										class=" size-7 rounded-full object-cover border-2 border-white dark:border-base-900 {index ===
+										class=" size-7 rounded-full object-cover border-2 border-base-0 dark:border-base-900 {index ===
 										1
 											? '-ml-2.5'
 											: ''}"

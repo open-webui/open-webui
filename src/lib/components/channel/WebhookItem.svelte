@@ -104,7 +104,7 @@
 			alt=""
 		/>
 		<div class="flex-1 text-left min-w-0">
-			<div class="font-normal text-base-900 dark:text-white truncate">
+			<div class="font-normal text-base-900 dark:text-base-0 truncate">
 				{name}
 			</div>
 			<div class="text-base-500 text-xs">

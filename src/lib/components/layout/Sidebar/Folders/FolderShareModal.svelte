@@ -95,7 +95,7 @@
 			</button>
 		</div>
 
-		<div class="w-full px-5 pb-4 dark:text-white" inert={loading} aria-busy={loading}>
+		<div class="w-full px-5 pb-4 dark:text-base-0" inert={loading} aria-busy={loading}>
 			<AccessControl
 				bind:accessGrants
 				labels={{

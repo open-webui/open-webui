@@ -70,7 +70,7 @@
 							{idx + 1}.
 						</div>
 						<div
-							class="flex-1 truncate text-black/60 hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
+							class="flex-1 truncate text-base-1000/60 hover:text-base-1000 dark:text-base-0/60 dark:hover:text-base-0 transition text-left"
 						>
 							{decodeString(citation.source.name)}
 						</div>

@@ -207,9 +207,9 @@
 	let providerVoices: Voice[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 	const inputClass =
-		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const linkedHelpClass =
 		'text-[0.6875rem] text-base-400 dark:text-base-600 [&_a]:text-base-900 [&_a]:hover:underline dark:[&_a]:text-base-300';
 
@@ -403,7 +403,7 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.audio.title')}
 	</h2>
 	{#if $config?.features?.slim === true}
@@ -766,7 +766,7 @@
 							bind:value={STT_WHISPER_MODEL}
 						/>
 						<button
-							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition-colors hover:bg-black/5 hover:text-base-900 aria-disabled:opacity-50 dark:text-base-500 dark:hover:bg-white/5 dark:hover:text-white"
+							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition-colors hover:bg-base-1000/5 hover:text-base-900 aria-disabled:opacity-50 dark:text-base-500 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 							type="button"
 							on:click={() => {
 								sttModelUpdateHandler();

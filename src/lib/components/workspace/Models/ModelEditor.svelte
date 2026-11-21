@@ -1000,7 +1000,7 @@
 				<div class="flex shrink-0 justify-end py-2" class:px-1={admin} class:px-3={!admin}>
 					<button
 						type="button"
-						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						disabled={promotingVersion}
 						on:click={() => historyMenu.requestPromotion()}
 					>
@@ -1139,7 +1139,7 @@
 													class="group relative flex size-full items-center overflow-hidden rounded-xl {info
 														.meta.profile_image_url !== `${WEBUI_BASE_URL}/static/favicon.png`
 														? 'bg-transparent'
-														: 'bg-base-50 dark:bg-base-850'} ring-1 ring-base-200/70 transition hover:ring-base-300 dark:ring-white/10 dark:hover:ring-white/20"
+														: 'bg-base-50 dark:bg-base-850'} ring-1 ring-base-200/70 transition hover:ring-base-300 dark:ring-base-0/10 dark:hover:ring-base-0/20"
 													type="button"
 													aria-label={$i18n.t('Upload profile image')}
 													on:click={() => {
@@ -1165,7 +1165,7 @@
 													>
 														<div class="m-1">
 															<div
-																class="rounded-full bg-base-900 p-1 text-white shadow-sm transition dark:bg-white dark:text-black"
+																class="rounded-full bg-base-900 p-1 text-base-0 shadow-sm transition dark:bg-base-0 dark:text-base-1000"
 															>
 																<svg
 																	xmlns="http://www.w3.org/2000/svg"
@@ -1184,7 +1184,7 @@
 													</div>
 
 													<div
-														class="absolute inset-0 bg-white opacity-0 transition group-hover:opacity-20 dark:bg-black"
+														class="absolute inset-0 bg-base-0 opacity-0 transition group-hover:opacity-20 dark:bg-base-1000"
 													></div>
 												</button>
 
@@ -1207,7 +1207,7 @@
 														<input
 															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
 																? 'min-h-6'
-																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-white dark:placeholder:text-base-700 md:text-lg"
+																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-0 dark:placeholder:text-base-700 md:text-lg"
 															placeholder={name || $i18n.t('Model Name')}
 															aria-label={$i18n.t('Model Name')}
 															value={localizedField('name')}
@@ -1221,7 +1221,7 @@
 														<input
 															class="min-w-0 flex-1 {($settings?.highContrastMode ?? false)
 																? 'min-h-6'
-																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-white dark:placeholder:text-base-700 md:text-lg"
+																: ''} bg-transparent text-base leading-tight text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-0 dark:placeholder:text-base-700 md:text-lg"
 															placeholder={$i18n.t('Model Name')}
 															aria-label={$i18n.t('Model Name')}
 															bind:value={name}
@@ -1957,7 +1957,7 @@
 					{/if}
 					<button
 						form={formId}
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						type="submit"
 						disabled={loading || (edit && !configurationChanged)}
 					>

@@ -26,7 +26,7 @@
 <Drawer bind:show ariaLabel={$i18n.t('Input')}>
 	<div class="flex h-full min-h-screen flex-col" {oninput}>
 		<div
-			class=" sticky top-0 z-30 flex justify-between bg-white px-4 pt-3 pb-2 dark:bg-base-900 dark:text-base-100"
+			class=" sticky top-0 z-30 flex justify-between bg-base-0 px-4 pt-3 pb-2 dark:bg-base-900 dark:text-base-100"
 		>
 			<div class="text-sm font-medium self-center">
 				{$i18n.t('Input')}

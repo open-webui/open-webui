@@ -33,12 +33,12 @@
 	const compactSectionButtonClass =
 		'w-full py-1 text-xs font-normal text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100 transition cursor-pointer select-none';
 	const systemPromptTextareaClass =
-		'w-full resize-vertical rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full resize-vertical rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const compactSystemPromptTextareaClass =
 		'w-full resize-vertical appearance-none bg-transparent py-1 text-xs outline-hidden focus:bg-transparent disabled:bg-transparent';
 </script>
 
-<div class=" dark:text-white">
+<div class=" dark:text-base-0">
 	{#if !embed}
 		<div class=" flex items-center justify-between dark:text-base-100 mb-2">
 			<div class=" text-md self-center">{$i18n.t('Controls')}</div>

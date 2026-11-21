@@ -232,7 +232,7 @@
 							{#if renaming === chat.id}
 								<input
 									data-rename-input
-									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-white"
+									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-base-0"
 									aria-label={$i18n.t('Rename')}
 									bind:value={renameValue}
 									on:blur={() => saveRename(chat)}
@@ -254,7 +254,7 @@
 									title={chat.title}
 									disabled={!!menuOpen[chat.id]}
 									className="min-w-0 shrink truncate rounded text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-										? 'text-base-900 dark:text-white'
+										? 'text-base-900 dark:text-base-0'
 										: 'text-base-700 dark:text-base-200'}"
 									onclick={(event) => openFolderChat(chat, appLayout, event)}
 								/>

@@ -1119,7 +1119,7 @@
 						<button
 							type="button"
 							aria-label={$i18n.t('Stop camera')}
-							class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-black/10 rounded-full"
+							class="p-1.5 text-white cursor-pointer backdrop-blur-xl bg-base-1000/10 rounded-full"
 							on:click={() => {
 								stopCamera();
 							}}

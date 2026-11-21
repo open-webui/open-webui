@@ -16,7 +16,7 @@
 
 	export let className = 'w-60';
 	export let colorClassName =
-		'bg-white dark:bg-base-850 border border-base-50/30 dark:border-base-800/30';
+		'bg-base-0 dark:bg-base-850 border border-base-50/30 dark:border-base-800/30';
 	export let url: string | null = null;
 
 	export let dismissible = false;
@@ -84,7 +84,7 @@
 	>
 		{#if !small}
 			<div
-				class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+				class="size-10 shrink-0 flex justify-center items-center bg-base-1000/20 dark:bg-base-0/10 text-white rounded-xl"
 			>
 				{#if !loading}
 					<svg
@@ -199,7 +199,7 @@
 		<div class=" absolute -top-[3px] -right-[3px] flex">
 			<button
 				aria-label={$i18n.t('Remove File')}
-				class=" bg-white text-black border border-base-50 rounded-full {($settings?.highContrastMode ??
+				class=" bg-base-0 text-base-1000 border border-base-50 rounded-full {($settings?.highContrastMode ??
 				false)
 					? ''
 					: 'hover-reveal transition'}"
@@ -212,7 +212,7 @@
 			</button>
 
 			<!-- <button
-				class=" p-1 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
+				class=" p-1 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-full group-hover:visible invisible transition"
 				type="button"
 				on:click={() => {
 				}}

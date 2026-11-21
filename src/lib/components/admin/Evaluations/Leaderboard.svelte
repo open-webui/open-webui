@@ -123,7 +123,7 @@
 <ModelModal bind:show={showModal} model={selectedModel} onClose={closeModal} />
 
 <div>
-	<div class="sticky top-0 z-10 bg-white dark:bg-base-900">
+	<div class="sticky top-0 z-10 bg-base-0 dark:bg-base-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -158,7 +158,7 @@
 	>
 		{#if loading}
 			<div
-				class="absolute inset-0 flex items-center justify-center z-10 bg-white/50 dark:bg-base-900/50"
+				class="absolute inset-0 flex items-center justify-center z-10 bg-base-0/50 dark:bg-base-900/50"
 			>
 				<Spinner className="size-5" />
 			</div>
@@ -212,7 +212,7 @@
 							class="text-xs group cursor-pointer hover:bg-base-50 dark:hover:bg-base-850/50 transition"
 							on:click={() => openModal(model)}
 						>
-							<td class="px-3 py-1.5 font-normal text-base-900 dark:text-white">
+							<td class="px-3 py-1.5 font-normal text-base-900 dark:text-base-0">
 								{model.rating !== '-' ? idx + 1 : '-'}
 							</td>
 							<td class="px-3 py-1.5">
@@ -237,7 +237,7 @@
 									</Tooltip>
 								</div>
 							</td>
-							<td class="px-3 py-1.5 text-right font-normal text-base-900 dark:text-white">
+							<td class="px-3 py-1.5 text-right font-normal text-base-900 dark:text-base-0">
 								{model.rating}
 							</td>
 							<td class="px-3 py-1.5 text-right font-normal text-green-500 w-10">

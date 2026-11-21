@@ -95,7 +95,7 @@
 
 	export let replyToMessage: any = null;
 
-	export let typingUsersClassName = 'from-white dark:from-base-900';
+	export let typingUsersClassName = 'from-base-0 dark:from-base-900';
 
 	let loaded = false;
 	let draggedOver = false;
@@ -913,7 +913,7 @@
 							>
 								<button
 									aria-label={$i18n.t('Scroll to bottom')}
-									class=" bg-white border border-base-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+									class=" bg-base-0 border border-base-100 dark:border-none dark:bg-base-0/20 p-1.5 rounded-full pointer-events-auto"
 									on:click={() => {
 										scrollEnd = true;
 										scrollToBottom();
@@ -944,7 +944,7 @@
 								<Skeleton size="xs" />
 
 								<div>
-									<span class=" font-normal text-black dark:text-white">
+									<span class=" font-normal text-base-1000 dark:text-base-0">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
 									{$i18n.t('is typing...')}
@@ -993,7 +993,7 @@
 					>
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-base-900/60 border border-base-100 dark:border-base-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-base-0 dark:bg-base-900/60 border border-base-100 dark:border-base-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
 							>
 								{#each messageQueue as entry (entry.id)}
 									<QueuedMessageItem
@@ -1060,7 +1060,7 @@
 												</div>
 												<div class=" absolute -top-1 -right-1">
 													<button
-														class=" bg-white text-black border border-white rounded-full hover-reveal transition"
+														class=" bg-base-0 text-base-1000 border border-base-0 rounded-full hover-reveal transition"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
 														on:click={() => {
@@ -1249,7 +1249,7 @@
 											>
 												<button
 													id="input-menu-button"
-													class="bg-transparent hover:bg-base-100/40 text-base-700 dark:text-white dark:hover:bg-base-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+													class="bg-transparent hover:bg-base-100/40 text-base-700 dark:text-base-0 dark:hover:bg-base-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 													type="button"
 													aria-label={$i18n.t('More')}
 												>
@@ -1306,7 +1306,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														aria-label={$i18n.t('Stop')}
-														class="bg-white hover:bg-base-100 text-base-800 dark:bg-base-700 dark:text-white dark:hover:bg-base-800 transition rounded-full p-[0.3125rem]"
+														class="bg-base-0 hover:bg-base-100 text-base-800 dark:bg-base-700 dark:text-base-0 dark:hover:bg-base-800 transition rounded-full p-[0.3125rem]"
 														on:click={() => {
 															onStop();
 														}}
@@ -1333,8 +1333,8 @@
 														id="send-message-button"
 														aria-label={$i18n.t('Send message')}
 														class="{content !== '' || files.length !== 0
-															? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 '
-															: 'text-white bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
+															? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+															: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
 														disabled={content === '' && files.length === 0}
 													>

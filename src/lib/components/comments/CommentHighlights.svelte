@@ -397,7 +397,7 @@
 <div class="hidden">
 	<div
 		bind:this={preview}
-		class="w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 text-base-800 dark:text-base-200 shadow-lg"
+		class="w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 text-base-800 dark:text-base-200 shadow-lg"
 	>
 		{#if $commentSelectionDraft}
 			{@const draft = $commentSelectionDraft}

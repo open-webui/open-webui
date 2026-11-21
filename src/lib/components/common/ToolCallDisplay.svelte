@@ -309,7 +309,7 @@
 					<div class="min-w-0 line-clamp-1">
 						<!-- Short label (below md) -->
 						<span
-							class="@md:hidden text-black dark:text-white"
+							class="@md:hidden text-base-1000 dark:text-base-0"
 							title={displayLabel ? attributes.name : undefined}>{displayLabel || toolName}</span
 						>
 						<!-- Full label (md and above) -->
@@ -350,7 +350,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-white/8 hover:bg-base-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-base-0/8 hover:bg-base-200 dark:hover:bg-base-0/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={resolving}
 							on:click|stopPropagation={() => onResolve(true)}
 						>

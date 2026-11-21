@@ -225,7 +225,7 @@
 </script>
 
 {#if channel}
-	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-white dark:bg-base-900">
+	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-base-0 dark:bg-base-900">
 		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
@@ -311,7 +311,7 @@
 				placeholder={!channel?.write_access
 					? $i18n.t('You do not have permission to send messages in this thread.')
 					: $i18n.t('Reply to thread...')}
-				typingUsersClassName="from-white dark:from-base-900"
+				typingUsersClassName="from-base-0 dark:from-base-900"
 				{typingUsers}
 				userSuggestions={true}
 				channelSuggestions={true}

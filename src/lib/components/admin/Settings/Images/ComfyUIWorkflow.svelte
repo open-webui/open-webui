@@ -54,7 +54,7 @@
 		<div class="flex items-center gap-2 shrink-0">
 			<!-- Always available, so a workflow can be pasted in as well as uploaded. -->
 			<button
-				class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-white"
+				class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-base-0"
 				type="button"
 				aria-label={$i18n.t('settings.admin.images.editWorkflowJsonContent.label')}
 				on:click={() => {
@@ -66,7 +66,7 @@
 
 			<Tooltip content={$i18n.t('settings.admin.images.clickHereToUploadAWorkflowJsonFile.label')}>
 				<button
-					class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-white"
+					class="text-xs text-base-500 transition-colors hover:text-base-900 hover:underline dark:hover:text-base-0"
 					type="button"
 					aria-label={$i18n.t('settings.admin.images.clickHereToUploadAWorkflowJsonFile.label')}
 					on:click={() => {

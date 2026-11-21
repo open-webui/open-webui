@@ -80,7 +80,7 @@
 
 <LinkPreview.Portal>
 	<LinkPreview.Content
-		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 md:block dark:bg-base-850 dark:text-white dark:ring-white/10"
+		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-base-0 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 md:block dark:bg-base-850 dark:text-base-0 dark:ring-base-0/10"
 		side="top"
 		align="center"
 		{sideOffset}

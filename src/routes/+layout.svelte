@@ -1267,7 +1267,7 @@
 
 <a
 	href="#main-content"
-	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-base-900 focus:shadow-lg dark:focus:bg-base-800 dark:focus:text-base-100"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-base-0 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-base-900 focus:shadow-lg dark:focus:bg-base-800 dark:focus:text-base-100"
 >
 	{$i18n.t('Skip to main content')}
 </a>

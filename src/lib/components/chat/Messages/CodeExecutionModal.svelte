@@ -75,7 +75,7 @@
 				</div>
 
 				{#if codeExecution?.result && (codeExecution?.result?.error || codeExecution?.result?.output)}
-					<div class="dark:bg-[#202123] dark:text-white px-4 py-4 rounded-b-lg flex flex-col gap-3">
+					<div class="dark:bg-[#202123] dark:text-base-0 px-4 py-4 rounded-b-lg flex flex-col gap-3">
 						{#if codeExecution?.result?.error}
 							<div>
 								<div class=" text-base-500 text-xs mb-1">{$i18n.t('ERROR')}</div>

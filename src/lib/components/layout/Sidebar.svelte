@@ -1166,7 +1166,7 @@
 
 	{#if visible}
 		<div
-			class="fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-black w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain {progress >
+			class="fixed md:hidden z-40 top-0 right-0 left-0 bottom-0 bg-base-1000 w-full min-h-screen h-screen flex justify-center overflow-hidden overscroll-contain {progress >
 			0.02
 				? ''
 				: 'pointer-events-none'}"
@@ -1309,8 +1309,8 @@
 											class="self-center flex size-[calc(30px*var(--app-text-scale,1))] items-center justify-center rounded-lg transition {itemId ===
 											activeMenuItemId
 												? ($settings?.highContrastMode ?? false)
-													? 'bg-black/[0.035] dark:bg-white/[0.06]'
-													: 'bg-black/[0.035] dark:bg-white/[0.045]'
+													? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+													: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]'
 												: 'group-hover:bg-base-100 dark:group-hover:bg-base-900'}"
 										>
 											{#if itemId === 'notes'}
@@ -1359,7 +1359,7 @@
 													<span
 														class="relative inline-flex size-2.5 rounded-full {true
 															? 'bg-green-500'
-															: 'bg-base-300 dark:bg-base-700'} border-2 border-white dark:border-base-900"
+															: 'bg-base-300 dark:bg-base-700'} border-2 border-base-0 dark:border-base-900"
 													></span>
 												</span>
 											</div>
@@ -1549,8 +1549,8 @@
 											class="grow flex items-center space-x-2 rounded-xl px-2 py-1.5 transition {itemId ===
 											activeMenuItemId
 												? ($settings?.highContrastMode ?? false)
-													? 'bg-black/[0.035] dark:bg-white/[0.06]'
-													: 'bg-black/[0.035] dark:bg-white/[0.045]'
+													? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+													: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]'
 												: 'hover:bg-base-100 dark:hover:bg-base-900'}"
 											href={meta.href}
 											on:click={itemClickHandler}
@@ -2097,7 +2097,7 @@
 													<span
 														class="relative inline-flex size-2.5 rounded-full {true
 															? 'bg-green-500'
-															: 'bg-base-300 dark:bg-base-700'} border-2 border-white dark:border-base-900"
+															: 'bg-base-300 dark:bg-base-700'} border-2 border-base-0 dark:border-base-900"
 													></span>
 												</span>
 											</div>

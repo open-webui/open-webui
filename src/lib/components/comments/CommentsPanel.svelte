@@ -224,7 +224,7 @@
 </script>
 
 <svelte:window on:focus={refresh} />
-<div class="flex flex-col min-h-0 w-full h-full {embedded ? '' : 'bg-white dark:bg-base-900'}">
+<div class="flex flex-col min-h-0 w-full h-full {embedded ? '' : 'bg-base-0 dark:bg-base-900'}">
 	{#if !embedded}
 		<header class="sticky top-0 flex min-h-10 shrink-0 items-center justify-between px-4 py-1.5">
 			<h2 class="flex items-center gap-1 font-normal text-sm" {title}>

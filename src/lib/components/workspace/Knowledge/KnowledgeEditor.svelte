@@ -242,7 +242,7 @@
 		<div class="flex justify-end {modal ? 'pt-3 gap-2' : 'mt-2'}">
 			{#if modal}
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 					type="button"
 					on:click={() => {
 						onBack();
@@ -255,7 +255,7 @@
 			<div>
 				<button
 					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 disabled:cursor-not-allowed {modal
-						? 'bg-base-900 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white'
+						? 'bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0'
 						: 'bg-base-50 hover:bg-base-100 dark:bg-base-850 dark:hover:bg-base-800'}"
 					type="submit"
 					disabled={loading}

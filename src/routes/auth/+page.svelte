@@ -267,13 +267,13 @@
 
 <div class="w-full h-dvh text-white relative" id="auth-page">
 	<div id="main-content" tabindex="-1" class="sr-only left-0 top-0"></div>
-	<div class="w-full h-full absolute top-0 left-0 bg-white dark:bg-black"></div>
+	<div class="w-full h-full absolute top-0 left-0 bg-base-0 dark:bg-base-1000"></div>
 
 	<div class="w-full absolute top-0 left-0 right-0 h-8 drag-region" />
 
 	{#if loaded && !onboarding}
 		<div
-			class="fixed inset-0 h-dvh overflow-y-auto bg-transparent w-full z-50 text-black dark:text-white"
+			class="fixed inset-0 h-dvh overflow-y-auto bg-transparent w-full z-50 text-base-1000 dark:text-base-0"
 			id="auth-container"
 		>
 			<div class="w-full p-6 min-h-full flex flex-col text-center">
@@ -461,7 +461,7 @@
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										{#if mode === 'ldap'}
 											<button
-												class="bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 aria-disabled:opacity-50 flex justify-center"
+												class="bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 aria-disabled:opacity-50 flex justify-center"
 												type="submit"
 												aria-disabled={submitting}
 											>
@@ -475,7 +475,7 @@
 											</button>
 										{:else}
 											<button
-												class="bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 aria-disabled:opacity-50 flex justify-center"
+												class="bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5 aria-disabled:opacity-50 flex justify-center"
 												type="submit"
 												aria-disabled={submitting}
 											>
@@ -525,7 +525,7 @@
 									<hr class="w-32 h-px my-4 border-0 dark:bg-base-100/10 bg-base-700/10" />
 									{#if $config?.features.enable_login_form || $config?.features.enable_ldap || form}
 										<span
-											class="px-3 text-sm font-normal text-base-900 dark:text-white bg-transparent"
+											class="px-3 text-sm font-normal text-base-900 dark:text-base-0 bg-transparent"
 											>{$i18n.t('or')}</span
 										>
 									{/if}
@@ -535,7 +535,7 @@
 								<div class="flex flex-col space-y-2">
 									{#if $config?.oauth?.providers?.google}
 										<button
-											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
+											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/google/login`;
 											}}
@@ -565,7 +565,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.microsoft}
 										<button
-											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
+											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/microsoft/login`;
 											}}
@@ -596,7 +596,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.github}
 										<button
-											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
+											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/github/login`;
 											}}
@@ -617,7 +617,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.oidc}
 										<button
-											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
+											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/oidc/login`;
 											}}
@@ -647,7 +647,7 @@
 									{/if}
 									{#if $config?.oauth?.providers?.feishu}
 										<button
-											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-white transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
+											class="flex justify-center items-center bg-base-700/5 hover:bg-base-700/10 dark:bg-base-100/5 dark:hover:bg-base-100/10 dark:text-base-300 dark:hover:text-base-0 transition w-full rounded-full font-normal text-[0.8125rem] leading-5 py-2.5"
 											on:click={() => {
 												window.location.href = `${WEBUI_BASE_URL}/oauth/feishu/login`;
 											}}

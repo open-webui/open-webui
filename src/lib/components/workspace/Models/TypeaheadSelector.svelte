@@ -144,7 +144,7 @@
 
 		<div slot="content">
 			<div
-				class="flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-base-200 bg-white p-1 text-base-900 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-100"
+				class="flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-base-200 bg-base-0 p-1 text-base-900 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-100"
 			>
 				<div class="flex items-center gap-2 px-2 py-1">
 					<Search className="size-3.5 text-base-500" />

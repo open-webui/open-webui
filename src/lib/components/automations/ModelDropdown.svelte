@@ -76,7 +76,7 @@
 
 	<div
 		slot="content"
-		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-white dark:bg-base-850 w-72 p-0.5"
+		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 w-72 p-0.5"
 	>
 		<div class="flex items-center gap-1.5 px-2 py-1">
 			<Search className="size-3.5" strokeWidth="2.5" />
@@ -108,7 +108,7 @@
 						onChange();
 					}}
 				>
-					<div class="flex text-black dark:text-base-100 line-clamp-1">
+					<div class="flex text-base-1000 dark:text-base-100 line-clamp-1">
 						<img
 							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(model.id)}`}
 							alt={model?.name ?? model.id}

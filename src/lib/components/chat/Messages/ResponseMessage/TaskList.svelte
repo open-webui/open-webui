@@ -18,7 +18,7 @@
 
 {#if tasks.length > 0 && hasActive}
 	<div
-		class="my-2 rounded-2xl border border-base-50 dark:border-base-850 bg-white dark:bg-base-900"
+		class="my-2 rounded-2xl border border-base-50 dark:border-base-850 bg-base-0 dark:bg-base-900"
 		transition:slide={{ duration: 200 }}
 	>
 		<!-- Header -->

@@ -578,7 +578,7 @@
 		: $i18n.t('Add Knowledge Connection')}
 	bind:show={showSourceModal}
 	size="sm"
-	className="bg-white dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div>
 		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
@@ -816,7 +816,7 @@
 														>{storeOptions.find((store) => store.id === id)?.name ?? id}</span
 													>
 													<button
-														class="text-base-400 hover:text-base-900 dark:hover:text-white transition"
+														class="text-base-400 hover:text-base-900 dark:hover:text-base-0 transition"
 														type="button"
 														aria-label={$i18n.t('Remove')}
 														on:click={() => removeStoreId(id)}
@@ -1094,7 +1094,7 @@
 							{/if}
 
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 								type="submit"
 								disabled={creating ||
 									(connectionMode
@@ -1134,7 +1134,7 @@
 		<Tooltip content={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}>
 			<button
 				aria-label={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}
-				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
+				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 				on:click={openCreateSource}
 				type="button"
 			>

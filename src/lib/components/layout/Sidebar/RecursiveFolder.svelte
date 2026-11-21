@@ -678,7 +678,7 @@
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div
-			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
+			class="w-fit max-w-40 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<div class="flex items-center gap-1.5">
 				<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
@@ -698,7 +698,7 @@
 >
 	{#if draggedOver}
 		<div
-			class="pointer-events-none absolute inset-0 z-50 touch-none bg-black/[0.02] ring-1 ring-inset ring-black/10 dark:bg-white/[0.02] dark:ring-white/10"
+			class="pointer-events-none absolute inset-0 z-50 touch-none bg-base-1000/[0.02] ring-1 ring-inset ring-base-1000/10 dark:bg-base-0/[0.02] dark:ring-base-0/10"
 		></div>
 	{/if}
 
@@ -892,7 +892,7 @@
 								: null}
 						>
 							<div
-								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
+								class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition m-0 touch-auto"
 							>
 								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>

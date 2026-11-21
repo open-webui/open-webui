@@ -186,7 +186,7 @@
 	onRequestClose={() => {
 		if (!saving) finishSave(false);
 	}}
-	className="bg-white dark:bg-base-900 rounded-2xl"
+	className="bg-base-0 dark:bg-base-900 rounded-2xl"
 >
 	<form class="flex max-h-[26rem] flex-col p-3 text-sm" on:submit|preventDefault={write}>
 		<label class="flex items-center gap-2 pb-3">

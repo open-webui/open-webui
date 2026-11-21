@@ -210,7 +210,7 @@
 
 {#if loaded}
 	<div
-		class="h-screen max-h-[100dvh] w-full flex flex-col text-base-700 dark:text-base-100 bg-white dark:bg-base-900"
+		class="h-screen max-h-[100dvh] w-full flex flex-col text-base-700 dark:text-base-100 bg-base-0 dark:bg-base-900"
 	>
 		<div class="flex flex-col flex-auto justify-center relative">
 			<div
@@ -218,10 +218,10 @@
 				id="messages-container"
 			>
 				<header
-					class="sticky top-0 z-30 mx-auto w-full max-w-[58rem] shrink-0 bg-white px-2 dark:bg-base-900"
+					class="sticky top-0 z-30 mx-auto w-full max-w-[58rem] shrink-0 bg-base-0 px-2 dark:bg-base-900"
 				>
 					<div
-						class="pointer-events-none absolute inset-x-0 top-full h-10 z-[-1] bg-linear-to-b from-white to-transparent dark:from-base-900"
+						class="pointer-events-none absolute inset-x-0 top-full h-10 z-[-1] bg-linear-to-b from-base-0 to-transparent dark:from-base-900"
 					></div>
 					<div class="flex items-center gap-3 px-3 py-2">
 						<h1
@@ -268,10 +268,10 @@
 
 			{#if canClone}
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-base-900 to-transparent pb-5 pt-10"
+					class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-base-0 dark:from-base-900 to-transparent pb-5 pt-10"
 				>
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white pointer-events-auto"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 pointer-events-auto"
 						on:click={cloneSharedChat}
 					>
 						{$i18n.t('Clone Chat')}

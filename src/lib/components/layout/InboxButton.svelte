@@ -12,8 +12,8 @@
 	$: opened = !!$page.state.inbox && $page.state.inboxUserId === $user?.id;
 	$: activeClass =
 		($settings?.highContrastMode ?? false)
-			? 'bg-black/[0.035] dark:bg-white/[0.06]'
-			: 'bg-black/[0.035] dark:bg-white/[0.045]';
+			? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+			: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]';
 </script>
 
 <Tooltip content={$i18n.t('Notifications')} placement="bottom">

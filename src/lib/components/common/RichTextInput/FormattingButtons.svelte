@@ -59,7 +59,7 @@
 />
 
 <div
-	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-white text-base-800 dark:text-white dark:bg-base-850 min-w-fit border border-base-100 dark:border-base-800"
+	class="flex gap-0.5 p-0.5 rounded-xl shadow-lg bg-base-0 text-base-800 dark:text-base-0 dark:bg-base-850 min-w-fit border border-base-100 dark:border-base-800"
 >
 	{#if onComment}
 		<Tooltip placement="top" content={$i18n.t('Comment')}>
@@ -103,7 +103,7 @@
 		{#if showHeadingMenu}
 			<div
 				role="menu"
-				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-white text-base-800 dark:text-white dark:bg-base-850 border border-base-100 dark:border-base-800"
+				class="absolute left-0 top-full mt-1 z-10 flex min-w-36 flex-col gap-0.5 p-1 rounded-xl shadow-lg bg-base-0 text-base-800 dark:text-base-0 dark:bg-base-850 border border-base-100 dark:border-base-800"
 			>
 				<button
 					role="menuitemradio"

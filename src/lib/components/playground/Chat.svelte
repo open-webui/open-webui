@@ -364,7 +364,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+								class="p-1.5 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 								aria-label={$i18n.t('System Instructions')}
 								aria-expanded={showSystem}
 							>
@@ -484,7 +484,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60 {($settings?.highContrastMode ??
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60 {($settings?.highContrastMode ??
 								false)
 									? ''
 									: 'outline-hidden'}"
@@ -522,7 +522,7 @@
 
 							<button
 								class="p-1.5 text-sm font-normal bg-transparent hover:bg-base-100 dark:hover:bg-base-800 transition rounded-lg {showControls
-									? 'text-black dark:text-white'
+									? 'text-base-1000 dark:text-base-0'
 									: 'text-base-500 dark:text-base-400'}"
 								aria-label={$i18n.t('Controls')}
 								id="playground-controls-toggle"
@@ -537,7 +537,7 @@
 								{#if !loading}
 									<button
 										disabled={message === ''}
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60 disabled:cursor-not-allowed"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60 disabled:cursor-not-allowed"
 										on:click={() => {
 											addHandler();
 											role = role === 'user' ? 'assistant' : 'user';
@@ -547,7 +547,7 @@
 									</button>
 
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 										on:click={() => {
 											submitHandler();
 										}}
@@ -556,7 +556,7 @@
 									</button>
 								{:else}
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 										on:click={() => {
 											stopResponse();
 										}}

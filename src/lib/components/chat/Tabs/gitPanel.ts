@@ -1,11 +1,11 @@
 // Shared look and formatting for the Git panel's views.
 
 export const primaryButton =
-	'bg-base-900 dark:bg-white text-white dark:text-black hover:bg-base-800 dark:hover:bg-white/90';
+	'bg-base-900 dark:bg-base-0 text-base-0 dark:text-base-1000 hover:bg-base-800 dark:hover:bg-base-0/90';
 export const disabledButton =
-	'bg-base-100 dark:bg-white/6 text-base-400 dark:text-base-600 cursor-default';
+	'bg-base-100 dark:bg-base-0/6 text-base-400 dark:text-base-600 cursor-default';
 export const secondaryButton =
-	'bg-base-100 dark:bg-white/6 text-base-600 dark:text-base-300 hover:bg-base-200/60 dark:hover:bg-white/10 disabled:text-base-400 dark:disabled:text-base-600 disabled:hover:bg-base-100 dark:disabled:hover:bg-white/6';
+	'bg-base-100 dark:bg-base-0/6 text-base-600 dark:text-base-300 hover:bg-base-200/60 dark:hover:bg-base-0/10 disabled:text-base-400 dark:disabled:text-base-600 disabled:hover:bg-base-100 dark:disabled:hover:bg-base-0/6';
 
 export const relativeTime = (date: string) => {
 	const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));

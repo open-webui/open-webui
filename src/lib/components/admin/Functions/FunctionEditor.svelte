@@ -701,7 +701,7 @@ class Pipe:
 						{/if}
 						<button
 							type="button"
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white disabled:opacity-60 dark:bg-base-100 dark:text-base-900"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-base-0 disabled:opacity-60 dark:bg-base-100 dark:text-base-900"
 							disabled={promoting || selecting}
 							on:click={() => historyControl?.requestPromotion()}
 						>
@@ -716,7 +716,7 @@ class Pipe:
 							disabled={loading}
 						/>
 						<button
-							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 							disabled={loading || selecting || promoting || (edit && !changed)}
 						>

@@ -35,7 +35,7 @@
 			title={terminalLabel}
 			class={plain
 				? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-base-700 dark:text-base-300'
-				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${terminalServerId ? 'text-black dark:text-base-100' : 'text-base-600 dark:text-base-400'} hover:text-base-900 dark:hover:text-base-100`}
+				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${terminalServerId ? 'text-base-1000 dark:text-base-100' : 'text-base-600 dark:text-base-400'} hover:text-base-900 dark:hover:text-base-100`}
 		>
 			{#if plain}
 				<span class="truncate {terminalServerId ? '' : 'text-base-400 dark:text-base-500'}"
@@ -61,7 +61,7 @@
 
 		<div
 			slot="content"
-			class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-white dark:bg-base-850 min-w-56 max-w-56 p-0.5"
+			class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 min-w-56 max-w-56 p-0.5"
 		>
 			<div class="px-2 text-[0.6875rem] text-base-500 py-0.5">
 				{$i18n.t('Terminal')}

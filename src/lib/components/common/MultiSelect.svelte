@@ -121,7 +121,7 @@
 {#if open}
 	<div use:portal bind:this={contentEl} transition:flyAndScale>
 		<div
-			class="rounded-2xl min-w-[10.625rem] max-h-72 overflow-y-auto p-1 border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 dark:text-white shadow-lg"
+			class="rounded-2xl min-w-[10.625rem] max-h-72 overflow-y-auto p-1 border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 dark:text-base-0 shadow-lg"
 			role="listbox"
 			aria-multiselectable="true"
 			aria-label={placeholder}
@@ -138,7 +138,7 @@
 						class="size-3.5 shrink-0 rounded-sm flex items-center justify-center outline -outline-offset-1 outline-[1.5px] {selectedValues.includes(
 							item.value
 						)
-							? 'bg-black outline-black text-white'
+							? 'bg-base-1000 outline-base-1000 text-base-0'
 							: 'outline-base-200 dark:outline-base-600'}"
 					>
 						{#if selectedValues.includes(item.value)}

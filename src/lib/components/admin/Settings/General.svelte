@@ -84,9 +84,9 @@
 		BANNERS: $i18n.t('settings.admin.general.banners.label')
 	};
 	const inputClass =
-		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
 		version = await getVersionUpdates(localStorage.token).catch((error) => {
@@ -175,7 +175,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.general.title')}
 	</h2>
 
@@ -224,7 +224,7 @@
 
 					{#if WEBUI_BUILD_CHANNEL === 'main' && $config?.features?.enable_version_update_check}
 						<button
-							class="shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
+							class="shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 							type="button"
 							on:click={() => {
 								checkForVersionUpdates();
@@ -250,7 +250,7 @@
 						</div>
 
 						<a
-							class="shrink-0 text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
+							class="shrink-0 text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 							href="https://docs.openwebui.com/"
 							target="_blank"
 						>
@@ -291,15 +291,15 @@
 							target="_blank"
 							class="mt-0.5 block text-base-500"
 						>
-							<span class="capitalize text-black dark:text-white"
+							<span class="capitalize text-base-1000 dark:text-base-0"
 								>{$config?.license_metadata?.type} license</span
 							>
 							{$i18n.t('registered to')}
-							<span class="capitalize text-black dark:text-white"
+							<span class="capitalize text-base-1000 dark:text-base-0"
 								>{$config?.license_metadata?.organization_name}</span
 							>
 							for
-							<span class="text-black dark:text-white"
+							<span class="text-base-1000 dark:text-base-0"
 								>{$config?.license_metadata?.seats ?? 'Unlimited'} users.</span
 							>
 						</a>

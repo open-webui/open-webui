@@ -151,18 +151,18 @@
 		<div class="flex justify-end gap-1.5 pt-3 text-sm font-normal">
 			<button
 				type="button"
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-white hover:bg-base-100 text-black dark:bg-black dark:text-white dark:hover:bg-base-900"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-0 hover:bg-base-100 text-base-1000 dark:bg-base-1000 dark:text-base-0 dark:hover:bg-base-900"
 				on:click={() => onResponse({ action: 'cancel' })}>{$i18n.t('Cancel')}</button
 			>
 			<button
 				type="button"
-				class="flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-white"
+				class="flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-base-0"
 				on:click={() => onResponse({ action: 'decline' })}>{$i18n.t('Decline')}</button
 			>
 			{#if data.mode !== 'url' && supported}
 				<button
 					type="submit"
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					>{$i18n.t('Submit')}</button
 				>
 			{/if}

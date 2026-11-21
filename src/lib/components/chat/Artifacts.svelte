@@ -166,7 +166,7 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div class="flex-1 w-full min-h-0 bg-white dark:bg-base-850">
+		<div class="flex-1 w-full min-h-0 bg-base-0 dark:bg-base-850">
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">
@@ -198,7 +198,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="m-auto p-6 text-center font-normal text-xs text-base-900 dark:text-white">
+					<div class="m-auto p-6 text-center font-normal text-xs text-base-900 dark:text-base-0">
 						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
 					</div>
 				{/if}

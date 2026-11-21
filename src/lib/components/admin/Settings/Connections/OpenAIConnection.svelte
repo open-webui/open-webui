@@ -52,7 +52,7 @@
 	>
 		{#if !(config?.enable ?? true)}
 			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-base-900 z-10"
+				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
 			></div>
 		{/if}
 		<div class="flex w-full gap-2">

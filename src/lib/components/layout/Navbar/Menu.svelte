@@ -99,8 +99,8 @@
 
 					// Clone and style
 					const clonedElement = containerElement.cloneNode(true);
-					clonedElement.classList.add('text-black');
-					clonedElement.classList.add('dark:text-white');
+					clonedElement.classList.add('text-base-1000');
+					clonedElement.classList.add('dark:text-base-0');
 					clonedElement.style.width = `${virtualWidth}px`;
 					clonedElement.style.position = 'absolute';
 					clonedElement.style.left = '-9999px';

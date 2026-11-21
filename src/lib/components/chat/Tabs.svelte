@@ -1885,7 +1885,7 @@
 
 {#if chatDropPreview}
 	<div
-		class="chat-drop-preview fixed pointer-events-none z-50 bg-black/[0.02] dark:bg-white/[0.02]"
+		class="chat-drop-preview fixed pointer-events-none z-50 bg-base-1000/[0.02] dark:bg-base-0/[0.02]"
 		style:left={`${chatDropPreview.left}px`}
 		style:top={`${chatDropPreview.top}px`}
 		style:width={`${chatDropPreview.width}px`}
@@ -1893,7 +1893,7 @@
 		role="status"
 	>
 		<div
-			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
+			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<Icon name="split-horizontal" size={14} strokeWidth={1.5} />
 			<span class="truncate">{$i18n.t('Open in side panel')}</span>
@@ -1954,7 +1954,7 @@
 		{#if viewError}
 			<div
 				role="alert"
-				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-white dark:bg-base-900 p-3 text-sm"
+				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-base-0 dark:bg-base-900 p-3 text-sm"
 			>
 				{viewError}
 				<button
@@ -2502,7 +2502,7 @@
 									>{@render chatTabActions[tab.id]?.()}</span
 								>{/if}<button
 								type="button"
-								class="flex items-center justify-center w-4 h-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-white/10 dark:hover:text-white"
+								class="flex items-center justify-center w-4 h-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-base-0/10 dark:hover:text-base-0"
 								title={[
 									$i18n.t('Close'),
 									$settings?.keyboardShortcuts !== false ? formatChord($keybindings.closeTab) : ''
@@ -2635,7 +2635,7 @@
 				panelStyle={$mobile ? panelStyle : ''}
 				backdropStyle={$mobile ? backdropStyle : ''}
 				swipeSide={$mobile ? 'right' : undefined}
-				className="min-h-[100dvh] !bg-white dark:!bg-base-900"
+				className="min-h-[100dvh] !bg-base-0 dark:!bg-base-900"
 			>
 				<div use:preservePanel bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>

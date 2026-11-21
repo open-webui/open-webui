@@ -173,7 +173,7 @@
 		use:portal
 		bind:this={popupElement}
 		id={listboxId}
-		class="fixed max-w-[min(12rem,calc(100vw-1rem))] max-h-48 overflow-y-auto rounded-2xl border border-base-200 bg-white p-0.5 shadow-lg dark:border-base-800 dark:bg-base-850"
+		class="fixed max-w-[min(12rem,calc(100vw-1rem))] max-h-48 overflow-y-auto rounded-2xl border border-base-200 bg-base-0 p-0.5 shadow-lg dark:border-base-800 dark:bg-base-850"
 		role="listbox"
 		style="z-index: 9999; top: 0; left: 0;"
 	>

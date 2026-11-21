@@ -76,7 +76,7 @@
 				><button
 					type="button"
 					aria-label={$i18n.t('Add app')}
-					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
+					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 					on:click={() => configure(null)}><Plus /></button
 				></Tooltip
 			>

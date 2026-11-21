@@ -49,8 +49,8 @@
 					<button
 						aria-label={$i18n.t('Submit suggestion')}
 						class="{inputValue !== ''
-							? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 '
-							: 'text-white bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-1 self-center"
+							? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+							: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-1 self-center"
 						on:click={() => {
 							onRegenerate(inputValue);
 							show = false;

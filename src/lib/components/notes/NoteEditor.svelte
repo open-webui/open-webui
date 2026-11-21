@@ -1233,7 +1233,7 @@ ${content}
 								>
 									<Tooltip content={$i18n.t('Generate')}>
 										<button
-											class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+											class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition disabled:cursor-not-allowed"
 											id="generate-title-button"
 											aria-label={$i18n.t('Generate')}
 											disabled={(note?.user_id !== $user?.id && $user?.role !== 'admin') ||
@@ -1266,7 +1266,7 @@ ${content}
 										<div>
 											<div class="flex items-center gap-0.5 self-center min-w-fit" dir="ltr">
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
+													class="self-center p-1 hover:enabled:bg-base-1000/5 dark:hover:enabled:bg-base-0/5 dark:hover:enabled:text-base-0 hover:enabled:text-base-1000 rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
 													aria-label={$i18n.t('Undo')}
 													on:click={() => {
 														editor.chain().focus().undo().run();
@@ -1278,7 +1278,7 @@ ${content}
 												</button>
 
 												<button
-													class="self-center p-1 hover:enabled:bg-black/5 dark:hover:enabled:bg-white/5 dark:hover:enabled:text-white hover:enabled:text-black rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
+													class="self-center p-1 hover:enabled:bg-base-1000/5 dark:hover:enabled:bg-base-0/5 dark:hover:enabled:text-base-0 hover:enabled:text-base-1000 rounded-md transition disabled:cursor-not-allowed disabled:text-base-500 disabled:hover:text-base-500"
 													aria-label={$i18n.t('Redo')}
 													on:click={() => {
 														editor.chain().focus().redo().run();
@@ -1296,7 +1296,7 @@ ${content}
 								<Tooltip content={$i18n.t('Chat')} placement="top">
 									<button
 										type="button"
-										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										class="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 										aria-label={$i18n.t('Chat')}
 										bind:this={noteChatButtonElement}
 										on:click={openNoteChat}
@@ -1306,7 +1306,7 @@ ${content}
 								</Tooltip>
 
 								<CommentButton
-									className="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+									className="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 									onComment={(request) => (currentNoteComments = request)}
 									resource={{ resource_type: 'note', resource_id: note.id }}
 								/>
@@ -1362,7 +1362,7 @@ ${content}
 										<Tooltip content={$i18n.t('Record')} placement="top">
 											<button
 												type="button"
-												class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+												class="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 												aria-label={$i18n.t('Record')}
 											>
 												<Mic className="size-4" />
@@ -1414,7 +1414,7 @@ ${content}
 								>
 									<button
 										type="button"
-										class="p-1 bg-transparent hover:bg-white/5 transition rounded-lg"
+										class="p-1 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 										aria-label={$i18n.t('Note Menu')}
 									>
 										<EllipsisHorizontal className="size-5" />

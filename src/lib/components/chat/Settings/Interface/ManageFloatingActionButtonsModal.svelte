@@ -32,10 +32,10 @@
 	ariaLabel={$i18n.t('Quick Actions')}
 	size="sm"
 	bind:show
-	className="bg-white dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class=" flex justify-between text-base-900 dark:text-white px-4 pt-3 pb-1">
+		<div class=" flex justify-between text-base-900 dark:text-base-0 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{$i18n.t('Quick Actions')}
 			</h1>
@@ -180,7 +180,7 @@
 
 					<div class="flex justify-end text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 						>
 							{$i18n.t('Save')}

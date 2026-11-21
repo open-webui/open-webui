@@ -502,7 +502,7 @@
 />
 
 <div class="flex flex-col gap-2" inert={saving} aria-busy={saving}>
-	<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-white/[0.03]">
+	<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-base-0/[0.03]">
 		<Tooltip
 			content={!(share && sharePublic) && visibility === 'private'
 				? $i18n.t('You do not have permission to make this public')
@@ -511,7 +511,7 @@
 			<Dropdown closeOnSelect>
 				<button
 					type="button"
-					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-white"
+					class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-base-0"
 				>
 					{#if visibility === 'private'}
 						<LockClosed className="size-3.5 text-base-500 dark:text-base-400" />
@@ -555,7 +555,7 @@
 
 		{#if hasPublicReadGrant(accessGrants ?? []) && !hasAnyoneReadGrant(accessGrants ?? []) && accessRoles.includes('write')}
 			<div
-				class="flex w-full items-center justify-between gap-3 border-t border-base-100/70 pt-2 mt-2 dark:border-white/5"
+				class="flex w-full items-center justify-between gap-3 border-t border-base-100/70 pt-2 mt-2 dark:border-base-0/5"
 			>
 				<div class="self-center text-xs">
 					{$i18n.t('Allow public write access')}

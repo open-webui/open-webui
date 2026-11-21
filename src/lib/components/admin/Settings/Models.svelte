@@ -764,7 +764,7 @@
 	{#if selectedModelId === null}
 		<div class="flex h-full min-h-0 flex-col text-sm">
 			<div class="mb-0.5 flex items-center justify-between">
-				<h2 class="text-sm font-medium text-base-900 dark:text-white">
+				<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 					{$i18n.t('settings.admin.models.title')}
 					<span class="ml-2 font-normal text-base-500 dark:text-base-500">
 						{filteredModels.length}
@@ -1112,7 +1112,7 @@
 										<Tooltip content={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}>
 											<button
 												aria-label={model?.meta?.hidden ? $i18n.t('Show') : $i18n.t('Hide')}
-												class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+												class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 												type="button"
 												on:click={() => {
 													hideModelHandler(model);
@@ -1132,11 +1132,11 @@
 												: $i18n.t('Set as Selected Model')}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultModelIdSet.has(
+												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-base-1000/5 dark:hover:bg-base-0/5 {defaultModelIdSet.has(
 													model.id
 												)
-													? 'text-base-900 dark:text-white'
-													: 'text-base-500 dark:text-base-400 dark:hover:text-white'}"
+													? 'text-base-900 dark:text-base-0'
+													: 'text-base-500 dark:text-base-400 dark:hover:text-base-0'}"
 												type="button"
 												aria-label={defaultModelIdSet.has(model.id)
 													? $i18n.t('Remove Selected Model')
@@ -1155,11 +1155,11 @@
 												: $i18n.t('Set as Pinned Model')}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 {defaultPinnedModelIdSet.has(
+												class="self-center w-fit text-sm p-1.5 rounded-xl hover:bg-base-1000/5 dark:hover:bg-base-0/5 {defaultPinnedModelIdSet.has(
 													model.id
 												)
-													? 'text-base-900 dark:text-white'
-													: 'text-base-500 dark:text-base-400 dark:hover:text-white'}"
+													? 'text-base-900 dark:text-base-0'
+													: 'text-base-500 dark:text-base-400 dark:hover:text-base-0'}"
 												type="button"
 												aria-label={defaultPinnedModelIdSet.has(model.id)
 													? $i18n.t('Remove Pinned Model')
@@ -1182,7 +1182,7 @@
 												: $i18n.t('Make Public')}
 										>
 											<button
-												class="self-center w-fit text-sm p-1.5 rounded-xl text-base-500 hover:bg-black/5 dark:text-base-400 dark:hover:bg-white/5 dark:hover:text-white"
+												class="self-center w-fit text-sm p-1.5 rounded-xl text-base-500 hover:bg-base-1000/5 dark:text-base-400 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 												type="button"
 												aria-label={isPublicModel(model)
 													? $i18n.t('Make Private')
@@ -1201,7 +1201,7 @@
 									{/if}
 
 									<button
-										class="hidden sm:flex self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+										class="hidden sm:flex self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 										type="button"
 										aria-label={$i18n.t('Edit')}
 										on:click={() => {
@@ -1262,7 +1262,7 @@
 										onClose={() => {}}
 									>
 										<button
-											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 											type="button"
 											aria-label={$i18n.t('More Options')}
 										>
@@ -1305,7 +1305,7 @@
 
 				<div class="flex justify-end pt-6 text-sm font-normal">
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 						type="button"
 						disabled={(!modelOrderDirty && !modelDefaultsDirty) ||
 							savingModelOrder ||

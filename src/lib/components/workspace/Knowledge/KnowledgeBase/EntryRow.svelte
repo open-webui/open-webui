@@ -70,7 +70,7 @@
 <div
 	data-knowledge-row={item.id || file.itemId}
 	class="flex h-7 min-w-0 items-center rounded-xl {active || dragOver
-		? 'bg-base-100 dark:bg-white/8'
+		? 'bg-base-100 dark:bg-base-0/8'
 		: ''}"
 	style:padding-left={`${8 + depth * 16}px`}
 	role="presentation"

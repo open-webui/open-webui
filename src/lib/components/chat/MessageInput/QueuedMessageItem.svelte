@@ -47,12 +47,12 @@
 								? file.url
 								: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 						<div
-							class="relative size-6 shrink-0 overflow-hidden rounded-lg border border-base-100/60 bg-white/60 dark:border-white/[0.06] dark:bg-white/[0.025]"
+							class="relative size-6 shrink-0 overflow-hidden rounded-lg border border-base-100/60 bg-base-0/60 dark:border-base-0/[0.06] dark:bg-base-0/[0.025]"
 						>
 							<Image src={fileUrl} alt="" imageClassName="size-full object-cover" />
 							{#if file.status === 'uploading'}
 								<div
-									class="absolute inset-0 flex items-center justify-center bg-white/75 text-base-500 backdrop-blur-[1px] dark:bg-base-950/70 dark:text-base-300"
+									class="absolute inset-0 flex items-center justify-center bg-base-0/75 text-base-500 backdrop-blur-[1px] dark:bg-base-950/70 dark:text-base-300"
 								>
 									<Spinner className="size-3" />
 								</div>
@@ -60,7 +60,7 @@
 						</div>
 					{:else}
 						<div
-							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-base-100/60 bg-white/60 px-1.5 text-[0.6875rem] leading-none text-base-500 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-base-400"
+							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-base-100/60 bg-base-0/60 px-1.5 text-[0.6875rem] leading-none text-base-500 dark:border-base-0/[0.06] dark:bg-base-0/[0.025] dark:text-base-400"
 						>
 							{#if file.status === 'uploading'}
 								<span class="shrink-0 text-base-400 dark:text-base-500">

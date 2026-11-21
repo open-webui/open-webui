@@ -67,7 +67,7 @@
 			<Tooltip content={$i18n.t('Clone')}>
 				<button
 					aria-label={$i18n.t('Clone')}
-					class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+					class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 					type="button"
 					on:click={() => {
 						showCloneModel = true;
@@ -79,7 +79,7 @@
 
 			<button
 				aria-label={$i18n.t('Configure')}
-				class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+				class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 				type="button"
 				on:click={() => {
 					showModel = true;

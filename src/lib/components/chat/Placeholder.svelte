@@ -223,7 +223,7 @@
 			{#if !folderReadOnly}
 				<!-- Same mount as the in-chat composer, floating over the list and board. -->
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-base-900 {dragged
+					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-base-0 from-40% to-transparent pt-8 pb-2 text-left dark:from-base-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
 					class:hidden={folderSection !== 'chats'}
@@ -353,7 +353,7 @@
 			<!-- Soft halo, like the denser fade around the in-chat composer, so it doesn't float on a vivid background. -->
 			<div
 				aria-hidden="true"
-				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-white/40 blur-2xl dark:bg-base-900/40"
+				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-base-0/40 blur-2xl dark:bg-base-900/40"
 			></div>
 			<div class="relative">
 				{@render composer($i18n.t('How can I help you today?'))}

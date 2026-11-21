@@ -405,7 +405,7 @@
 		<button
 			type="button"
 			data-file-comment-id="__unplaced"
-			class="absolute right-3 top-3 z-10 flex h-6 items-center gap-1 rounded px-1.5 text-xs text-base-400 dark:text-base-500 bg-white/95 dark:bg-base-850/95 hover:text-base-600 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
+			class="absolute right-3 top-3 z-10 flex h-6 items-center gap-1 rounded px-1.5 text-xs text-base-400 dark:text-base-500 bg-base-0/95 dark:bg-base-850/95 hover:text-base-600 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
 			aria-label={$i18n.t('Document comments')}
 			aria-haspopup="dialog"
 			><Icon name="chat-bubble" size={12} strokeWidth={1.5} />{unplaced.length || '!'}</button
@@ -420,7 +420,7 @@
 		role="dialog"
 		aria-label={$i18n.t('Comment')}
 		tabindex="-1"
-		class="file-comment-popover fixed z-[9999] w-72 max-w-[calc(100vw-1rem)] max-h-[50vh] overflow-y-auto rounded-2xl bg-white px-3 py-2 text-[0.8125rem] font-normal leading-5 text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-base-850 dark:text-base-100 dark:ring-white/10"
+		class="file-comment-popover fixed z-[9999] w-72 max-w-[calc(100vw-1rem)] max-h-[50vh] overflow-y-auto rounded-2xl bg-base-0 px-3 py-2 text-[0.8125rem] font-normal leading-5 text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-100 dark:ring-base-0/10"
 		style:left={`${popoverX}px`}
 		style:top={`${popoverY}px`}
 		on:mouseenter={keepOpen}

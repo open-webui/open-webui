@@ -167,7 +167,7 @@
 
 	<div slot="content">
 		<div
-			class="max-w-full w-84 border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 rounded-2xl z-9999 shadow-lg dark:text-white"
+			class="max-w-full w-84 border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 rounded-2xl z-9999 shadow-lg dark:text-base-0"
 		>
 			<div class="flex items-center gap-2 mb-0.5 px-3 pt-2 pb-1.5">
 				<Search className="size-3.5 shrink-0 text-base-500" />

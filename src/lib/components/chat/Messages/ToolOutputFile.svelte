@@ -230,10 +230,10 @@
 </script>
 
 <div
-	class="my-2 w-full overflow-hidden rounded-xl border border-base-200 bg-white dark:border-white/8 dark:bg-base-950/20"
+	class="my-2 w-full overflow-hidden rounded-xl border border-base-200 bg-base-0 dark:border-base-0/8 dark:bg-base-950/20"
 >
 	<div
-		class="flex h-8 items-center {expanded ? 'border-b border-base-100 dark:border-white/8' : ''}"
+		class="flex h-8 items-center {expanded ? 'border-b border-base-100 dark:border-base-0/8' : ''}"
 	>
 		<button
 			type="button"

@@ -137,7 +137,7 @@
 	$: menuItemClass =
 		variant === 'workspace'
 			? 'select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100'
-			: 'select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition';
+			: 'select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition';
 	$: rowIndent = `${8 + depth * 16}px`;
 	const fitGridName = (node: HTMLElement, name: string) => {
 		const fit = () => {
@@ -468,10 +468,10 @@
 			{selected || active
 			? viewMode === 'grid'
 				? 'bg-blue-50 dark:bg-blue-500/15'
-				: 'bg-base-100 dark:bg-white/8'
+				: 'bg-base-100 dark:bg-base-0/8'
 			: viewMode === 'grid'
 				? ''
-				: 'hover:bg-base-100 dark:hover:bg-white/10'}
+				: 'hover:bg-base-100 dark:hover:bg-base-0/10'}
 			{dragOverFolder ? 'bg-blue-50 dark:bg-blue-500/15 ring-2 ring-blue-500/60 ring-inset' : ''}"
 		role="presentation"
 		on:dragover={(e) => {
@@ -748,7 +748,7 @@
 					? 'h-6 w-6'
 					: 'h-5 w-5'} items-center justify-center mr-1 rounded transition
 					text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-400
-					hover:bg-base-50/40 dark:hover:bg-white/4 {viewMode === 'grid'
+					hover:bg-base-50/40 dark:hover:bg-base-0/4 {viewMode === 'grid'
 					? 'absolute left-[calc(50%_+_16px)] -top-[3px] !m-0 !h-6 !w-6 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100'
 					: ''}"
 				style:opacity={viewMode === 'grid' && menuOpen ? 1 : undefined}
@@ -790,7 +790,7 @@
 						</button>
 					{/if}
 					{#if entry.type === 'directory' && (onNewFolder || onNewFile)}
-						<div class="my-1 border-t border-base-100 dark:border-white/10" role="separator"></div>
+						<div class="my-1 border-t border-base-100 dark:border-base-0/10" role="separator"></div>
 					{/if}
 					{#if variant !== 'workspace' || entry.type !== 'directory'}
 						<button

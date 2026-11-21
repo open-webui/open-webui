@@ -83,7 +83,7 @@
 	ariaLabel={$i18n.t('Import skills')}
 	bind:show
 	size="md"
-	className="rounded-2xl bg-white dark:bg-base-900"
+	className="rounded-2xl bg-base-0 dark:bg-base-900"
 >
 	<div class="flex max-h-[calc(100dvh-3rem)] flex-col text-base-900 dark:text-base-100">
 		<div class="flex shrink-0 items-center justify-between gap-3 px-4 pt-3 pb-2">
@@ -216,7 +216,7 @@
 			>
 			<button
 				type="button"
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 				disabled={loading || !selectedCount}
 				on:click={save}
 			>

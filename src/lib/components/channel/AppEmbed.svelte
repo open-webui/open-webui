@@ -9,7 +9,7 @@
 </script>
 
 <div
-	class="app-embed @container relative w-full max-w-[520px] min-w-0 rounded-lg border border-base-200 bg-base-50/70 px-4.5 py-3 text-xs wrap-anywhere dark:border-white/8 dark:bg-white/[0.035] [&_p]:m-0 [&_p+p]:mt-1.5 [&_pre]:whitespace-pre-wrap [&_pre]:wrap-anywhere [&_h1]:my-1.5 [&_h1]:text-xs [&_h2]:my-1.5 [&_h2]:text-xs [&_h3]:my-1.5 [&_h3]:text-xs [&_h4]:my-1.5 [&_h4]:text-xs [&_h5]:my-1.5 [&_h5]:text-xs [&_h6]:my-1.5 [&_h6]:text-xs"
+	class="app-embed @container relative w-full max-w-[520px] min-w-0 rounded-lg border border-base-200 bg-base-50/70 px-4.5 py-3 text-xs wrap-anywhere dark:border-base-0/8 dark:bg-base-0/[0.035] [&_p]:m-0 [&_p+p]:mt-1.5 [&_pre]:whitespace-pre-wrap [&_pre]:wrap-anywhere [&_h1]:my-1.5 [&_h1]:text-xs [&_h2]:my-1.5 [&_h2]:text-xs [&_h3]:my-1.5 [&_h3]:text-xs [&_h4]:my-1.5 [&_h4]:text-xs [&_h5]:my-1.5 [&_h5]:text-xs [&_h6]:my-1.5 [&_h6]:text-xs"
 >
 	{#if accent}
 		<svg class="pointer-events-none absolute inset-0 size-full rounded-lg" aria-hidden="true">

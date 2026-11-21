@@ -37,7 +37,7 @@
 >
 	<button
 		type="button"
-		class="group flex min-w-0 items-center gap-1 text-[0.8125rem] font-normal text-base-600 transition hover:text-base-900 dark:text-base-300 dark:hover:text-white"
+		class="group flex min-w-0 items-center gap-1 text-[0.8125rem] font-normal text-base-600 transition hover:text-base-900 dark:text-base-300 dark:hover:text-base-0"
 		aria-label={$i18n.t('Chat history')}
 	>
 		<span class="min-w-0 truncate">{title}</span>

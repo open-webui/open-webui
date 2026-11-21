@@ -328,7 +328,7 @@
 				{/if}
 			</div>
 			<button
-				class="{button} bg-base-900 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+				class="{button} bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 				disabled={busy || !url}
 			>
 				{$i18n.t('Save')}

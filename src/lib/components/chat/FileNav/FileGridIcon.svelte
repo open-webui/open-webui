@@ -83,7 +83,7 @@
 		</svg>
 	{:else}
 		<span
-			class="relative flex h-10 w-8 items-center justify-center rounded-md border border-base-200 bg-white dark:border-base-600 dark:bg-base-800"
+			class="relative flex h-10 w-8 items-center justify-center rounded-md border border-base-200 bg-base-0 dark:border-base-600 dark:bg-base-800"
 		>
 			<span
 				class="absolute right-0 top-0 h-2.5 w-2.5 rounded-bl border-b border-l border-base-200 bg-base-50 dark:border-base-600 dark:bg-base-700"

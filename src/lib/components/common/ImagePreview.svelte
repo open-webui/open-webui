@@ -72,7 +72,7 @@
 		aria-modal="true"
 		aria-label={alt || $i18n.t('Image')}
 		tabindex="-1"
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black text-white w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-base-1000 text-base-0 w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
 	>
 		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
 			<div>

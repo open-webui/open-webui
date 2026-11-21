@@ -100,7 +100,7 @@
 			<div class="min-w-0 flex items-center gap-3 text-xs">
 				{#if lang === 'json'}
 					<button
-						class="shrink-0 text-base-500 transition hover:text-base-900 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed dark:hover:text-white"
+						class="shrink-0 text-base-500 transition hover:text-base-900 hover:underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed dark:hover:text-base-0"
 						type="button"
 						disabled={!draft.trim() || !!jsonError}
 						onclick={format}
@@ -128,7 +128,7 @@
 				</button>
 
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					type="button"
 					disabled={!!jsonError}
 					onclick={save}

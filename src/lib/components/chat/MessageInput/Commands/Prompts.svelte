@@ -80,7 +80,7 @@
 					on:focus={() => {}}
 					data-selected={promptIdx === selectedPromptIdx}
 				>
-					<span class="shrink-0 font-normal text-black dark:text-base-100">
+					<span class="shrink-0 font-normal text-base-1000 dark:text-base-100">
 						{promptItem.command}
 					</span>
 

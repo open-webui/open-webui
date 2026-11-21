@@ -37,7 +37,7 @@
 					}}
 				>
 					<div
-						class="bg-white dark:bg-base-700 rounded-full size-4 flex items-center justify-center"
+						class="bg-base-0 dark:bg-base-700 rounded-full size-4 flex items-center justify-center"
 					>
 						{#if execution?.result}
 							{#if execution.result?.error}

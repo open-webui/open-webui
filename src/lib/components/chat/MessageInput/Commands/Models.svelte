@@ -88,7 +88,7 @@
 				on:focus={() => {}}
 				data-selected={modelIdx === selectedIdx}
 			>
-				<div class="flex min-w-0 items-center text-black dark:text-base-100">
+				<div class="flex min-w-0 items-center text-base-1000 dark:text-base-100">
 					<img
 						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
 						alt={resolveLocalizedModelName(model, $i18n.language) ?? model.id}

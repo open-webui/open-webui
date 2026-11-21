@@ -72,7 +72,7 @@
 							draggable="false"
 							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/users')
 								? ''
-								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 							href="/admin">{$i18n.t('Users')}</a
 						>
 
@@ -80,7 +80,7 @@
 							draggable="false"
 							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/evaluations')
 								? ''
-								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 							href="/admin/evaluations">{$i18n.t('Evaluations')}</a
 						>
 
@@ -89,7 +89,7 @@
 								draggable="false"
 								class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/functions')
 									? ''
-									: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+									: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 								href="/admin/functions">{$i18n.t('Functions')}</a
 							>
 						{/if}
@@ -98,7 +98,7 @@
 							draggable="false"
 							class="min-w-fit px-1 text-sm {$page.url.pathname.includes('/admin/settings')
 								? ''
-								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition select-none"
+								: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 							href="/admin/settings"
 							on:click={(event) => {
 								event.preventDefault();

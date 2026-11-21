@@ -101,7 +101,7 @@
 					{#each PRESET_COLORS as c}
 						<button
 							class="size-6 rounded-full transition-all border-2 {color === c
-								? 'border-base-800 dark:border-white scale-110'
+								? 'border-base-800 dark:border-base-0 scale-110'
 								: 'border-transparent hover:scale-110'}"
 							style="background-color: {c};"
 							on:click={() => (color = c)}
@@ -113,7 +113,7 @@
 						class="size-6 rounded-full overflow-hidden cursor-pointer border-2 transition-all {!PRESET_COLORS.includes(
 							color
 						)
-							? 'border-base-800 dark:border-white scale-110'
+							? 'border-base-800 dark:border-base-0 scale-110'
 							: 'border-transparent hover:scale-110'}"
 						style="background-color: {color};"
 						title={$i18n.t('Custom color')}
@@ -132,14 +132,14 @@
 		<!-- Bottom toolbar -->
 		<div class="flex items-center justify-end px-4 pb-3.5 pt-2 gap-2">
 			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 				type="button"
 				on:click={() => (show = false)}
 			>
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 				on:click={submitHandler}
 				type="button"
 				disabled={loading}

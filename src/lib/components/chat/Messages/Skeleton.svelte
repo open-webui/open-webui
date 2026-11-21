@@ -17,7 +17,7 @@
 			? 'size-3'
 			: size === 'xs'
 				? 'size-1.5'
-				: 'size-2'} rounded-full bg-black dark:bg-white animate-size"
+				: 'size-2'} rounded-full bg-base-1000 dark:bg-base-0 animate-size"
 	></span>
 </span>
 

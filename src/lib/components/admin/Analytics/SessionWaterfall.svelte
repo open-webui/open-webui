@@ -64,7 +64,7 @@
 			aria-label={$i18n.t('Execution timeline')}
 		>
 			<div
-				class="grid grid-cols-[6rem_minmax(0,1fr)_3rem] sm:grid-cols-[10rem_minmax(0,1fr)_3.5rem] gap-x-2 sticky top-0 z-10 bg-white dark:bg-base-900 pb-1 text-[0.625rem] tabular-nums"
+				class="grid grid-cols-[6rem_minmax(0,1fr)_3rem] sm:grid-cols-[10rem_minmax(0,1fr)_3.5rem] gap-x-2 sticky top-0 z-10 bg-base-0 dark:bg-base-900 pb-1 text-[0.625rem] tabular-nums"
 				aria-hidden="true"
 			>
 				<span></span>

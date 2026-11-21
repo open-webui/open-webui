@@ -125,7 +125,7 @@
 	<button
 		type="button"
 		aria-label={$i18n.t('Chat Menu')}
-		class="flex size-5 items-center justify-center rounded-md text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-white"
+		class="flex size-5 items-center justify-center rounded-md text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-0"
 		disabled={busy}
 	>
 		<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />

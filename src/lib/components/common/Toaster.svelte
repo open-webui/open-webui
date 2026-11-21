@@ -28,7 +28,7 @@
 		unstyled: true,
 		classes: {
 			toast:
-				'group/toast flex w-full items-start gap-2.5 rounded-2xl border border-base-100 dark:border-base-800 bg-white dark:bg-base-850 p-3 font-primary text-[0.8125rem] text-base-800 dark:text-base-100 shadow-lg shadow-black/5 dark:shadow-black/30 outline-none focus-visible:ring-2 focus-visible:ring-base-200 dark:focus-visible:ring-base-700 has-[>[data-toast-custom]]:p-0 [&_[data-content]]:flex [&_[data-content]]:min-w-0 [&_[data-content]]:flex-1 [&_[data-content]]:flex-col [&_[data-content]]:gap-0.5 [&_[data-icon]]:flex [&_[data-icon]]:h-[1lh]! [&_[data-icon]]:shrink-0 [&_[data-icon]]:items-center [&_[data-icon]]:m-0! [&_[data-icon]_svg]:m-0!',
+				'group/toast flex w-full items-start gap-2.5 rounded-2xl border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 p-3 font-primary text-[0.8125rem] text-base-800 dark:text-base-100 shadow-lg shadow-black/5 dark:shadow-black/30 outline-none focus-visible:ring-2 focus-visible:ring-base-200 dark:focus-visible:ring-base-700 has-[>[data-toast-custom]]:p-0 [&_[data-content]]:flex [&_[data-content]]:min-w-0 [&_[data-content]]:flex-1 [&_[data-content]]:flex-col [&_[data-content]]:gap-0.5 [&_[data-icon]]:flex [&_[data-icon]]:h-[1lh]! [&_[data-icon]]:shrink-0 [&_[data-icon]]:items-center [&_[data-icon]]:m-0! [&_[data-icon]_svg]:m-0!',
 			title: 'font-medium text-base-900 dark:text-base-50',
 			description: 'text-xs text-base-500 dark:text-base-400',
 			actionButton: `${button} bg-base-100 hover:bg-base-200 dark:bg-base-800 dark:hover:bg-base-700`,

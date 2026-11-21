@@ -31,7 +31,7 @@
 
 	let chatImportInputElement: HTMLInputElement;
 	const actionButtonClass =
-		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	$: if (importFiles) {
 		console.log(importFiles);
@@ -142,7 +142,7 @@
 />
 
 <div id="tab-data-controls" class="flex flex-col h-full text-sm">
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.dataControls.title')}
 	</h2>
 

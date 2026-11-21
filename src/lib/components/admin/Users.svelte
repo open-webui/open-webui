@@ -93,7 +93,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'overview'
 					? ''
-					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class=" self-center">{$i18n.t('Overview')}</div>
 				{#if formattedUserCount !== null}
@@ -114,7 +114,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'groups'
 					? ''
-					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class=" self-center">{$i18n.t('Groups')}</div>
 				{#if formattedGroupCount !== null}

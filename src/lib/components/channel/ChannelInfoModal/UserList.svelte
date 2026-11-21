@@ -228,7 +228,7 @@
 					<div class="w-full">
 						{#each filteredApps as app (app.id)}
 							<div class="text-xs flex items-center justify-between">
-								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-white flex-1 min-w-0">
+								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-base-0 flex-1 min-w-0">
 									<div class="flex items-center gap-2">
 										<div
 											class="size-6 rounded-lg bg-base-100 dark:bg-base-850 flex items-center justify-center shrink-0"
@@ -267,7 +267,7 @@
 						{/each}
 						{#each users as user, userIdx (user.id)}
 							<div class=" dark:border-base-850 text-xs flex items-center justify-between">
-								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-white flex-1">
+								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-base-0 flex-1">
 									<div class="flex items-center gap-2">
 										<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 											<img

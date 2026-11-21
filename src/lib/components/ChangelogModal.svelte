@@ -86,12 +86,12 @@
 	ariaLabel={`${$i18n.t("What's New in")} ${$WEBUI_NAME}`}
 	bind:show
 	size="lg"
-	className="bg-white dark:bg-base-900 rounded-3xl overflow-hidden"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl overflow-hidden"
 	containerClassName="p-3"
 >
 	<div class="flex max-h-[58vh] flex-col">
 		<div
-			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3 dark:text-white text-black"
+			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3 dark:text-base-0 text-base-1000"
 		>
 			<div class="min-w-0">
 				<!-- LICENSE covers this Open WebUI release identifier.
@@ -125,7 +125,7 @@
 					{#each Object.keys(changelog) as version}
 						<section class="pr-1">
 							<div class="mb-2">
-								<h3 class="m-0 text-sm font-normal text-base-950 dark:text-white">v{version}</h3>
+								<h3 class="m-0 text-sm font-normal text-base-950 dark:text-base-0">v{version}</h3>
 								<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-500">
 									{formatDate(changelog[version].date)}
 								</div>
@@ -178,7 +178,7 @@
 							error = false;
 							init();
 						}}
-						class="text-sm font-normal text-base-700 transition hover:text-black dark:text-base-300 dark:hover:text-white"
+						class="text-sm font-normal text-base-700 transition hover:text-base-1000 dark:text-base-300 dark:hover:text-base-0"
 					>
 						{$i18n.t('Retry')}
 					</button>
@@ -195,7 +195,7 @@
 		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-xs">
 			<button
 				on:click={closeModal}
-				class="font-normal text-base-600 transition hover:text-base-950 dark:text-base-400 dark:hover:text-white"
+				class="font-normal text-base-600 transition hover:text-base-950 dark:text-base-400 dark:hover:text-base-0"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>

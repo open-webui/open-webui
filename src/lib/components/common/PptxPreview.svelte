@@ -321,7 +321,7 @@
 							type="button"
 							data-slide-comment={comment.id}
 							data-file-comment-id={comment.id}
-							class="absolute flex size-5 items-center justify-center rounded bg-white/95 text-base-400 hover:text-base-600 dark:bg-base-850/95 dark:text-base-500 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
+							class="absolute flex size-5 items-center justify-center rounded bg-base-0/95 text-base-400 hover:text-base-600 dark:bg-base-850/95 dark:text-base-500 dark:hover:text-base-300 focus-visible:outline focus-visible:outline-2"
 							class:ring-2={selectedComment?.id === comment.id ||
 								selectedComment?.parentId === comment.id}
 							style:left={`${comment.location.x !== undefined ? Math.max(0, Math.min(slideWidth - 24, comment.location.x * fitScale)) : 8}px`}
@@ -340,7 +340,7 @@
 		<div
 			class="absolute bottom-3 {hideThumbs
 				? 'left-1/2'
-				: 'left-[calc(144px+(100%-144px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-white/90 dark:bg-base-850/90 backdrop-blur-sm shadow-lg border border-base-200/60 dark:border-base-700/60 px-1 py-0.5"
+				: 'left-[calc(144px+(100%-144px)/2)]'} -translate-x-1/2 z-10 flex items-center gap-0.5 rounded-lg bg-base-0/90 dark:bg-base-850/90 backdrop-blur-sm shadow-lg border border-base-200/60 dark:border-base-700/60 px-1 py-0.5"
 		>
 			<button
 				type="button"

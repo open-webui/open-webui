@@ -181,9 +181,9 @@
 		'EXTERNAL_WEB_LOADER_API_KEY'
 	];
 	const inputClass =
-		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const submitHandler = async () => {
 		// Convert domain filter string to array before sending
@@ -297,7 +297,7 @@
 		saveHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.web.title')}
 	</h2>
 
@@ -398,7 +398,7 @@
 									<div class="flex-1">
 										<input
 											id="perplexity-search-api-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Perplexity Search API URL')}
 											bind:value={webConfig.PERPLEXITY_SEARCH_API_URL}
@@ -440,7 +440,7 @@
 									<div class="flex-1">
 										<input
 											id="searxng-query-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Searxng Query URL')}
 											bind:value={webConfig.SEARXNG_QUERY_URL}
@@ -462,7 +462,7 @@
 									<div class="flex-1">
 										<input
 											id="searxng-language"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Searxng search language')}
 											bind:value={webConfig.SEARXNG_LANGUAGE}
@@ -487,7 +487,7 @@
 									<div class="flex-1">
 										<input
 											id="yacy-query-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Yacy URL (e.g. http://yacy.example.com:8090)')}
 											bind:value={webConfig.YACY_QUERY_URL}
@@ -509,7 +509,7 @@
 
 									<input
 										id="yacy-username"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										placeholder={$i18n.t('Enter Yacy Username')}
 										bind:value={webConfig.YACY_USERNAME}
 										required
@@ -554,7 +554,7 @@
 									<div class="flex-1">
 										<input
 											id="google-pse-engine-id"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Google PSE Engine Id')}
 											bind:value={webConfig.GOOGLE_PSE_ENGINE_ID}
@@ -603,7 +603,7 @@
 									<div class="flex-1">
 										<input
 											id="brave-context-tokens"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="number"
 											min="1024"
 											max="32768"
@@ -711,7 +711,7 @@
 									<div class="flex-1">
 										<input
 											id="serphouse-domain"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder="google.com"
 											bind:value={webConfig.SERPHOUSE_DOMAIN}
@@ -839,7 +839,7 @@
 									<div class="flex-1">
 										<input
 											id="searchapi-engine"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter SearchApi Engine')}
 											bind:value={webConfig.SEARCHAPI_ENGINE}
@@ -874,7 +874,7 @@
 									<div class="flex-1">
 										<input
 											id="serpapi-engine"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter SerpApi Engine')}
 											bind:value={webConfig.SERPAPI_ENGINE}
@@ -898,7 +898,7 @@
 									<div class="flex-1">
 										<input
 											id="jina-api-base-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Jina API Base URL')}
 											bind:value={webConfig.JINA_API_BASE_URL}
@@ -934,7 +934,7 @@
 									<div class="flex-1">
 										<input
 											id="bing-search-v7-endpoint"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Bing Search V7 Endpoint')}
 											bind:value={webConfig.BING_SEARCH_V7_ENDPOINT}
@@ -1012,7 +1012,7 @@
 								<input
 									id="perplexity-model"
 									list="perplexity-model-list"
-									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 									bind:value={webConfig.PERPLEXITY_MODEL}
 								/>
 
@@ -1059,7 +1059,7 @@
 									<div class="flex-1">
 										<input
 											id="microsoft-web-iq-api-base-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Microsoft Web IQ API Base URL')}
 											bind:value={webConfig.MICROSOFT_WEB_IQ_API_BASE_URL}
@@ -1091,7 +1091,7 @@
 
 								<input
 									id="microsoft-web-iq-language"
-									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 									type="text"
 									placeholder={$i18n.t('Enter language')}
 									bind:value={webConfig.MICROSOFT_WEB_IQ_LANGUAGE}
@@ -1140,7 +1140,7 @@
 									<div class="flex-1">
 										<input
 											id="firecrawl-api-base-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Firecrawl API Base URL')}
 											bind:value={webConfig.FIRECRAWL_API_BASE_URL}
@@ -1174,7 +1174,7 @@
 									<div class="flex-1">
 										<input
 											id="firecrawl-timeout"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="number"
 											placeholder={$i18n.t('Enter Firecrawl Timeout')}
 											bind:value={webConfig.FIRECRAWL_TIMEOUT}
@@ -1198,7 +1198,7 @@
 									<div class="flex-1">
 										<input
 											id="external-web-search-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter External Web Search URL')}
 											bind:value={webConfig.EXTERNAL_WEB_SEARCH_URL}
@@ -1234,7 +1234,7 @@
 									<div class="flex-1">
 										<input
 											id="yandex-web-search-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Yandex Web Search URL')}
 											bind:value={webConfig.YANDEX_WEB_SEARCH_URL}
@@ -1332,7 +1332,7 @@
 								<div class="flex-1">
 									<input
 										id="openserp-base-url"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										type="text"
 										placeholder={$i18n.t('Enter OpenSERP Base URL')}
 										bind:value={webConfig.OPENSERP_BASE_URL}
@@ -1395,7 +1395,7 @@
 
 								<input
 									id="web-search-result-count"
-									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 									placeholder={$i18n.t('settings.admin.web.searchResultCount.label')}
 									bind:value={webConfig.WEB_SEARCH_RESULT_COUNT}
 									required
@@ -1417,7 +1417,7 @@
 
 								<input
 									id="web-search-concurrent-requests"
-									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 									placeholder={$i18n.t('settings.admin.web.concurrentRequests.label')}
 									bind:value={webConfig.WEB_SEARCH_CONCURRENT_REQUESTS}
 									type="number"
@@ -1569,7 +1569,7 @@
 								<div class="flex-1">
 									<input
 										id="playwright-ws-url"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										type="text"
 										placeholder={$i18n.t('Enter Playwright WebSocket URL')}
 										bind:value={webConfig.PLAYWRIGHT_WS_URL}
@@ -1591,7 +1591,7 @@
 								<div class="flex-1">
 									<input
 										id="playwright-timeout"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										placeholder={$i18n.t('Enter Playwright Timeout')}
 										bind:value={webConfig.PLAYWRIGHT_TIMEOUT}
 										autocomplete="off"
@@ -1614,7 +1614,7 @@
 								<div class="flex-1">
 									<input
 										id="web-loader-firecrawl-api-base-url"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										type="text"
 										placeholder={$i18n.t('Enter Firecrawl API Base URL')}
 										bind:value={webConfig.FIRECRAWL_API_BASE_URL}
@@ -1650,7 +1650,7 @@
 								<div class="flex-1">
 									<input
 										id="tavily-extract-depth"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										type="text"
 										placeholder={$i18n.t('Enter Tavily Extract Depth')}
 										bind:value={webConfig.TAVILY_EXTRACT_DEPTH}
@@ -1689,7 +1689,7 @@
 									<div class="flex-1">
 										<input
 											id="web-loader-microsoft-web-iq-api-base-url"
-											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+											class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 											type="text"
 											placeholder={$i18n.t('Enter Microsoft Web IQ API Base URL')}
 											bind:value={webConfig.MICROSOFT_WEB_IQ_API_BASE_URL}
@@ -1721,7 +1721,7 @@
 
 								<input
 									id="web-loader-microsoft-web-iq-language"
-									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 									type="text"
 									placeholder={$i18n.t('Enter language')}
 									bind:value={webConfig.MICROSOFT_WEB_IQ_LANGUAGE}
@@ -1744,7 +1744,7 @@
 								<div class="flex-1">
 									<input
 										id="external-web-loader-url"
-										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+										class="w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 										type="text"
 										placeholder={$i18n.t('Enter External Web Loader URL')}
 										bind:value={webConfig.EXTERNAL_WEB_LOADER_URL}

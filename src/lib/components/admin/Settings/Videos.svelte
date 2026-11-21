@@ -122,7 +122,7 @@
 						<Tooltip content={$i18n.t('settings.admin.videos.addConnection.label')}>
 							<button
 								aria-label={$i18n.t('settings.admin.videos.addConnection.label')}
-								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-base-300"
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-300"
 								on:click={() => {
 									showAddConnectionModal = true;
 								}}

@@ -41,7 +41,7 @@
 		<label class="block">
 			<span class="text-base-600 dark:text-base-400">{$i18n.t('Repository URL')}</span>
 			<input
-				class="mt-1 w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500 disabled:opacity-50"
+				class="mt-1 w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500 disabled:opacity-50"
 				type="text"
 				bind:value={url}
 				placeholder="https://github.com/owner/repository.git"
@@ -72,7 +72,7 @@
 		>
 		<button
 			type="submit"
-			class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 {cloning
+			class="flex h-7 shrink-0 items-center gap-1.5 rounded-lg bg-base-900 px-2 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 {cloning
 				? 'cursor-wait'
 				: 'disabled:cursor-not-allowed disabled:opacity-50'}"
 			disabled={disabled || cloning || !url.trim()}

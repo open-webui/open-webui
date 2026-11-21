@@ -58,7 +58,7 @@
 	</button>
 	{#if expanded}
 		<div
-			class="mt-2 ml-3 border-l border-base-100 dark:border-white/8 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:text-base-400 whitespace-pre-wrap break-words"
+			class="mt-2 ml-3 border-l border-base-100 dark:border-base-0/8 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:text-base-400 whitespace-pre-wrap break-words"
 		>
 			{content}
 		</div>

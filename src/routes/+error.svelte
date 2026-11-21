@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 </script>
 
-<div class=" bg-white dark:bg-base-800 min-h-screen">
+<div class=" bg-base-0 dark:bg-base-800 min-h-screen">
 	<div class=" flex h-full">
 		<div class="m-auto my-10 dark:text-base-300 text-3xl font-normal">
 			{$page.status}: {$page.error?.message}

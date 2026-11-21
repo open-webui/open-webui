@@ -1060,7 +1060,7 @@
 			</div>
 			<div class="mb-2 min-h-0 flex-1">
 				{#if isExternalKnowledge}<div
-						class="h-full overflow-auto rounded-2xl border border-base-100/80 dark:border-white/[0.04]"
+						class="h-full overflow-auto rounded-2xl border border-base-100/80 dark:border-base-0/[0.04]"
 					>
 						<div class="p-5 flex flex-col gap-4">
 							<div class="flex flex-wrap gap-2 text-xs">
@@ -1112,7 +1112,7 @@
 										placeholder={$i18n.t('Ask this knowledge source a test question')}
 									/>
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 										on:click={externalTestHandler}
 									>
 										{$i18n.t('Test')}

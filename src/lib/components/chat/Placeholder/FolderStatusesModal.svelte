@@ -209,7 +209,7 @@
 											<span
 												class="size-2.5 rounded-full {colorDot(color)} {item.color === color &&
 												!item.icon
-													? 'ring-2 ring-base-300 ring-offset-1 ring-offset-white dark:ring-base-600 dark:ring-offset-base-850'
+													? 'ring-2 ring-base-300 ring-offset-1 ring-offset-base-0 dark:ring-base-600 dark:ring-offset-base-850'
 													: ''}"
 											></span>
 										</button>
@@ -290,7 +290,7 @@
 
 			<div class="mt-3 flex justify-end">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					type="submit"
 					disabled={saving}
 				>

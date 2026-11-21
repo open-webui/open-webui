@@ -88,7 +88,7 @@
 </script>
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={save}>
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.subagents.title')}
 	</h2>
 
@@ -122,7 +122,7 @@
 								min="1"
 								step="1"
 								aria-describedby="sa-concurrent-help"
-								class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+								class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('simultaneous sub-agents')}
@@ -161,7 +161,7 @@
 									min="1"
 									step="1"
 									aria-describedby="sa-async-help"
-									class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+									class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 								/>
 								<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
 									{$i18n.t('background sub-agents')}
@@ -185,7 +185,7 @@
 								min="1"
 								step="1"
 								aria-describedby="sa-iterations-help"
-								class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+								class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('tool loops per sub-agent')}
@@ -211,7 +211,7 @@
 								min="1"
 								step="1"
 								aria-describedby="sa-output-help"
-								class="h-7 w-20 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+								class="h-7 w-20 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 							/>
 							<span class="text-[0.6875rem] text-base-400 dark:text-base-600">chars</span>
 						</div>
@@ -229,7 +229,7 @@
 							bind:value={systemPrompt}
 							rows="4"
 							placeholder={$i18n.t('You are a sub-agent...')}
-							class="mt-1 w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 font-mono text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+							class="mt-1 w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 font-mono text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 						></textarea>
 						<p class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('settings.admin.subagents.systemPrompt.description')}

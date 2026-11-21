@@ -60,7 +60,7 @@
 <div
 	class="overflow-x-auto {compact
 		? 'text-xs bg-transparent text-inherit'
-		: 'text-sm bg-white text-[#24292f] dark:bg-[#0d1117] dark:text-[#c9d1d9]'}"
+		: 'text-sm bg-base-0 text-[#24292f] dark:bg-[#0d1117] dark:text-[#c9d1d9]'}"
 	dir="ltr"
 	style:--diff-gutter-width={gutterWidth}
 >

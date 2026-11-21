@@ -60,11 +60,11 @@
 	);
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 font-mono text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 font-mono text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 	const item =
 		'select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/40 dark:hover:bg-base-800/40 transition';
 
@@ -442,7 +442,7 @@
 									bind:value={scope}
 									ariaLabel={$i18n.t('Separate instance per')}
 									disabled={scopeLocked || busy}
-									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-base-900 dark:!bg-transparent dark:focus-visible:text-white"
+									selectClassName="!h-4 cursor-pointer !rounded-none !border-0 !bg-transparent !ps-0 !pe-6 !outline-none focus-visible:text-base-900 dark:!bg-transparent dark:focus-visible:text-base-0"
 								>
 									{#each scopes as option}
 										<option value={option.value}>{$i18n.t(option.label)}</option>
@@ -625,7 +625,7 @@
 									<button
 										type="button"
 										aria-label={$i18n.t('Add variable')}
-										class="text-base-500 hover:text-base-900 dark:hover:text-white"
+										class="text-base-500 hover:text-base-900 dark:hover:text-base-0"
 										on:click={() => (env = [...env, { key: '', value: '' }])}
 										><Plus className="size-3.5" /></button
 									>
@@ -647,7 +647,7 @@
 										<button
 											type="button"
 											aria-label={$i18n.t('Remove variable')}
-											class="shrink-0 text-base-400 hover:text-base-900 dark:hover:text-white"
+											class="shrink-0 text-base-400 hover:text-base-900 dark:hover:text-base-0"
 											on:click={() => (env = env.filter((_, i) => i !== index))}
 											><XMark className="size-3.5" /></button
 										>
@@ -763,7 +763,7 @@
 					</div>
 					<button
 						type="submit"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						disabled={busy || invalid || (!terminalId && !connectionId)}
 					>
 						{terminalId ? $i18n.t('Save') : $i18n.t('Create')}
@@ -791,7 +791,7 @@
 				</button>
 			</div>
 
-			<div class="w-full px-5 pb-4 dark:text-white" inert={busy} aria-busy={busy}>
+			<div class="w-full px-5 pb-4 dark:text-base-0" inert={busy} aria-busy={busy}>
 				<AccessControl
 					bind:accessGrants
 					labels={{ private: $i18n.t('Restricted') }}

@@ -478,7 +478,7 @@
 		</div>
 	{:else}
 		<div
-			class="absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-base-200/60 bg-white/90 p-1 text-xs text-base-500 shadow-lg dark:border-base-700/60 dark:bg-base-850/90 dark:text-base-400"
+			class="absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-base-200/60 bg-base-0/90 p-1 text-xs text-base-500 shadow-lg dark:border-base-700/60 dark:bg-base-850/90 dark:text-base-400"
 		>
 			<button
 				type="button"

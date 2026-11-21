@@ -261,7 +261,7 @@
 										<div class=" absolute -top-1 -right-1">
 											<button
 												aria-label={$i18n.t('Remove file')}
-												class=" bg-white text-black border border-white rounded-full {($settings?.highContrastMode ??
+												class=" bg-base-0 text-base-1000 border border-base-0 rounded-full {($settings?.highContrastMode ??
 												false)
 													? ''
 													: 'hover-reveal transition'}"
@@ -346,7 +346,7 @@
 							{#if isOwn && !readOnly}
 								<button
 									id="save-edit-message-button"
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 									on:click={() => {
 										editMessageConfirmHandler(false);
 									}}
@@ -359,7 +359,7 @@
 						<div class="flex space-x-1.5">
 							<button
 								id="close-edit-message-button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 								on:click={() => {
 									cancelEditMessage();
 								}}
@@ -369,7 +369,7 @@
 
 							<button
 								id="confirm-edit-message-button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 								on:click={() => {
 									editMessageConfirmHandler();
 								}}
@@ -406,7 +406,7 @@
 					</button>
 					{#if timerExpanded}
 						<div
-							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-base-100 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:border-white/10 dark:text-base-400"
+							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-base-100 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:border-base-0/10 dark:text-base-400"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{message.content}
@@ -503,7 +503,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -559,7 +559,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}
@@ -574,7 +574,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition edit-user-message-button"
+									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition edit-user-message-button"
 								aria-label={$i18n.t('Edit')}
 								bind:this={editButtonElement}
 								on:click={() => {
@@ -591,7 +591,7 @@
 							<button
 								class="{($settings?.highContrastMode ?? false)
 									? ''
-									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition"
+									: 'hover-reveal'} inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg dark:hover:text-base-400 hover:text-base-600 transition"
 								aria-label={$i18n.t('Copy')}
 								on:click={() => {
 									copyToClipboard(message.content);
@@ -629,7 +629,7 @@
 							<div class="flex self-center" dir="ltr">
 								<button
 									aria-label={$i18n.t('Previous message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition previous-message-button"
 									on:click={() => {
 										showPreviousMessage(message);
 									}}
@@ -685,7 +685,7 @@
 
 								<button
 									aria-label={$i18n.t('Next message')}
-									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-black/5 dark:hover:bg-white/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
+									class="self-center inline-flex size-7 shrink-0 items-center justify-center p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 dark:hover:text-base-400 hover:text-base-600 rounded-md transition next-message-button"
 									on:click={() => {
 										showNextMessage(message);
 									}}

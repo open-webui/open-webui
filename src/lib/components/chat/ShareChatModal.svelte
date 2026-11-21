@@ -201,7 +201,7 @@
 				<div class="flex justify-end gap-1 mt-3">
 					{#if $config?.features.enable_community_sharing}
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-200 text-base-800 dark:bg-base-850 dark:text-white dark:hover:bg-base-800"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-200 text-base-800 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-800"
 							type="button"
 							on:click={() => {
 								shareChat();
@@ -215,7 +215,7 @@
 					{/if}
 
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						type="button"
 						id="copy-and-share-chat-button"
 						on:click={async () => {

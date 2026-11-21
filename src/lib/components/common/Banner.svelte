@@ -72,7 +72,7 @@
 					{#if banner.url}
 						<div class="flex md:hidden group w-fit md:items-center">
 							<a
-								class="text-base-700 dark:text-white text-xs font-normal underline"
+								class="text-base-700 dark:text-base-0 text-xs font-normal underline"
 								href="{WEBUI_BASE_URL}/assets/files/whitepaper.pdf"
 								target="_blank"
 							>
@@ -80,7 +80,7 @@
 							</a>
 
 							<div
-								class=" ml-1 text-base-400 group-hover:text-base-600 dark:group-hover:text-white"
+								class=" ml-1 text-base-400 group-hover:text-base-600 dark:group-hover:text-base-0"
 							>
 								<svg
 									aria-hidden="true"
@@ -99,7 +99,7 @@
 						</div>
 					{/if}
 				</div>
-				<div class="flex-1 text-xs text-base-700 dark:text-white max-h-60 overflow-y-auto">
+				<div class="flex-1 text-xs text-base-700 dark:text-base-0 max-h-60 overflow-y-auto">
 					{@html DOMPurify.sanitize(
 						marked.parse(
 							resolveLocalizedString(
@@ -116,14 +116,14 @@
 			{#if banner.url}
 				<div class="hidden md:flex group w-fit md:items-center">
 					<a
-						class="text-base-700 dark:text-white text-xs font-normal underline"
+						class="text-base-700 dark:text-base-0 text-xs font-normal underline"
 						href="/"
 						target="_blank"
 					>
 						{$i18n.t('Learn More')}
 					</a>
 
-					<div class=" ml-1 text-base-400 group-hover:text-base-600 dark:group-hover:text-white">
+					<div class=" ml-1 text-base-400 group-hover:text-base-600 dark:group-hover:text-base-0">
 						<svg
 							aria-hidden="true"
 							xmlns="http://www.w3.org/2000/svg"
@@ -146,7 +146,7 @@
 					on:click={() => {
 						dismiss(banner.id);
 					}}
-					class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-base-400 dark:hover:text-white"
+					class="  -mt-1 -mb-2 -translate-y-[1px] ml-1.5 mr-1 text-base-400 dark:hover:text-base-0"
 					>&times;</button
 				>
 			</div>

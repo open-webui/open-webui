@@ -103,7 +103,7 @@
 					: 'auto'}
 			class="relative {embedded
 				? ''
-				: `rounded-2xl border border-base-100/50 dark:border-base-850/50 hover:border-base-200/70 focus-within:border-base-100/70 hover:dark:border-base-800/70 focus-within:dark:border-base-800/70 transition bg-white/5 dark:bg-base-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
+				: `rounded-2xl border border-base-100/50 dark:border-base-850/50 hover:border-base-200/70 focus-within:border-base-100/70 hover:dark:border-base-800/70 focus-within:dark:border-base-800/70 transition bg-base-0/5 dark:bg-base-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
 			false)
 				? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
 				: ''}"
@@ -181,7 +181,7 @@
 						type="button"
 						aria-label={$i18n.t(submitLabel)}
 						title={$i18n.t(submitLabel)}
-						class="flex h-6 shrink-0 items-center justify-center bg-black text-white transition hover:bg-base-900 disabled:bg-base-200 disabled:text-base-500 dark:bg-white dark:text-black dark:hover:bg-base-100 dark:disabled:bg-base-600 dark:disabled:text-base-850 {submitLabel ===
+						class="flex h-6 shrink-0 items-center justify-center bg-base-1000 text-base-0 transition hover:bg-base-900 disabled:bg-base-200 disabled:text-base-500 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 dark:disabled:bg-base-600 dark:disabled:text-base-850 {submitLabel ===
 						'Save'
 							? 'rounded-md px-2 text-xs'
 							: 'size-6 rounded-full'}"

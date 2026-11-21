@@ -236,7 +236,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'general'
 										? ''
-										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'general';
 									}}
@@ -265,7 +265,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'permissions'
 										? ''
-										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'permissions';
 									}}
@@ -283,7 +283,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'users'
 										? ''
-										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'users';
 									}}
@@ -301,7 +301,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'preview'
 										? ''
-										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'preview';
 									}}
@@ -416,7 +416,7 @@
 									</div>
 
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 										type="submit"
 										disabled={loading || (custom && !name?.trim())}
 									>
@@ -440,8 +440,8 @@
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'display'
-									? ' dark:border-white'
-									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+									? ' dark:border-base-0'
+									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'display';
 								}}
@@ -455,8 +455,8 @@
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'permissions'
-									? '  dark:border-white'
-									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+									? '  dark:border-base-0'
+									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'permissions';
 								}}
@@ -470,8 +470,8 @@
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'users'
-									? ' dark:border-white'
-									: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'}"
+									? ' dark:border-base-0'
+									: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'users';
 								}}

@@ -202,12 +202,12 @@
 		</Dropdown>
 		<button
 			type="button"
-			class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
+			class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 			on:click|stopPropagation={onClose}
 			aria-label={$i18n.t('Close')}><Icon name="xmark" size={16} /></button
 		>
 	</div>
-	<div class="grid shrink-0 grid-cols-2 border-b border-black/5 dark:border-white/5">
+	<div class="grid shrink-0 grid-cols-2 border-b border-base-1000/5 dark:border-base-0/5">
 		{#each [original, revised] as path}
 			<Tooltip content={path} allowHTML={false} className="min-w-0 px-3 py-2">
 				<div class="truncate font-normal text-base-700 dark:text-base-300">{name(path)}</div>
@@ -225,7 +225,7 @@
 		</div>
 	{:else if result}
 		<div
-			class="flex shrink-0 items-center gap-2 border-b border-black/5 px-3 py-1 dark:border-white/5"
+			class="flex shrink-0 items-center gap-2 border-b border-base-1000/5 px-3 py-1 dark:border-base-0/5"
 			aria-live="polite"
 		>
 			<span
@@ -264,7 +264,7 @@
 				<div class="diff-content" class:split={mode === 'split'}>
 					{#each result.hunks as hunk}
 						<div
-							class="hunk-header select-none bg-black/[0.025] px-3 text-base-400 dark:bg-white/[0.025] dark:text-base-600"
+							class="hunk-header select-none bg-base-1000/[0.025] px-3 text-base-400 dark:bg-base-0/[0.025] dark:text-base-600"
 						>
 							{hunk.header}
 						</div>

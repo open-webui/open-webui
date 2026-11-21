@@ -213,7 +213,7 @@
 
 <div id="tab-notifications" class="flex h-full flex-col text-sm">
 	<div class="flex-1 min-h-0 w-full overflow-y-auto scrollbar-hover pr-1.5">
-		<h2 class="mb-4 text-sm font-medium text-base-900 dark:text-white">
+		<h2 class="mb-4 text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.notifications.title')}
 		</h2>
 
@@ -398,7 +398,7 @@
 								</div>
 							</div>
 							{#if index < targets.length - 1}
-								<hr class="my-1 h-px border-0 bg-base-100/50 dark:bg-white/[0.03]" />
+								<hr class="my-1 h-px border-0 bg-base-100/50 dark:bg-base-0/[0.03]" />
 							{/if}
 						{/each}
 					</div>
@@ -416,7 +416,7 @@
 	bind:show={formOpen}
 >
 	<div class="p-4">
-		<h2 class="mb-3 text-sm font-medium text-base-900 dark:text-white">
+		<h2 class="mb-3 text-sm font-medium text-base-900 dark:text-base-0">
 			{editingId
 				? $i18n.t('Edit')
 				: $i18n.t('settings.personal.notifications.addNotificationTarget.label')}
@@ -464,7 +464,7 @@
 					class="h-6 rounded-md px-2 text-[0.6875rem] transition-colors {form.events.includes(
 						event.event
 					)
-						? 'bg-base-200/60 text-base-900 dark:bg-white/10 dark:text-white'
+						? 'bg-base-200/60 text-base-900 dark:bg-base-0/10 dark:text-base-0'
 						: 'text-base-500 hover:text-base-800 dark:hover:text-base-300'}"
 					type="button"
 					on:click={() => toggleFormEvent(event.event)}
@@ -482,7 +482,7 @@
 				{#each ['away', 'always'] as mode}
 					<button
 						class="h-6 rounded-md px-2 text-[0.6875rem] transition-colors {form.delivery === mode
-							? 'bg-base-200/60 text-base-900 dark:bg-white/10 dark:text-white'
+							? 'bg-base-200/60 text-base-900 dark:bg-base-0/10 dark:text-base-0'
 							: 'text-base-500 hover:text-base-800 dark:hover:text-base-300'}"
 						type="button"
 						on:click={() => (form.delivery = mode as 'away' | 'always')}
@@ -508,7 +508,7 @@
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 				type="button"
 				on:click={saveTarget}
 				disabled={savingTarget || (!editingId && !form.url.trim())}

@@ -118,7 +118,7 @@
 		ariaLabel={$i18n.t('Compare files')}
 		size="full"
 		containerClassName="p-2 sm:p-4"
-		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-base-900 !border-0"
+		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-base-0 dark:bg-base-900 !border-0"
 		onRequestClose={close}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -137,7 +137,7 @@
 						<h2 class="font-medium">{$i18n.t('Compare files')}</h2>
 						<button
 							type="button"
-							class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
+							class="shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 							aria-label={$i18n.t('Close')}
 							on:click|stopPropagation={close}><XMark className="size-4" /></button
 						>
@@ -147,7 +147,7 @@
 							<Tooltip
 								content={file.path}
 								allowHTML={false}
-								className="min-w-0 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-white/[0.03]"
+								className="min-w-0 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-base-0/[0.03]"
 							>
 								<p class="truncate font-medium">{file.name}</p>
 							</Tooltip>

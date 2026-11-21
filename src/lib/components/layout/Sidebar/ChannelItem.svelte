@@ -85,7 +85,7 @@
 		? 'bg-base-100 dark:bg-base-900 selected'
 		: ''} {channel?.type === 'dm' ? 'px-1 py-[0.1875rem]' : 'p-1'}  {channel?.unread_count > 0 &&
 	!channel?.is_channel_muted
-		? 'font-normal dark:text-white text-black'
+		? 'font-normal dark:text-base-0 text-base-1000'
 		: ' dark:text-base-400 text-base-600'} cursor-pointer select-none"
 >
 	{#if channel?.type === 'dm' && channel?.users}
@@ -98,7 +98,7 @@
 							<img
 								src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 								alt={u.name}
-								class="size-5.5 rounded-full border-2 border-white dark:border-base-900"
+								class="size-5.5 rounded-full border-2 border-base-0 dark:border-base-900"
 							/>
 						</ProfilePreview>
 					</div>
@@ -115,7 +115,7 @@
 							<span
 								class="relative inline-flex size-2 rounded-full {channelMembers[0]?.is_active
 									? 'bg-green-500'
-									: 'bg-base-300 dark:bg-base-700'} border-[1.5px] border-white dark:border-base-900"
+									: 'bg-base-300 dark:bg-base-700'} border-[1.5px] border-base-0 dark:border-base-900"
 							></span>
 						</span>
 					</div>

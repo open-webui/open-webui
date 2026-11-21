@@ -41,7 +41,7 @@
 		</p>
 	</div>
 	<ul
-		class="rounded-md border border-base-100 bg-base-50/50 px-3 py-2 font-mono text-[0.6875rem] leading-5 text-base-600 dark:border-white/[0.06] dark:bg-white/[0.02] dark:text-base-400"
+		class="rounded-md border border-base-100 bg-base-50/50 px-3 py-2 font-mono text-[0.6875rem] leading-5 text-base-600 dark:border-base-0/[0.06] dark:bg-base-0/[0.02] dark:text-base-400"
 	>
 		{#each codes as code}<li class="break-all select-all">{code}</li>{/each}
 	</ul>

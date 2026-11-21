@@ -193,7 +193,7 @@
 
 	<div
 		slot="content"
-		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-white dark:bg-base-850 w-48 p-0.5"
+		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 w-48 p-0.5"
 	>
 		<div class="px-2 text-[0.6875rem] text-base-500 pt-0.5">
 			{$i18n.t('Schedule')}
@@ -291,7 +291,7 @@
 						<button
 							type="button"
 							class="flex-1 py-1 text-xs rounded-xl transition {selectedDays.includes(d.key)
-								? 'text-black dark:text-base-100'
+								? 'text-base-1000 dark:text-base-100'
 								: 'text-base-400 dark:text-base-500 hover:text-base-700 dark:hover:text-base-200'}"
 							on:click={() => {
 								if (selectedDays.includes(d.key)) {

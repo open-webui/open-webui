@@ -509,7 +509,7 @@
 		ariaLabel={session.title || $i18n.t('Compare revision')}
 		size="full"
 		containerClassName="p-2 sm:p-4"
-		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-base-900 !border-0"
+		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-base-0 dark:bg-base-900 !border-0"
 		onRequestClose={requestClose}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -629,7 +629,7 @@
 					<Dropdown bind:this={optionsDropdown} bind:show={showOptions} align="end">
 						<button
 							type="button"
-							class="comparison-options shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
+							class="comparison-options shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 							disabled={loading}
 							aria-label={$i18n.t('Comparison options')}
 							aria-haspopup="menu"
@@ -698,7 +698,7 @@
 				{/if}
 				<button
 					type="button"
-					class="comparison-close shrink-0 text-base-500 hover:text-base-900 dark:hover:text-white"
+					class="comparison-close shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 					aria-label={$i18n.t('Close')}
 					on:click|stopPropagation={requestClose}><XMark className="size-4" /></button
 				>
@@ -713,7 +713,7 @@
 									{@const lines = (side === 'a' ? working : proposal).split(/\r\n|\r|\n/).length}
 									{@const file = (side === 'a') !== swapped ? session.leftFile : session.rightFile}
 									<div
-										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-white/[0.03]"
+										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-base-0/[0.03]"
 									>
 										<Tooltip content={file?.path ?? ''} allowHTML={false} className="min-w-0">
 											<span class="block truncate font-medium"
@@ -753,7 +753,7 @@
 										>
 										<button
 											type="button"
-											class="shrink-0 rounded px-1 hover:text-base-900 dark:hover:text-white"
+											class="shrink-0 rounded px-1 hover:text-base-900 dark:hover:text-base-0"
 											aria-label={file
 												? $i18n.t('Copy {{name}} to clipboard', { name: file.name })
 												: side === 'a'

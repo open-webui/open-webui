@@ -23,7 +23,7 @@
 	let options: { id: string; key?: string; label: string; params: Record<string, any> }[] = [];
 	let nameInput: HTMLInputElement;
 	const actionClass =
-		'flex size-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition hover:bg-black/5 hover:text-base-700 dark:text-base-400 dark:hover:bg-white/5 dark:hover:text-base-200';
+		'flex size-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition hover:bg-base-1000/5 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-0/5 dark:hover:text-base-200';
 	const inputClass =
 		'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 font-normal text-base-900 dark:text-base-100';
 
@@ -262,7 +262,7 @@
 							type="button"
 							aria-pressed={display === mode}
 							class="rounded-lg px-2 py-1 text-xs transition {display === mode
-								? 'bg-base-100 text-base-900 dark:bg-base-800 dark:text-white'
+								? 'bg-base-100 text-base-900 dark:bg-base-800 dark:text-base-0'
 								: 'text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200'}"
 							on:click={() => (display = mode as 'menu' | 'slider')}
 						>
@@ -335,7 +335,7 @@
 						!options.length ||
 						(display === 'slider' && options.length < 2) ||
 						options.some((option) => !option.label.trim())}
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					>{$i18n.t('Apply')}</button
 				>
 			</div>

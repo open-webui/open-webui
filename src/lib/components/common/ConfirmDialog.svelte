@@ -148,7 +148,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-base-1000/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			cancelHandler();
@@ -159,7 +159,7 @@
 			aria-modal="true"
 			aria-label={title !== '' ? title : $i18n.t('Confirm your action')}
 			tabindex="-1"
-			class="m-auto max-w-full w-[32rem] mx-2 bg-white dark:bg-base-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-white dark:border-base-900"
+			class="m-auto max-w-full w-[32rem] mx-2 bg-base-0 dark:bg-base-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-base-0 dark:border-base-900"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
@@ -224,8 +224,8 @@
 						<button
 							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action ===
 							primaryAction
-								? 'bg-base-900 text-white hover:bg-black dark:bg-base-100 dark:text-base-900 dark:hover:bg-white'
-								: 'bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-white'}"
+								? 'bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0'
+								: 'bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-base-0'}"
 							on:click={action === 'confirm' ? confirmHandler : cancelHandler}
 							type="button"
 						>

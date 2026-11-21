@@ -180,12 +180,12 @@
 	$: chatItemClass = ` w-full flex justify-between rounded-xl px-2 py-1.5 ${
 		id === $chatId || confirmEdit
 			? ($settings?.highContrastMode ?? false)
-				? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
-				: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+				? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06] selected'
+				: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045] selected'
 			: selected || multiSelected
 				? ($settings?.highContrastMode ?? false)
-					? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
-					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+					? 'bg-base-1000/[0.035] dark:bg-base-0/[0.055] selected'
+					: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045] selected'
 				: $mobile
 					? ''
 					: ' hover:bg-base-100 dark:hover:bg-base-900 group-hover:bg-base-100 dark:group-hover:bg-base-900'
@@ -675,7 +675,7 @@
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div
-			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-black/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-white/10"
+			class="w-fit max-w-40 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<div class="flex items-center gap-1.5">
 				<ChatIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
@@ -713,12 +713,12 @@
 			id="sidebar-chat-item"
 			class=" w-full flex justify-between rounded-xl px-2 py-1.5 {id === $chatId || confirmEdit
 				? ($settings?.highContrastMode ?? false)
-					? 'bg-black/[0.035] dark:bg-white/[0.06] selected'
-					: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+					? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06] selected'
+					: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045] selected'
 				: selected || multiSelected
 					? ($settings?.highContrastMode ?? false)
-						? 'bg-black/[0.035] dark:bg-white/[0.055] selected'
-						: 'bg-black/[0.035] dark:bg-white/[0.045] selected'
+						? 'bg-base-1000/[0.035] dark:bg-base-0/[0.055] selected'
+						: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045] selected'
 					: 'hover:bg-base-100 dark:hover:bg-base-900 group-hover:bg-base-100 dark:group-hover:bg-base-900'}  whitespace-nowrap text-ellipsis relative transition {generating
 				? 'cursor-not-allowed'
 				: ''}"
@@ -758,7 +758,7 @@
 					disabled={readonly || $selectionBusy}
 					aria-label={$i18n.t('Select {{name}}', { name: title })}
 					class="mr-2 flex size-3.5 shrink-0 self-center items-center justify-center rounded border disabled:opacity-40 {multiSelected
-						? 'border-base-900 bg-base-900 text-white dark:border-base-200 dark:bg-base-200 dark:text-base-900'
+						? 'border-base-900 bg-base-900 text-base-0 dark:border-base-200 dark:bg-base-200 dark:text-base-900'
 						: 'border-base-300 dark:border-base-600'}"
 					on:click|stopPropagation={(event) => chatSelection?.select(id, event.shiftKey)}
 				>
@@ -848,7 +848,7 @@
 					<Tooltip content={$i18n.t('Generate')}>
 						<button
 							aria-label={$i18n.t('Generate')}
-							class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+							class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition disabled:cursor-not-allowed"
 							id="generate-title-button"
 							disabled={generating}
 							on:click={() => {
@@ -865,7 +865,7 @@
 						<Tooltip content={$i18n.t('Archive')} className="flex items-center">
 							<button
 								aria-label={$i18n.t('Archive')}
-								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+								class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition disabled:cursor-not-allowed"
 								disabled={archiving}
 								on:click={() => {
 									archiveChatHandler(id);
@@ -881,7 +881,7 @@
 						<Tooltip content={$i18n.t('Delete')}>
 							<button
 								aria-label={$i18n.t('Delete')}
-								class=" self-center dark:hover:text-white transition disabled:cursor-not-allowed"
+								class=" self-center dark:hover:text-base-0 transition disabled:cursor-not-allowed"
 								disabled={deleting}
 								on:click={() => {
 									deleteChatHandler(id);
@@ -934,7 +934,7 @@
 							aria-label={$i18n.t('Chat Menu')}
 							class="flex {($settings?.highContrastMode ?? false)
 								? 'size-6'
-								: 'size-5'} items-center justify-center self-center dark:hover:text-white transition m-0"
+								: 'size-5'} items-center justify-center self-center dark:hover:text-base-0 transition m-0"
 						>
 							<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 						</button>

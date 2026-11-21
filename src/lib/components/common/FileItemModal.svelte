@@ -403,7 +403,7 @@
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
 								? ' '
-								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								selectedTab = '';
@@ -413,7 +413,7 @@
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
 								? ' '
-								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								selectedTab = 'preview';
@@ -428,7 +428,7 @@
 							<Tooltip content={$i18n.t('Reset view')}>
 								<button
 									aria-label={$i18n.t('Reset view')}
-									class="p-1.5 rounded-lg bg-white/80 dark:bg-base-850/80 backdrop-blur-sm shadow-sm hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400"
+									class="p-1.5 rounded-lg bg-base-0/80 dark:bg-base-850/80 backdrop-blur-sm shadow-sm hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400"
 									on:click={resetImageView}
 								>
 									<Reset className="size-4" />

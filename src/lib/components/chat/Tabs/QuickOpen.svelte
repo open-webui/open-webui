@@ -91,7 +91,7 @@
 	size="sm"
 	ariaLabel={$i18n.t('settings.personal.shortcuts.quickOpen.label')}
 	onRequestClose={onclose}
-	className="bg-white dark:bg-base-850 rounded-xl overflow-hidden !border-base-100 dark:!border-base-800 text-base-700 dark:text-base-100 font-normal"
+	className="bg-base-0 dark:bg-base-850 rounded-xl overflow-hidden !border-base-100 dark:!border-base-800 text-base-700 dark:text-base-100 font-normal"
 >
 	<div class="flex h-10 items-center gap-2 px-3">
 		<span class="shrink-0 text-base-500 dark:text-base-400"><Icon name="search" size={14} /></span>

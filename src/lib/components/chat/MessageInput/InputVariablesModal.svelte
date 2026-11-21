@@ -405,7 +405,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-white hover:bg-base-100 text-black dark:bg-black dark:text-white dark:hover:bg-base-900"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-0 hover:bg-base-100 text-base-1000 dark:bg-base-1000 dark:text-base-0 dark:hover:bg-base-900"
 							type="button"
 							on:click={() => {
 								show = false;
@@ -415,7 +415,7 @@
 						</button>
 
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 						>
 							{$i18n.t('Save')}

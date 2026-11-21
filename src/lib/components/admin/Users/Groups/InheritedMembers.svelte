@@ -51,7 +51,7 @@
 				<tbody>
 					{#each result.items as member (member.id)}
 						<tr class="text-xs">
-							<td class="px-3 py-1 font-normal text-base-900 dark:text-white">
+							<td class="px-3 py-1 font-normal text-base-900 dark:text-base-0">
 								<Tooltip content={member.email} placement="top-start">
 									<div class="flex min-w-0 items-center gap-2">
 										<img

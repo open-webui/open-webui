@@ -146,7 +146,7 @@
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 	<article
 		data-folder-item
-		class="group cursor-pointer rounded-xl border border-black/[0.06] bg-white px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition hover:border-black/[0.09] dark:border-white/[0.06] dark:bg-base-900 dark:hover:border-white/[0.09] {saving ===
+		class="group cursor-pointer rounded-xl border border-base-1000/[0.06] bg-base-0 px-3 py-2 shadow-[0_1px_2px_rgba(0,0,0,0.03)] transition hover:border-base-1000/[0.09] dark:border-base-0/[0.06] dark:bg-base-900 dark:hover:border-base-0/[0.09] {saving ===
 			chat.id || dragged?.id === chat.id
 			? 'opacity-40'
 			: ''}"
@@ -200,7 +200,7 @@
 				side="right"
 				disabled={!!dragged}
 				className="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-					? 'text-base-900 dark:text-white'
+					? 'text-base-900 dark:text-base-0'
 					: 'text-base-700 dark:text-base-200'}"
 				onclick={(event) => openFolderChat(chat, appLayout, event)}
 			/>
@@ -311,7 +311,7 @@
 	>
 		<div class="inline-flex min-w-full flex-col">
 			<div
-				class="sticky top-0 z-[2] flex gap-2 bg-white/80 pb-1 backdrop-blur-md dark:bg-base-900/80"
+				class="sticky top-0 z-[2] flex gap-2 bg-base-0/80 pb-1 backdrop-blur-md dark:bg-base-900/80"
 			>
 				{#each columns as column (column.id)}
 					<div class="w-72 shrink-0 rounded-2xl bg-base-50/80 dark:bg-base-850/40">

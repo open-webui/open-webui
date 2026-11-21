@@ -224,7 +224,7 @@
 							}}
 							data-selected={idx === selectedIdx}
 						>
-							<div class="w-full text-left text-black dark:text-base-100 flex items-center gap-1">
+							<div class="w-full text-left text-base-1000 dark:text-base-100 flex items-center gap-1">
 								<Tooltip content={$i18n.t('Knowledge Base')} placement="top">
 									<Database className="size-3.5" />
 								</Tooltip>

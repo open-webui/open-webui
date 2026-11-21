@@ -457,7 +457,7 @@
 					</div>{/if}
 				{#each sortedFiles as file (file.id)}
 					<div
-						class="group grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 rounded-xl text-xs transition-colors hover:bg-base-50/40 dark:hover:bg-white/4 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
+						class="group grid h-7 grid-cols-[1.75rem_minmax(0,1fr)_3.5rem_1.75rem] items-center gap-x-2 rounded-xl text-xs transition-colors hover:bg-base-50/40 dark:hover:bg-base-0/4 sm:grid-cols-[1.75rem_minmax(0,1fr)_4rem_7rem_1.75rem]"
 					>
 						<div class="flex justify-center">
 							<Checkbox

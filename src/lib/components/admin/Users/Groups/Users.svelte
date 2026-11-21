@@ -489,7 +489,7 @@
 										/>
 									</div>
 								</td>
-								<td class="px-3 py-1 font-normal text-base-900 dark:text-white max-w-48">
+								<td class="px-3 py-1 font-normal text-base-900 dark:text-base-0 max-w-48">
 									<Tooltip content={user.email} placement="top-start">
 										<div class="flex items-center gap-2">
 											<img

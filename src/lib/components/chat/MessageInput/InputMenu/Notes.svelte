@@ -139,7 +139,7 @@
 							}}
 							data-selected={idx === selectedIdx}
 						>
-							<div class="text-black dark:text-base-100 flex items-center gap-1.5">
+							<div class="text-base-1000 dark:text-base-100 flex items-center gap-1.5">
 								<Tooltip content={$i18n.t('Note')} placement="top">
 									<PageEdit className="size-3.5" />
 								</Tooltip>

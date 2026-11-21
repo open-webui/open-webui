@@ -57,7 +57,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="group flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-base-850/50 hover:bg-white rounded-xl transition
+	class="group flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-base-850/50 hover:bg-base-0 rounded-xl transition
 		{dragOver
 		? 'bg-base-100 dark:bg-base-800 ring-1 ring-base-300 dark:ring-base-600'
 		: 'hover:bg-base-100 dark:hover:bg-base-850'}"

@@ -216,7 +216,7 @@
 		style:--git-list-width={`${listWidth}px`}
 	>
 		<div
-			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-base-100/50 dark:border-white/2"
+			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-base-100/50 dark:border-base-0/2"
 		>
 			<Icon name="search" size={12} class="shrink-0 text-base-300 dark:text-base-600" /><input
 				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-base-700 dark:text-base-300 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
@@ -263,7 +263,7 @@
 			</div>{/if}
 		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 			{#each filtered as issue (issue.number)}<button
-					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-base-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
+					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-base-50/50 dark:border-base-0/2 transition-colors duration-75 {selected?.number ===
 					issue.number
 						? 'bg-base-100/40 dark:bg-base-800/25'
 						: 'hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
@@ -291,7 +291,7 @@
 	>
 		{#if showingDetail}
 			<div
-				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-white/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
+				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-base-0/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 			>
 				<button class="@min-[560px]:hidden" aria-label={$i18n.t('Back to issues')} on:click={back}
 					><Icon name="chevron-left" size={12} /></button
@@ -301,7 +301,7 @@
 						: $i18n.t('New issue')}</span
 				>
 				{#if onDraft && selected && !creating && !editing && !loading}<button
-						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-white/5 dark:hover:text-base-200 transition-colors duration-75"
+						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-base-0/5 dark:hover:text-base-200 transition-colors duration-75"
 						on:click={() => selected && onDraft?.(issuePrompt($i18n.t, selected))}
 						><Icon name="chat-plus" size={11} />{$i18n.t('Work on this')}</button
 					>{/if}
@@ -353,14 +353,14 @@
 			>
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2">
 					<input
-						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
+						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 						aria-label={$i18n.t('Issue title')}
 						placeholder={$i18n.t('Title')}
 						bind:value={title}
 						required
 					/>
 					<textarea
-						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-white/2"
+						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-base-0/2"
 						aria-label={$i18n.t('Issue description')}
 						placeholder={$i18n.t('Description')}
 						rows="8"
@@ -368,7 +368,7 @@
 					></textarea>
 				</div>
 				<div
-					class="flex items-center justify-end gap-1 px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-white/2"
+					class="flex items-center justify-end gap-1 px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-base-0/2"
 				>
 					<button
 						type="button"
@@ -435,12 +435,12 @@
 							</div>{/if}
 					</div>
 					{#if selected.comments?.length}<div
-							class="px-2.5 pt-2 pb-1 border-t border-base-100/50 dark:border-white/2 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
+							class="px-2.5 pt-2 pb-1 border-t border-base-100/50 dark:border-base-0/2 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('Comments')}
 						</div>
 						{#each selected.comments as item, index}<div
-								class="group px-2.5 py-1.5 border-b border-base-50/50 dark:border-white/2"
+								class="group px-2.5 py-1.5 border-b border-base-50/50 dark:border-base-0/2"
 							>
 								<div class="flex min-w-0 items-center gap-1.5 h-5">
 									<span
@@ -449,7 +449,7 @@
 											? ` · ${relativeTime(item.createdAt)}`
 											: ''}</span
 									>{#if onDraft && item.body?.trim()}<button
-											class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-white/5 dark:hover:text-base-200 transition-colors duration-75"
+											class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-base-0/5 dark:hover:text-base-200 transition-colors duration-75"
 											on:click={() => selected && onDraft?.(commentPrompt(selected, item))}
 											><Icon name="chat-plus" size={11} />{$i18n.t('Add to chat')}</button
 										>{/if}
@@ -468,11 +468,11 @@
 							</div>{/each}{/if}
 				</div>
 				<form
-					class="border-t border-base-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+					class="border-t border-base-100/50 dark:border-base-0/2 px-2 pb-1.5 shrink-0"
 					on:submit|preventDefault={() => mutate('comment')}
 				>
 					<textarea
-						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none"
+						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none"
 						aria-label={$i18n.t('Comment')}
 						placeholder={$i18n.t('Leave a comment')}
 						rows="2"

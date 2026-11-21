@@ -147,7 +147,7 @@
 											class="w-full aspect-square object-cover rounded-lg border border-base-100/30 dark:border-base-850/30"
 										/>
 										<div
-											class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition rounded-lg flex items-center justify-center"
+											class="absolute inset-0 bg-base-1000/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition rounded-lg flex items-center justify-center"
 										>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
@@ -191,7 +191,7 @@
 									</div>
 									<div class=" absolute -top-1 -right-1">
 										<button
-											class=" bg-white text-black border border-white rounded-full hover-reveal transition"
+											class=" bg-base-0 text-base-1000 border border-base-0 rounded-full hover-reveal transition"
 											type="button"
 											aria-label={$i18n.t('Remove image')}
 											on:click={() => removeImage(index)}
@@ -251,7 +251,7 @@
 							/>
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 								on:click={() => fileInputElement?.click()}
 								on:dragover|preventDefault
 								on:drop={handleDrop}
@@ -264,14 +264,14 @@
 							{#if !loading}
 								<button
 									disabled={prompt.trim() === ''}
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white disabled:cursor-not-allowed"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 									on:click={submitHandler}
 								>
 									{$i18n.t('Run')}
 								</button>
 							{:else}
 								<button
-									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white"
+									class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 									disabled
 								>
 									<Spinner className="size-4" />

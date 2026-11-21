@@ -65,11 +65,11 @@
 	let deleteModelTag = '';
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-left text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-left text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 py-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 py-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500';
 	const iconButtonClass =
-		'inline-flex h-7 items-center justify-center rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-base-700 transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:hover:bg-white/[0.06]';
+		'inline-flex h-7 items-center justify-center rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-base-700 transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:hover:bg-base-0/[0.06]';
 
 	const updateModelsHandler = async () => {
 		updateCancelled = false;
@@ -665,7 +665,7 @@
 									}}
 								>
 									<svg
-										class="w-4 h-4 text-base-800 dark:text-white"
+										class="w-4 h-4 text-base-800 dark:text-base-0"
 										aria-hidden="true"
 										xmlns="http://www.w3.org/2000/svg"
 										width="24"
@@ -714,7 +714,7 @@
 													}}
 												>
 													<svg
-														class="w-4 h-4 text-base-800 dark:text-white"
+														class="w-4 h-4 text-base-800 dark:text-base-0"
 														aria-hidden="true"
 														xmlns="http://www.w3.org/2000/svg"
 														width="24"

@@ -43,7 +43,7 @@
 {#if $embed}
 	<div class="h-full w-full flex flex-col">
 		<div
-			class="pointer-events-auto z-20 flex justify-between items-center pb-3 px-2 font-primar text-base-900 dark:text-white flex-shrink-0"
+			class="pointer-events-auto z-20 flex justify-between items-center pb-3 px-2 font-primar text-base-900 dark:text-base-0 flex-shrink-0"
 		>
 			<div class="flex-1 flex items-center justify-between pl-2">
 				<a

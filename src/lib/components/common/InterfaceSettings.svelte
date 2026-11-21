@@ -139,7 +139,7 @@
 	const firstSectionHeadingClass = 'text-xs text-base-600 dark:text-base-500';
 	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-base-500 dark:text-base-500/80';
 	const actionButtonClass =
-		'text-xs text-base-600 transition-colors hover:text-base-900 dark:text-base-400 dark:hover:text-white';
+		'text-xs text-base-600 transition-colors hover:text-base-900 dark:text-base-400 dark:hover:text-base-0';
 
 	const hasSettingPath = (source: Record<string, any>, path: string) => {
 		let current: any = source;
@@ -588,7 +588,7 @@
 				<input
 					id="font-family-input"
 					aria-labelledby="font-family-label"
-					class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-base-300 dark:placeholder:text-base-500 dark:focus:border-blue-500"
+					class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-600 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-500 dark:focus:border-blue-500"
 					type="text"
 					placeholder="Aptos"
 					bind:value={fontFamilyInput}

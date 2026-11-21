@@ -370,7 +370,7 @@
 				on:click={close}><Icon name="xmark" size={14} /></button
 			>
 			<button
-				class="voice-note-pill relative flex h-14 w-56 items-center justify-center touch-none select-none cursor-grab active:cursor-grabbing rounded-full border border-base-100 bg-white shadow-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-base-400 dark:border-base-800 dark:bg-base-850"
+				class="voice-note-pill relative flex h-14 w-56 items-center justify-center touch-none select-none cursor-grab active:cursor-grabbing rounded-full border border-base-100 bg-base-0 shadow-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-base-400 dark:border-base-800 dark:bg-base-850"
 				disabled={busy || initializing}
 				aria-label={$i18n.t(initializing ? 'Loading...' : 'Stop recording')}
 				title={`${$i18n.t('Stop recording')} · ${$i18n.t('Drag to move')}`}
@@ -404,7 +404,7 @@
 							></span>{/each}
 					</div>
 					<span
-						class="voice-note-stop pointer-events-none absolute flex size-6 items-center justify-center rounded-lg bg-white text-base-700 opacity-0 transition-opacity dark:bg-base-850 dark:text-base-300"
+						class="voice-note-stop pointer-events-none absolute flex size-6 items-center justify-center rounded-lg bg-base-0 text-base-700 opacity-0 transition-opacity dark:bg-base-850 dark:text-base-300"
 						aria-hidden="true"><span class="size-2.5 rounded-[0.125rem] bg-current"></span></span
 					>
 				{/if}
@@ -416,7 +416,7 @@
 		</div>
 	{:else}
 		<div
-			class="voice-note-review w-[22rem] max-w-full max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-xl border border-base-100 bg-white px-3 py-2 shadow-lg dark:border-base-800 dark:bg-base-850"
+			class="voice-note-review w-[22rem] max-w-full max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-xl border border-base-100 bg-base-0 px-3 py-2 shadow-lg dark:border-base-800 dark:bg-base-850"
 		>
 			{#if draft}
 				<div class="flex items-center gap-2">

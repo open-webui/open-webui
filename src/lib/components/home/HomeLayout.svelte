@@ -55,14 +55,14 @@
 					<a
 						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/home/notes')
 							? ''
-							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
 						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/playground/calendar')
 							? ''
-							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-white'} transition"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 						href="/playground/completions">{$i18n.t('Calendar')}</a
 					>
 				</div>

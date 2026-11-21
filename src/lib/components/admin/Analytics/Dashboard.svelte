@@ -348,7 +348,7 @@
 </script>
 
 <div class="flex flex-wrap items-center justify-between mb-3 gap-x-4 gap-y-2">
-	<h2 class="text-sm font-normal text-base-900 dark:text-white shrink-0">
+	<h2 class="text-sm font-normal text-base-900 dark:text-base-0 shrink-0">
 		{$i18n.t('Analytics')}
 	</h2>
 	<div class="flex items-center gap-2 flex-wrap justify-end min-w-0">
@@ -720,7 +720,7 @@
 											}}
 										>
 											<td class="font-normal px-3 py-1.5 text-base-400">{idx + 1}</td>
-											<td class="font-normal px-3 py-1.5 text-base-900 dark:text-white">
+											<td class="font-normal px-3 py-1.5 text-base-900 dark:text-base-0">
 												<div class="flex items-center gap-2">
 													<img
 														src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
@@ -901,7 +901,7 @@
 											selectedMetric === 'tokens' ? (user.total_tokens ?? 0) : user.count}
 										<tr class="text-xs">
 											<td class="font-normal px-3 py-1.5 text-base-400">{idx + 1}</td>
-											<td class="font-normal px-3 py-1.5 text-base-900 dark:text-white">
+											<td class="font-normal px-3 py-1.5 text-base-900 dark:text-base-0">
 												<div class="flex items-center gap-2">
 													<ProfilePreview
 														user={{ id: user.user_id, name: user.name || user.email }}

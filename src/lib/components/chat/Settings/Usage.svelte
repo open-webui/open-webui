@@ -275,7 +275,7 @@
 
 <div id="tab-usage" class="flex h-full min-h-0 flex-col">
 	<div class="mb-4">
-		<h2 class="text-sm font-medium text-base-900 dark:text-white">
+		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.usage.title')}
 		</h2>
 	</div>
@@ -293,7 +293,7 @@
 			<UserSettingSection title={$i18n.t('settings.personal.usage.sections.overview.title')} first>
 				<div class="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-5">
 					<div>
-						<div class="text-sm font-medium text-base-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatNumber(usage.totals.lifetime_tokens)}
 						</div>
 						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
@@ -301,7 +301,7 @@
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-base-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatNumber(usage.totals.peak_daily_tokens)}
 						</div>
 						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
@@ -309,7 +309,7 @@
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-base-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatDuration(usage.totals.longest_chat_seconds)}
 						</div>
 						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
@@ -317,7 +317,7 @@
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-base-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{usage.totals.current_streak.toLocaleString()}
 						</div>
 						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
@@ -325,7 +325,7 @@
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-base-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{usage.totals.longest_streak.toLocaleString()}
 						</div>
 						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
@@ -348,7 +348,7 @@
 								type="button"
 								class="min-w-0 shrink truncate whitespace-nowrap text-xs transition-colors {heatmapMode ===
 								mode.value
-									? 'text-base-900 dark:text-white'
+									? 'text-base-900 dark:text-base-0'
 									: 'text-base-400 hover:text-base-700 dark:hover:text-base-200'}
 								"
 								on:click={() => {
@@ -423,33 +423,33 @@
 					title={$i18n.t('settings.personal.usage.sections.activityInsights.title')}
 				>
 					<UserSettingRow label={$i18n.t('Models')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.models_used.toLocaleString()}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Average tokens per chat')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{formatNumber(usage.insights.average_tokens_per_chat)}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Average messages per active day')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.insights.average_messages_per_active_day.toLocaleString()}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('User messages')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.user_messages.toLocaleString()} · {usage.insights.user_message_share}%
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Assistant messages')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.assistant_messages.toLocaleString()} · {usage.insights
 								.assistant_message_share}%
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Total chats')}>
-						<span class="text-xs text-base-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.total_chats.toLocaleString()}
 						</span>
 					</UserSettingRow>

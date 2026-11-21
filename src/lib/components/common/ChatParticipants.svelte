@@ -66,7 +66,7 @@
 					>
 						{@render avatar(
 							person,
-							`${avatarClass} bg-white dark:bg-base-900 ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
+							`${avatarClass} bg-base-0 dark:bg-base-900 ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
 						)}
 					</button>
 				{:else}
@@ -81,10 +81,10 @@
 					>
 						{@render avatar(
 							person,
-							`${avatarClass} bg-white dark:bg-base-900 ${
+							`${avatarClass} bg-base-0 dark:bg-base-900 ${
 								mode === 'presence'
 									? `ring-2 ${['ring-red-400', 'ring-sky-400', 'ring-lime-500', 'ring-amber-400', 'ring-violet-400'][person.id.charCodeAt(0) % 5]}`
-									: 'ring-1 ring-white dark:ring-base-900'
+									: 'ring-1 ring-base-0 dark:ring-base-900'
 							}`
 						)}
 					</ProfilePreview>
@@ -113,7 +113,7 @@
 					side="bottom"
 					align={mode === 'presence' ? 'end' : 'start'}
 					sideOffset={6}
-					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-white p-2 text-base-900 shadow-lg ring-1 ring-black/5 dark:bg-base-850 dark:text-base-100 dark:ring-white/10"
+					class="z-[9999] w-60 max-w-[calc(100vw-1.5rem)] max-h-80 overflow-y-auto rounded-xl bg-base-0 p-2 text-base-900 shadow-lg ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-100 dark:ring-base-0/10"
 					aria-label={mode === 'presence' ? $i18n.t('Collaborators') : $i18n.t('Contributors')}
 				>
 					{#if mode === 'presence'}

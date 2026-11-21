@@ -133,12 +133,12 @@
 
 <div id="tab-shortcuts" class="flex h-full flex-col overflow-y-auto text-sm">
 	<div class="mb-4 flex items-center justify-between">
-		<h2 class="text-sm font-medium text-base-900 dark:text-white">
+		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.shortcuts.title')}
 		</h2>
 
 		<button
-			class="text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-white"
+			class="text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 			on:click={resetBindings}
 		>
 			{$i18n.t('settings.personal.shortcuts.resetDefaults.label')}
@@ -188,7 +188,7 @@
 				<div
 					role="list"
 					aria-labelledby="shortcut-category-{categoryIndex}"
-					class="divide-y divide-base-100/70 dark:divide-white/[0.03]"
+					class="divide-y divide-base-100/70 dark:divide-base-0/[0.03]"
 				>
 					<!-- {$i18n.t('Chat')} -->
 					<!-- {$i18n.t('Global')} -->
@@ -249,7 +249,7 @@
 										<span
 											id="shortcut-binding-{id}"
 											tabindex="-1"
-											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-base-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-base-500 dark:bg-white/6 dark:text-base-400"
+											class="inline-flex min-h-[1.125rem] items-center rounded-full bg-base-100 px-[0.4375rem] py-0.5 text-[0.625rem] font-medium leading-none text-base-500 dark:bg-base-0/6 dark:text-base-400"
 										>
 											{$i18n.t('Press keys...')}
 										</span>

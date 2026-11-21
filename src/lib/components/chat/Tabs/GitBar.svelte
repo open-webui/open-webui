@@ -565,7 +565,7 @@
 									.includes(branchSearch.toLowerCase())) as branch}
 								<div
 									class="group flex items-center gap-1 w-full h-6 rounded-xl text-xs transition-colors duration-75 {branch.current
-										? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-white'
+										? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-base-0'
 										: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
 								>
 									<button
@@ -622,7 +622,7 @@
 								on:submit|preventDefault={() => act('branch', { branch: newBranch })}
 							>
 								<Icon name="git-branch" size={14} class="text-base-400" /><input
-									class="min-w-0 flex-1 bg-transparent text-xs outline-none text-base-900 dark:text-white"
+									class="min-w-0 flex-1 bg-transparent text-xs outline-none text-base-900 dark:text-base-0"
 									aria-label={$i18n.t('New branch')}
 									placeholder={$i18n.t('New branch')}
 									bind:value={newBranch}
@@ -636,7 +636,7 @@
 							</form>
 						{:else}<div>
 								<button
-									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5"
+									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-0/5"
 									on:click={() => (creatingBranch = true)}
 									><Icon name="plus" size={14} />{$i18n.t('New branch')}</button
 								>
@@ -670,8 +670,8 @@
 									.toLowerCase()
 									.includes(worktreeSearch.toLowerCase())) as tree}<button
 									class="flex items-center gap-2 w-full h-6 px-2 rounded-xl text-xs {tree.current
-										? 'bg-base-100 dark:bg-white/6 text-base-900 dark:text-white'
-										: 'text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5'}"
+										? 'bg-base-100 dark:bg-base-0/6 text-base-900 dark:text-base-0'
+										: 'text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-0/5'}"
 									disabled={tree.current}
 									on:click={() => {
 										showWorktrees = false;
@@ -711,7 +711,7 @@
 							</form>
 						{:else}<div>
 								<button
-									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-white/5"
+									class="flex items-center gap-2 w-full h-7 px-2 rounded-xl text-xs text-base-600 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-0/5"
 									on:click={() => (creatingWorktree = true)}
 									><Icon name="plus" size={14} />{$i18n.t('New worktree')}</button
 								>
@@ -783,16 +783,16 @@
 			</div>{/if}
 		{#if expanded}
 			<div
-				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-base-100/50 dark:border-white/2"
+				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-base-100/50 dark:border-base-0/2"
 				style:height={`${height + 32}px`}
 			>
 				<div
-					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-base-100/50 dark:border-white/2"
+					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-base-100/50 dark:border-base-0/2"
 				>
 					{#each ['changes', 'history', ...(github?.available ? [...(github.issues ? ['issues'] : []), 'pull requests'] : [])] as section}<button
 							class="px-2.5 py-0.5 shrink-0 rounded-md text-[0.6875rem] font-normal transition-colors duration-75 {view ===
 							section
-								? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-white'
+								? 'bg-base-100/40 dark:bg-base-800/25 text-base-900 dark:text-base-0'
 								: 'text-base-400 hover:text-base-600 dark:hover:text-base-300'}"
 							on:click={() => {
 								view = section as typeof view;
@@ -837,19 +837,19 @@
 							<DropdownMenu className="w-48"
 								><div class="py-0.5 text-xs font-normal">
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs text-base-500 dark:text-base-400 hover:bg-base-100 dark:hover:bg-white/6"
+										class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs text-base-500 dark:text-base-400 hover:bg-base-100 dark:hover:bg-base-0/6"
 										aria-pressed={hideWhitespace}
 										on:click={() => (hideWhitespace = !hideWhitespace)}
 										><Icon name="code" size={13} /><span class="min-w-0 flex-1 truncate"
 											>{$i18n.t('Hide whitespace')}</span
 										><span
 											class="relative h-3.5 w-6 rounded-full {hideWhitespace
-												? 'bg-base-900 dark:bg-white'
+												? 'bg-base-900 dark:bg-base-0'
 												: 'bg-base-300 dark:bg-base-700'}"
 											><span
 												class="absolute top-0.5 h-2.5 w-2.5 rounded-full {hideWhitespace
-													? 'left-3 bg-white dark:bg-black'
-													: 'left-0.5 bg-white dark:bg-base-500'}"
+													? 'left-3 bg-base-0 dark:bg-base-1000'
+													: 'left-0.5 bg-base-0 dark:bg-base-500'}"
 											></span></span
 										></button
 									>
@@ -861,7 +861,7 @@
 									{#each ['unified', 'split'] as mode}<button
 											class="flex h-6 w-full items-center gap-2 rounded-xl px-2 text-left text-xs {diffMode ===
 											mode
-												? 'bg-base-100 dark:bg-white/6 text-base-900 dark:text-white'
+												? 'bg-base-100 dark:bg-base-0/6 text-base-900 dark:text-base-0'
 												: 'text-base-500 dark:text-base-400'}"
 											on:click={() => (diffMode = mode as typeof diffMode)}
 											><Icon name={mode === 'unified' ? 'list' : 'split-view'} size={13} /><span
@@ -912,10 +912,10 @@
 							{#if view === 'changes'}
 								{#if status.files.length}
 									<div
-										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-base-100/50 dark:border-white/2 shrink-0"
+										class="flex min-w-0 items-center gap-1.5 h-7 pe-2.5 border-b border-base-100/50 dark:border-base-0/2 shrink-0"
 									>
 										<button
-											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-base-50 dark:hover:bg-white/3"
+											class="flex min-w-0 flex-1 items-center gap-1.5 h-full ps-2.5 hover:bg-base-50 dark:hover:bg-base-0/3"
 											disabled={busy}
 											role="checkbox"
 											aria-checked={allStaged ? true : someStaged ? 'mixed' : false}
@@ -927,14 +927,14 @@
 											<span
 												class:opacity-60={!!pendingStaging}
 												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-base-300 dark:border-base-600 {allStaged
-													? 'bg-base-800 dark:bg-white'
+													? 'bg-base-800 dark:bg-base-0'
 													: someStaged
 														? 'bg-base-400 dark:bg-base-500'
 														: ''}"
 												>{#if allStaged || someStaged}<Icon
 														name={allStaged ? 'check' : 'minus'}
 														size={7}
-														class="text-white dark:text-black"
+														class="text-white dark:text-base-1000"
 													/>{/if}</span
 											>
 											<span
@@ -994,14 +994,14 @@
 											class="group flex min-w-0 items-center gap-1.5 w-full h-7 px-2.5 text-left select-none transition-colors duration-75 {selected?.path ===
 												file.path || picked.has(file.path)
 												? 'bg-base-100/40 dark:bg-base-800/25'
-												: 'hover:bg-base-50 dark:hover:bg-white/3'}"
+												: 'hover:bg-base-50 dark:hover:bg-base-0/3'}"
 											class:opacity-60={discarding?.has(file.path)}
 											on:click|capture={(event) => pick(event, file)}
 										>
 											<button
 												data-no-pick
 												class="flex items-center justify-center w-3 h-3 me-1 rounded border shrink-0 border-base-300 dark:border-base-600 {checked
-													? 'bg-base-800 dark:bg-white'
+													? 'bg-base-800 dark:bg-base-0'
 													: 'hover:border-base-500 dark:hover:border-base-400'}"
 												disabled={busy}
 												class:opacity-60={staging}
@@ -1015,7 +1015,7 @@
 												{#if checked}<Icon
 														name={checked === 'mixed' ? 'minus' : 'check'}
 														size={7}
-														class="text-white dark:text-black"
+														class="text-white dark:text-base-1000"
 													/>{/if}
 											</button>
 											<div class="flex min-w-0 flex-1 items-center gap-0.5 h-full">
@@ -1092,7 +1092,7 @@
 										</div>{/if}
 								</div>
 								<form
-									class="border-t border-base-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+									class="border-t border-base-100/50 dark:border-base-0/2 px-2 pb-1.5 shrink-0"
 									on:submit|preventDefault={() =>
 										act('commit', {
 											message: [summary.trim(), description.trim()].filter(Boolean).join('\n\n')
@@ -1100,13 +1100,13 @@
 								>
 									<div class="rounded-lg overflow-hidden">
 										<input
-											class="w-full h-6 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
+											class="w-full h-6 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 											aria-label={$i18n.t('Commit summary')}
 											placeholder={$i18n.t('Summary')}
 											bind:value={summary}
 										/>
 										<textarea
-											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-white placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-white/2"
+											class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-base-0/2"
 											rows="3"
 											aria-label={$i18n.t('Description')}
 											placeholder={$i18n.t('Description')}
@@ -1116,8 +1116,8 @@
 									<button
 										class="w-full h-6 mt-1 rounded-lg text-[0.6875rem] font-normal transition-colors duration-75 {staged.length &&
 										summary.trim()
-											? 'bg-base-900 dark:bg-white text-white dark:text-black hover:bg-base-800 dark:hover:bg-white/90'
-											: 'bg-base-100 dark:bg-white/6 text-base-400 dark:text-base-600 cursor-default'}"
+											? 'bg-base-900 dark:bg-base-0 text-base-0 dark:text-base-1000 hover:bg-base-800 dark:hover:bg-base-0/90'
+											: 'bg-base-100 dark:bg-base-0/6 text-base-400 dark:text-base-600 cursor-default'}"
 										disabled={busy || !staged.length || !summary.trim()}
 									>
 										{staged.length
@@ -1133,7 +1133,7 @@
 							{:else}
 								<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 									{#each commits as commit, index}<div
-											class="group flex min-w-0 items-center border-b border-base-50/50 dark:border-white/2 transition-colors duration-75 {selectedCommit?.hash ===
+											class="group flex min-w-0 items-center border-b border-base-50/50 dark:border-base-0/2 transition-colors duration-75 {selectedCommit?.hash ===
 											commit.hash
 												? 'bg-base-100/40 dark:bg-base-800/25'
 												: 'hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
@@ -1200,7 +1200,7 @@
 						>
 							{#if selected || selectedCommit}
 								<div
-									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-white/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
+									class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-base-0/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 								>
 									<button
 										class="@min-[560px]:hidden"
@@ -1248,7 +1248,7 @@
 	</section>
 {:else if detectionError}
 	<div
-		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-base-100/50 dark:border-white/2 px-3 text-[0.6875rem] text-base-500 dark:text-base-400"
+		class="flex h-7 shrink-0 items-center gap-1.5 border-t border-base-100/50 dark:border-base-0/2 px-3 text-[0.6875rem] text-base-500 dark:text-base-400"
 	>
 		<Icon name="git-branch" size={12} />
 		<Tooltip content={detectionError} className="min-w-0 flex-1"

@@ -235,7 +235,7 @@
 
 	const menuLabel = 'px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500';
 	const iconButton =
-		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-white dark:aria-expanded:bg-base-850 dark:aria-expanded:text-white';
+		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0 dark:aria-expanded:bg-base-850 dark:aria-expanded:text-base-0';
 
 	// Same payload as sidebar page links, so a note can be dropped into split view;
 	// the text/plain note entry still lets the chat composer attach it.
@@ -896,7 +896,7 @@
 												<a
 													href={noteUrl(note)}
 													on:dragstart={(e) => noteDragStartHandler(e, note)}
-													class="focus-ring flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 pt-2 pb-1.5 text-center transition-colors duration-75 hover:bg-base-50/60 dark:hover:bg-white/4"
+													class="focus-ring flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 pt-2 pb-1.5 text-center transition-colors duration-75 hover:bg-base-50/60 dark:hover:bg-base-0/4"
 													aria-label={note.title}
 												>
 													<span
@@ -904,7 +904,7 @@
 														aria-hidden="true"
 													>
 														<span
-															class="relative h-[5.75rem] w-[4.75rem] overflow-hidden rounded-lg border border-base-200 bg-white shadow-xs dark:border-base-700 dark:bg-base-850"
+															class="relative h-[5.75rem] w-[4.75rem] overflow-hidden rounded-lg border border-base-200 bg-base-0 shadow-xs dark:border-base-700 dark:bg-base-850"
 														>
 															{#if note.data?.content?.md?.trim()}
 																<span
@@ -915,7 +915,7 @@
 																	>{note.data.content.md.slice(0, 600)}</span
 																>
 																<span
-																	class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-white from-15% to-transparent dark:from-base-850"
+																	class="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-linear-to-t from-base-0 from-15% to-transparent dark:from-base-850"
 																></span>
 															{:else}
 																<span class="flex h-full w-full items-center justify-center">
@@ -958,7 +958,7 @@
 												{#if shiftKey}
 													<Tooltip content={$i18n.t('Delete')}>
 														<button
-															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-white/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100"
+															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-base-0/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100"
 															type="button"
 															aria-label={$i18n.t('Delete')}
 															on:click={(e) => {
@@ -1010,7 +1010,7 @@
 														}}
 													>
 														<button
-															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-white/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100 max-md:opacity-100 {openNoteMenuId ===
+															class="absolute top-2.5 left-[calc(50%_+_12px)] flex size-6 items-center justify-center rounded-md bg-base-0/90 text-base-500 shadow-xs backdrop-blur-sm transition hover:text-base-800 group-hover:opacity-100 group-focus-within:opacity-100 dark:bg-base-800/90 dark:text-base-400 dark:hover:text-base-100 max-md:opacity-100 {openNoteMenuId ===
 															note.id
 																? 'opacity-100'
 																: 'opacity-0'}"

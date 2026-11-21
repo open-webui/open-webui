@@ -159,7 +159,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-base-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.integrations.title')}
 	</h2>
 
@@ -190,7 +190,7 @@
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										showConnectionModal = true;
 									}}
@@ -255,7 +255,7 @@
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-black/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										editTerminalIdx = null;
 										showAddTerminalModal = true;
@@ -298,7 +298,7 @@
 										<Tooltip content={$i18n.t('Configure')}>
 											<button
 												aria-label={$i18n.t('Configure')}
-												class="self-center p-1 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"
+												class="self-center p-1 bg-transparent hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg transition"
 												on:click={() => {
 													editTerminalIdx = idx;
 													showAddTerminalModal = true;
@@ -357,7 +357,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}

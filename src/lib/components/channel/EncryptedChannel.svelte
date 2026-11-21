@@ -155,7 +155,7 @@
 			</h2>
 			<button
 				type="button"
-				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 				on:click={leave}>{$i18n.t('Return to conversation')}</button
 			>
 		</div>
@@ -242,7 +242,7 @@
 				>
 					<Skeleton size="xs" />
 					<div>
-						<span class="font-normal text-black dark:text-white"
+						<span class="font-normal text-base-1000 dark:text-base-0"
 							>{typingMembers.map((member) => member.name).join(', ')}</span
 						>
 						{typingMembers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
@@ -251,7 +251,7 @@
 			{/if}
 			<div
 				id="message-input-container"
-				class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-base-100/60 dark:border-base-800/50 hover:border-base-100 focus-within:border-base-100 hover:dark:border-base-800 focus-within:dark:border-base-800 transition bg-white dark:bg-base-400/5 dark:text-base-100"
+				class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-base-100/60 dark:border-base-800/50 hover:border-base-100 focus-within:border-base-100 hover:dark:border-base-800 focus-within:dark:border-base-800 transition bg-base-0 dark:bg-base-400/5 dark:text-base-100"
 				dir={$settings?.chatDirection === 'RTL'
 					? 'rtl'
 					: $settings?.chatDirection === 'LTR'
@@ -302,8 +302,8 @@
 							id="send-message-button"
 							aria-label={$i18n.t('Send message')}
 							class="{!(state.status !== 'active' || oversized || !draft.trim())
-								? 'bg-black text-white hover:bg-base-900 dark:bg-white dark:text-black dark:hover:bg-base-100 '
-								: 'text-white bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
+								? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+								: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
 							type="submit"
 							disabled={state.status !== 'active' || oversized || !draft.trim()}
 						>
@@ -341,7 +341,7 @@
 		{#each state.members as member (member.identity.participation)}
 			<details class="group text-xs">
 				<summary
-					class="flex cursor-pointer list-none items-center gap-2 px-2 py-1.5 font-normal text-base-900 dark:text-white [&::-webkit-details-marker]:hidden"
+					class="flex cursor-pointer list-none items-center gap-2 px-2 py-1.5 font-normal text-base-900 dark:text-base-0 [&::-webkit-details-marker]:hidden"
 				>
 					<ProfileImage
 						src={`${WEBUI_API_BASE_URL}/users/${member.identity.user}/profile/image`}
@@ -370,7 +370,7 @@
 					{#if member.identity.participation !== state.self}
 						<button
 							type="button"
-							class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+							class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 							on:click={() => (verified = new Set([...verified, member.fingerprint]))}
 							>{$i18n.t('Codes match')}</button
 						>
@@ -381,7 +381,7 @@
 		<div class="flex justify-end px-2 pt-2">
 			<button
 				type="button"
-				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-white dark:hover:bg-base-850/60"
+				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 				disabled={state.status !== 'active'}
 				on:click={() => conversation?.updateKeys()}>{$i18n.t('Refresh encryption keys')}</button
 			>

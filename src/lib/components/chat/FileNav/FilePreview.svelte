@@ -292,7 +292,7 @@
 			/>
 		</PanzoomContainer>
 	{:else if fileVideoUrl !== null}
-		<div class="w-full h-full flex items-center justify-center bg-black">
+		<div class="w-full h-full flex items-center justify-center bg-base-1000">
 			<!-- svelte-ignore a11y-media-has-caption -->
 			<video src={fileVideoUrl} controls class="w-full h-full object-contain">
 				{$i18n.t('Your browser does not support the video tag.')}
@@ -383,7 +383,7 @@
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
-				class="w-full h-full border-none bg-white"
+				class="w-full h-full border-none bg-base-0"
 				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && !showRaw}
@@ -399,7 +399,7 @@
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
-				class="w-full h-full border-none bg-white"
+				class="w-full h-full border-none bg-base-0"
 				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isMarkdown && !showRaw && onSave && !readOnly}
@@ -492,7 +492,7 @@
 
 	{#if !fileLoading && (fileImageUrl !== null || svgPreview)}
 		<div
-			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-base-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-base-700/60 dark:bg-base-850/90"
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-base-200/60 bg-base-0/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-base-700/60 dark:bg-base-850/90"
 		>
 			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button

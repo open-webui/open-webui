@@ -215,7 +215,7 @@
 				{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-base-700 dark:text-base-300'
 					: 'text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400'}
-				{dragOverCrumb === i ? 'bg-base-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15' : ''}"
+				{dragOverCrumb === i ? 'bg-base-100 dark:bg-base-0/8 ring-1 ring-base-1000/15 dark:ring-base-0/15' : ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
 					if (!writable) return;
@@ -314,7 +314,7 @@
 				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('name');
 							sortMenuOpen = false;
@@ -334,7 +334,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('size');
 							sortMenuOpen = false;
@@ -354,7 +354,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('date');
 							sortMenuOpen = false;
@@ -375,7 +375,7 @@
 					{#if showDateAdded}
 						<button
 							type="button"
-							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 							on:click={() => {
 								onSort('created');
 								sortMenuOpen = false;
@@ -450,7 +450,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						on:click={() => {
 							actionsMenuOpen = false;
 							uploadInput?.click();
@@ -463,7 +463,7 @@
 					{#if onUploadFolder}
 						<button
 							type="button"
-							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click={() => {
 								actionsMenuOpen = false;
@@ -476,7 +476,7 @@
 					{/if}
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onDownloadDir();
 							actionsMenuOpen = false;
@@ -487,7 +487,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onToggleHidden();
 							actionsMenuOpen = false;
@@ -497,11 +497,11 @@
 						<span>{showHidden ? $i18n.t('Hide Hidden Files') : $i18n.t('Show Hidden Files')}</span>
 					</button>
 					{#if viewMode !== null}
-						<div class="my-1 border-t border-base-100 dark:border-white/10" role="separator"></div>
+						<div class="my-1 border-t border-base-100 dark:border-base-0/10" role="separator"></div>
 						{#each ['grid', 'list'] as mode}
 							<button
 								type="button"
-								class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-white/4 transition"
+								class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 								aria-pressed={viewMode === mode}
 								on:click={() => {
 									onViewModeChange(mode === 'grid' ? 'grid' : 'list');
