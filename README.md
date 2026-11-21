@@ -24,6 +24,7 @@
 [বাংলা](README.bn.md) |
 [Ελληνικά](README.gr.md) |
 [Tiếng Việt](README.vi.md)
+[Svenska](README.sv.md)
 
 [![Open WebUI Demo](https://cdn.openwebui.com/open-webui-demo.gif)](https://docs.openwebui.com/)
 
