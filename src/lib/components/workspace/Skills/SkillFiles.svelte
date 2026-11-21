@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { getPageContext } from '$lib/utils/page';
+	const { active } = getPageContext();
 	import { v4 as uuidv4 } from 'uuid';
 	import { onDestroy, getContext, tick, type Snippet } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -546,6 +548,18 @@
 	});
 </script>
 
+<svelte:window
+	on:keydown={(event) => {
+		if (
+			$active &&
+			event.key === 'Escape' &&
+			!event.defaultPrevented &&
+			!document.querySelector('.modal, [role="menu"]')
+		)
+			selectedPaths = new Set();
+	}}
+/>
+
 <DiffEditorModal
 	bind:show={showComparison}
 	initialContent={comparison?.content ?? ''}
@@ -752,7 +766,13 @@
 {/snippet}
 
 {#snippet fileList()}
-	<div class="h-full min-h-0 w-full overflow-auto p-1.5">
+	<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+	<div
+		class="h-full min-h-0 w-full overflow-auto p-1.5"
+		on:click={(event) => {
+			if (event.target === event.currentTarget) selectedPaths = new Set();
+		}}
+	>
 		<div class="mb-1 flex w-full items-center">
 			<div class="min-w-0 flex-1">{@render version()}</div>
 			{#if readOnly}
