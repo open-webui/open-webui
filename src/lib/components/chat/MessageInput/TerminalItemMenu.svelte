@@ -100,7 +100,7 @@
 				{#if onSettings}
 					<hr class="border-base-50 dark:border-base-800/30 mx-1 my-0.5" />
 					<button type="button" class={item} on:click={(e) => run(e, onSettings)}
-						><Cog6 className="size-3.5" />{$i18n.t('Terminal settings')}</button
+						><Cog6 className="size-3.5" />{$i18n.t('Machine settings')}</button
 					>
 				{/if}
 			</DropdownMenu>

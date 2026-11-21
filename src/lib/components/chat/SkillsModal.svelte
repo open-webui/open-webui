@@ -57,7 +57,7 @@
 									</div>
 								{/if}
 								{#if skill.source === 'terminal'}
-									<div class="text-xs text-base-500">{$i18n.t('Terminal')}</div>
+									<div class="text-xs text-base-500">{$i18n.t('Machine')}</div>
 								{/if}
 							</div>
 						</Collapsible>
