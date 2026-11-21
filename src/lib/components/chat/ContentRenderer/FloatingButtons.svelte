@@ -91,6 +91,16 @@
 		floatingInput = false;
 		floatingInputValue = '';
 	};
+
+	const paintSelection = (range: Range | null) => {
+		const highlights = (window.CSS as any)?.highlights;
+		const HighlightClass = (window as any).Highlight;
+		if (!highlights || !HighlightClass) return;
+		if (range) highlights.set('floating-selection', new HighlightClass(range));
+		else highlights.delete('floating-selection');
+	};
+
+	$: paintSelection(floatingInput ? range : null);
 </script>
 
 <div
@@ -187,3 +197,9 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	:global(::highlight(floating-selection)) {
+		background-color: #fbbf2466;
+	}
+</style>
