@@ -49,7 +49,7 @@ jobs:
           node-version: "22"
 
       - name: Install frontend dependencies
-        run: npm install --force
+        run: npm install --force --onnxruntime-node-install-cuda=skip
 
       - name: Verify frontend formatting
         run: npm run format

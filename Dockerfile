@@ -42,7 +42,7 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
-RUN npm ci --force
+RUN npm ci --force --onnxruntime-node-install-cuda=skip
 
 COPY . .
 ENV APP_BUILD_HASH=${BUILD_HASH}
