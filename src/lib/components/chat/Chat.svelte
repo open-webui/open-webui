@@ -1414,7 +1414,7 @@
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
 			// Loading a saved chat must preserve its terminal, including an explicit deselection.
 			const terminalId =
-				(loading && $chatId) || (!history.currentId && $selectedFolder)
+				(loading && mainChatHref === `/c/${$chatId}`) || (!history.currentId && $selectedFolder)
 					? null
 					: currentModels[0]?.info?.meta?.terminalId;
 			const defaults: Record<string, any> = {
