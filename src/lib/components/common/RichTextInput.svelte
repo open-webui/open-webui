@@ -1338,8 +1338,8 @@
 
 								const { state } = view;
 								const { $from } = state.selection;
-								const lineStart = $from.before($from.depth);
-								const lineEnd = $from.after($from.depth);
+								const lineStart = $from.start();
+								const lineEnd = $from.end();
 								const lineText = state.doc.textBetween(lineStart, lineEnd, '\n', '\0').trim();
 								if (event.shiftKey && !isCtrlPressed) {
 									if (lineText.startsWith('```')) {
