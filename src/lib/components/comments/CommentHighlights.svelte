@@ -12,6 +12,7 @@
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import {
 		anchorRange,
+		middleTruncate,
 		getCommentSurfaces,
 		surfaceRevision,
 		commentSelectionDraft,
@@ -418,9 +419,10 @@
 					>
 				</div>
 				<div
-					class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+					class="my-1 max-h-24 overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+					title={draft.anchor.quote}
 				>
-					{draft.anchor.quote}
+					{middleTruncate(draft.anchor.quote)}
 				</div>
 				<div class="-mr-1 mt-2">
 					{#key `${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
@@ -477,9 +479,10 @@
 				</div>
 				{#if comment.meta?.anchor}
 					<div
-						class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+						class="my-1 max-h-24 overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+						title={comment.meta.anchor.quote}
 					>
-						{comment.meta.anchor.quote}
+						{middleTruncate(comment.meta.anchor.quote)}
 					</div>
 				{/if}
 				<div class="mt-2 text-[0.8125rem] text-base-600 dark:text-base-300 break-words">

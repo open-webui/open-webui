@@ -61,6 +61,8 @@
 	let connection: import('socket.io-client').Socket | null = null;
 	let refreshVersion = 0;
 	let revision = 0;
+	// Deleted comments stay as tombstones only while they still anchor live replies.
+	$: visibleItems = items.filter((comment) => !comment.deleted_at || comment.reply_count > 0);
 	let previousView = view;
 	$: if (view !== previousView) {
 		previousView = view;
@@ -273,12 +275,12 @@
 				>
 			</div>{/if}
 		{#if resource && !loading}
-			{#if !items.length && !error}<div
+			{#if !visibleItems.length && !error}<div
 					class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-base-500"
 				>
 					{$i18n.t('No comments yet')}
 				</div>{/if}
-			{#each items as comment (comment.id)}
+			{#each visibleItems as comment (comment.id)}
 				<div class="mx-1.5 my-0.5">
 					<CommentItem {comment} onReply={reply} onChange={refresh} />
 

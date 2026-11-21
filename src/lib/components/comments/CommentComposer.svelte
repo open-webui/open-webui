@@ -12,6 +12,7 @@
 	import MentionList from '$lib/components/channel/MessageInput/MentionList.svelte';
 	import { getSuggestionRenderer } from '$lib/components/common/RichTextInput/suggestions';
 	import { commentsRequest, resourceQuery, type CommentResource } from '$lib/apis/comments';
+	import { middleTruncate } from './anchors';
 	export let resource: CommentResource;
 	export let draftKey: string;
 	export let contextLabel = '';
@@ -27,7 +28,23 @@
 	}
 	export let onSubmit: (content: string, tempId: string) => Promise<void>;
 	export let onCancel: (() => void) | null = null;
+	export let cancelOnOutsideClick = false;
 	const i18n = getContext<any>('i18n');
+	let root: HTMLDivElement;
+	const outsidePointer = (event: PointerEvent) => {
+		const target = event.target as Element | null;
+		if (
+			!cancelOnOutsideClick ||
+			!onCancel ||
+			saving ||
+			!target?.isConnected ||
+			root?.contains(target) ||
+			target.closest('.suggestion-list-container')
+		)
+			return;
+		drafts.delete(draftKey);
+		onCancel();
+	};
 	if (draftAccount !== $user?.id) {
 		drafts.clear();
 		draftAccount = $user?.id;
@@ -82,7 +99,10 @@
 	};
 </script>
 
+<svelte:window on:pointerdown={outsidePointer} />
+
 <div
+	bind:this={root}
 	class="w-full"
 	on:focusout={(event) => {
 		if (
@@ -126,8 +146,9 @@
 							class="{embedded ? '' : 'mb-1 mt-1'} {scrollable
 								? 'max-h-20 overflow-auto'
 								: ''} border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 whitespace-pre-wrap break-words"
+							title={quote}
 						>
-							{quote}
+							{middleTruncate(quote)}
 						</div>{/if}
 				</div>
 			{/if}

@@ -13,6 +13,13 @@ export type CommentSurface = CommentResource &
 		onComment?: (target: CommentTarget & { comment_id?: string }) => void;
 	};
 export const contentHash = (text: string) => sha256(text);
+// Display-only: keeps both ends of a long selection visible; anchor.quote stays intact.
+export function middleTruncate(text: string, max = 280) {
+	const chars = [...text];
+	if (chars.length <= max) return text;
+	const half = Math.floor((max - 1) / 2);
+	return `${chars.slice(0, half).join('').trimEnd()} … ${chars.slice(-half).join('').trimStart()}`;
+}
 export function noteCommentText(content: { json?: unknown; md?: string }) {
 	const text = (node: any): string =>
 		!node || typeof node !== 'object'

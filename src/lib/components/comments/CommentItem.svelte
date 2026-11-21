@@ -19,7 +19,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import CommentComposer from './CommentComposer.svelte';
 	import { commentsRequest, type ResourceComment } from '$lib/apis/comments';
-	import { highlightAnchor } from './anchors';
+	import { highlightAnchor, middleTruncate } from './anchors';
 	import { commentLink, copyToClipboard } from '$lib/utils';
 	export let comment: ResourceComment;
 	export let onReply: (comment: ResourceComment) => void;
@@ -169,6 +169,7 @@
 						draftKey={`edit:${comment.id}`}
 						initialContent={comment.content}
 						submitLabel="Save"
+						cancelOnOutsideClick={true}
 						onCancel={() => (editing = false)}
 						onSubmit={async (content) => {
 							await commentsRequest(`/${comment.id}`, 'PATCH', { content, etag: editingEtag });
@@ -182,12 +183,13 @@
 					<button
 						type="button"
 						class="my-1 max-h-24 w-full overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-left text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
+						title={comment.meta.anchor.quote}
 						on:click={() =>
 							(unavailable = !highlightAnchor(
 								comment,
 								comment.target_id ?? '',
 								comment.meta!.anchor!
-							))}>{comment.meta.anchor.quote}</button
+							))}>{middleTruncate(comment.meta.anchor.quote)}</button
 					>
 					{#if unavailable}<p class="mb-1 text-[0.6875rem] text-base-500">
 							{$i18n.t('Original passage changed or is unavailable.')}
