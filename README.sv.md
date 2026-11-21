@@ -67,8 +67,8 @@ Sedan öppna [http://localhost:3000](http://localhost:3000).
 | --------- | ---------------------------------------------------------------------------------------- |
 | `:main`   | Standard bild med lokala AI beroenden                                                |
 | `:slim`   | Lightweight bild med externa servicer för embeddings, dokument extraction, och tal |
-| `:cuda`   | Öppna WebUI med CUDA acceleration                                                        |
-| `:ollama` | Öppna WebUI bundled med Ollama                                                           |
+| `:cuda`   | Open WebUI med CUDA acceleration                                                        |
+| `:ollama` | Open WebUI bundled med Ollama                                                           |
 | `:dev`    | Senaste development bygg                                                                 |
 
 
