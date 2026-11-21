@@ -41,6 +41,7 @@
 	/** Connections the user may create terminals on. */
 	export let connections: { id: string; name: string }[] = [];
 	export let onCreate: (id: string) => Promise<void> = async () => {};
+	export let onDelete: (id: string) => Promise<void> = async () => {};
 
 	const i18n = getContext<any>('i18n');
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
@@ -345,6 +346,7 @@
 			() =>
 				run(async () => {
 					await templatesApi(path(terminalId!), 'DELETE');
+					await onDelete(terminalId!);
 					await refreshServers();
 					show = false;
 				})
