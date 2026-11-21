@@ -11,6 +11,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
+	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -99,9 +100,16 @@
 					>{formatTrigger(automation.data, $i18n)}</span
 				>
 				<span class="flex-1"></span>
-				<span class="text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
-					>{lastRun(automation)}</span
-				>
+				<!-- The owner's avatar beside the last run, as on the automations page. -->
+				<div class="flex w-28 shrink-0 items-center justify-end gap-2">
+					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+					<div class="hidden shrink-0 @sm:flex" on:click|stopPropagation>
+						<ChatParticipants owner={{ id: automation.user_id, name: automation.user_name }} />
+					</div>
+					<span class="truncate text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
+						>{lastRun(automation)}</span
+					>
+				</div>
 				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 				<div on:click|stopPropagation>
 					<Switch
