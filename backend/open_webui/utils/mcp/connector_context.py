@@ -41,6 +41,8 @@ OFFICE365_TOOLS = frozenset(
     }
 )
 
+RESEARCH_TOOLS = frozenset({"start_founder_research", "get_founder_research"})
+
 PORTFOLIO_DOCUMENT_TOOLS = frozenset(
     {
         'search_portfolio_documents',
@@ -60,7 +62,7 @@ def is_personal_broker_request(request):
             isinstance(rpc, dict)
             and rpc.get('method') == 'tools/call'
             and isinstance(rpc.get('params'), dict)
-            and rpc['params'].get('name') in BROKER_TOOLS | OFFICE365_TOOLS | PORTFOLIO_DOCUMENT_TOOLS
+            and rpc['params'].get('name') in BROKER_TOOLS | OFFICE365_TOOLS | PORTFOLIO_DOCUMENT_TOOLS | RESEARCH_TOOLS
         )
     except (ValueError, TypeError, AttributeError):
         return False

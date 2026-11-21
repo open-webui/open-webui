@@ -92,6 +92,12 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn(self.module.HEADER, headers)
         self.assertEqual(self.claim.await_count, 4)
 
+    async def test_research_requires_private_interactive_chat(self):
+        for name in ('start_founder_research', 'get_founder_research'):
+            self.assertIn(self.module.HEADER, await self.headers(tool_name=name))
+            self.assertNotIn(self.module.HEADER, await self.headers(tool_name=name, automation_id='job'))
+        self.assertEqual(self.claim.await_count, 2)
+
     async def test_office365_tools_use_the_same_private_chat_claim(self):
         for name in self.module.OFFICE365_TOOLS:
             headers = await self.headers(tool_name=name)
