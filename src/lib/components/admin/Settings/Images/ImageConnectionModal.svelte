@@ -693,7 +693,6 @@
 								on:click={() => {
 									showAccessControlModal = true;
 								}}
-								label={$i18n.t('Access Control')}
 							/>
 						</div>
 
