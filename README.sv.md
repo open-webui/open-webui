@@ -81,21 +81,21 @@ Lägg till dessa flaggor till `docker run` innan bildens namn om det behövs:
 | `-e HF_HUB_OFFLINE=1`                                | Disablea Hugging Face model nedladdningar för att använda offline                                     |
 | `--gpus all`                                         | Enablea Nvidia GPU åtkomst för `:cuda` eller `:ollama`; Du behöver Nvidia Container Toolkit |
 
-See the [Docker installation guide](https://docs.openwebui.com/getting-started/quick-start/) for setup instructions and configuration options.
+Se [Docker installations guiden](https://docs.openwebui.com/getting-started/quick-start/) för setup-instruktioner, konfiguration flaggor och andra alternativ.
 
 #### Desktop App
 
-[Download the native desktop app](https://github.com/open-webui/desktop) for macOS, Windows, and Linux.
+[Ladda ned native-desktop appen](https://github.com/open-webui/desktop) för macOS, Windows, och Linux.
 
-[Read the docs →](https://docs.openwebui.com/getting-started/)
+[Läs dokumentation →](https://docs.openwebui.com/getting-started/)
 
 ### Ecosystem
 
-- [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals): The action layer that turns Open WebUI into a full agent harness, with enterprise orchestration for per-user workspaces.
-- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Mirror folders, repos, buckets, and wikis into Open WebUI Knowledge Bases with incremental sync.
-- [Open WebUI Computer](https://github.com/open-webui/computer): Your computer in any browser: files, editor, terminal, git, and optional AI agents, running on your real machine.
+- [Öppna Terminal](https://github.com/open-webui/open-terminal) / [Terminaler (Enterprise)](https://github.com/open-webui/terminals): Det aktivitets lager som gör Open WebUI till ett fullt "agent harness", med enterprise orchestration för pär-användare workspaces.
+- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Spegla mappar, repos, buckets, och wikis i Open WebUI Knowledge Baser med inkrementell sync.
+- [Open WebUI Computer](https://github.com/open-webui/computer): Din dator i vilken webbläsare som hellst: filer, editors, terminaler, git, och friviliga AI agenter, körs på ditt lokala system.
 
-See the [ecosystem documentation](https://docs.openwebui.com/ecosystem/) for details.
+Se [ecosystemets dokumentation](https://docs.openwebui.com/ecosystem/) för detaljer.
 
 ### Troubleshooting and Updates
 
