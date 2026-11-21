@@ -15,7 +15,7 @@ from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.automations import AutomationResponse, AutomationRuns, Automations
 from open_webui.models.chat_messages import ChatMessages
-from open_webui.models.chats import Chats
+from open_webui.models.chats import FOLDER_PRIORITIES, NO_FOLDER_PRIORITY, Chats
 from open_webui.models.config import Config
 from open_webui.models.folders import (
     FolderForm,
@@ -589,6 +589,7 @@ async def get_shared_folder_chats(
     user_ids: list[str] = Query(default=[]),
     # `status` is taken by fastapi's status module here, hence the alias.
     status_filter: list[str] = Query(default=[], alias='status'),
+    priority_filter: list[str] = Query(default=[], alias='priority'),
     activity: FolderActivity | None = None,
     updated_at_gte: int | None = Query(None, ge=0),
     user=Depends(get_verified_user),
@@ -617,7 +618,7 @@ async def get_shared_folder_chats(
     limit = FOLDER_PAGE_SIZE if workspace else 10
     skip = (page - 1) * limit if page is not None else 0
     if workspace:
-        if sort_by not in ('title', 'updated_at', 'unread_updated_at') or sort_dir not in ('asc', 'desc'):
+        if sort_by not in ('title', 'updated_at', 'unread_updated_at', 'priority') or sort_dir not in ('asc', 'desc'):
             raise HTTPException(status_code=422, detail='Invalid sort')
         if len(tag_ids) > 50 or len(user_ids) > 50:
             raise HTTPException(status_code=422, detail='Too many filters')
@@ -625,16 +626,18 @@ async def get_shared_folder_chats(
         # 'none' (or the older 'not_started') filters for chats without a status.
         if any(value not in (*statuses, 'none', 'not_started') for value in status_filter):
             raise HTTPException(status_code=422, detail='Invalid status')
+        if any(value not in (*FOLDER_PRIORITIES, NO_FOLDER_PRIORITY) for value in priority_filter):
+            raise HTTPException(status_code=422, detail='Invalid priority')
         chats, total = await Chats.get_folder_chat_page(
             id,
             user.id,
-            folder_write_access=has_write,
             skip=skip,
             limit=limit,
             search=search.strip(),
             tag_ids=tag_ids,
             status_ids=status_filter,
             valid_status_ids=statuses,
+            priority_ids=priority_filter,
             user_ids=user_ids,
             activity=activity,
             updated_at_gte=updated_at_gte,
@@ -823,6 +826,39 @@ async def update_folder_chat_status(
         data={'folder_id': id, 'folder_status': form_data.status},
     )
     return {'id': chat_id, 'status': form_data.status}
+
+
+class FolderChatPriorityForm(BaseModel):
+    # null clears the priority.
+    priority: Literal['urgent', 'high', 'medium', 'low'] | None = None
+
+
+@router.patch('/{id}/chats/{chat_id}/priority')
+async def update_folder_chat_priority(
+    request: Request,
+    id: str,
+    chat_id: str,
+    form_data: FolderChatPriorityForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    folder = await check_folder_read_access(request, id, user, db)
+    # Folder editors may set priority on any chat in the folder; others only on their own.
+    has_write = (
+        user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    )
+    if not await Chats.update_chat_folder_priority_by_id(
+        chat_id, id, None if has_write else user.id, form_data.priority, db=db
+    ):
+        raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    await publish_event(
+        request,
+        EVENTS.CHAT_UPDATED,
+        actor=user,
+        subject_id=chat_id,
+        data={'folder_id': id, 'folder_priority': form_data.priority},
+    )
+    return {'id': chat_id, 'priority': form_data.priority}
 
 
 # Delete Folder By Id

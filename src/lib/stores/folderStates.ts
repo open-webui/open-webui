@@ -1,4 +1,9 @@
-import { FOLDER_PAGE_SIZE, type FolderStatus, type FolderActivity } from '$lib/utils/folders';
+import {
+	FOLDER_PAGE_SIZE,
+	type FolderStatus,
+	type FolderPriority,
+	type FolderActivity
+} from '$lib/utils/folders';
 import { readonly, writable } from 'svelte/store';
 import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
 import { getChatListByFolderId } from '$lib/apis/chats';
@@ -24,13 +29,14 @@ export type FolderDetails = {
 export type FolderChat = { id: string; [key: string]: any };
 export type FolderChatQuery = {
 	page?: number;
-	sortBy?: 'title' | 'updated_at' | 'unread_updated_at';
+	sortBy?: 'title' | 'updated_at' | 'unread_updated_at' | 'priority';
 	sortDir?: 'asc' | 'desc';
 	workspace?: boolean;
 	search?: string;
 	tagIds?: string[];
 	userIds?: string[];
 	status?: FolderStatus | FolderStatus[];
+	priority?: FolderPriority | FolderPriority[];
 	activity?: FolderActivity;
 	updatedAtGte?: number;
 };
@@ -75,6 +81,7 @@ export const folderChatPageKey = (query: FolderChatQuery = {}) =>
 					query.search?.trim() ?? '',
 					[...new Set(query.tagIds ?? [])].sort(),
 					query.status ?? null,
+					query.priority ?? null,
 					query.activity ?? null,
 					query.updatedAtGte ?? null,
 					[...new Set(query.userIds ?? [])].sort()

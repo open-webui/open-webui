@@ -6,8 +6,11 @@
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
+	import type { Readable } from 'svelte/store';
 	import {
+		type CanEditChat,
 		type FolderStatus,
+		type FolderPriority,
 		type WorkspaceChat,
 		type WorkspacePage,
 		isChatUnread
@@ -20,28 +23,33 @@
 	import FolderChatLink from './FolderChatLink.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
+	import FolderPriorityControl from './FolderPriority.svelte';
 	import StatusIcon from './FolderStatusIcon.svelte';
+	import PriorityIcon from './FolderPriorityIcon.svelte';
 	import FolderStatusTime from './FolderStatusTime.svelte';
 	import { formatDateDetails, formatShortDate } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let groups: {
 		id: string;
 		label: string;
 		status?: FolderStatus;
+		priority?: FolderPriority;
 		dot?: string;
 		spinner?: boolean;
 		page?: WorkspacePage;
 	}[] = [];
+	export let showPriority = true;
 	export let saving = '';
 	export let loading = false;
 	export let loadingGroup = '';
 	export let onMore: (id: string) => Promise<void>;
 	export let onMove: (chat: WorkspaceChat, status: FolderStatus) => Promise<void>;
+	export let onPriority: (chat: WorkspaceChat, priority: FolderPriority) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
-	export let ownsFolder = false;
 
 	// Same payload as the sidebar chat item, so a row can be dropped into split view
 	// or onto the composer.
@@ -162,6 +170,8 @@
 					</button>
 					{#if group.status}
 						<StatusIcon status={group.status} />
+					{:else if group.priority}
+						<PriorityIcon priority={group.priority} />
 					{:else if group.spinner}
 						<span class="flex size-3.5 shrink-0 items-center justify-center"
 							><Spinner className="size-3" /></span
@@ -197,11 +207,21 @@
 						on:click={(event) => open(event, chat)}
 					>
 						<div class="flex shrink-0 items-center gap-2">
-							<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
-							{#if showStatusTime}
-								<!-- Time in status; fixed width keeps titles aligned across rows. -->
-								<span class="-ml-1 flex w-6 shrink-0"><FolderStatusTime {chat} /></span>
-							{/if}
+							<!-- Status, its time, then priority, kept close together. -->
+							<div class="flex items-center gap-0.5">
+								<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
+								{#if showStatusTime}
+									<!-- Time in status; fixed width keeps priorities and titles aligned across rows. -->
+									<span class="flex w-6 shrink-0"><FolderStatusTime {chat} /></span>
+								{/if}
+								{#if showPriority}
+									<FolderPriorityControl
+										{chat}
+										disabled={!!saving || loading}
+										onChange={onPriority}
+									/>
+								{/if}
+							</div>
 							<!-- Same marker as the sidebar chat item; takes no space when absent. -->
 							{#if chat.pending_approval || chat.active || unread}
 								<span class="flex size-3 shrink-0 items-center justify-center">
@@ -287,7 +307,7 @@
 							</div>
 							<!-- The menu takes the date's place on hover, so nothing shifts. -->
 							<div
-								class="{ownsFolder || chat.can_edit_tags
+								class="{$canEdit?.(chat)
 									? 'date-slot'
 									: ''} relative flex w-14 shrink-0 items-center justify-end"
 								class:open={menuOpen[chat.id]}
@@ -304,7 +324,7 @@
 										>{formatShortDate(chat.updated_at, $i18n.language)}</time
 									>
 								</Tooltip>
-								{#if ownsFolder || chat.can_edit_tags}
+								{#if $canEdit?.(chat)}
 									<div class="chat-menu absolute inset-y-0 right-0 flex items-center">
 										<FolderChatMenu
 											{chat}

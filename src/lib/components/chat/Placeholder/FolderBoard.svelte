@@ -3,11 +3,15 @@
 	import { chatId } from '$lib/stores';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
+	import type { Readable } from 'svelte/store';
 	import {
+		type CanEditChat,
 		type FolderStatus,
+		type FolderPriority,
 		type WorkspaceChat,
 		type WorkspacePage,
 		isChatUnread,
+		priorityKey,
 		statusKey
 	} from '$lib/utils/folders';
 	import ChatParticipants from '$lib/components/common/ChatParticipants.svelte';
@@ -18,7 +22,9 @@
 	import FolderChatLink from './FolderChatLink.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
+	import FolderPriorityControl from './FolderPriority.svelte';
 	import StatusIcon from './FolderStatusIcon.svelte';
+	import PriorityIcon from './FolderPriorityIcon.svelte';
 	import FolderStatusTime from './FolderStatusTime.svelte';
 	import { formatDateDetails, formatShortDate } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -27,22 +33,29 @@
 		id: string;
 		label: string;
 		status?: FolderStatus;
+		priority?: FolderPriority;
 		dot?: string;
 		spinner?: boolean;
 		page?: WorkspacePage;
 	};
+	type Field = 'status' | 'priority';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let columns: BoardGroup[] = [];
 	/** Optional swimlanes; cards are placed by `rowOf`. */
 	export let rows: BoardGroup[] | null = null;
 	export let rowOf: (chat: WorkspaceChat) => string[] = () => [];
-	/** The status a drop into this cell sets, or null when the cell isn't a status. */
-	export let dropStatus: (column: string, row: string | null) => FolderStatus | null = (column) =>
-		column;
+	/** What a drop into this cell sets: status and/or priority, or nothing. */
+	export let dropTargets: (column: string, row: string | null) => [Field, string][] = (column) => [
+		['status', column]
+	];
+	export let showPriority = true;
 	export let onMore: (id: string) => Promise<void>;
 	export let onMove: (chat: WorkspaceChat, status: FolderStatus) => Promise<void>;
+	export let onPriority: (chat: WorkspaceChat, priority: FolderPriority) => Promise<void>;
+	export let onDrop: (chat: WorkspaceChat, changes: [Field, string][]) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
 	export let onAddStatus: (() => void) | null = null;
 	export let saving = '';
@@ -54,13 +67,17 @@
 	let collapsed: Record<string, boolean> = {};
 
 	const cellKey = (column: string, row: string | null) => `${column}\u0000${row ?? ''}`;
-	$: canDrop = (column: string, row: string | null) => dropStatus(column, row) != null;
+	const valueOf = (chat: WorkspaceChat, field: Field): string =>
+		field === 'status' ? statusKey(chat.status) : priorityKey(chat.priority);
+	// The changes a drop here would make to this chat.
+	const changesFor = (chat: WorkspaceChat, column: string, row: string | null) =>
+		dropTargets(column, row).filter(([field, value]) => valueOf(chat, field) !== value);
+	$: canDrop = (column: string, row: string | null) => dropTargets(column, row).length > 0;
 	$: draggableBoard = columns.some((column) => canDrop(column.id, rows?.[0]?.id ?? null));
 
 	function drop(column: string, row: string | null) {
-		const status = dropStatus(column, row);
-		if (dragged && status && dragged.can_edit_status && statusKey(dragged.status) !== status)
-			void onMove(dragged, status);
+		const changes = dragged ? changesFor(dragged, column, row) : [];
+		if (dragged && changes.length && $canEdit?.(dragged)) void onDrop(dragged, changes);
 		dragged = null;
 		over = '';
 	}
@@ -71,8 +88,7 @@
 			event.preventDefault();
 			over = cellKey(column, row);
 			if (event.dataTransfer)
-				event.dataTransfer.dropEffect =
-					statusKey(dragged.status) === dropStatus(column, row) ? 'none' : 'move';
+				event.dataTransfer.dropEffect = changesFor(dragged, column, row).length ? 'move' : 'none';
 		},
 		dragleave: (event: DragEvent) => {
 			const target = event.currentTarget as HTMLElement;
@@ -101,6 +117,8 @@
 {#snippet groupIcon(group: BoardGroup)}
 	{#if group.status}
 		<StatusIcon status={group.status} />
+	{:else if group.priority}
+		<PriorityIcon priority={group.priority} />
 	{:else if group.spinner}
 		<span class="flex size-3.5 shrink-0 items-center justify-center"
 			><Spinner className="size-3" /></span
@@ -150,7 +168,7 @@
 			chat.id || dragged?.id === chat.id
 			? 'opacity-40'
 			: ''}"
-		draggable={draggableBoard && chat.can_edit_status && !saving && !loading}
+		draggable={draggableBoard && $canEdit?.(chat) && !saving && !loading}
 		on:click={(event) => open(event, chat)}
 		on:dragstart={(event) => {
 			dragged = chat;
@@ -163,13 +181,16 @@
 		}}
 	>
 		<div class="flex items-start gap-1.5">
-			<div class="-ml-0.5 shrink-0">
+			<!-- Status, its time, then priority, on the title's first line. -->
+			<div class="-ml-0.5 flex shrink-0 items-center gap-0.5">
 				<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
+				{#if chat.status_since && chat.status}
+					<span class="flex h-5 shrink-0 items-center"><FolderStatusTime {chat} /></span>
+				{/if}
+				{#if showPriority}
+					<FolderPriorityControl {chat} disabled={!!saving || loading} onChange={onPriority} />
+				{/if}
 			</div>
-			<!-- Time in status, on the title's first line. -->
-			{#if chat.status_since && chat.status}
-				<span class="-ml-1 flex h-5 shrink-0 items-center"><FolderStatusTime {chat} /></span>
-			{/if}
 			{#if chat.pending_approval || chat.active || unread}
 				<!-- Centered on the title's first line, like the list's marker slot. -->
 				<span class="flex h-5 w-3 shrink-0 items-center justify-center">
@@ -214,12 +235,17 @@
 		</div>
 
 		{#if chat.search_snippet}
-			<p class="mt-1 line-clamp-2 pl-6 text-xs leading-4 text-base-500 dark:text-base-400">
+			<p
+				class="mt-1 line-clamp-2 text-xs leading-4 text-base-500 dark:text-base-400 {showPriority
+					? 'pl-11.5'
+					: 'pl-6'}"
+			>
 				{chat.search_snippet}
 			</p>
 		{/if}
 
-		<div class="mt-2 flex min-h-5 items-center gap-2 pl-6">
+		<!-- Lines up with the title, past the status and priority icons. -->
+		<div class="mt-2 flex min-h-5 items-center gap-2 {showPriority ? 'pl-11.5' : 'pl-6'}">
 			<div class="flex min-w-0 flex-1">
 				<FolderTags {chat} onChange={onTagsChange} />
 			</div>

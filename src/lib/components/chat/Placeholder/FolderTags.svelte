@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import type { WorkspaceChat } from '$lib/utils/folders';
+	import type { Readable } from 'svelte/store';
+	import type { CanEditChat, WorkspaceChat } from '$lib/utils/folders';
 	import { tagDot, type FolderTag } from '$lib/utils/tags';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -8,6 +9,7 @@
 	import TagPicker from '$lib/components/chat/TagPicker.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let chat: WorkspaceChat;
 	export let max = 2;
@@ -39,7 +41,7 @@
 	{/if}
 {/snippet}
 
-{#if chat.can_edit_tags}
+{#if $canEdit?.(chat)}
 	<Dropdown bind:show align="end">
 		<button
 			type="button"

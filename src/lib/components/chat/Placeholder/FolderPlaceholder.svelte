@@ -18,12 +18,17 @@
 	import {
 		FOLDER_PAGE_SIZE,
 		NO_STATUS,
+		NO_PRIORITY,
 		statusDefs,
+		priorityDefs,
+		priorityKey,
 		isChatUnread,
 		type FolderUser,
 		type FolderStatus,
+		type FolderPriority,
 		type CustomStatus,
 		type StatusDef,
+		type CanEditChat,
 		type FolderActivity,
 		type WorkspacePage,
 		type WorkspaceChat,
@@ -38,9 +43,11 @@
 		updateFolderById,
 		getFolderTags,
 		getFolderUsers,
-		updateFolderChatStatus
+		updateFolderChatStatus,
+		updateFolderChatPriority
 	} from '$lib/apis/folders';
 	import StatusIcon from './FolderStatusIcon.svelte';
+	import PriorityIcon from './FolderPriorityIcon.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import DropdownSub from '$lib/components/common/DropdownSub.svelte';
@@ -110,18 +117,21 @@
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 
 	type GroupKey = string;
-	type GroupBy = 'none' | 'status' | 'tags' | 'activity';
+	type GroupBy = 'none' | 'status' | 'priority' | 'tags' | 'activity';
 	type Group = {
 		id: string;
 		label: string;
 		status?: FolderStatus;
+		priority?: FolderPriority;
 		dot?: string;
 		spinner?: boolean;
 	};
 	// Like the 'none' status: tag id 'none' means untagged (tag names can't be 'none').
 	const UNTAGGED = 'none';
-	type Facet = 'status' | 'tags' | 'users' | 'activity' | 'updated';
-	type SortKey = 'updated_at' | 'title';
+	type Facet = 'status' | 'priority' | 'tags' | 'users' | 'activity' | 'updated';
+	type SortKey = 'updated_at' | 'title' | 'priority';
+	// The chat fields a drop or picker can set.
+	type Field = 'status' | 'priority';
 
 	const activityOptions = [
 		['unread', 'Unread'],
@@ -136,6 +146,7 @@
 	] as const;
 	const facets: { id: Facet; label: string }[] = [
 		{ id: 'status', label: 'Status' },
+		{ id: 'priority', label: 'Priority' },
 		{ id: 'tags', label: 'Tags' },
 		{ id: 'users', label: 'Users' },
 		{ id: 'activity', label: 'Activity' },
@@ -153,14 +164,19 @@
 	})();
 	let view: 'list' | 'board' = prefs.view === 'board' ? 'board' : 'list';
 	const groupByPref = (value: unknown): GroupBy =>
-		value === 'status' || value === 'tags' || value === 'activity' ? value : 'none';
+		value === 'status' || value === 'priority' || value === 'tags' || value === 'activity'
+			? value
+			: 'none';
 	// List grouping, board columns and board rows (swimlanes) are separate choices.
 	let grouping: GroupBy = groupByPref(prefs.grouping);
 	let columnsBy: Exclude<GroupBy, 'none'> =
-		prefs.columnsBy === 'tags' || prefs.columnsBy === 'activity' ? prefs.columnsBy : 'status';
+		prefs.columnsBy === 'priority' || prefs.columnsBy === 'tags' || prefs.columnsBy === 'activity'
+			? prefs.columnsBy
+			: 'status';
 	let rowsBy: GroupBy =
 		groupByPref(prefs.rowsBy) === columnsBy ? 'none' : groupByPref(prefs.rowsBy);
-	let sortBy: SortKey = prefs.sortBy === 'title' ? 'title' : 'updated_at';
+	let sortBy: SortKey =
+		prefs.sortBy === 'title' || prefs.sortBy === 'priority' ? prefs.sortBy : 'updated_at';
 	let sortDir: 'asc' | 'desc' =
 		prefs.sortDir === 'asc' || prefs.sortDir === 'desc'
 			? prefs.sortDir
@@ -168,11 +184,21 @@
 				? 'asc'
 				: 'desc';
 	let showEmptyGroups = prefs.showEmptyGroups === true;
+	let showPriority = prefs.showPriority !== false;
 	const savePrefs = () => {
 		try {
 			localStorage.setItem(
 				PREFS,
-				JSON.stringify({ view, grouping, columnsBy, rowsBy, sortBy, sortDir, showEmptyGroups })
+				JSON.stringify({
+					view,
+					grouping,
+					columnsBy,
+					rowsBy,
+					sortBy,
+					sortDir,
+					showEmptyGroups,
+					showPriority
+				})
 			);
 		} catch {
 			/* Storage is optional. */
@@ -189,6 +215,10 @@
 	$: defs = statusDefs(folder?.meta, (key) => $i18n.t(key));
 	$: defsStore.set(defs);
 	$: manageStore.set(readOnly ? null : () => (showStatuses = true));
+	// Who may change a chat's tags, status and priority here (the server checks the same).
+	const canEditStore = writable<CanEditChat>(() => false);
+	setContext('folder-can-edit', canEditStore);
+	$: canEditStore.set((chat) => !readOnly || chat.user_id === $user?.id);
 
 	// The folder's emoji is picked here only; the tab just shows it.
 	let iconSaving = false;
@@ -240,6 +270,7 @@
 	let search = '';
 	let appliedSearch = '';
 	let statusFilter: FolderStatus[] = [];
+	let priorityFilter: FolderPriority[] = [];
 	let selectedTags: string[] = [];
 	let selectedUsers: string[] = [];
 	let folderUsers: FolderUser[] = [];
@@ -267,11 +298,13 @@
 	$: groupByLabel = (value: GroupBy) =>
 		value === 'status'
 			? $i18n.t('Status')
-			: value === 'tags'
-				? $i18n.t('Tags')
-				: value === 'activity'
-					? $i18n.t('Activity')
-					: $i18n.t('None');
+			: value === 'priority'
+				? $i18n.t('Priority')
+				: value === 'tags'
+					? $i18n.t('Tags')
+					: value === 'activity'
+						? $i18n.t('Activity')
+						: $i18n.t('None');
 	const activeBy = (): GroupBy => (view === 'board' ? columnsBy : grouping);
 
 	// The groups a view splits into, honouring the matching filter.
@@ -290,6 +323,16 @@
 				...defined.filter((status) => status.id !== NO_STATUS),
 				...defined.filter((status) => status.id === NO_STATUS)
 			].map((status) => ({ id: status.id, label: status.name, status: status.id }));
+		}
+		if (by === 'priority') {
+			const defined = priorityDefs(t).filter(
+				(priority) => !priorityFilter.length || priorityFilter.includes(priority.id)
+			);
+			// Urgent first; "No priority" last, like "No status".
+			return [
+				...defined.filter((priority) => priority.id !== NO_PRIORITY),
+				...defined.filter((priority) => priority.id === NO_PRIORITY)
+			].map((priority) => ({ id: priority.id, label: priority.name, priority: priority.id }));
 		}
 		if (by === 'tags') {
 			const untaggedGroup = {
@@ -327,6 +370,7 @@
 	$: by = view === 'board' ? columnsBy : grouping;
 	$: currentGroups = groupsFor(by, (key) => $i18n.t(key), [
 		statusFilter,
+		priorityFilter,
 		selectedTags,
 		options,
 		defs
@@ -338,6 +382,7 @@
 	$: hasData = Object.keys(groups).length > 0;
 	$: filterCount =
 		(statusFilter.length ? 1 : 0) +
+		(priorityFilter.length ? 1 : 0) +
 		(selectedTags.length ? 1 : 0) +
 		(selectedUsers.length ? 1 : 0) +
 		(activity ? 1 : 0) +
@@ -353,7 +398,13 @@
 	$: boardRows =
 		rowsBy === 'none'
 			? null
-			: groupsFor(rowsBy, (key) => $i18n.t(key), [statusFilter, selectedTags, options, defs]);
+			: groupsFor(rowsBy, (key) => $i18n.t(key), [
+					statusFilter,
+					priorityFilter,
+					selectedTags,
+					options,
+					defs
+				]);
 	const rowOf = (chat: WorkspaceChat) =>
 		rowsBy === 'activity'
 			? [
@@ -367,11 +418,17 @@
 				]
 			: rowsBy === 'status'
 				? [defs.some((status) => status.id === chat.status) ? statusKey(chat.status) : NO_STATUS]
-				: chat.tags?.length
-					? chat.tags.map((tag) => tag.id)
-					: [UNTAGGED];
-	const dropStatus = (column: string, row: string | null) =>
-		columnsBy === 'status' ? column : rowsBy === 'status' ? row : null;
+				: rowsBy === 'priority'
+					? [priorityKey(chat.priority)]
+					: chat.tags?.length
+						? chat.tags.map((tag) => tag.id)
+						: [UNTAGGED];
+	// What a drop into a board cell sets: its column's and its row's status or priority.
+	const isField = (value: GroupBy): value is Field => value === 'status' || value === 'priority';
+	const dropTargets = (column: string, row: string | null): [Field, string][] => [
+		...(isField(columnsBy) ? [[columnsBy, column] as [Field, string]] : []),
+		...(isField(rowsBy) && row != null ? [[rowsBy, row] as [Field, string]] : [])
+	];
 
 	type FilterOption = {
 		facet: Facet;
@@ -379,6 +436,7 @@
 		label: string;
 		checked: boolean;
 		status?: FolderStatus;
+		priority?: FolderPriority;
 		dot?: string;
 		avatar?: string;
 		count?: number;
@@ -394,6 +452,16 @@
 			dot: '',
 			avatar: undefined as string | undefined,
 			count: undefined as number | undefined
+		})),
+		...priorityDefs((key) => $i18n.t(key)).map((priority) => ({
+			facet: 'priority' as Facet,
+			value: priority.id as string,
+			label: priority.name,
+			checked: priorityFilter.includes(priority.id),
+			status: undefined,
+			priority: priority.id,
+			dot: '',
+			count: undefined
 		})),
 		{
 			facet: 'tags' as Facet,
@@ -451,13 +519,15 @@
 	const facetCount = (id: Facet) =>
 		id === 'status'
 			? statusFilter.length
-			: id === 'tags'
-				? selectedTags.length
-				: id === 'users'
-					? selectedUsers.length
-					: id === 'activity'
-						? Number(Boolean(activity))
-						: Number(Boolean(updatedRange));
+			: id === 'priority'
+				? priorityFilter.length
+				: id === 'tags'
+					? selectedTags.length
+					: id === 'users'
+						? selectedUsers.length
+						: id === 'activity'
+							? Number(Boolean(activity))
+							: Number(Boolean(updatedRange));
 
 	function query(page: number, key: GroupKey) {
 		return {
@@ -475,6 +545,12 @@
 					? key
 					: statusFilter.length
 						? [...statusFilter].sort()
+						: undefined,
+			priority:
+				activeBy() === 'priority' && key !== 'all'
+					? (key as FolderPriority)
+					: priorityFilter.length
+						? [...priorityFilter].sort()
 						: undefined
 		};
 	}
@@ -660,6 +736,12 @@
 				? statusFilter.filter((item) => item !== status)
 				: [...statusFilter, status];
 			apply();
+		} else if (option.facet === 'priority') {
+			const priority = option.value as FolderPriority;
+			priorityFilter = priorityFilter.includes(priority)
+				? priorityFilter.filter((item) => item !== priority)
+				: [...priorityFilter, priority];
+			apply();
 		} else if (option.facet === 'tags') {
 			toggleTag(option.value);
 		} else if (option.facet === 'users') {
@@ -675,6 +757,7 @@
 
 	function clearFacet(id: Facet) {
 		if (id === 'status') statusFilter = [];
+		else if (id === 'priority') priorityFilter = [];
 		else if (id === 'tags') {
 			selectedTags = [];
 		} else if (id === 'users') selectedUsers = [];
@@ -689,6 +772,7 @@
 	function clear() {
 		search = '';
 		statusFilter = [];
+		priorityFilter = [];
 		selectedTags = [];
 		selectedUsers = [];
 		activity = undefined;
@@ -720,20 +804,36 @@
 		await load();
 	}
 
-	// Status changes land instantly; the server refresh reconciles counts and filters.
-	async function move(chat: WorkspaceChat, status: FolderStatus) {
-		// `status` is a group key; NO_STATUS clears the chat's status (null).
-		const from = statusKey(chat.status);
-		if (!folder?.id || saving || !chat.can_edit_status || from === status) return;
+	const valueOf = (chat: WorkspaceChat, field: Field): string =>
+		field === 'status' ? statusKey(chat.status) : priorityKey(chat.priority);
+
+	// Status and priority changes land instantly; the server refresh reconciles counts and filters.
+	// Each change is a group key: 'none' (NO_STATUS, NO_PRIORITY) clears the field (null).
+	async function update(chat: WorkspaceChat, changes: [Field, string][]) {
+		changes = changes.filter(([field, key]) => valueOf(chat, field) !== key);
+		if (!folder?.id || saving || !$canEditStore(chat) || !changes.length) return;
 		const folderId = folder.id;
-		const value = status === NO_STATUS ? null : status;
-		// Earlier time in the target status comes back with the refresh below.
-		const now = value ? Math.floor(Date.now() / 1000) : null;
-		const moved = { ...chat, status: value, status_since: now, status_entered_at: now };
+		let moved = chat;
+		for (const [field, key] of changes) {
+			if (field === 'status') {
+				const value = key === NO_STATUS ? null : key;
+				// Earlier time in the target status comes back with the refresh below.
+				const now = value ? Math.floor(Date.now() / 1000) : null;
+				moved = { ...moved, status: value, status_since: now, status_entered_at: now };
+			} else {
+				moved = {
+					...moved,
+					priority: key === NO_PRIORITY ? null : (key as WorkspaceChat['priority'])
+				};
+			}
+		}
 		saving = chat.id;
-		if (activeBy() === 'status') {
+		const regrouped = changes.find(([field]) => field === activeBy());
+		if (regrouped) {
+			const from = valueOf(chat, regrouped[0]);
+			const to = regrouped[1];
 			const source = groups[from];
-			const target = groups[status];
+			const target = groups[to];
 			groups = {
 				...groups,
 				...(source && {
@@ -744,7 +844,7 @@
 					}
 				}),
 				...(target && {
-					[status]: {
+					[to]: {
 						...target,
 						chats: [moved, ...target.chats.filter((item) => item.id !== chat.id)],
 						total: target.total + 1
@@ -766,7 +866,12 @@
 			) as typeof groups;
 		}
 		try {
-			await updateFolderChatStatus(localStorage.token, folderId, chat.id, value);
+			for (const [field, key] of changes) {
+				const value = key === 'none' ? null : key;
+				if (field === 'status')
+					await updateFolderChatStatus(localStorage.token, folderId, chat.id, value);
+				else await updateFolderChatPriority(localStorage.token, folderId, chat.id, value);
+			}
 			markFolderChatsDirty(folderId);
 		} catch (failure) {
 			toast.error(String(failure));
@@ -775,6 +880,9 @@
 		}
 		if (folder?.id === folderId) await load();
 	}
+	const move = (chat: WorkspaceChat, status: FolderStatus) => update(chat, [['status', status]]);
+	const prioritize = (chat: WorkspaceChat, priority: FolderPriority) =>
+		update(chat, [['priority', priority]]);
 
 	// Linear-style single-key shortcuts while the workspace is on screen.
 	function shortcuts(event: KeyboardEvent) {
@@ -850,6 +958,7 @@
 		appliedSearch = '';
 		searchOpen = false;
 		statusFilter = [];
+		priorityFilter = [];
 		selectedTags = [];
 		selectedUsers = [];
 		folderUsers = [];
@@ -891,6 +1000,8 @@
 {#snippet facetIcon(id: Facet)}
 	{#if id === 'status'}
 		<StatusIcon glyph="backlog" className="size-3.5 text-current!" />
+	{:else if id === 'priority'}
+		<PriorityIcon priority="high" />
 	{:else if id === 'tags'}
 		<TagIcon className="size-3.5" strokeWidth="1.5" />
 	{:else if id === 'users'}
@@ -938,7 +1049,13 @@
 
 {#snippet chip(
 	id: Facet,
-	values: { label: string; dot?: string; status?: FolderStatus; avatar?: string }[]
+	values: {
+		label: string;
+		dot?: string;
+		status?: FolderStatus;
+		priority?: FolderPriority;
+		avatar?: string;
+	}[]
 )}
 	<div
 		class="inline-flex h-6 max-w-full items-center overflow-hidden rounded-full border border-base-100 bg-base-50/60 text-xs dark:border-base-850 dark:bg-base-850/50"
@@ -957,6 +1074,9 @@
 			{#each values.slice(0, 3) as item}
 				{#if item.status}<StatusIcon
 						status={item.status}
+						className="size-3"
+					/>{:else if item.priority}<PriorityIcon
+						priority={item.priority}
 						className="size-3"
 					/>{:else if item.avatar}<img
 						src={item.avatar}
@@ -1273,7 +1393,10 @@
 								{#each facetOptions(item.id, item.id === 'tags' || item.id === 'users' ? tagQuery : '') as option (`${option.facet}:${option.value}`)}
 									<button
 										type="button"
-										role={item.id === 'status' || item.id === 'tags' || item.id === 'users'
+										role={item.id === 'status' ||
+										item.id === 'priority' ||
+										item.id === 'tags' ||
+										item.id === 'users'
 											? 'menuitemcheckbox'
 											: 'menuitemradio'}
 										aria-checked={option.checked}
@@ -1281,6 +1404,8 @@
 									>
 										{#if option.status}
 											<StatusIcon status={option.status} />
+										{:else if option.priority}
+											<PriorityIcon priority={option.priority} />
 										{:else if option.avatar}
 											<img
 												src={option.avatar}
@@ -1349,20 +1474,20 @@
 							{@render groupMenu(
 								$i18n.t('Grouping'),
 								grouping,
-								['none', 'status', 'tags', 'activity'],
+								['none', 'status', 'priority', 'tags', 'activity'],
 								(value) => setGrouping(value)
 							)}
 						{:else}
 							{@render groupMenu(
 								$i18n.t('Columns'),
 								columnsBy,
-								['status', 'tags', 'activity'],
+								['status', 'priority', 'tags', 'activity'],
 								(value) => setColumns(value as Exclude<GroupBy, 'none'>)
 							)}
 							{@render groupMenu(
 								$i18n.t('Rows'),
 								rowsBy,
-								(['none', 'status', 'tags', 'activity'] as const).filter(
+								(['none', 'status', 'priority', 'tags', 'activity'] as const).filter(
 									(value) => value !== columnsBy
 								),
 								(value) => setRows(value)
@@ -1373,11 +1498,15 @@
 							<button slot="trigger" type="button" class={subRow}>
 								<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Ordering')}</span>
 								<span class="truncate text-base-500 dark:text-base-400"
-									>{sortBy === 'title' ? $i18n.t('Title') : $i18n.t('Updated')}</span
+									>{sortBy === 'title'
+										? $i18n.t('Title')
+										: sortBy === 'priority'
+											? $i18n.t('Priority')
+											: $i18n.t('Updated')}</span
 								>
 								<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 							</button>
-							{#each [['updated_at', 'Updated'], ['title', 'Title']] as const as [value, label]}
+							{#each [['updated_at', 'Updated'], ['title', 'Title'], ['priority', 'Priority']] as const as [value, label]}
 								<button
 									type="button"
 									role="menuitemradio"
@@ -1416,6 +1545,18 @@
 								{#if showEmptyGroups}<Check className="size-3! shrink-0" />{/if}
 							</button>
 						{/if}
+						<button
+							type="button"
+							role="menuitemcheckbox"
+							aria-checked={showPriority}
+							on:click={() => {
+								showPriority = !showPriority;
+								savePrefs();
+							}}
+						>
+							<span class="flex-1 text-left">{$i18n.t('Show priority')}</span>
+							{#if showPriority}<Check className="size-3! shrink-0" />{/if}
+						</button>
 					</DropdownMenu>
 				</Dropdown>
 			{/if}
@@ -1440,6 +1581,14 @@
 					defs
 						.filter((status) => statusFilter.includes(status.id))
 						.map((status) => ({ label: status.name, status: status.id }))
+				)}
+			{/if}
+			{#if priorityFilter.length}
+				{@render chip(
+					'priority',
+					priorityDefs((key) => $i18n.t(key))
+						.filter((priority) => priorityFilter.includes(priority.id))
+						.map((priority) => ({ label: priority.name, priority: priority.id }))
 				)}
 			{/if}
 			{#if selectedTags.length}
@@ -1553,24 +1702,28 @@
 				columns={boardColumns}
 				rows={boardRows}
 				{rowOf}
-				{dropStatus}
+				{dropTargets}
+				{showPriority}
 				{saving}
 				{loading}
 				{loadingGroup}
 				onMore={loadMore}
 				onMove={move}
+				onPriority={prioritize}
+				onDrop={update}
 				onTagsChange={changed}
 			/>
 		{:else}
 			<ChatList
 				groups={listGroups}
+				{showPriority}
 				{saving}
 				{loading}
 				{loadingGroup}
 				onMore={loadMore}
 				onMove={move}
+				onPriority={prioritize}
 				onTagsChange={changed}
-				ownsFolder={!!folder?.user_id && folder.user_id === $user?.id}
 			/>
 		{/if}
 	</div>

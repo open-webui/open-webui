@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import type { Readable } from 'svelte/store';
-	import type { FolderStatus, StatusDef, WorkspaceChat } from '$lib/utils/folders';
+	import type { CanEditChat, FolderStatus, StatusDef, WorkspaceChat } from '$lib/utils/folders';
 	import { statusKey } from '$lib/utils/folders';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -14,6 +14,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const defs = getContext<Readable<StatusDef[]> | undefined>('folder-statuses');
 	const manage = getContext<Readable<(() => void) | null> | undefined>('folder-statuses-manage');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let chat: WorkspaceChat;
 	export let disabled = false;
@@ -28,7 +29,7 @@
 </script>
 
 <Tooltip content={tip} placement="top-start" as="span" className="flex shrink-0">
-	{#if chat.can_edit_status}
+	{#if $canEdit?.(chat)}
 		<Dropdown align="start" closeOnSelect>
 			<button
 				type="button"

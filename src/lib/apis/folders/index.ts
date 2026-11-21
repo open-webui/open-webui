@@ -355,6 +355,7 @@ export const getSharedFolderChats = async (
 	for (const tag of params.tagIds ?? []) searchParams.append('tag_ids', tag);
 	for (const id of params.userIds ?? []) searchParams.append('user_ids', id);
 	for (const status of [params.status ?? []].flat()) searchParams.append('status', status);
+	for (const priority of [params.priority ?? []].flat()) searchParams.append('priority', priority);
 	if (params.activity) searchParams.set('activity', params.activity);
 	if (params.updatedAtGte !== undefined)
 		searchParams.set('updated_at_gte', String(params.updatedAtGte));
@@ -438,6 +439,43 @@ export const getFolderTags = async (token: string, id: string, signal?: AbortSig
 		})
 		.catch((err) => {
 			if (signal?.aborted) return null;
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateFolderChatPriority = async (
+	token: string,
+	folderId: string,
+	chatId: string,
+	priority: string | null
+) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/folders/${encodeURIComponent(folderId)}/chats/${encodeURIComponent(chatId)}/priority`,
+		{
+			method: 'PATCH',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ priority })
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
 			error = err.detail;
 			console.error(err);
 			return null;
