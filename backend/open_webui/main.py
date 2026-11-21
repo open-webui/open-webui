@@ -1335,6 +1335,9 @@ async def chat_completion(
         if is_new_chat:
             metadata['chat_id'] = str(uuid4())
 
+        for entry in message_ids:
+            entry['task_id'] = str(uuid4()) if metadata.get('session_id') else None
+
         if is_temporary_chat_id(metadata.get('chat_id')):
             session_id = metadata.get('session_id')
             if not isinstance(session_id, str) or not await register_temporary_chat_session(
@@ -1435,6 +1438,10 @@ async def chat_completion(
                                 'done': False,
                                 'model': target_model_id,
                                 'timestamp': int(time.time()),
+                                'meta': {
+                                    **({'task_id': entry['task_id']} if entry['task_id'] else {}),
+                                    'response_started_at': time.time(),
+                                },
                             }
                             # Preserve the side-by-side column index so duplicate
                             # models don't collapse into one another on reload.
@@ -1655,14 +1662,16 @@ async def chat_completion(
         error_detail = None
         try:
             try:
-                if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
+                if (
+                    is_saved_chat_id(metadata.get('chat_id'))
+                    and metadata.get('message_id')
+                    and metadata.get('assistant_message_id')
+                ):
                     async with Chats.edit_message_output(metadata['chat_id'], metadata['message_id']) as message:
                         if message is not None:
                             response_meta = dict(message.get('meta') or {})
                             # Continuations retain the original start, including approval pauses.
                             # A historical response without a recorded start remains unknown.
-                            if not metadata.get('assistant_message_id'):
-                                response_meta['response_started_at'] = time.time()
                             response_meta.pop('response_ended_at', None)
                             message['meta'] = response_meta
                             message['done'] = False
@@ -1859,10 +1868,11 @@ async def chat_completion(
                 'model_id': entry['model_id'],
                 'chat_context': copy.deepcopy(metadata['chat_context']),
                 'message_id': assistant_message_id,
-                'task_id': str(uuid4()),
+                'task_id': entry['task_id'],
             }
 
-            if is_saved_chat_id(chat_id):
+            # New replies were saved with their task already.
+            if is_saved_chat_id(chat_id) and (metadata.get('assistant_message_id') or agent_model):
                 await Chats.upsert_message_to_chat_by_id_and_message_id(
                     chat_id,
                     assistant_message_id,

@@ -1426,6 +1426,10 @@ class ChatTable:
                         'modelIdx': entry.get('modelIdx'),
                         'timestamp': int(time.time()),
                         'user_id': user.id,
+                        'meta': {
+                            **({'task_id': entry['task_id']} if entry['task_id'] else {}),
+                            'response_started_at': time.time(),
+                        },
                     },
                 )
             chat.chat = {**(chat.chat or {}), 'history': history}
