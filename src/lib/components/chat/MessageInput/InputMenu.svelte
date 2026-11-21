@@ -74,6 +74,9 @@
 		'directory'
 	].includes(tab);
 
+	$: showImageCapture = visionCapableModels.length > 0 && $visibleControls['chat.capture'];
+	$: showCapture = showImageCapture || !!recordActions;
+
 	let showAttachWebpageModal = false;
 	$: showAddContext =
 		$visibleControls['chat.attach_webpage'] ||
@@ -268,7 +271,55 @@
 						</button>
 					</Tooltip>
 
-					{#if visionCapableModels.length > 0 && $visibleControls['chat.capture']}
+					{#if showCapture}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								tab = 'capture';
+							}}
+						>
+							<Camera />
+							<div class="flex items-center w-full justify-between">
+								<div>{$i18n.t('Capture')}</div>
+								<div class="text-base-500"><ChevronRight /></div>
+							</div>
+						</button>
+					{/if}
+
+					{#if showAddContext}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								tab = 'attachments';
+							}}
+						>
+							<DocumentDuplicate />
+							<div class="flex items-center w-full justify-between">
+								<div>{$i18n.t('Attachments')}</div>
+								<div class="text-base-500"><ChevronRight /></div>
+							</div>
+						</button>
+					{/if}
+				</div>
+			{:else if tab === 'capture' && showCapture}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						role="menuitem"
+						type="button"
+						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div>{$i18n.t('Capture')}</div>
+					</button>
+
+					{#if showImageCapture}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -298,76 +349,32 @@
 									}
 								}}
 							>
-								<Camera />
-								<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+								<Camera className="size-4" />
+								<div class="line-clamp-1">
+									{detectMobile() ? $i18n.t('Camera') : $i18n.t('Screenshot')}
+								</div>
 							</button>
 						</Tooltip>
 					{/if}
 
 					{#if recordActions}
-						<button
-							role="menuitem"
-							type="button"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
-							on:click={() => {
-								tab = 'record';
-							}}
-						>
-							<Mic />
-							<div class="flex items-center w-full justify-between">
-								<div>{$i18n.t('Record')}</div>
-								<div class="text-base-500"><ChevronRight /></div>
-							</div>
-						</button>
+						<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Record') $i18n.t('Capture Audio') -->
+						<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
+						{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
+							<button
+								role="menuitem"
+								type="button"
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+								on:click={() => {
+									show = false;
+									item.action();
+								}}
+							>
+								<svelte:component this={item.icon} className="size-4" />
+								<div class="line-clamp-1">{$i18n.t(item.label)}</div>
+							</button>
+						{/each}
 					{/if}
-
-					{#if showAddContext}
-						<button
-							role="menuitem"
-							type="button"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
-							on:click={() => {
-								tab = 'attachments';
-							}}
-						>
-							<DocumentDuplicate />
-							<div class="flex items-center w-full justify-between">
-								<div>{$i18n.t('Attachments')}</div>
-								<div class="text-base-500"><ChevronRight /></div>
-							</div>
-						</button>
-					{/if}
-				</div>
-			{:else if tab === 'record' && recordActions}
-				<div in:fly={{ x: 20, duration: 150 }}>
-					<button
-						role="menuitem"
-						type="button"
-						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
-						on:click={() => {
-							tab = '';
-						}}
-					>
-						<ChevronLeft />
-						<div>{$i18n.t('Record')}</div>
-					</button>
-
-					<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Capture Audio') -->
-					<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
-					{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
-						<button
-							role="menuitem"
-							type="button"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
-							on:click={() => {
-								show = false;
-								item.action();
-							}}
-						>
-							<svelte:component this={item.icon} className="size-4" />
-							<div class="line-clamp-1">{$i18n.t(item.label)}</div>
-						</button>
-					{/each}
 				</div>
 			{:else if tab === 'attachments'}
 				<div in:fly={{ x: 20, duration: 150 }}>
