@@ -2123,6 +2123,10 @@ AUTOMATION_MAX_COUNT = os.getenv('AUTOMATION_MAX_COUNT', '')
 
 AUTOMATION_MIN_INTERVAL = os.getenv('AUTOMATION_MIN_INTERVAL', '')
 
+# Leave empty for unlimited.
+AUTOMATION_MAX_CONCURRENT = os.getenv('AUTOMATION_MAX_CONCURRENT', '')
+AUTOMATION_MAX_CONCURRENT = int(AUTOMATION_MAX_CONCURRENT) if AUTOMATION_MAX_CONCURRENT else None
+
 AUTOMATION_AUTH_TOKEN_EXPIRES_IN = os.getenv('AUTOMATION_AUTH_TOKEN_EXPIRES_IN', '1h')
 
 ENABLE_COMMENTS = os.getenv('ENABLE_COMMENTS', 'False').lower() == 'true'
@@ -3302,6 +3306,7 @@ DEFAULT_CONFIG = {
     'subagents.system_prompt': SUBAGENTS_SYSTEM_PROMPT,
     'automations.max_count': AUTOMATION_MAX_COUNT,
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,
+    'automations.max_concurrent': AUTOMATION_MAX_CONCURRENT,
     'automations.auth_token_expires_in': AUTOMATION_AUTH_TOKEN_EXPIRES_IN,
     'notes.enable': ENABLE_NOTES,
     'comments.enable': ENABLE_COMMENTS,

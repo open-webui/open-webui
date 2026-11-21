@@ -380,7 +380,21 @@ async def _execute_channel_automation(
     )
 
 
+_run_semaphore: asyncio.Semaphore | None = None
+
+
 async def execute_automation(app, automation: AutomationModel, variables: Optional[dict] = None) -> None:
+    global _run_semaphore
+    max_concurrent = await Config.get('automations.max_concurrent')
+    if not max_concurrent:
+        return await _execute_automation(app, automation, variables)
+    if _run_semaphore is None:
+        _run_semaphore = asyncio.Semaphore(int(max_concurrent))
+    async with _run_semaphore:
+        await _execute_automation(app, automation, variables)
+
+
+async def _execute_automation(app, automation: AutomationModel, variables: Optional[dict] = None) -> None:
     """Execute an automation through the full chat completion pipeline.
 
     Creates a real chat or channel message, then calls chat_completion exactly like the frontend:
