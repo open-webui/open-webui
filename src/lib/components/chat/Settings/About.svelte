@@ -22,6 +22,16 @@
 		current: '',
 		latest: ''
 	};
+	const communityLinks = [
+		['GitHub', 'https://github.com/open-webui/open-webui'],
+		['Enterprise', 'https://docs.openwebui.com/enterprise'],
+		['Careers', 'https://careers.openwebui.com/'],
+		['Sponsor', 'https://github.com/sponsors/open-webui'],
+		['Discord', 'https://discord.gg/5rJgQTnV4s'],
+		['Reddit', 'https://www.reddit.com/r/OpenWebUI/'],
+		['X', 'https://x.com/OpenWebUI']
+	];
+
 	const actionButtonClass =
 		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
@@ -117,6 +127,29 @@
 					</button>
 				{/if}
 			</UserSettingRow>
+
+			{#if $config?.license_metadata}
+				<!-- LICENSE covers this Open WebUI license attribution.
+				Do not alter, remove, obscure, or replace it except as LICENSE permits:
+				https://docs.openwebui.com/license. -->
+				<div class="text-xs text-base-600 dark:text-base-400">
+					{#if !$WEBUI_NAME.includes('Open WebUI')}
+						<span>{$WEBUI_NAME}</span> -
+					{/if}
+					<span class="capitalize">{$config?.license_metadata?.type}</span>
+					{$i18n.t('license purchased by')}
+					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
+				</div>
+			{:else}
+				<div class="flex flex-wrap gap-x-1.5 gap-y-1 text-xs text-base-400 dark:text-base-600">
+					{#each communityLinks as [label, href], idx}
+						{#if idx > 0}<span aria-hidden="true">·</span>{/if}
+						<a class="hover:text-base-700 dark:hover:text-base-400" {href} target="_blank"
+							>{label}</a
+						>
+					{/each}
+				</div>
+			{/if}
 		</UserSettingSection>
 
 		{#if ollamaVersion}
@@ -127,40 +160,7 @@
 			</UserSettingSection>
 		{/if}
 
-		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
-			{#if $config?.license_metadata}
-				<!-- LICENSE covers this Open WebUI license attribution.
-				Do not alter, remove, obscure, or replace it except as LICENSE permits:
-				https://docs.openwebui.com/license. -->
-				<div class="text-xs text-base-600 dark:text-base-400">
-					{#if !$WEBUI_NAME.includes('Open WebUI')}
-						<span>{$WEBUI_NAME}</span> -
-					{/if}
-
-					<span class="capitalize">{$config?.license_metadata?.type}</span>
-					{$i18n.t('license purchased by')}
-					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
-				</div>
-			{:else}
-				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-base-400 dark:text-base-600">
-					<a
-						class="hover:text-base-700 dark:hover:text-base-400"
-						href="https://discord.gg/5rJgQTnV4s"
-						target="_blank">Discord</a
-					>
-					<a
-						class="hover:text-base-700 dark:hover:text-base-400"
-						href="https://twitter.com/OpenWebUI"
-						target="_blank">X</a
-					>
-					<a
-						class="hover:text-base-700 dark:hover:text-base-400"
-						href="https://github.com/open-webui/open-webui"
-						target="_blank">GitHub</a
-					>
-				</div>
-			{/if}
-
+		<UserSettingSection>
 			<div class="text-xs text-base-400 dark:text-base-500">
 				{$i18n.t('Emoji graphics provided by')}
 				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
