@@ -367,10 +367,21 @@
 		await tick();
 		if (id === channel_id) scrollToBottom();
 
-		await sendMessage(localStorage.token, channel_id, message).catch((error) => {
+		const res = await sendMessage(localStorage.token, channel_id, message).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
+
+		const idx = (messages ?? []).findIndex((message) => message.temp_id === tempId);
+		if (idx !== -1) {
+			if (res) {
+				messages[idx] = { ...messages[idx], ...res, temp_id: null };
+			} else {
+				messages = messages.filter((message) => message.temp_id !== tempId);
+			}
+		}
+
+		return res;
 	};
 
 	const onChange = async () => {
