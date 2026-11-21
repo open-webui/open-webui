@@ -91,9 +91,10 @@ Se [Docker installations guiden](https://docs.openwebui.com/getting-started/quic
 
 ### Ecosystem
 
-- [Öppna Terminal](https://github.com/open-webui/open-terminal) / [Terminaler (Enterprise)](https://github.com/open-webui/terminals): Det aktivitets lager som gör Open WebUI till ett fullt "agent harness", med enterprise orchestration för pär-användare workspaces.
-- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Spegla mappar, repos, buckets, och wikis i Open WebUI Knowledge Baser med inkrementell sync.
-- [Open WebUI Computer](https://github.com/open-webui/computer): Din dator i vilken webbläsare som hellst: filer, editors, terminaler, git, och friviliga AI agenter, körs på ditt lokala system.
+- [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals): Åtgärdslagret som gör Open WebUI till ett komplett agentramverk, med företagsorkestrering för arbetsytor per användare.
+- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Spegla mappar, repos, buckets och wikis till Open WebUI Knowledge Bases med inkrementell synkronisering.
+- [Open WebUI Computer](https://github.com/open-webui/computer): Din dator i vilken webbläsare som helst: filer, kodredigerare, terminal, git och valfria AI-agenter som körs på din riktiga dator.
+
 
 Se [ecosystemets dokumentationen](https://docs.openwebui.com/ecosystem/) för detaljer.
 
