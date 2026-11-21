@@ -31,7 +31,7 @@
 		!chat.active && (chat.last_read_at == null || (chat.updated_at ?? 0) > chat.last_read_at);
 </script>
 
-<div class="w-full text-left">
+<div class="w-full px-1 text-left">
 	<h3 id="recent-chats-heading" class="mb-1 -mx-1 text-xs text-base-400 dark:text-base-500">
 		{$i18n.t('chat.placeholder.recentChats')}
 	</h3>
