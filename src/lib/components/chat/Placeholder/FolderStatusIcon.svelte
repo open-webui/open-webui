@@ -31,7 +31,7 @@
 {:else if !shape}
 	<!-- No status -->
 	<svg
-		class="shrink-0 text-gray-300 dark:text-gray-600 {className}"
+		class="shrink-0 text-base-300 dark:text-base-600 {className}"
 		viewBox="0 0 14 14"
 		fill="none"
 		aria-hidden="true"

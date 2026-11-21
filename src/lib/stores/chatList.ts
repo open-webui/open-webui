@@ -15,6 +15,35 @@ const pinnedChatsStore = writable<ChatListItem[]>([]);
 export const chats = readonly(chatsStore);
 export const pinnedChats = readonly(pinnedChatsStore);
 
+// How the sidebar's chat list is filtered and sorted; remembered per browser.
+export type ChatListView = {
+	status: 'active' | 'archived' | 'all';
+	sortBy: 'updated_at' | 'created_at';
+};
+
+const chatListViewStore = writable<ChatListView>({
+	status: 'active',
+	sortBy: 'updated_at',
+	...(() => {
+		try {
+			return JSON.parse(localStorage.getItem('sidebar-chat-list-view') ?? '{}');
+		} catch {
+			return {};
+		}
+	})()
+});
+export const chatListView = readonly(chatListViewStore);
+
+export const setChatListView = async (token: string, patch: Partial<ChatListView>) => {
+	chatListViewStore.update((view) => ({ ...view, ...patch }));
+	try {
+		localStorage.setItem('sidebar-chat-list-view', JSON.stringify(get(chatListViewStore)));
+	} catch {
+		// Not remembered, but the list still updates.
+	}
+	return refreshChatList(token);
+};
+
 let currentPage = 1;
 let paginationReady = false;
 let requestGeneration = 0;
@@ -40,7 +69,7 @@ export const refreshChatList = async (
 	loadingNextPage = false;
 
 	const [nextChats, nextPinnedChats] = await Promise.all([
-		getChatList(token, 1) as Promise<ChatListItem[]>,
+		getChatList(token, 1, false, false, get(chatListViewStore)) as Promise<ChatListItem[]>,
 		options.refreshPinned && !options.clearPinned
 			? (getPinnedChatList(token) as Promise<ChatListItem[]>)
 			: Promise.resolve(undefined as ChatListItem[] | undefined)
@@ -110,7 +139,13 @@ export const loadNextChatListPage = async (token: string = ''): Promise<ChatList
 	loadingNextPage = true;
 
 	try {
-		const nextChats = (await getChatList(token, nextPage)) as ChatListItem[];
+		const nextChats = (await getChatList(
+			token,
+			nextPage,
+			false,
+			false,
+			get(chatListViewStore)
+		)) as ChatListItem[];
 
 		if (generation !== requestGeneration) {
 			return { accepted: false, allLoaded };

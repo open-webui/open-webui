@@ -121,7 +121,7 @@
 		: ''}"
 >
 	<Navbar channel={channelInfo} readOnly>
-		<span slot="status" class="ml-2 shrink-0 text-[0.6875rem] text-gray-500 dark:text-gray-400"
+		<span slot="status" class="ml-2 shrink-0 text-[0.6875rem] text-base-500 dark:text-base-400"
 			>{$i18n.t('Encrypted')}</span
 		>
 		<svelte:fragment slot="actions">
@@ -130,7 +130,7 @@
 					<button
 						type="button"
 						aria-label={$i18n.t('{{COUNT}} participants', { COUNT: state.members.length })}
-						class="flex h-7 items-center gap-1 px-1.5 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-50/60 dark:hover:bg-gray-800/60 transition-colors"
+						class="flex h-7 items-center gap-1 px-1.5 rounded-lg text-base-500 dark:text-base-400 hover:bg-base-50/60 dark:hover:bg-base-800/60 transition-colors"
 						on:click={() => (showParticipants = true)}
 					>
 						<UserAlt className="size-4" strokeWidth="1.5" />
@@ -140,7 +140,7 @@
 			{/if}
 			<button
 				type="button"
-				class="h-7 rounded-lg px-2 text-xs text-gray-500 hover:bg-gray-50/60 dark:text-gray-400 dark:hover:bg-gray-800/60"
+				class="h-7 rounded-lg px-2 text-xs text-base-500 hover:bg-base-50/60 dark:text-base-400 dark:hover:bg-base-800/60"
 				on:click={leave}>{$i18n.t('Leave')}</button
 			>
 		</svelte:fragment>
@@ -150,12 +150,12 @@
 			class="flex flex-1 flex-col items-center justify-center gap-2 px-4 text-center"
 			role="status"
 		>
-			<h2 class="text-xs font-normal text-gray-500 dark:text-gray-400">
+			<h2 class="text-xs font-normal text-base-500 dark:text-base-400">
 				{$i18n.t('Encrypted chat ended')}
 			</h2>
 			<button
 				type="button"
-				class="h-7 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 				on:click={leave}>{$i18n.t('Return to conversation')}</button
 			>
 		</div>
@@ -169,7 +169,7 @@
 		>
 			<div class="min-h-full flex flex-col justify-end">
 				{#if state.messages.length === 0}
-					<div class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">
+					<div class="px-4 py-6 text-sm text-base-500 dark:text-base-400">
 						<p>
 							{state.status === 'joining'
 								? $i18n.t('Joining encrypted chat…')
@@ -180,7 +180,7 @@
 				{/if}
 				{#each state.messages as message, messageIdx (message.id)}
 					{#if message.type === 'joined'}
-						<p class="px-4 py-1 text-[0.6875rem] font-normal text-gray-500 dark:text-gray-400">
+						<p class="px-4 py-1 text-[0.6875rem] font-normal text-base-500 dark:text-base-400">
 							{$i18n.t('{{NAME}} joined', { NAME: message.user.name })}
 						</p>
 					{:else}
@@ -212,13 +212,13 @@
 								{#if message.sender === state.self}
 									{#if message.expected.length > 0 && message.received.length === message.expected.length}
 										<span
-											class="hover-reveal shrink-0 translate-y-px text-[0.6875rem] leading-4 font-normal text-gray-500 dark:text-gray-400"
+											class="hover-reveal shrink-0 translate-y-px text-[0.6875rem] leading-4 font-normal text-base-500 dark:text-base-400"
 										>
 											{$i18n.t('Delivered')}
 										</span>
 									{:else if !message.relayed}
 										<span
-											class="shrink-0 translate-y-px text-[0.6875rem] leading-4 font-normal text-gray-500 dark:text-gray-400"
+											class="shrink-0 translate-y-px text-[0.6875rem] leading-4 font-normal text-base-500 dark:text-base-400"
 										>
 											{$i18n.t('Sending…')}
 										</span>
@@ -237,12 +237,12 @@
 		>
 			{#if typingMembers.length > 0}
 				<div
-					class="flex items-center gap-1.5 px-1 pb-2 text-xs text-gray-500 dark:text-gray-400"
+					class="flex items-center gap-1.5 px-1 pb-2 text-xs text-base-500 dark:text-base-400"
 					role="status"
 				>
 					<Skeleton size="xs" />
 					<div>
-						<span class="font-normal text-black dark:text-white"
+						<span class="font-normal text-base-1000 dark:text-base-0"
 							>{typingMembers.map((member) => member.name).join(', ')}</span
 						>
 						{typingMembers.length === 1 ? $i18n.t('is typing...') : $i18n.t('are typing...')}
@@ -251,7 +251,7 @@
 			{/if}
 			<div
 				id="message-input-container"
-				class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-gray-100/60 dark:border-gray-800/50 hover:border-gray-100 focus-within:border-gray-100 hover:dark:border-gray-800 focus-within:dark:border-gray-800 transition bg-white dark:bg-gray-400/5 dark:text-gray-100"
+				class="flex-1 flex flex-col relative w-full shadow-sm rounded-2xl border border-base-100/60 dark:border-base-800/50 hover:border-base-100 focus-within:border-base-100 hover:dark:border-base-800 focus-within:dark:border-base-800 transition bg-base-0 dark:bg-base-400/5 dark:text-base-100"
 				dir={$settings?.chatDirection === 'RTL'
 					? 'rtl'
 					: $settings?.chatDirection === 'LTR'
@@ -260,7 +260,7 @@
 			>
 				<div class="px-2" spellcheck="false">
 					<div
-						class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2 pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto"
+						class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full pt-2 pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto"
 					>
 						<RichTextInput
 							id="chat-input"
@@ -294,7 +294,7 @@
 					</div>
 				</div>
 				<div class="flex items-center justify-end gap-2 px-2 pb-2 pt-1">
-					{#if oversized}<span class="mr-auto text-xs text-gray-500" role="status"
+					{#if oversized}<span class="mr-auto text-xs text-base-500" role="status"
 							>{$i18n.t('Message exceeds the 16 KiB limit.')}</span
 						>{/if}
 					<Tooltip content={$i18n.t('Send message')}>
@@ -302,8 +302,8 @@
 							id="send-message-button"
 							aria-label={$i18n.t('Send message')}
 							class="{!(state.status !== 'active' || oversized || !draft.trim())
-								? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-								: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
+								? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+								: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full size-7 flex items-center justify-center self-center"
 							type="submit"
 							disabled={state.status !== 'active' || oversized || !draft.trim()}
 						>
@@ -328,20 +328,20 @@
 </div>
 
 <Modal bind:show={showParticipants} size="sm" ariaLabel={$i18n.t('Participants')}>
-	<div class="flex items-center justify-between px-4 pt-3 mb-1 dark:text-gray-100">
-		<h2 class="text-base font-normal">{$i18n.t('Participants')}</h2>
+	<div class="flex items-center justify-between px-4 pt-3 mb-1 dark:text-base-100">
+		<h2 class="text-sm font-medium">{$i18n.t('Participants')}</h2>
 		<button
 			type="button"
 			aria-label={$i18n.t('Close')}
-			class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+			class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 			on:click={() => (showParticipants = false)}><XMark className="size-4" /></button
 		>
 	</div>
-	<div class="max-h-[50dvh] overflow-y-auto px-3 pb-4 dark:text-gray-200">
+	<div class="max-h-[50dvh] overflow-y-auto px-3 pb-4 dark:text-base-200">
 		{#each state.members as member (member.identity.participation)}
 			<details class="group text-xs">
 				<summary
-					class="flex cursor-pointer list-none items-center gap-2 px-2 py-1.5 font-normal text-gray-900 dark:text-white [&::-webkit-details-marker]:hidden"
+					class="flex cursor-pointer list-none items-center gap-2 px-2 py-1.5 font-normal text-base-900 dark:text-base-0 [&::-webkit-details-marker]:hidden"
 				>
 					<ProfileImage
 						src={`${WEBUI_API_BASE_URL}/users/${member.identity.user}/profile/image`}
@@ -350,27 +350,27 @@
 					<span class="min-w-0 flex-1 truncate text-xs font-normal" title={member.name}
 						>{member.name}</span
 					>
-					<span class="shrink-0 text-xs font-normal text-gray-500 dark:text-gray-400"
+					<span class="shrink-0 text-xs font-normal text-base-500 dark:text-base-400"
 						>{verified.has(member.fingerprint) ? $i18n.t('Verified') : $i18n.t('Verify')}</span
 					>
 					<ChevronRight
-						className="size-3 shrink-0 text-gray-400 transition-transform group-open:rotate-90"
+						className="size-3 shrink-0 text-base-400 transition-transform group-open:rotate-90"
 					/>
 				</summary>
-				<div class="mx-2 mb-2 rounded-lg bg-gray-50/60 p-2.5 dark:bg-gray-850/60">
-					<p class="text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400">
+				<div class="mx-2 mb-2 rounded-lg bg-base-50/60 p-2.5 dark:bg-base-850/60">
+					<p class="text-[0.6875rem] leading-4 text-base-500 dark:text-base-400">
 						{$i18n.t(
 							'Compare this code with this participant through another trusted channel. It changes when they rejoin.'
 						)}
 					</p>
 					<code
-						class="my-2 block break-all text-[0.6875rem] leading-4 text-gray-700 dark:text-gray-300"
+						class="my-2 block break-all text-[0.6875rem] leading-4 text-base-700 dark:text-base-300"
 						>{member.fingerprint.match(/.{1,4}/g)?.join(' ')}</code
 					>
 					{#if member.identity.participation !== state.self}
 						<button
 							type="button"
-							class="h-7 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+							class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 							on:click={() => (verified = new Set([...verified, member.fingerprint]))}
 							>{$i18n.t('Codes match')}</button
 						>
@@ -381,7 +381,7 @@
 		<div class="flex justify-end px-2 pt-2">
 			<button
 				type="button"
-				class="h-7 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+				class="h-7 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 				disabled={state.status !== 'active'}
 				on:click={() => conversation?.updateKeys()}>{$i18n.t('Refresh encryption keys')}</button
 			>

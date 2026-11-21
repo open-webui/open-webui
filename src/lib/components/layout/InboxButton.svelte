@@ -12,17 +12,17 @@
 	$: opened = !!$page.state.inbox && $page.state.inboxUserId === $user?.id;
 	$: activeClass =
 		($settings?.highContrastMode ?? false)
-			? 'bg-black/[0.035] dark:bg-white/[0.06]'
-			: 'bg-black/[0.035] dark:bg-white/[0.045]';
+			? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+			: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]';
 </script>
 
 <Tooltip content={$i18n.t('Notifications')} placement="bottom">
 	<button
 		type="button"
 		data-inbox-trigger
-		class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-lg text-gray-600 dark:text-gray-400 transition {opened
+		class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-lg text-base-600 dark:text-base-400 transition {opened
 			? activeClass
-			: 'hover:bg-gray-100 dark:hover:bg-gray-900'}"
+			: 'hover:bg-base-100 dark:hover:bg-base-900'}"
 		aria-label={`${$i18n.t('Notifications')}${$inboxCount ? ` (${$inboxCount})` : ''}`}
 		aria-pressed={opened}
 		aria-controls="sidebar-notifications"

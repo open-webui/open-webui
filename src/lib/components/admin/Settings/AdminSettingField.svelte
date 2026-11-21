@@ -7,7 +7,7 @@
 
 <div class={className}>
 	{#if label}
-		<label class="text-xs text-gray-600 dark:text-gray-400" for={forId || undefined}>
+		<label class="text-xs text-base-600 dark:text-base-400" for={forId || undefined}>
 			{label}
 		</label>
 	{/if}
@@ -17,7 +17,7 @@
 	</div>
 
 	{#if description}
-		<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+		<p class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 			{description}
 		</p>
 	{/if}

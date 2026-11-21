@@ -69,13 +69,13 @@
 			<span>{$i18n.t('Recorded tokens by response')}</span>
 			<span class="flex items-center gap-3">
 				<span class="flex items-center gap-1.5"
-					><span class="size-2 bg-gray-400 opacity-45"></span>{$i18n.t('Input')}</span
+					><span class="size-2 bg-base-400 opacity-45"></span>{$i18n.t('Input')}</span
 				>
 				<span class="flex items-center gap-1.5"
-					><span class="size-2 bg-gray-400"></span>{$i18n.t('Output')}</span
+					><span class="size-2 bg-base-400"></span>{$i18n.t('Output')}</span
 				>
 				{#if usage.some((bar) => bar.errors > 0)}<span class="flex items-center gap-1.5"
-						><span class="size-1.5 bg-gray-400 dark:bg-gray-500"></span>{$i18n.t(
+						><span class="size-1.5 bg-base-400 dark:bg-base-500"></span>{$i18n.t(
 							'Response errors'
 						)}</span
 					>{/if}
@@ -90,7 +90,7 @@
 					<span class="w-10 shrink-0 text-right text-[0.6875rem] tabular-nums"
 						>{formatter.format(value)}</span
 					>
-					<span class="h-px flex-1 bg-gray-100 dark:bg-gray-850/50"></span>
+					<span class="h-px flex-1 bg-base-100 dark:bg-base-850/50"></span>
 				</div>
 			{/each}
 			<div
@@ -104,7 +104,7 @@
 					<button
 						type="button"
 						data-usage-bar
-						class="relative flex-1 min-w-0 flex items-end justify-center focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+						class="relative flex-1 min-w-0 flex items-end justify-center focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 						tabindex={index === active ? 0 : -1}
 						aria-label={description(bar)}
 						title={description(bar)}
@@ -116,7 +116,7 @@
 						<span
 							class="w-3/4 max-w-12 h-full flex flex-col-reverse"
 							aria-hidden="true"
-							style:color={bar.model_id ? modelColor(bar.model_id) : 'var(--color-gray-400)'}
+							style:color={bar.model_id ? modelColor(bar.model_id) : 'var(--color-base-400)'}
 						>
 							{#if !bar.recorded}<span class="absolute bottom-0 text-[0.6875rem] leading-none"
 									>-</span
@@ -135,7 +135,7 @@
 						</span>
 						{#if bar.errors}<span
 								aria-hidden="true"
-								class="absolute top-0 size-1.5 bg-gray-400 dark:bg-gray-500"
+								class="absolute top-0 size-1.5 bg-base-400 dark:bg-base-500"
 							></span>{/if}
 					</button>
 				{/each}
@@ -152,7 +152,7 @@
 				class="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] tabular-nums"
 				aria-live="polite"
 			>
-				<span class="text-gray-900 dark:text-gray-200">{range(current)}</span>
+				<span class="text-base-900 dark:text-base-200">{range(current)}</span>
 				<span>{$i18n.t('Input')} {amount(current.input_tokens)}</span><span
 					>{$i18n.t('Output')} {amount(current.output_tokens)}</span
 				>
@@ -163,7 +163,7 @@
 				{#if current.errors}<span>{current.errors} {$i18n.t('Response errors')}</span>{/if}
 			</div>
 		{/if}
-		<p class="mt-1 text-[0.625rem] text-gray-400 dark:text-gray-500">
+		<p class="mt-1 text-[0.625rem] text-base-400 dark:text-base-500">
 			{$i18n.t(
 				'Select a bar to jump to its saved responses. Grouped bars sum consecutive responses.'
 			)}

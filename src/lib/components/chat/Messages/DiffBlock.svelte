@@ -23,9 +23,9 @@
 	const COMPACT_ROW: Record<DiffRow['type'], string> = {
 		addition: 'bg-green-500/8 text-green-700 dark:bg-green-500/10 dark:text-green-300',
 		deletion: 'bg-red-500/7 text-red-700 dark:bg-red-500/10 dark:text-red-300',
-		hunk: 'text-gray-400 dark:text-gray-500',
+		hunk: 'text-base-400 dark:text-base-500',
 		file: '',
-		meta: 'italic text-gray-400 dark:text-gray-500',
+		meta: 'italic text-base-400 dark:text-base-500',
 		context: ''
 	};
 
@@ -52,7 +52,7 @@
 			: 'grid-cols-[1.75rem_minmax(0,1fr)]';
 	$: numberClass = `px-[0.5ch] text-right select-none before:content-[attr(data-line-number)] ${
 		compact
-			? 'text-gray-400 dark:text-gray-500'
+			? 'text-base-400 dark:text-base-500'
 			: 'text-[#6e7781] dark:text-[#8b949e] border-e border-[#80808020]'
 	}`;
 </script>
@@ -60,7 +60,7 @@
 <div
 	class="overflow-x-auto {compact
 		? 'text-xs bg-transparent text-inherit'
-		: 'text-sm bg-white text-[#24292f] dark:bg-[#0d1117] dark:text-[#c9d1d9]'}"
+		: 'text-sm bg-base-0 text-[#24292f] dark:bg-[#0d1117] dark:text-[#c9d1d9]'}"
 	dir="ltr"
 	style:--diff-gutter-width={gutterWidth}
 >

@@ -96,18 +96,18 @@
 				/>
 				<div class="min-w-0 flex-1">
 					<div
-						class="truncate text-[0.8125rem] font-medium leading-4 text-gray-900 dark:text-gray-100"
+						class="truncate text-[0.8125rem] font-medium leading-4 text-base-900 dark:text-base-100"
 						title={user.name}
 					>
 						{user.name}
 					</div>
 					<div
-						class="-mt-0.25 flex items-center gap-1.5 text-[0.6875rem] leading-4 text-gray-500 dark:text-gray-400"
+						class="-mt-0.25 flex items-center gap-1.5 text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
 					>
 						<span
 							class="size-1.5 shrink-0 rounded-full {user.is_active
 								? 'bg-green-500'
-								: 'bg-gray-400'}"
+								: 'bg-base-400'}"
 							aria-hidden="true"
 						></span>
 						<span>{user.is_active ? $i18n.t('Active') : $i18n.t('Away')}</span>
@@ -118,7 +118,7 @@
 			{#if user.status_emoji || user.status_message}
 				<div class="mt-2.5">
 					<Tooltip content={user.status_message ?? undefined}>
-						<div class="flex min-w-0 items-start gap-1.5 text-gray-700 dark:text-gray-300">
+						<div class="flex min-w-0 items-start gap-1.5 text-base-700 dark:text-base-300">
 							{#if user.status_emoji}
 								<div class="flex h-4 shrink-0 items-center">
 									<Emoji className="size-3.5" shortCode={user.status_emoji} />
@@ -135,7 +135,7 @@
 			{#if user.bio}
 				<div class="mt-2">
 					<Tooltip content={user.bio}>
-						<div class="line-clamp-3 text-left leading-[1.125rem] text-gray-500 dark:text-gray-400">
+						<div class="line-clamp-3 text-left leading-[1.125rem] text-base-500 dark:text-base-400">
 							{user.bio}
 						</div>
 					</Tooltip>
@@ -146,7 +146,7 @@
 				<div class="mt-2 flex max-h-16 flex-wrap gap-1 overflow-y-auto scrollbar-hover">
 					{#each user.groups as group}
 						<span
-							class="max-w-full break-words rounded-md bg-gray-50 px-1.5 py-0.5 text-[0.6875rem] leading-4 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400"
+							class="max-w-full break-words rounded-md bg-base-50 px-1.5 py-0.5 text-[0.6875rem] leading-4 text-base-600 dark:bg-base-800/50 dark:text-base-400"
 						>
 							{group.name}
 						</span>
@@ -156,9 +156,9 @@
 		</div>
 
 		{#if lastSeen || localTime || $_user?.id !== user.id}
-			<div class="border-t border-gray-50/60 p-1.5 dark:border-gray-800/30">
+			<div class="border-t border-base-50/60 p-1.5 dark:border-base-800/30">
 				{#if lastSeen || localTime}
-					<dl class="text-[0.625rem] leading-[0.875rem] text-gray-500 dark:text-gray-400">
+					<dl class="text-[0.625rem] leading-[0.875rem] text-base-500 dark:text-base-400">
 						{#if localTime}
 							<div class="flex items-start gap-1.5 px-1.5 py-0.5">
 								<dt class="shrink-0 pt-px">
@@ -189,10 +189,10 @@
 				{/if}
 				{#if $_user?.id !== user.id}
 					{#if lastSeen || localTime}
-						<div class="-mx-1.5 my-1 border-t border-gray-50/60 dark:border-gray-800/30"></div>
+						<div class="-mx-1.5 my-1 border-t border-base-50/60 dark:border-base-800/30"></div>
 					{/if}
 					<button
-						class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs text-gray-700 transition-colors hover:bg-gray-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:text-gray-300 dark:hover:bg-gray-800/60"
+						class="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-xs text-base-700 transition-colors hover:bg-base-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-base-400 dark:text-base-300 dark:hover:bg-base-800/60"
 						type="button"
 						on:click={directMessageHandler}
 					>

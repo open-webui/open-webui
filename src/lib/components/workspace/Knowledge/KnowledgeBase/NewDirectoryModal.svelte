@@ -31,8 +31,8 @@
 <Modal size="sm" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between items-center dark:text-gray-100 px-4 pt-3 pb-1">
-			<h3 class="text-base font-normal">{$i18n.t('New Directory')}</h3>
+		<div class="flex justify-between items-center dark:text-base-100 px-4 pt-3 pb-1">
+			<h3 class="text-sm font-medium">{$i18n.t('New Directory')}</h3>
 			<button
 				class="self-center shrink-0 ml-2"
 				aria-label={$i18n.t('Close')}
@@ -45,9 +45,9 @@
 		<!-- Form -->
 		<div class="px-4 pb-2 flex flex-col gap-3">
 			<div>
-				<div class="mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+				<div class="mb-1 text-xs text-base-500">{$i18n.t('Name')}</div>
 				<input
-					class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+					class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 					type="text"
 					bind:value={name}
 					placeholder={$i18n.t('Directory name')}
@@ -61,14 +61,14 @@
 		<!-- Bottom toolbar -->
 		<div class="flex items-center justify-end px-4 pb-3.5 pt-2 gap-2">
 			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 				type="button"
 				on:click={() => (show = false)}
 			>
 				{$i18n.t('Cancel')}
 			</button>
 			<button
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 				on:click={submitHandler}
 				type="button"
 			>

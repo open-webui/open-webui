@@ -46,7 +46,7 @@
 	<div slot="content">
 		<DropdownMenu className="w-[12.5rem] z-999 transition">
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				type="button"
 				on:click={() => {
 					uploadFilesHandler();
@@ -58,7 +58,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				type="button"
 				on:click={() => {
 					screenCaptureHandler();

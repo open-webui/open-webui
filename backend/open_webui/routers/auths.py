@@ -144,6 +144,7 @@ ADMIN_CONFIG_KEYS = {
     'SKILL_CONTENT_MAX_CHARS': 'skills.content_max_chars',
     'SKILL_PREVIEW_MAX_CHARS': 'skills.preview_max_chars',
     'VIEW_CHAT_MAX_CHARS': 'chats.view_max_chars',
+    'TOOL_OUTPUT_MAX_CHARS': 'tools.output_max_chars',
     'ENABLE_NOTES': 'notes.enable',
     'ENABLE_USER_WEBHOOKS': 'ui.enable_user_webhooks',
     'ENABLE_USER_STATUS': 'users.enable_status',
@@ -1196,6 +1197,7 @@ class AdminConfig(MfaConfigForm):
     SKILL_CONTENT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     SKILL_PREVIEW_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     VIEW_CHAT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
+    TOOL_OUTPUT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
     ENABLE_USER_STATUS: bool
@@ -1256,6 +1258,8 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         updates.pop('skills.preview_max_chars', None)
     if 'VIEW_CHAT_MAX_CHARS' not in form_data.model_fields_set:
         updates.pop('chats.view_max_chars', None)
+    if 'TOOL_OUTPUT_MAX_CHARS' not in form_data.model_fields_set:
+        updates.pop('tools.output_max_chars', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''

@@ -5,8 +5,8 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
-	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/terminal';
-	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/terminal/socket';
+	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/machines';
+	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/machines/socket';
 
 	export let target: TerminalTarget;
 
@@ -305,7 +305,7 @@
 <div class="terminal-view h-full min-h-0 relative bg-transparent">
 	{#if reconnecting}
 		<div
-			class="absolute top-1 right-2 z-10 rounded bg-white/90 px-2 py-1 text-xs text-gray-600 dark:bg-gray-900/90 dark:text-gray-300"
+			class="absolute top-1 right-2 z-10 rounded bg-base-0/90 px-2 py-1 text-xs text-base-600 dark:bg-base-900/90 dark:text-base-300"
 			role="status"
 		>
 			Connection interrupted. Reconnecting to the same terminal…

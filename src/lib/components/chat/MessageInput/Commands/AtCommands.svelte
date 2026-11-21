@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/terminal';
+	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/machines';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
@@ -8,7 +8,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
-	import { searchFiles, filesystemFile } from '$lib/apis/terminal';
+	import { searchFiles, filesystemFile } from '$lib/apis/machines';
 	import { decodeString, isValidHttpUrl, isYoutubeUrl } from '$lib/utils';
 	import {
 		resolveLocalizedModelDescription,
@@ -279,7 +279,7 @@
 		{/if}
 
 		<button
-			class="flex h-6 w-full max-w-full items-center justify-between overflow-hidden rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+			class="flex h-6 w-full max-w-full items-center justify-between overflow-hidden rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {itemIdx ===
 			selectedIdx
 				? 'app-interactive-active selected-command-option-button'
 				: ''}"
@@ -346,7 +346,7 @@
 		{@const itemIdx = knowledgeResults.length + modelIdx}
 		<Tooltip content={model.id} placement="top-start">
 			<button
-				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {itemIdx ===
+				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {itemIdx ===
 				selectedIdx
 					? 'app-interactive-active selected-command-option-button'
 					: ''}"

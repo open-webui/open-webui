@@ -67,7 +67,7 @@
 		</p>{/if}
 	{#if error}<p role="alert" class="text-red-600">{error}</p>{/if}
 	{#if reply?.type === 'download'}<button
-			class="focus-ring flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="focus-ring flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			on:click={download}>Download {reply.filename}</button
 		>{/if}
 	{#if reply?.actions?.length}
@@ -78,7 +78,7 @@
 						href={item.url}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="focus-ring inline-flex min-h-7 max-w-full items-center rounded-lg border border-gray-200 px-2.5 text-xs hover:bg-gray-100 dark:border-white/8 dark:hover:bg-gray-850"
+						class="focus-ring inline-flex min-h-7 max-w-full items-center rounded-lg border border-base-200 px-2.5 text-xs hover:bg-base-100 dark:border-base-0/8 dark:hover:bg-base-850"
 						>{item.label}</a
 					>
 				{:else if item.action_id}
@@ -87,8 +87,8 @@
 						disabled={busy}
 						class="focus-ring flex h-7 max-w-full shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:cursor-not-allowed disabled:opacity-60 {index ===
 						0
-							? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
-							: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+							? 'bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0'
+							: 'hover:bg-base-100 dark:hover:bg-base-850'}"
 						on:click={() => item.action_id && action(item.action_id)}>{item.label}</button
 					>
 				{/if}

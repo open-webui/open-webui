@@ -15,7 +15,7 @@
 		'en-US';
 	let list: HTMLDivElement;
 	const fieldClass =
-		'block min-h-5 max-h-40 min-w-0 w-full resize-none bg-transparent text-[0.8125rem] leading-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 [field-sizing:content]';
+		'block min-h-5 max-h-40 min-w-0 w-full resize-none bg-transparent text-[0.8125rem] leading-5 outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 [field-sizing:content]';
 	const add = async () => {
 		if (!entries.length || entries.at(-1)?.content.trim()) {
 			entries = [...entries, { content: '', i18n: {} }];
@@ -27,7 +27,7 @@
 
 <div class="space-y-1.5">
 	<div class="flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-		<div class="text-xs text-gray-600 dark:text-gray-400">
+		<div class="text-xs text-base-600 dark:text-base-400">
 			{$i18n.t('settings.admin.general.translations.uiTranslations.label')}
 		</div>
 		<div class="ms-auto flex shrink-0 items-center gap-1">
@@ -41,7 +41,7 @@
 					type="button"
 					aria-label={$i18n.t('settings.admin.general.translations.addTranslation.label')}
 					on:click={add}
-					class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
+					class="flex size-6 items-center justify-center text-base-400 dark:text-base-600"
 				>
 					<Plus className="size-3.5" />
 				</button>
@@ -51,21 +51,21 @@
 	<div bind:this={list} class="flex flex-col gap-1.5">
 		{#each entries as entry (entry)}
 			<div
-				class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1.5rem] items-center gap-2 rounded-lg border border-gray-100/40 px-2 py-1 transition focus-within:border-blue-400 dark:border-gray-850/50 dark:focus-within:border-blue-500"
+				class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_1.5rem] items-center gap-2 rounded-lg border border-base-100/40 px-2 py-1 transition focus-within:border-blue-400 dark:border-base-850/50 dark:focus-within:border-blue-500"
 			>
 				<textarea
 					rows="1"
 					bind:value={entry.content}
 					aria-label={$i18n.t('Key')}
 					placeholder={$i18n.t('Key')}
-					class="{fieldClass} text-gray-500 dark:text-gray-400"
+					class="{fieldClass} text-base-500 dark:text-base-400"
 				></textarea>
 				<textarea
 					rows="1"
 					value={entry.i18n[locale]?.content ?? ''}
 					aria-label={$i18n.t('Value')}
 					placeholder={$i18n.t('Value')}
-					class="{fieldClass} text-gray-700 dark:text-gray-200"
+					class="{fieldClass} text-base-700 dark:text-base-200"
 					on:input={(event) => {
 						entry.i18n = { ...entry.i18n, [locale]: { content: event.currentTarget.value } };
 					}}
@@ -83,7 +83,7 @@
 									item !== entry || Object.values(item.i18n).some((text) => text.content.trim())
 							);
 						}}
-						class="flex size-6 shrink-0 items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+						class="flex size-6 shrink-0 items-center justify-center text-base-400 hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 					>
 						<XMark className="size-3.5" />
 					</button>

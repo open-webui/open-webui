@@ -9,7 +9,17 @@ export type AutomationTerminalConfig = {
 export type AutomationTarget = {
 	type: 'chat' | 'channel';
 	channel_id?: string | null;
+	/** Off: every run continues one chat, which the first run creates (chat_id is set by the server). */
+	new_chat?: boolean;
+	chat_id?: string | null;
+	/** Off: every run continues one channel thread, which the first run starts (thread_id is set by the server). */
+	new_thread?: boolean;
+	thread_id?: string | null;
 };
+
+/** Whether each run starts a new chat (or channel thread); targets saved before the option existed do. */
+export const startsNew = (target?: AutomationTarget | null) =>
+	(target?.type === 'channel' ? target?.new_thread : target?.new_chat) !== false;
 
 export type AutomationData = {
 	prompt: string;
@@ -296,12 +306,13 @@ export const getAutomationRuns = async (
 	token: string,
 	id: string,
 	skip: number = 0,
-	limit: number = 50
+	limit: number = 50,
+	direction: 'asc' | 'desc' = 'desc'
 ) => {
 	let error = null;
 
 	const res = await fetch(
-		`${WEBUI_API_BASE_URL}/automations/${id}/runs?skip=${skip}&limit=${limit}`,
+		`${WEBUI_API_BASE_URL}/automations/${id}/runs?skip=${skip}&limit=${limit}&direction=${direction}`,
 		{
 			method: 'GET',
 			headers: {

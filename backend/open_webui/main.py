@@ -166,6 +166,7 @@ from open_webui.routers import (
     groups,
     images,
     knowledge,
+    machines,
     memories,
     mfa,
     models,
@@ -180,7 +181,6 @@ from open_webui.routers import (
     search,
     skills,
     tasks,
-    terminals,
     tools,
     users,
     utils,
@@ -476,7 +476,7 @@ async def lifespan(app: FastAPI):
 
     # Pre-fetch tool server specs so the first request doesn't pay the latency cost
     if ENABLE_TOOL_SERVERS and (
-        await Config.get('tool_server.connections', []) or await Config.get('terminal_server.connections', [])
+        await Config.get('tool_server.connections', []) or await Config.get('machines.connections', [])
     ):
         mock_request = Request(
             {
@@ -859,7 +859,11 @@ app.include_router(evaluations.router, prefix='/api/v1/evaluations', tags=['eval
 if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
-app.include_router(terminals.router, prefix='/api/v1/terminals', tags=['terminals'])
+app.include_router(machines.router, prefix='/api/v1/machines', tags=['machines'])
+# Deprecated: Terminals became Machines. Kept so older clients and links keep working.
+app.include_router(
+    machines.router, prefix='/api/v1/terminals', tags=['machines'], deprecated=True, include_in_schema=False
+)
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
 
@@ -1107,7 +1111,7 @@ async def chat_completion(
     request.state.model_id = model_id
     tasks = form_data.pop('background_tasks', None)
 
-    from open_webui.utils.terminals import get_folder_terminal_defaults, initialize_terminal_directory
+    from open_webui.utils.machines import get_folder_terminal_defaults, initialize_terminal_directory
 
     folder_defaults = {}
     requested_directory = form_data.pop('terminal_cwd', None)
@@ -1243,6 +1247,7 @@ async def chat_completion(
         #   absent → legacy caller, no chat management
         is_new_chat = 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id')
         parent_id = form_data.pop('parent_id', None)
+        queue = form_data.pop('queue', False) is True
         form_data.pop('new_chat', None)  # Legacy field
 
         # Multi-model message_ids: list of {model_id, message_id} entries.
@@ -1551,13 +1556,22 @@ async def chat_completion(
 
                     user_message = metadata.get('user_message') or {}
                     assistant_message_id = metadata.get('assistant_message_id')
-                    if parent_id and not (
-                        assistant_message_id or metadata.get('regeneration_message_id') or metadata['internal']
+                    if (
+                        queue
+                        and parent_id
+                        and not (
+                            assistant_message_id or metadata.get('regeneration_message_id') or metadata['internal']
+                        )
                     ):
                         from open_webui.utils.subagents import queue_user_message
 
                         # A reply in this chat is still running: it takes this message at its next step.
                         if await queue_user_message(request, chat_id, user, user_message, parent_id):
+                            if user_message.get('parentId') != parent_id:
+                                event_emitter = await get_event_emitter(
+                                    {**metadata, 'message_id': user_message['id']}, update_db=False
+                                )
+                                await event_emitter({'type': 'chat:reload'})
                             return {'status': True, 'queued': True, 'chat_id': chat_id}
                     if assistant_message_id:
                         message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
@@ -1576,6 +1590,8 @@ async def chat_completion(
                             for mid, message in turn['messages'].items()
                         }
                         await event_emitter({'type': 'chat:messages', 'data': turn})
+                        if queue and user_message.get('parentId') != parent_id:
+                            await event_emitter({'type': 'chat:reload'})
                         user_message_id = user_message.get('id')
                         await emit_chat_list_event({**metadata, 'message_id': user_message_id}, chat_id)
                         for message_id, message in turn['messages'].items():
@@ -2367,7 +2383,7 @@ async def get_app_config(request: Request):
         'ui.enable_login_form',
         'auth.enable_api_keys',
         'ui.enable_password_change_form',
-        'terminal_server.connections',
+        'machines.connections',
         'folders.enable',
         'folders.max_file_count',
         'channels.enable',
@@ -2477,10 +2493,7 @@ async def get_app_config(request: Request):
                     'enable_functions': ENABLE_FUNCTIONS,
                     'enable_tool_servers': ENABLE_TOOL_SERVERS,
                     'enable_terminal_servers': ENABLE_TOOL_SERVERS
-                    and any(
-                        connection.get('enabled', True)
-                        for connection in config.get('terminal_server.connections') or []
-                    ),
+                    and any(connection.get('enabled', True) for connection in config.get('machines.connections') or []),
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),
                     'enable_channels': config.get('channels.enable'),

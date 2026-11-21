@@ -327,13 +327,13 @@
 	ariaLabel={$i18n.t('Sync Usage Stats')}
 	bind:show
 	size="md"
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div class="w-full">
 		{#if completed}
-			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Complete!')}</div>
-				<div class="mb-3 text-xs text-gray-500">
+			<div class="px-4 py-4">
+				<div class="text-sm font-medium mb-1">{$i18n.t('Sync Complete!')}</div>
+				<div class="mb-3 text-xs text-base-500">
 					{$i18n.t('Your usage stats have been successfully synced.')}
 				</div>
 
@@ -341,7 +341,7 @@
 
 				<div class="flex justify-end">
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						on:click={closeModal}
 					>
 						{$i18n.t('Done')}
@@ -349,15 +349,15 @@
 				</div>
 			</div>
 		{:else if error}
-			<div class="px-5.5 py-5">
-				<div class="mb-1 text-xl font-normal">{$i18n.t('Sync Failed')}</div>
-				<div class="mb-3 text-xs text-gray-500">
+			<div class="px-4 py-4">
+				<div class="text-sm font-medium mb-1">{$i18n.t('Sync Failed')}</div>
+				<div class="mb-3 text-xs text-base-500">
 					{errorMessage || $i18n.t('There was an error syncing your stats. Please try again.')}
 				</div>
 
 				<div class="flex justify-end">
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						on:click={() => {
 							error = false;
 							errorMessage = '';
@@ -371,7 +371,7 @@
 			<div class="flex justify-between px-4 pt-3 pb-1">
 				<div class="text-sm font-medium self-center">{$i18n.t('Sync Usage Stats')}</div>
 				<button
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					aria-label={$i18n.t('Close modal')}
 					on:click={() => {
 						show = false;
@@ -383,14 +383,14 @@
 			</div>
 
 			<div class="px-5 pt-2 pb-5">
-				<div class="text-sm text-gray-500 dark:text-gray-400">
+				<div class="text-sm text-base-500 dark:text-base-400">
 					<!-- LICENSE covers this Open WebUI Community wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
 					{$i18n.t('Do you want to sync your usage stats with Open WebUI Community?')}
 				</div>
 
-				<div class="mt-2 text-xs text-gray-500">
+				<div class="mt-2 text-xs text-base-500">
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
@@ -399,8 +399,8 @@
 					)}
 				</div>
 
-				<div class="mt-3 text-xs text-gray-500">
-					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
+				<div class="mt-3 text-xs text-base-500">
+					<div class="mb-1 font-normal text-base-600 dark:text-base-400">
 						{$i18n.t('What is shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1 mb-2">
@@ -414,7 +414,7 @@
 						<li>{$i18n.t('User ratings (thumbs up/down)')}</li>
 					</ul>
 
-					<div class="mb-1 font-normal text-gray-600 dark:text-gray-400">
+					<div class="mb-1 font-normal text-base-600 dark:text-base-400">
 						{$i18n.t('What is NOT shared:')}
 					</div>
 					<ul class="list-disc list-inside space-y-0.5 ml-1">
@@ -438,9 +438,9 @@
 									checked={syncMode === 'incremental'}
 									on:change={(e) => (syncMode = e.target.checked ? 'incremental' : 'full')}
 									disabled={syncing}
-									class="w-4 h-4 rounded border-gray-300 dark:border-gray-600"
+									class="w-4 h-4 rounded border-base-300 dark:border-base-600"
 								/>
-								<span class="text-gray-700 dark:text-gray-300"
+								<span class="text-base-700 dark:text-base-300"
 									>{$i18n.t('Only sync new/updated chats')}</span
 								>
 							</label>
@@ -450,7 +450,7 @@
 
 				{#if syncing}
 					<div class="mt-3 mx-1.5">
-						<div class="text-xs text-gray-500 mb-1 flex justify-between">
+						<div class="text-xs text-base-500 mb-1 flex justify-between">
 							<div>
 								{downloading ? $i18n.t('Downloading stats...') : $i18n.t('Syncing stats...')}
 							</div>
@@ -460,15 +460,15 @@
 								{/if}
 							</div>
 						</div>
-						<div class="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 overflow-hidden">
+						<div class="w-full bg-base-200 rounded-full h-1.5 dark:bg-base-700 overflow-hidden">
 							{#if total > 0}
 								<div
-									class="bg-gray-900 dark:bg-gray-100 h-1.5 rounded-full transition-all duration-300"
+									class="bg-base-900 dark:bg-base-100 h-1.5 rounded-full transition-all duration-300"
 									style="width: {progressPercent}%"
 								></div>
 							{:else}
 								<div
-									class="bg-gray-900 dark:bg-gray-100 h-1.5 w-0 rounded-full animate-pulse"
+									class="bg-base-900 dark:bg-base-100 h-1.5 w-0 rounded-full animate-pulse"
 								></div>
 							{/if}
 						</div>
@@ -476,7 +476,7 @@
 				{/if}
 
 				<div class="mt-4 flex items-center justify-between gap-2">
-					<div class="text-xs text-gray-400 text-center mr-auto">
+					<div class="text-xs text-base-400 text-center mr-auto">
 						<button
 							class="hover:underline px-2"
 							type="button"
@@ -488,7 +488,7 @@
 					</div>
 
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:cursor-not-allowed dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 text-base-600 hover:bg-base-200 disabled:cursor-not-allowed dark:bg-base-800 dark:text-base-400 dark:hover:bg-base-700"
 						on:click={() => {
 							if (syncing) {
 								cancelOperation();
@@ -501,7 +501,7 @@
 					</button>
 
 					<button
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 						on:click={syncStats}
 						disabled={syncing}
 					>

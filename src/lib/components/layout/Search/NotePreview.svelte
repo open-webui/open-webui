@@ -52,10 +52,10 @@
 	onDestroy(() => (generation += 1));
 </script>
 
-{#if loading}<div class="flex justify-center py-6 text-gray-400">
+{#if loading}<div class="flex justify-center py-6 text-base-400">
 		<Spinner className="size-4" />
 	</div>
-{:else if error}<div class="py-4 text-xs text-gray-500 dark:text-gray-400">
+{:else if error}<div class="py-4 text-xs text-base-500 dark:text-base-400">
 		<p>{$i18n.t('Failed to load note preview')}</p>
 		<button class="mt-2 underline underline-offset-2" on:click={() => load(id, query)}
 			>{$i18n.t('Try again')}</button

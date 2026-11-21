@@ -104,8 +104,8 @@ export const downloadPdf = async (note) => {
 
 		node.appendChild(contentNode);
 
-		node.classList.add('text-black');
-		node.classList.add('dark:text-white');
+		node.classList.add('text-base-1000');
+		node.classList.add('dark:text-base-0');
 		node.style.width = `${virtualWidth}px`;
 		node.style.position = 'absolute';
 		node.style.left = '-9999px';

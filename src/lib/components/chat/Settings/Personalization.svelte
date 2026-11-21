@@ -38,7 +38,7 @@
 	let showDeleteConfirm = false;
 	let query = '';
 	const actionButtonClass =
-		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	type Memory = {
 		id: string;
@@ -109,7 +109,7 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.personalization.title')}
 	</h2>
 
@@ -144,10 +144,10 @@
 			{#if enableMemory}
 				<div>
 					<div class="mb-1 flex items-center">
-						<div class="text-xs text-gray-600 dark:text-gray-400">
+						<div class="text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('settings.personal.personalization.savedMemories.label')}
 							{#if !loadingMemories}
-								<span class="ml-1 text-gray-400 dark:text-gray-600">{memories.length}</span>
+								<span class="ml-1 text-base-400 dark:text-base-600">{memories.length}</span>
 							{/if}
 						</div>
 					</div>
@@ -160,10 +160,10 @@
 						<div class="mb-2 flex min-w-0 items-center justify-between gap-3">
 							{#if memories.length > 0}
 								<div class="flex min-w-0 flex-1 items-center gap-2">
-									<Search className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600" />
+									<Search className="size-3.5 shrink-0 text-base-400 dark:text-base-600" />
 									<input
 										data-settings-search
-										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-gray-700 outline-hidden placeholder:text-gray-300 dark:text-gray-300 dark:placeholder:text-gray-700"
+										class="min-w-0 flex-1 bg-transparent py-0.5 text-xs text-base-700 outline-hidden placeholder:text-base-300 dark:text-base-300 dark:placeholder:text-base-700"
 										bind:value={query}
 										aria-label={$i18n.t('Search Memories')}
 										placeholder={$i18n.t('Search Memories')}
@@ -172,7 +172,7 @@
 									{#if query}
 										<div class="shrink-0">
 											<button
-												class="rounded-lg p-0.5 text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+												class="rounded-lg p-0.5 text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 												type="button"
 												aria-label={$i18n.t('Clear search')}
 												on:click={() => {
@@ -191,7 +191,7 @@
 							<Dropdown closeOnSelect align="end">
 								<Tooltip content={$i18n.t('Actions')}>
 									<button
-										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+										class="flex h-7 items-center gap-1.5 rounded-lg bg-transparent px-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 										type="button"
 									>
 										<span>{$i18n.t('Actions')}</span>
@@ -202,7 +202,7 @@
 								<div slot="content">
 									<DropdownMenu className="min-w-[10.625rem] shadow-sm">
 										<button
-											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-base-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-base-100"
 											type="button"
 											on:click={() => {
 												selectedMemory = null;
@@ -214,7 +214,7 @@
 										</button>
 
 										<button
-											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-gray-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-100"
+											class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-lg bg-transparent px-2 text-xs hover:text-base-900 disabled:cursor-default disabled:opacity-30 dark:hover:text-base-100"
 											disabled={memories.length === 0}
 											type="button"
 											on:click={() => {
@@ -232,7 +232,7 @@
 						</div>
 
 						{#if sortedMemories.length === 0}
-							<div class="min-h-16 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="min-h-16 text-[0.6875rem] text-base-400 dark:text-base-600">
 								{#if memories.length === 0}
 									{$i18n.t('settings.personal.personalization.noResultsFound.description')}
 								{:else}
@@ -244,7 +244,7 @@
 								{#each sortedMemories as memory (memory.id)}
 									<div class="flex items-start justify-between gap-3">
 										<div
-											class="min-w-0 whitespace-pre-wrap break-words text-xs text-gray-700 dark:text-gray-300"
+											class="min-w-0 whitespace-pre-wrap break-words text-xs text-base-700 dark:text-base-300"
 										>
 											{memory.content}
 										</div>
@@ -276,7 +276,7 @@
 
 	<div class="shrink-0 flex justify-end text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}
@@ -315,10 +315,10 @@
 		showDeleteConfirm = false;
 	}}
 >
-	<div class="text-sm text-gray-500 flex-1">
+	<div class="text-sm text-base-500 flex-1">
 		{$i18n.t('Are you sure you want to delete this memory? This action cannot be undone.')}
 		<div
-			class="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-gray-100/50 bg-gray-50/40 p-2 text-xs text-gray-600 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-400"
+			class="mt-2 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-base-100/50 bg-base-50/40 p-2 text-xs text-base-600 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-400"
 		>
 			{selectedMemory?.content}
 		</div>

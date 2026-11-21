@@ -130,21 +130,21 @@
 		<div class="flex items-center justify-center h-full"><Spinner className="size-4" /></div>
 	{:else if error}
 		<div
-			class="flex flex-1 items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
+			class="flex flex-1 items-center justify-center p-3 text-center text-xs text-base-500 dark:text-base-400"
 		>
 			{error}
 		</div>
 	{:else}
 		<!-- Table tabs + query toggle -->
 		<div
-			class="flex items-center gap-1 px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto scrollbar-none shrink-0"
+			class="flex items-center gap-1 px-2 py-1.5 border-b border-base-100 dark:border-base-800 overflow-x-auto scrollbar-none shrink-0"
 		>
 			{#each tables as table}
 				<button
 					class="shrink-0 px-2 py-1 text-xs rounded-lg transition
 						{table === selectedTable && !queryMode
-						? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-normal'
-						: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+						? 'bg-base-100 dark:bg-base-800 text-base-700 dark:text-base-200 font-normal'
+						: 'text-base-500 dark:text-base-400 hover:bg-base-100 dark:hover:bg-base-800'}"
 					on:click={() => selectTable(table)}
 				>
 					{table}
@@ -154,8 +154,8 @@
 			<button
 				class="shrink-0 px-2 py-1 text-xs rounded-lg transition font-mono
 					{queryMode
-					? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-normal'
-					: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}"
+					? 'bg-base-100 dark:bg-base-800 text-base-700 dark:text-base-200 font-normal'
+					: 'text-base-500 dark:text-base-400 hover:bg-base-100 dark:hover:bg-base-800'}"
 				on:click={() => {
 					queryMode = !queryMode;
 				}}
@@ -171,7 +171,7 @@
 					aria-label={$i18n.t('SQL query')}
 					bind:value={queryText}
 					placeholder="SELECT * FROM ..."
-					class="query-editor w-full text-xs font-mono bg-transparent text-gray-800 dark:text-gray-200 px-3 py-2 outline-none resize-none"
+					class="query-editor w-full text-xs font-mono bg-transparent text-base-800 dark:text-base-200 px-3 py-2 outline-none resize-none"
 					rows="3"
 					spellcheck="false"
 					on:keydown={(e) => {
@@ -182,17 +182,17 @@
 					}}
 				></textarea>
 				<div
-					class="flex items-center justify-between px-2 py-1 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800"
+					class="flex items-center justify-between px-2 py-1 bg-base-50 dark:bg-base-900 border-b border-base-100 dark:border-base-800"
 				>
 					{#if queryError}
-						<span class="text-[0.65rem] text-gray-500 dark:text-gray-400 truncate mr-2"
+						<span class="text-[0.65rem] text-base-500 dark:text-base-400 truncate mr-2"
 							>{queryError}</span
 						>
 					{:else}
-						<span class="text-[0.6rem] text-gray-400 dark:text-gray-600 select-none">⌘+Enter</span>
+						<span class="text-[0.6rem] text-base-400 dark:text-base-600 select-none">⌘+Enter</span>
 					{/if}
 					<button
-						class="shrink-0 px-2.5 py-0.5 text-[0.65rem] font-normal rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+						class="shrink-0 px-2.5 py-0.5 text-[0.65rem] font-normal rounded hover:bg-base-200 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-300"
 						on:click={runQuery}
 					>
 						{$i18n.t('Run')}
@@ -250,7 +250,7 @@
 					</table>
 				{:else}
 					<div
-						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400"
+						class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400"
 					>
 						{$i18n.t('No data')}
 					</div>
@@ -260,11 +260,11 @@
 			<!-- Pagination -->
 			{#if totalPages > 1}
 				<div
-					class="flex items-center justify-center gap-3 py-1.5 px-3 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-500 shrink-0"
+					class="flex items-center justify-center gap-3 py-1.5 px-3 border-t border-base-100 dark:border-base-800 text-xs text-base-500 shrink-0"
 				>
 					<button
 						aria-label={$i18n.t('Previous page')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+						class="p-1 rounded hover:bg-base-100 dark:hover:bg-base-800 disabled:opacity-30"
 						disabled={page === 0}
 						on:click={() => {
 							page--;
@@ -293,7 +293,7 @@
 					</span>
 					<button
 						aria-label={$i18n.t('Next page')}
-						class="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-30"
+						class="p-1 rounded hover:bg-base-100 dark:hover:bg-base-800 disabled:opacity-30"
 						disabled={page >= totalPages - 1}
 						on:click={() => {
 							page++;
@@ -334,16 +334,16 @@
 	.sqlite-table thead th {
 		position: sticky;
 		top: 0;
-		background: rgba(243, 244, 246, 0.95);
+		background: color-mix(in oklab, var(--color-base-100) 95%, transparent);
 		backdrop-filter: blur(4px);
 		font-weight: 600;
-		color: #374151;
+		color: var(--color-base-700);
 		border-bottom: 2px solid rgba(128, 128, 128, 0.25);
 		z-index: 1;
 	}
 	:global(.dark) .sqlite-table thead th {
-		background: rgba(31, 41, 55, 0.95);
-		color: #d1d5db;
+		background: color-mix(in oklab, var(--color-base-800) 95%, transparent);
+		color: var(--color-base-300);
 	}
 	.sqlite-table tbody tr:nth-child(even) {
 		background: rgba(128, 128, 128, 0.04);
@@ -355,16 +355,16 @@
 		background: rgba(59, 130, 246, 0.1);
 	}
 	.sqlite-table td {
-		color: #374151;
+		color: var(--color-base-700);
 		max-width: 18.75rem;
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
 	:global(.dark) .sqlite-table td {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.sqlite-row-num {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-size: 0.6rem;
 		text-align: right !important;
 		user-select: none;
@@ -372,19 +372,19 @@
 		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .sqlite-row-num {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	.sqlite-null {
-		color: #9ca3af !important;
+		color: var(--color-base-500) !important;
 		font-style: italic;
 	}
 	:global(.dark) .sqlite-null {
-		color: #6b7280 !important;
+		color: var(--color-base-600) !important;
 	}
 	.query-editor::placeholder {
-		color: #9ca3af;
+		color: var(--color-base-500);
 	}
 	:global(.dark) .query-editor::placeholder {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 </style>

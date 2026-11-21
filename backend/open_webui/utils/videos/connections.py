@@ -1,7 +1,8 @@
 """Video connections: the configured backends that built-in video generation runs on.
 
 A connection is one OpenAI compatible server with a video API (``/videos``), such as LiteLLM,
-OpenAI or OpenRouter, with the video models it exposes. Users pick a model by its reference,
+OpenAI or OpenRouter, or a ComfyUI server running the admin's video workflow, with the video models it
+exposes. Users pick a model by its reference,
 ``{connection_id}:{model_id}``, and only see models their access grants allow.
 """
 
@@ -24,6 +25,8 @@ from open_webui.utils.images.connections import (
     IMAGE_CONNECTION_AUTH_TYPES,
     _json_object,
     _size,
+    _workflow,
+    _workflow_nodes,
     get_image_model_ref,
     get_openai_connection_models,
     get_requested_model,
@@ -35,7 +38,7 @@ log = logging.getLogger(__name__)
 VIDEO_CONNECTIONS_CONFIG_KEY = 'videos.connections'
 VIDEO_GENERATION_DEFAULT_MODEL_CONFIG_KEY = 'video_generation.default_model'
 
-VIDEO_CONNECTION_TYPES = ('openai',)
+VIDEO_CONNECTION_TYPES = ('openai', 'comfyui')
 VIDEO_CONNECTION_AUTH_TYPES = IMAGE_CONNECTION_AUTH_TYPES
 
 # Like chat model connections: '' is the OpenAI video API (OpenAI, LiteLLM); OpenRouter has its own.
@@ -71,8 +74,10 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
     auth_type = str(config.get('auth_type') or 'bearer')
     if auth_type not in VIDEO_CONNECTION_AUTH_TYPES:
         raise ValueError(f'Unsupported auth type: {auth_type}')
+    if connection_type != 'openai' and auth_type not in ('none', 'bearer'):
+        raise ValueError(f'{connection_type} connections support no auth or a key')
 
-    provider = str(config.get('provider') or '')
+    provider = str(config.get('provider') or '') if connection_type == 'openai' else ''
     if provider not in VIDEO_CONNECTION_PROVIDERS:
         raise ValueError(f'Unsupported video provider: {provider}')
 
@@ -83,6 +88,14 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
             raise ValueError('Video length must be a positive number of seconds (e.g. 8)')
     else:
         seconds = None
+
+    fps = config.get('fps')
+    if fps not in (None, ''):
+        fps = float(fps)
+        if fps <= 0:
+            raise ValueError('Frame rate must be a positive number of frames per second (e.g. 24)')
+    else:
+        fps = None
 
     return {
         'id': connection_id,
@@ -101,6 +114,9 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
             'seconds': seconds,
             'api_version': str(config.get('api_version') or ''),
             'params': _json_object(config.get('params'), 'additional parameters'),
+            'workflow': _workflow(config.get('workflow'), 'ComfyUI workflow'),
+            'nodes': _workflow_nodes(config.get('nodes')),
+            'fps': fps,
         },
     }
 
@@ -108,7 +124,12 @@ def normalize_video_connection(connection: dict[str, Any]) -> dict[str, Any]:
 async def get_video_connection_models(request: Request, connection: dict, user: UserModel | None = None) -> list[dict]:
     """The models a connection serves, with video models marked (``video``). OpenRouter lists its video
     models on their own at ``/videos/models``; other servers list everything at ``/models``, and LiteLLM
-    marks which ones make video."""
+    marks which ones make video. ComfyUI offers the models its workflow's model node can load."""
+    if connection.get('type') == 'comfyui':
+        from open_webui.routers.images import get_comfyui_connection_models
+
+        return [{**model, 'video': True} for model in await get_comfyui_connection_models(connection)]
+
     if get_video_connection_provider(connection) != 'openrouter':
         return await get_openai_connection_models(request, connection, user)
 
@@ -157,7 +178,8 @@ async def get_synced_video_models(request: Request, connection: dict, user: User
 async def get_video_models(request: Request, user: UserModel, *, bypass_access: bool = False) -> list[dict]:
     """Video models the user may use, across enabled connections. Each carries its connection for internal use.
 
-    A connection without model IDs offers every video model the server labels (LiteLLM), else its default model.
+    A connection without model IDs offers every video model the server labels (LiteLLM), else its default
+    model, or for ComfyUI the model its workflow sets.
     """
     connections = await Config.get(VIDEO_CONNECTIONS_CONFIG_KEY) or []
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
@@ -172,6 +194,8 @@ async def get_video_models(request: Request, user: UserModel, *, bypass_access: 
 
         if config.get('model_ids'):
             entries = [{'id': model_id} for model_id in config['model_ids']]
+        elif connection.get('type') == 'comfyui':
+            entries = [{'id': ''}]
         else:
             entries = await get_synced_video_models(request, connection, user)
 

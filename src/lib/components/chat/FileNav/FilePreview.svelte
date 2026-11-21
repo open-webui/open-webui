@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
 	import { getContext, tick, onDestroy } from 'svelte';
-	import { downloadFileBlob, terminalRequest } from '$lib/apis/terminal';
+	import { downloadFileBlob, terminalRequest } from '$lib/apis/machines';
 	import MarkdownFileEditor from './MarkdownFileEditor.svelte';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
@@ -275,7 +275,7 @@
 	<!-- File preview -->
 	{#if fileLoading}
 		<div class="flex items-center justify-center h-full">
-			<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+			<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 		</div>
 	{:else if fileImageUrl !== null}
 		<PanzoomContainer
@@ -292,7 +292,7 @@
 			/>
 		</PanzoomContainer>
 	{:else if fileVideoUrl !== null}
-		<div class="w-full h-full flex items-center justify-center bg-black">
+		<div class="w-full h-full flex items-center justify-center bg-base-1000">
 			<!-- svelte-ignore a11y-media-has-caption -->
 			<video src={fileVideoUrl} controls class="w-full h-full object-contain">
 				{$i18n.t('Your browser does not support the video tag.')}
@@ -319,7 +319,7 @@
 		{#key fileModelData}
 			{#await import('../../common/ModelPreview.svelte')}
 				<div class="flex h-full items-center justify-center">
-					<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+					<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 				</div>
 			{:then { default: ModelPreview }}
 				<ModelPreview
@@ -335,7 +335,7 @@
 				/>
 			{:catch}
 				<div
-					class="flex h-full items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+					class="flex h-full items-center justify-center p-4 text-center text-sm text-base-500 dark:text-base-400"
 				>
 					{$i18n.t('Preview failed')}
 				</div>
@@ -383,7 +383,7 @@
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
-				class="w-full h-full border-none bg-white"
+				class="w-full h-full border-none bg-base-0"
 				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isHtml && !showRaw}
@@ -399,7 +399,7 @@
 					: ''}{($settings?.iframeSandboxAllowForms ?? true)
 					? ' allow-forms'
 					: ''}{($settings?.iframeSandboxAllowSameOrigin ?? false) ? ' allow-same-origin' : ''}"
-				class="w-full h-full border-none bg-white"
+				class="w-full h-full border-none bg-base-0"
 				title={$i18n.t('HTML Preview')}
 			/>
 		{:else if isMarkdown && !showRaw && onSave && !readOnly}
@@ -485,19 +485,19 @@
 			</div>
 		{/if}
 	{:else}
-		<div class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400">
+		<div class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400">
 			{$i18n.t('Could not read file.')}
 		</div>
 	{/if}
 
 	{#if !fileLoading && (fileImageUrl !== null || svgPreview)}
 		<div
-			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-gray-200/60 bg-white/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-gray-700/60 dark:bg-gray-850/90"
+			class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-0.5 rounded-lg border border-base-200/60 bg-base-0/90 px-1 py-0.5 shadow-lg backdrop-blur-sm dark:border-base-700/60 dark:bg-base-850/90"
 		>
 			<!-- Pinch covers in/out on coarse pointers; reset has no gesture, so it stays -->
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomOut()}
 				aria-label={$i18n.t('Zoom out')}
 			>
@@ -516,7 +516,7 @@
 			</button>
 			<button
 				type="button"
-				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+				class="h-7 min-w-12 shrink-0 rounded-md px-1.5 py-1 text-center text-[0.6875rem] font-normal tabular-nums text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800"
 				on:click={() => panzoomRef?.reset()}
 				aria-label={$i18n.t('Reset zoom')}
 			>
@@ -524,7 +524,7 @@
 			</button>
 			<button
 				type="button"
-				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-gray-500 transition hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 pointer-coarse:hidden"
+				class="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md p-1.5 text-base-500 transition hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800 pointer-coarse:hidden"
 				on:click={() => panzoomRef?.zoomIn()}
 				aria-label={$i18n.t('Zoom in')}
 			>
@@ -558,16 +558,16 @@
 	.csv-table thead th {
 		position: sticky;
 		top: 0;
-		background: rgba(243, 244, 246, 0.95);
+		background: color-mix(in oklab, var(--color-base-100) 95%, transparent);
 		backdrop-filter: blur(4px);
 		font-weight: 600;
-		color: #374151;
+		color: var(--color-base-700);
 		border-bottom: 2px solid rgba(128, 128, 128, 0.25);
 		z-index: 1;
 	}
 	:global(.dark) .csv-table thead th {
-		background: rgba(31, 41, 55, 0.95);
-		color: #d1d5db;
+		background: color-mix(in oklab, var(--color-base-800) 95%, transparent);
+		color: var(--color-base-300);
 	}
 	.csv-table tbody tr:nth-child(even) {
 		background: rgba(128, 128, 128, 0.04);
@@ -579,13 +579,13 @@
 		background: rgba(59, 130, 246, 0.1);
 	}
 	.csv-table td {
-		color: #374151;
+		color: var(--color-base-700);
 	}
 	:global(.dark) .csv-table td {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.csv-row-num {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-size: 0.6rem;
 		text-align: right !important;
 		user-select: none;
@@ -593,7 +593,7 @@
 		padding-right: 0.375rem !important;
 	}
 	:global(.dark) .csv-row-num {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	/* DOCX / generic office styles */
 	:global(.office-preview img) {

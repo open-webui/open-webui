@@ -57,10 +57,10 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class="group flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-gray-850/50 hover:bg-white rounded-xl transition
+	class="group flex cursor-pointer w-full px-2 bg-transparent dark:hover:bg-base-850/50 hover:bg-base-0 rounded-xl transition
 		{dragOver
-		? 'bg-gray-100 dark:bg-gray-800 ring-1 ring-gray-300 dark:ring-gray-600'
-		: 'hover:bg-gray-100 dark:hover:bg-gray-850'}"
+		? 'bg-base-100 dark:bg-base-800 ring-1 ring-base-300 dark:ring-base-600'
+		: 'hover:bg-base-100 dark:hover:bg-base-850'}"
 	draggable="true"
 	on:dragstart={(e) => {
 		e.dataTransfer?.setData('application/x-kb-dir-move', JSON.stringify({ dirId: directory.id }));
@@ -155,7 +155,7 @@
 						.locale($i18n.language)
 						.format('LLLL')}
 				>
-					<div class="text-xs text-gray-400">
+					<div class="text-xs text-base-400">
 						{dayjs(directory.updated_at * 1000)
 							.locale($i18n.language)
 							.fromNow()}
@@ -169,7 +169,7 @@
 		<div class="flex items-center">
 			<Dropdown closeOnSelect align="end" sideOffset={4}>
 				<button
-					class="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+					class="p-1 rounded-full hover:bg-base-100 dark:hover:bg-base-850 transition"
 					type="button"
 				>
 					<EllipsisHorizontal className="size-3.5" />
@@ -179,7 +179,7 @@
 					<DropdownMenu className="min-w-[8.75rem] z-[9999999]">
 						<button
 							type="button"
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => startRename()}
 						>
 							<Pencil className="size-3.5" />
@@ -187,7 +187,7 @@
 						</button>
 						<button
 							type="button"
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs transition hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => onDelete(directory.id)}
 						>
 							<GarbageBin className="size-3.5" />

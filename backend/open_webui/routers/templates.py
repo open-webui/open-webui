@@ -9,7 +9,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.utils.access_control import validate_access_grants
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.terminals import (
+from open_webui.utils.machines import (
     has_connection_write_access,
     get_connection,
     server_request,
@@ -43,18 +43,18 @@ def path(template_id, suffix=''):
 
 
 async def changed(user_id, terminal_id, previous=()):
-    from open_webui.socket.main import emit_to_users
+    from open_webui.utils.machines import notify_machines_changed
 
     current = await AccessGrants.get_grants_by_resource('terminal', terminal_id)
     recipients = {user_id}
     recipients.update(await AccessGrants.get_user_ids_by_access_grants([*previous, *current], 'read'))
-    await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, list(recipients))
+    await notify_machines_changed(recipients)
 
 
 @router.get('/connections')
 async def management_connections(user=Depends(get_verified_user)):
     result = []
-    for connection in await Config.get('terminal_server.connections', []) or []:
+    for connection in await Config.get('machines.connections', []) or []:
         if connection.get('server_type') != 'orchestrator' or not connection.get('enabled', True):
             continue
         try:

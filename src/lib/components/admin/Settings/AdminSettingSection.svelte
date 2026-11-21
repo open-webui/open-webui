@@ -6,7 +6,7 @@
 
 <section class="{first ? '' : 'mt-5'} {className}">
 	{#if title}
-		<h3 class="mb-2 text-xs text-gray-400 dark:text-gray-600">
+		<h3 class="mb-2 text-xs text-base-400 dark:text-base-600">
 			{title}
 		</h3>
 	{/if}

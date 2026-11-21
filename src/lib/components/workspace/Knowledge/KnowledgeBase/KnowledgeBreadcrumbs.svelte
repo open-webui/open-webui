@@ -59,9 +59,9 @@
 	<button
 		class="text-xs shrink-0 py-0.5 hover:underline transition
 			{breadcrumbs.length === 0
-			? 'text-gray-700 dark:text-gray-300'
-			: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
-			{dragOverCrumb === -1 ? 'bg-gray-100 dark:bg-gray-800 rounded-lg' : ''}"
+			? 'text-base-700 dark:text-base-300'
+			: 'text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400'}
+			{dragOverCrumb === -1 ? 'bg-base-100 dark:bg-base-800 rounded-lg' : ''}"
 		on:click={() => onNavigate(null)}
 		on:dragover={(e) => handleDragOver(e, -1)}
 		on:dragleave={() => handleDragLeave(-1)}
@@ -71,13 +71,13 @@
 	</button>
 
 	{#each breadcrumbs as crumb, i}
-		<ChevronRight className="size-3 shrink-0 mx-0.5 text-gray-300 dark:text-gray-600" />
+		<ChevronRight className="size-3 shrink-0 mx-0.5 text-base-300 dark:text-base-600" />
 		<button
 			class="text-xs shrink-0 py-0.5 hover:underline transition
 				{i === breadcrumbs.length - 1
-				? 'text-gray-700 dark:text-gray-300'
-				: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
-				{dragOverCrumb === i ? 'bg-gray-100 dark:bg-gray-800 rounded-lg' : ''}"
+				? 'text-base-700 dark:text-base-300'
+				: 'text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400'}
+				{dragOverCrumb === i ? 'bg-base-100 dark:bg-base-800 rounded-lg' : ''}"
 			on:click={() => onNavigate(crumb.id)}
 			on:dragover={(e) => handleDragOver(e, i)}
 			on:dragleave={() => handleDragLeave(i)}

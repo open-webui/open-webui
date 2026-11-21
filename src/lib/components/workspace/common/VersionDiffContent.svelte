@@ -71,7 +71,7 @@
 
 <style>
 	.version-diff-content {
-		color: var(--color-gray-700);
+		color: var(--color-base-700);
 	}
 	.split-row {
 		display: grid;
@@ -93,7 +93,7 @@
 		padding: 0 0.5rem;
 		text-align: right;
 		user-select: none;
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 		border-right: 1px solid rgb(0 0 0 / 0.04);
 	}
 	.line-content {
@@ -132,11 +132,11 @@
 	.hunk-gap {
 		padding: 0.125rem 1rem;
 		text-align: center;
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 		background: rgb(0 0 0 / 0.025);
 	}
 	:global(.dark) .version-diff-content {
-		color: var(--color-gray-300);
+		color: var(--color-base-300);
 	}
 	:global(.dark) .addition {
 		background: #12261e;

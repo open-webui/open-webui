@@ -108,12 +108,12 @@
 				<div class="flex min-w-0 items-center gap-0.5" dir="ltr">
 					<button
 						aria-label={$i18n.t('Previous version')}
-						class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 disabled:text-gray-200 dark:text-gray-500 dark:hover:text-gray-300 dark:disabled:text-gray-700"
+						class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 disabled:text-base-200 dark:text-base-500 dark:hover:text-base-300 dark:disabled:text-base-700"
 						on:click={() => navigateContent('prev')}
 						disabled={selectedContentIdx === 0}
 						><Icon name="chevron-left" size={11} strokeWidth={1.5} /></button
 					>
-					<span class="truncate text-xs text-gray-500 dark:text-gray-400">
+					<span class="truncate text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('Version {{selectedVersion}} of {{totalVersions}}', {
 							selectedVersion: selectedContentIdx + 1,
 							totalVersions: contents.length
@@ -121,7 +121,7 @@
 					</span>
 					<button
 						aria-label={$i18n.t('Next version')}
-						class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 disabled:text-gray-200 dark:text-gray-500 dark:hover:text-gray-300 dark:disabled:text-gray-700"
+						class="flex h-5 w-5 shrink-0 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 disabled:text-base-200 dark:text-base-500 dark:hover:text-base-300 dark:disabled:text-base-700"
 						on:click={() => navigateContent('next')}
 						disabled={selectedContentIdx === contents.length - 1}
 						><Icon name="chevron-right" size={11} strokeWidth={1.5} /></button
@@ -131,7 +131,7 @@
 					<Tooltip content={copied ? $i18n.t('Copied') : $i18n.t('Copy')}>
 						<button
 							aria-label={copied ? $i18n.t('Copied') : $i18n.t('Copy')}
-							class="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+							class="flex h-5 w-5 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 							on:click={() => {
 								copyToClipboard(contents[selectedContentIdx].content);
 								copied = true;
@@ -144,7 +144,7 @@
 					<Tooltip content={$i18n.t('Download')}>
 						<button
 							aria-label={$i18n.t('Download')}
-							class="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+							class="flex h-5 w-5 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 							on:click={downloadArtifact}
 							><Icon name="download" size={11} strokeWidth={1.4} /></button
 						>
@@ -153,7 +153,7 @@
 						<Tooltip content={$i18n.t('Open in full screen')}>
 							<button
 								aria-label={$i18n.t('Open in full screen')}
-								class="flex h-5 w-5 items-center justify-center rounded text-gray-400 transition-colors duration-100 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+								class="flex h-5 w-5 items-center justify-center rounded text-base-400 transition-colors duration-100 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 								on:click={showFullScreen}><Icon name="expand" size={11} strokeWidth={1.4} /></button
 							>
 						</Tooltip>
@@ -166,7 +166,7 @@
 			<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 		{/if}
 
-		<div class="flex-1 w-full min-h-0 bg-white dark:bg-gray-850">
+		<div class="flex-1 w-full min-h-0 bg-base-0 dark:bg-base-850">
 			<div class=" h-full flex flex-col">
 				{#if contents.length > 0}
 					<div class="max-w-full w-full h-full">
@@ -198,7 +198,7 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="m-auto p-6 text-center font-normal text-xs text-gray-900 dark:text-white">
+					<div class="m-auto p-6 text-center font-normal text-xs text-base-900 dark:text-base-0">
 						{$i18n.t('No HTML, CSS, or JavaScript content found.')}
 					</div>
 				{/if}

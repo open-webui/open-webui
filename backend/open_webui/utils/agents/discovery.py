@@ -3,7 +3,7 @@
 from urllib.parse import urlencode
 
 from open_webui.utils.agents.session import model_id
-from open_webui.utils.terminals import MissingTerminalContext, get_terminal_json
+from open_webui.utils.machines import MissingTerminalContext, get_terminal_json
 
 
 def model_controls(model):

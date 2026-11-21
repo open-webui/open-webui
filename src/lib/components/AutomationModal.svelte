@@ -9,7 +9,7 @@
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
 	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
@@ -18,6 +18,7 @@
 	import {
 		createAutomation,
 		getAutomationModels,
+		startsNew,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse
@@ -46,6 +47,7 @@
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
+	let start_new = true;
 	let is_active = true;
 
 	let loading = false;
@@ -131,7 +133,10 @@
 					terminal: terminalServerId
 						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
 						: undefined,
-					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
+					target:
+						target_type === 'channel'
+							? { type: 'channel', channel_id, new_thread: start_new }
+							: { type: 'chat', new_chat: start_new }
 				},
 				is_active
 			};
@@ -178,6 +183,7 @@
 			folder_id = automation.folder_id ?? '';
 			target_type = automation.data.target?.type === 'channel' ? 'channel' : 'chat';
 			channel_id = automation.data.target?.channel_id ?? '';
+			start_new = startsNew(automation.data.target);
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
@@ -195,6 +201,7 @@
 			)
 				? (cloneFrom.data.target?.channel_id ?? '')
 				: '';
+			start_new = startsNew(cloneFrom.data.target);
 			is_active = true;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
@@ -206,6 +213,7 @@
 			folder_id = folderId ?? '';
 			target_type = 'chat';
 			channel_id = '';
+			start_new = true;
 			is_active = true;
 		}
 		initialized = true;
@@ -219,9 +227,9 @@
 <Modal ariaLabel={name || $i18n.t('Automation')} size="lg" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 				type="text"
 				bind:value={name}
 				aria-label={$i18n.t('Automation title')}
@@ -238,12 +246,12 @@
 
 		<!-- Prompt -->
 		<div class="px-4 pb-2">
-			<label for="automation-instructions" class="block mb-1 text-xs text-gray-500"
+			<label for="automation-instructions" class="block mb-1 text-xs text-base-500"
 				>{$i18n.t('Instructions')}</label
 			>
 			<textarea
 				id="automation-instructions"
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[min(28rem,55vh)]"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 resize-none min-h-[min(28rem,55vh)]"
 				bind:value={prompt}
 				rows={8}
 				placeholder={$i18n.t('Enter prompt here.')}
@@ -269,6 +277,7 @@
 					bind:target_type
 					bind:channel_id
 					bind:folder_id
+					bind:start_new
 					folders={$folders}
 					channels={$channels}
 					side="top"
@@ -285,14 +294,14 @@
 
 			<div class="flex items-center justify-end gap-2 shrink-0">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 					type="button"
 					on:click={() => (show = false)}
 				>
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 					on:click={submitHandler}
 					type="button"
 					disabled={loading || modelsLoading || !initialized}

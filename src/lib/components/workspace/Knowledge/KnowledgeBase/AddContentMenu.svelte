@@ -37,7 +37,7 @@
 >
 	<Tooltip content={$i18n.t('Add Content')}>
 		<button
-			class="px-1 py-1.5 rounded-xl bg-transparent transition text-xs flex items-center text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+			class="px-1 py-1.5 rounded-xl bg-transparent transition text-xs flex items-center text-base-500 hover:text-base-900 dark:hover:text-base-100"
 			aria-label={$i18n.t('Add Content')}
 			on:click={(e) => {
 				e.stopPropagation();
@@ -60,7 +60,7 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[12.5rem] transition">
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onUpload({ type: 'new_directory' });
 				}}
@@ -69,10 +69,10 @@
 				<div class="flex items-center">{$i18n.t('New directory')}</div>
 			</button>
 
-			<hr class="my-1 border-gray-100 dark:border-gray-800" />
+			<hr class="my-1 border-base-100 dark:border-base-800" />
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onUpload({ type: 'files' });
 				}}
@@ -82,7 +82,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onUpload({ type: 'directory' });
 				}}
@@ -98,7 +98,7 @@
 				className="w-full"
 			>
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onSync();
 					}}
@@ -109,7 +109,7 @@
 			</Tooltip>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onUpload({ type: 'web' });
 				}}
@@ -119,7 +119,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onUpload({ type: 'text' });
 				}}
@@ -128,10 +128,10 @@
 				<div class="flex items-center">{$i18n.t('Add text content')}</div>
 			</button>
 
-			<hr class="my-1 border-gray-100 dark:border-gray-800" />
+			<hr class="my-1 border-base-100 dark:border-base-800" />
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					onReset();
 				}}

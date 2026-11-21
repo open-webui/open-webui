@@ -167,10 +167,10 @@
 
 	<div slot="content">
 		<div
-			class="max-w-full w-84 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 rounded-2xl z-9999 shadow-lg dark:text-white"
+			class="max-w-full w-84 border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 rounded-2xl z-9999 shadow-lg dark:text-base-0"
 		>
 			<div class="flex items-center gap-2 mb-0.5 px-3 pt-2 pb-1.5">
-				<Search className="size-3.5 shrink-0 text-gray-500" />
+				<Search className="size-3.5 shrink-0 text-base-500" />
 				<input
 					type="text"
 					class="min-w-0 flex-1 text-[0.8125rem] bg-transparent outline-hidden"
@@ -183,7 +183,7 @@
 			<!-- Virtualized Emoji List -->
 			<div class="w-full flex justify-start h-96 overflow-y-auto px-2.5 pb-2.5 text-[0.8125rem]">
 				{#if emojiRows.length === 0}
-					<div class="text-center text-xs text-gray-500 dark:text-gray-400">
+					<div class="text-center text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('No results')}
 					</div>
 				{:else}
@@ -193,7 +193,7 @@
 								{#if item.length === 1 && item[0].type === 'group'}
 									<!-- Render group header -->
 									<div
-										class="px-0.25 text-[0.6875rem] font-normal -mb-1 text-gray-500 dark:text-gray-400"
+										class="px-0.25 text-[0.6875rem] font-normal -mb-1 text-base-500 dark:text-base-400"
 									>
 										{item[0].label}
 									</div>
@@ -206,9 +206,9 @@
 												placement="top"
 											>
 												<button
-													class="p-1 rounded-lg cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 transition {selected ===
+													class="p-1 rounded-lg cursor-pointer hover:bg-base-200 dark:hover:bg-base-700 transition {selected ===
 													emojiItem.shortCodes[0]
-														? 'bg-gray-200 dark:bg-gray-700'
+														? 'bg-base-200 dark:bg-base-700'
 														: ''}"
 													on:click={() => selectEmoji(emojiItem)}
 												>

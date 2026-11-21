@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { AppLayoutContext, TerminalContext } from '$lib/types';
-	import type { GitStatus } from '$lib/apis/terminal/git';
+	import type { GitStatus } from '$lib/apis/machines/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
-	import { onMount, onDestroy, tick, getContext } from 'svelte';
+	import { onMount, onDestroy, tick, getContext, type ComponentProps } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { get, readable, writable, type Readable, type Writable } from 'svelte/store';
 	import {
@@ -24,6 +24,7 @@
 	import Sortable from 'sortablejs';
 	import { beforeNavigate } from '$app/navigation';
 	import { WEBUI_NAME } from '$lib/stores';
+	import type Chat from './Chat.svelte';
 	import { pageTabKey } from './Tabs/tabs';
 	import Page from './Tabs/Page.svelte';
 	let pageViews: Record<string, Page> = {};
@@ -79,7 +80,7 @@
 		terminalRequest,
 		TerminalRequestError,
 		type TerminalTarget
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -138,7 +139,7 @@
 	export let eventTarget = new EventTarget();
 	export let submitPrompt: Function = () => {};
 	export let onAskFile:
-		| ((instruction: string, file: import('$lib/apis/terminal').FilesystemFile) => Promise<void>)
+		| ((instruction: string, file: import('$lib/apis/machines').FilesystemFile) => Promise<void>)
 		| null = null;
 	export let onDraftPrompt: ((text: string) => void) | null = null;
 	export let stopResponse: Function = () => {};
@@ -186,6 +187,20 @@
 	};
 	$: if (!mainTabFolder) isRenamingFolder = false;
 	$: mainTabTitle = mainTabFolder?.name ?? title;
+	export let getEmbeddedDraft: (
+		text?: string,
+		files?: any[]
+	) => NonNullable<ComponentProps<Chat>['embeddedDraft']>;
+	$: if (
+		viewReady &&
+		!chatLoading &&
+		$chatTabRequest &&
+		'folderId' in $chatTabRequest &&
+		$chatTabRequest.folderId === mainTabFolder?.id
+	) {
+		chatTabRequest.set(null);
+		if (mainTabFolder?.canEdit) openFeatureTab('chat');
+	}
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	/** Double-clicking the main chat tab renames the chat. */
@@ -870,23 +885,30 @@
 		queuedArtifactCode = null;
 		openArtifacts(code);
 	}
-	const openFeatureTab = (
+	export const openFeatureTab = (
 		kind: 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat',
-		inSplit = false
+		inSplit = false,
+		text?: string,
+		files?: any[]
 	) => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		if (kind === 'artifacts') return openArtifacts(undefined, mainChatTabId, inSplit);
 		const view = availableViews.find((view) => view.kind === kind)!;
 		if (kind === 'chat') {
+			if (!viewReady || !viewEntry) return false;
+			const id = uuidv4();
+			if (mainTabFolder?.canEdit) {
+				viewEntry.transient[`chat:${id}`] = { embeddedDraft: getEmbeddedDraft(text, files) };
+			}
 			let chatNumber = 1;
 			while (tabs.tabs.some((tab) => tab.kind === 'chat' && tab.chatNumber === chatNumber))
 				chatNumber++;
-			const pending = $chatTabRequest;
+			const pending = $chatTabRequest && 'parentChatId' in $chatTabRequest ? $chatTabRequest : null;
 			const initialPrompt = pending?.parentChatId === chatId ? pending.prompt : '';
 			if (pending?.parentChatId === chatId) chatTabRequest.set(null);
 			openPanel(
 				{
-					id: uuidv4(),
+					id,
 					kind,
 					label: `${view.label} ${chatNumber}`,
 					chatNumber,
@@ -895,7 +917,7 @@
 				},
 				inSplit
 			);
-			return;
+			return true;
 		}
 		openPanel({ id: kind, kind, label: view.label }, inSplit);
 	};
@@ -1190,6 +1212,8 @@
 			if (
 				target &&
 				tab.kind === 'terminal' &&
+				// An exited or expired shell has nothing left to stop.
+				!(chatView === viewEntry && sessionFailures[id]?.status === 404) &&
 				!(await new Promise<boolean>((resolve) => {
 					stopTerminalChoice = resolve;
 				}))
@@ -1582,7 +1606,7 @@
 					)
 					.map((terminal) => ({
 						id: terminal.id,
-						label: terminal.name || $i18n.t('Terminal'),
+						label: terminal.name || $i18n.t('Machine'),
 						device: terminal.id.startsWith('tether:')
 					}))
 			]
@@ -1650,7 +1674,13 @@
 		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasExtraTabs = true;
 	}
-	$: if (!canOpenChatTab && $chatTabRequest?.parentChatId === chatId) chatTabRequest.set(null);
+	$: if (
+		!canOpenChatTab &&
+		$chatTabRequest &&
+		'parentChatId' in $chatTabRequest &&
+		$chatTabRequest.parentChatId === chatId
+	)
+		chatTabRequest.set(null);
 	$: if (viewReady && $showTabs === 'chat') {
 		if (canOpenChatTab) openFeatureTab('chat', true);
 		else chatTabRequest.set(null);
@@ -1855,7 +1885,7 @@
 
 {#if chatDropPreview}
 	<div
-		class="chat-drop-preview fixed pointer-events-none z-50 bg-black/[0.02] dark:bg-white/[0.02]"
+		class="chat-drop-preview fixed pointer-events-none z-50 bg-base-1000/[0.02] dark:bg-base-0/[0.02]"
 		style:left={`${chatDropPreview.left}px`}
 		style:top={`${chatDropPreview.top}px`}
 		style:width={`${chatDropPreview.width}px`}
@@ -1863,7 +1893,7 @@
 		role="status"
 	>
 		<div
-			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+			class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<Icon name="split-horizontal" size={14} strokeWidth={1.5} />
 			<span class="truncate">{$i18n.t('Open in side panel')}</span>
@@ -1917,14 +1947,14 @@
 	class="h-full w-full min-h-0 flex flex-col {fullWidth
 		? 'absolute inset-0 pointer-events-none'
 		: ''}"
-	style:--chat-tabs-dark-background={'var(--color-gray-900)'}
+	style:--chat-tabs-dark-background={'var(--color-base-900)'}
 	id="controls-container"
 >
 	<div bind:this={paneCanvas} class="relative flex-1 min-h-0 min-w-0">
 		{#if viewError}
 			<div
 				role="alert"
-				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-white dark:bg-gray-900 p-3 text-sm"
+				class="absolute inset-x-0 top-10 z-40 pointer-events-auto bg-base-0 dark:bg-base-900 p-3 text-sm"
 			>
 				{viewError}
 				<button
@@ -1941,7 +1971,7 @@
 			<div
 				role="status"
 				aria-label={$i18n.t('Loading…')}
-				class="absolute inset-0 flex items-center justify-center text-sm text-gray-500"
+				class="absolute inset-0 flex items-center justify-center text-sm text-base-500"
 			>
 				<Spinner className="size-5" />
 			</div>
@@ -1949,7 +1979,7 @@
 		{#if fullWidth && viewReady && !chatLoading}
 			<button
 				type="button"
-				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-50/40 dark:text-gray-400 dark:hover:bg-gray-800/40 disabled:opacity-30 pointer-events-auto"
+				class="absolute right-2 top-1 z-20 flex size-7 items-center justify-center rounded-lg text-base-500 hover:bg-base-50/40 dark:text-base-400 dark:hover:bg-base-800/40 disabled:opacity-30 pointer-events-auto"
 				aria-label={$i18n.t('Split screen')}
 				title={[
 					$i18n.t('Split screen'),
@@ -2011,7 +2041,7 @@
 				}}
 			>
 				<div
-					class="absolute bg-gray-200/40 dark:bg-gray-850/20 group-hover:bg-gray-300/60 dark:group-hover:bg-gray-800 transition-colors {divider.direction ===
+					class="absolute bg-base-200/40 dark:bg-base-850/20 group-hover:bg-base-300/60 dark:group-hover:bg-base-800 transition-colors {divider.direction ===
 					'horizontal'
 						? 'inset-y-0 left-1/2 w-px'
 						: 'inset-x-0 top-1/2 h-px'}"
@@ -2041,9 +2071,9 @@
 				{#if tab.terminalId && !target}
 					<div
 						role="status"
-						class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+						class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
 					>
-						{$i18n.t('Terminal connection unavailable')}
+						{$i18n.t('Machine unavailable')}
 					</div>
 				{:else if tab.kind === 'page' && tab.href}
 					<Page
@@ -2138,14 +2168,14 @@
 					{#if chatView.pending.has(tab.id)}
 						<p
 							role="status"
-							class="flex h-full items-center justify-center p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+							class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
 						>
 							{$i18n.t('Connecting…')}
 						</p>
 					{:else if !tab.sessionId || failure}
 						<div
 							role="status"
-							class="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-xs text-gray-400 dark:text-gray-500"
+							class="flex h-full flex-col items-center justify-center gap-3 p-4 text-center text-xs text-base-400 dark:text-base-500"
 						>
 							<p>
 								{failure?.status === 404
@@ -2325,7 +2355,7 @@
 		{/each}
 		<!-- The mobile drawer hides the main chat tab, so count what it actually shows. -->
 		{#if viewReady && !chatLoading && !viewError && !renderedTabs.tabs.length && (canOpenNewTab || !isLargeScreen)}<div
-				class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-500 dark:text-gray-400"
+				class="flex h-full items-center justify-center p-3 text-center text-xs text-base-500 dark:text-base-400"
 			>
 				{canOpenNewTab ? $i18n.t('Open a tab using the + menu.') : $i18n.t('No open tabs')}
 			</div>{/if}
@@ -2380,8 +2410,8 @@
 						on:click={() => selectTab(tab.id)}
 						class="panel-tab flex cursor-pointer items-center gap-1.5 ps-2.5 pe-2 h-7 rounded-lg text-sm font-normal whitespace-nowrap shrink-0 transition {group.activeId ===
 						tab.id
-							? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200'
-							: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+							? 'bg-base-100/40 dark:bg-base-800/25 text-base-700 dark:text-base-200'
+							: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20 hover:text-base-600 dark:hover:text-base-300'}"
 					>
 						<button
 							role="tab"
@@ -2437,13 +2467,13 @@
 									>{tab.id === mainChatTabId ? mainTabTitle : tabLabel(tab)}</span
 								>
 							{/if}
-							{#if tab.kind === 'comments' && commentCount}<span class="text-gray-400"
+							{#if tab.kind === 'comments' && commentCount}<span class="text-base-400"
 									>{commentCount}</span
 								>{/if}
 						</button>
 						{@render titleEditor?.()}
 						{#if tab.untitled || dirtyFiles[tab.id]}<span
-								class="ms-1 size-1.5 shrink-0 rounded-full bg-gray-400"
+								class="ms-1 size-1.5 shrink-0 rounded-full bg-base-400"
 								aria-label={$i18n.t('Unsaved changes')}
 							></span>{/if}
 						{#if tab.id === mainChatTabId}
@@ -2451,7 +2481,7 @@
 								<input
 									data-folder-tab-rename
 									bind:value={folderNameDraft}
-									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-gray-700 outline-hidden dark:text-gray-300"
+									class="min-w-0 flex-1 bg-transparent text-sm font-normal text-base-700 outline-hidden dark:text-base-300"
 									aria-label={$i18n.t('Folder Name')}
 									on:click|stopPropagation
 									on:keydown={(e) => {
@@ -2472,7 +2502,7 @@
 									>{@render chatTabActions[tab.id]?.()}</span
 								>{/if}<button
 								type="button"
-								class="flex items-center justify-center w-4 h-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+								class="flex items-center justify-center w-4 h-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-base-0/10 dark:hover:text-base-0"
 								title={[
 									$i18n.t('Close'),
 									$settings?.keyboardShortcuts !== false ? formatChord($keybindings.closeTab) : ''
@@ -2492,7 +2522,7 @@
 				<Dropdown align="start" closeOnSelect>
 					<button
 						type="button"
-						class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+						class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
 						aria-label={$i18n.t('New tab')}><Icon name="plus" size={14} /></button
 					>
 					<div slot="content">
@@ -2575,7 +2605,7 @@
 		{#if !fullWidth && (!isLargeScreen || group.id === tabs.groups[0].id)}
 			<button
 				type="button"
-				class="flex items-center justify-center w-7 h-7 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 shrink-0"
+				class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
 				on:click={() => showTabs.set(false)}
 				aria-label={$i18n.t('Hide tabs')}><Icon name="xmark" size={12} /></button
 			>
@@ -2605,7 +2635,7 @@
 				panelStyle={$mobile ? panelStyle : ''}
 				backdropStyle={$mobile ? backdropStyle : ''}
 				swipeSide={$mobile ? 'right' : undefined}
-				className="min-h-[100dvh] !bg-white dark:!bg-gray-900"
+				className="min-h-[100dvh] !bg-base-0 dark:!bg-base-900"
 			>
 				<div use:preservePanel bind:this={panelTarget} class="h-[100dvh] flex flex-col"></div>
 			</Drawer>

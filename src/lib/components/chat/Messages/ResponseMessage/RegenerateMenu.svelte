@@ -29,7 +29,7 @@
 
 	<div slot="content">
 		<DropdownMenu className="max-w-[12.5rem] transition">
-			<div class="py-1 px-2 flex dark:text-gray-100">
+			<div class="py-1 px-2 flex dark:text-base-100">
 				<input
 					type="text"
 					id="floating-message-input"
@@ -49,8 +49,8 @@
 					<button
 						aria-label={$i18n.t('Submit suggestion')}
 						class="{inputValue !== ''
-							? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-							: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-1 self-center"
+							? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+							: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-1 self-center"
 						on:click={() => {
 							onRegenerate(inputValue);
 							show = false;
@@ -71,9 +71,9 @@
 					</button>
 				</div>
 			</div>
-			<hr class="border-gray-50/30 dark:border-gray-800/30 my-0.5 mx-1" />
+			<hr class="border-base-50/30 dark:border-base-800/30 my-0.5 mx-1" />
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					onRegenerate();
 					show = false;
@@ -98,7 +98,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					onRegenerate($i18n.t('Add Details'));
 				}}
@@ -108,7 +108,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="select-none flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					onRegenerate($i18n.t('More Concise'));
 				}}

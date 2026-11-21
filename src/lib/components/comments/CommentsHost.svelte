@@ -87,7 +87,7 @@
 			bind:this={selectionButton}
 			use:positionSelectionToolbar={selection.range}
 			type="button"
-			class="fixed z-9999 min-h-9 sm:min-h-0 flex items-center gap-1 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 px-2 py-1 text-xs shadow-xl"
+			class="fixed z-9999 min-h-9 sm:min-h-0 flex items-center gap-1 rounded-xl border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 px-2 py-1 text-xs shadow-xl"
 			on:mousedown|preventDefault
 			disabled={preparing}
 			on:click={commentSelection}><Annotation className="size-3" />{$i18n.t('Comment')}</button

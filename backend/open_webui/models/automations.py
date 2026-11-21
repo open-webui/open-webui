@@ -65,6 +65,29 @@ class AutomationTerminalConfig(BaseModel):
 class AutomationTarget(BaseModel):
     type: Literal['chat', 'channel'] = 'chat'
     channel_id: Optional[str] = None
+    # Off: every run continues one chat (or channel thread). The first run creates it and saves its id here.
+    new_chat: bool = True
+    chat_id: Optional[str] = None
+    new_thread: bool = True
+    thread_id: Optional[str] = None
+
+
+def keep_target_refs(target: Optional[dict], previous: Optional[dict]) -> Optional[dict]:
+    """The ongoing chat or thread is the runner's, not the form's: keep it while the target still continues there."""
+    if not target:
+        return target
+    previous = previous or {}
+    target = {**target, 'chat_id': None, 'thread_id': None}
+    if target.get('type', 'chat') == 'chat':
+        if not target.get('new_chat', True) and previous.get('type', 'chat') == 'chat':
+            target['chat_id'] = previous.get('chat_id')
+    elif (
+        not target.get('new_thread', True)
+        and previous.get('type') == 'channel'
+        and previous.get('channel_id') == target.get('channel_id')
+    ):
+        target['thread_id'] = previous.get('thread_id')
+    return target
 
 
 class AutomationData(BaseModel):
@@ -238,7 +261,9 @@ class AutomationTable:
                 return None
             row.name = form.name
             row.folder_id = form.folder_id
-            row.data = form.data.model_dump()
+            data = form.data.model_dump()
+            data['target'] = keep_target_refs(data.get('target'), (row.data or {}).get('target'))
+            row.data = data
             row.meta = form.meta
             if form.is_active is not None:
                 row.is_active = form.is_active
@@ -246,6 +271,17 @@ class AutomationTable:
             row.updated_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
+
+    async def set_target_ref(self, id: str, key: Literal['chat_id', 'thread_id'], value: Optional[str]) -> None:
+        """Save the ongoing chat or thread a run created, without counting as an edit."""
+        async with get_async_db_context() as db:
+            row = await db.get(Automation, id, with_for_update=True)
+            if not row:
+                return
+            data = dict(row.data or {})
+            data['target'] = {**(data.get('target') or {'type': 'chat'}), key: value}
+            row.data = data
+            await db.commit()
 
     async def update_last_run_at(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
         async with get_async_db_context(db) as db:
@@ -457,15 +493,13 @@ class AutomationRunTable:
         automation_id: str,
         skip: int = 0,
         limit: int = 50,
+        direction: str = 'desc',
         db: Optional[AsyncSession] = None,
     ) -> list[AutomationRunModel]:
+        order = AutomationRun.created_at.asc() if direction == 'asc' else AutomationRun.created_at.desc()
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AutomationRun)
-                .filter_by(automation_id=automation_id)
-                .order_by(AutomationRun.created_at.desc())
-                .offset(skip)
-                .limit(limit)
+                select(AutomationRun).filter_by(automation_id=automation_id).order_by(order).offset(skip).limit(limit)
             )
             rows = result.scalars().all()
             return [AutomationRunModel.model_validate(r) for r in rows]

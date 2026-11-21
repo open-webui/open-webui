@@ -397,7 +397,7 @@
 
 <div
 	bind:clientWidth={chartWidth}
-	class="min-w-0 text-xs font-normal text-gray-500 dark:text-gray-400"
+	class="min-w-0 text-xs font-normal text-base-500 dark:text-base-400"
 >
 	<div
 		class="h-5 mb-2 flex min-w-0 items-center justify-between gap-3 text-[0.6875rem] tabular-nums"
@@ -416,7 +416,7 @@
 		{#if comparing}
 			<span class="flex shrink-0 items-center gap-3 text-[0.625rem]">
 				<span class="flex items-center gap-1.5"
-					><svg width="16" height="8" aria-hidden="true" class="text-gray-900 dark:text-gray-200"
+					><svg width="16" height="8" aria-hidden="true" class="text-base-900 dark:text-base-200"
 						><path d="M0 4H16" stroke={lineColor} stroke-width="1.5" /></svg
 					>{$i18n.t('Current')}</span
 				>
@@ -425,7 +425,7 @@
 						width="16"
 						height="8"
 						aria-hidden="true"
-						class="text-gray-900 dark:text-gray-200 opacity-50"
+						class="text-base-900 dark:text-base-200 opacity-50"
 						><path d="M0 4H16" stroke={lineColor} stroke-width="1.5" stroke-dasharray="4 3" /></svg
 					>{$i18n.t('Previous')}</span
 				>
@@ -452,13 +452,13 @@
 						<span class="w-10 shrink-0 text-right text-[0.6875rem] tabular-nums"
 							>{number(tick)}</span
 						>
-						<span class="h-px flex-1 bg-gray-100 dark:bg-gray-850/50"></span>
+						<span class="h-px flex-1 bg-base-100 dark:bg-base-850/50"></span>
 					</div>
 				{/each}
 				<div class="relative h-full">
 					{#if comparing}
 						<svg
-							class="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-gray-900 dark:text-gray-200"
+							class="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-base-900 dark:text-base-200"
 							viewBox="0 0 100 100"
 							preserveAspectRatio="none"
 							aria-hidden="true"
@@ -486,7 +486,7 @@
 						<button
 							type="button"
 							data-point
-							class="absolute bottom-0 top-0 flex justify-center items-end focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+							class="absolute bottom-0 top-0 flex justify-center items-end focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 							style:left={`${position(point.time)}%`}
 							style:width={`${comparing ? (100 * step) / span : barWidth}%`}
 							style:transform="translateX(-50%)"
@@ -509,7 +509,7 @@
 								{#if active === index || series.length === 1}
 									{#each [point.value, previousSeries[index].value] as value, period}
 										<span
-											class="absolute left-1/2 size-1.5 rounded-full bg-current text-gray-900 dark:text-gray-200"
+											class="absolute left-1/2 size-1.5 rounded-full bg-current text-base-900 dark:text-base-200"
 											style:bottom={`${(value / ceiling) * 100}%`}
 											style:transform="translate(-50%, 50%)"
 											style:background-color={lineColor}
@@ -571,7 +571,7 @@
 								type="button"
 								data-point
 								data-row={row}
-								class="relative h-6 bg-gray-100/70 dark:bg-gray-850/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+								class="relative h-6 bg-base-100/70 dark:bg-base-850/40 focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 								tabindex={Math.floor(keyboardIndex / series.length) === row ||
 								(row === activityStart &&
 									(Math.floor(keyboardIndex / series.length) < activityStart ||
@@ -614,7 +614,7 @@
 				aria-hidden="true"
 			>
 				<div
-					class="absolute inset-y-0 w-px bg-gray-400/70 dark:bg-gray-300/70"
+					class="absolute inset-y-0 w-px bg-base-400/70 dark:bg-base-300/70"
 					style:left={`${position(hovered.time)}%`}
 					style:transform="translateX(-50%)"
 				></div>
@@ -647,15 +647,15 @@
 		<button
 			type="button"
 			class="py-1 text-left"
-			class:text-gray-900={selectedModel === null}
-			class:dark:text-gray-200={selectedModel === null}
+			class:text-base-900={selectedModel === null}
+			class:dark:text-base-200={selectedModel === null}
 			aria-pressed={selectedModel === null}
 			on:click={() => isolate(null)}>{$i18n.t('All models')}</button
 		>
 		{#each legendIds as id (id)}
 			<button
 				type="button"
-				class="flex min-w-0 max-w-full items-center gap-1.5 py-1 text-left hover:text-gray-900 dark:hover:text-gray-100"
+				class="flex min-w-0 max-w-full items-center gap-1.5 py-1 text-left hover:text-base-900 dark:hover:text-base-100"
 				style:opacity={selectedModel && selectedModel !== id ? 0.45 : 1}
 				aria-pressed={selectedModel === id}
 				on:click={() => isolate(id)}
@@ -663,7 +663,7 @@
 				<span class="size-2 shrink-0" style:background-color={modelColor(id)}></span>
 				<span class="max-w-40 truncate" title={name(id)}>{name(id)}</span>
 				<span
-					class="ml-auto w-14 shrink-0 text-right tabular-nums text-gray-400 dark:text-gray-500"
+					class="ml-auto w-14 shrink-0 text-right tabular-nums text-base-400 dark:text-base-500"
 					title={(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0)).toLocaleString(
 						$i18n.language
 					)}>{number(hovered ? (hoveredModels?.[id] ?? 0) : (totals[id] ?? 0))}</span
@@ -675,13 +675,13 @@
 	{#if ids.length > legendLimit}
 		<button
 			type="button"
-			class="mt-1 py-1 text-[0.6875rem] hover:text-gray-900 dark:hover:text-gray-100"
+			class="mt-1 py-1 text-[0.6875rem] hover:text-base-900 dark:hover:text-base-100"
 			aria-expanded={legendExpanded}
 			on:click={() => (legendExpanded = !legendExpanded)}
 			>{legendExpanded ? $i18n.t('Show less') : $i18n.t('Show more')}</button
 		>
 	{/if}
-	<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+	<p class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 		{view === 'activity'
 			? $i18n.t('Intensity relative to each model’s peak. Blank means no recorded usage.')
 			: $i18n.t('Select a model to isolate it.')} · {$i18n.t('Server time')}
@@ -691,11 +691,11 @@
 <div class="hidden">
 	<div
 		bind:this={tooltipContent}
-		class="w-64 max-w-full py-0.5 text-[0.625rem] leading-4 font-normal text-gray-100"
+		class="w-64 max-w-full py-0.5 text-[0.625rem] leading-4 font-normal text-base-100"
 	>
 		{#if hovered}
 			{#if comparing && hovered.previous && previousHovered && hovered.start && hovered.end}
-				<div class="truncate text-gray-400">
+				<div class="truncate text-base-400">
 					{selectedModel ? name(selectedModel) : $i18n.t('All models')} · {metricLabel}
 				</div>
 				<div class="mt-1 space-y-0.5">
@@ -714,7 +714,7 @@
 										opacity={index === 1 ? 0.5 : 1}
 									/></svg
 								>
-								<span class="truncate text-gray-400"
+								<span class="truncate text-base-400"
 									>{comparisonInterval(period.start, period.end)}</span
 								>
 							</span>
@@ -723,7 +723,7 @@
 							>
 						</div>
 					{/each}
-					<div class="flex h-4 items-center justify-between gap-3 text-gray-400">
+					<div class="flex h-4 items-center justify-between gap-3 text-base-400">
 						<span>{$i18n.t('Change')}</span><span class="tabular-nums"
 							>{change === null
 								? $i18n.t('No previous usage')
@@ -732,14 +732,14 @@
 					</div>
 				</div>
 			{:else}
-				<div class="truncate text-gray-400" title={intervalLabel(hovered.date)}>
+				<div class="truncate text-base-400" title={intervalLabel(hovered.date)}>
 					{intervalLabel(hovered.date)}
 				</div>
 				<div class="mt-1 max-h-48 overflow-y-auto scrollbar-hidden space-y-0.5">
 					{#each tooltipRows as row (row.id)}
 						<div
 							class="flex h-4 items-center justify-between gap-3"
-							class:text-gray-500={row.value === 0}
+							class:text-base-500={row.value === 0}
 						>
 							<span class="flex min-w-0 items-center gap-1.5"
 								><span class="size-1.5 shrink-0" style:background-color={modelColor(row.id)}
@@ -748,10 +748,10 @@
 							>
 							<span class="shrink-0 whitespace-nowrap tabular-nums"
 								>{row.value.toLocaleString($i18n.language)}
-								<span class="text-gray-400">({usageShare(row.value, hovered.value)})</span></span
+								<span class="text-base-400">({usageShare(row.value, hovered.value)})</span></span
 							>
 						</div>
-					{:else}<div class="text-gray-400">{$i18n.t('No activity in this period')}</div>{/each}
+					{:else}<div class="text-base-400">{$i18n.t('No activity in this period')}</div>{/each}
 				</div>
 			{/if}
 		{/if}

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Grid from '$lib/components/icons/Grid.svelte';
 	import CodeBracket from '$lib/components/icons/CodeBracket.svelte';
 	import BarsArrowUp from '$lib/components/icons/BarsArrowUp.svelte';
 	import Computer from '$lib/components/icons/Computer.svelte';
@@ -9,7 +8,6 @@
 	import Link from '$lib/components/icons/Link.svelte';
 	import Lock from '$lib/components/icons/Lock.svelte';
 	import Photo from '$lib/components/icons/Photo.svelte';
-	import VideoCamera from '$lib/components/icons/VideoCamera.svelte';
 	import QueueList from '$lib/components/icons/QueueList.svelte';
 	import SettingsAlt from '$lib/components/icons/SettingsAlt.svelte';
 	import SoundHigh from '$lib/components/icons/SoundHigh.svelte';
@@ -73,8 +71,6 @@
 	<BarsArrowUp {className} {strokeWidth} />
 {:else if id === 'integrations'}
 	<WrenchAlt {className} {strokeWidth} />
-{:else if id === 'apps'}
-	<Grid {className} {strokeWidth} />
 {:else if id === 'documents'}
 	<Document {className} {strokeWidth} />
 {:else if id === 'web'}
@@ -87,8 +83,6 @@
 	<SoundHigh {className} {strokeWidth} />
 {:else if id === 'images'}
 	<Photo {className} {strokeWidth} />
-{:else if id === 'videos'}
-	<VideoCamera {className} {strokeWidth} />
 {:else if id === 'pipelines'}
 	<QueueList {className} {strokeWidth} />
 {:else if id === 'db'}

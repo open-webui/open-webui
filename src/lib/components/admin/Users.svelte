@@ -84,7 +84,7 @@
 	<div class="flex flex-col lg:flex-row w-full h-full pb-2">
 		<div
 			id="users-tabs-container"
-			class="tabs mx-2 px-2 sm:mx-2.5 lg:mx-0 lg:px-2.5 flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-0 lg:flex-col lg:flex-none lg:w-50 dark:text-gray-200 text-sm font-normal text-left scrollbar-none"
+			class="tabs mx-2 px-2 sm:mx-2.5 lg:mx-0 lg:px-2.5 flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-0 lg:flex-col lg:flex-none lg:w-50 dark:text-base-200 text-sm font-normal text-left scrollbar-none"
 		>
 			<a
 				id="overview"
@@ -93,7 +93,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'overview'
 					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class=" self-center">{$i18n.t('Overview')}</div>
 				{#if formattedUserCount !== null}
@@ -114,7 +114,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'groups'
 					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class=" self-center">{$i18n.t('Groups')}</div>
 				{#if formattedGroupCount !== null}

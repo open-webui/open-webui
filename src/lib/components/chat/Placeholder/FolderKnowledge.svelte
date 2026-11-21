@@ -303,8 +303,8 @@
 >
 	{#if !items.length}
 		<div class="flex h-full flex-col items-center justify-center gap-1 px-6 pb-16 text-center">
-			<div class="text-sm text-gray-800 dark:text-gray-100">{$i18n.t('No knowledge yet')}</div>
-			<div class="text-xs text-gray-500 dark:text-gray-400">
+			<div class="text-sm text-base-800 dark:text-base-100">{$i18n.t('No knowledge yet')}</div>
+			<div class="text-xs text-base-500 dark:text-base-400">
 				{readOnly
 					? $i18n.t('Knowledge added to this folder will show up here.')
 					: $i18n.t('Add knowledge bases, notes, or files. New chats in this folder can use them.')}
@@ -313,13 +313,13 @@
 				<div class="mt-2 flex items-center gap-3 text-xs">
 					<button
 						type="button"
-						class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+						class="text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 						on:click={onPick}>{$i18n.t('Add knowledge')}</button
 					>
 					{#if canUpload}
 						<button
 							type="button"
-							class="text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+							class="text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 							on:click={upload}>{$i18n.t('Upload Files')}</button
 						>
 					{/if}
@@ -331,7 +331,7 @@
 			{#each items as item (keyOf(item))}
 				{@const busy = item.status === 'uploading' || removing.has(keyOf(item))}
 				<li
-					class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-850/50"
+					class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50"
 				>
 					<button
 						type="button"
@@ -340,7 +340,7 @@
 						title={item.description || item.name || item.id || ''}
 						on:click={() => open(item)}
 					>
-						<span class="shrink-0 text-gray-400 dark:text-gray-500">
+						<span class="shrink-0 text-base-400 dark:text-base-500">
 							{#if busy}
 								<Spinner className="size-3.5" />
 							{:else if item.type === 'collection'}
@@ -356,16 +356,16 @@
 							{/if}
 						</span>
 						<span
-							class="min-w-0 shrink truncate text-[0.8125rem] leading-5 text-gray-700 dark:text-gray-200"
+							class="min-w-0 shrink truncate text-[0.8125rem] leading-5 text-base-700 dark:text-base-200"
 							>{decodeString(item.name || item.id || '')}</span
 						>
 						{#if item.context === 'full'}
-							<span class="hidden shrink-0 text-xs text-gray-400 @md:block dark:text-gray-500"
+							<span class="hidden shrink-0 text-xs text-base-400 @md:block dark:text-base-500"
 								>{$i18n.t('Using Entire Document')}</span
 							>
 						{/if}
 					</button>
-					<span class="shrink-0 text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500">
+					<span class="shrink-0 text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500">
 						{#if item.status === 'uploading'}
 							{$i18n.t('Uploading')}
 						{:else if (item.type ?? 'file') === 'file' && item.size}
@@ -377,7 +377,7 @@
 					{#if !readOnly && item.status !== 'uploading'}
 						<button
 							type="button"
-							class="flex size-5 shrink-0 items-center justify-center rounded-full text-gray-400 transition hover:text-gray-700 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-200"
+							class="flex size-5 shrink-0 items-center justify-center rounded-full text-base-400 transition hover:text-base-700 disabled:opacity-50 dark:text-base-500 dark:hover:text-base-200"
 							aria-label={$i18n.t('Remove File')}
 							title={$i18n.t('Remove')}
 							disabled={busy}

@@ -66,8 +66,8 @@
 			aria-hidden="true"
 		></video>
 
-		<div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent"></div>
-		<div class="absolute inset-0 bg-linear-to-r from-black/50 via-black/10 to-transparent"></div>
+		<div class="absolute inset-0 bg-linear-to-t from-base-1000/80 via-base-1000/20 to-transparent"></div>
+		<div class="absolute inset-0 bg-linear-to-r from-base-1000/50 via-base-1000/10 to-transparent"></div>
 
 		<div class="relative z-10 flex h-screen max-h-[100dvh] w-full">
 			<div class="flex w-full flex-col justify-end px-6 pb-8 sm:px-10 sm:pb-10 lg:px-16 lg:pb-14">
@@ -85,7 +85,7 @@
 						{$i18n.t('Welcome to your AI home.')}
 					</h1>
 
-					<p class="mt-6 max-w-xl text-sm leading-relaxed font-light text-white/60 lg:text-base">
+					<p class="mt-6 max-w-xl text-sm leading-relaxed font-light text-base-0/60 lg:text-base">
 						{$i18n.t(
 							'Run AI on your own terms. Connect any model, extend with code, and protect what matters without compromise. Your models, your data, your machine, wherever you open it.'
 						)}
@@ -94,7 +94,7 @@
 					<div class="mt-8 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-7">
 						<button
 							aria-label={$i18n.t('Get started')}
-							class="group relative z-20 inline-flex h-10 w-[220px] max-w-full items-center justify-between gap-2 rounded-none bg-white px-4 text-[13px] font-normal text-black transition hover:bg-white/90 focus:ring-2 focus:ring-white/50 focus:outline-hidden"
+							class="group relative z-20 inline-flex h-10 w-[220px] max-w-full items-center justify-between gap-2 rounded-none bg-base-0 px-4 text-[13px] font-normal text-base-1000 transition hover:bg-base-0/90 focus:ring-2 focus:ring-base-0/50 focus:outline-hidden"
 							on:click={() => {
 								getStartedHandler();
 							}}
@@ -113,7 +113,7 @@
 						</button>
 
 						<a
-							class="inline-flex items-center text-sm text-white/60 transition hover:text-white"
+							class="inline-flex items-center text-sm text-base-0/60 transition hover:text-white"
 							href="https://docs.openwebui.com/"
 							target="_blank"
 							rel="noopener noreferrer"

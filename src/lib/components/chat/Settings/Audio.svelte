@@ -40,7 +40,7 @@
 	// Audio speed control
 	let playbackRate = 1;
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const getVoices = async () => {
 		if (TTSEngine === 'browser-kokoro') {
@@ -177,7 +177,7 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.audio.title')}
 	</h2>
 
@@ -215,7 +215,7 @@
 							bind:value={STTLanguage}
 							aria-label={$i18n.t('Speech-to-Text Language')}
 							placeholder={$i18n.t('e.g. en')}
-							class="h-7 w-24 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500"
+							class="h-7 w-24 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-right text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500"
 						/>
 					</Tooltip>
 				</UserSettingRow>
@@ -296,14 +296,14 @@
 				label={$i18n.t('settings.personal.audio.speechPlaybackSpeed.label')}
 				description={$i18n.t('settings.personal.audio.speechPlaybackSpeed.description')}
 			>
-				<div class="relative flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-600">
+				<div class="relative flex items-center gap-1.5 text-xs text-base-400 dark:text-base-600">
 					<input
 						type="number"
 						min="0"
 						step="0.01"
 						bind:value={playbackRate}
 						aria-label={$i18n.t('settings.personal.audio.speechPlaybackSpeed.label')}
-						class="h-7 w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+						class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-right text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 					/>
 					x
 				</div>
@@ -334,7 +334,7 @@
 				</UserSettingSection>
 			{:else}
 				<UserSettingSection title={$i18n.t('settings.personal.audio.sections.voice.title')}>
-					<div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+					<div class="flex items-center gap-2 text-xs text-base-600 dark:text-base-400">
 						<Spinner className="size-4" />
 
 						<div class="shimmer">
@@ -345,7 +345,7 @@
 						</div>
 					</div>
 
-					<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+					<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 						{$i18n.t('Please do not close the settings page while loading the model.')}
 					</div>
 				</UserSettingSection>
@@ -365,7 +365,7 @@
 						{#each voices.filter((v) => nonLocalVoices || v.localService === true) as _voice}
 							<option
 								value={_voice.voiceURI}
-								class="bg-gray-100 dark:bg-gray-700"
+								class="bg-base-100 dark:bg-base-700"
 								selected={voice === _voice.voiceURI}>{_voice.name}</option
 							>
 						{/each}
@@ -405,7 +405,7 @@
 
 	<div class="shrink-0 flex justify-end text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}

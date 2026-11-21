@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { gitRequest, type GitFile } from '$lib/apis/terminal/git';
+	import type { TerminalTarget } from '$lib/apis/machines';
+	import { gitRequest, type GitFile } from '$lib/apis/machines/git';
 	import GitDiff from '../Tabs/GitDiff.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 
@@ -67,7 +67,7 @@
 >
 	{#if error}<div
 			role="alert"
-			class="flex h-full flex-col items-center justify-center gap-2 p-3 text-center text-xs text-gray-500 dark:text-gray-400"
+			class="flex h-full flex-col items-center justify-center gap-2 p-3 text-center text-xs text-base-500 dark:text-base-400"
 		>
 			{error}<button
 				class="underline"
@@ -79,12 +79,12 @@
 			<Spinner className="size-4" />
 		</div>
 	{:else if file?.binary}<div
-			class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-400"
+			class="flex h-full items-center justify-center p-3 text-center text-xs text-base-400"
 		>
 			{$i18n.t('Binary file changed')}
 		</div>
 	{:else if diff}<GitDiff code={diff} {mode} {hideWhitespace} />
-	{:else}<div class="flex h-full items-center justify-center p-3 text-center text-xs text-gray-400">
+	{:else}<div class="flex h-full items-center justify-center p-3 text-center text-xs text-base-400">
 			{$i18n.t('No changes')}
 		</div>{/if}
 </div>

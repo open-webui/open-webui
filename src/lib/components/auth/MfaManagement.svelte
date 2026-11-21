@@ -63,13 +63,13 @@
 			<p role="alert" class="text-xs text-red-500">{error}</p>
 			<button
 				type="button"
-				class="mt-3 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+				class="mt-3 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-200"
 				on:click={reauthenticate ? signIn : cancel}
 			>
 				{reauthenticate || !$user ? $i18n.t('Sign in again') : $i18n.t('Back')}
 			</button>
 		{:else}
-			<div role="status" class="flex items-center justify-center gap-2 text-xs text-gray-500">
+			<div role="status" class="flex items-center justify-center gap-2 text-xs text-base-500">
 				<Spinner />
 				{$i18n.t('Loading...')}
 			</div>

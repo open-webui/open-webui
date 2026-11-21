@@ -111,20 +111,20 @@
 {:else}
 	<div
 		class={compact
-			? 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'
+			? 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-base-700 dark:text-base-300'
 			: 'flex min-h-8 w-full items-center gap-3 px-1 py-1.5'}
 	>
 		<div
 			class={compact
 				? ''
-				: 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-gray-700 dark:text-gray-300'}
+				: 'min-w-0 flex-1 text-[0.71875rem] leading-tight text-base-700 dark:text-base-300'}
 		>
 			{#if shortcut.tooltip}
 				<Tooltip content={$i18n.t(shortcut.tooltip)}>
 					<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 					<span class="relative inline-flex max-w-full items-baseline gap-1" tabindex="0">
 						<span class="truncate whitespace-pre-line">{shortcut.name($i18n.t)}</span>
-						<span class="text-[0.625rem] text-gray-400 dark:text-gray-600" aria-hidden="true"
+						<span class="text-[0.625rem] text-base-400 dark:text-base-600" aria-hidden="true"
 							>*</span
 						>
 						<span class="sr-only">{$i18n.t(shortcut.tooltip)}</span>

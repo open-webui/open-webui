@@ -42,6 +42,7 @@ from open_webui.utils.json_codec import JSONCodec
 
 async def seed_registered_defaults():
     await Config.rename_prefix('rag.web', 'web')
+    await Config.rename_prefix('terminal_server', 'machines')  # Terminals became Machines
     await Config.repair_config_rows()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
@@ -370,11 +371,11 @@ TOOL_SERVER_CONNECTIONS = tool_server_connections
 
 OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 
-# TERMINAL_SERVER
+# MACHINES (formerly TERMINAL_SERVER: stored rows are renamed on load; TERMINAL_SERVER_CONNECTIONS is a fallback)
 
-terminal_server_connections = JSONCodec.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
-
-TERMINAL_SERVER_CONNECTIONS = terminal_server_connections
+MACHINE_CONNECTIONS = JSONCodec.loads(
+    os.getenv('MACHINE_CONNECTIONS') or os.getenv('TERMINAL_SERVER_CONNECTIONS') or '[]'
+)
 
 try:
     TERMINAL_PROXY_HEADERS = JSONCodec.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
@@ -2088,6 +2089,10 @@ VIEW_CHAT_MAX_CHARS = int(os.environ['VIEW_CHAT_MAX_CHARS']) if os.getenv('VIEW_
 if VIEW_CHAT_MAX_CHARS is not None and VIEW_CHAT_MAX_CHARS <= 0:
     raise ValueError('VIEW_CHAT_MAX_CHARS must be a positive integer or unset')
 
+TOOL_OUTPUT_MAX_CHARS = int(os.environ['TOOL_OUTPUT_MAX_CHARS']) if os.getenv('TOOL_OUTPUT_MAX_CHARS') else None
+if TOOL_OUTPUT_MAX_CHARS is not None and TOOL_OUTPUT_MAX_CHARS <= 0:
+    raise ValueError('TOOL_OUTPUT_MAX_CHARS must be a positive integer or unset')
+
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
 ENABLE_ENCRYPTED_CHANNELS = os.getenv('ENABLE_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
@@ -2307,6 +2312,10 @@ TOOL_SEARCH_ALWAYS_LOADED = [
 ]
 
 TOOL_SEARCH_DEFER_BUILTIN_TOOLS = os.getenv('TOOL_SEARCH_DEFER_BUILTIN_TOOLS', 'True').lower() == 'true'
+
+# Listing deferred tools in the system prompt helps models find them, but the prompt then changes
+# (and the provider prompt cache is invalidated) whenever the set of deferred tools changes.
+TOOL_SEARCH_LIST_TOOLS = os.getenv('TOOL_SEARCH_LIST_TOOLS', 'True').lower() == 'true'
 
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
@@ -2971,6 +2980,7 @@ DEFAULT_CONFIG = {
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
+    'tools.output_max_chars': TOOL_OUTPUT_MAX_CHARS,
     'ollama.enable': ENABLE_OLLAMA_API,
     'ollama.base_urls': OLLAMA_BASE_URLS,
     'ollama.api_configs': OLLAMA_API_CONFIGS,
@@ -2981,7 +2991,7 @@ DEFAULT_CONFIG = {
     'models.base_models_cache': ENABLE_BASE_MODELS_CACHE,
     'tool_server.connections': TOOL_SERVER_CONNECTIONS,
     'oauth.client.timeout': OAUTH_CLIENT_TIMEOUT,
-    'terminal_server.connections': TERMINAL_SERVER_CONNECTIONS,
+    'machines.connections': MACHINE_CONNECTIONS,
     'code_execution.enable': ENABLE_CODE_EXECUTION,
     'code_execution.engine': CODE_EXECUTION_ENGINE,
     'code_execution.jupyter.url': CODE_EXECUTION_JUPYTER_URL,
@@ -3333,6 +3343,7 @@ DEFAULT_CONFIG = {
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
     'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,
+    'chat.tool_search.list_tools': TOOL_SEARCH_LIST_TOOLS,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

@@ -148,7 +148,7 @@
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
 		bind:this={modalElement}
-		class="modal fixed top-0 right-0 left-0 bottom-0 bg-black/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
+		class="modal fixed top-0 right-0 left-0 bottom-0 bg-base-1000/60 w-full h-screen max-h-[100dvh] flex justify-center z-99999999 overflow-hidden overscroll-contain"
 		in:fade={{ duration: 10 }}
 		on:mousedown={() => {
 			cancelHandler();
@@ -159,14 +159,14 @@
 			aria-modal="true"
 			aria-label={title !== '' ? title : $i18n.t('Confirm your action')}
 			tabindex="-1"
-			class="m-auto max-w-full w-[32rem] mx-2 bg-white dark:bg-gray-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-white dark:border-gray-900"
+			class="m-auto max-w-full w-[32rem] mx-2 bg-base-0 dark:bg-base-950 rounded-3xl max-h-[100dvh] shadow-3xl border border-base-0 dark:border-base-900"
 			in:flyAndScale
 			on:mousedown={(e) => {
 				e.stopPropagation();
 			}}
 		>
 			<div class="px-5 py-5 flex flex-col">
-				<div class="text-sm font-medium dark:text-gray-200 mb-2.5">
+				<div class="text-sm font-medium dark:text-base-200 mb-2.5">
 					{#if title !== ''}
 						{title}
 					{:else}
@@ -175,7 +175,7 @@
 				</div>
 
 				<slot>
-					<div class=" text-sm text-gray-500 flex-1">
+					<div class=" text-sm text-base-500 flex-1">
 						{#if message !== ''}
 							{@const html = DOMPurify.sanitize(marked.parse(message))}
 							{@html html}
@@ -186,7 +186,7 @@
 						{#if input}
 							{#if inputType === 'password'}
 								<div
-									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900"
+									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-base-300 dark:bg-base-900"
 								>
 									<SensitiveInput
 										id="event-confirm-input"
@@ -199,7 +199,7 @@
 								</div>
 							{:else if inputType === 'select' && inputOptions.length}
 								<NativeSelect
-									className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden"
+									className="w-full mt-2 rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-900 outline-hidden"
 									bind:value={_inputValue}
 									options={inputOptions}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Select an option')}
@@ -210,7 +210,7 @@
 									bind:value={_inputValue}
 									aria-label={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
 									placeholder={inputPlaceholder ? inputPlaceholder : $i18n.t('Enter your message')}
-									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-gray-300 dark:bg-gray-900 outline-hidden resize-none"
+									class="w-full mt-2 rounded-lg px-4 py-2 text-sm dark:text-base-300 dark:bg-base-900 outline-hidden resize-none"
 									rows="3"
 									required
 								/>
@@ -224,8 +224,8 @@
 						<button
 							class="flex h-7 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 {action ===
 							primaryAction
-								? 'bg-gray-900 text-white hover:bg-black dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white'
-								: 'bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white'}"
+								? 'bg-base-900 text-base-0 hover:bg-base-1000 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0'
+								: 'bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-base-0'}"
 							on:click={action === 'confirm' ? confirmHandler : cancelHandler}
 							type="button"
 						>

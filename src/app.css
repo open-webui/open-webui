@@ -55,15 +55,15 @@ code {
 }
 
 .app-muted {
-	@apply text-gray-500 dark:text-gray-400;
+	@apply text-base-500 dark:text-base-400;
 }
 
 .app-icon-muted {
-	@apply text-gray-500 dark:text-gray-400;
+	@apply text-base-500 dark:text-base-400;
 }
 
 .app-interactive-active {
-	@apply bg-gray-50/40 dark:bg-gray-800/40;
+	@apply bg-base-50/40 dark:bg-base-800/40;
 }
 
 /* visibility:hidden is not focusable, so a keyboard user could never reveal these */
@@ -72,7 +72,9 @@ code {
 }
 
 .group:hover .hover-reveal,
-.group:focus-within .hover-reveal {
+.group:focus-visible .hover-reveal,
+.group:has(:focus-visible) .hover-reveal,
+.group:has([aria-haspopup][aria-expanded='true']) .hover-reveal {
 	@apply opacity-100 pointer-events-auto;
 }
 
@@ -109,20 +111,20 @@ textarea::-webkit-resizer {
 }
 
 .input-prose {
-	@apply prose dark:prose-invert !text-[0.90625rem] prose-headings:font-medium prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
+	@apply prose dark:prose-invert !text-[0.90625rem] prose-headings:font-medium prose-hr:my-4 prose-hr:border-base-50 prose-hr:dark:border-base-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5 whitespace-pre-line;
 }
 
 .input-prose-sm {
-	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
+	@apply prose dark:prose-invert prose-headings:font-medium prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-hr:my-4 prose-hr:border-base-50 prose-hr:dark:border-base-850 prose-p:my-1 prose-img:my-1 prose-headings:my-2 prose-pre:my-0 prose-table:my-1 prose-blockquote:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-1 whitespace-pre-line text-sm;
 }
 
 .markdown-prose {
-	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.90625rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:text-[0.8125rem] prose-hr:my-4 prose-hr:border-gray-50 prose-hr:dark:border-gray-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
+	@apply prose prose-sm dark:prose-invert max-w-none break-words !text-[0.90625rem] font-normal leading-relaxed prose-p:mt-0 prose-p:mb-2 prose-p:font-normal prose-p:leading-relaxed prose-headings:mt-2 prose-headings:mb-1 prose-headings:font-medium prose-headings:leading-snug prose-h1:text-xl prose-h2:text-lg prose-h3:text-base prose-strong:font-medium prose-code:before:content-none prose-code:after:content-none prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-li:font-normal prose-pre:my-3 prose-table:my-0 prose-blockquote:text-[0.8125rem] prose-hr:my-4 prose-hr:border-base-50 prose-hr:dark:border-base-850/30 prose-img:my-2 [&>:first-child]:mt-0 [&>:last-child]:mb-0 [&_p:first-child]:mt-0 [&_h1:first-child]:mt-0 [&_h2:first-child]:mt-0 [&_h3:first-child]:mt-0 [&_h4:first-child]:mt-0 [&_h5:first-child]:mt-0 [&_h6:first-child]:mt-0;
 }
 
 .markdown-prose,
 .document-markdown {
-	@apply prose-blockquote:my-2 prose-blockquote:border-s-2 prose-blockquote:border-gray-200 prose-blockquote:dark:border-gray-700 prose-blockquote:ps-3 prose-blockquote:pe-0 prose-blockquote:leading-relaxed prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-gray-600 prose-blockquote:dark:text-gray-400 prose-blockquote:[&>:first-child]:mt-0 prose-blockquote:[&>:last-child]:mb-0;
+	@apply prose-blockquote:my-2 prose-blockquote:border-s-2 prose-blockquote:border-base-200 prose-blockquote:dark:border-base-700 prose-blockquote:ps-3 prose-blockquote:pe-0 prose-blockquote:leading-relaxed prose-blockquote:not-italic prose-blockquote:font-normal prose-blockquote:text-base-600 prose-blockquote:dark:text-base-400 prose-blockquote:[&>:first-child]:mt-0 prose-blockquote:[&>:last-child]:mb-0;
 }
 
 .markdown-prose :where(blockquote p:first-of-type)::before,
@@ -133,11 +135,11 @@ textarea::-webkit-resizer {
 }
 
 .markdown-prose-sm {
-	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-2  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-sm prose dark:prose-invert prose-blockquote:border-s-base-100 prose-blockquote:dark:border-base-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-2  prose-hr:border-base-50 prose-hr:dark:border-base-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown-prose-xs {
-	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-gray-100 prose-blockquote:dark:border-gray-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-0.5  prose-hr:border-gray-50 prose-hr:dark:border-gray-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
+	@apply text-xs prose dark:prose-invert prose-blockquote:border-s-base-100 prose-blockquote:dark:border-base-800 prose-blockquote:border-s-2 prose-blockquote:not-italic prose-blockquote:font-normal  prose-headings:font-medium prose-hr:my-0.5  prose-hr:border-base-50 prose-hr:dark:border-base-850 prose-p:my-0 prose-img:my-1 prose-headings:my-1 prose-pre:my-0 prose-table:my-0 prose-blockquote:my-0 prose-ul:-my-0 prose-ol:-my-0 prose-li:-my-0 whitespace-pre-line;
 }
 
 .markdown a {
@@ -167,16 +169,16 @@ li p {
 
 :where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar-thumb {
 	--tw-border-opacity: 1;
-	background-color: rgba(215, 215, 215, 0.6);
-	border-color: rgba(255, 255, 255, var(--tw-border-opacity));
+	background-color: color-mix(in oklab, var(--color-base-300) 60%, transparent);
+	border-color: var(--color-base-0);
 	border-radius: 9999px;
 	border-width: 1px;
 }
 
 /* Dark theme scrollbar styles */
 :where(html:not(.native-scrollbars)).dark ::-webkit-scrollbar-thumb {
-	background-color: rgba(67, 67, 67, 0.6); /* Darker color for dark theme */
-	border-color: rgba(0, 0, 0, var(--tw-border-opacity));
+	background-color: color-mix(in oklab, var(--color-base-700) 60%, transparent);
+	border-color: var(--color-base-1000);
 }
 
 :where(html:not(.native-scrollbars), html:not(.native-scrollbars) *)::-webkit-scrollbar {
@@ -209,54 +211,42 @@ select {
 }
 
 .dark select:not([class*='bg-transparent']) {
-	@apply bg-gray-900 text-gray-300;
+	@apply bg-base-900 text-base-300;
 }
 
 .dark select option {
-	@apply bg-gray-850 text-white;
+	@apply bg-base-850 text-base-0;
 }
 
 @keyframes shimmer {
 	0% {
-		background-position: 100% 0;
+		transform: translateX(-50%);
 	}
 	100% {
-		background-position: -100% 0;
+		transform: translateX(50%);
 	}
 }
 
 .shimmer {
-	background: linear-gradient(
-		110deg,
-		#b4b4b4 0%,
-		#b4b4b4 43%,
-		#e8e8e8 50%,
-		#b4b4b4 57%,
-		#b4b4b4 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
-	color: #b4b4b4;
+	position: relative;
+	overflow: hidden;
+	clip-path: inset(0);
+	-webkit-text-fill-color: var(--color-base-400);
+	color: var(--color-base-400);
 }
 
-:global(.dark) .shimmer {
-	background: linear-gradient(
-		110deg,
-		#9a9a9a 0%,
-		#9a9a9a 43%,
-		#5e5e5e 50%,
-		#9a9a9a 57%,
-		#9a9a9a 100%
-	);
-	background-size: 200% 100%;
-	background-clip: text;
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
+/* Brightens the base-400 text towards base-100. */
+.shimmer::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	width: 200%;
+	pointer-events: none;
+	backdrop-filter: brightness(1.256) contrast(1.06);
+	mask-image: linear-gradient(110deg, transparent 43%, #000 50%, transparent 57%);
 	animation: shimmer 1.5s cubic-bezier(0.7, 0, 1, 0.4) infinite;
-	color: #9a9a9a;
 }
 
 @keyframes smoothFadeIn {
@@ -391,15 +381,15 @@ input[type='number'] {
 }
 
 .cm-gutters {
-	@apply !bg-white dark:!bg-black !border-none;
+	@apply !bg-base-0 dark:!bg-base-1000 !border-none;
 }
 
 .cm-editor {
-	@apply bg-white dark:bg-black;
+	@apply bg-base-0 dark:bg-base-1000;
 }
 
 .tippy-box[data-theme~='dark'] {
-	@apply rounded-lg bg-gray-950 text-xs border border-gray-900 shadow-xl;
+	@apply rounded-lg bg-base-950 text-xs border border-base-900 shadow-xl;
 }
 
 .password {
@@ -409,7 +399,7 @@ input[type='number'] {
 .codespan {
 	padding: 0.15rem 0.3rem;
 	font-size: 0.85em;
-	@apply font-mono rounded-md text-gray-800 bg-gray-100 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
+	@apply font-mono rounded-md text-base-800 bg-base-100 dark:text-base-200 dark:bg-base-800 mx-0.5;
 }
 
 .svelte-flow {
@@ -422,11 +412,11 @@ input[type='number'] {
 
 .svelte-flow__edge.animated > path {
 	stroke-width: 2;
-	@apply stroke-gray-600 dark:stroke-gray-500;
+	@apply stroke-base-600 dark:stroke-base-500;
 }
 
-.bg-gray-950-90 {
-	background-color: rgba(var(--color-gray-950, #0d0d0d), 0.9);
+.bg-base-950-90 {
+	background-color: color-mix(in oklab, var(--color-base-950) 90%, transparent);
 }
 
 .ProseMirror {
@@ -458,27 +448,18 @@ html.high-contrast :is(input, textarea, [contenteditable='true'], .ProseMirror):
 	outline-offset: -2px;
 }
 
-html [data-sonner-toaster][data-theme='light'] {
-	--success-text: hsl(140, 100%, 25%);
-	--info-text: hsl(210, 92%, 43%);
-	--warning-text: hsl(31, 92%, 35%);
-	--error-text: hsl(360, 100%, 43%);
-}
-
 .ProseMirror p.is-editor-empty:first-child::before {
 	content: attr(data-placeholder);
 	float: left;
-	/* Below color is from tailwind, and has the proper contrast
-	text-gray-600 from: https://tailwindcss.com/docs/color */
-	color: #676767;
+	color: var(--color-base-600);
 	pointer-events: none;
 
 	@apply line-clamp-1 absolute;
 }
 
-/* #676767 is 3.17:1 on the dark canvas; the light value already passes. */
+/* base-600 is about 3.2:1 on the dark canvas; the light value already passes. */
 html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
-	color: var(--color-gray-500);
+	color: var(--color-base-500);
 }
 
 .tiptap ul[data-type='taskList'] {
@@ -571,7 +552,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 .tiptap .suggestion.is-empty::after {
 	content: '\00A0';
-	border-bottom: 1px dotted rgba(31, 41, 55, 0.12);
+	border-bottom: 1px dotted color-mix(in oklab, var(--color-base-800) 12%, transparent);
 }
 
 .input-prose .tiptap ul[data-type='taskList'] {
@@ -642,13 +623,13 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 @media (prefers-color-scheme: dark) {
 	.ProseMirror p.is-editor-empty:first-child::before {
-		color: #757575;
+		color: var(--color-base-600);
 	}
 }
 
 .ProseMirror p.is-editor-empty.ai-autocompletion:first-child::before {
 	content: attr(data-suggestion);
-	color: #a0a0a0;
+	color: var(--color-base-500);
 }
 
 .ProseMirror p.is-editor-empty.ai-autocompletion:first-child::after {
@@ -656,7 +637,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 .ai-autocompletion::after {
-	color: #a0a0a0;
+	color: var(--color-base-500);
 
 	content: attr(data-suggestion);
 	pointer-events: none;
@@ -667,7 +648,7 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	font-size: 0.85rem;
 	padding: 0.25em 0.3em;
 
-	@apply dark:bg-gray-800 bg-gray-50;
+	@apply dark:bg-base-800 bg-base-50;
 }
 
 .tiptap pre,
@@ -677,13 +658,13 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 	margin: 1.5rem 0;
 	padding: 0.75rem 1rem;
 
-	@apply dark:bg-gray-800 bg-gray-50;
+	@apply dark:bg-base-800 bg-base-50;
 }
 
 .tiptap p code {
 	padding: 0.15rem 0.3rem;
 	font-size: 0.85em;
-	@apply font-mono rounded-md text-gray-800 bg-gray-50 dark:text-gray-200 dark:bg-gray-800 mx-0.5;
+	@apply font-mono rounded-md text-base-800 bg-base-50 dark:text-base-200 dark:bg-base-800 mx-0.5;
 }
 
 :where(html:not(.dark)) .tiptap {
@@ -696,28 +677,28 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 
 /* Table styling for tiptap editors */
 .tiptap table {
-	@apply w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full;
+	@apply w-full text-sm text-start text-base-500 dark:text-base-400 max-w-full;
 }
 
 .tiptap thead {
-	@apply text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-850 dark:text-gray-400 border-none;
+	@apply text-xs text-base-700 uppercase bg-base-50 dark:bg-base-850 dark:text-base-400 border-none;
 }
 
 .tiptap th,
 .tiptap td {
-	@apply px-3 py-1.5 border border-gray-100/30 dark:border-gray-850/30;
+	@apply px-3 py-1.5 border border-base-100/30 dark:border-base-850/30;
 }
 
 .tiptap th {
-	@apply cursor-pointer text-start text-xs text-gray-700 dark:text-gray-400 font-normal uppercase bg-gray-50 dark:bg-gray-850;
+	@apply cursor-pointer text-start text-xs text-base-700 dark:text-base-400 font-normal uppercase bg-base-50 dark:bg-base-850;
 }
 
 .tiptap td {
-	@apply text-gray-900 dark:text-white w-max;
+	@apply text-base-900 dark:text-base-0 w-max;
 }
 
 .tiptap tr {
-	@apply dark:border-gray-850 text-xs;
+	@apply dark:border-base-850 text-xs;
 }
 
 .document-markdown {
@@ -869,13 +850,13 @@ html.high-contrast.dark .ProseMirror p.is-editor-empty:first-child::before {
 }
 
 body {
-	background: #fff;
-	color: #000;
+	background: var(--color-base-0);
+	color: var(--color-base-1000);
 }
 
 .dark body {
-	background: #171717;
-	color: #eee;
+	background: var(--color-base-900);
+	color: var(--color-base-100);
 }
 
 /* Position the handle relative to each LI */
@@ -920,7 +901,7 @@ body {
 	opacity: 1;
 }
 .pm-list-drag-handle:hover {
-	background: rgba(0, 0, 0, 0.06);
+	background: color-mix(in oklab, var(--color-base-1000) 6%, transparent);
 }
 
 :root {
@@ -994,148 +975,150 @@ body {
 /* Accessibility Mode: placeholders bottom out at 1.58:1 (WCAG 1.4.3 wants 4.5:1). */
 @layer utilities {
 	html.high-contrast:not(.dark) :is(input, textarea)::placeholder {
-		color: var(--color-gray-700);
+		color: var(--color-base-700);
 	}
 
 	html.high-contrast.dark :is(input, textarea)::placeholder {
-		color: var(--color-gray-300);
+		color: var(--color-base-300);
 	}
 }
 
 /* Accessibility Mode: muted text fails WCAG 1.4.3 (2.07:1 light, 3.12:1 dark).
    :where() keeps these at low specificity so hover variants still win. */
 @layer utilities {
-	html:where(.high-contrast):not(:where(.dark)) .text-gray-400 {
-		color: var(--color-gray-700);
+	html:where(.high-contrast):not(:where(.dark)) .text-base-400 {
+		color: var(--color-base-700);
 	}
 
 	html:where(.high-contrast).dark
-		:is(.dark\:text-gray-400, .dark\:text-gray-500, .dark\:text-gray-600) {
-		color: var(--color-gray-300);
+		:is(.dark\:text-base-400, .dark\:text-base-500, .dark\:text-base-600) {
+		color: var(--color-base-300);
 	}
 
 	html:where(.high-contrast).dark
 		:is(
-			.dark\:hover\:text-gray-100:hover,
-			.dark\:hover\:text-gray-200:hover,
-			.dark\:hover\:text-gray-300:hover,
-			.dark\:hover\:text-gray-400:hover
+			.dark\:hover\:text-base-100:hover,
+			.dark\:hover\:text-base-200:hover,
+			.dark\:hover\:text-base-300:hover,
+			.dark\:hover\:text-base-400:hover
 		) {
-		color: #fff;
+		color: var(--color-base-0);
 	}
 
 	/* Elements that hover to a lighter grey than the new resting colour. */
 	html:where(.high-contrast):not(:where(.dark))
 		:is(
-			.hover\:text-gray-500:hover,
-			.hover\:text-gray-600:hover,
-			.hover\:text-gray-700:hover,
-			.hover\:text-gray-800:hover
+			.hover\:text-base-500:hover,
+			.hover\:text-base-600:hover,
+			.hover\:text-base-700:hover,
+			.hover\:text-base-800:hover
 		) {
-		color: var(--color-gray-900);
+		color: var(--color-base-900);
 	}
 }
 
-/* Accessibility Mode: gray-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
+/* Accessibility Mode: base-500 muted text is 2.77:1 in light (WCAG 1.4.3 wants 4.5:1).
    The utility stays in the layer so hover variants still outrank it; the classes below
    are unlayered, so their override has to be too. */
 @layer utilities {
-	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-500, .text-gray-600) {
-		color: var(--color-gray-700);
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-base-500, .text-base-600) {
+		color: var(--color-base-700);
 	}
 }
 
 html.high-contrast:not(.dark) :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
-	color: var(--color-gray-700);
+	color: var(--color-base-700);
 }
 
 html.high-contrast.dark :is(.app-muted, .app-icon-muted, .tiptap table, .cm-placeholder) {
-	color: var(--color-gray-300);
+	color: var(--color-base-300);
 }
 
 html.high-contrast:not(.dark)
 	:is(
-		#sidebar .hover\:bg-gray-100:hover,
-		#sidebar .group:hover .group-hover\:bg-gray-100,
+		#sidebar .hover\:bg-base-100:hover,
+		#sidebar .group:hover .group-hover\:bg-base-100,
 		.app-dropdown-menu :is(button, a):not(.user-menu-row *):hover,
 		.app-dropdown-menu .user-menu-row:hover
 	) {
-	background-color: var(--color-gray-200) !important;
+	background-color: var(--color-base-200) !important;
 }
 
 html.high-contrast.dark
 	:is(
-		#sidebar .dark\:hover\:bg-gray-900:hover,
-		#sidebar .group:hover .dark\:group-hover\:bg-gray-900,
+		#sidebar .dark\:hover\:bg-base-900:hover,
+		#sidebar .group:hover .dark\:group-hover\:bg-base-900,
 		.app-dropdown-menu :is(button, a):not(.user-menu-row *):hover,
 		.app-dropdown-menu .user-menu-row:hover
 	) {
-	background-color: var(--color-gray-800) !important;
+	background-color: var(--color-base-800) !important;
 }
 
 /* Accessibility Mode: the lightest muted pair, 1.58:1 in light and 2.14:1 in dark.
-   text-gray-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
+   text-base-400/70 is an icon colour, so 1.4.11 governs it, and 2.07:1 misses that too. */
 @layer utilities {
-	html:where(.high-contrast):not(:where(.dark)) :is(.text-gray-300, .text-gray-400\/70) {
-		color: var(--color-gray-700);
+	html:where(.high-contrast):not(:where(.dark)) :is(.text-base-300, .text-base-400\/70) {
+		color: var(--color-base-700);
 	}
 
-	html:where(.high-contrast).dark :is(.dark\:text-gray-700, .dark\:text-gray-800) {
-		color: var(--color-gray-300);
+	html:where(.high-contrast).dark :is(.dark\:text-base-700, .dark\:text-base-800) {
+		color: var(--color-base-300);
 	}
 
 	/* Hover states that land lighter than the new resting colour. */
 	html:where(.high-contrast):not(:where(.dark))
 		:is(
-			.hover\:text-gray-500:hover,
-			.hover\:text-gray-600:hover,
-			.hover\:text-gray-700:hover,
-			.hover\:text-gray-800:hover
+			.hover\:text-base-500:hover,
+			.hover\:text-base-600:hover,
+			.hover\:text-base-700:hover,
+			.hover\:text-base-800:hover
 		) {
-		color: var(--color-gray-900);
+		color: var(--color-base-900);
 	}
 
 	html:where(.high-contrast):not(:where(.dark))
 		.group:hover
-		:is(.group-hover\:text-gray-500, .group-hover\:text-gray-600, .group-hover\:text-gray-700) {
-		color: var(--color-gray-900);
+		:is(.group-hover\:text-base-500, .group-hover\:text-base-600, .group-hover\:text-base-700) {
+		color: var(--color-base-900);
 	}
 
 	html:where(.high-contrast).dark
 		.group:hover
 		:is(
-			.dark\:group-hover\:text-gray-200,
-			.dark\:group-hover\:text-gray-300,
-			.dark\:group-hover\:text-gray-400
+			.dark\:group-hover\:text-base-200,
+			.dark\:group-hover\:text-base-300,
+			.dark\:group-hover\:text-base-400
 		) {
-		color: #fff;
+		color: var(--color-base-0);
 	}
 }
 
 /* Autocompletion ghost text is 2.65:1 in light; the dark canvas already passes. */
 html.high-contrast:not(.dark) .ai-autocompletion::after {
-	color: var(--color-gray-700);
+	color: var(--color-base-700);
 }
 
-/* The shimmer gradient is 2.10:1 in light, and clipping it to the text leaves no
-   solid colour to raise; render it as flat text instead. */
+/* The shimmer text is 2.10:1 in light; render it as flat text instead. */
 html.high-contrast:not(.dark) .shimmer {
-	background: none;
-	color: var(--color-gray-800);
-	-webkit-text-fill-color: var(--color-gray-800);
+	color: var(--color-base-800);
+	-webkit-text-fill-color: var(--color-base-800);
+}
+
+html.high-contrast:not(.dark) .shimmer::after {
+	display: none;
 }
 
 /* Shared by file previews and the attachment modal. */
 .office-preview {
 	font-size: 0.875rem;
 	line-height: 1.6;
-	color: var(--color-gray-800);
-	background: #fff;
+	color: var(--color-base-800);
+	background: var(--color-base-0);
 	border-radius: 0.25rem;
 }
 .dark .office-preview {
-	color: var(--color-gray-200);
-	background: var(--color-gray-900);
+	color: var(--color-base-200);
+	background: var(--color-base-900);
 }
 .office-preview table {
 	border-collapse: collapse;
@@ -1145,7 +1128,7 @@ html.high-contrast:not(.dark) .shimmer {
 }
 .office-preview table td,
 .office-preview table th {
-	border: 1px solid var(--color-gray-200);
+	border: 1px solid var(--color-base-200);
 	padding: 0.25rem 0.625rem;
 	text-align: left;
 	white-space: nowrap;
@@ -1157,45 +1140,45 @@ html.high-contrast:not(.dark) .shimmer {
 }
 .dark .office-preview table td,
 .dark .office-preview table th {
-	border-color: var(--color-gray-800);
+	border-color: var(--color-base-800);
 }
 /* Column letter headers */
 .office-preview table th.excel-col-hdr {
 	position: sticky;
 	top: 0;
 	z-index: 2;
-	background: var(--color-gray-100);
-	color: var(--color-gray-600);
+	background: var(--color-base-100);
+	color: var(--color-base-600);
 	font-weight: 500;
 	font-size: 0.65rem;
 	text-align: center;
 	padding: 0.1875rem 0.625rem;
-	border-bottom: 2px solid var(--color-gray-300);
+	border-bottom: 2px solid var(--color-base-300);
 }
 .dark .office-preview table th.excel-col-hdr {
-	background: var(--color-gray-850);
-	color: var(--color-gray-400);
-	border-bottom-color: var(--color-gray-700);
+	background: var(--color-base-850);
+	color: var(--color-base-400);
+	border-bottom-color: var(--color-base-700);
 }
 /* Row number cells */
 .office-preview .excel-row-num {
 	position: sticky;
 	left: 0;
 	z-index: 1;
-	background: var(--color-gray-100);
-	color: var(--color-gray-600);
+	background: var(--color-base-100);
+	color: var(--color-base-600);
 	font-size: 0.6rem;
 	text-align: right !important;
 	padding: 0.25rem 0.5rem 0.25rem 0.25rem !important;
 	user-select: none;
 	width: 1px;
 	white-space: nowrap;
-	border-right: 2px solid var(--color-gray-300) !important;
+	border-right: 2px solid var(--color-base-300) !important;
 }
 .dark .office-preview .excel-row-num {
-	background: var(--color-gray-850);
-	color: var(--color-gray-400);
-	border-right-color: var(--color-gray-700) !important;
+	background: var(--color-base-850);
+	color: var(--color-base-400);
+	border-right-color: var(--color-base-700) !important;
 }
 /* Corner cell (intersection of row nums and col headers) */
 .office-preview thead .excel-row-num {
@@ -1208,10 +1191,10 @@ html.high-contrast:not(.dark) .shimmer {
 }
 /* Row hover and selection */
 .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
-	background: rgba(0, 0, 0, 0.015);
+	background: color-mix(in oklab, var(--color-base-1000) 1.5%, transparent);
 }
 .dark .office-preview table tbody tr:nth-child(even) td:not(.excel-row-num) {
-	background: rgba(255, 255, 255, 0.02);
+	background: color-mix(in oklab, var(--color-base-0) 2%, transparent);
 }
 .office-preview table tbody tr:hover td:not(.excel-row-num) {
 	background: rgba(59, 130, 246, 0.06);

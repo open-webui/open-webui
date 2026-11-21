@@ -9,7 +9,8 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { toast } from 'svelte-sonner';
+	import Toaster from '$lib/components/common/Toaster.svelte';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -1266,7 +1267,7 @@
 
 <a
 	href="#main-content"
-	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-gray-800 dark:focus:text-gray-100"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-base-0 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-base-900 focus:shadow-lg dark:focus:bg-base-800 dark:focus:text-base-100"
 >
 	{$i18n.t('Skip to main content')}
 </a>
@@ -1295,22 +1296,5 @@
 {/if}
 
 <div aria-live="polite">
-	<Toaster
-		theme={$theme.includes('dark')
-			? 'dark'
-			: $theme === 'system'
-				? window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light'
-				: 'light'}
-		richColors
-		position="top-right"
-		closeButton
-		toastOptions={{
-			classes: {
-				closeButton:
-					'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
-			}
-		}}
-	/>
+	<Toaster />
 </div>

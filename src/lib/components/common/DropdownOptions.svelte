@@ -29,8 +29,8 @@
 	{align}
 	triggerClass={className
 		? className
-		: 'flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-gray-700 transition placeholder-gray-400 outline-hidden hover:text-gray-900 focus:outline-hidden dark:text-gray-200 dark:hover:text-gray-100'}
-	itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+		: 'flex h-8 shrink-0 items-center gap-1.5 rounded-xl bg-transparent px-1.5 text-[0.8125rem] font-normal text-base-700 transition placeholder-base-400 outline-hidden hover:text-base-900 focus:outline-hidden dark:text-base-200 dark:hover:text-base-100'}
+	itemClass="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100"
 	onChange={(v) => {
 		onChange(v);
 	}}
@@ -41,7 +41,7 @@
 	</svelte:fragment>
 
 	<svelte:fragment slot="item" let:item let:selected>
-		<span class={`min-w-0 truncate ${selected ? '' : 'text-gray-500 dark:text-gray-400'}`}
+		<span class={`min-w-0 truncate ${selected ? '' : 'text-base-500 dark:text-base-400'}`}
 			>{item.label}</span
 		>
 	</svelte:fragment>

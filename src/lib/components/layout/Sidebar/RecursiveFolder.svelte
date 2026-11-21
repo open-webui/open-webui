@@ -14,9 +14,10 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+	import { chatId, chatTabRequest, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
 	import {
 		folderStates,
 		folderChatPageKey,
@@ -641,7 +642,7 @@
 		deleteHandler();
 	}}
 >
-	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+	<div class=" text-sm text-base-700 dark:text-base-300 flex-1 line-clamp-3 mb-2">
 		<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
 				NAME: folders[folderId].name
 			})} -->
@@ -658,7 +659,7 @@
 			bind:checked={deleteFolderContents}
 		/>
 
-		<div class="text-xs text-gray-500">
+		<div class="text-xs text-base-500">
 			{$i18n.t('Delete all contents inside this folder')}
 		</div>
 	</div>
@@ -677,7 +678,7 @@
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div
-			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+			class="w-fit max-w-40 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<div class="flex items-center gap-1.5">
 				<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
@@ -697,7 +698,7 @@
 >
 	{#if draggedOver}
 		<div
-			class="pointer-events-none absolute inset-0 z-50 touch-none bg-black/[0.02] ring-1 ring-inset ring-black/10 dark:bg-white/[0.02] dark:ring-white/10"
+			class="pointer-events-none absolute inset-0 z-50 touch-none bg-base-1000/[0.02] ring-1 ring-inset ring-base-1000/10 dark:bg-base-0/[0.02] dark:ring-base-0/10"
 		></div>
 	{/if}
 
@@ -714,14 +715,14 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition {$selectedFolder?.id ===
 				folderId
-					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
+					? 'bg-base-100/80 dark:bg-base-850/50 selected'
 					: ''}"
 				on:click|stopPropagation
 			>
 				<button
-					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+					class="text-base-600 dark:text-base-400 transition-all p-1 hover:bg-base-100 dark:hover:bg-base-900 rounded-lg"
 					aria-label={open
 						? $i18n.t('Collapse {{name}}', { name: folders[folderId]?.name })
 						: $i18n.t('Expand {{name}}', { name: folders[folderId]?.name })}
@@ -861,12 +862,16 @@
 
 				{#if isWritable}
 					<div
-						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-base-300"
 						role="presentation"
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
-							onNewChat={openFolderHandler}
+							onNewChat={async () => {
+								if ($selectedFolder?.id !== folderId) await openFolderHandler();
+								if ($page.params.folderId === folderId) chatTabRequest.set({ folderId });
+								if ($mobile) showSidebar.set(false);
+							}}
 							onEdit={() => {
 								showFolderModal = true;
 							}}
@@ -887,7 +892,7 @@
 								: null}
 						>
 							<div
-								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
+								class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition m-0 touch-auto"
 							>
 								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>
@@ -900,7 +905,7 @@
 		<div slot="content" class="w-full">
 			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || chats !== null || hasMoreChats || chatsLoading}
 				<div
-					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-base-100 dark:border-base-900"
 				>
 					{#if folders[folderId]?.childrenIds}
 						{@const children = folders[folderId]?.childrenIds
@@ -941,18 +946,18 @@
 
 					{#if chats === null && chatsLoading}
 						<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+							<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"></span>
 							<span
-								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+								class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 							></span>
 							<span
-								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+								class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 							></span>
 						</div>
 					{/if}
 
 					{#if chats !== null && chats.length === 0 && !chatsLoading}
-						<div class="px-2 py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="px-2 py-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('No chats')}
 						</div>
 					{/if}
@@ -992,19 +997,19 @@
 
 					{#if hasMoreChats}
 						<button
-							class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-600 dark:hover:text-gray-300"
+							class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-base-400 transition hover:text-base-700 disabled:cursor-not-allowed dark:text-base-600 dark:hover:text-base-300"
 							disabled={chatsLoading}
 							on:click={() => setFolderItems(true)}
 						>
 							{#if chatsLoading}
 								<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
+									<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"
 									></span>
 									<span
-										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+										class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 									></span>
 									<span
-										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+										class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 									></span>
 								</div>
 							{:else}

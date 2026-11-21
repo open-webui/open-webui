@@ -32,7 +32,7 @@
 
 <div class="flex items-center gap-2 px-2 py-1.5">
 	<!-- Arrow forward icon -->
-	<div class="shrink-0 text-gray-500">
+	<div class="shrink-0 text-base-500">
 		<ArrowForward className="size-3.5" />
 	</div>
 
@@ -47,12 +47,12 @@
 								? file.url
 								: `${WEBUI_API_BASE_URL}/files/${file.url}${file?.content_type ? '/content' : ''}`}
 						<div
-							class="relative size-6 shrink-0 overflow-hidden rounded-lg border border-gray-100/60 bg-white/60 dark:border-white/[0.06] dark:bg-white/[0.025]"
+							class="relative size-6 shrink-0 overflow-hidden rounded-lg border border-base-100/60 bg-base-0/60 dark:border-base-0/[0.06] dark:bg-base-0/[0.025]"
 						>
 							<Image src={fileUrl} alt="" imageClassName="size-full object-cover" />
 							{#if file.status === 'uploading'}
 								<div
-									class="absolute inset-0 flex items-center justify-center bg-white/75 text-gray-500 backdrop-blur-[1px] dark:bg-gray-950/70 dark:text-gray-300"
+									class="absolute inset-0 flex items-center justify-center bg-base-0/75 text-base-500 backdrop-blur-[1px] dark:bg-base-950/70 dark:text-base-300"
 								>
 									<Spinner className="size-3" />
 								</div>
@@ -60,10 +60,10 @@
 						</div>
 					{:else}
 						<div
-							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-gray-100/60 bg-white/60 px-1.5 text-[0.6875rem] leading-none text-gray-500 dark:border-white/[0.06] dark:bg-white/[0.025] dark:text-gray-400"
+							class="flex h-6 max-w-[9rem] items-center gap-1 rounded-lg border border-base-100/60 bg-base-0/60 px-1.5 text-[0.6875rem] leading-none text-base-500 dark:border-base-0/[0.06] dark:bg-base-0/[0.025] dark:text-base-400"
 						>
 							{#if file.status === 'uploading'}
-								<span class="shrink-0 text-gray-400 dark:text-gray-500">
+								<span class="shrink-0 text-base-400 dark:text-base-500">
 									<Spinner className="size-3" />
 								</span>
 							{/if}
@@ -75,15 +75,15 @@
 		{/if}
 
 		{#if content}
-			<p class="text-sm text-gray-600 dark:text-gray-300 truncate">{content}</p>
+			<p class="text-sm text-base-600 dark:text-base-300 truncate">{content}</p>
 		{:else if files.length === 0}
-			<p class="text-sm text-gray-400 dark:text-gray-500 truncate italic">
+			<p class="text-sm text-base-400 dark:text-base-500 truncate italic">
 				{$i18n.t('Empty message')}
 			</p>
 		{/if}
 
 		{#if uploadFailed}
-			<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+			<span class="shrink-0 text-xs text-base-400 dark:text-base-500">
 				{$i18n.t('Upload failed')}
 			</span>
 		{:else if error}
@@ -101,9 +101,9 @@
 		<Tooltip content={sendLabel}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 transition-colors {sendDisabled
+				class="p-1 text-base-400 transition-colors {sendDisabled
 					? 'opacity-40 cursor-not-allowed'
-					: 'hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300'}"
+					: 'hover:text-base-700 dark:text-base-500 dark:hover:text-base-300'}"
 				disabled={sendDisabled}
 				on:click={() => {
 					if (!sendDisabled) onSendNow(id);
@@ -131,7 +131,7 @@
 		<Tooltip content={$i18n.t('Edit')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				class="p-1 text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				disabled={sending || !onEdit}
 				on:click={() => onEdit?.(id)}
 				aria-label={$i18n.t('Edit')}
@@ -144,7 +144,7 @@
 		<Tooltip content={$i18n.t('Delete')}>
 			<button
 				type="button"
-				class="p-1 text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+				class="p-1 text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
 				disabled={sending}
 				on:click={() => onDelete(id)}
 				aria-label={$i18n.t('Delete')}

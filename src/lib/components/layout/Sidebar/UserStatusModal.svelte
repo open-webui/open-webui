@@ -25,7 +25,7 @@
 	let loading = false;
 
 	const highContrastInputClass =
-		'rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const submitHandler = async () => {
 		loading = true;
@@ -76,13 +76,13 @@
 
 <Modal ariaLabel={$i18n.t('Set your status')} size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
 				{$i18n.t('Set your status')}
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -91,7 +91,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -100,12 +100,12 @@
 					}}
 				>
 					<div>
-						<div class="text-xs text-gray-500 mb-1.5">
+						<div class="text-xs text-base-500 mb-1.5">
 							{$i18n.t('Status')}
 						</div>
 
 						<div
-							class="flex items-center px-2.5 py-2 gap-3 border border-gray-100/50 dark:border-gray-850/50 rounded-xl"
+							class="flex items-center px-2.5 py-2 gap-3 border border-base-100/50 dark:border-base-850/50 rounded-xl"
 						>
 							<EmojiPicker
 								onClose={() => {}}
@@ -128,7 +128,7 @@
 								id="status-message"
 								type="text"
 								bind:value={message}
-								class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700'}`}
+								class={`w-full flex-1 text-sm ${($settings?.highContrastMode ?? false) ? highContrastInputClass : 'bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700'}`}
 								placeholder={$i18n.t("What's on your mind?")}
 								autocomplete="off"
 								required
@@ -149,7 +149,7 @@
 
 					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

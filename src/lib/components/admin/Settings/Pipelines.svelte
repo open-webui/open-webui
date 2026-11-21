@@ -52,10 +52,10 @@
 
 	let pipelineDownloadUrl = '';
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 disabled:opacity-50 dark:text-gray-500 dark:hover:text-white';
-	const mutedMessageClass = 'text-xs text-gray-400 dark:text-gray-600';
+		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 disabled:opacity-50 dark:text-base-500 dark:hover:text-base-0';
+	const mutedMessageClass = 'text-xs text-base-400 dark:text-base-600';
 
 	const updateHandler = async () => {
 		if (!pipelines) {
@@ -239,7 +239,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.pipelines.title')}
 	</h2>
 
@@ -273,12 +273,12 @@
 								await setPipelines();
 							}}
 						>
-							<option value="" selected disabled class="bg-gray-100 dark:bg-gray-700"
+							<option value="" selected disabled class="bg-base-100 dark:bg-base-700"
 								>{$i18n.t('Select a pipeline url')}</option
 							>
 
 							{#each PIPELINES_LIST as pipelines}
-								<option value={pipelines.idx.toString()} class="bg-gray-100 dark:bg-gray-700"
+								<option value={pipelines.idx.toString()} class="bg-base-100 dark:bg-base-700"
 									>{pipelines.url}</option
 								>
 							{/each}
@@ -291,7 +291,7 @@
 					>
 						<div class="flex gap-2">
 							<button
-								class="h-7 flex-1 rounded-lg border border-dashed border-gray-100/50 bg-transparent px-2 text-left text-xs text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 dark:border-white/[0.04] dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
+								class="h-7 flex-1 rounded-lg border border-dashed border-base-100/50 bg-transparent px-2 text-left text-xs text-base-500 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:border-base-0/[0.04] dark:text-base-500 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 								type="button"
 								on:click={() => {
 									document.getElementById('pipelines-upload-input')?.click();
@@ -367,7 +367,7 @@
 										}}
 									>
 										{#each pipelines as pipeline, idx}
-											<option value={idx} class="bg-gray-100 dark:bg-gray-700">
+											<option value={idx} class="bg-base-100 dark:bg-base-700">
 												{pipeline.name} ({pipeline.type ?? 'pipe'})
 											</option>
 										{/each}
@@ -423,7 +423,7 @@
 													{:else if (valves_spec.properties[property]?.type ?? null) === 'boolean'}
 														<AdminSettingRow
 															label={valves[property] ? $i18n.t('Enabled') : $i18n.t('Disabled')}
-															labelClassName="text-gray-400 dark:text-gray-600"
+															labelClassName="text-base-400 dark:text-base-600"
 															let:labelId
 														>
 															<Switch bind:state={valves[property]} ariaLabelledbyId={labelId} />

@@ -13,7 +13,7 @@
 		allowHTML={false}
 	>
 		<span
-			class="cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+			class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
 			>{label}</span
 		>
 	</Tooltip>

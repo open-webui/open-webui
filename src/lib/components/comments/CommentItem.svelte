@@ -59,7 +59,7 @@
 		);
 	};
 	const actionClass =
-		'flex size-6 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 transition';
+		'flex size-6 items-center justify-center rounded-md text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200 transition';
 </script>
 
 <ConfirmDialog
@@ -94,7 +94,7 @@
 						/>
 					</ProfilePreview>
 				</div>
-				<span class="min-w-0 truncate text-[0.8125rem] font-medium text-gray-900 dark:text-gray-100"
+				<span class="min-w-0 truncate text-[0.8125rem] font-medium text-base-900 dark:text-base-100"
 					>{comment.user?.name ?? $i18n.t('Unknown User')}</span
 				>
 				<Tooltip
@@ -103,7 +103,7 @@
 						.locale($i18n.language)
 						.format('LLLL')}
 				>
-					<span class="shrink-0 text-xs text-gray-400 dark:text-gray-500"
+					<span class="shrink-0 text-xs text-base-400 dark:text-base-500"
 						>{dayjs(comment.created_at / 1000000)
 							.locale($i18n.language)
 							.fromNow()}</span
@@ -123,7 +123,7 @@
 										<EmojiPicker align="end" onSubmit={react}>
 											<button
 												type="button"
-												class="flex w-full h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+												class="flex w-full h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
 											>
 												<FaceSmile className="size-3.5" /><span>{$i18n.t('Add Reaction')}</span>
 											</button>
@@ -148,7 +148,7 @@
 										}}><Link /><span>{$i18n.t('Copy link')}</span></button
 									>
 									{#if comment.can_delete}
-										<hr class="border-gray-100 dark:border-gray-800" />
+										<hr class="border-base-100 dark:border-base-800" />
 										<button type="button" on:click={() => (confirmDelete = true)}>
 											<GarbageBin /><span>{$i18n.t('Delete')}</span>
 										</button>
@@ -161,7 +161,7 @@
 			</div>
 		</svelte:fragment>
 		<svelte:fragment slot="content">
-			{#if comment.deleted_at}<p class="text-xs text-gray-500">{$i18n.t('Comment deleted')}</p>
+			{#if comment.deleted_at}<p class="text-xs text-base-500">{$i18n.t('Comment deleted')}</p>
 			{:else if editing}
 				<div class="py-2">
 					<CommentComposer
@@ -181,7 +181,7 @@
 				{#if comment.meta?.anchor}
 					<button
 						type="button"
-						class="my-1 max-h-24 w-full overflow-auto border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-left text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap break-words"
+						class="my-1 max-h-24 w-full overflow-auto border-l-2 border-base-200 dark:border-base-700 ps-2 text-left text-xs text-base-500 dark:text-base-400 whitespace-pre-wrap break-words"
 						on:click={() =>
 							(unavailable = !highlightAnchor(
 								comment,
@@ -189,16 +189,16 @@
 								comment.meta!.anchor!
 							))}>{comment.meta.anchor.quote}</button
 					>
-					{#if unavailable}<p class="mb-1 text-[0.6875rem] text-gray-500">
+					{#if unavailable}<p class="mb-1 text-[0.6875rem] text-base-500">
 							{$i18n.t('Original passage changed or is unavailable.')}
 							<a class="underline" href={commentLink(comment)}>{$i18n.t('Open source')}</a>
 						</p>{/if}
 				{:else if comment.target_id}<a
-						class="text-[0.6875rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+						class="text-[0.6875rem] text-base-500 hover:text-base-700 dark:hover:text-base-300"
 						href={commentLink(comment)}
 						>{$i18n.t(comment.target_type === 'note_page' ? 'Page comment' : 'Message comment')}</a
 					>{/if}
-				<div class="markdown-prose comment-body text-gray-600 dark:text-gray-300">
+				<div class="markdown-prose comment-body text-base-600 dark:text-base-300">
 					<Markdown
 						id={`comment-body-${comment.id}`}
 						content={comment.content}
@@ -215,7 +215,7 @@
 					<button
 						type="button"
 						disabled={busy}
-						class="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 transition"
+						class="text-xs text-base-500 hover:text-base-900 dark:hover:text-base-200 transition"
 						on:click={() => onReply(comment)}>{$i18n.t('Reply')}</button
 					>
 				</div>

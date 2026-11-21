@@ -51,9 +51,9 @@
 	let providerModels: ProviderModel[] = [];
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-left text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-left text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500';
 	const iconButtonClass =
-		'inline-flex h-7 items-center justify-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]';
+		'inline-flex h-7 items-center justify-center rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-base-700 transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:hover:bg-base-0/[0.06]';
 
 	const getModelId = (model: ProviderModel) =>
 		model.key ?? model.id ?? model.name ?? model.model ?? '';
@@ -84,7 +84,7 @@
 		if (status === 'loading' || status === 'downloading') {
 			return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300';
 		}
-		return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300';
+		return 'bg-base-100 text-base-600 dark:bg-base-800 dark:text-base-300';
 	};
 
 	const normalizeModels = (response: any): ProviderModel[] => {
@@ -225,26 +225,26 @@
 			<Spinner />
 		</div>
 	{:else if providerModels.length === 0}
-		<div class="py-5 text-center text-xs text-gray-400">
+		<div class="py-5 text-center text-xs text-base-400">
 			{$i18n.t('No models found')}
 		</div>
 	{:else}
 		<div
-			class="max-h-96 overflow-y-auto rounded-lg border border-gray-100/50 dark:border-white/[0.04]"
+			class="max-h-96 overflow-y-auto rounded-lg border border-base-100/50 dark:border-base-0/[0.04]"
 		>
 			{#each providerModels as model}
 				{@const modelId = getModelId(model)}
 				{@const displayName = getDisplayName(model)}
 				{@const status = getStatus(model)}
 				<div
-					class="flex items-center justify-between gap-2 border-b border-gray-100/50 px-2 py-2 last:border-b-0 dark:border-white/[0.04]"
+					class="flex items-center justify-between gap-2 border-b border-base-100/50 px-2 py-2 last:border-b-0 dark:border-base-0/[0.04]"
 				>
 					<div class="min-w-0 flex-1">
-						<div class="truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+						<div class="truncate text-xs font-medium text-base-700 dark:text-base-200">
 							{displayName}
 						</div>
 						{#if displayName !== modelId}
-							<div class="truncate text-[0.65rem] text-gray-400">{modelId}</div>
+							<div class="truncate text-[0.65rem] text-base-400">{modelId}</div>
 						{/if}
 						<div class="mt-1 flex items-center gap-1.5">
 							<span class="rounded-full px-1.5 py-0.5 text-[0.65rem] {getStatusClass(status)}">

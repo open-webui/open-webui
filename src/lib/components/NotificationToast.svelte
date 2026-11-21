@@ -77,7 +77,8 @@
 <div
 	role="status"
 	aria-live="polite"
-	class="group relative flex gap-2.5 text-left min-w-[var(--width)] w-full dark:bg-gray-850 dark:text-white bg-white text-black border border-gray-100 dark:border-gray-800 rounded-3xl px-4 py-3.5 cursor-pointer select-none"
+	data-toast-custom
+	class="flex w-full items-start gap-2.5 rounded-[inherit] p-3 text-left cursor-pointer select-none"
 	on:dragstart|preventDefault
 	on:pointerdown={onPointerDown}
 	on:pointermove={onPointerMove}
@@ -91,30 +92,29 @@
 		}
 	}}
 >
-	<!-- Close button (visible on hover) -->
-	<button
-		bind:this={closeButtonElement}
-		class="absolute -top-0.5 -left-0.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-opacity z-10 px-0"
-		on:click|stopPropagation={closeHandler}
-		aria-label={$i18n.t('Dismiss notification')}
-	>
-		<XMark className="size-3" />
-	</button>
-
-	<div class="shrink-0 self-top -translate-y-0.5">
+	<div class="-mt-0.5 shrink-0">
 		<!-- LICENSE covers this Open WebUI notification logo.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
 		<img src="{WEBUI_BASE_URL}/static/favicon.png" alt="" class="size-6 rounded-full" />
 	</div>
 
-	<div>
+	<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 		{#if title}
-			<div class=" text-[0.8125rem] font-normal mb-0.5 line-clamp-1">{title}</div>
+			<div class="line-clamp-1 font-medium text-base-900 dark:text-base-50">{title}</div>
 		{/if}
 
-		<div class=" line-clamp-2 text-xs self-center dark:text-gray-300 font-normal">
+		<div class="line-clamp-2 text-xs text-base-500 dark:text-base-400">
 			{@html DOMPurify.sanitize(marked(DOMPurify.sanitize(content, { ALLOWED_TAGS: [] })))}
 		</div>
 	</div>
+
+	<button
+		bind:this={closeButtonElement}
+		class="-mr-0.5 flex size-5 shrink-0 items-center justify-center rounded-md text-base-400 transition hover:bg-base-100 hover:text-base-700 dark:text-base-500 dark:hover:bg-base-800 dark:hover:text-base-200"
+		on:click|stopPropagation={closeHandler}
+		aria-label={$i18n.t('Dismiss notification')}
+	>
+		<XMark className="size-3.5" />
+	</button>
 </div>

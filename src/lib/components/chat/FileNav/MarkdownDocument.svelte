@@ -38,13 +38,13 @@
 </script>
 
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import type { TerminalTarget } from '$lib/apis/machines';
 	export let target: TerminalTarget | null = null;
 	import { getAllContexts, mount, unmount, setContext, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
 	import DOMPurify from 'dompurify';
 	import { v4 as uuidv4 } from 'uuid';
-	import { downloadFileBlob } from '$lib/apis/terminal';
+	import { downloadFileBlob } from '$lib/apis/machines';
 	import MarkdownTokens from '../Messages/Markdown/MarkdownTokens.svelte';
 	import type { Token, Tokens } from 'marked';
 	import { toast } from 'svelte-sonner';

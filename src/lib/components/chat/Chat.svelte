@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { resolveToolApprovalMode } from '$lib/utils/toolPermissions';
 	import type { AppLayoutContext, TerminalContext } from '$lib/types';
 	import { setChatContext } from './context';
@@ -127,7 +127,7 @@
 		resolveTerminalTarget,
 		setCwd,
 		type FilesystemFile
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import { generateOpenAIChatCompletion, getErrorMessage } from '$lib/apis/openai';
 	import { processUrl, processWebSearch } from '$lib/apis/retrieval';
 	import {
@@ -173,6 +173,7 @@
 	import Sidebar from '../icons/Sidebar.svelte';
 	import Image from '../common/Image.svelte';
 	import XMark from '../icons/XMark.svelte';
+	import ChevronDown from '../icons/ChevronDown.svelte';
 	import EmbeddedChatHistoryDropdown from './EmbeddedChatHistoryDropdown.svelte';
 	import ChatMenu from '$lib/components/layout/Navbar/Menu.svelte';
 	import ShareChatModal from './ShareChatModal.svelte';
@@ -215,6 +216,11 @@
 	export let embeddedChats = [];
 	export let embeddedDraftKey = '';
 	export let embeddedDraft: {
+		controls?: ReturnType<typeof getChatInputControls>;
+		terminalId?: string | null;
+		terminalContext?: TerminalContext | null;
+		chatVariables?: Record<string, any>;
+		submit?: boolean;
 		selectedModels: string[];
 		params: Record<string, any>;
 		history: typeof history;
@@ -234,6 +240,12 @@
 	export let onBeforeNoteSubmit: (() => Promise<void>) | null = null;
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onCloseEmbedded: (() => void) | null = null;
+	// Collapsed embedded chats render only the composer; the host expands them on demand.
+	export let embeddedCollapsed = false;
+	export let onCollapseEmbedded: (() => void) | null = null;
+	// Pads the header and messages when the host draws the composer flush to its frame.
+	export let embeddedInset = false;
+	export let onRecordedAudio: ((file: File) => unknown) | null = null;
 	export let onNewEmbeddedChat: (() => void | Promise<void>) | null = null;
 	export let onCreateEmbeddedChat:
 		| ((chat: {
@@ -507,6 +519,7 @@
 	};
 
 	const handleWebSearchToggle = (enabled: boolean) => {
+		if ($selectedFolder && !$chatId) return;
 		if (enabled && $config?.features?.enable_web_search_confirmation && !webSearchConfirmed) {
 			webSearchEnabled = false;
 			pendingWebSearchPrompt = null;
@@ -956,6 +969,18 @@
 		});
 	};
 
+	const applyChatInputControls = (input: ReturnType<typeof getChatInputControls>) => {
+		selectedToolIds = input.selectedToolIds ?? [];
+		selectedSkillIds = input.selectedSkillIds ?? [];
+		selectedFilterIds = input.selectedFilterIds ?? [];
+		webSearchEnabled = input.webSearchEnabled ?? false;
+		imageGenerationEnabled = input.imageGenerationEnabled ?? false;
+		selectedImageModelId = input.selectedImageModelId ?? '';
+		videoGenerationEnabled = input.videoGenerationEnabled ?? false;
+		selectedVideoModelId = input.selectedVideoModelId ?? '';
+		codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
+	};
+
 	const restoreChatInput = async (storageChatInput: string | null) => {
 		if (!storageChatInput || $temporaryChat) {
 			return false;
@@ -966,15 +991,7 @@
 			prompt = input.prompt ?? '';
 			messageInput?.setText(prompt);
 			files = input.files ?? [];
-			selectedToolIds = input.selectedToolIds ?? [];
-			selectedSkillIds = input.selectedSkillIds ?? [];
-			selectedFilterIds = input.selectedFilterIds ?? [];
-			webSearchEnabled = input.webSearchEnabled ?? false;
-			imageGenerationEnabled = input.imageGenerationEnabled ?? false;
-			selectedImageModelId = input.selectedImageModelId ?? '';
-			videoGenerationEnabled = input.videoGenerationEnabled ?? false;
-			selectedVideoModelId = input.selectedVideoModelId ?? '';
-			codeInterpreterEnabled = input.codeInterpreterEnabled ?? false;
+			applyChatInputControls(input);
 			// Ignore approval modes in older drafts. Restoring input must not overwrite chat
 			// parameters or invoke the change handler, which can save settings and approve tools.
 			return true;
@@ -1077,7 +1094,7 @@
 	};
 
 	const initEmbeddedDraft = async () => {
-		startChatLoad();
+		const signal = startChatLoad();
 		modelDefaults = null;
 		terminalContext = null;
 		clearTimeout(saveControlsTimer);
@@ -1121,7 +1138,13 @@
 			await temporaryChat.set(isTemporaryEnforced() || embeddedDraft.temporary);
 		}
 
-		await setDefaults();
+		if (embeddedDraft?.controls) {
+			chatVariables = embeddedDraft.chatVariables ?? {};
+			selectedTerminalId.set(embeddedDraft.terminalId ?? null);
+			terminalContext = embeddedDraft.terminalContext ?? null;
+			applyChatInputControls(embeddedDraft.controls);
+		}
+		await setDefaults(!!embeddedDraft?.controls);
 		loading = false;
 		await tick();
 		if (embeddedDraft) {
@@ -1129,9 +1152,10 @@
 			messageInput?.setText(prompt);
 		}
 		if (!$mobile) messageInput?.focus({ preventScroll: true });
-		if (initialPrompt) {
+		if (embeddedDraft?.submit || initialPrompt) {
 			await tick();
-			submitHandler(initialPrompt);
+			if (!signal.aborted)
+				submitHandler(embeddedDraft?.submit ? embeddedDraft.prompt : initialPrompt);
 		}
 	};
 
@@ -3210,6 +3234,7 @@
 		}
 
 		if (signal.aborted) return;
+		if (preserveTabs) tabs?.focusMainChat();
 		loading = false;
 		await tick();
 		if (signal.aborted) return;
@@ -3262,7 +3287,6 @@
 		);
 
 		await tick();
-		if (preserveTabs) tabs?.focusMainChat();
 		if (!$mobile) messageInput?.focus({ preventScroll: true });
 	};
 
@@ -3752,6 +3776,20 @@
 		await processNextInQueue($chatId);
 	};
 
+	// Takes back a message whose chat could not be set up; it returns to the input after any draft.
+	const unsendMessage = async (id: string) => {
+		const message = history.messages[id];
+		const parent = history.messages[message?.parentId];
+		if (parent) parent.childrenIds = parent.childrenIds.filter((childId: string) => childId !== id);
+		delete history.messages[id];
+		if (history.currentId === id) history.currentId = message.parentId;
+		history = history;
+		files = [...files, ...(message.files ?? [])];
+		// An emptied chat shows the placeholder's input again.
+		await tick();
+		await draftPrompt(message.content);
+	};
+
 	const chatCompletedHandler = async (_chatId, modelId, responseMessageId, messages) => {
 		// Backend handles outlet filters and persistence inline.
 		// Just refresh the sidebar chat list.
@@ -4127,6 +4165,16 @@
 		bridgeRequest: { userMessageId: string; modelId: string } | null = null
 	) => {
 		if (selectedModels.includes('')) throw new Error($i18n.t('Model not selected'));
+		if ($selectedFolder && !$chatId && !bridgeRequest) {
+			if (tabs?.openFeatureTab('chat', false, inputContent, inputFiles)) {
+				atSelectedModel = undefined;
+				return { status: 'submitted' as const };
+			}
+			prompt = inputContent;
+			files = inputFiles;
+			messageInput?.setText(prompt);
+			return { status: 'deferred' as const };
+		}
 		const _files = structuredClone(inputFiles);
 
 		chatFiles.push(
@@ -4141,11 +4189,11 @@
 			(item, index, array) => array.findIndex((i) => equal(i, item)) === index
 		);
 
-		const runningReply = history.currentId ? history.messages[history.currentId] : null;
+		const lastMessage = history.currentId ? history.messages[history.currentId] : null;
 		const queued =
 			!bridgeRequest &&
-			runningReply?.role === 'assistant' &&
-			runningReply.done === false &&
+			lastMessage?.role === 'assistant' &&
+			(lastMessage.done === false || backendQueue.length > 0) &&
 			usesBackendQueue(_files);
 
 		// Create user message
@@ -4186,17 +4234,20 @@
 		saveSessionSelectedModels();
 
 		const currentHistory = history;
+		let _chatId: string | null = null;
 		processing = 'uploading';
 		try {
 			await tick();
 			if (history !== currentHistory) return { status: 'rejected' as const };
-			if ((await getChatId(currentHistory, _files)) === null)
-				return { status: 'rejected' as const };
+			_chatId = await getChatId(currentHistory, _files);
 		} catch (error) {
 			toast.error(`${error}`);
-			return { status: 'rejected' as const };
 		} finally {
 			processing = '';
+		}
+		if (_chatId === null) {
+			if (!existingUserMessage && history === currentHistory) await unsendMessage(userMessageId);
+			return { status: 'rejected' as const };
 		}
 
 		return await sendMessage(history, userMessageId, {
@@ -4486,12 +4537,10 @@
 			localStorage.token,
 			{ chatId: id, modelId: selectedModels[0] ?? null }
 		);
-		if (!target) throw new Error($i18n.t('Terminal Not Found'));
+		if (!target) throw new Error($i18n.t('Machine Not Found'));
 		const result = await setCwd(target, context.currentDirectory);
 		if (!result?.cwd)
-			throw new Error(
-				$i18n.t('Working directory is unavailable. Check the terminal connection and path.')
-			);
+			throw new Error($i18n.t('Working directory is unavailable. Check the machine and path.'));
 		initializedTerminalChatId = id;
 	};
 
@@ -4656,7 +4705,9 @@
 			return { status: 'rejected' };
 		}
 
+		const openingFolderTab = $selectedFolder && !$chatId && !bridgeRequest;
 		if (
+			!openingFolderTab &&
 			$config?.features?.enable_web_search_confirmation &&
 			webSearchActive &&
 			!webSearchConfirmed
@@ -4666,25 +4717,26 @@
 			return { status: 'deferred' };
 		}
 
-		const currentHistory = history;
-		processing = 'uploading';
-		try {
-			// Set up the chat before the message is posted and the input cleared, so a refusal
-			// (e.g. a missing working directory) leaves the draft in place.
-			const _chatId = await getChatId(currentHistory);
-			if (_chatId === null) return { status: 'rejected' };
-			if (history !== currentHistory) return { status: 'rejected' };
-			if (
-				files.some((file) => file.status === 'pending' && file.file instanceof File) &&
-				!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history))))
-			)
+		// Uploads need the chat first. Otherwise the message shows at once and submitPrompt sets
+		// up the chat, which can take several round trips (e.g. a folder's working directory).
+		if (
+			!openingFolderTab &&
+			files.some((file) => file.status === 'pending' && file.file instanceof File)
+		) {
+			const currentHistory = history;
+			processing = 'uploading';
+			try {
+				const _chatId = await getChatId(currentHistory);
+				if (_chatId === null || history !== currentHistory) return { status: 'rejected' };
+				if (!(await messageInput?.uploadPendingFiles(_chatId || (await initChatHandler(history)))))
+					return { status: 'rejected' };
+				if (history !== currentHistory) return { status: 'rejected' };
+			} catch (error) {
+				toast.error(`${error}`);
 				return { status: 'rejected' };
-			if (history !== currentHistory) return { status: 'rejected' };
-		} catch (error) {
-			toast.error(`${error}`);
-			return { status: 'rejected' };
-		} finally {
-			processing = '';
+			} finally {
+				processing = '';
+			}
 		}
 
 		if (
@@ -5164,11 +5216,13 @@
 
 				session_id: $socket?.id,
 				chat_id: _chatId || undefined,
-				folder_id: $selectedFolder?.id ?? undefined,
+				folder_id:
+					$selectedFolder?.id ?? ($temporaryChat && draftFolderId ? draftFolderId : undefined),
 
 				id: responseMessageId,
 				...(messageIdsList ? { message_ids: messageIdsList } : {}),
 				parent_id: userMessage?.parentId ?? null,
+				...(userMessage?.meta?.status === 'pending' ? { queue: true } : {}),
 				// Whether a message is queued is the backend's call, not a status the browser sends.
 				user_message:
 					userMessage?.meta?.status === 'pending'
@@ -5570,8 +5624,8 @@
 			);
 
 			if (!createdChat?.id) throw new Error($i18n.t('Failed to create chat'));
-			if (!_history.currentId) {
-				// A refused first message leaves no empty chat behind.
+			if (!Object.values(_history.messages).some((message) => message.role === 'assistant')) {
+				// A refused first message leaves no chat behind.
 				await initializeTerminalDirectory(createdChat.id, context).catch(async (error) => {
 					if (await deleteChatById(localStorage.token, createdChat.id).catch(() => null))
 						throw error;
@@ -5595,11 +5649,9 @@
 
 			await tick();
 
-			await refreshChatList(localStorage.token);
-
-			if (selectedFolderId) {
-				await refreshFolderChatLists(selectedFolderId, chat);
-			}
+			// The sidebar catches up on its own; the reply does not wait for it.
+			void refreshChatList(localStorage.token);
+			if (selectedFolderId) void refreshFolderChatLists(selectedFolderId, chat);
 
 			if ($chatId === _chatId && $selectedFolder?.id === selectedFolderId) selectedFolder.set(null);
 		} else {
@@ -5664,15 +5716,23 @@
 		return folderId ? `chat-input-folder-${folderId}` : 'chat-input';
 	};
 
-	const getChatInputDraft = () => ({
-		prompt,
-		files: files
-			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
-			.map((file) => ({
-				...file,
-				user: undefined,
-				access_grants: undefined
-			})),
+	const getEmbeddedDraft = (text?: string, inputFiles: any[] = []) =>
+		structuredClone({
+			selectedModels: atSelectedModel ? [atSelectedModel.id] : selectedModels,
+			params,
+			history,
+			chatFiles,
+			chatVariables,
+			temporary: $temporaryChat,
+			terminalId: $selectedTerminalId,
+			terminalContext,
+			controls: getChatInputControls(),
+			prompt: text ?? '',
+			files: inputFiles,
+			submit: text !== undefined
+		});
+
+	const getChatInputControls = () => ({
 		selectedToolIds,
 		selectedSkillIds,
 		selectedFilterIds,
@@ -5682,6 +5742,18 @@
 		selectedVideoModelId,
 		webSearchEnabled,
 		codeInterpreterEnabled
+	});
+
+	const getChatInputDraft = () => ({
+		prompt,
+		files: files
+			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
+			.map((file) => ({
+				...file,
+				user: undefined,
+				access_grants: undefined
+			})),
+		...getChatInputControls()
 	});
 
 	const saveDraft = async (draft: any, chatId: string | null = null, debounce = true) => {
@@ -5843,8 +5915,8 @@
 		<button
 			type="button"
 			class="flex shrink-0 cursor-pointer items-center justify-center {tabbed || fullWidthTabs
-				? 'size-4 rounded text-gray-400 hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white'
-				: 'size-6 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200'}"
+				? 'size-4 rounded text-base-400 hover:bg-base-200 hover:text-base-700 dark:hover:bg-base-0/10 dark:hover:text-base-0'
+				: 'size-6 rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200'}"
 			id={embedded ? undefined : 'chat-context-menu-button'}
 			aria-label={$i18n.t('Chat actions')}
 		>
@@ -5862,7 +5934,7 @@
 		bind:value={titleDraft}
 		class="min-w-0 flex-1 bg-transparent {tabbed || fullWidthTabs
 			? 'text-sm'
-			: 'md:py-1 text-[0.9375rem]'} font-normal text-gray-700 outline-hidden dark:text-gray-300"
+			: 'md:py-1 text-[0.9375rem]'} font-normal text-base-700 outline-hidden dark:text-base-300"
 		aria-label={$i18n.t('Title')}
 		placeholder={generatingTitle ? $i18n.t('Generating...') : ''}
 		disabled={generatingTitle}
@@ -5883,7 +5955,7 @@
 
 	<Tooltip content={$i18n.t('Generate')}>
 		<button
-			class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+			class="flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 disabled:cursor-not-allowed dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 			aria-label={$i18n.t('Generate')}
 			disabled={generatingTitle}
 			on:mousedown={(e) => e.preventDefault()}
@@ -5901,11 +5973,11 @@
 {#if getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts.length > 0}
 	<Modal ariaLabel={$i18n.t('Chat Variables')} bind:show={showChatVariablesModal} size="md">
 		<div>
-			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-gray-300">
+			<div class="flex justify-between px-4 pt-3 pb-1 dark:text-base-300">
 				<div class="self-center text-sm font-medium">{$i18n.t('Chat Variables')}</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => {
 						showChatVariablesModal = false;
 					}}
@@ -5914,15 +5986,15 @@
 				</button>
 			</div>
 
-			<div class="px-5 pb-4 text-sm text-gray-600 dark:text-gray-300">
-				<div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+			<div class="px-5 pb-4 text-sm text-base-600 dark:text-base-300">
+				<div class="mb-2 text-xs text-base-500 dark:text-base-400">
 					{$i18n.t('Selected models define incompatible Chat Variables.')}
 				</div>
 				<div class="flex flex-col gap-1">
 					{#each getChatVariablesForm(selectedModelIds, chatVariables, $models).conflicts as conflict}
 						<div class="rounded-lg border border-red-200 px-3 py-2 text-xs dark:border-red-900/60">
 							<div class="font-medium text-red-600 dark:text-red-400">{conflict.key}</div>
-							<div class="mt-1 text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-base-500 dark:text-base-400">
 								{conflict.modelIds.join(', ')}
 							</div>
 						</div>
@@ -5956,7 +6028,7 @@
 	}}
 	on:cancel={() => (pendingUrlActions = null)}
 >
-	<div class="text-sm text-gray-500 space-y-2 max-h-60 overflow-auto break-words">
+	<div class="text-sm text-base-500 space-y-2 max-h-60 overflow-auto break-words">
 		{#if pendingUrlActions?.urls.length}
 			<p>{$i18n.t('Load content from these URLs?')}</p>
 			{#each pendingUrlActions.urls as url}
@@ -5995,7 +6067,7 @@
 		confirmDeleteChat();
 	}}
 >
-	<div class=" text-sm text-gray-500 flex-1 line-clamp-3">
+	<div class=" text-sm text-base-500 flex-1 line-clamp-3">
 		{$i18n.t('This will delete')} <span class="  font-normal">{$chatTitle}</span>.
 	</div>
 </DeleteConfirmDialog>
@@ -6044,7 +6116,7 @@
 			on:confirm={() => resolveBrowserInteraction(interaction, true)}
 			on:cancel={() => resolveBrowserInteraction(interaction, false)}
 		>
-			<div class="text-sm text-gray-500">
+			<div class="text-sm text-base-500">
 				<div class="font-medium break-all">{interaction.data.tool_call.name}</div>
 				<pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(
 						interaction.data.tool_call.arguments,
@@ -6077,7 +6149,7 @@
 				style="background-image: url({backgroundImage})"
 			/>
 			<div
-				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-white/90 to-white/55 dark:from-gray-900/90 dark:to-gray-900/65 z-0"
+				class="pointer-events-none absolute top-0 left-0 w-full h-full bg-linear-to-t from-base-0/90 to-base-0/55 dark:from-base-900/90 dark:to-base-900/65 z-0"
 			></div>
 		{/if}
 
@@ -6096,16 +6168,18 @@
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
 			>
 				{#if loading}
-					{#if !fullWidthTabs}
+					{#if !fullWidthTabs && !embeddedCollapsed}
 						<div class="flex items-center justify-center h-full w-full">
 							<Spinner className="size-5" />
 						</div>
 					{/if}
 				{:else}
 					<FilesOverlay show={dragged} />
-					{#if embedded && !tabbed}
+					{#if embedded && !tabbed && !embeddedCollapsed}
 						<div
-							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-gray-50/80 px-3 pb-1 text-gray-700 dark:border-gray-850/40 dark:text-gray-200"
+							class="h-8 shrink-0 flex items-center justify-between gap-2 border-b border-base-50/80 pb-1 text-base-700 dark:border-base-850/40 dark:text-base-200 {embeddedInset
+								? 'px-4'
+								: 'px-3'}"
 						>
 							<div class="flex min-w-0 items-center gap-2">
 								<EmbeddedChatHistoryDropdown
@@ -6119,10 +6193,20 @@
 									onDeleteChat={onDeleteEmbeddedChat}
 								/>
 							</div>
+							{#if onCollapseEmbedded}<Tooltip content={$i18n.t('Collapse')} placement="bottom">
+									<button
+										type="button"
+										class="rounded-md py-1 text-base-500 transition hover:text-base-900 dark:hover:text-base-0 px-0"
+										on:click={() => onCollapseEmbedded?.()}
+										aria-label={$i18n.t('Collapse')}
+									>
+										<ChevronDown className="size-4" strokeWidth="2" />
+									</button>
+								</Tooltip>{/if}
 							{#if onCloseEmbedded}<Tooltip content={$i18n.t('Close')} placement="bottom">
 									<button
 										type="button"
-										class="rounded-md py-1 text-gray-500 transition hover:text-gray-900 dark:hover:text-white px-0"
+										class="rounded-md py-1 text-base-500 transition hover:text-base-900 dark:hover:text-base-0 px-0"
 										on:click={() => onCloseEmbedded?.()}
 										aria-label={$i18n.t('Close')}
 									>
@@ -6203,12 +6287,16 @@
 					{/if}
 					<div
 						id="chat-pane"
-						class="flex min-h-0 flex-col flex-auto z-10 w-full @container overflow-auto"
+						class="flex min-h-0 flex-col flex-auto z-10 w-full @container {embeddedCollapsed
+							? 'overflow-visible'
+							: 'overflow-auto'}"
 					>
 						<div class="sr-only" aria-live="polite" aria-atomic="true">{liveStatus}</div>
 						{#if (!tabbed && $settings?.landingPageMode === 'chat' && !$selectedFolder) || (!contextOnly && createMessagesList(history, history.currentId).length > 0)}
 							<div
 								class=" pb-2.5 flex flex-col justify-between w-full flex-auto overflow-auto h-0 max-w-full z-10 scrollbar-hidden"
+								class:hidden={embeddedCollapsed}
+								class:px-2={embeddedInset}
 								id={messagesContainerId}
 								bind:this={messagesContainerElement}
 								on:scroll={(e) => {
@@ -6263,10 +6351,10 @@
 							{#if isShared && !chat?.write_access}
 								{#if canClone}
 									<div
-										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-white dark:from-gray-900 to-transparent pb-5 pt-10"
+										class="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-center gap-2 bg-linear-to-t from-base-0 dark:from-base-900 to-transparent pb-5 pt-10"
 									>
 										<button
-											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white pointer-events-auto"
+											class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 pointer-events-auto"
 											disabled={cloning}
 											on:click={cloneSharedChat}
 										>
@@ -6320,6 +6408,8 @@
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
+										autofocus={!embeddedCollapsed}
+										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -6356,7 +6446,7 @@
 									/>
 
 									<div
-										class="absolute bottom-1 text-xs text-gray-500 text-center line-clamp-1 right-0 left-0"
+										class="absolute bottom-1 text-xs text-base-500 text-center line-clamp-1 right-0 left-0"
 									>
 										<!-- {$i18n.t('LLMs can make mistakes. Verify important information.')} -->
 									</div>
@@ -6367,27 +6457,27 @@
 								{#if tabbed}
 									<div class="flex flex-1 items-center justify-center px-6">
 										<div class="max-w-56 text-center">
-											<p class="text-sm font-normal text-gray-600 dark:text-gray-300">
+											<p class="text-sm font-normal text-base-600 dark:text-base-300">
 												{$temporaryChat ? $i18n.t('Temporary chat') : $i18n.t('New Chat')}
 											</p>
-											<p class="mt-1.5 text-xs leading-relaxed text-gray-400 dark:text-gray-500">
+											<p class="mt-1.5 text-xs leading-relaxed text-base-400 dark:text-base-500">
 												{$temporaryChat
 													? $i18n.t('Messages disappear when you close this tab.')
 													: $i18n.t('Messages are saved to your chats.')}
 											</p>
 										</div>
 									</div>
-								{:else if suggestedPrompts.length > 0}
+								{:else if suggestedPrompts.length > 0 && !embeddedCollapsed}
 									<div class="flex flex-1 items-end px-5 pb-8">
 										<div class="w-full">
-											<div class="mb-2 text-[0.75rem] text-gray-300 dark:text-gray-700">
+											<div class="mb-2 text-[0.75rem] text-base-300 dark:text-base-700">
 												{$i18n.t('Suggested prompts')}
 											</div>
 											<div class="flex flex-col">
 												{#each suggestedPrompts as suggestion}
 													<button
 														type="button"
-														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[0.8125rem] leading-5 text-gray-500 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+														class="flex min-h-8 w-full items-center justify-between py-1 text-left text-[0.8125rem] leading-5 text-base-500 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 														on:click={async () => {
 															await tick();
 															await submitHandler(withSelectedText(suggestion));
@@ -6442,6 +6532,8 @@
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
+										autofocus={!embeddedCollapsed}
+										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
 										forkHandler={handleForkChat}
@@ -6484,6 +6576,7 @@
 									: 'items-center'}"
 							>
 								<Placeholder
+									onNewFolderChat={() => tabs?.openFeatureTab('chat')}
 									bind:folderTabActions
 									{selectedTerminalId}
 									{terminalSkills}
@@ -6555,6 +6648,7 @@
 			{#if !embedded}
 				<Tabs
 					{mainChatHref}
+					{getEmbeddedDraft}
 					chatLoading={loading}
 					chatStreaming={streaming}
 					bind:fullWidth={fullWidthTabs}

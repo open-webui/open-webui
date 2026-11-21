@@ -21,6 +21,7 @@
 		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
+	import { firstNameOf, getGreeting } from '$lib/utils/greeting';
 
 	import Suggestions from './Suggestions.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -49,6 +50,7 @@
 
 	export let history;
 	export let chatId = '';
+	export let onNewFolderChat: () => void = () => {};
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 
 	export let prompt = '';
@@ -114,6 +116,11 @@
 	$: selectedModelDescription =
 		$config?.license_metadata?.chat_placeholder_description ||
 		resolveLocalizedModelDescription(selectedModel, $i18n.language);
+
+	// Time-of-day greeting, unless the model (or license) gives the placeholder a description.
+	$: firstName = firstNameOf($user?.name);
+	$: showGreeting = !!firstName && !selectedModelDescription;
+	$: greeting = getGreeting((key, options) => $i18n.t(key, options), firstName);
 	$: selectedSuggestionPrompts =
 		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
 		resolveLocalizedModelPromptSuggestions(models[selectedModelIdx], $i18n.language) ??
@@ -189,7 +196,7 @@
 <div
 	class="w-full {$selectedFolder
 		? 'flex h-full min-h-0 flex-col overflow-hidden'
-		: 'm-auto max-w-[58rem] px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
+		: 'm-auto max-w-[58rem] overflow-x-clip px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
 >
 	<!-- In a folder, temporary mode shows on the composer alone. -->
 	{#if $temporary && !$selectedFolder}
@@ -198,7 +205,7 @@
 			className="w-full flex justify-center mb-0.5"
 			placement="top"
 		>
-			<div class="flex items-center gap-1.5 text-gray-500 text-xs my-1 w-fit">
+			<div class="flex items-center gap-1.5 text-base-500 text-xs my-1 w-fit">
 				<EyeSlash strokeWidth="2" className="size-3.5" />{$i18n.t('Temporary Chat')}
 			</div>
 		</Tooltip>
@@ -216,13 +223,13 @@
 				readOnly={folderReadOnly}
 				bind:folderTabActions
 				bind:folderSection
-				onNewChat={() => messageInput?.focus()}
+				onNewChat={onNewFolderChat}
 			/>
 
 			{#if !folderReadOnly}
 				<!-- Same mount as the in-chat composer, floating over the list and board. -->
 				<div
-					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-white from-40% to-transparent pt-8 pb-2 text-left dark:from-gray-900 {dragged
+					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-base-0 from-40% to-transparent pt-8 pb-2 text-left dark:from-base-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
 					class:hidden={folderSection !== 'chats'}
@@ -236,67 +243,73 @@
 		</div>
 	{:else}
 		<div
-			class="w-full shrink-0 text-3xl text-gray-800 dark:text-gray-100 text-center flex items-center gap-4"
+			class="w-full shrink-0 text-3xl text-base-800 dark:text-base-100 text-center flex items-center gap-4"
 		>
 			<div class="w-full flex flex-col justify-center items-center">
-				<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
-					<div class="flex shrink-0 justify-center">
-						<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
-							{#each models as model, modelIdx}
-								<Tooltip
-									content={(models[modelIdx]?.info?.meta?.tags ?? [])
-										.map((tag) => tag.name.toUpperCase())
-										.join(', ')}
-									placement="top"
-								>
-									<button
-										aria-hidden={models.length <= 1}
-										tabindex={models.length > 1 ? 0 : -1}
-										aria-label={$i18n.t('Get information on {{name}} in the UI', {
-											name: models[modelIdx]?.name
-										})}
-										on:click={() => {
-											selectedModelIdx = modelIdx;
-										}}
-									>
-										<img
-											src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
-											class=" size-9 @sm:size-10 rounded-2xl"
-											aria-hidden="true"
-											draggable="false"
-											on:error={(e) => {
-												// LICENSE covers this Open WebUI fallback logo.
-												// Do not alter, remove, obscure, or replace it except as LICENSE permits:
-												// https://docs.openwebui.com/license.
-												e.currentTarget.src = '/favicon.png';
-											}}
-										/>
-									</button>
-								</Tooltip>
-							{/each}
-						</div>
-					</div>
-
-					<h2
-						class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
-						in:fade={{ duration: 100 }}
-					>
-						{#if selectedModelName}
-							<Tooltip
-								as="span"
-								content={selectedModelName}
-								placement="top"
-								className=" flex items-center "
-							>
-								<span class="line-clamp-1">
-									{selectedModelName}
-								</span>
-							</Tooltip>
-						{:else}
-							{$i18n.t('Hello, {{name}}', { name: $user?.name })}
-						{/if}
+				{#if showGreeting}
+					<h2 class="px-5 max-w-xl mb-1 text-2xl line-clamp-1" in:fade={{ duration: 100 }}>
+						{greeting}
 					</h2>
-				</div>
+				{:else}
+					<div class="flex flex-row justify-center gap-2.5 @sm:gap-3 w-fit px-5 max-w-xl">
+						<div class="flex shrink-0 justify-center">
+							<div class="flex -space-x-4 mb-0.5" in:fade={{ duration: 100 }}>
+								{#each models as model, modelIdx}
+									<Tooltip
+										content={(models[modelIdx]?.info?.meta?.tags ?? [])
+											.map((tag) => tag.name.toUpperCase())
+											.join(', ')}
+										placement="top"
+									>
+										<button
+											aria-hidden={models.length <= 1}
+											tabindex={models.length > 1 ? 0 : -1}
+											aria-label={$i18n.t('Get information on {{name}} in the UI', {
+												name: models[modelIdx]?.name
+											})}
+											on:click={() => {
+												selectedModelIdx = modelIdx;
+											}}
+										>
+											<img
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model?.id}&lang=${$i18n.language}`}
+												class=" size-9 @sm:size-10 rounded-2xl"
+												aria-hidden="true"
+												draggable="false"
+												on:error={(e) => {
+													// LICENSE covers this Open WebUI fallback logo.
+													// Do not alter, remove, obscure, or replace it except as LICENSE permits:
+													// https://docs.openwebui.com/license.
+													e.currentTarget.src = '/favicon.png';
+												}}
+											/>
+										</button>
+									</Tooltip>
+								{/each}
+							</div>
+						</div>
+
+						<h2
+							class=" text-2xl @sm:text-2xl line-clamp-1 flex items-center"
+							in:fade={{ duration: 100 }}
+						>
+							{#if selectedModelName}
+								<Tooltip
+									as="span"
+									content={selectedModelName}
+									placement="top"
+									className=" flex items-center "
+								>
+									<span class="line-clamp-1">
+										{selectedModelName}
+									</span>
+								</Tooltip>
+							{:else}
+								{$i18n.t('Hello, {{name}}', { name: $user?.name })}
+							{/if}
+						</h2>
+					</div>
+				{/if}
 
 				<div class="flex mt-1 mb-2">
 					<div in:fade={{ duration: 100, delay: 50 }}>
@@ -312,7 +325,7 @@
 								placement="top"
 							>
 								<div
-									class="mt-0.5 px-2 text-sm font-normal text-gray-500 dark:text-gray-400 line-clamp-2 max-w-xl markdown"
+									class="mt-0.5 px-2 text-sm font-normal text-base-500 dark:text-base-400 line-clamp-2 max-w-xl markdown"
 								>
 									{@html DOMPurify.sanitize(
 										marked.parse(
@@ -323,7 +336,7 @@
 							</Tooltip>
 
 							{#if models[selectedModelIdx]?.info?.meta?.user && (!models[selectedModelIdx]?.info?.meta?.user.community || $config?.features.enable_community_sharing)}
-								<div class="mt-0.5 text-sm font-normal text-gray-400 dark:text-gray-500">
+								<div class="mt-0.5 text-sm font-normal text-base-400 dark:text-base-500">
 									{$i18n.t('By')}
 									{#if models[selectedModelIdx]?.info?.meta?.user.community}
 										<a
@@ -352,14 +365,14 @@
 			<!-- Soft halo, like the denser fade around the in-chat composer, so it doesn't float on a vivid background. -->
 			<div
 				aria-hidden="true"
-				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-white/40 blur-2xl dark:bg-gray-900/40"
+				class="pointer-events-none absolute -inset-x-8 -inset-y-3 rounded-[3rem] bg-base-0/40 blur-2xl dark:bg-base-900/40"
 			></div>
 			<div class="relative">
 				{@render composer($i18n.t('How can I help you today?'))}
 			</div>
 		</div>
 
-		<div class="mx-auto max-w-2xl mt-2" in:fade={{ duration: 200, delay: 200 }}>
+		<div class="mx-auto max-w-2xl mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<div class="mx-5">
 				<Suggestions suggestionPrompts={selectedSuggestionPrompts} inputValue={prompt} {onSelect} />
 			</div>

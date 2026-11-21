@@ -70,14 +70,14 @@
 	<div class="flex h-full items-center justify-center"><Spinner className="size-4" /></div>
 {:else if !automations.length}
 	<div class="flex h-full flex-col items-center justify-center gap-1 px-6 pb-16 text-center">
-		<div class="text-sm text-gray-800 dark:text-gray-100">{$i18n.t('No automations yet')}</div>
-		<div class="text-xs text-gray-500 dark:text-gray-400">
+		<div class="text-sm text-base-800 dark:text-base-100">{$i18n.t('No automations yet')}</div>
+		<div class="text-xs text-base-500 dark:text-base-400">
 			{$i18n.t('Run a prompt in this folder on a schedule. Each run lands here as a chat.')}
 		</div>
 		{#if canCreate}
 			<button
 				type="button"
-				class="mt-2 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+				class="mt-2 text-xs text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 				on:click={startNew}>{$i18n.t('New automation')}</button
 			>
 		{/if}
@@ -87,21 +87,21 @@
 		{#each automations as automation (automation.id)}
 			<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 			<li
-				class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-850/50 {automation.can_edit
+				class="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50 {automation.can_edit
 					? 'cursor-pointer'
 					: ''}"
 				on:click={() => edit(automation)}
 			>
-				<Icon name="clock" size={14} class="text-gray-400 dark:text-gray-500" />
+				<Icon name="clock" size={14} class="text-base-400 dark:text-base-500" />
 				<span
-					class="min-w-0 shrink truncate text-[0.8125rem] leading-5 text-gray-700 dark:text-gray-200"
+					class="min-w-0 shrink truncate text-[0.8125rem] leading-5 text-base-700 dark:text-base-200"
 					>{automation.name}</span
 				>
-				<span class="hidden min-w-0 truncate text-xs text-gray-400 @md:block dark:text-gray-500"
+				<span class="hidden min-w-0 truncate text-xs text-base-400 @md:block dark:text-base-500"
 					>{formatSchedule(automation.data.rrule, $i18n)}</span
 				>
 				<span class="flex-1"></span>
-				<span class="text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500"
+				<span class="text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
 					>{lastRun(automation)}</span
 				>
 				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->

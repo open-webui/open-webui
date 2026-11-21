@@ -101,22 +101,22 @@
 
 <Modal ariaLabel={title} size="lg" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class="flex items-center gap-2 text-sm font-medium self-center">
 				<div>{title}</div>
 				{#if count !== null}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-base-500 dark:text-base-500">
 						{formatNumber(count)}
 					</div>
 				{:else if chatList}
-					<div class="text-sm font-medium text-gray-500 dark:text-gray-500">
+					<div class="text-sm font-medium text-base-500 dark:text-base-500">
 						{formatNumber(chatList.length)}
 					</div>
 				{/if}
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -136,7 +136,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col w-full px-5 pb-4 dark:text-gray-200">
+		<div class="flex flex-col w-full px-5 pb-4 dark:text-base-200">
 			{#if showSearch}
 				<div class=" flex w-full space-x-2 mt-0.5 mb-1.5">
 					<div class="flex flex-1">
@@ -165,7 +165,7 @@
 						{#if query}
 							<div class="self-center pl-1.5 pr-1 translate-y-[0.5px] rounded-l-xl bg-transparent">
 								<button
-									class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+									class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 									aria-label={$i18n.t('Clear search')}
 									on:click={() => {
 										query = '';
@@ -243,7 +243,7 @@
 						<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 							{#if chatList.length === 0}
 								<div
-									class="text-xs text-gray-500 dark:text-gray-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
+									class="text-xs text-base-500 dark:text-base-400 text-center px-5 min-h-20 w-full h-full flex justify-center items-center"
 								>
 									{$i18n.t('No results found')}
 								</div>
@@ -252,7 +252,7 @@
 							{#each chatList as chat, idx (chat.id)}
 								{#if (idx === 0 || (idx > 0 && chat.time_range !== chatList[idx - 1].time_range)) && chat?.time_range}
 									<div
-										class="w-full text-xs text-gray-500 dark:text-gray-500 font-normal {idx === 0
+										class="w-full text-xs text-base-500 dark:text-base-500 font-normal {idx === 0
 											? ''
 											: 'pt-5'} pb-2 px-2"
 									>
@@ -279,7 +279,7 @@
 								{/if}
 
 								<div
-									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-gray-50/70 dark:hover:bg-gray-850/50"
+									class=" w-full flex items-center rounded-lg text-sm py-2 px-3 hover:bg-base-50/70 dark:hover:bg-base-850/50"
 									draggable="false"
 								>
 									{#if showUserInfo && chat.user_id}
@@ -289,7 +289,7 @@
 												alt={chat.user_name || 'User'}
 												class="size-5 rounded-full object-cover shrink-0"
 											/>
-											<span class="text-xs text-gray-600 dark:text-gray-400 truncate"
+											<span class="text-xs text-base-600 dark:text-base-400 truncate"
 												>{chat.user_name || 'Unknown'}</span
 											>
 										</div>
@@ -305,7 +305,7 @@
 									</a>
 
 									<div class="{showUserInfo ? 'w-28' : 'basis-2/5'} flex items-center justify-end">
-										<div class="hidden sm:flex text-gray-500 dark:text-gray-400 text-xs">
+										<div class="hidden sm:flex text-base-500 dark:text-base-400 text-xs">
 											{$i18n.t(
 												dayjs(chat?.updated_at * 1000)
 													.locale($i18n.language)
@@ -321,7 +321,7 @@
 										</div>
 
 										{#if !readOnly}
-											<div class="flex justify-end pl-2.5 text-gray-600 dark:text-gray-300">
+											<div class="flex justify-end pl-2.5 text-base-600 dark:text-base-300">
 												{#if unarchiveHandler}
 													<Tooltip content={$i18n.t('Unarchive Chat')}>
 														<button
@@ -450,10 +450,10 @@
 							<div class="text-left text-sm w-full mb-3 max-h-[22rem] overflow-y-scroll">
 								<div class="relative overflow-x-auto">
 									<table
-										class="w-full text-sm text-left text-gray-600 dark:text-gray-400 table-auto"
+										class="w-full text-sm text-left text-base-600 dark:text-base-400 table-auto"
 									>
 										<thead
-											class="text-xs text-gray-700 uppercase bg-transparent dark:text-gray-200 border-b-1 border-gray-50 dark:border-gray-850/30"
+											class="text-xs text-base-700 uppercase bg-transparent dark:text-base-200 border-b-1 border-base-50 dark:border-base-850/30"
 										>
 											<tr>
 												<th scope="col" class="px-3 py-2"> {$i18n.t('Name')} </th>
@@ -467,7 +467,7 @@
 											{#each chats as chat, idx}
 												<tr
 													class="bg-transparent {idx !== chats.length - 1 &&
-														'border-b'} border-gray-50 dark:border-gray-850/30 text-xs"
+														'border-b'} border-base-50 dark:border-base-850/30 text-xs"
 												>
 													<td class="px-3 py-1 w-2/3">
 														<a href="/c/{chat.id}" target="_blank">
@@ -489,7 +489,7 @@
 																<Tooltip content={$i18n.t('Unarchive Chat')}>
 																	<button
 																		aria-label={$i18n.t('Unarchive Chat')}
-																		class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																		class="self-center w-fit text-sm px-2 py-2 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 																		on:click={async () => {
 																			unarchiveHandler(chat.id);
 																		}}
@@ -515,7 +515,7 @@
 															<Tooltip content={$i18n.t('Delete Chat')}>
 																<button
 																	aria-label={$i18n.t('Delete Chat')}
-																	class="self-center w-fit text-sm px-2 py-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+																	class="self-center w-fit text-sm px-2 py-2 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
 																	on:click={async () => {
 																		deleteHandler(chat.id);
 																	}}

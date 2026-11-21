@@ -192,7 +192,7 @@ export const setToolServerConnections = async (token: string, connections: objec
 export const getTerminalServerConnections = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -219,7 +219,7 @@ export const getTerminalServerConnections = async (token: string) => {
 export const setTerminalServerConnections = async (token: string, connections: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -253,7 +253,7 @@ export const setTerminalServerConnections = async (token: string, connections: o
 export const verifyTerminalServerConnection = async (token: string, connection: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/verify`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines/verify`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

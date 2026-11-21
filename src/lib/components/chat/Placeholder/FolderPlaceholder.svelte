@@ -295,7 +295,7 @@
 			const untaggedGroup = {
 				id: UNTAGGED,
 				label: t('Untagged'),
-				dot: 'border border-dashed border-gray-400 dark:border-gray-500'
+				dot: 'border border-dashed border-base-400 dark:border-base-500'
 			};
 			const picked = (id: string) => !selectedTags.length || selectedTags.includes(id);
 			return [
@@ -312,7 +312,7 @@
 				{ id: 'waiting_for_approval', label: t('Waiting for approval'), dot: 'bg-yellow-500' },
 				{ id: 'generating', label: t('Generating'), spinner: true },
 				{ id: 'unread', label: t('Unread'), dot: 'bg-sky-500' },
-				{ id: 'idle', label: t('Read'), dot: 'border border-gray-300 dark:border-gray-600' }
+				{ id: 'idle', label: t('Read'), dot: 'border border-base-300 dark:border-base-600' }
 			];
 			return activity ? states.filter((state) => state.id === activity) : states;
 		}
@@ -401,7 +401,7 @@
 			label: $i18n.t('Untagged'),
 			checked: selectedTags.includes(UNTAGGED),
 			status: undefined,
-			dot: 'border border-dashed border-gray-400 dark:border-gray-500',
+			dot: 'border border-dashed border-base-400 dark:border-base-500',
 			count: undefined
 		},
 		...options.map((tag) => ({
@@ -794,7 +794,6 @@
 			event.preventDefault();
 			openFilterFromKeyboard();
 		} else if (event.key === 'c' && !readOnly) {
-			// Jump into the floating composer.
 			event.preventDefault();
 			onNewChat();
 		}
@@ -884,7 +883,7 @@
 	// Same as ChatMenu's submenus: DropdownSub sizes them to the parent menu, so no width here.
 	const subMenu = 'select-none z-50 max-h-80 overflow-y-auto';
 	const iconButton =
-		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-gray-100 bg-gray-50/60 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 aria-expanded:bg-gray-100 aria-expanded:text-gray-900 dark:border-gray-850 dark:bg-gray-850/50 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white dark:aria-expanded:bg-gray-850 dark:aria-expanded:text-white';
+		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0 dark:aria-expanded:bg-base-850 dark:aria-expanded:text-base-0';
 </script>
 
 <svelte:window on:keydown={shortcuts} />
@@ -912,8 +911,8 @@
 	<DropdownSub contentClass={subMenu} maxWidth={320} sideOffset={6}>
 		<button slot="trigger" type="button" class={subRow}>
 			<span class="min-w-0 flex-1 truncate text-left">{label}</span>
-			<span class="truncate text-gray-500 dark:text-gray-400">{groupByLabel(value)}</span>
-			<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+			<span class="truncate text-base-500 dark:text-base-400">{groupByLabel(value)}</span>
+			<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 		</button>
 		{#each choices as choice (choice)}
 			<button
@@ -933,7 +932,7 @@
 	{#if folder?.meta?.icon}
 		<Emoji shortCode={folder.meta.icon} className="size-4 shrink-0" />
 	{:else}
-		<Icon name="folder" size={14} class="shrink-0 text-gray-500 dark:text-gray-400" />
+		<Icon name="folder" size={14} class="shrink-0 text-base-500 dark:text-base-400" />
 	{/if}
 {/snippet}
 
@@ -942,17 +941,17 @@
 	values: { label: string; dot?: string; status?: FolderStatus; avatar?: string }[]
 )}
 	<div
-		class="inline-flex h-6 max-w-full items-center overflow-hidden rounded-full border border-gray-100 bg-gray-50/60 text-xs dark:border-gray-850 dark:bg-gray-850/50"
+		class="inline-flex h-6 max-w-full items-center overflow-hidden rounded-full border border-base-100 bg-base-50/60 text-xs dark:border-base-850 dark:bg-base-850/50"
 	>
-		<span class="flex h-full items-center gap-1.5 pl-2 pr-1.5 text-gray-500 dark:text-gray-400">
+		<span class="flex h-full items-center gap-1.5 pl-2 pr-1.5 text-base-500 dark:text-base-400">
 			{@render facetIcon(id)}{$i18n.t(facets.find((item) => item.id === id)?.label ?? '')}
 		</span>
-		<span class="flex h-full items-center px-1 text-gray-400 dark:text-gray-500">
+		<span class="flex h-full items-center px-1 text-base-400 dark:text-base-500">
 			{values.length > 1 ? $i18n.t('is any of') : $i18n.t('is')}
 		</span>
 		<button
 			type="button"
-			class="flex h-full min-w-0 items-center gap-1.5 px-1.5 text-gray-700 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+			class="flex h-full min-w-0 items-center gap-1.5 px-1.5 text-base-700 transition-colors hover:bg-base-100 dark:text-base-200 dark:hover:bg-base-800"
 			on:click={openFilter}
 		>
 			{#each values.slice(0, 3) as item}
@@ -973,7 +972,7 @@
 		</button>
 		<button
 			type="button"
-			class="flex h-full w-6 shrink-0 items-center justify-center border-l border-gray-100 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-gray-850 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+			class="flex h-full w-6 shrink-0 items-center justify-center border-l border-base-100 text-base-400 transition-colors hover:bg-base-100 hover:text-base-700 dark:border-base-850 dark:hover:bg-base-800 dark:hover:text-base-200"
 			aria-label={$i18n.t('Remove filter')}
 			on:click={() => clearFacet(id)}><XMark className="size-3" /></button
 		>
@@ -982,7 +981,7 @@
 
 <section
 	bind:this={section}
-	class="folder-workspace flex h-full min-h-0 min-w-0 w-full flex-col text-left text-gray-600 @container dark:text-gray-300"
+	class="folder-workspace flex h-full min-h-0 min-w-0 w-full flex-col text-left text-base-600 @container dark:text-base-300"
 	aria-label={$i18n.t('Folder')}
 	aria-busy={loading}
 >
@@ -1003,7 +1002,7 @@
 
 	<div class="flex shrink-0 items-center gap-1 px-1.5 pb-1 md:px-2.5">
 		<h2
-			class="flex h-6.5 min-w-0 items-center gap-1 px-1 text-sm text-gray-900 select-none dark:text-gray-100"
+			class="flex h-6.5 min-w-0 items-center gap-1 px-1 text-sm text-base-900 select-none dark:text-base-100"
 			aria-live="polite"
 		>
 			<!-- Folder first, like a breadcrumb, then the Workspace-tab style title + count. -->
@@ -1014,7 +1013,7 @@
 					<EmojiPicker side="bottom" selected={folder?.meta?.icon || null} onSubmit={saveIcon}>
 						<button
 							type="button"
-							class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-850"
+							class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-850"
 							aria-label={$i18n.t('Change folder icon')}
 							title={$i18n.t('Change folder icon')}
 							disabled={iconSaving}
@@ -1028,20 +1027,20 @@
 				{:else}
 					<button
 						type="button"
-						class="min-w-0 truncate rounded text-left transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+						class="min-w-0 truncate rounded text-left transition-colors hover:text-base-600 dark:hover:text-base-300"
 						title={$i18n.t('Edit Folder')}
 						on:click={() => (showEditFolder = true)}>{folder?.name}</button
 					>
 				{/if}
 			</span>
 			<ChevronRight
-				className="mx-0.5 size-3 shrink-0 text-gray-400 rtl:rotate-180 dark:text-gray-500"
+				className="mx-0.5 size-3 shrink-0 text-base-400 rtl:rotate-180 dark:text-base-500"
 				strokeWidth="2"
 			/>
 			<Dropdown align="start" closeOnSelect>
 				<button
 					type="button"
-					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-850"
+					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-base-100 dark:hover:bg-base-850"
 					aria-label={$i18n.t('Switch section')}
 				>
 					{#if folderSection === 'automations'}
@@ -1059,7 +1058,7 @@
 							<span class="text-sm opacity-60">{formatNumber(total)}</span>
 						{/if}
 					{/if}
-					<ChevronDown className="size-2.5 text-gray-400 dark:text-gray-500" strokeWidth="2.5" />
+					<ChevronDown className="size-2.5 text-base-400 dark:text-base-500" strokeWidth="2.5" />
 				</button>
 				<DropdownMenu slot="content" className="w-44">
 					<button
@@ -1070,7 +1069,7 @@
 					>
 						<Icon name="chat-bubble" size={14} />
 						<span class="flex-1 text-left">{$i18n.t('Chats')}</span>
-						{#if hasData}<span class="text-xs tabular-nums text-gray-400"
+						{#if hasData}<span class="text-xs tabular-nums text-base-400"
 								>{formatNumber(total)}</span
 							>{/if}
 						{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
@@ -1084,7 +1083,7 @@
 						>
 							<Icon name="clock" size={14} />
 							<span class="flex-1 text-left">{$i18n.t('Automations')}</span>
-							{#if automations.length}<span class="text-xs tabular-nums text-gray-400"
+							{#if automations.length}<span class="text-xs tabular-nums text-base-400"
 									>{automations.length}</span
 								>{/if}
 							{#if folderSection === 'automations'}<Check className="size-3! shrink-0" />{/if}
@@ -1098,7 +1097,7 @@
 					>
 						<Database className="size-3.5" />
 						<span class="flex-1 text-left">{$i18n.t('Knowledge')}</span>
-						{#if knowledgeCount}<span class="text-xs tabular-nums text-gray-400"
+						{#if knowledgeCount}<span class="text-xs tabular-nums text-base-400"
 								>{knowledgeCount}</span
 							>{/if}
 						{#if folderSection === 'knowledge'}<Check className="size-3! shrink-0" />{/if}
@@ -1137,7 +1136,7 @@
 							{#if canUploadKnowledge}
 								<button
 									type="button"
-									class="hover:text-gray-900 dark:hover:text-gray-100"
+									class="hover:text-base-900 dark:hover:text-base-100"
 									on:click={() => {
 										showKnowledgePicker = false;
 										knowledgeView?.upload();
@@ -1149,7 +1148,7 @@
 									href="/workspace/knowledge"
 									target="_blank"
 									rel="noreferrer"
-									class="ml-auto hover:text-gray-900 dark:hover:text-gray-100"
+									class="ml-auto hover:text-base-900 dark:hover:text-base-100"
 									>{$i18n.t('Manage')}</a
 								>
 							{/if}
@@ -1159,12 +1158,12 @@
 			{:else}
 				{#if searchOpen || search}
 					<div
-						class="flex h-6.5 w-40 items-center gap-1.5 rounded-full border border-gray-100 bg-gray-50/60 px-2 text-gray-400 @lg:w-52 dark:border-gray-850 dark:bg-gray-850/50 dark:text-gray-500"
+						class="flex h-6.5 w-40 items-center gap-1.5 rounded-full border border-base-100 bg-base-50/60 px-2 text-base-400 @lg:w-52 dark:border-base-850 dark:bg-base-850/50 dark:text-base-500"
 					>
 						<Icon name="search" size={13} />
 						<input
 							bind:this={searchInput}
-							class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-100 dark:placeholder:text-gray-500"
+							class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-base-800 outline-none placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-500"
 							aria-label={$i18n.t('Search this folder')}
 							title={$i18n.t('Search conversation titles and messages')}
 							placeholder={$i18n.t('Search…')}
@@ -1187,7 +1186,7 @@
 						{#if search}
 							<button
 								type="button"
-								class="flex size-4 shrink-0 items-center justify-center rounded-full hover:text-gray-700 dark:hover:text-gray-200"
+								class="flex size-4 shrink-0 items-center justify-center rounded-full hover:text-base-700 dark:hover:text-base-200"
 								aria-label={$i18n.t('Clear search')}
 								on:mousedown|preventDefault
 								on:click={() => {
@@ -1216,7 +1215,7 @@
 				>
 					<button
 						type="button"
-						class="{iconButton} {filterCount ? 'text-gray-800 dark:text-gray-100' : ''}"
+						class="{iconButton} {filterCount ? 'text-base-800 dark:text-base-100' : ''}"
 						aria-label={$i18n.t('Filter')}
 						title={`${$i18n.t('Filter')}  F`}
 					>
@@ -1239,12 +1238,12 @@
 								sideOffset={6}
 							>
 								<button slot="trigger" type="button" class={subRow}>
-									<span class="text-gray-500 dark:text-gray-400">{@render facetIcon(item.id)}</span>
+									<span class="text-base-500 dark:text-base-400">{@render facetIcon(item.id)}</span>
 									<span class="min-w-0 flex-1 truncate text-left">{$i18n.t(item.label)}</span>
-									{#if facetCount(item.id)}<span class="text-xs tabular-nums text-gray-400"
+									{#if facetCount(item.id)}<span class="text-xs tabular-nums text-base-400"
 											>{facetCount(item.id)}</span
 										>{/if}
-									<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+									<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 								</button>
 
 								{#if (item.id === 'tags' && options.length > 8) || (item.id === 'users' && folderUsers.length > 8)}
@@ -1252,10 +1251,10 @@
 										<Icon
 											name="search"
 											size={12}
-											class="shrink-0 text-gray-400 dark:text-gray-500"
+											class="shrink-0 text-base-400 dark:text-base-500"
 										/>
 										<input
-											class="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+											class="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-base-400 dark:placeholder:text-base-500"
 											aria-label={item.id === 'users'
 												? $i18n.t('Find users')
 												: $i18n.t('Find tags')}
@@ -1297,19 +1296,19 @@
 											>{option.label}</span
 										>
 										{#if option.count != null}<span
-												class="shrink-0 text-xs tabular-nums text-gray-400">{option.count}</span
+												class="shrink-0 text-xs tabular-nums text-base-400">{option.count}</span
 											>{/if}
 										{#if option.checked}<Check className="size-3! shrink-0" />{/if}
 									</button>
 								{:else}
-									<div class="px-2 py-1.5 text-xs text-gray-400 dark:text-gray-500">
+									<div class="px-2 py-1.5 text-xs text-base-400 dark:text-base-500">
 										{$i18n.t('No results')}
 									</div>
 								{/each}
 							</DropdownSub>
 						{/each}
 						{#if filterCount}
-							<hr class="border-gray-50/30 dark:border-gray-800/30" />
+							<hr class="border-base-50/30 dark:border-base-800/30" />
 							<button type="button" on:click={clear}>
 								<XMark className="size-3.5" />{$i18n.t('Clear filters')}
 							</button>
@@ -1328,7 +1327,7 @@
 					</button>
 
 					<DropdownMenu slot="content" className="w-52">
-						<div class="px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+						<div class="px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 							{$i18n.t('Layout')}
 						</div>
 						{#each [['list', 'List', 'list'], ['board', 'Board', 'grid']] as const as [value, label, icon]}
@@ -1344,7 +1343,7 @@
 							</button>
 						{/each}
 
-						<hr class="border-gray-50/30 dark:border-gray-800/30" />
+						<hr class="border-base-50/30 dark:border-base-800/30" />
 
 						{#if view === 'list'}
 							{@render groupMenu(
@@ -1373,10 +1372,10 @@
 						<DropdownSub contentClass={subMenu} maxWidth={320} sideOffset={6}>
 							<button slot="trigger" type="button" class={subRow}>
 								<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Ordering')}</span>
-								<span class="truncate text-gray-500 dark:text-gray-400"
+								<span class="truncate text-base-500 dark:text-base-400"
 									>{sortBy === 'title' ? $i18n.t('Title') : $i18n.t('Updated')}</span
 								>
-								<ChevronRight className="size-3.5 shrink-0 text-gray-400 rtl:rotate-180" />
+								<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 							</button>
 							{#each [['updated_at', 'Updated'], ['title', 'Title']] as const as [value, label]}
 								<button
@@ -1389,7 +1388,7 @@
 									{#if sortBy === value}<Check className="size-3! shrink-0" />{/if}
 								</button>
 							{/each}
-							<hr class="border-gray-50/30 dark:border-gray-800/30" />
+							<hr class="border-base-50/30 dark:border-base-800/30" />
 							{#each [['asc', 'Ascending'], ['desc', 'Descending']] as const as [value, label]}
 								<button
 									type="button"
@@ -1426,7 +1425,7 @@
 	<!-- The folder's description sits under its name, above any filter chips. -->
 	{#if folder?.data?.description?.trim()}
 		<p
-			class="shrink-0 px-2.5 pb-1.5 text-xs leading-5 whitespace-pre-line md:px-3.5 text-gray-500 line-clamp-2 dark:text-gray-400"
+			class="shrink-0 px-2.5 pb-1.5 text-xs leading-5 whitespace-pre-line md:px-3.5 text-base-500 line-clamp-2 dark:text-base-400"
 			title={folder.data.description}
 		>
 			{folder.data.description.trim()}
@@ -1448,7 +1447,7 @@
 					'tags',
 					selectedTags.map((id) => {
 						if (id === UNTAGGED)
-							return { label: $i18n.t('Untagged'), dot: 'border border-dashed border-gray-400' };
+							return { label: $i18n.t('Untagged'), dot: 'border border-dashed border-base-400' };
 						const tag = options.find((item) => item.id === id) ?? {
 							id,
 							name: id.replaceAll('_', ' ')
@@ -1478,7 +1477,7 @@
 			{/if}
 			<button
 				type="button"
-				class="flex size-5 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+				class="flex size-5 items-center justify-center rounded-full text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 				aria-label={$i18n.t('Clear filters')}
 				title={$i18n.t('Clear filters')}
 				on:click={clear}><XMark className="size-3" /></button
@@ -1530,10 +1529,10 @@
 				class="flex h-full flex-col items-center justify-center gap-1 px-6 text-center"
 				style="padding-bottom: calc(var(--folder-composer-space, 0px) + 2rem)"
 			>
-				<div class="text-sm text-gray-800 dark:text-gray-100">
+				<div class="text-sm text-base-800 dark:text-base-100">
 					{filtered ? $i18n.t('No matching conversations') : $i18n.t('No conversations yet')}
 				</div>
-				<div class="text-xs text-gray-500 dark:text-gray-400">
+				<div class="text-xs text-base-500 dark:text-base-400">
 					{filtered
 						? $i18n.t('Try a different search or remove a filter.')
 						: readOnly
@@ -1543,7 +1542,7 @@
 				{#if filtered}
 					<button
 						type="button"
-						class="mt-2 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+						class="mt-2 text-xs text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
 						on:click={clear}>{$i18n.t('Clear filters')}</button
 					>
 				{/if}

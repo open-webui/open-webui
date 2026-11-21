@@ -34,11 +34,11 @@
 
 <Modal ariaLabel={$i18n.t('User Preview')} size="md" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 mb-1">
 			<div class=" text-sm font-medium self-center min-w-0 truncate">
 				{$i18n.t('User Preview')}
 				{#if userName}
-					<span class="text-sm font-normal text-gray-500 ml-1">{userName}</span>
+					<span class="text-sm font-normal text-base-500 ml-1">{userName}</span>
 				{/if}
 			</div>
 			<button
@@ -73,7 +73,7 @@
 							</div>
 						</div>
 
-						<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+						<hr class="border-base-50 dark:border-base-850/30 my-1" />
 					{/if}
 
 					<div>
@@ -81,7 +81,7 @@
 						<div class="flex flex-col w-full">
 							{#if preview.models.items.length === 0}
 								<div class="flex w-full justify-between my-1">
-									<div class=" self-center text-xs text-gray-500">
+									<div class=" self-center text-xs text-base-500">
 										{$i18n.t('No models accessible')}
 									</div>
 								</div>
@@ -94,7 +94,7 @@
 
 								{#if preview.models.total > preview.models.items.length}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs text-gray-500">
+										<div class=" self-center text-xs text-base-500">
 											{$i18n.t('{{count}} of {{total}} accessible', {
 												count: preview.models.items.length,
 												total: preview.models.total
@@ -106,14 +106,14 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+					<hr class="border-base-50 dark:border-base-850/30 my-1" />
 
 					<div>
 						<div class=" mb-2 text-sm font-normal">{$i18n.t('Knowledge')}</div>
 						<div class="flex flex-col w-full">
 							{#if preview.knowledge.items.length === 0}
 								<div class="flex w-full justify-between my-1">
-									<div class=" self-center text-xs text-gray-500">
+									<div class=" self-center text-xs text-base-500">
 										{$i18n.t('No knowledge bases accessible')}
 									</div>
 								</div>
@@ -126,7 +126,7 @@
 
 								{#if preview.knowledge.total > preview.knowledge.items.length}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs text-gray-500">
+										<div class=" self-center text-xs text-base-500">
 											{$i18n.t('{{count}} of {{total}} accessible', {
 												count: preview.knowledge.items.length,
 												total: preview.knowledge.total
@@ -138,14 +138,14 @@
 						</div>
 					</div>
 
-					<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+					<hr class="border-base-50 dark:border-base-850/30 my-1" />
 
 					<div>
 						<div class=" mb-2 text-sm font-normal">{$i18n.t('Tools')}</div>
 						<div class="flex flex-col w-full">
 							{#if preview.tools.items.length === 0}
 								<div class="flex w-full justify-between my-1">
-									<div class=" self-center text-xs text-gray-500">
+									<div class=" self-center text-xs text-base-500">
 										{$i18n.t('No tools accessible')}
 									</div>
 								</div>
@@ -158,7 +158,7 @@
 
 								{#if preview.tools.total > preview.tools.items.length}
 									<div class="flex w-full justify-between my-1">
-										<div class=" self-center text-xs text-gray-500">
+										<div class=" self-center text-xs text-base-500">
 											{$i18n.t('{{count}} of {{total}} accessible', {
 												count: preview.tools.items.length,
 												total: preview.tools.total

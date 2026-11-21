@@ -23,7 +23,7 @@
 
 	export let className = '';
 	export let buttonClassName =
-		'w-fit py-1 text-[0.9375rem] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition';
+		'w-fit py-1 text-[0.9375rem] text-base-500 hover:text-base-700 dark:hover:text-base-300 transition';
 
 	export let id = '';
 	export let title = null;

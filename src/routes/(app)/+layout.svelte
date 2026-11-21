@@ -13,7 +13,7 @@
 	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { getUserSettings } from '$lib/apis/users';
 	import { setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
@@ -110,7 +110,7 @@
 		terminalServers.set(
 			systemTerminals.map((terminal) => ({
 				...terminal,
-				url: `${WEBUI_API_BASE_URL}/terminals/${terminal.id}`,
+				url: `${WEBUI_API_BASE_URL}/machines/${terminal.id}`,
 				key: localStorage.token
 			}))
 		);
@@ -164,7 +164,7 @@
 			);
 		};
 		const eventHandler = (event: { data?: { type?: string } }) => {
-			if (event?.data?.type === 'terminals:changed') {
+			if (event?.data?.type === 'machines:changed') {
 				changed();
 				// Tether devices also bring the user's own models and tool servers.
 				void setModels().catch((error) => console.error('Unable to refresh models', error));
@@ -475,7 +475,7 @@
 {#if $user}
 	<div class="app relative">
 		<div
-			class=" text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
+			class=" text-base-700 dark:text-base-100 bg-base-0 dark:bg-base-900 h-screen max-h-[100dvh] overflow-auto flex flex-row justify-end"
 		>
 			{#if !['user', 'admin'].includes($user?.role)}
 				<AccountPending />

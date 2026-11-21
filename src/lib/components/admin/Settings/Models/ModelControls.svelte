@@ -23,9 +23,9 @@
 	let options: { id: string; key?: string; label: string; params: Record<string, any> }[] = [];
 	let nameInput: HTMLInputElement;
 	const actionClass =
-		'flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-black/5 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200';
+		'flex size-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition hover:bg-base-1000/5 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-0/5 dark:hover:text-base-200';
 	const inputClass =
-		'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 font-normal text-gray-900 dark:text-gray-100';
+		'w-full min-w-0 bg-transparent py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 font-normal text-base-900 dark:text-base-100';
 
 	const keyFor = (label: string, items: object) => {
 		let base = label
@@ -138,21 +138,21 @@
 	<div
 		class="grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 px-1 py-1.5 text-xs sm:grid-cols-[8rem_minmax(0,1fr)_auto]"
 	>
-		<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+		<span class="text-xs font-normal text-base-600 dark:text-base-400"
 			><ModelSettingsLabel
 				label={$i18n.t('Model controls')}
 				description={$i18n.t('Let people choose approved parameter presets in chat.')}
 			/></span
 		>
 		<p
-			class="truncate text-gray-500 dark:text-gray-400"
+			class="truncate text-base-500 dark:text-base-400"
 			title={$i18n.t('Let people choose approved parameter presets in chat.')}
 		>
 			{$i18n.t('Let people choose approved parameter presets in chat.')}
 		</p>
 		<button
 			type="button"
-			class="text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+			class="text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 			aria-label={$i18n.t('Add control')}
 			title={$i18n.t('Add control')}
 			on:click={() => edit()}><Plus className="size-3" /></button
@@ -171,22 +171,22 @@
 				>
 				<button
 					type="button"
-					class="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left text-[0.8125rem] font-normal text-gray-900 dark:text-gray-100"
+					class="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left text-[0.8125rem] font-normal text-base-900 dark:text-base-100"
 					aria-label={`${$i18n.t('Edit')} ${control.label}`}
 					on:click={() => edit(key)}
 				>
 					<span class="truncate">{control.label}</span>
 					<span class="flex min-w-0 items-center gap-3 text-xs">
-						<span class="truncate text-gray-400 dark:text-gray-600"
+						<span class="truncate text-base-400 dark:text-base-600"
 							>{$i18n.t('Default option')}: {control.options[control.default ?? '']?.label ??
 								$i18n.t('None')}</span
 						>
-						<span class="text-gray-500 dark:text-gray-400">{$i18n.t('Edit')}</span>
+						<span class="text-base-500 dark:text-base-400">{$i18n.t('Edit')}</span>
 					</span>
 				</button>
 				<button
 					type="button"
-					class="ml-2 flex shrink-0 items-center justify-center rounded text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="ml-2 flex shrink-0 items-center justify-center rounded text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 					aria-label={`${$i18n.t('Remove')} ${control.label}`}
 					on:click={() => {
 						delete controls?.[key];
@@ -203,22 +203,22 @@
 	size="sm"
 	bind:show
 >
-	<div class="px-5 pb-5 pt-4 dark:text-gray-200">
+	<div class="px-4 pb-4 pt-3 dark:text-base-200">
 		<div class="mb-3 flex items-center justify-between gap-3">
-			<div class="font-primary text-lg font-medium">
+			<div class="text-sm font-medium">
 				{editingKey ? $i18n.t('Edit control') : $i18n.t('Add control')}
 			</div>
 			<button
 				type="button"
 				class={actionClass}
 				aria-label={$i18n.t('Close')}
-				on:click={() => (show = false)}><XMark className="size-5" /></button
+				on:click={() => (show = false)}><XMark className="size-4" /></button
 			>
 		</div>
 		<form class="space-y-2.5" on:submit|preventDefault|stopPropagation={apply}>
 			<div class="grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] gap-4">
 				<label class="block min-w-0 text-xs leading-4">
-					<span class="text-xs font-normal text-gray-600 dark:text-gray-400">{$i18n.t('Name')}</span
+					<span class="text-xs font-normal text-base-600 dark:text-base-400">{$i18n.t('Name')}</span
 					>
 					<input
 						bind:this={nameInput}
@@ -230,7 +230,7 @@
 					/>
 				</label>
 				<label class="block min-w-0 text-xs leading-4">
-					<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+					<span class="text-xs font-normal text-base-600 dark:text-base-400"
 						>{$i18n.t('Default option')}</span
 					>
 					<NativeSelect
@@ -247,13 +247,13 @@
 				</label>
 			</div>
 			<label class="block text-xs leading-4">
-				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+				<span class="text-xs font-normal text-base-600 dark:text-base-400"
 					>{$i18n.t('Description')}</span
 				>
 				<input class={inputClass} placeholder={$i18n.t('Optional')} bind:value={description} />
 			</label>
 			<div class="flex items-center justify-between">
-				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+				<span class="text-xs font-normal text-base-600 dark:text-base-400"
 					>{$i18n.t('Display')}</span
 				>
 				<div class="flex gap-1">
@@ -262,8 +262,8 @@
 							type="button"
 							aria-pressed={display === mode}
 							class="rounded-lg px-2 py-1 text-xs transition {display === mode
-								? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
-								: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
+								? 'bg-base-100 text-base-900 dark:bg-base-800 dark:text-base-0'
+								: 'text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200'}"
 							on:click={() => (display = mode as 'menu' | 'slider')}
 						>
 							{mode === 'slider' ? $i18n.t('Slider') : $i18n.t('Menu')}
@@ -272,10 +272,10 @@
 				</div>
 			</div>
 			<div>
-				<span class="text-xs font-normal text-gray-600 dark:text-gray-400"
+				<span class="text-xs font-normal text-base-600 dark:text-base-400"
 					>{$i18n.t('Options')}</span
 				>
-				<div class="divide-y divide-gray-100/60 dark:divide-gray-850/60" use:sortable={moveOption}>
+				<div class="divide-y divide-base-100/60 dark:divide-base-850/60" use:sortable={moveOption}>
 					{#each options as option, index (option.id)}
 						<div class="py-1.5">
 							<div class="flex items-center gap-1">
@@ -297,7 +297,7 @@
 								/>
 								<button
 									type="button"
-									class="flex shrink-0 items-center justify-center rounded text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+									class="flex shrink-0 items-center justify-center rounded text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 									aria-label={`${$i18n.t('Remove')} ${option.label || $i18n.t('option')}`}
 									on:click={() => {
 										options = options.filter((item) => item.id !== option.id);
@@ -311,7 +311,7 @@
 				</div>
 				<button
 					type="button"
-					class="mt-1 flex items-center gap-1.5 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+					class="mt-1 flex items-center gap-1.5 py-1 text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300"
 					on:click={addOption}
 				>
 					<Plus className="size-3" />
@@ -319,14 +319,14 @@
 				</button>
 			</div>
 			{#if display === 'slider' && options.length < 2}
-				<p class="text-xs text-gray-500 dark:text-gray-400">
+				<p class="text-xs text-base-500 dark:text-base-400">
 					{$i18n.t('Add at least two options for a slider.')}
 				</p>
 			{/if}
-			<div class="flex justify-end gap-1.5 pt-1 text-sm font-medium">
+			<div class="flex justify-end gap-1.5 pt-1 text-xs">
 				<button
 					type="button"
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 hover:bg-gray-100 dark:hover:bg-gray-850"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 hover:bg-base-100 dark:hover:bg-base-850"
 					on:click={() => (show = false)}>{$i18n.t('Cancel')}</button
 				>
 				<button
@@ -335,7 +335,7 @@
 						!options.length ||
 						(display === 'slider' && options.length < 2) ||
 						options.some((option) => !option.label.trim())}
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					>{$i18n.t('Apply')}</button
 				>
 			</div>

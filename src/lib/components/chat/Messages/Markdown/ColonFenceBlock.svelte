@@ -37,10 +37,10 @@
 	};
 </script>
 
-<div class="relative group my-2 rounded-2xl border border-gray-100 dark:border-gray-800 px-4 py-3">
+<div class="relative group my-2 rounded-2xl border border-base-100 dark:border-base-800 px-4 py-3">
 	<div class="flex items-center justify-between gap-2 mb-2">
 		<span
-			class="text-xs font-normal text-gray-500 dark:text-gray-400 truncate"
+			class="text-xs font-normal text-base-500 dark:text-base-400 truncate"
 			dir="auto"
 			title={header}
 		>
@@ -51,7 +51,7 @@
 			<Tooltip content={copied ? $i18n.t('Copied') : $i18n.t('Copy')}>
 				<button
 					aria-label={copied ? $i18n.t('Copied') : $i18n.t('Copy')}
-					class="p-1 rounded-lg bg-transparent hover:bg-black/5 dark:hover:bg-white/5 transition"
+					class="p-1 rounded-lg bg-transparent hover:bg-base-1000/5 dark:hover:bg-base-0/5 transition"
 					on:click={(e) => {
 						e.stopPropagation();
 						copyText();

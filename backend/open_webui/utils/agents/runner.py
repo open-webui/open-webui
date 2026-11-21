@@ -6,7 +6,7 @@ from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64
 from open_webui.utils.misc import get_message_list
-from open_webui.utils.terminals import get_terminal_json, upload_files_to_terminal
+from open_webui.utils.machines import get_terminal_json, upload_files_to_terminal
 
 from .session import get_resume_point
 from .output import Output

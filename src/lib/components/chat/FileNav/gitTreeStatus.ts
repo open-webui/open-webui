@@ -1,4 +1,4 @@
-import type { GitFile, GitStatus } from '$lib/apis/terminal/git';
+import type { GitFile, GitStatus } from '$lib/apis/machines/git';
 
 export const gitTreePath = (path: string) =>
 	path

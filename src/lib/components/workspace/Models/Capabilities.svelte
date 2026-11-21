@@ -111,14 +111,14 @@
 			label={$i18n.t('settings.admin.models.capabilities.title')}
 			description={$i18n.t('Choose which features are available for this model.')}
 		>
-			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+			<span slot="summary" class="flex min-w-0 items-center gap-1 text-base-900 dark:text-base-100">
 				<span class="min-w-0 truncate"
 					>{enabledCapabilityIds
 						.slice(0, 3)
 						.map((key) => capabilityLabels[key].label)
 						.join(', ') || $i18n.t('None')}</span
 				>
-				{#if enabledCapabilityIds.length > 3}<span class="shrink-0 text-gray-500"
+				{#if enabledCapabilityIds.length > 3}<span class="shrink-0 text-base-500"
 						>+{enabledCapabilityIds.length - 3}</span
 					>{/if}
 			</span>
@@ -149,18 +149,18 @@
 			label={$i18n.t('settings.admin.models.defaultFeatures.title')}
 			description={$i18n.t('Choose which available features start enabled in new chats.')}
 		>
-			<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+			<span slot="summary" class="flex min-w-0 items-center gap-1 text-base-900 dark:text-base-100">
 				<span class="min-w-0 truncate"
 					>{enabledDefaultIds
 						.slice(0, 3)
 						.map((key) => capabilityLabels[key].label)
 						.join(', ') || $i18n.t('None')}</span
 				>
-				{#if enabledDefaultIds.length > 3}<span class="shrink-0 text-gray-500"
+				{#if enabledDefaultIds.length > 3}<span class="shrink-0 text-base-500"
 						>+{enabledDefaultIds.length - 3}</span
 					>{/if}
 			</span>
-			<p class="mb-1 px-1 text-xs text-gray-500 dark:text-gray-400">
+			<p class="mb-1 px-1 text-xs text-base-500 dark:text-base-400">
 				{$i18n.t('Start enabled in new chats')}
 			</p>
 			<div class="grid grid-cols-1 gap-x-6 sm:grid-cols-2 lg:grid-cols-3">

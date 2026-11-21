@@ -161,7 +161,7 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.terminals import filter_user_terminal_tools, upload_files_to_terminal
+from open_webui.utils.machines import filter_user_terminal_tools, upload_files_to_terminal
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
     ToolApprovalRequired,
@@ -933,7 +933,7 @@ async def process_tool_result(
         tool_result = {'results': tool_result}
 
     if isinstance(tool_result, dict) or isinstance(tool_result, list):
-        tool_result = json.dumps(tool_result, indent=2, ensure_ascii=False)
+        tool_result = json.dumps(tool_result, separators=(',', ':'), ensure_ascii=False)
 
     # Safety: ensure tool_result is always a string (or None) to prevent
     # downstream TypeError when concatenating (e.g. if an upstream callable
@@ -941,9 +941,15 @@ async def process_tool_result(
     if tool_result is not None and not isinstance(tool_result, str):
         if isinstance(tool_result, tuple):
             # execute_tool_server returns (data, headers); unpack the data part
-            tool_result = json.dumps(tool_result[0], indent=2, ensure_ascii=False) if len(tool_result) > 0 else ''
+            tool_result = (
+                json.dumps(tool_result[0], separators=(',', ':'), ensure_ascii=False) if len(tool_result) > 0 else ''
+            )
         else:
             tool_result = str(tool_result)
+
+    max_chars = await Config.get('tools.output_max_chars')
+    if max_chars and tool_result and len(tool_result) > max_chars:
+        tool_result = f'{tool_result[:max_chars]}\n\n[Truncated: {len(tool_result)} characters, limit {max_chars}]'
 
     return tool_result, tool_result_files, tool_result_embeds
 
@@ -2510,7 +2516,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     if skill_ids or (use_builtin_tools and model_builtin_tools.get('skills', True)):
         from open_webui.models.skills import Skills as SkillsModel
         from open_webui.utils.skill_files import format_skill_content, skill_overview
-        from open_webui.utils.terminals import (
+        from open_webui.utils.machines import (
             format_terminal_skill_context,
             format_terminal_skill_manifest_entry,
             get_terminal_json,
@@ -2794,7 +2800,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 raise HTTPException(status_code=503, detail=f'Terminal unavailable: {e}') from e
 
         if terminal_id and terminal_capability:
-            from open_webui.utils.terminals import add_terminal_agents_md, get_terminal_agents_md
+            from open_webui.utils.machines import add_terminal_agents_md, get_terminal_agents_md
 
             agents_md = await get_terminal_agents_md(request, user, metadata, extra_params)
             if agents_md:
@@ -6589,6 +6595,7 @@ async def streaming_chat_response_handler(response, ctx):
                             {
                                 'done': True,
                                 'output': cancelled_output,
+                                **({'usage': {**usage, 'incomplete': True}} if usage else {}),
                             },
                         )
                     await clear_response_stream(request.app.state.redis, response_stream_task_id)

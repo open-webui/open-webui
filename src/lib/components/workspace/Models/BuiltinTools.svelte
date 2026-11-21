@@ -31,6 +31,10 @@
 			label: $i18n.t('settings.admin.models.builtinTools.chats.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.chats.description')
 		},
+		users: {
+			label: $i18n.t('settings.admin.models.builtinTools.users.label'),
+			description: $i18n.t('settings.admin.models.builtinTools.users.description')
+		},
 		notes: {
 			label: $i18n.t('settings.admin.models.builtinTools.notes.label'),
 			description: $i18n.t('settings.admin.models.builtinTools.notes.description'),
@@ -143,14 +147,14 @@
 		{$i18n.t('{{COUNT}} disabled')}
 		{$i18n.t('{{COUNT}} of {{TOTAL}} enabled')}
 		-->
-		<span slot="summary" class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100">
+		<span slot="summary" class="flex min-w-0 items-center gap-1 text-base-900 dark:text-base-100">
 			<span class="min-w-0 truncate"
 				>{enabledTools
 					.slice(0, 3)
 					.map((key) => toolLabels[key].label)
 					.join(', ') || $i18n.t('None')}</span
 			>
-			{#if enabledTools.length > 3}<span class="shrink-0 text-gray-500"
+			{#if enabledTools.length > 3}<span class="shrink-0 text-base-500"
 					>+{enabledTools.length - 3}</span
 				>{/if}
 		</span>

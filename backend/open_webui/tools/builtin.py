@@ -8,6 +8,7 @@ IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 
 import asyncio
 import logging
+import ntpath
 import time
 from typing import Literal, Optional
 from urllib.parse import unquote
@@ -74,7 +75,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import get_terminal_file, upload_files_to_terminal
+from open_webui.utils.machines import get_terminal_file, upload_files_to_terminal
 
 log = logging.getLogger(__name__)
 
@@ -479,7 +480,7 @@ async def edit_image(
 
         resolved_images = []
         for url in image_urls:
-            if url.startswith('/') and not url.startswith('/api/v1/files/'):
+            if (url.startswith('/') or ntpath.isabs(url)) and not url.startswith('/api/v1/files/'):
                 data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
                 url = await asyncio.to_thread(get_image_data_url, data)
             resolved_images.append(url)
@@ -575,7 +576,11 @@ async def generate_video(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        if image_url and image_url.startswith('/') and not image_url.startswith('/api/v1/files/'):
+        if (
+            image_url
+            and (image_url.startswith('/') or ntpath.isabs(image_url))
+            and not image_url.startswith('/api/v1/files/')
+        ):
             data = await get_terminal_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
             image_url = await asyncio.to_thread(get_image_data_url, data)
 
@@ -3843,7 +3848,7 @@ async def view_skill(
     try:
         terminal_skill_prefix = 'terminal:'
         if isinstance(id, str) and id.startswith(terminal_skill_prefix):
-            from open_webui.utils.terminals import get_terminal_skill
+            from open_webui.utils.machines import get_terminal_skill
 
             skill_name = unquote(id.removeprefix(terminal_skill_prefix))
             skill = await get_terminal_skill(
@@ -3915,7 +3920,7 @@ async def read_skill_file(
         if not __user__ or __request__ is None:
             raise ValueError('Request and user context required')
         if id.startswith('terminal:'):
-            from open_webui.utils.terminals import get_terminal_skill
+            from open_webui.utils.machines import get_terminal_skill
 
             if path != 'SKILL.md':
                 raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
@@ -3997,7 +4002,7 @@ async def grep_skill_files(
             raise ValueError('Request and user context required')
         metadata = __metadata__ if __metadata__ is not None else {}
         if id.startswith('terminal:'):
-            from open_webui.utils.terminals import load_terminal_skill
+            from open_webui.utils.machines import load_terminal_skill
 
             if path is not None and path != 'SKILL.md':
                 raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
@@ -4402,6 +4407,7 @@ async def create_automation(
     prompt: str,
     rrule: str,
     folder_id: Optional[str] = None,
+    new_chat: bool = True,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
@@ -4425,6 +4431,7 @@ async def create_automation(
     :param prompt: The prompt/instructions to execute on each run
     :param rrule: An iCalendar RRULE string defining the schedule
     :param folder_id: Optional owner-owned folder ID for generated chats
+    :param new_chat: True starts each run in a new chat. False continues this chat on every run (in a channel, one thread), so each run sees the earlier ones.
     :return: JSON with the created automation details including id, next scheduled runs
     """
     if __request__ is None:
@@ -4468,6 +4475,22 @@ async def create_automation(
         except HTTPException as e:
             return JSONCodec.dumps({'error': e.detail})
 
+        current_chat_id = metadata.get('chat_id') or ''
+        if current_chat_id.startswith('channel:'):
+            target = AutomationTarget(
+                type='channel', channel_id=current_chat_id.removeprefix('channel:'), new_thread=new_chat
+            )
+        elif not new_chat:
+            # Continue the chat it was asked from, when that chat is the user's own saved chat.
+            chat = (
+                await Chats.get_chat_by_id_and_user_id(current_chat_id, user_id)
+                if current_chat_id and not current_chat_id.startswith('local:')
+                else None
+            )
+            target = AutomationTarget(new_chat=False, chat_id=chat.id if chat else None)
+        else:
+            target = None
+
         tz = user.timezone
         form = AutomationForm(
             name=name,
@@ -4476,11 +4499,7 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
-                target=(
-                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
-                    if metadata.get('chat_id', '').startswith('channel:')
-                    else None
-                ),
+                target=target,
             ),
             is_active=True,
         )

@@ -460,11 +460,24 @@ export const compressImage = async (imageUrl, maxWidth, maxHeight) => {
 		img.src = imageUrl;
 	});
 };
+// Muted colors that keep white initials readable; one is picked per name.
+const INITIALS_IMAGE_COLORS = [
+	'#4f7cf7',
+	'#e0795c',
+	'#3fa37a',
+	'#9b6fe0',
+	'#d9a03f',
+	'#e06a8f',
+	'#3a9fbf',
+	'#7a8a99'
+];
+
 export const generateInitialsImage = (name) => {
+	const size = 256;
 	const canvas = document.createElement('canvas');
 	const ctx = canvas.getContext('2d');
-	canvas.width = 100;
-	canvas.height = 100;
+	canvas.width = size;
+	canvas.height = size;
 
 	if (!canvasPixelTest()) {
 		console.log(
@@ -473,24 +486,54 @@ export const generateInitialsImage = (name) => {
 		return `${WEBUI_BASE_URL}/user.png`;
 	}
 
-	ctx.fillStyle = '#F39C12';
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	const sanitizedName = (name ?? '').trim();
+	const words = sanitizedName.split(/\s+/).filter(Boolean);
+	const first = Array.from(words[0] ?? '')[0] ?? '';
+	// CJK names show one character (the family name comes first): two full-width glyphs
+	// crowd the circle, and pairing across a space splits names like 欧阳 娜娜 meaninglessly.
+	const isCJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(
+		first
+	);
+	const initials = (
+		!isCJK && words.length > 1 ? first + (Array.from(words[words.length - 1])[0] ?? '') : first
+	).toUpperCase();
+
+	// Same name, same color, so regenerating it (e.g. on rename checks) stays stable.
+	let hash = 0;
+	for (const char of sanitizedName.toLowerCase()) {
+		hash = (hash * 31 + char.codePointAt(0)) >>> 0;
+	}
+	const hex = INITIALS_IMAGE_COLORS[hash % INITIALS_IMAGE_COLORS.length];
+	const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+	const shade = (k) => `rgb(${rgb.map((v) => Math.min(255, Math.round(v * k))).join(',')})`;
+
+	// Soft top-light gradient
+	const gradient = ctx.createLinearGradient(0, 0, 0, size);
+	gradient.addColorStop(0, shade(1.18));
+	gradient.addColorStop(1, shade(0.82));
+	ctx.fillStyle = gradient;
+	ctx.fillRect(0, 0, size, size);
 
 	ctx.fillStyle = '#FFFFFF';
-	ctx.font = '40px Helvetica';
 	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
+	ctx.textBaseline = 'alphabetic';
 
-	const sanitizedName = name.trim();
-	const initials =
-		sanitizedName.length > 0
-			? sanitizedName[0] +
-				(sanitizedName.split(' ').length > 1
-					? sanitizedName[sanitizedName.lastIndexOf(' ') + 1]
-					: '')
-			: '';
+	// Shrink wide initials (e.g. "WM") so they stay inside the circle.
+	const fontFamily = `-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif`;
+	let fontSize = 104;
+	ctx.font = `600 ${fontSize}px ${fontFamily}`;
+	const maxWidth = size * 0.66;
+	const width = ctx.measureText(initials).width;
+	if (width > maxWidth) {
+		fontSize = Math.floor((fontSize * maxWidth) / width);
+		ctx.font = `600 ${fontSize}px ${fontFamily}`;
+	}
 
-	ctx.fillText(initials.toUpperCase(), canvas.width / 2, canvas.height / 2);
+	// Center on the glyphs' actual bounds; 'middle' sits capitals visibly high.
+	const metrics = ctx.measureText(initials);
+	const ascent = metrics.actualBoundingBoxAscent || 0;
+	const descent = metrics.actualBoundingBoxDescent || 0;
+	ctx.fillText(initials, size / 2, size / 2 + (ascent - descent) / 2);
 
 	return canvas.toDataURL();
 };

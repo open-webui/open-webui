@@ -62,7 +62,7 @@
 
 {#if chat.status_since && chat.status}
 	<Tooltip content={tip} placement="top" allowHTML as="span" className="flex shrink-0">
-		<span class="text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500 {className}"
+		<span class="text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500 {className}"
 			>{formatElapsedShort(chat.status_since)}</span
 		>
 	</Tooltip>

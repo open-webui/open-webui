@@ -79,8 +79,8 @@
 	<div class="w-full group">
 		<button
 			class="w-full py-1 flex items-center gap-1 text-xs text-left font-normal
-				text-gray-600 dark:text-gray-400
-				hover:text-gray-800 dark:hover:text-gray-300
+				text-base-600 dark:text-base-400
+				hover:text-base-800 dark:hover:text-base-300
 				transition-colors duration-100 cursor-pointer"
 			on:click={toggleExpand}
 		>
@@ -99,14 +99,14 @@
 			</div>
 
 			{#if folder.owner_name}
-				<div class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600 pr-1">
+				<div class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600 pr-1">
 					{folder.owner_name}
 				</div>
 			{/if}
 
 			{#if !isWritable}
 				<div
-					class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600"
+					class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600"
 					title={$i18n.t('Read only')}
 				>
 					<Eye className="size-3" />
@@ -119,12 +119,12 @@
 		<div class="pl-3">
 			{#if loading && !loaded}
 				<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-					<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+					<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"></span>
 					<span
-						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+						class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 					></span>
 					<span
-						class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+						class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 					></span>
 				</div>
 			{:else}
@@ -150,18 +150,18 @@
 
 				{#if hasMoreChats}
 					<button
-						class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-600 dark:hover:text-gray-300"
+						class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-base-400 transition hover:text-base-700 disabled:cursor-not-allowed dark:text-base-600 dark:hover:text-base-300"
 						disabled={loading}
 						on:click={() => loadChats(true)}
 					>
 						{#if loading}
 							<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-								<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+								<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"></span>
 								<span
-									class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+									class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 								></span>
 								<span
-									class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+									class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 								></span>
 							</div>
 						{:else}
@@ -171,7 +171,7 @@
 				{/if}
 
 				{#if chats.length === 0 && children.length === 0 && !hasMoreChats}
-					<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600 py-1 px-2">
+					<div class="text-[0.6875rem] text-base-400 dark:text-base-600 py-1 px-2">
 						{$i18n.t('Empty')}
 					</div>
 				{/if}

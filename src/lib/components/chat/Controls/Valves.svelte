@@ -177,12 +177,12 @@
 							placeholder={$i18n.t('Select')}
 						>
 							{#if $config?.features?.enable_tools}
-								<option value="tools" class="bg-gray-100 dark:bg-gray-800"
+								<option value="tools" class="bg-base-100 dark:bg-base-800"
 									>{$i18n.t('Tools')}</option
 								>
 							{/if}
 							{#if $config?.features?.enable_functions}
-								<option value="functions" class="bg-gray-100 dark:bg-gray-800"
+								<option value="functions" class="bg-base-100 dark:bg-base-800"
 									>{$i18n.t('Functions')}</option
 								>
 							{/if}
@@ -199,24 +199,24 @@
 							}}
 						>
 							{#if tab === 'tools'}
-								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
+								<option value="" selected disabled class="bg-base-100 dark:bg-base-800"
 									>{$i18n.t('Select a tool')}</option
 								>
 
 								{#each $tools
 									.filter((tool) => !tool?.id?.startsWith('server:'))
 									.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')) as tool, toolIdx}
-									<option value={tool.id} class="bg-gray-100 dark:bg-gray-800"
+									<option value={tool.id} class="bg-base-100 dark:bg-base-800"
 										>{resolveLocalizedResource(tool, $i18n.language)}</option
 									>
 								{/each}
 							{:else if tab === 'functions'}
-								<option value="" selected disabled class="bg-gray-100 dark:bg-gray-800"
+								<option value="" selected disabled class="bg-base-100 dark:bg-base-800"
 									>{$i18n.t('Select a function')}</option
 								>
 
 								{#each $functions.sort( (a, b) => (a.name ?? '').localeCompare(b.name ?? '') ) as func, funcIdx}
-									<option value={func.id} class="bg-gray-100 dark:bg-gray-800"
+									<option value={func.id} class="bg-base-100 dark:bg-base-800"
 										>{resolveLocalizedResource(func, $i18n.language)}</option
 									>
 								{/each}

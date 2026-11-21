@@ -115,7 +115,7 @@
 		{#if children.has(comment.id)}
 			<div
 				id={`comment-replies-${comment.id}`}
-				class="ms-4 border-s border-gray-200/40 dark:border-gray-700/30"
+				class="ms-4 border-s border-base-200/40 dark:border-base-700/30"
 			>
 				{@render branch(comment.id)}
 			</div>
@@ -127,7 +127,7 @@
 	<div
 		id={`comment-replies-${parent.id}`}
 		aria-busy={loading}
-		class="ms-4 border-s border-gray-200/40 dark:border-gray-700/30"
+		class="ms-4 border-s border-base-200/40 dark:border-base-700/30"
 	>
 		{@render branch(parent.id)}
 		{#if loading && !items.length}<div class="flex justify-center py-2">
@@ -135,7 +135,7 @@
 			</div>{/if}
 		{#if cursor}<button
 				type="button"
-				class="mx-4 my-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+				class="mx-4 my-2 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300"
 				disabled={loading}
 				on:click={more}>{$i18n.t('Load more')}</button
 			>{/if}

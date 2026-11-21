@@ -25,6 +25,7 @@
 	export let onCompact: () => void = () => {};
 	export let onStatus: () => void = () => {};
 	export let onComments: () => void = () => {};
+	export let onRecord: (() => void) | null = null;
 	export let onSide: () => void = () => {};
 	export let onFork: () => void = () => {};
 	export let onModel: () => void = () => {};
@@ -127,6 +128,7 @@
 					compactDisabled={isCompactDisabled}
 					canStatus={statusAvailable}
 					canComments={commentsAvailable}
+					canRecord={onRecord !== null}
 					canSide={sideAvailable}
 					canFork={forkAvailable}
 					forkDisabled={isForkDisabled}
@@ -155,6 +157,9 @@
 						} else if (type === 'command' && data.id === 'comments') {
 							command({ id: data.id, label: data.id });
 							onComments();
+						} else if (type === 'command' && data.id === 'record') {
+							command({ id: data.id, label: data.id });
+							onRecord?.();
 						} else if (type === 'command' && data.id === 'side') {
 							command({ id: data.id, label: data.id });
 							onSide();

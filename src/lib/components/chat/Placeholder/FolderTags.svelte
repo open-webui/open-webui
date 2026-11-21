@@ -21,7 +21,7 @@
 {#snippet pills()}
 	{#each assigned.slice(0, max) as tag (tag.id)}
 		<span
-			class="inline-flex h-5 min-w-0 max-w-28 items-center gap-1.5 rounded-full border border-gray-100/60 pl-2 pr-1.25 text-[0.6875rem] text-gray-600 dark:border-gray-800/60 dark:text-gray-300"
+			class="inline-flex h-5 min-w-0 max-w-28 items-center gap-1.5 rounded-full border border-base-100/60 pl-2 pr-1.25 text-[0.6875rem] text-base-600 dark:border-base-800/60 dark:text-base-300"
 			title={tag.name}
 		>
 			<span class="size-1.5 shrink-0 rounded-full {tagDot(tag)}"></span>
@@ -30,7 +30,7 @@
 	{/each}
 	{#if assigned.length > max}
 		<span
-			class="inline-flex h-5 shrink-0 items-center rounded-full border border-gray-100/60 px-1.5 text-[0.6875rem] text-gray-500 dark:border-gray-800/60 dark:text-gray-400"
+			class="inline-flex h-5 shrink-0 items-center rounded-full border border-base-100/60 px-1.5 text-[0.6875rem] text-base-500 dark:border-base-800/60 dark:text-base-400"
 			title={assigned
 				.slice(max)
 				.map((tag) => tag.name)
@@ -50,7 +50,7 @@
 			{@render pills()}
 			{#if !assigned.length}
 				<span
-					class="tag-add flex h-5 items-center gap-1 rounded-full border border-dashed border-gray-200 px-1.5 text-[0.6875rem] text-gray-400 transition-colors hover:border-gray-300 hover:text-gray-600 dark:border-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="tag-add flex h-5 items-center gap-1 rounded-full border border-dashed border-base-200 px-1.5 text-[0.6875rem] text-base-400 transition-colors hover:border-base-300 hover:text-base-600 dark:border-base-700 dark:text-base-500 dark:hover:text-base-300"
 					class:open={show}
 				>
 					<Plus className="size-2.5" strokeWidth="2" />{$i18n.t('Tag')}
@@ -58,7 +58,7 @@
 			{/if}
 		</button>
 
-		<DropdownMenu slot="content" className="w-52 text-gray-700 dark:text-gray-200">
+		<DropdownMenu slot="content" className="w-52 text-base-700 dark:text-base-200">
 			<TagPicker
 				chatId={chat.id}
 				{assigned}

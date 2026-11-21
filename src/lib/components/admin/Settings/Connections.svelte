@@ -228,7 +228,7 @@
 />
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={submitHandler}>
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.connections.title')}
 	</h2>
 
@@ -248,14 +248,14 @@
 				{#if ENABLE_OPENAI_API}
 					<div>
 						<div class="mb-2 flex items-center justify-between gap-4">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
+							<div class="text-xs text-base-600 dark:text-base-400">
 								{$i18n.t('settings.admin.connections.manageOpenaiApiConnections.label')}
 							</div>
 
 							<Tooltip content={$i18n.t('settings.admin.connections.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.connections.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-300"
 									on:click={() => {
 										showAddOpenAIConnectionModal = true;
 									}}
@@ -308,14 +308,14 @@
 				{#if ENABLE_OLLAMA_API}
 					<div>
 						<div class="mb-2 flex items-center justify-between gap-4">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
+							<div class="text-xs text-base-600 dark:text-base-400">
 								{$i18n.t('settings.admin.connections.manageOllamaApiConnections.label')}
 							</div>
 
 							<Tooltip content={$i18n.t('settings.admin.connections.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.connections.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-300"
 									on:click={() => {
 										showAddOllamaConnectionModal = true;
 									}}
@@ -349,10 +349,10 @@
 							{/each}
 						</div>
 
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('settings.admin.connections.manageOllamaApiConnections.description')}
 							<a
-								class="font-normal underline hover:text-gray-700 dark:hover:text-gray-300"
+								class="font-normal underline hover:text-base-700 dark:hover:text-base-300"
 								href="https://github.com/open-webui/open-webui#troubleshooting"
 								target="_blank"
 							>
@@ -375,7 +375,7 @@
 						{#if connectionsConfig.ENABLE_BASE_MODELS_CACHE}
 							<Tooltip content={$i18n.t('settings.admin.connections.refreshModels.label')}>
 								<button
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-700 disabled:cursor-not-allowed disabled:opacity-50 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-300"
 									type="button"
 									disabled={modelListRefreshing}
 									on:click={refreshModelListHandler}
@@ -411,7 +411,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}

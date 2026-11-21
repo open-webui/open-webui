@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { createEventDispatcher, onMount, getContext, tick } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount, getContext, tick } from 'svelte';
 	import { v4 as uuidv4 } from 'uuid';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 	import type { Writable } from 'svelte/store';
@@ -9,8 +9,8 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { config, models, settings, user, terminalServers } from '$lib/stores';
-	import { getTerminalServers } from '$lib/apis/terminal';
+	import { config, models, settings, user, terminalServers, socket } from '$lib/stores';
+	import { getTerminalServers } from '$lib/apis/machines';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -25,6 +25,7 @@
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
 	import ExternalKnowledge from './ExternalKnowledge.svelte';
+	import Apps from './Apps.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
 	import AdminSettingRow from './AdminSettingRow.svelte';
 
@@ -77,19 +78,19 @@
 		const res = await setTerminalServerConnections(localStorage.token, {
 			TERMINAL_SERVER_CONNECTIONS: terminalConnections
 		}).catch((err) => {
-			toast.error($i18n.t('Failed to save terminal servers'));
+			toast.error($i18n.t('Failed to save machines'));
 			return null;
 		});
 
 		if (res) {
-			toast.success($i18n.t('Terminal servers saved'));
+			toast.success($i18n.t('Machines saved'));
 			await config.set(await getBackendConfig());
 
 			// Refresh the terminalServers store so changes are reflected immediately
 			const systemTerminals = await getTerminalServers(localStorage.token);
 			const systemEntries = systemTerminals.map((t) => ({
 				...t,
-				url: `${WEBUI_API_BASE_URL}/terminals/${t.id}`,
+				url: `${WEBUI_API_BASE_URL}/machines/${t.id}`,
 				name: t.name,
 				key: localStorage.token,
 				config: t.config ?? {}
@@ -98,7 +99,19 @@
 		}
 	};
 
-	const addTerminalConnection = (server: TerminalConnection) => {
+	const addTerminalConnection = async (server: TerminalConnection) => {
+		if (String(server.url ?? '').startsWith('ssh://')) {
+			// Installed over SSH: the backend already saved the machine. Reload the list,
+			// then apply the rest of the form (name, access, options) to it.
+			const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
+			terminalConnections = (res?.TERMINAL_SERVER_CONNECTIONS ??
+				terminalConnections) as TerminalConnection[];
+			terminalConnections = terminalConnections.map((c) =>
+				c.id === server.id ? { ...c, ...server, url: c.url, key: c.key, ssh: c.ssh } : c
+			);
+			await saveTerminalServers();
+			return;
+		}
 		terminalConnections = [...terminalConnections, { ...server, id: server.id ?? uuidv4() }];
 		saveTerminalServers();
 	};
@@ -127,7 +140,19 @@
 		} catch {
 			// Not configured yet
 		}
+		$socket?.on('events', machinesChanged);
 	});
+
+	// An SSH install or upgrade finished (here or in another tab): show the machine's new state.
+	const machinesChanged = async (event: { data?: { type?: string } }) => {
+		if (event?.data?.type !== 'machines:changed') return;
+		const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
+		if (res?.TERMINAL_SERVER_CONNECTIONS) {
+			terminalConnections = res.TERMINAL_SERVER_CONNECTIONS as TerminalConnection[];
+		}
+	};
+
+	onDestroy(() => $socket?.off('events', machinesChanged));
 </script>
 
 <AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
@@ -158,7 +183,7 @@
 		updateHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.integrations.title')}
 	</h2>
 
@@ -174,14 +199,22 @@
 				>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
-								{$i18n.t('settings.admin.integrations.externalToolServers.label')}
-							</div>
+							<Tooltip
+								content={$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
+								placement="top-start"
+								className="w-fit"
+							>
+								<div
+									class="text-xs text-base-600 dark:text-base-400 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
+								>
+									{$i18n.t('settings.admin.integrations.externalToolServers.label')}
+								</div>
+							</Tooltip>
 
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										showConnectionModal = true;
 									}}
@@ -208,28 +241,45 @@
 						</div>
 
 						{#if (servers ?? []).length === 0}
-							<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('No tool server connections configured.')}
 							</div>
 						{/if}
-
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t('Connect to your own OpenAPI compatible external tool servers.')}
-						</div>
 					</div>
 				</AdminSettingSection>
 
-				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.terminal.title')}>
+				<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.machines.title')}>
 					<div>
 						<div class="mb-2 flex items-center justify-between">
-							<div class="text-xs text-gray-600 dark:text-gray-400">
-								{$i18n.t('settings.admin.integrations.openTerminal.label')}
+							<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
+								<Tooltip
+									content={$i18n.t(
+										'Machines run Open Terminal. Admins and users granted access can browse files and use terminal tools on them.'
+									)}
+									placement="top-start"
+									className="w-fit"
+								>
+									<div
+										class="underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
+									>
+										{$i18n.t('settings.admin.integrations.openTerminal.label')}
+									</div>
+								</Tooltip>
+								<Tooltip content={$i18n.t('Learn more about Open Terminal')}>
+									<a
+										class="text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
+										href="https://github.com/open-webui/open-terminal"
+										target="_blank"
+										rel="noopener noreferrer"
+										aria-label={$i18n.t('Learn more about Open Terminal')}>↗</a
+									>
+								</Tooltip>
 							</div>
 
-							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
+							<Tooltip content={$i18n.t('Add Machine')}>
 								<button
-									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+									aria-label={$i18n.t('Add Machine')}
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										editTerminalIdx = null;
 										showAddTerminalModal = true;
@@ -253,16 +303,16 @@
 													: ''}"
 											>
 												<Tooltip
-													content={$i18n.t('settings.admin.integrations.sections.terminal.title')}
+													content={$i18n.t('settings.admin.integrations.openTerminal.label')}
 												>
 													<Cloud className="size-4" strokeWidth="1.5" />
 												</Tooltip>
 
 												<label
 													for={`terminal-${idx}-control`}
-													class="outline-hidden w-full bg-transparent text-xs text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
+													class="outline-hidden w-full bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
 												>
-													{connection.name || connection.url || $i18n.t('New Terminal')}
+													{connection.name || connection.url || $i18n.t('New Machine')}
 												</label>
 											</div>
 										</div>
@@ -272,7 +322,7 @@
 										<Tooltip content={$i18n.t('Configure')}>
 											<button
 												aria-label={$i18n.t('Configure')}
-												class="self-center p-1 bg-transparent hover:bg-black/5 dark:hover:bg-white/5 rounded-lg transition"
+												class="self-center p-1 bg-transparent hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg transition"
 												on:click={() => {
 													editTerminalIdx = idx;
 													showAddTerminalModal = true;
@@ -305,21 +355,10 @@
 						</div>
 
 						{#if terminalConnections.length === 0}
-							<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-								{$i18n.t('No terminal connections configured.')}
+							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
+								{$i18n.t('No machines configured.')}
 							</div>
 						{/if}
-
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-							{$i18n.t(
-								'Connect to Open Terminal servers. Admins and users granted access can use file browsing and terminal tools through these servers.'
-							)}
-						</div>
-						<a
-							class="mt-0.5 block text-[0.6875rem] text-gray-500 underline hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
-							href="https://github.com/open-webui/open-terminal"
-							target="_blank">{$i18n.t('Learn more about Open Terminal')} ↗</a
-						>
 					</div>
 				</AdminSettingSection>
 			</fieldset>
@@ -327,6 +366,10 @@
 			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.knowledge.title')}>
 				<ExternalKnowledge />
 			</AdminSettingSection>
+
+			{#if $config?.features?.enable_apps}
+				<Apps />
+			{/if}
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
@@ -338,7 +381,7 @@
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}

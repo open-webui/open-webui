@@ -117,14 +117,14 @@
 				<span class="text-sm">
 					{$i18n.t('Members')}
 				</span>
-				<span class="text-sm text-gray-500">{total + filteredApps.length}</span>
+				<span class="text-sm text-base-500">{total + filteredApps.length}</span>
 			</div>
 
 			{#if onAdd}
 				<div class="">
 					<button
 						type="button"
-						class="inline-flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs font-normal text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+						class="inline-flex h-6 items-center gap-1 rounded-lg px-1.5 text-xs font-normal text-base-500 transition hover:bg-base-100 hover:text-base-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-base-400 dark:hover:bg-base-800 dark:hover:text-base-100"
 						on:click={onAdd}
 					>
 						<Plus className="size-3" />
@@ -133,7 +133,7 @@
 				</div>
 			{/if}
 		</div>
-		<!-- <hr class="my-1 border-gray-100/5- dark:border-gray-850/50" /> -->
+		<!-- <hr class="my-1 border-base-100/5- dark:border-base-850/50" /> -->
 
 		{#if search}
 			<div class="flex shrink-0 gap-1 px-1 mb-1">
@@ -169,12 +169,12 @@
 			<div
 				class="min-h-0 overflow-y-auto overscroll-contain relative whitespace-nowrap w-full max-w-full"
 			>
-				<div class=" text-sm text-left text-gray-500 dark:text-gray-400 w-full max-w-full">
+				<div class=" text-sm text-left text-base-500 dark:text-base-400 w-full max-w-full">
 					<!-- <div
-						class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200 w-full mb-0.5"
+						class="text-xs text-base-800 uppercase bg-transparent dark:text-base-200 w-full mb-0.5"
 					>
 						<div
-							class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10 flex items-center justify-between"
+							class=" border-b-[1.5px] border-base-50/50 dark:border-base-800/10 flex items-center justify-between"
 						>
 							<button
 								type="button"
@@ -228,10 +228,10 @@
 					<div class="w-full">
 						{#each filteredApps as app (app.id)}
 							<div class="text-xs flex items-center justify-between">
-								<div class="px-2 py-1.5 font-normal text-gray-900 dark:text-white flex-1 min-w-0">
+								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-base-0 flex-1 min-w-0">
 									<div class="flex items-center gap-2">
 										<div
-											class="size-6 rounded-lg bg-gray-100 dark:bg-gray-850 flex items-center justify-center shrink-0"
+											class="size-6 rounded-lg bg-base-100 dark:bg-base-850 flex items-center justify-center shrink-0"
 										>
 											{#if app.data.manifest.profile_image_url}
 												<ProfileImage
@@ -251,7 +251,7 @@
 											type="button"
 											aria-label={$i18n.t('Remove {{name}}', { name: app.name })}
 											disabled={!!removingApp}
-											class="rounded-lg py-1 transition disabled:opacity-50 hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+											class="rounded-lg py-1 transition disabled:opacity-50 hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 											on:click={async () => {
 												removingApp = app.id;
 												try {
@@ -266,8 +266,8 @@
 							</div>
 						{/each}
 						{#each users as user, userIdx (user.id)}
-							<div class=" dark:border-gray-850 text-xs flex items-center justify-between">
-								<div class="px-2 py-1.5 font-normal text-gray-900 dark:text-white flex-1">
+							<div class=" dark:border-base-850 text-xs flex items-center justify-between">
+								<div class="px-2 py-1.5 font-normal text-base-900 dark:text-base-0 flex-1">
 									<div class="flex items-center gap-2">
 										<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 											<img
@@ -310,7 +310,7 @@
 										<div>
 											<button
 												aria-label={$i18n.t('Remove {{name}}', { name: user.name })}
-												class="rounded-full py-1 transition disabled:opacity-50 disabled:cursor-not-allowed hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+												class="rounded-full py-1 transition disabled:opacity-50 disabled:cursor-not-allowed hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 												type="button"
 												disabled={user.id === $_user?.id}
 												on:click={() => {
@@ -334,7 +334,7 @@
 				</div>
 			{/if}
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-5 px-10">
+			<div class="text-base-500 text-xs text-center py-5 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

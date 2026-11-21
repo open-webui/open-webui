@@ -61,11 +61,11 @@
 					</div>
 				</div>
 
-				<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+				<hr class="border-base-50 dark:border-base-850/30 my-1" />
 			{/if}
 
 			<button
-				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl w-full"
 				on:click={() => {
 					editHandler();
 					closeMenu();
@@ -91,7 +91,7 @@
 
 			{#if $config?.features.enable_community_sharing}
 				<button
-					class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+					class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl w-full"
 					on:click={() => {
 						shareHandler();
 						closeMenu();
@@ -103,7 +103,7 @@
 			{/if}
 
 			<button
-				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl w-full"
 				on:click={() => {
 					cloneHandler();
 					closeMenu();
@@ -114,7 +114,7 @@
 			</button>
 
 			<button
-				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl w-full"
 				on:click={() => {
 					exportHandler();
 					closeMenu();
@@ -124,10 +124,10 @@
 				<div class="flex items-center">{$i18n.t('Export')}</div>
 			</button>
 
-			<hr class="border-gray-50 dark:border-gray-850/30 my-1" />
+			<hr class="border-base-50 dark:border-base-850/30 my-1" />
 
 			<button
-				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl w-full"
+				class="select-none flex gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl w-full"
 				on:click={() => {
 					deleteHandler();
 					closeMenu();

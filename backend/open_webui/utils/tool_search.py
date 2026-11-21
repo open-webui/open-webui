@@ -28,6 +28,7 @@ MAX_SEARCH_COUNT = 20
 DEFAULT_SEARCH_COUNT = 5
 EMBEDDING_CACHE_SIZE = 2048
 DECISIONS_BATCH_SIZE = 400
+LISTING_DESCRIPTION_MAX_CHARS = 100
 DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT = (
     'Estimate the probability that this tool is relevant to satisfying '
     'the request, directly or as a necessary step. Consider meaning '
@@ -46,11 +47,13 @@ async def get_tool_search_config() -> dict | None:
         'chat.tool_search.defer_threshold',
         'chat.tool_search.always_loaded',
         'chat.tool_search.defer_builtin_tools',
+        'chat.tool_search.list_tools',
     )
     return {
         'defer_threshold': values['chat.tool_search.defer_threshold'],
         'always_loaded': values['chat.tool_search.always_loaded'],
         'defer_builtin_tools': values['chat.tool_search.defer_builtin_tools'],
+        'list_tools': bool(values['chat.tool_search.list_tools']),
     }
 
 
@@ -64,6 +67,19 @@ def select_deferred_tools(tools_dict: dict[str, dict], config: dict) -> list[str
         and not any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
         and len(JSONCodec.dumps(tool.get('spec') or {})) > config['defer_threshold']
     )
+
+
+def build_deferred_tools_listing(tools_dict: dict[str, dict], deferred: list[str]) -> str:
+    """One line per deferred tool, in sorted order so the prompt stays identical while the set is unchanged."""
+    lines = []
+    for name in sorted(deferred):
+        # Angle brackets are dropped so a description cannot close the manifest early.
+        description = ' '.join(str((tools_dict[name].get('spec') or {}).get('description') or '').split())
+        description = description.replace('<', '').replace('>', '')
+        if len(description) > LISTING_DESCRIPTION_MAX_CHARS:
+            description = description[: LISTING_DESCRIPTION_MAX_CHARS - 1].rstrip() + '…'
+        lines.append(f'- {name}: {description}' if description else f'- {name}')
+    return 'Deferred tools:\n' + '\n'.join(lines) + '\n'
 
 
 async def apply_tool_search(
@@ -98,6 +114,7 @@ async def apply_tool_search(
         'Batch independent calls together; wait for results before calling tools that depend on them. '
         'Do not call deferred tools directly. '
         'Never tell the user a capability is unavailable without searching first.\n'
+        f'{build_deferred_tools_listing(tools_dict, deferred) if config["list_tools"] else ""}'
         '</available_tools>',
         form_data['messages'],
         append=True,

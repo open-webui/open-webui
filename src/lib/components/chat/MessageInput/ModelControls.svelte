@@ -50,10 +50,10 @@
 				!('pipe' in model && model.pipe) &&
 				Object.keys(model.info?.params?.model_controls ?? {}).length > 0
 		);
-	$: rowClass = `focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-gray-700 outline-hidden transition-colors duration-75 dark:text-gray-100 ${$settings?.highContrastMode ? 'hover:bg-gray-200! dark:hover:bg-gray-800!' : 'hover:bg-gray-50/40! dark:hover:bg-gray-800/40!'}`;
+	$: rowClass = `focus-ring flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] font-normal text-base-700 outline-hidden transition-colors duration-75 dark:text-base-100 ${$settings?.highContrastMode ? 'hover:bg-base-200! dark:hover:bg-base-800!' : 'hover:bg-base-50/40! dark:hover:bg-base-800/40!'}`;
 	$: selectedClass = $settings?.highContrastMode
-		? 'bg-gray-200 dark:bg-gray-800'
-		: 'bg-gray-50/70 dark:bg-gray-800/60';
+		? 'bg-base-200 dark:bg-base-800'
+		: 'bg-base-50/70 dark:bg-base-800/60';
 	const select = async (modelId: string, controlId: string, value: string) => {
 		const previous = modelControls;
 		const modelOptions = { ...modelControls[modelId] };
@@ -82,16 +82,16 @@
 
 {#snippet summary(model: Model, key: string, control: ModelControl)}
 	<span class="min-w-0 flex-1 truncate text-left">{control.label}</span>
-	<span class="max-w-[55%] truncate text-gray-500 dark:text-gray-400">
+	<span class="max-w-[55%] truncate text-base-500 dark:text-base-400">
 		{control.options[modelControls[model.id]?.[key] ?? control.default ?? '']?.label ??
 			$i18n.t('Default')}
 	</span>
-	<ChevronRight className="size-3.5 shrink-0 text-gray-400" />
+	<ChevronRight className="size-3.5 shrink-0 text-base-400" />
 {/snippet}
 
 {#snippet choices(model: Model, key: string, control: ModelControl)}
 	{#if control.description}
-		<p class="px-2 py-1.5 text-xs leading-4 text-gray-500 dark:text-gray-400">
+		<p class="px-2 py-1.5 text-xs leading-4 text-base-500 dark:text-base-400">
 			{control.description}
 		</p>
 	{/if}
@@ -139,7 +139,7 @@
 			<button
 				type="button"
 				aria-label={$i18n.t('Model controls')}
-				class="mr-2 flex shrink-0 items-center justify-center text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+				class="mr-2 flex shrink-0 items-center justify-center text-base-500 transition-colors hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 			>
 				<Knobs className="size-4" />
 			</button>
@@ -157,7 +157,7 @@
 				{:else}
 					{#each available as model (model.id)}
 						{#if selectedModels.length > 1}
-							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 								{resolveLocalizedModelName(model, $i18n.language)}
 							</div>
 						{/if}
@@ -200,7 +200,7 @@
 						{/each}
 					{/each}
 					{#if controlsAllowed}
-						{#if available.length}<hr class="border-gray-200/30 dark:border-gray-700/25" />{/if}
+						{#if available.length}<hr class="border-base-200/30 dark:border-base-700/25" />{/if}
 						<button
 							type="button"
 							class={`${rowClass} text-xs!`}
@@ -215,13 +215,13 @@
 								allowHTML={false}
 							>
 								<span
-									class="cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500"
+									class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
 								>
 									{$i18n.t('Controls')}
 								</span>
 							</Tooltip>
 							<ChevronDown
-								className={`ml-auto size-3.5 text-gray-400 ${controlsOpen ? 'rotate-180' : ''}`}
+								className={`ml-auto size-3.5 text-base-400 ${controlsOpen ? 'rotate-180' : ''}`}
 								strokeWidth="1.5"
 							/>
 						</button>

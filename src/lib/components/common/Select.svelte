@@ -2,7 +2,10 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
 	import { mobile } from '$lib/stores';
+	import { getPageContext } from '$lib/utils/page';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+
+	const { active } = getPageContext();
 
 	/** Currently selected value */
 	export let value = '';
@@ -30,7 +33,7 @@
 
 	/** CSS classes for each item button */
 	export let itemClass =
-		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100';
+		'flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100';
 
 	/** Alignment of the dropdown: 'start' | 'end' */
 	export let align = 'start';
@@ -47,6 +50,11 @@
 	let contentEl;
 
 	$: selectedLabel = items.find((i) => i.value === value)?.label ?? placeholder;
+
+	$: if (!$active && open) {
+		open = false;
+		onClose();
+	}
 
 	/** Svelte action: moves the node to document.body (portal) */
 	function portal(node) {

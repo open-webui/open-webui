@@ -214,7 +214,7 @@
 				button.type = 'button';
 				button.contentEditable = 'false';
 				button.className =
-					'not-prose absolute end-2 top-2 rounded-lg px-2.5 py-1 text-xs font-normal text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-850';
+					'not-prose absolute end-2 top-2 rounded-lg px-2.5 py-1 text-xs font-normal text-base-600 hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-850';
 				button.textContent = $i18n.t('Copy');
 				button.onclick = async () => {
 					const pos = getPos();
@@ -421,6 +421,7 @@
 	}
 
 	export let messageInput = false;
+	export let autofocus = true;
 	export let shiftEnter = false;
 	export let largeTextAsFile = false;
 	export let insertPromptAsRichText = false;
@@ -1106,7 +1107,7 @@
 			],
 			content: provider ? undefined : content,
 			editable,
-			autofocus: messageInput && !$mobile && !$voiceCall,
+			autofocus: autofocus && messageInput && !$mobile && !$voiceCall,
 			onTransaction: ({ transaction }) => {
 				if (!editor) return;
 
