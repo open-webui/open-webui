@@ -37,6 +37,7 @@
 		getAutomationRuns,
 		getAutomationModels,
 		startsNew,
+		repliesInThread,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse,
@@ -103,6 +104,7 @@
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
 	let start_new = true;
+	let reply_in_thread = true;
 	let terminalServerId = '';
 	let terminalCwd = '';
 	let terminalServers: TerminalServer[] = [];
@@ -122,6 +124,7 @@
 		target_type = source.data.target?.type === 'channel' ? 'channel' : 'chat';
 		channel_id = source.data.target?.channel_id ?? '';
 		start_new = startsNew(source.data.target);
+		reply_in_thread = repliesInThread(source.data.target);
 		terminalServerId = source.data.terminal?.server_id ?? '';
 		terminalCwd = source.data.terminal?.cwd ?? '';
 		await tick();
@@ -141,6 +144,7 @@
 			target_type !== (automation.data.target?.type === 'channel' ? 'channel' : 'chat') ||
 			channel_id !== (automation.data.target?.channel_id ?? '') ||
 			start_new !== startsNew(automation.data.target) ||
+			reply_in_thread !== repliesInThread(automation.data.target) ||
 			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
 			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
 			rruleNow(scheduleTick) !== savedRrule);
@@ -190,7 +194,7 @@
 						: undefined,
 					target:
 						target_type === 'channel'
-							? { type: 'channel', channel_id, new_thread: start_new }
+							? { type: 'channel', channel_id, new_thread: start_new, reply_in_thread }
 							: { type: 'chat', new_chat: start_new }
 				},
 				meta: automation.meta ?? undefined,
@@ -590,6 +594,7 @@
 							bind:channel_id
 							bind:folder_id
 							bind:start_new
+							bind:reply_in_thread
 							folders={$folders}
 							channels={$channels}
 							plain

@@ -19,6 +19,7 @@
 		createAutomation,
 		getAutomationModels,
 		startsNew,
+		repliesInThread,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse
@@ -48,6 +49,7 @@
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
 	let start_new = true;
+	let reply_in_thread = true;
 	let is_active = true;
 
 	let loading = false;
@@ -135,7 +137,7 @@
 						: undefined,
 					target:
 						target_type === 'channel'
-							? { type: 'channel', channel_id, new_thread: start_new }
+							? { type: 'channel', channel_id, new_thread: start_new, reply_in_thread }
 							: { type: 'chat', new_chat: start_new }
 				},
 				is_active
@@ -184,6 +186,7 @@
 			target_type = automation.data.target?.type === 'channel' ? 'channel' : 'chat';
 			channel_id = automation.data.target?.channel_id ?? '';
 			start_new = startsNew(automation.data.target);
+			reply_in_thread = repliesInThread(automation.data.target);
 			is_active = automation.is_active;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(automation.data.rrule);
@@ -202,6 +205,7 @@
 				? (cloneFrom.data.target?.channel_id ?? '')
 				: '';
 			start_new = startsNew(cloneFrom.data.target);
+			reply_in_thread = repliesInThread(cloneFrom.data.target);
 			is_active = true;
 			if (scheduleDropdown) {
 				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
@@ -214,6 +218,7 @@
 			target_type = 'chat';
 			channel_id = '';
 			start_new = true;
+			reply_in_thread = true;
 			is_active = true;
 		}
 		initialized = true;
@@ -278,6 +283,7 @@
 					bind:channel_id
 					bind:folder_id
 					bind:start_new
+					bind:reply_in_thread
 					folders={$folders}
 					channels={$channels}
 					side="top"

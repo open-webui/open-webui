@@ -280,15 +280,8 @@ async def _execute_channel_automation(
         )
         if ongoing and not thread_id:
             await Automations.set_target_ref(automation.id, 'thread_id', user_message.id)
-        response_parent_id = (
-            user_message.parent_id
-            if user_message.parent_id
-            else (
-                user_message.id
-                if ongoing or await Config.get('channels.model_response_mode', 'thread') == 'thread'
-                else None
-            )
-        )
+        reply_in_thread = ongoing or target.get('reply_in_thread', True) is not False
+        response_parent_id = user_message.parent_id or (user_message.id if reply_in_thread else None)
         # Earlier runs and anyone's replies in the thread, oldest first, so this run continues from them.
         thread_history = []
         if thread_id:

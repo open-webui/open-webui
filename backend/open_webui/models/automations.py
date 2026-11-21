@@ -70,6 +70,8 @@ class AutomationTarget(BaseModel):
     chat_id: Optional[str] = None
     new_thread: bool = True
     thread_id: Optional[str] = None
+    # False: the reply posts in the channel instead of under the run's message. Unset replies in a thread, as does an ongoing thread.
+    reply_in_thread: Optional[bool] = None
 
 
 def keep_target_refs(target: Optional[dict], previous: Optional[dict]) -> Optional[dict]:

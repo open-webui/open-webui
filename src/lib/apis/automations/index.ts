@@ -15,11 +15,17 @@ export type AutomationTarget = {
 	/** Off: every run continues one channel thread, which the first run starts (thread_id is set by the server). */
 	new_thread?: boolean;
 	thread_id?: string | null;
+	/** Off: the reply posts in the channel instead of under the run's message. An ongoing thread always replies in it. */
+	reply_in_thread?: boolean;
 };
 
 /** Whether each run starts a new chat (or channel thread); targets saved before the option existed do. */
 export const startsNew = (target?: AutomationTarget | null) =>
 	(target?.type === 'channel' ? target?.new_thread : target?.new_chat) !== false;
+
+/** Whether a channel run's reply goes in a thread; targets saved before the option existed do. */
+export const repliesInThread = (target?: AutomationTarget | null) =>
+	target?.reply_in_thread !== false;
 
 export type AutomationData = {
 	prompt: string;
