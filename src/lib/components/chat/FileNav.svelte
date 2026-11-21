@@ -383,6 +383,7 @@
 		if (selectedFileLocation === target) {
 			fileContent = content;
 			diskChanged = false;
+			selectedFileVersion = '';
 		}
 		await tick();
 		onFileSaved?.(content);
@@ -1296,6 +1297,23 @@
 		saveTreeState();
 	};
 
+	// Watcher events name no files, so the open file reloads when its listing changes.
+	// Empty means "take the next listing as is" (unknown, or our own save).
+	let selectedFileVersion = '';
+	const entryVersion = (entry?: FileEntry) =>
+		entry?.modified === undefined ? '' : `${entry.modified}:${entry.size}`;
+	const refreshSelectedFile = async () => {
+		await refreshBrowser();
+		if (!selectedFile || saving) return;
+		const fileName = selectedFile.split('/').pop();
+		const entry = entries.find((item) => item.name === fileName);
+		const version = entryVersion(entry);
+		if (!entry || version === selectedFileVersion) return;
+		const previous = selectedFileVersion;
+		selectedFileVersion = version;
+		if (previous) await openEntry(entry, { refresh: true });
+	};
+
 	// The terminal's watcher reports real changes, including ones made outside the chat.
 	let watchedFolder = '';
 	let stopWatching: (() => void) | undefined;
@@ -1312,7 +1330,7 @@
 		stopWatching = watchTerminalFiles(
 			terminal,
 			directory,
-			() => !selectedFile && refreshBrowser(),
+			() => (selectedFile ? refreshSelectedFile() : refreshBrowser()),
 			(message) => (watcherConnected = !message)
 		);
 	};
@@ -1375,6 +1393,7 @@
 		if (parentPath !== currentPath) {
 			await loadDir(parentPath);
 		}
+		selectedFileVersion = entryVersion(entries.find((item) => item.name === entry.name) ?? entry);
 		selectedFileWritable = entry.writable !== false;
 		pushNavHistory(parentPath, filePath);
 
@@ -2248,7 +2267,8 @@
 			if (comparison) return;
 
 			if (selectedFile) {
-				if (selectedFile === filePath) {
+				// A live watcher already reloads the open file when it changes.
+				if (selectedFile === filePath && !watcherConnected) {
 					const fileName = selectedFile.split('/').pop() ?? '';
 					await openEntry({ name: fileName, type: 'file', size: 0 }, { refresh: true });
 				}
@@ -2831,6 +2851,7 @@
 								readOnly={!selectedFileWritable}
 								onSaved={(preview) => {
 									diskChanged = false;
+									selectedFileVersion = '';
 									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
 								}}
 								path={selectedFile}
