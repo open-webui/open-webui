@@ -2,7 +2,10 @@
 	import { flyAndScale } from '$lib/utils/transitions';
 	import { tick } from 'svelte';
 	import { mobile } from '$lib/stores';
+	import { getPageContext } from '$lib/utils/page';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+
+	const { active } = getPageContext();
 
 	/** Currently selected value */
 	export let value = '';
@@ -47,6 +50,11 @@
 	let contentEl;
 
 	$: selectedLabel = items.find((i) => i.value === value)?.label ?? placeholder;
+
+	$: if (!$active && open) {
+		open = false;
+		onClose();
+	}
 
 	/** Svelte action: moves the node to document.body (portal) */
 	function portal(node) {
