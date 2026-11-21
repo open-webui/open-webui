@@ -406,7 +406,10 @@
 			if (viewState !== loading) return;
 			// The chat restores its terminal and directory together; layouts must not override them.
 			entry.state.selectedTerminalId = $selectedTerminalId;
-			entry.state.panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
+			entry.state.panels = activateTab(
+				setMainChatTab(entry.state.panels, true, mainTabTitle),
+				mainChatTabId
+			);
 			tabs = entry.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};
