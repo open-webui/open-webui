@@ -116,7 +116,7 @@
 	class="flex h-full min-h-0 flex-col bg-base-0 text-xs dark:bg-base-900"
 	aria-label={$i18n.t('Compare to current')}
 >
-	<div class="flex shrink-0 items-center gap-2 bg-base-50/60 px-3 py-1.5 dark:bg-base-1000">
+	<div class="flex shrink-0 items-center gap-2 px-3 py-1.5">
 		<span class="min-w-0 flex-1 font-medium">{$i18n.t('Compare to current')}</span>
 		<Dropdown bind:show={showMode} align="end">
 			<button

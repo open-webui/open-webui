@@ -209,7 +209,7 @@
 </script>
 
 <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col bg-base-0 dark:bg-base-900">
-	<div class="flex h-8 shrink-0 items-center gap-1 px-2.5 text-xs dark:bg-base-1000">
+	<div class="flex h-8 shrink-0 items-center gap-1 px-2.5 text-xs">
 		{#if mobile}<button
 				type="button"
 				aria-label={$i18n.t('Back to files')}
