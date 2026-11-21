@@ -10,6 +10,7 @@
 		settings,
 		terminalServers,
 		user,
+		showSettings,
 		tools as _tools,
 		skills as _skills,
 		imageModels as _imageModels,
@@ -45,6 +46,7 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { chatId } = getChatContext();
@@ -668,23 +670,43 @@
 	</div>
 {:else if tab === 'tools' && tools}
 	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
-		<button
-			role="menuitem"
-			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
-			on:click={() => {
-				toolQuery = '';
-				tab = '';
-			}}
+		<div
+			class="flex shrink-0 items-center rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 		>
-			<ChevronLeft />
+			<button
+				role="menuitem"
+				class="flex flex-1 min-w-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl"
+				on:click={() => {
+					toolQuery = '';
+					tab = '';
+				}}
+			>
+				<ChevronLeft />
 
-			<div class="flex items-center w-full justify-between">
-				<div>
-					{$i18n.t('Tools')}
-					<span class="ml-0.5 text-base-500">{toolIds.length}</span>
+				<div class="flex items-center w-full justify-between">
+					<div>
+						{$i18n.t('Tools')}
+						<span class="ml-0.5 text-base-500">{toolIds.length}</span>
+					</div>
 				</div>
-			</div>
-		</button>
+			</button>
+
+			{#if $user?.role === 'admin'}
+				<Tooltip content={$i18n.t('Settings')} placement="top">
+					<button
+						type="button"
+						aria-label={$i18n.t('Settings')}
+						class="mr-1.5 p-0.5 rounded-md text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 transition"
+						on:click|stopPropagation={() => {
+							show = false;
+							showSettings.set('admin:integrations');
+						}}
+					>
+						<Cog6 className="size-3.5" />
+					</button>
+				</Tooltip>
+			{/if}
+		</div>
 
 		<SearchInput bind:value={toolQuery} placeholder={$i18n.t('Search tools')} />
 
