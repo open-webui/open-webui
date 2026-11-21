@@ -626,7 +626,9 @@
 
 		let saveAttempted = false;
 		let uploadedId: string | null = null;
+		let uploadedProfileImageId: string | null = null;
 		const previousBackground = info.meta.background_image_url;
+		const previousProfileImage = info.meta.profile_image_url;
 		const previousAvatar = structuredClone(info.meta.voice_avatar);
 		const uploadedAvatarIds: string[] = [];
 
@@ -636,6 +638,22 @@
 				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload background image.'));
 				uploadedId = uploaded.id;
 				info.meta.background_image_url = `/api/v1/files/${uploaded.id}/content`;
+			}
+			if (
+				info.meta.profile_image_url?.startsWith('data:') &&
+				info.meta.profile_image_url !== model?.meta?.profile_image_url
+			) {
+				const blob = await (await fetch(info.meta.profile_image_url)).blob();
+				const uploaded = await uploadFile(
+					localStorage.token,
+					new File([blob], `profile.${blob.type.split('/')[1]}`, { type: blob.type }),
+					null,
+					false,
+					false
+				);
+				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload profile image.'));
+				uploadedProfileImageId = uploaded.id;
+				info.meta.profile_image_url = `/api/v1/files/${uploaded.id}/content`;
 			}
 			if (avatarFile && info.meta.voice_avatar) {
 				const uploaded = await uploadFile(localStorage.token, avatarFile, null, false, false);
@@ -679,11 +697,16 @@
 			allowNavigation = false;
 		} catch (error: any) {
 			info.meta.background_image_url = previousBackground;
+			info.meta.profile_image_url = previousProfileImage;
 			info.meta.voice_avatar = previousAvatar;
 			allowNavigation = false;
 			// A lost response can follow a committed version. Keep its uploads until the outcome is known.
 			if (!saveAttempted) {
-				for (const fileId of [...uploadedAvatarIds, ...(uploadedId ? [uploadedId] : [])]) {
+				for (const fileId of [
+					...uploadedAvatarIds,
+					...(uploadedId ? [uploadedId] : []),
+					...(uploadedProfileImageId ? [uploadedProfileImageId] : [])
+				]) {
 					await deleteFileById(localStorage.token, fileId).catch(() => {});
 				}
 			}
