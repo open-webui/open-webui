@@ -13,6 +13,7 @@
 	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Camera from '$lib/components/icons/Camera.svelte';
+	import Viewfinder from '$lib/components/icons/Viewfinder.svelte';
 	import Note from '$lib/components/icons/Note.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
@@ -280,7 +281,7 @@
 								tab = 'capture';
 							}}
 						>
-							<Camera />
+							<Viewfinder />
 							<div class="flex items-center w-full justify-between">
 								<div>{$i18n.t('Capture')}</div>
 								<div class="text-base-500"><ChevronRight /></div>
@@ -319,6 +320,25 @@
 						<div>{$i18n.t('Capture')}</div>
 					</button>
 
+					{#if recordActions}
+						<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Record') $i18n.t('Capture Audio') -->
+						<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
+						{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
+							<button
+								role="menuitem"
+								type="button"
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+								on:click={() => {
+									show = false;
+									item.action();
+								}}
+							>
+								<svelte:component this={item.icon} className="size-4" />
+								<div class="line-clamp-1">{$i18n.t(item.label)}</div>
+							</button>
+						{/each}
+					{/if}
+
 					{#if showImageCapture}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
@@ -355,25 +375,6 @@
 								</div>
 							</button>
 						</Tooltip>
-					{/if}
-
-					{#if recordActions}
-						<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Record') $i18n.t('Capture Audio') -->
-						<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
-						{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
-							<button
-								role="menuitem"
-								type="button"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
-								on:click={() => {
-									show = false;
-									item.action();
-								}}
-							>
-								<svelte:component this={item.icon} className="size-4" />
-								<div class="line-clamp-1">{$i18n.t(item.label)}</div>
-							</button>
-						{/each}
 					{/if}
 				</div>
 			{:else if tab === 'attachments'}
