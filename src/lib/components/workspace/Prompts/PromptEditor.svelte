@@ -563,7 +563,7 @@
 		</div>
 
 		<div
-			class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-base-100/80 bg-base-0 dark:border-base-0/[0.04] dark:bg-base-900"
+			class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-base-100/80 bg-base-50/60 dark:border-base-0/[0.04] dark:bg-base-0/[0.03]"
 		>
 			{#if historyDiff}
 				<VersionDiff
@@ -578,7 +578,7 @@
 				/>
 			{:else}
 				<div
-					class="flex shrink-0 items-center gap-1 bg-base-50/60 px-2.5 py-1.5 text-xs dark:bg-base-1000"
+					class="flex shrink-0 items-center gap-1 px-2.5 py-1.5 text-xs"
 				>
 					<div class="min-w-0 flex-1">
 						{#if edit}
