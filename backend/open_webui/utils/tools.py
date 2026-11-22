@@ -609,7 +609,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     while function_name in tools_dict:
                         log.warning(f'Tool {function_name} already exists in another tools!')
                         # Prepend server ID to function name
-                        function_name = f'{server_id}_{function_name}'
+                        function_name = re.sub(r'[^a-zA-Z0-9_-]', '_', f'{server_id}_{function_name}')
 
                     tool_dict['spec'] = {**tool_dict['spec'], 'name': function_name}
                     tools_dict[function_name] = tool_dict
