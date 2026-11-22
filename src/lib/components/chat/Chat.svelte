@@ -301,7 +301,7 @@
 
 	const eventTarget = new EventTarget();
 
-	let messageInput: MessageInput | undefined;
+	export let messageInput: MessageInput | undefined = undefined;
 	let messagesRef: Messages | undefined;
 
 	let autoScroll = true;
