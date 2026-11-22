@@ -11,6 +11,7 @@ export const CONTROL_LABELS = {
 	'model_editor.capabilities.code_interpreter':
 		'settings.admin.models.capabilities.codeInterpreter.label',
 	'model_editor.capabilities.terminal': 'settings.admin.models.capabilities.terminal.label',
+	'model_editor.capabilities.code_mode': 'settings.admin.models.capabilities.codeMode.label',
 	'model_editor.capabilities.usage': 'settings.admin.models.capabilities.usage.label',
 	'model_editor.capabilities.citations': 'settings.admin.models.capabilities.citations.label',
 	'model_editor.capabilities.status_updates':

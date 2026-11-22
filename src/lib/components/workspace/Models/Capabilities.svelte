@@ -47,6 +47,10 @@
 			label: $i18n.t('settings.admin.models.capabilities.terminal.label'),
 			description: $i18n.t('settings.admin.models.capabilities.terminal.description')
 		},
+		code_mode: {
+			label: $i18n.t('settings.admin.models.capabilities.codeMode.label'),
+			description: $i18n.t('settings.admin.models.capabilities.codeMode.description')
+		},
 		usage: {
 			label: $i18n.t('settings.admin.models.capabilities.usage.label'),
 			description: $i18n.t('settings.admin.models.capabilities.usage.description')
@@ -93,6 +97,7 @@
 		(key) =>
 			(key !== 'file_context' || capabilities.file_upload) &&
 			(key !== 'terminal' || hasMachine) &&
+			(key !== 'code_mode' || (hasMachine && capabilities.terminal)) &&
 			(capabilityLabels[key].enabled ?? true)
 	);
 	$: enabledCapabilityIds = availableCapabilities.filter((key) => effectiveCapabilities[key]);

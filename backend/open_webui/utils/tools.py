@@ -25,7 +25,7 @@ from fastapi import HTTPException, Request
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
-from open_webui.utils.machines import is_machine_ref
+from open_webui.utils.machines import is_machine_ref, is_private_machine
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
@@ -40,6 +40,7 @@ from open_webui.env import (
     FORWARD_SESSION_INFO_HEADER_CHAT_ID,
     FORWARD_SESSION_INFO_HEADER_MESSAGE_ID,
     REDIS_KEY_PREFIX,
+    UVICORN_WORKERS,
 )
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
@@ -82,6 +83,7 @@ from open_webui.tools.builtin import (
     replace_memory_content,
     replace_note_content,
     render_visualization,
+    run_code,
     search_calendar_events,
     search_channel_messages,
     search_channels,
@@ -919,6 +921,16 @@ async def get_builtin_tools(
         and await has_user_permission('code_interpreter')
     ):
         builtin_functions.append(execute_code)
+
+    # Code mode puts a run token on the machine, so only on the user's own machine.
+    if (
+        get_model_capability('code_mode', False)
+        and get_model_capability('terminal')
+        and metadata.get('machine_id')
+        and (UVICORN_WORKERS == 1 or request.app.state.redis)
+        and await is_private_machine(request, user, metadata)
+    ):
+        builtin_functions.append(run_code)
 
     # Notes tools - search, view, create, and update user's notes
     if is_note_chat or (

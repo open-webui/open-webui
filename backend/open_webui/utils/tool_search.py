@@ -64,6 +64,8 @@ def select_deferred_tools(tools_dict: dict[str, dict], config: dict) -> list[str
         name
         for name, tool in tools_dict.items()
         if (config['defer_builtin_tools'] or tool.get('type') != 'builtin')
+        # Scripts reach deferred tools through run_code.
+        and name != 'run_code'
         and not any(fnmatch.fnmatchcase(name, pattern) for pattern in patterns)
         and len(JSONCodec.dumps(tool.get('spec') or {})) > config['defer_threshold']
     )

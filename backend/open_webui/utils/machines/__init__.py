@@ -616,6 +616,19 @@ async def initialize_machine_directory(request, user, metadata, machine_id, path
     metadata['initial_machine_cwd'] = result['cwd']
 
 
+async def is_private_machine(request, user: dict, metadata: dict) -> bool:
+    """Whether only this user can reach the chat's machine."""
+    try:
+        connection = await find_machine_connection(user, metadata['machine_id'], metadata, request=request)
+    except Exception:
+        return False
+    return (
+        bool(connection)
+        and connection.get('instance_user_id', user['id']) == user['id']
+        and (connection.get('owner_id') == user['id'] or connection.get('scope') == 'user')
+    )
+
+
 async def filter_user_terminal_tools(request, user, tools: dict, metadata: dict, extra_params: dict):
     """Let Open Terminal, which owns the shells, confirm availability for this user and chat."""
     machine_id = metadata.get('machine_id')

@@ -922,6 +922,61 @@ async def execute_code(
         return JSONCodec.dumps({'error': str(e)})
 
 
+async def run_code(
+    code: str,
+    __request__: Request = None,
+    __event_emitter__: callable = None,
+    __event_call__: callable = None,
+    __metadata__: dict = None,
+    __messages__: list = None,
+) -> str:
+    """
+    Run a Python script on the machine. Inside the script every other tool, including tools found with search_tools, is a Python function, so use this instead of separate tool calls when a task needs many calls, loops, filtering or combining results.
+    Call a tool directly with `tools.<name>(**arguments)`, or `getattr(tools, '<name>')(**arguments)` when the name is not a valid Python identifier. For parallel calls use `await asyncio.gather(*[tools.<name>.run_async(**arguments) ...])`; asyncio and json are already imported.
+    A tool returns the parsed JSON when its result is JSON, otherwise a string. When unsure of the shape, print a sample first (type, keys, first item) rather than the whole result. A failed call raises ToolError.
+    Each run is a new process: variables do not carry over to the next run_code call, but files written to the working directory do.
+    Only printed output comes back to you, so print just the data you need.
+
+    :param code: The Python script to run. Top-level await is allowed.
+    :return: JSON with the run status, exit code and printed output
+    """
+    from uuid import uuid4
+
+    from open_webui.utils.code_mode import get_script_result, run_code_on_machine
+    from open_webui.utils.middleware import execute_tool_call, machine_event_handler
+    from open_webui.utils.tool_search import CALL_TOOL_NAME
+
+    tools = __metadata__.get('tools', {})
+    if not {'run_command', 'get_process_status', 'kill_process', 'write_file'} <= tools.keys():
+        return JSONCodec.dumps({'error': 'The machine cannot run commands'})
+
+    form_data = {'messages': __messages__}
+    # A running script can't pause the chat, so approvals are asked live.
+    call_metadata = {**__metadata__, 'message_id': None, 'assistant_message_id': None}
+
+    async def call(name: str, arguments: dict) -> tuple[str, str]:
+        if name in ('run_code', CALL_TOOL_NAME):
+            return f'Error: {name} is not available inside run_code. Call tools directly.', 'failed'
+        tool_call = {'name': name, 'arguments': JSONCodec.dumps(arguments), 'call_id': str(uuid4())}
+        try:
+            params, result, tool, tool_type = await execute_tool_call(
+                form_data, call_metadata, __event_call__, tool_call
+            )
+            if tool:
+                result = get_script_result(result, tool_type)
+                await machine_event_handler(name, params, result, __event_emitter__)
+        except Exception as e:
+            return f'Error: {e}', 'failed'
+        return result, tool_call['status']
+
+    try:
+        result = await run_code_on_machine(__request__, tools, code, call)
+        return JSONCodec.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        log.exception('run_code error: %s', e)
+        return JSONCodec.dumps({'error': str(e)})
+
+
 # Memory tools
 
 

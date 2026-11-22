@@ -9,6 +9,7 @@ from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from open_webui.env import REDIS_KEY_PREFIX, REDIS_RESPONSE_STREAM_TTL, REDIS_TASK_TTL
+from open_webui.utils.code_mode import WORKER_CHANNEL, handle_code_command
 from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.misc import get_output_text
 from open_webui.utils.response import get_response_delta_key, handle_responses_streaming_event
@@ -40,7 +41,7 @@ async def redis_task_command_listener(app):
             await redis.initialize()
 
             pubsub = redis.pubsub()
-            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL)
+            await pubsub.subscribe(REDIS_PUBSUB_CHANNEL, WORKER_CHANNEL)
             reconnect_interval = REDIS_PUBSUB_RECONNECT_INTERVAL
 
             async for message in pubsub.listen():
@@ -48,6 +49,9 @@ async def redis_task_command_listener(app):
                     continue
                 try:
                     command = JSONCodec.loads(message['data'])
+                    if message['channel'] == WORKER_CHANNEL:
+                        handle_code_command(redis, command)
+                        continue
                     if command.get('action') != 'stop':
                         continue
 

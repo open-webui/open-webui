@@ -712,6 +712,13 @@ try:
 except (ValueError, TypeError):
     MCP_INITIALIZE_TIMEOUT = 10
 
+# Seconds a Code Mode script may run on the machine before it is stopped.
+CODE_MODE_TIMEOUT = os.getenv('CODE_MODE_TIMEOUT', '300')
+try:
+    CODE_MODE_TIMEOUT = max(int(CODE_MODE_TIMEOUT), 1)
+except (ValueError, TypeError):
+    CODE_MODE_TIMEOUT = 300
+
 
 # AIOHTTP Connection Pool
 

@@ -123,6 +123,7 @@ export const DEFAULT_CAPABILITIES = {
 	video_generation: true,
 	code_interpreter: true,
 	terminal: true,
+	code_mode: false,
 	citations: true,
 	status_updates: true,
 	usage: undefined,

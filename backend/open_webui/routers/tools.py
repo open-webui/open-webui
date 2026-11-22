@@ -40,6 +40,7 @@ from open_webui.utils.access_control import (
     validate_access_grants,
 )
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.code_mode import run_tool_call
 from open_webui.utils.mcp.apps import app_csp, ui_resource_uri, verify_app_binding
 from open_webui.utils.mcp.client import tool_visible_to
 from open_webui.utils.misc import is_string_allowed
@@ -366,6 +367,21 @@ async def mcp_app_rpc(request: Request, id: str, form_data: MCPAppRPCForm, user=
     except Exception as error:
         log.warning('MCP app request failed: %s', type(error).__name__)
         raise HTTPException(status_code=502, detail='MCP app request failed')
+
+
+class RunCodeCallForm(BaseModel):
+    name: str
+    arguments: dict = {}
+
+
+# The per-run token is the credential, so no user session is needed.
+@router.post('/code/{run_id}/call')
+async def run_code_call(request: Request, run_id: str, form_data: RunCodeCallForm):
+    token = request.state.token.credentials if request.state.token else ''
+    reply = await run_tool_call(request, run_id, token, form_data.name, form_data.arguments)
+    if reply is None:
+        raise HTTPException(status_code=404, detail=ERROR_MESSAGES.NOT_FOUND)
+    return reply
 
 
 @router.get('/list', response_model=list[ToolAccessResponse])

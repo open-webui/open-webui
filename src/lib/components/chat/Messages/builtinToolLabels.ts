@@ -20,6 +20,7 @@ const labels = (t: Translate, name: string): Labels | null => {
 		case 'fetch_url':
 			return [t('Reading web page'), t('Read web page'), t('Failed to read web page')];
 		case 'execute_code':
+		case 'run_code':
 			return [t('Running code'), t('Ran code'), t('Failed to run code')];
 
 		// Time
