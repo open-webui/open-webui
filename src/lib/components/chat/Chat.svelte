@@ -471,7 +471,7 @@
 	$: contextThreshold = contextCompactionEnabled
 		? (getContextThreshold(
 				atSelectedModel?.id ?? selectedModels.find((id) => id),
-				$models,
+				$models ?? [],
 				params
 			) ??
 			serverContextUsage?.threshold ??
@@ -508,7 +508,8 @@
 		const currentModels = atSelectedModel?.id ? [atSelectedModel.id] : selectedModels;
 		const allModelsSupportWebSearch =
 			currentModels.filter(
-				(model) => ($models ?? []).find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
+				(model) =>
+					($models ?? []).find((m) => m.id === model)?.info?.meta?.capabilities?.web_search ?? true
 			).length === currentModels.length;
 
 		webSearchActive = Boolean(
@@ -1410,7 +1411,9 @@
 			)
 				return;
 
-			const currentModels: any[] = modelIds.map((id) => ($models ?? []).find((model) => model.id === id));
+			const currentModels: any[] = modelIds.map((id) =>
+				($models ?? []).find((model) => model.id === id)
+			);
 			if (!currentModels.length || currentModels.some((model) => !model)) return;
 			const supports = (feature: string) =>
 				currentModels.every((model) => model.info?.meta?.capabilities?.[feature] ?? true);
@@ -3088,7 +3091,8 @@
 
 			// Unavailable models filtering
 			selectedModels = selectedModels.filter(
-				(modelId) => modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
+				(modelId) =>
+					modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
 			);
 		} else {
 			if (destinationFolder) {
@@ -3290,7 +3294,9 @@
 		}
 
 		selectedModels = selectedModels.map((modelId) =>
-			modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId) ? modelId : ''
+			modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
+				? modelId
+				: ''
 		);
 
 		await tick();
@@ -3391,7 +3397,8 @@
 				// An empty model list is not evidence that the chat's models are gone.
 				if (($models ?? []).length > 0) {
 					selectedModels = selectedModels.filter(
-						(modelId) => modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
+						(modelId) =>
+							modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
 					);
 				}
 
@@ -4634,7 +4641,9 @@
 			return { status: 'rejected' };
 
 		const _selectedModels = selectedModels.map((modelId) =>
-			modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId) ? modelId : ''
+			modelId.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(modelId)
+				? modelId
+				: ''
 		);
 
 		if (!equal(selectedModels, _selectedModels)) {

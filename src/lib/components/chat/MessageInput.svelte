@@ -196,8 +196,8 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 	$: hasChatVariables = selectedModelIds.some(
 		(modelId) =>
-			(($models ?? []).find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema?.fields
-				?.length ?? 0) > 0
+			(($models ?? []).find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema
+				?.fields?.length ?? 0) > 0
 	);
 
 	export let history;
@@ -3058,18 +3058,20 @@
 								</div>
 
 								<div class="self-end flex space-x-1 mr-1 min-w-0 gap-[0.03125rem]">
-									<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
-										<ModelSelector
-											bind:this={modelSelector}
-											multipleEnabled={multipleModels}
-											bind:selectedModels
-											{onModelSelect}
-											showSetDefault={!history?.currentId}
-											placement="auto"
-											align="end"
-											triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-base-600 transition-colors duration-100 hover:bg-base-50/40 hover:text-base-700 dark:text-base-300 dark:hover:bg-base-800/40 dark:hover:text-base-200"
-										/>
-									</div>
+									{#if $models !== null}
+										<div class="flex min-w-0 max-w-[10rem] items-center sm:max-w-[13rem]">
+											<ModelSelector
+												bind:this={modelSelector}
+												multipleEnabled={multipleModels}
+												bind:selectedModels
+												{onModelSelect}
+												showSetDefault={!history?.currentId}
+												placement="auto"
+												align="end"
+												triggerClassName="items-center gap-1.5 rounded-lg pl-2 pr-1.5 py-1 text-[0.8125rem] font-normal text-base-600 transition-colors duration-100 hover:bg-base-50/40 hover:text-base-700 dark:text-base-300 dark:hover:bg-base-800/40 dark:hover:text-base-200"
+											/>
+										</div>
+									{/if}
 									<ModelControls
 										selectedModels={selectedModelIds}
 										bind:chatFiles

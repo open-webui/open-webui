@@ -258,7 +258,11 @@
 				setBanners().catch((e) => console.error('Failed to load banners:', e)),
 				setTools().catch((e) => console.error('Failed to load tools:', e)),
 				setUserSettings(),
-				setModels().catch((e) => console.error('Failed to load models:', e)),
+				setModels().catch((e) => {
+					console.error('Failed to load models:', e);
+					// Loaded, with nothing to list: null would mean the list is still on its way.
+					models.update((list) => list ?? []);
+				}),
 				refreshMachines().catch((e) => console.error('Failed to load machines:', e))
 			]);
 		} catch (e) {
