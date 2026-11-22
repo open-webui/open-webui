@@ -1,9 +1,11 @@
 # Run by utils/machines/managed.py on stdin, over SSH or on this computer. Tokens (__OPEN_WEBUI_*__) are
-# validated before rendering; FOLDER (where sessions start, empty for home) is set on the line above.
+# validated before rendering; FOLDER (where sessions start, empty for home) and DEPS (arguments for
+# `open-terminal install-deps`, empty for none) are set on the lines above.
 # Output lines starting with OPEN_WEBUI: drive the progress UI; everything else is log.
 set -eu
 ROOT="${OPEN_WEBUI_MACHINES_DIR:-$HOME/.open-webui}/__OPEN_WEBUI_ID__"
 FOLDER="${FOLDER:-}"
+DEPS="${DEPS:-}"
 VERSION="__OPEN_WEBUI_VERSION__"
 
 echo "OPEN_WEBUI:step:detect"
@@ -36,6 +38,21 @@ if [ "$VERSION" = latest ] || [ "$INSTALLED" != "$VERSION" ]; then
   fi
 fi
 echo "OPEN_WEBUI:version:$(cat "$ROOT/version")"
+
+# Optional system packages. A failure here is a warning: the machine
+# works without them. stdin is this script, so sudo must not read a password from it.
+if [ -n "$DEPS" ]; then
+  echo "OPEN_WEBUI:step:packages"
+  if ! "$ROOT/bin/open-terminal" install-deps --help >/dev/null 2>&1; then
+    echo "OPEN_WEBUI:warning:This Open Terminal version cannot install packages. Upgrade to the latest."
+  elif "$ROOT/bin/open-terminal" install-deps --yes $DEPS >"$ROOT/packages.log" 2>&1 </dev/null; then
+    # "Will run:" means something was installed: restart so the server offers it (start.sh below).
+    if grep -q '^Will run:' "$ROOT/packages.log" && [ -x "$ROOT/stop.sh" ]; then "$ROOT/stop.sh"; fi
+  else
+    tail -n 20 "$ROOT/packages.log"
+    echo "OPEN_WEBUI:warning:$(sed '/^Install failed/d' "$ROOT/packages.log" | tail -n 1)"
+  fi
+fi
 
 echo "OPEN_WEBUI:step:configure"
 umask 077

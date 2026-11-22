@@ -95,6 +95,9 @@ class CreateForm(Pinned):
     id: str = Field(pattern=SSH_MACHINE_ID)
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
+    # For `open-terminal install-deps`: dependency sets it knows by name, and apt packages. Needs passwordless sudo.
+    deps: list[str] = Field(default_factory=list, max_length=16)
+    packages: list[str] = Field(default_factory=list, max_length=64)
 
 
 class LocalForm(BaseModel):
@@ -106,6 +109,13 @@ class LocalForm(BaseModel):
 
 class UpgradeForm(BaseModel):
     version: str | None = Field(None, max_length=20)  # omitted: keep the machine's current choice
+    deps: list[str] | None = Field(None, max_length=16)
+    packages: list[str] | None = Field(None, max_length=64)
+
+
+class InstallForm(BaseModel):
+    deps: list[str] = Field(default_factory=list, max_length=16)
+    packages: list[str] = Field(default_factory=list, max_length=64)
 
 
 class FolderForm(BaseModel):
@@ -158,11 +168,21 @@ async def install_key(form: InstallKeyForm, user=Depends(get_admin_user)):
 async def create_machine(request: Request, form: CreateForm, user=Depends(get_admin_user)):
     try:
         version = managed.requested_version(form.version)
+        managed.install_args(form.deps, form.packages)
     except MachineError as error:
         _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
     _ssh_start(
-        managed.provision(request, form.id, user.id, name=form.name or form.host, target=target, version=version)
+        managed.provision(
+            request,
+            form.id,
+            user.id,
+            name=form.name or form.host,
+            target=target,
+            version=version,
+            deps=form.deps,
+            packages=form.packages,
+        )
     )
     return {'id': form.id, 'status': 'installing'}
 
@@ -204,9 +224,32 @@ async def upgrade_machine(
     try:
         await managed.get_machine(machine_id)
         version = managed.requested_version(form.version) if form and form.version is not None else None
+        managed.install_args(form.deps if form else None, form.packages if form else None)
     except MachineError as error:
         _ssh_fail(error)
-    _ssh_start(managed.provision(request, machine_id, user.id, version=version))
+    _ssh_start(
+        managed.provision(
+            request,
+            machine_id,
+            user.id,
+            version=version,
+            deps=form.deps if form else None,
+            packages=form.packages if form else None,
+        )
+    )
+    return {'id': machine_id, 'status': 'installing'}
+
+
+@router.post('/managed/{machine_id}/install')
+async def install_machine_packages(request: Request, machine_id: str, form: InstallForm, user=Depends(get_admin_user)):
+    """Install system packages on the machine through `open-terminal install-deps`. Needs passwordless sudo."""
+    try:
+        await managed.get_machine(machine_id)
+        if not managed.install_args(form.deps, form.packages):
+            raise MachineError('Enter what to install.')
+    except MachineError as error:
+        _ssh_fail(error)
+    _ssh_start(managed.install(request, machine_id, user.id, form.deps, form.packages))
     return {'id': machine_id, 'status': 'installing'}
 
 

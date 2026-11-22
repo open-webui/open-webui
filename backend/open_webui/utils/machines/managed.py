@@ -85,6 +85,16 @@ def clean_folder(value: str | None) -> str:
     return value
 
 
+def install_args(deps: list[str] | None, packages: list[str] | None) -> str:
+    """Arguments for `open-terminal install-deps`: the dependency sets it knows by name, then apt packages."""
+    deps, packages = list(dict.fromkeys(deps or [])), list(dict.fromkeys(packages or []))
+    for name in [*deps, *packages]:
+        # Names only: these become arguments of a command that installs as root on the machine.
+        if not re.fullmatch(r'[a-z0-9][a-z0-9+.-]*', name):
+            raise MachineError(f'"{name}" is not a package name.')
+    return ' '.join([*deps, *(f'--package {name}' for name in packages)])
+
+
 def render(template: str, **values: str) -> str:
     for name, value in values.items():
         if not TOKENS[name].fullmatch(value):
@@ -142,10 +152,20 @@ async def open_host(machine: dict):
 
 
 async def run_bootstrap(
-    host, machine_id: str, api_key: str, on_step, version: str = 'latest', folder: str = ''
-) -> tuple[str, str]:
-    """Install or upgrade Open Terminal and start it. Returns (install root, installed version)."""
-    script = f'FOLDER={shlex.quote(folder)}\n' + render(
+    host,
+    machine_id: str,
+    api_key: str,
+    on_step,
+    version: str = 'latest',
+    folder: str = '',
+    install: str = '',
+) -> tuple[str, str, str | None]:
+    """Install or upgrade Open Terminal and start it. Returns (install root, installed version, warning).
+
+    `install` (see install_args) also runs `open-terminal install-deps`. When that fails the
+    machine is still set up, with a warning.
+    """
+    script = f'FOLDER={shlex.quote(folder)}\nDEPS={shlex.quote(install)}\n' + render(
         BOOTSTRAP,
         ID=machine_id,
         VERSION=requested_version(version),
@@ -154,9 +174,10 @@ async def run_bootstrap(
         API_KEY=api_key,
     )
     proc = await host.start(script)  # stdin, not argv: the API key never shows up in `ps`
-    root, installed, error, tail = None, None, None, deque(maxlen=80)
+    root, installed, error, warning, tail = None, None, None, None, deque(maxlen=80)
     try:
-        async with asyncio.timeout(900):  # a cold install downloads Python and the package
+        # A cold install downloads Python and the package; system packages can be far larger.
+        async with asyncio.timeout(2700 if install else 900):
             async for line in proc.lines():
                 line = line.rstrip('\n')
                 tail.append(line)
@@ -171,6 +192,8 @@ async def run_bootstrap(
                     installed = value
                 elif name == 'error':
                     error = value
+                elif name == 'warning':
+                    warning = value
             status = await proc.wait()
     finally:
         proc.close()
@@ -178,7 +201,12 @@ async def run_bootstrap(
         raise MachineError(error or '\n'.join(tail) or 'Setup failed.')
     if not host.valid_root(root, machine_id):
         raise MachineError(f'Unexpected install path: {root}')
-    return root, installed or ''
+    if warning:
+        warning = (
+            f'Packages were not installed: {warning}\n'
+            f'Run this on the machine, then restart it here: {root}/bin/open-terminal install-deps {install}'
+        )
+    return root, installed or '', warning
 
 
 # ---------------------------------------------------------------------------
@@ -397,6 +425,17 @@ class MachineClient:
 # ---------------------------------------------------------------------------
 
 
+async def emit_step(admin_id: str, machine_id: str, value: str, **extra):
+    """Tell the admin's browser how far a machine's setup is (`machines:progress`)."""
+    from open_webui.socket.main import emit_to_users
+
+    await emit_to_users(
+        'events',
+        {'data': {'type': 'machines:progress', 'id': machine_id, 'step': value, **extra}},
+        [admin_id],
+    )
+
+
 async def provision(
     request,
     machine_id: str,
@@ -407,23 +446,19 @@ async def provision(
     is_local: bool = False,
     version: str | None = None,
     folder: str | None = None,
+    deps: list[str] | None = None,
+    packages: list[str] | None = None,
 ):
     """Create (target given, or is_local) or upgrade/repair (neither) a machine, streaming progress to the admin.
 
-    `version` is 'latest' or an exact Open Terminal version, and `folder` is where sessions start.
+    `version` is 'latest' or an exact Open Terminal version, `folder` is where sessions start,
+    and `deps` and `packages` are what `open-terminal install-deps` adds (see install_args).
     When omitted, the machine keeps what the admin chose last time.
     """
-    from open_webui.socket.main import emit_to_users
     from open_webui.utils.machines import notify_machines_changed
     from open_webui.utils.tools import set_machines
 
-    async def step(value: str, **extra):
-        await emit_to_users(
-            'events',
-            {'data': {'type': 'machines:progress', 'id': machine_id, 'step': value, **extra}},
-            [admin_id],
-        )
-
+    step = partial(emit_step, admin_id, machine_id)
     existing = None
     with suppress(MachineError):
         existing = await get_machine(machine_id)
@@ -439,6 +474,10 @@ async def provision(
         folder = current.get('folder') or ''
     if is_local and not folder:
         folder = local.default_folder()
+    if deps is None:
+        deps = current.get('deps') or []
+    if packages is None:
+        packages = current.get('packages') or []
 
     try:
         if existing:
@@ -447,7 +486,9 @@ async def provision(
         await step('connect')
         machine = existing or ({'id': machine_id, 'local': {}} if is_local else {'id': machine_id, 'ssh': target})
         async with await open_host(machine) as host:
-            root, installed = await run_bootstrap(host, machine_id, api_key, step, requested, folder)
+            root, installed, warning = await run_bootstrap(
+                host, machine_id, api_key, step, requested, folder, install_args(deps, packages)
+            )
             transport = await host.transport(root)
 
         entry = existing or {
@@ -465,9 +506,12 @@ async def provision(
             'folder': folder,
             'version': installed,
             'requested_version': requested,
+            'deps': deps,
+            'packages': packages,
             'transport': transport,
             'status': 'ready',
             'error': None,
+            'warning': warning,
         }
         await save_machine(entry)
         if not is_local:
@@ -477,7 +521,7 @@ async def provision(
         await tunnels.socket_for(machine_id)
         await set_machines(request)  # load its OpenAPI spec like any other machine
         await notify_machines_changed([admin_id])
-        await step('ready')
+        await step('ready', message=warning)
     except Exception as error:
         log.exception('Provisioning %s failed', machine_id)
         message = describe(error)
@@ -501,6 +545,33 @@ async def set_folder(machine_id: str, folder: str):
             f'{q(root + "/stop.sh")}\n{q(root + "/start.sh")}\n'
         )
     await update_state(machine_id, folder=folder)
+
+
+async def install(request, machine_id: str, admin_id: str, deps: list[str], packages: list[str]):
+    """Run `open-terminal install-deps` on a machine that is already set up, streaming progress to the admin."""
+    from open_webui.utils.tools import set_machines
+
+    step = partial(emit_step, admin_id, machine_id)
+    try:
+        args = install_args(deps, packages)
+        machine = await get_machine(machine_id)
+        binary = f'{state(machine)["root"]}/bin/open-terminal'
+        await step('packages')
+        async with await open_host(machine) as host:
+            try:
+                # stdin is the script, so sudo must not read a password from it.
+                output = await host.sh(f'{shlex.quote(binary)} install-deps --yes {args} </dev/null\n', timeout=2700)
+            except MachineError as error:
+                hint = f'To install by hand, run this on the machine: {binary} install-deps {args}'
+                raise MachineError(f'{error}\n{hint}') from error
+        await update_state(machine_id, deps=deps, packages=packages, warning=None)
+        if 'Will run:' in output:  # something was installed: restart so the server offers it
+            await restart(machine_id)
+            await set_machines(request)
+        await step('ready', output=output.strip()[-2000:])
+    except Exception as error:
+        log.exception('Installing packages on %s failed', machine_id)
+        await step('error', message=describe(error))
 
 
 async def restart(machine_id: str):

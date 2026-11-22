@@ -21,6 +21,7 @@
 		getLocalMachineDefaults,
 		getMachineLogs,
 		installLocalMachine,
+		installMachinePackages,
 		installSSHKey,
 		installSSHMachine,
 		parseSSHUrl,
@@ -60,6 +61,13 @@
 	let showDelete = false;
 	// SSH: an ssh://user@host URL installs Open Terminal on that machine instead of connecting to one.
 	const SSH_STEPS = ['connect', 'detect', 'install', 'configure', 'start', 'health', 'ready'];
+	// SSH only: what `open-terminal install-deps` adds to the machine, typed as names separated by
+	// spaces. These are the names it knows itself; any other name is an apt package.
+	const INSTALL_DEPS = ['desktop', 'browser'];
+	let toInstall = '';
+	// The Install button: only that step runs, and what it reports shows under the field.
+	let installingPackages = false;
+	let packagesResult: { text: string; failed: boolean } | null = null;
 	// How Open WebUI logs in the first time to add its own key. Nothing here is stored.
 	let signIn: 'password' | 'key' | 'manual' = 'password';
 	let password = '';
@@ -97,6 +105,14 @@
 	$: installingSSH = !managed && !installingLocal && url.trim().toLowerCase().startsWith('ssh://');
 	$: installing = installingSSH || installingLocal;
 	$: sshTarget = installingSSH ? parseSSHUrl(url) : null;
+	$: installNames = toInstall.trim().split(/\s+/).filter(Boolean);
+	$: installForm = {
+		deps: installNames.filter((name) => INSTALL_DEPS.includes(name)),
+		packages: installNames.filter((name) => !INSTALL_DEPS.includes(name))
+	};
+	$: installSteps = installNames.length
+		? SSH_STEPS.flatMap((step) => (step === 'install' ? [step, 'packages'] : [step]))
+		: SSH_STEPS;
 	$: showLocalOption = allowLocal && !connection && localDefaults !== null && !localDefaults.added;
 	$: if (show && !initialized) {
 		url = connection?.url ?? '';
@@ -115,6 +131,7 @@
 				? current.requested_version
 				: '';
 		folder = current?.folder ?? '';
+		toInstall = [...(current?.deps ?? []), ...(current?.packages ?? [])].join(' ');
 		target = 'url';
 		localDefaults = null;
 		if (allowLocal && !connection) {
@@ -131,6 +148,8 @@
 		passphrase = '';
 		resetSSH();
 		logs = null;
+		installingPackages = false;
+		packagesResult = null;
 		initialized = true;
 	}
 	$: if (!show) {
@@ -152,6 +171,8 @@
 				return $i18n.t('Checking the machine');
 			case 'install':
 				return $i18n.t('Installing Open Terminal');
+			case 'packages':
+				return $i18n.t('Installing packages');
 			case 'configure':
 				return $i18n.t('Configuring');
 			case 'start':
@@ -163,7 +184,10 @@
 		}
 	}
 	// Follow `machines:progress` events for one machine until it is ready or fails.
-	function follow(machineId: string, onDone: (ok: boolean, message?: string) => void) {
+	function follow(
+		machineId: string,
+		onDone: (ok: boolean, message?: string, output?: string) => void
+	) {
 		stopListening?.();
 		steps = [];
 		running = true;
@@ -178,7 +202,8 @@
 			steps = [...steps.filter((step) => step !== data.step), data.step];
 			if (data.step === 'ready') {
 				stop();
-				onDone(true);
+				// A message here is a warning: ready, but packages are missing.
+				onDone(true, data.message, data.output);
 			}
 		};
 		const stop = () => {
@@ -313,7 +338,8 @@
 				host_key: hostKey!.host_key,
 				id: machine.id,
 				name: name.trim(),
-				version: openTerminalVersion.trim() || 'latest'
+				version: openTerminalVersion.trim() || 'latest',
+				...installForm
 			})
 		);
 	}
@@ -356,6 +382,7 @@
 					config: configuration(),
 					[kind]: {}
 				});
+				if (message) toast.warning(message);
 				show = false;
 			} catch (e) {
 				error = e instanceof Error ? e.message : String(e);
@@ -373,29 +400,53 @@
 	const authorizeCommand = (publicKey: string) =>
 		`mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '${publicKey}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`;
 	// Existing machines Open WebUI installed (SSH or this computer)
+	// Show what the machine has now: its version, packages, and any warning.
+	async function refreshManaged() {
+		const res = await getMachineConnections(localStorage.token).catch(() => null);
+		const updated = res?.MACHINE_CONNECTIONS?.find((c: any) => c.id === connection.id);
+		if (updated?.ssh) connection = { ...connection, ssh: updated.ssh };
+		if (updated?.local) connection = { ...connection, local: updated.local };
+	}
 	const upgrade = () =>
 		run(async () => {
+			installingPackages = false;
 			follow(connection.id, async (ok, message) => {
 				if (!ok) {
 					error = message ?? $i18n.t('Upgrade failed');
 					return;
 				}
-				toast.success($i18n.t('Machine upgraded'));
-				// Show the version that is now installed.
-				const res = await getMachineConnections(localStorage.token).catch(() => null);
-				const updated = res?.MACHINE_CONNECTIONS?.find((c: any) => c.id === connection.id);
-				if (updated?.ssh) connection = { ...connection, ssh: updated.ssh };
-				if (updated?.local) connection = { ...connection, local: updated.local };
+				if (message) toast.warning(message);
+				else toast.success($i18n.t('Machine upgraded'));
+				await refreshManaged();
 			});
 			try {
-				await upgradeMachine(
-					localStorage.token,
-					connection.id,
-					openTerminalVersion.trim() || 'latest'
-				);
+				await upgradeMachine(localStorage.token, connection.id, {
+					version: openTerminalVersion.trim() || 'latest',
+					...(sshMachine ? installForm : {})
+				});
 			} catch (e) {
 				stopListening?.();
 				throw e;
+			}
+		});
+	const installPackages = () =>
+		run(async () => {
+			installingPackages = true;
+			packagesResult = null;
+			follow(connection.id, async (ok, message, output) => {
+				installingPackages = false;
+				steps = [];
+				packagesResult = ok
+					? { text: output?.trim() || $i18n.t('Packages installed'), failed: false }
+					: { text: message ?? $i18n.t('Installation failed'), failed: true };
+				if (ok) await refreshManaged();
+			});
+			try {
+				await installMachinePackages(localStorage.token, connection.id, installForm);
+			} catch (e) {
+				stopListening?.();
+				installingPackages = false;
+				packagesResult = { text: e instanceof Error ? e.message : String(e), failed: true };
 			}
 		});
 	const restart = () =>
@@ -705,10 +756,63 @@
 			</div>
 		{/if}
 		{#if (installing && sshPhase === 'form') || managed}
+			{#if installingSSH || sshMachine}
+				<div class="flex items-center gap-2 text-xs">
+					<Tooltip
+						className="shrink-0"
+						placement="top-start"
+						content={$i18n.t(
+							'Installed with apt, using sudo without a password. "desktop" and "browser" add a desktop and Chrome; any other name is an apt package.'
+						)}
+					>
+						<label
+							for="machine-packages"
+							class="cursor-help text-base-500 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+							>{$i18n.t('Packages')}</label
+						>
+					</Tooltip>
+					<input
+						id="machine-packages"
+						class="w-full min-w-0 bg-transparent py-0.5 font-mono text-xs text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-100 dark:placeholder:text-base-700"
+						bind:value={toInstall}
+						placeholder="desktop browser ffmpeg"
+						pattern="\s*([a-z0-9][a-z0-9+.\-]*\s*)*"
+						autocomplete="off"
+						spellcheck="false"
+					/>
+					{#if managed}
+						<button
+							type="button"
+							class="{action} shrink-0"
+							disabled={busy || running || !installNames.length}
+							on:click={installPackages}>{$i18n.t('Install')}</button
+						>
+					{/if}
+				</div>
+				{#if installingPackages}
+					<div class="flex items-center gap-1.5 text-xs text-base-500" aria-live="polite">
+						<Spinner className="size-3" />{$i18n.t('Installing packages')}
+					</div>
+				{:else if packagesResult || managed?.warning}
+					<pre
+						role={packagesResult?.failed ? 'alert' : undefined}
+						class="max-h-32 overflow-auto whitespace-pre-wrap break-words font-mono text-xs {packagesResult &&
+						!packagesResult.failed
+							? 'text-base-500'
+							: 'text-base-700 dark:text-base-300'}">{packagesResult?.text ??
+							managed?.warning}</pre>
+				{/if}
+			{/if}
 			<div>
-				<label for="machine-folder" class="mb-0.5 block text-xs text-base-500"
-					>{$i18n.t('Folder')}</label
-				>
+				<div class="mb-0.5 flex text-xs text-base-500">
+					<Tooltip placement="top-start" content={$i18n.t('Where terminal sessions start.')}>
+						<label
+							for="machine-folder"
+							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+							>{$i18n.t('Folder')}</label
+						>
+					</Tooltip>
+				</div>
 				<input
 					id="machine-folder"
 					class={input}
@@ -719,12 +823,22 @@
 					autocomplete="off"
 					spellcheck="false"
 				/>
-				<p class="mt-1 text-xs text-base-500">{$i18n.t('Where terminal sessions start.')}</p>
 			</div>
 			<div>
-				<label for="open-terminal-version" class="mb-0.5 block text-xs text-base-500"
-					>{$i18n.t('Open Terminal version')}</label
-				>
+				<div class="mb-0.5 flex text-xs text-base-500">
+					<Tooltip
+						placement="top-start"
+						content={managed
+							? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
+							: $i18n.t('Leave empty for the latest release.')}
+					>
+						<label
+							for="open-terminal-version"
+							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+							>{$i18n.t('Open Terminal version')}</label
+						>
+					</Tooltip>
+				</div>
 				<input
 					id="open-terminal-version"
 					class="{input} font-mono"
@@ -733,11 +847,6 @@
 					pattern="latest|\d+\.\d+\.\d+"
 					autocomplete="off"
 				/>
-				<p class="mt-1 text-xs text-base-500">
-					{managed
-						? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
-						: $i18n.t('Leave empty for the latest release.')}
-				</p>
 			</div>
 			{#if installingLocal || localMachine}
 				<p class="text-xs text-base-500">
@@ -747,9 +856,9 @@
 				</p>
 			{/if}
 		{/if}
-		{#if sshPhase === 'installing' || running || steps.length}
+		{#if !installingPackages && (sshPhase === 'installing' || running || steps.length)}
 			<ol class="space-y-1 text-xs" aria-live="polite">
-				{#each SSH_STEPS as step}
+				{#each installSteps as step}
 					{@const index = steps.indexOf(step)}
 					{@const current = running && index === steps.length - 1}
 					<li
@@ -782,16 +891,6 @@
 				<option value="filesystem">{$i18n.t('Filesystem')}</option>
 			</select>
 		</div>
-		<Collapsible
-			title={$i18n.t('Access')}
-			buttonClassName="flex w-full py-1 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
-			chevronClassName="size-3.5"
-			chevronStrokeWidth="2"
-		>
-			<div slot="content" class="mt-2">
-				<AccessControl bind:accessGrants accessRoles={['read', 'write']} onChange={() => {}} />
-			</div>
-		</Collapsible>
 		<Collapsible
 			title={$i18n.t('Advanced')}
 			buttonClassName="flex w-full py-1 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
@@ -869,6 +968,16 @@
 						</p>
 					</div>
 				{/if}
+			</div>
+		</Collapsible>
+		<Collapsible
+			title={$i18n.t('Access')}
+			buttonClassName="flex w-full py-1 text-xs text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
+			chevronClassName="size-3.5"
+			chevronStrokeWidth="2"
+		>
+			<div slot="content" class="mt-2">
+				<AccessControl bind:accessGrants accessRoles={['read', 'write']} onChange={() => {}} />
 			</div>
 		</Collapsible>
 		<div class="flex items-center justify-between pt-3">

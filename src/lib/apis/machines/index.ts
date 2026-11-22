@@ -873,8 +873,11 @@ export type ManagedMachineInfo = {
 	folder?: string; // where terminal sessions start; empty is home
 	version?: string;
 	requested_version?: string; // 'latest' or an exact version
+	deps?: string[]; // installed with the machine by `open-terminal install-deps`, by name
+	packages?: string[]; // and extra apt packages
 	status?: 'installing' | 'ready' | 'error';
 	error?: string | null;
+	warning?: string | null; // the last install could not add the packages
 };
 
 export type SSHMachineInfo = ManagedMachineInfo &
@@ -958,7 +961,14 @@ export const installSSHKey = (
 /** Start installing Open Terminal. Progress arrives as `machines:progress` socket events. */
 export const installSSHMachine = (
 	token: string,
-	form: SSHTarget & { host_key: string; id: string; name: string; version?: string }
+	form: SSHTarget & {
+		host_key: string;
+		id: string;
+		name: string;
+		version?: string;
+		deps?: string[];
+		packages?: string[];
+	}
 ) => managedMachineRequest<{ id: string; status: string }>(token, '/ssh', 'POST', form);
 
 /** Where sessions on this computer start by default, and whether it is already added. */
@@ -971,13 +981,30 @@ export const installLocalMachine = (
 	form: { id: string; name?: string; version?: string; folder?: string }
 ) => managedMachineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
 
-/** Install the machine's Open Terminal again: `version` is 'latest' or an exact version (omit to keep the current choice). */
-export const upgradeMachine = (token: string, id: string, version?: string) =>
+/** Install the machine's Open Terminal again: `version` is 'latest' or an exact version. Omitted fields keep the current choice. */
+export const upgradeMachine = (
+	token: string,
+	id: string,
+	form?: { version?: string; deps?: string[]; packages?: string[] }
+) =>
 	managedMachineRequest<{ id: string; status: string }>(
 		token,
 		managedPath(id, '/upgrade'),
 		'POST',
-		version === undefined ? undefined : { version }
+		form
+	);
+
+/** Install system packages on the machine now. Progress arrives as `machines:progress` socket events. */
+export const installMachinePackages = (
+	token: string,
+	id: string,
+	form: { deps: string[]; packages: string[] }
+) =>
+	managedMachineRequest<{ id: string; status: string }>(
+		token,
+		managedPath(id, '/install'),
+		'POST',
+		form
 	);
 
 /** Change where terminal sessions start, then restart Open Terminal there. */
