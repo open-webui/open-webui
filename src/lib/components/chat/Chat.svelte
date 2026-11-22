@@ -305,10 +305,10 @@
 	let messagesRef: Messages | undefined;
 
 	let autoScroll = true;
-	let lastScrollTop = 0;
-	let isNearTop = true;
 	let processing = '';
 	let messagesContainerElement: HTMLDivElement;
+	$: lastScrollTop = messagesContainerElement?.scrollTop ?? 0;
+	$: isNearTop = lastScrollTop <= 100;
 
 	let showEventConfirmation = false;
 	let pendingUrlActions: { urls: string[]; call: boolean } | null = null;
@@ -6344,7 +6344,6 @@
 										scrollHeight - scrollTop <= clientHeight + 5 ||
 										(autoScroll && scrollTop >= lastScrollTop);
 									lastScrollTop = scrollTop;
-									isNearTop = scrollTop <= 100;
 								}}
 							>
 								<div class=" h-full w-full flex flex-col">
