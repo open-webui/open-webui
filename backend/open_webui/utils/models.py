@@ -515,6 +515,8 @@ async def check_model_access(user, model, model_info=None, db=None):
     if model_info is None or model_info.id != model.get('id'):
         model_info = await Models.get_model_by_id(model.get('id'), db=db)
     if not model_info:
+        if model.get('router') and user.role == 'admin':
+            return
         log.warning(
             'Model access denied: user_id=%r model_id=%r reason=model_unregistered',
             user.id,
