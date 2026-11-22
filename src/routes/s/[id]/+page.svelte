@@ -7,7 +7,12 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 
 	import { settings, chatId, WEBUI_NAME, models, config, user as sessionUser } from '$lib/stores';
-	import { convertMessagesToHistory, createMessagesList, getDeepestChildId } from '$lib/utils';
+	import {
+		convertMessagesToHistory,
+		createMessagesList,
+		getDeepestChildId,
+		sanitizeHistory
+	} from '$lib/utils';
 
 	import { getChatByShareId, cloneSharedChatById, forkChatById } from '$lib/apis/chats';
 
@@ -136,6 +141,7 @@
 					(chatContent?.history ?? undefined) !== undefined
 						? chatContent.history
 						: convertMessagesToHistory(chatContent.messages);
+				sanitizeHistory(history);
 				title = chatContent.title;
 
 				autoScroll = true;

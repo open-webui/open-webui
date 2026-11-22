@@ -536,6 +536,31 @@ export const setSubagentsConfig = async (token: string, config: object) => {
 	return res.json();
 };
 
+export const getRouterModelsConfig = async (token: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/router_models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const setRouterModelsConfig = async (token: string, config: object) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/router_models`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const setDefaultPromptSuggestions = async (
 	token: string,
 	promptSuggestions: any[] | null,

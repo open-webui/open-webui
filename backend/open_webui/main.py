@@ -664,12 +664,6 @@ async def initialize_runtime_config(app: FastAPI):
                         f'{type(e).__name__}: {e}' if str(e) else type(e).__name__,
                     )
 
-    arena_models = await Config.get('evaluation.arena.models', []) or []
-    if any('access_control' in m.get('meta', {}) for m in arena_models):
-        for model in arena_models:
-            migrate_access_control(model.get('meta', {}))
-        await Config.upsert({'evaluation.arena.models': arena_models})
-
     app.state.EMBEDDING_FUNCTION = None
     app.state.RERANKING_FUNCTION = None
     app.state.ef = None
@@ -1080,7 +1074,7 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
 
     This handler:
       - Performs user/model checks and dispatches to the correct backend.
-      - Supports OpenAI, Ollama, arena models, pipelines, and any compatible provider.
+      - Supports OpenAI, Ollama, router models, pipelines, and any compatible provider.
 
     Args:
         request (Request): Request context.

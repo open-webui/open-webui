@@ -4031,7 +4031,18 @@
 	};
 
 	const chatCompletionEventHandler = async (data, message, chatId, shared = false) => {
-		const { id, done, choices, content, output, sources, selected_model_id, error, usage } = data;
+		const {
+			id,
+			done,
+			choices,
+			content,
+			output,
+			sources,
+			selected_model_id,
+			strategy,
+			error,
+			usage
+		} = data;
 
 		if (error) {
 			if (shared) message.error = error;
@@ -4090,7 +4101,7 @@
 
 		if (selected_model_id) {
 			message.selectedModelId = selected_model_id;
-			message.arena = true;
+			message.strategy = strategy ?? null;
 		}
 
 		if (usage) {

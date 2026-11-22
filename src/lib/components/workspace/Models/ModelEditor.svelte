@@ -23,9 +23,14 @@
 		functions,
 		user,
 		settings,
-		visibleControls
+		visibleControls,
+		imageModels,
+		videoModels
 	} from '$lib/stores';
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
+	import { getImageModels } from '$lib/apis/images';
+	import { getVideoModels } from '$lib/apis/videos';
+	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -272,6 +277,31 @@
 	let imageModelId = '';
 	let videoModelId = '';
 	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
+	let terminalServers: TerminalServer[] = [];
+
+	$: showMachine = capabilities.terminal && hasTerminal;
+	$: machineSummary = terminalId
+		? (terminalServers.find((t) => t.id === terminalId)?.name ?? terminalId)
+		: $i18n.t('None');
+
+	const mediaModelName = (list: any[] | null, id: string) => {
+		if (!id) return $i18n.t('Default');
+		return (list ?? []).find((m) => m.id === id)?.name ?? $i18n.t('Unavailable');
+	};
+	$: showImageModel =
+		capabilities.image_generation &&
+		$config?.features?.enable_image_generation &&
+		(($imageModels ?? []).length > 1 || !!imageModelId);
+	$: showVideoModel =
+		capabilities.video_generation &&
+		$config?.features?.enable_video_generation &&
+		(($videoModels ?? []).length > 1 || !!videoModelId);
+	$: mediaSummary = [
+		showImageModel ? mediaModelName($imageModels, imageModelId) : null,
+		showVideoModel ? mediaModelName($videoModels, videoModelId) : null
+	]
+		.filter(Boolean)
+		.join(' · ');
 	let tts = { voice: '' };
 	let voice = { voice: '' };
 	export let suggestionTags: { name: string }[] = [];
@@ -381,7 +411,7 @@
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
 					(!baseModel?.preset || (edit && baseModel.id === info.base_model_id)) &&
-					baseModel?.owned_by !== 'arena' &&
+					baseModel?.owned_by !== 'router' &&
 					!(baseModel?.owner_id ?? false) &&
 					(includeHidden ||
 						!(baseModel?.info?.meta?.hidden ?? false) ||
@@ -718,7 +748,7 @@
 					.filter(
 						(m) =>
 							m.owned_by !== 'terminal' &&
-							((!m?.preset && !(m?.arena ?? false)) || (edit && m.id === model.base_model_id))
+							((!m?.preset && !(m?.router ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
 
@@ -811,6 +841,22 @@
 		}
 		if (voices.length === 0) {
 			await loadVoices();
+		}
+
+		if ($config?.features?.enable_image_generation && $imageModels === null) {
+			getImageModels(localStorage.token)
+				.catch(() => [])
+				.then((res) => imageModels.set(res));
+		}
+		if ($config?.features?.enable_video_generation && $videoModels === null) {
+			getVideoModels(localStorage.token)
+				.catch(() => [])
+				.then((res) => videoModels.set(res));
+		}
+		if (hasTerminal) {
+			getTerminalServers(localStorage.token)
+				.then((res) => (terminalServers = res ?? []))
+				.catch(() => {});
 		}
 
 		// Fetch admin-configured default model metadata so the editor
@@ -1856,14 +1902,32 @@
 											/>
 										</div>
 									</ModelSettingsSection>
-									{#if capabilities.terminal && hasTerminal}
-										<TerminalSelector bind:terminalId />
+									{#if showImageModel || showVideoModel}
+										<ModelSettingsSection
+											label={$i18n.t('Images & Videos')}
+											description={$i18n.t(
+												'Choose the image and video models used for chats with this model, unless the user picks another.'
+											)}
+											summary={mediaSummary}
+										>
+											{#if showImageModel}
+												<ImageModelSelector bind:imageModelId label={$i18n.t('Image model')} />
+											{/if}
+											{#if showVideoModel}
+												<VideoModelSelector bind:videoModelId label={$i18n.t('Video model')} />
+											{/if}
+										</ModelSettingsSection>
 									{/if}
-									{#if capabilities.image_generation && $config?.features?.enable_image_generation}
-										<ImageModelSelector bind:imageModelId />
-									{/if}
-									{#if capabilities.video_generation && $config?.features?.enable_video_generation}
-										<VideoModelSelector bind:videoModelId />
+									{#if showMachine}
+										<ModelSettingsSection
+											label={$i18n.t('Machine')}
+											description={$i18n.t(
+												'Choose the machine selected by default for chats with this model.'
+											)}
+											summary={machineSummary}
+										>
+											<TerminalSelector bind:terminalId label={$i18n.t('Default')} />
+										</ModelSettingsSection>
 									{/if}
 								</div>
 							</fieldset>

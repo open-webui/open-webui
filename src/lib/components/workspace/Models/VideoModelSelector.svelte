@@ -10,6 +10,7 @@
 	const i18n = getContext<any>('i18n');
 
 	export let videoModelId: string = '';
+	export let label = '';
 	export let onChange: () => void = () => {};
 
 	let show = false;
@@ -53,7 +54,7 @@
 		>
 			<span class="text-base-600 dark:text-base-400"
 				><ModelSettingsLabel
-					label={$i18n.t('Default video model')}
+					label={label || $i18n.t('Default video model')}
 					description={$i18n.t(
 						'Choose the video model used for chats with this model, unless the user picks another.'
 					)}

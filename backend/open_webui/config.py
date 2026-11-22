@@ -2141,31 +2141,15 @@ ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
-ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'False').lower() == 'true'
 try:
-    evaluation_arena_models = JSONCodec.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
-    if not isinstance(evaluation_arena_models, list) or not all(
-        isinstance(model, dict) for model in evaluation_arena_models
-    ):
-        raise ValueError('EVALUATION_ARENA_MODELS must be a JSON list of objects')
+    router_models = JSONCodec.loads(os.getenv('ROUTER_MODELS', '[]'))
+    if not isinstance(router_models, list) or not all(isinstance(model, dict) for model in router_models):
+        raise ValueError('ROUTER_MODELS must be a JSON list of objects')
 except Exception as e:
-    log.exception(f'Error loading EVALUATION_ARENA_MODELS: {e}')
-    evaluation_arena_models = []
+    log.exception(f'Error loading ROUTER_MODELS: {e}')
+    router_models = []
 
-EVALUATION_ARENA_MODELS = evaluation_arena_models
-
-DEFAULT_ARENA_MODEL = {
-    'id': 'arena-model',
-    'name': 'Arena Model',
-    'meta': {
-        # LICENSE covers this Open WebUI fallback logo.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        'profile_image_url': '/favicon.png',
-        'description': 'Submit your questions to anonymous AI chatbots and vote on the best response.',
-        'model_ids': None,
-    },
-}
+ROUTER_MODELS = router_models
 
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 
@@ -3317,8 +3301,7 @@ DEFAULT_CONFIG = {
     'comments.enable': ENABLE_COMMENTS,
     'notifications.enable': ENABLE_NOTIFICATIONS,
     'users.enable_status': ENABLE_USER_STATUS,
-    'evaluation.arena.enable': ENABLE_EVALUATION_ARENA_MODELS,
-    'evaluation.arena.models': EVALUATION_ARENA_MODELS,
+    'router.models': ROUTER_MODELS,
     'webhook_url': WEBHOOK_URL,
     'ui.enable_community_sharing': ENABLE_COMMUNITY_SHARING,
     'ui.enable_message_rating': ENABLE_MESSAGE_RATING,

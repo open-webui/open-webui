@@ -258,6 +258,11 @@ export const sanitizeHistory = (history) => {
 	for (const [id, message] of Object.entries(history.messages)) {
 		if (message.id !== id) message.id = id;
 		if (!Array.isArray(message.childrenIds)) message.childrenIds = [];
+		// Messages from arena models: a random router pick.
+		if ('arena' in message) {
+			if (message.arena && !message.strategy) message.strategy = 'random';
+			delete message.arena;
+		}
 	}
 
 	// Build reverse lookup: parent, indexed by child id

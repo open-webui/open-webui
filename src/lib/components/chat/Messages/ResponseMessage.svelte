@@ -206,6 +206,13 @@
 		? resolveLocalizedModelName(model, $i18n.language)
 		: message.modelName || message.model;
 	$: model = $models.find((m) => m.id === message.model);
+	$: selectedModel = message?.selectedModelId
+		? $models.find((m) => m.id === message.selectedModelId)
+		: null;
+	$: selectedModelName = selectedModel
+		? resolveLocalizedModelName(selectedModel, $i18n.language)
+		: message?.selectedModelId;
+	$: showSelectedModel = !!message?.selectedModelId && message?.strategy !== 'random';
 	$: responseTimestamp = message?.meta?.response_ended_at ?? message?.timestamp;
 
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
@@ -531,7 +538,7 @@
 					: {})
 			},
 			meta: {
-				arena: message ? message.arena : false,
+				strategy: message?.strategy ?? null,
 				model_id: message.model,
 				message_id: message.id,
 				message_index: messages.length,
@@ -589,12 +596,15 @@
 
 			if (!updatedMessage.annotation?.tags && (message?.content ?? '') !== '') {
 				// attempt to generate tags
-				const tags = await generateTags(localStorage.token, message.model, messages, chatId).catch(
-					(error) => {
-						console.error(error);
-						return [];
-					}
-				);
+				const tags = await generateTags(
+					localStorage.token,
+					message?.selectedModelId ?? message.model,
+					messages,
+					chatId
+				).catch((error) => {
+					console.error(error);
+					return [];
+				});
 				console.log(tags);
 
 				if (tags) {
@@ -723,10 +733,18 @@
 			{#if !compactPreview}
 				<Name>
 					<Tooltip content={localizedModelName} placement="top-start">
-						<span id="response-message-model-name" class="line-clamp-1 text-base-1000 dark:text-base-0">
+						<span
+							id="response-message-model-name"
+							class="line-clamp-1 text-base-1000 dark:text-base-0"
+						>
 							{localizedModelName}
 						</span>
 					</Tooltip>
+					{#if showSelectedModel}
+						<span class="line-clamp-1 text-xs text-base-500">
+							{$i18n.t('Answered by {{NAME}}', { NAME: selectedModelName })}
+						</span>
+					{/if}
 				</Name>
 			{/if}
 

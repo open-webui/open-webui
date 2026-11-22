@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 import sys
 import time
 from typing import Any, Optional
@@ -37,6 +36,7 @@ from open_webui.utils.response import (
     convert_ollama_response_to_chat_completions,
     convert_ollama_stream_to_chat_completions,
 )
+from open_webui.utils.router_models import resolve_router_model
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -144,41 +144,24 @@ async def generate_chat_completion(
         except Exception as e:
             raise e
 
-    # Arena model — sub-model was already resolved by process_chat_payload.
-    # Inject selected_model_id into the response for the frontend.
+    # Router model: target already resolved by process_chat_payload.
+    # Inject selected_model_id and strategy into the response for the frontend.
     metadata = form_data.get('metadata', {})
     selected_model_id = metadata.pop('selected_model_id', None)
-    # Also clear from request.state.metadata to prevent the merge at
-    # lines 177-179 from re-adding it on the recursive call.
+    strategy = metadata.pop('strategy', None)
+    # Also clear from request.state.metadata so the merge on the recursive
+    # call doesn't re-add them.
     if hasattr(request.state, 'metadata'):
         request.state.metadata.pop('selected_model_id', None)
+        request.state.metadata.pop('strategy', None)
 
-    # Fallback: if generate_chat_completion is called with an arena model
-    # from a path that did NOT go through process_chat_payload (e.g.,
-    # background tasks for title/follow-up/tags generation), resolve now.
-    if not selected_model_id and model.get('owned_by') == 'arena':
-        model_ids = model.get('info', {}).get('meta', {}).get('model_ids')
-        filter_mode = model.get('info', {}).get('meta', {}).get('filter_mode')
-        if model_ids and filter_mode == 'exclude':
-            model_ids = [
-                available_model['id']
-                for available_model in list(request.app.state.MODELS.values())
-                if available_model.get('owned_by') != 'arena' and available_model['id'] not in model_ids
-            ]
-
-        if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
-        else:
-            model_ids = [
-                available_model['id']
-                for available_model in list(request.app.state.MODELS.values())
-                if available_model.get('owned_by') != 'arena'
-            ]
-            selected_model_id = random.choice(model_ids)
-
+    # Fallback for paths that skip process_chat_payload (title, tags, follow-ups),
+    # so background tasks for sensitive chats are routed too.
+    if not selected_model_id and model.get('owned_by') == 'router':
+        selected_model_id, strategy = await resolve_router_model(model['id'], form_data, user)
         form_data['model'] = selected_model_id
 
-        # bypass_filter recursion below skips the line-200 check; gate the resolved model here.
+        # bypass_filter recursion below skips the access check; gate the resolved model here.
         if not bypass_filter and user.role == 'user':
             selected_model = request.app.state.MODELS.get(selected_model_id)
             if selected_model:
@@ -188,7 +171,7 @@ async def generate_chat_completion(
         if form_data.get('stream') == True:
 
             async def stream_wrapper(stream):
-                yield f'data: {JSONCodec.dumps({"selected_model_id": selected_model_id})}\n\n'
+                yield f'data: {JSONCodec.dumps({"selected_model_id": selected_model_id, "strategy": strategy})}\n\n'
                 async for chunk in stream:
                     yield chunk
 
@@ -217,7 +200,7 @@ async def generate_chat_completion(
             )
             if not isinstance(response, dict):
                 return response
-            return {**response, 'selected_model_id': selected_model_id}
+            return {**response, 'selected_model_id': selected_model_id, 'strategy': strategy}
 
     if model.get('pipe'):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter

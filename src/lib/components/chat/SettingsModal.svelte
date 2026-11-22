@@ -46,7 +46,6 @@
 	import AdminConnections from '$lib/components/admin/Settings/Connections.svelte';
 	import AdminModels from '$lib/components/admin/Settings/Models.svelte';
 	import AdminSubagents from '$lib/components/admin/Settings/Subagents.svelte';
-	import AdminEvaluations from '$lib/components/admin/Settings/Evaluations.svelte';
 	import AdminAnalytics from '$lib/components/admin/Analytics.svelte';
 	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
 	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
@@ -168,7 +167,6 @@
 		'admin:web': $i18n.t('Tools'),
 		'admin:code-execution': $i18n.t('Tools'),
 		'admin:pipelines': $i18n.t('Tools'),
-		'admin:evaluations': $i18n.t('Quality'),
 		'admin:analytics': $i18n.t('Quality'),
 		'admin:db': $i18n.t('Data')
 	};
@@ -344,12 +342,6 @@
 			titleKey: 'settings.admin.analytics.title',
 			title: $i18n.t('settings.admin.analytics.title'),
 			searchPrefixes: ['settings.admin.analytics.']
-		},
-		{
-			id: 'admin:evaluations',
-			titleKey: 'settings.admin.evaluations.title',
-			title: $i18n.t('settings.admin.evaluations.title'),
-			searchPrefixes: ['settings.admin.evaluations.']
 		},
 		{
 			id: 'admin:db',
@@ -871,8 +863,6 @@
 				<AdminModels bind:tabState />
 			{:else if selectedTab === 'admin:subagents'}
 				<AdminSubagents />
-			{:else if selectedTab === 'admin:evaluations'}
-				<AdminEvaluations />
 			{:else if selectedTab === 'admin:analytics'}
 				<AdminAnalytics />
 			{:else if selectedTab === 'admin:integrations'}

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+import re
+from typing import Any, Literal, Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,6 +11,7 @@ from open_webui.config import BannerModel
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
+from open_webui.models.models import Models
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
@@ -27,13 +29,14 @@ from open_webui.utils.oauth import (
     recover_oauth_client_metadata,
     resolve_oauth_client_info,
 )
+from open_webui.utils.tool_search import ToolSearchError, validate_decisions_config
 from open_webui.utils.tools import (
     get_tool_server_data,
     get_tool_server_url,
     set_terminal_servers,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 router = APIRouter()
 
@@ -74,6 +77,9 @@ SUBAGENTS_CONFIG_KEYS = {
     'SUBAGENTS_MAX_ITERATIONS': 'subagents.max_iterations',
     'SUBAGENTS_MAX_OUTPUT': 'subagents.max_output',
     'SUBAGENTS_SYSTEM_PROMPT': 'subagents.system_prompt',
+}
+ROUTER_MODELS_CONFIG_KEYS = {
+    'ROUTER_MODELS': 'router.models',
 }
 
 
@@ -712,6 +718,148 @@ async def set_subagents_config(
         subject_id='subagents',
         subject_type='config',
         data={'enabled': values.get('ENABLE_SUBAGENTS')},
+    )
+    return values
+
+
+class RouterModelRoute(BaseModel):
+    model_id: str
+    condition: str | None = None
+    pattern: str | None = None
+    model_config = ConfigDict(extra='forbid')
+
+    @field_validator('condition', 'pattern', mode='before')
+    @classmethod
+    def normalize_empty(cls, value):
+        return (value or '').strip() or None
+
+    @model_validator(mode='after')
+    def validate_match(self):
+        if self.condition and self.pattern:
+            raise ValueError('A route can have a condition or a pattern, not both.')
+        if self.pattern:
+            try:
+                re.compile(self.pattern)
+            except re.error as e:
+                raise ValueError(f'Invalid pattern: {e}')
+        return self
+
+
+class RouterModelMeta(BaseModel):
+    routes: list[RouterModelRoute] = Field(min_length=1)
+    strategy: Literal['first', 'random'] = 'first'
+    model_config = ConfigDict(extra='allow')
+
+    @model_validator(mode='before')
+    @classmethod
+    def drop_access_grants(cls, data):
+        # Access lives on the model row (/models/model/access/update), like any model.
+        if isinstance(data, dict):
+            data = {key: value for key, value in data.items() if key != 'access_grants'}
+        return data
+
+    @field_validator('routes')
+    @classmethod
+    def group_routes(cls, routes):
+        # Stored in the order they're evaluated: patterns, conditions, defaults.
+        return (
+            [route for route in routes if route.pattern]
+            + [route for route in routes if route.condition]
+            + [route for route in routes if not (route.pattern or route.condition)]
+        )
+
+
+class RouterModelDecisionsConfig(BaseModel):
+    api_base_url: str = 'https://api.openai.com/v1'
+    api_key: str = ''
+    model: str = 'gpt-6-luna'
+    threshold: float = Field(default=0.5, ge=0, le=1)
+    prompt: str = ''
+
+
+class RouterModelConfig(BaseModel):
+    decisions: RouterModelDecisionsConfig | None = None
+    model_config = ConfigDict(extra='allow')
+
+
+class RouterModel(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    meta: RouterModelMeta
+    config: RouterModelConfig = Field(default_factory=RouterModelConfig)
+
+    @model_validator(mode='after')
+    def validate_decisions(self):
+        if any(route.condition for route in self.meta.routes):
+            decisions = self.config.decisions
+            if not decisions:
+                raise ValueError('Routes with a condition need a Decisions API.')
+            try:
+                validate_decisions_config(decisions.api_base_url.strip(), decisions.model.strip())
+            except ToolSearchError as e:
+                raise ValueError(str(e))
+        else:
+            self.config.decisions = None
+        return self
+
+
+class RouterModelsConfigForm(BaseModel):
+    ROUTER_MODELS: list[RouterModel]
+
+    @field_validator('ROUTER_MODELS')
+    @classmethod
+    def validate_unique_ids(cls, value):
+        ids = [model.id for model in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Router model IDs must be unique.')
+        return value
+
+
+@router.get('/router_models', response_model=RouterModelsConfigForm)
+async def get_router_models_config(user=Depends(get_admin_user)):
+    return await get_config_values(ROUTER_MODELS_CONFIG_KEYS)
+
+
+@router.post('/router_models', response_model=RouterModelsConfigForm)
+async def set_router_models_config(
+    request: Request,
+    form_data: RouterModelsConfigForm,
+    user=Depends(get_admin_user),
+):
+    from open_webui.utils.models import get_all_models
+
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+    models = request.app.state.MODELS
+    router_model_ids = {model.id for model in form_data.ROUTER_MODELS}
+
+    for router_model in form_data.ROUTER_MODELS:
+        existing = models.get(router_model.id)
+        if existing and existing.get('owned_by') != 'router':
+            raise HTTPException(400, f'Model ID "{router_model.id}" is already in use.')
+        for route in router_model.meta.routes:
+            if route.model_id in router_model_ids or (models.get(route.model_id) or {}).get('owned_by') == 'router':
+                raise HTTPException(400, 'A route cannot use another router model.')
+
+    previous_ids = {model.get('id') for model in await Config.get('router.models', []) or []}
+    await Config.upsert(
+        config_updates(
+            form_data.model_dump(exclude_none=True),
+            ROUTER_MODELS_CONFIG_KEYS,
+        )
+    )
+    # A deleted router model takes its model row (and access grants) with it.
+    for model_id in previous_ids - router_model_ids:
+        if await Models.get_model_by_id(model_id):
+            await Models.delete_model_by_id(model_id)
+    values = await get_config_values(ROUTER_MODELS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='router_models',
+        subject_type='config',
+        data={'count': len(values.get('ROUTER_MODELS') or [])},
     )
     return values
 

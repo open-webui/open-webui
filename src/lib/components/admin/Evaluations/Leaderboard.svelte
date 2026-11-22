@@ -50,7 +50,7 @@
 			const modelMap = new Map(($models ?? []).map((m) => [m.id, m]));
 
 			const activeModels = $models
-				.filter((m) => m?.owned_by !== 'arena' && !m?.info?.meta?.hidden)
+				.filter((m) => m?.owned_by !== 'router' && !m?.info?.meta?.hidden)
 				.map((model) => {
 					const s = statsMap.get(model.id);
 					return {

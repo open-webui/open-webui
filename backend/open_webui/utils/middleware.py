@@ -8,7 +8,6 @@ import json
 import logging
 import mimetypes
 import os
-import random
 import re
 import sys
 import textwrap
@@ -136,6 +135,7 @@ from open_webui.utils.misc import (
     set_last_user_message_content,
     strip_empty_content_blocks,
 )
+from open_webui.utils.models import check_model_access
 from open_webui.utils.oauth import get_system_oauth_token
 from open_webui.utils.payload import apply_params_to_form_data, apply_system_prompt_to_body
 from open_webui.utils.plugin import load_function_module_by_id
@@ -147,6 +147,7 @@ from open_webui.utils.response import (
     normalize_usage,
     update_usage_snapshot,
 )
+from open_webui.utils.router_models import resolve_router_model
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skills import (
     apply_skills_create_prompt,
@@ -2046,34 +2047,21 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # -> Chat Code Interpreter (Form Data Update) -> (Default) Chat Tools Function Calling
     # -> Chat Files
 
-    # Arena model resolution — pick the sub-model now so all downstream
+    # Router model resolution: pick the target model now so all downstream
     # processing (knowledge, capabilities, tools, params) uses its settings
-    # instead of the empty arena wrapper.
-    if model.get('owned_by') == 'arena':
-        arena_model_ids = model.get('info', {}).get('meta', {}).get('model_ids')
-        arena_filter_mode = model.get('info', {}).get('meta', {}).get('filter_mode')
-        if arena_model_ids and arena_filter_mode == 'exclude':
-            arena_model_ids = [
-                available_model['id']
-                for available_model in request.app.state.MODELS.values()
-                if available_model.get('owned_by') != 'arena' and available_model['id'] not in arena_model_ids
-            ]
-
-        if isinstance(arena_model_ids, list) and arena_model_ids:
-            selected_model_id = random.choice(arena_model_ids)
-        else:
-            arena_model_ids = [
-                available_model['id']
-                for available_model in request.app.state.MODELS.values()
-                if available_model.get('owned_by') != 'arena'
-            ]
-            selected_model_id = random.choice(arena_model_ids)
-
+    # instead of the empty router wrapper.
+    if model.get('owned_by') == 'router':
+        selected_model_id, strategy = await resolve_router_model(model['id'], form_data, user)
         selected_model = request.app.state.MODELS.get(selected_model_id)
-        if selected_model:
-            model = selected_model
-            form_data['model'] = selected_model_id
-            metadata['selected_model_id'] = selected_model_id
+        if not selected_model:
+            raise HTTPException(status_code=404, detail='Model not found')
+        if user.role == 'user':
+            await check_model_access(user, selected_model)
+
+        model = selected_model
+        form_data['model'] = selected_model_id
+        metadata['selected_model_id'] = selected_model_id
+        metadata['strategy'] = strategy
 
     payload_tools = form_data.get('tools', None)  # snapshot before filters
     form_data = apply_params_to_form_data(form_data, model)
@@ -4098,6 +4086,7 @@ async def non_streaming_chat_response_handler(response, ctx):
                     metadata['message_id'],
                     {
                         'selectedModelId': response_data['selected_model_id'],
+                        'strategy': response_data.get('strategy'),
                     },
                     touch=False,
                 )
@@ -4971,6 +4960,7 @@ async def streaming_chat_response_handler(response, ctx):
                                             metadata['message_id'],
                                             {
                                                 'selectedModelId': form_data['model'],
+                                                'strategy': data.get('strategy'),
                                             },
                                             touch=False,
                                         )

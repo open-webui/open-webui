@@ -198,12 +198,15 @@
 									selectItem(item);
 								}}
 							>
-								<span class="min-w-0 flex-1">
-									<span class="block truncate"
+								<span
+									class="flex min-w-0 flex-1 items-baseline gap-1.5"
+									title={itemDescription || undefined}
+								>
+									<span class="max-w-full shrink-0 truncate"
 										>{resolveLocalizedResource(item, $i18n.language)}</span
 									>
 									{#if itemDescription}
-										<span class="block truncate text-base-500 dark:text-base-400"
+										<span class="min-w-0 truncate text-base-500 dark:text-base-400"
 											>{itemDescription}</span
 										>
 									{/if}

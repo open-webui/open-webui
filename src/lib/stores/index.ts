@@ -234,7 +234,7 @@ export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 
 export const isLastActiveTab = writable(true);
 
-export type Model = OpenAIModel | OllamaModel | AgentModel;
+export type Model = OpenAIModel | OllamaModel | AgentModel | RouterModel;
 
 export interface AgentModel extends BaseModel {
 	owned_by: 'terminal';
@@ -250,7 +250,7 @@ type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena' | 'terminal';
+	owned_by: 'ollama' | 'openai' | 'router' | 'terminal';
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -260,6 +260,11 @@ export interface OpenAIModel extends BaseModel {
 	// Set on the user's own connections, which the server reaches through their Tether.
 	owner_id?: string;
 	base_url?: string;
+}
+
+export interface RouterModel extends BaseModel {
+	owned_by: 'router';
+	router: true;
 }
 
 export interface OllamaModel extends BaseModel {

@@ -38,7 +38,7 @@
 		$user &&
 		model?.id &&
 		!model?.owner_id &&
-		!model?.arena &&
+		!model?.router &&
 		(model?.info || $user?.role === 'admin');
 </script>
 

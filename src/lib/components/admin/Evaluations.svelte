@@ -39,7 +39,7 @@
 		const entries = res?.entries ?? [];
 		const modelMap = new Map(($_models ?? []).map((model) => [model.id, model]));
 		const activeModelCount = ($_models ?? []).filter(
-			(model) => model?.owned_by !== 'arena' && !model?.info?.meta?.hidden
+			(model) => model?.owned_by !== 'router' && !model?.info?.meta?.hidden
 		).length;
 		const evaluatedModelCount = entries.filter((entry) => !modelMap.has(entry.model_id)).length;
 

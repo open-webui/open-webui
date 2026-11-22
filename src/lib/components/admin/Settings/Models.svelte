@@ -46,6 +46,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ManageModelsModal from './Models/ManageModelsModal.svelte';
 	import ModelDefaultsPanel from './Models/ModelDefaultsPanel.svelte';
+	import RouterModelsPanel from './Models/RouterModelsPanel.svelte';
 	import ModelMenu from '$lib/components/admin/Settings/Models/ModelMenu.svelte';
 	import EllipsisHorizontal from '$lib/components/icons/EllipsisHorizontal.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -71,7 +72,7 @@
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
-	type ModelListItem = { id: string; name?: string };
+	type ModelListItem = { id: string; name?: string; owned_by?: string };
 
 	let shiftKey = false;
 
@@ -169,7 +170,7 @@
 				if (viewOption === 'unavailable') return !availableModelIds.has(m.id) && !isPresetModel(m);
 				if (viewOption === 'base') return !isPresetModel(m);
 				if (viewOption === 'workspace') return isPresetModel(m);
-				if (viewOption === 'arena') return m?.owned_by === 'arena';
+				if (viewOption === 'router') return m?.owned_by === 'router';
 				if (viewOption === 'enabled') return m?.is_active ?? true;
 				if (viewOption === 'disabled') return !(m?.is_active ?? true);
 				if (viewOption === 'visible') return !(m?.meta?.hidden ?? false);
@@ -294,7 +295,7 @@
 		}
 
 		allModels = (await getModels(localStorage.token)).filter(
-			(model: any) => model.owned_by !== 'terminal'
+			(model: ModelListItem) => model.owned_by !== 'terminal'
 		);
 
 		const providerModels = await getModels(localStorage.token, true);
@@ -328,7 +329,7 @@
 		modelOrderList = [
 			...modelOrderList.filter((id) => models.some((model) => model.id === id)),
 			...models
-				.map((model) => model.id)
+				.map((model: ModelListItem) => model.id)
 				.filter((id) => !modelOrderList.includes(id))
 				.sort((a, b) => a.localeCompare(b))
 		];
@@ -647,7 +648,14 @@
 			? (await exportModels(localStorage.token, [model.id]))[0]
 			: getFullModel(model);
 
+	let routerModelsPanel: RouterModelsPanel;
+
 	const openModelHandler = async (model: any) => {
+		if (model?.owned_by === 'router') {
+			await routerModelsPanel?.openModel(model.id);
+			return;
+		}
+
 		if (isPresetModel(model)) {
 			showSettings.set(false);
 			await goto(`/workspace/models/edit?id=${encodeURIComponent(model.id)}`);
@@ -810,12 +818,6 @@
 			{/if}
 
 			<div class="flex min-h-0 flex-1 flex-col space-y-1">
-				<ModelDefaultsPanel
-					bind:this={modelDefaultsPanel}
-					bind:dirty={modelDefaultsDirty}
-					initHandler={init}
-				/>
-
 				<div class="flex h-8 shrink-0 items-center w-full gap-2">
 					<div class="flex min-w-0 flex-1 items-center">
 						<div class=" self-center ml-1 mr-3">
@@ -1301,6 +1303,16 @@
 							</div>
 						</div>
 					{/if}
+				</div>
+
+				<div class="shrink-0 space-y-1 pt-2">
+					<RouterModelsPanel bind:this={routerModelsPanel} initHandler={init} />
+
+					<ModelDefaultsPanel
+						bind:this={modelDefaultsPanel}
+						bind:dirty={modelDefaultsDirty}
+						initHandler={init}
+					/>
 				</div>
 
 				<div class="flex justify-end pt-6 text-sm font-normal">
