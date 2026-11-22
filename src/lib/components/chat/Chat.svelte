@@ -1104,7 +1104,7 @@
 	const initEmbeddedDraft = async () => {
 		const signal = startChatLoad();
 		modelDefaults = null;
-		machineContext = null;
+		machineContext = embeddedDraft?.machineContext ?? null;
 		clearTimeout(saveControlsTimer);
 		await saveControls();
 
@@ -1149,7 +1149,6 @@
 		if (embeddedDraft?.controls) {
 			chatVariables = embeddedDraft.chatVariables ?? {};
 			selectedMachineId.set(embeddedDraft.machineId ?? null);
-			machineContext = embeddedDraft.machineContext ?? null;
 			applyChatInputControls(embeddedDraft.controls);
 		}
 		await setDefaults(!!embeddedDraft?.controls);
