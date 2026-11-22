@@ -41,7 +41,14 @@ OFFICE365_TOOLS = frozenset(
     }
 )
 
-RESEARCH_TOOLS = frozenset({'start_founder_research', 'get_founder_research'})
+RESEARCH_TOOLS = frozenset(
+    {
+        'start_founder_research',
+        'get_founder_research',
+        'start_disposable_task',
+        'get_disposable_task',
+    }
+)
 
 PORTFOLIO_DOCUMENT_TOOLS = frozenset(
     {
