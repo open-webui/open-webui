@@ -2,7 +2,6 @@ import type { ResourceComment } from '$lib/apis/comments';
 import type { Writable } from 'svelte/store';
 import { v4 as uuidv4 } from 'uuid';
 import sha256 from 'js-sha256';
-import { parse as parseYaml } from 'yaml';
 import DOMPurify, { type UponSanitizeAttributeHookEvent } from 'dompurify';
 import { WEBUI_BASE_URL } from '$lib/constants';
 import type { FileNavOpenRequest } from '$lib/stores';
@@ -2542,18 +2541,6 @@ export const getCodeBlockContents = (content: string): object => {
 			}))
 	};
 };
-export const parseFrontmatter = (content: string): Record<string, unknown> => {
-	const match = content.match(/^\uFEFF?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
-	if (!match) return {};
-	try {
-		const fields = parseYaml(match[1]);
-		return fields && typeof fields === 'object' && !Array.isArray(fields) ? fields : {};
-	} catch {
-		// Incomplete frontmatter is normal while typing.
-		return {};
-	}
-};
-
 export const formatSkillName = (name) => {
 	return name.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };

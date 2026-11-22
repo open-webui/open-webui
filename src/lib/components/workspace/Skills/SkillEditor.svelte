@@ -23,7 +23,8 @@
 	let locale = '';
 	let meta: { i18n?: Record<string, Record<string, string>>; [key: string]: any } = {};
 	import { user } from '$lib/stores';
-	import { slugify, parseFrontmatter, formatSkillName } from '$lib/utils';
+	import { slugify, formatSkillName } from '$lib/utils';
+	import { parseFrontmatter } from '$lib/utils/frontmatter';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import { updateSkillAccessGrants } from '$lib/apis/skills';
 	import { beforeNavigate } from '$app/navigation';
