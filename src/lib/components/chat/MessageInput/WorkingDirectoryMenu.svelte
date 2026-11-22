@@ -17,7 +17,6 @@
 	import SearchInput from './InputMenu/SearchInput.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import FileNav from '../FileNav.svelte';
 	import { machineIdOf } from '$lib/utils/machines';
 
 	const i18n = getContext<any>('i18n');
@@ -341,14 +340,16 @@
 				</button>
 			</div>
 			<div class="h-[60dvh] min-h-0" aria-busy={saving}>
-				<FileNav
-					machineId={target.selector}
-					{chatId}
-					initialDirectory={directory || null}
-					manageFileRequests={false}
-					showTerminalDock={false}
-					onSelectDirectory={selectDirectory}
-				/>
+				{#await import('../FileNav.svelte') then { default: FileNav }}
+					<FileNav
+						machineId={target.selector}
+						{chatId}
+						initialDirectory={directory || null}
+						manageFileRequests={false}
+						showTerminalDock={false}
+						onSelectDirectory={selectDirectory}
+					/>
+				{/await}
 			</div>
 		</div>
 	</Modal>

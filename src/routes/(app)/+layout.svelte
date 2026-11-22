@@ -49,7 +49,6 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import Chat from '$lib/components/chat/Chat.svelte';
 	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
-	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
@@ -61,6 +60,9 @@
 	const appLayout = setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
+	// Settings (including the admin panels) load on first open, then stay mounted.
+	let settingsRequested = false;
+	$: if ($showSettings) settingsRequested = true;
 	$: routeHasTabs = ['/(app)', '/(app)/c/[id]', '/(app)/folders/[folderId]'].includes(
 		$page.route.id ?? ''
 	);
@@ -255,9 +257,9 @@
 			await Promise.all([
 				setBanners().catch((e) => console.error('Failed to load banners:', e)),
 				setTools().catch((e) => console.error('Failed to load tools:', e)),
-				setUserSettings(async () => {
-					await setModels().catch((e) => console.error('Failed to load models:', e));
-				})
+				setUserSettings(),
+				setModels().catch((e) => console.error('Failed to load models:', e)),
+				refreshMachines().catch((e) => console.error('Failed to load machines:', e))
 			]);
 		} catch (e) {
 			console.error('Failed to load user settings:', e);
@@ -265,9 +267,6 @@
 			return;
 		}
 
-		await refreshMachines().catch((e) => {
-			console.error('Failed to load machines:', e);
-		});
 		// selectedTerminalId is the former key.
 		const storedMachineId = localStorage.selectedMachineId ?? localStorage.selectedTerminalId;
 		delete localStorage.selectedTerminalId;
@@ -458,7 +457,11 @@
 	};
 </script>
 
-<SettingsModal bind:show={$showSettings} />
+{#if settingsRequested}
+	{#await import('$lib/components/chat/SettingsModal.svelte') then { default: SettingsModal }}
+		<SettingsModal bind:show={$showSettings} />
+	{/await}
+{/if}
 <ChangelogModal bind:show={$showChangelog} />
 
 {#if WEBUI_BUILD_CHANNEL === 'main' && version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}

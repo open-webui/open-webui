@@ -13,7 +13,7 @@
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
-	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
+	import type { MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
 	import { agentViewName, type AgentView } from '$lib/components/chat/Messages/agentViews';
 	import { toolCallLabel } from '$lib/components/chat/Messages/builtinToolLabels';
 
@@ -462,7 +462,9 @@
 		{#each allEmbeds as embedItem, idx}
 			<div id={`${id}-embed-${idx}`}>
 				{#if typeof embedItem.embed === 'object' && embedItem.embed?.type === 'mcp_app'}
-					{#key JSON.stringify(embedItem.embed)}<MCPApp app={embedItem.embed} />{/key}
+					{#key JSON.stringify(embedItem.embed)}{#await import('$lib/components/chat/Messages/MCPApp.svelte') then { default: MCPApp }}<MCPApp
+								app={embedItem.embed}
+							/>{/await}{/key}
 				{:else if typeof embedItem.embed === 'string'}
 					<FullHeightIframe
 						src={embedItem.embed}

@@ -1,13 +1,18 @@
-import * as XLSX from 'xlsx';
+import type * as SheetJS from 'xlsx';
 import DOMPurify from 'dompurify';
 import { OfficePackage, attr, children, elements } from './comments/package';
 import type { CellObject, Range, WorkBook, WorkSheet } from 'xlsx';
+
+// SheetJS is large, so it loads with the first workbook instead of with the app.
+// Every other export here works on a workbook that readExcelWorkbook returned.
+let XLSX: typeof SheetJS;
 
 export type PreviewSheet = WorkSheet & { '!previewStyles'?: Record<string, string> };
 
 // SheetJS CE reads values and number formats, but not fonts, borders or alignment.
 // Keep presentation metadata separate from the workbook's editable cell values.
 export async function readExcelWorkbook(data: ArrayBuffer): Promise<WorkBook> {
+	XLSX ??= await import('xlsx');
 	const workbook = XLSX.read(data, { type: 'array', cellStyles: true, cellNF: true });
 	if (new Uint8Array(data)[0] !== 0x50 || new Uint8Array(data)[1] !== 0x4b) return workbook; // XLS / CSV have no OOXML styles.
 	const pkg = await OfficePackage.open(data);
@@ -479,7 +484,7 @@ export class ExcelWorkbookEditor {
 	private changes = new Map<string, Change>();
 	private savedState = '[]';
 	private protectedSheets = new Set<string>();
-	private readOnlyRanges = new Map<string, XLSX.Range[]>();
+	private readOnlyRanges = new Map<string, Range[]>();
 	private sheetPaths = new Map<string, string>();
 	private original: ArrayBuffer;
 	private expected: ArrayBuffer;

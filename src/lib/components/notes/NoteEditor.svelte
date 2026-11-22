@@ -137,6 +137,9 @@
 	let savedCommentHashes: Record<string, string> = {};
 	let pageBusy = false;
 	let showNoteTabs = false;
+	let noteTabsWidth = 280;
+	// Width the docked pages panel takes from the editor column, divider included.
+	$: noteTabsSpace = showNoteTabs && !$mobile ? noteTabsWidth + 1 : 0;
 	let noteTabsPreferenceReady = false;
 	$: if (noteTabsPreferenceReady && !$mobile && $user?.id) {
 		localStorage.setItem(`note-tabs-open:${$user.id}`, String(showNoteTabs));
@@ -1477,7 +1480,7 @@ ${content}
 							bind:show={showNoteTabs}
 							ariaLabel={$i18n.t('Pages')}
 							side="left"
-							panelWidth={280}
+							bind:panelWidth={noteTabsWidth}
 							minWidth={180}
 							closeOnDragBelowMinWidth={false}
 							resizerId="note-tabs-resizer"
@@ -1611,12 +1614,14 @@ ${content}
 										? ''
 										: 'bg-linear-to-t from-base-0 from-40% to-transparent pt-8 dark:from-base-900'}"
 								>
-									<div class="flex justify-center">
+									<div class="flex">
 										<!-- Side padding lives on the column so the composer keeps its box in both states. -->
+										<!-- Centred on the whole note, so the pages panel only moves it when they would collide. -->
 										<div
 											class="pointer-events-auto flex w-full max-w-3xl flex-col rounded-t-3xl border border-b-0 {noteChatExpanded
 												? 'h-[min(60dvh,36rem)] border-base-100/40 bg-base-0 pt-1.5 dark:border-base-800/25 dark:bg-base-900'
 												: 'border-transparent'}"
+											style="margin-inline-start: max(0px, calc((100% - {noteTabsSpace}px - 48rem) / 2))"
 										>
 											{#if !noteChatExpanded}
 												<button

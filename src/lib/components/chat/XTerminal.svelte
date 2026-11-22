@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { Terminal } from '@xterm/xterm';
-	import { FitAddon } from '@xterm/addon-fit';
-	import { WebLinksAddon } from '@xterm/addon-web-links';
-	import { WebglAddon } from '@xterm/addon-webgl';
-	import '@xterm/xterm/css/xterm.css';
+	import type { Terminal } from '@xterm/xterm';
+	import type { FitAddon } from '@xterm/addon-fit';
 	import { machineRequest, MachineRequestError, type MachineTarget } from '$lib/apis/machines';
 	import { assignTerminalChat, openMachineSocket } from '$lib/apis/machines/socket';
 
@@ -237,8 +234,16 @@
 	$: if (active && term) requestAnimationFrame(fit);
 	$: if (connected) reportActivity(active);
 
-	onMount(() => {
-		document.addEventListener('visibilitychange', reportVisibility);
+	// xterm is only needed once a terminal is on screen, so it stays out of the boot bundle.
+	const init = async () => {
+		const [{ Terminal }, { FitAddon }, { WebLinksAddon }, { WebglAddon }] = await Promise.all([
+			import('@xterm/xterm'),
+			import('@xterm/addon-fit'),
+			import('@xterm/addon-web-links'),
+			import('@xterm/addon-webgl'),
+			import('@xterm/xterm/css/xterm.css')
+		]);
+		if (destroyed) return;
 		term = new Terminal({
 			allowTransparency: true,
 			cursorBlink: !readOnly,
@@ -284,6 +289,11 @@
 			});
 			connect();
 		}
+	};
+
+	onMount(() => {
+		document.addEventListener('visibilitychange', reportVisibility);
+		void init();
 	});
 
 	onDestroy(() => {

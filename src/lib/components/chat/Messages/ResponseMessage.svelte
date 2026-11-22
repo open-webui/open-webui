@@ -62,7 +62,6 @@
 	import RegenerateMenu from './ResponseMessage/RegenerateMenu.svelte';
 	import StatusHistory from './ResponseMessage/StatusHistory.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
-	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import OutputEditView from './OutputEditView.svelte';
 	import { getOutputText, replaceOutputMessageText, type OutputItem } from './structuredOutput';
 	import { getChatContext } from '$lib/components/chat/context';
@@ -798,7 +797,9 @@
 								{#each message.embeds as embed, idx}
 									<div class="my-2 w-full" id={`${message.id}-embeds-${idx}`}>
 										{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
-											{#key JSON.stringify(embed)}<MCPApp app={embed} />{/key}
+											{#key JSON.stringify(embed)}{#await import('$lib/components/chat/Messages/MCPApp.svelte') then { default: MCPApp }}<MCPApp
+														app={embed}
+													/>{/await}{/key}
 										{:else if typeof embed === 'string'}
 											<FullHeightIframe
 												src={embed}

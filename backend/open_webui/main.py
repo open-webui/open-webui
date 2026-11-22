@@ -334,6 +334,9 @@ class SPAStaticFiles(StaticFiles):
         if full_path.endswith('.html'):
             # Stale cached HTML references chunks from an older build
             response.headers['Cache-Control'] = 'no-cache'
+        elif '/_app/immutable/' in str(full_path).replace(os.sep, '/'):
+            # Content-hashed build output never changes under the same name
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
         return response
 
 

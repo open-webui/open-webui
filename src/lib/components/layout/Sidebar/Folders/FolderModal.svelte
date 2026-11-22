@@ -20,7 +20,6 @@
 	import { baseModels, user, config, settings } from '$lib/stores';
 	import { getModels } from '$lib/apis';
 	import ModelSelector from '$lib/components/chat/ModelSelector/Selector.svelte';
-	import FileNav from '$lib/components/chat/FileNav.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 	import MachineMenu from '$lib/components/chat/MessageInput/MachineMenu.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
@@ -549,16 +548,18 @@
 				>
 			</div>
 			<div class="h-[60dvh] min-h-0">
-				<FileNav
-					machineId={data.machine_id}
-					initialDirectory={data.working_directory || null}
-					manageFileRequests={false}
-					showTerminalDock={false}
-					onSelectDirectory={(path) => {
-						data.working_directory = path;
-						showDirectoryPicker = false;
-					}}
-				/>
+				{#await import('$lib/components/chat/FileNav.svelte') then { default: FileNav }}
+					<FileNav
+						machineId={data.machine_id}
+						initialDirectory={data.working_directory || null}
+						manageFileRequests={false}
+						showTerminalDock={false}
+						onSelectDirectory={(path) => {
+							data.working_directory = path;
+							showDirectoryPicker = false;
+						}}
+					/>
+				{/await}
 			</div>
 		</div>
 	</Modal>

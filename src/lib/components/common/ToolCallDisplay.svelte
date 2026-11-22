@@ -18,7 +18,6 @@
 	import XMark from '../icons/XMark.svelte';
 	import Image from './Image.svelte';
 	import FullHeightIframe from './FullHeightIframe.svelte';
-	import MCPApp from '$lib/components/chat/Messages/MCPApp.svelte';
 	import DiffBlock from '$lib/components/chat/Messages/DiffBlock.svelte';
 	import {
 		agentViewName,
@@ -252,7 +251,9 @@
 			{#each embeds as embed, idx}
 				<div class="my-2" id={`${componentId}-tool-call-embed-${idx}`}>
 					{#if typeof embed === 'object' && embed?.type === 'mcp_app'}
-						{#key JSON.stringify(embed)}<MCPApp app={embed} />{/key}
+						{#key JSON.stringify(embed)}{#await import('$lib/components/chat/Messages/MCPApp.svelte') then { default: MCPApp }}<MCPApp
+									app={embed}
+								/>{/await}{/key}
 					{:else if typeof embed === 'string'}
 						<FullHeightIframe
 							src={embed}
