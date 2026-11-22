@@ -357,6 +357,7 @@
 											<Switch
 												id={`terminal-${idx}-control`}
 												state={connection?.enabled !== false}
+												ariaLabel={`${$i18n.t('Enabled')}: ${connection.name || (connection.local ? $i18n.t('Local') : connection.url) || $i18n.t('New Machine')}`}
 												on:change={() => {
 													machineConnections = machineConnections.map((c, i) =>
 														i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
