@@ -702,13 +702,22 @@
 		} else {
 			processingQueueChannels.add(targetQueueKey);
 			try {
-				await onSubmit({
+				const res = await onSubmit({
 					content: entry.prompt,
 					data: { files: entry.files },
 					channel_id: entry.channel_id,
 					parent_id: entry.parent_id,
 					reply_to_message: entry.reply_to_message
 				});
+				if (!res) {
+					channelRequestQueues.update((q) => ({
+						...q,
+						[targetQueueKey]: [
+							{ ...entry, error: 'Failed to send message' },
+							...(q[targetQueueKey] ?? [])
+						]
+					}));
+				}
 			} finally {
 				processingQueueChannels.delete(targetQueueKey);
 				void processNextInQueue(targetQueueKey);

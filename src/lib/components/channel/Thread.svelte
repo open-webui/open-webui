@@ -198,6 +198,16 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
+		if (
+			res?.parent_id === threadId &&
+			messages &&
+			!messages.some((message) => message.id === res.id)
+		) {
+			messages = [{ ...res, user: $user, reply_to_message: reply_to_message ?? null }, ...messages];
+		}
+
+		return res;
 	};
 
 	const onChange = async () => {
