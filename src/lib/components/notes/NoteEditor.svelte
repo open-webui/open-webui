@@ -1605,17 +1605,13 @@ ${content}
 							</div>
 							{#if note}
 								<!-- The composer keeps its position; expanding only grows the conversation above it. -->
-								<div class="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col">
-									{#if !noteChatExpanded}
-										<div
-											class="h-6 shrink-0 bg-linear-to-t from-base-0 to-transparent dark:from-base-900"
-										></div>
-									{/if}
-									<div
-										class="flex justify-center {noteChatExpanded
-											? ''
-											: 'pointer-events-auto bg-base-0 dark:bg-base-900'}"
-									>
+								<!-- Collapsed, it floats over the page on the same fade as the folder composer. -->
+								<div
+									class="pointer-events-none absolute inset-x-0 bottom-0 z-30 flex flex-col {noteChatExpanded
+										? ''
+										: 'bg-linear-to-t from-base-0 from-40% to-transparent pt-8 dark:from-base-900'}"
+								>
+									<div class="flex justify-center">
 										<!-- Side padding lives on the column so the composer keeps its box in both states. -->
 										<div
 											class="pointer-events-auto flex w-full max-w-3xl flex-col rounded-t-3xl border border-b-0 {noteChatExpanded
