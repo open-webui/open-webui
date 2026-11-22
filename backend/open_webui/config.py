@@ -377,10 +377,12 @@ MACHINE_CONNECTIONS = JSONCodec.loads(
     os.getenv('MACHINE_CONNECTIONS') or os.getenv('TERMINAL_SERVER_CONNECTIONS') or '[]'
 )
 
-try:
-    TERMINAL_PROXY_HEADERS = JSONCodec.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
+try:  # TERMINAL_PROXY_HEADERS is the former name, still read as a fallback.
+    MACHINE_PROXY_HEADERS = JSONCodec.loads(
+        os.getenv('MACHINE_PROXY_HEADERS') or os.getenv('TERMINAL_PROXY_HEADERS') or '{}'
+    )
 except Exception:
-    TERMINAL_PROXY_HEADERS = {}
+    MACHINE_PROXY_HEADERS = {}
 
 # Code Interpreter
 

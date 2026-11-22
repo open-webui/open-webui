@@ -21,7 +21,7 @@ import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from multidict import CIMultiDict
-from open_webui.config import TERMINAL_PROXY_HEADERS
+from open_webui.config import MACHINE_PROXY_HEADERS
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.groups import Groups
@@ -639,7 +639,7 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
             for key, value in upstream_response.headers.items()
             if key.lower() not in STRIPPED_RESPONSE_HEADERS
         )
-        filtered_headers.update(TERMINAL_PROXY_HEADERS)
+        filtered_headers.update(MACHINE_PROXY_HEADERS)
 
         port_match = re.match(r'^proxy/(\d+)/', safe_path)
         port_prefix = None

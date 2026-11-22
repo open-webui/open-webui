@@ -12,7 +12,7 @@ import aiohttp
 
 from fastapi import HTTPException
 
-from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT_TERMINAL, ENABLE_TOOL_SERVERS
+from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT_MACHINE, ENABLE_TOOL_SERVERS
 from open_webui.utils.headers import bearer_auth_header
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.skill_files import (
@@ -489,7 +489,7 @@ async def get_terminal_json(
                 content_type=(source.meta or {}).get('content_type') or 'application/octet-stream',
             )
             headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
-        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
+        timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MACHINE)
         try:
             async with get_machine_client(
                 get_terminal_server_url(connection),
@@ -608,7 +608,7 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
     try:
         cwd = await asyncio.wait_for(
             get_terminal_json(request, user, metadata, '/files/cwd', extra_params),
-            timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
+            timeout=AIOHTTP_CLIENT_TIMEOUT_MACHINE,
         )
         directory = cwd.get('cwd') if isinstance(cwd, dict) else None
         if not directory:
@@ -620,7 +620,7 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
                 file = {'id': entry['id'], 'name': f'{entry["id"]}{Path(entry["name"]).suffix}'}
                 result = await asyncio.wait_for(
                     get_terminal_json(request, user, metadata, path, extra_params, file=file),
-                    timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
+                    timeout=AIOHTTP_CLIENT_TIMEOUT_MACHINE,
                 )
                 if not isinstance(result, dict) or not isinstance(result.get('path'), str) or not result['path']:
                     raise ValueError('Machine upload failed')
@@ -648,7 +648,7 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
         base_url,
         connection.get('instance_user_id') or (user.id if hasattr(user, 'id') else user['id']),
         service=connection.get('service', 'open_terminal'),
-        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TERMINAL),
+        timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MACHINE),
         trust_env=True,
     ) as session:
         async with session.get(
