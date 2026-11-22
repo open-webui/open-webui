@@ -2051,7 +2051,13 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     # processing (knowledge, capabilities, tools, params) uses its settings
     # instead of the empty router wrapper.
     if model.get('owned_by') == 'router':
-        selected_model_id, strategy = await resolve_router_model(model['id'], form_data, user)
+        routing_form_data = form_data
+        # Saved chats send only the system prompt; route on the stored conversation.
+        if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('user_message_id'):
+            db_messages = await load_messages_from_db(metadata['chat_id'], metadata['user_message_id'])
+            if db_messages:
+                routing_form_data = {**form_data, 'messages': db_messages}
+        selected_model_id, strategy = await resolve_router_model(model['id'], routing_form_data, user)
         selected_model = request.app.state.MODELS.get(selected_model_id)
         if not selected_model:
             raise HTTPException(status_code=404, detail='Model not found')
