@@ -662,8 +662,25 @@
 			const range = selection.getRangeAt(0);
 			const tempDiv = document.createElement('div');
 
+			// Copy formulas as TeX source, rendered KaTeX pastes garbled
+			const katexElements = [...document.querySelectorAll('.katex')].filter((katex) =>
+				selection.containsNode(katex, true)
+			);
+			const texNodes = katexElements.map((katex) => {
+				const tex = katex.querySelector('annotation[encoding="application/x-tex"]').textContent;
+				const texNode = document.createTextNode(
+					katex.closest('.katex-display') ? `$$${tex}$$` : `$${tex}$`
+				);
+				if (katex.contains(range.startContainer)) range.setStartBefore(katex);
+				if (katex.contains(range.endContainer)) range.setEndAfter(katex);
+				katex.before(texNode);
+				katex.style.display = 'none';
+				return texNode;
+			});
+
 			// Remove background, color, and font styles
 			tempDiv.appendChild(range.cloneContents());
+			tempDiv.querySelectorAll('.katex').forEach((katex) => katex.remove());
 
 			tempDiv.querySelectorAll('table').forEach((table) => {
 				table.style.borderCollapse = 'collapse';
@@ -679,6 +696,9 @@
 			// Put cleaned HTML + plain text into clipboard
 			e.clipboardData.setData('text/html', tempDiv.innerHTML);
 			e.clipboardData.setData('text/plain', selection.toString());
+
+			katexElements.forEach((katex) => (katex.style.display = ''));
+			texNodes.forEach((texNode) => texNode.remove());
 		}
 	};
 
