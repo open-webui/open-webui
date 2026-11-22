@@ -10,6 +10,7 @@
 	import { getBackendConfig, getModels, getVersionUpdates } from '$lib/apis';
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
+	import { getFunctions } from '$lib/apis/functions';
 	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
@@ -253,33 +254,33 @@
 		}
 
 		clearChatInputStorage();
+		// Requested beside settings. The page is drawn once settings are in;
+		// each of these shows up when it arrives.
+		void setBanners().catch((e) => console.error('Failed to load banners:', e));
+		const lists = Promise.all([
+			setTools().catch((e) => console.error('Failed to load tools:', e)),
+			refreshMachines().catch((e) => console.error('Failed to load machines:', e)),
+			// The chat needs these to apply a model's defaults; without them here it
+			// fetches them one after the other during set-up.
+			getFunctions(localStorage.token)
+				.then((value) => functions.set(value))
+				.catch((e) => console.error('Failed to load functions:', e)),
+			getSkills(localStorage.token)
+				.then((value) => skills.set(value))
+				.catch((e) => console.error('Failed to load skills:', e))
+		]);
+		const modelList = getModels(localStorage.token).catch((e) => {
+			console.error('Failed to load models:', e);
+			// Loaded, with nothing to list: null would mean the list is still on its way.
+			return [];
+		});
 		try {
-			await Promise.all([
-				setBanners().catch((e) => console.error('Failed to load banners:', e)),
-				setTools().catch((e) => console.error('Failed to load tools:', e)),
-				setUserSettings(),
-				setModels().catch((e) => {
-					console.error('Failed to load models:', e);
-					// Loaded, with nothing to list: null would mean the list is still on its way.
-					models.update((list) => list ?? []);
-				}),
-				refreshMachines().catch((e) => console.error('Failed to load machines:', e))
-			]);
+			await setUserSettings();
 		} catch (e) {
 			console.error('Failed to load user settings:', e);
 			toast.error($i18n.t('Failed to load Interface settings'));
 			return;
 		}
-
-		// selectedTerminalId is the former key.
-		const storedMachineId = localStorage.selectedMachineId ?? localStorage.selectedTerminalId;
-		delete localStorage.selectedTerminalId;
-		selectedMachineId.set(
-			$config?.features?.enable_tool_servers &&
-				$machines?.some((machine) => machine.id === storedMachineId)
-				? storedMachineId
-				: null
-		);
 
 		const setupKeyboardShortcuts = () => {
 			document.addEventListener('keydown', async (event) => {
@@ -416,6 +417,21 @@
 			localStorage.showTabs = value ? 'true' : 'false';
 		});
 
+		await tick();
+
+		loaded = true;
+
+		await lists;
+		// selectedTerminalId is the former key.
+		const storedMachineId = localStorage.selectedMachineId ?? localStorage.selectedTerminalId;
+		delete localStorage.selectedTerminalId;
+		selectedMachineId.set(
+			$config?.features?.enable_tool_servers &&
+				$machines?.some((machine) => machine.id === storedMachineId)
+				? storedMachineId
+				: null
+		);
+
 		// Persist selectedMachineId across page loads
 		selectedMachineId.subscribe((value) => {
 			if (!$config?.features?.enable_tool_servers) return;
@@ -426,9 +442,9 @@
 			}
 		});
 
-		await tick();
-
-		loaded = true;
+		// Set last: the chat sets itself up once the model list is in, and that set-up
+		// reads tools, machines and the selected machine as well.
+		models.set(await modelList);
 	});
 
 	$: if (

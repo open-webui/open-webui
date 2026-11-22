@@ -2344,7 +2344,7 @@
 		if (embedded) init();
 		else
 			void tick().then(() => {
-				if (!routeInitialized) void followRoute();
+				if (!routeInitialized) routeChanged = true;
 			});
 
 		return () => {
@@ -2852,15 +2852,25 @@
 			chatIdProp = $page.params.id ?? '';
 		} else if ($page.params.folderId || $page.url.pathname === '/') {
 			selectedFolder.set($page.data.folder ?? null);
+			// On a first load the input is on screen before set-up, which resets it;
+			// what was typed there goes back in.
+			const typed = preserveTabs ? '' : prompt;
 			await initNewChat({ preserveTabs, url: $page.url });
+			if (typed) messageInput?.setText(typed);
 		} else if (initialPage) {
 			if (!preserveTabs) await initNewChat();
 			loading = false;
 			tabs?.openPageTab({ href: initialPage, label: '' });
 		}
 	};
+	// Set-up checks its choices against the model list, so a page is followed once the list is in.
+	let routeChanged = false;
+	$: if (routeChanged && $models !== null) {
+		routeChanged = false;
+		void followRoute();
+	}
 	afterNavigate(() => {
-		if (!embedded) void followRoute();
+		routeChanged = !embedded;
 		stopAudio();
 	});
 	beforeNavigate(() => {
@@ -3249,8 +3259,8 @@
 		loading = false;
 		await tick();
 		if (signal.aborted) return;
-		// Mounting the editor clears prompt, so apply the saved text afterward.
-		if (chatInputPrompt !== null) messageInput?.setText(chatInputPrompt);
+		// The new-chat input stays mounted through set-up, so set its text either way.
+		messageInput?.setText(chatInputPrompt ?? '');
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume call requests or the acknowledged Tether handoff.
@@ -4636,6 +4646,7 @@
 			}
 		}
 		if (processing === 'uploading') return { status: 'deferred' };
+		if ($models === null) return { status: 'deferred' };
 		emitTyping(false);
 		if (bridgeRequest && (selectedModelIds.length !== 1 || !bridgeRequest.modelId))
 			return { status: 'rejected' };
@@ -6192,7 +6203,8 @@
 				role={fullWidthTabs ? 'tabpanel' : undefined}
 				aria-labelledby={fullWidthTabs ? 'chat-panel-main-chat' : undefined}
 			>
-				{#if loading}
+				<!-- An empty new chat keeps its input on screen while it sets itself up. -->
+				{#if loading && (embedded || $page.url.pathname !== '/' || history.currentId)}
 					{#if !fullWidthTabs && !embeddedCollapsed}
 						<div class="flex items-center justify-center h-full w-full">
 							<Spinner className="size-5" />
@@ -6670,7 +6682,8 @@
 				{/if}
 			</div>
 
-			{#if !embedded}
+			<!-- Restored tabs resolve their machines on mount, so they wait for the lists. -->
+			{#if !embedded && $models !== null}
 				<Tabs
 					{mainChatHref}
 					{getEmbeddedDraft}
