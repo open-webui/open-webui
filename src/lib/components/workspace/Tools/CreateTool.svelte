@@ -42,6 +42,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			files: data.files,
 			commit_message: data.commit_message,
 			access_grants: data.access_grants
 		}).catch((error) => {
@@ -93,6 +94,7 @@
 				name={tool?.name ?? ''}
 				meta={tool?.meta ?? { description: '' }}
 				content={tool?.content ?? ''}
+				files={tool?.files ?? []}
 				accessGrants={tool?.access_grants !== undefined ? tool.access_grants : []}
 				{clone}
 				onSave={saveHandler}

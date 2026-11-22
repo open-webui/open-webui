@@ -13,7 +13,7 @@ from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_FUNCTIONS
 from open_webui.events import EVENTS, build_event, dispatch_event_functions, publish_event, schedule_webhook_dispatch
 from open_webui.internal.db import get_async_session
-from open_webui.models.function_history import FunctionHistories, function_diff
+from open_webui.models.function_history import FunctionHistories, function_diff, function_snapshot
 from open_webui.models.functions import (
     FunctionForm,
     FunctionModel,
@@ -164,11 +164,13 @@ async def sync_functions(
     try:
         modules = {}
         source_modules = {}
-        previous_ids = {entry.id for entry in await Functions.get_functions(db=db)}
+        previous = {entry.id: entry for entry in await Functions.get_functions(db=db)}
         for function in form_data.functions:
             function.content = replace_imports(function.content)
+            if function.files is None and function.id in previous:
+                function.files = previous[function.id].files
             module, function.type, frontmatter, source_module = await load_function_module_by_id(
-                function.id, content=function.content
+                function.id, content=function.content, files=function.files
             )
             function.meta.manifest = frontmatter
             function.meta.toggle = function.type == 'filter' and bool(getattr(module, 'toggle', False))
@@ -177,9 +179,14 @@ async def sync_functions(
         result = await Functions.sync_functions(user.id, form_data.functions, db=db, modules=modules)
         for function in result:
             set_function_module_in_cache(
-                request, function.id, function.content, modules[function.id], source_modules[function.id]
+                request,
+                function.id,
+                function.content,
+                modules[function.id],
+                source_modules[function.id],
+                function.files,
             )
-        for id in previous_ids - {entry.id for entry in result}:
+        for id in previous.keys() - {entry.id for entry in result}:
             get_functions_cache(request).pop(id, None)
             get_function_contents_cache(request).pop(id, None)
         return result
@@ -216,6 +223,7 @@ async def create_new_function(
             function_module, function_type, frontmatter, source_module = await load_function_module_by_id(
                 form_data.id,
                 content=form_data.content,
+                files=form_data.files,
             )
             form_data.meta.manifest = frontmatter
             form_data.meta.toggle = function_type == 'filter' and bool(getattr(function_module, 'toggle', False))
@@ -228,7 +236,9 @@ async def create_new_function(
             function_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if function:
-                set_function_module_in_cache(request, function.id, function.content, function_module, source_module)
+                set_function_module_in_cache(
+                    request, function.id, function.content, function_module, source_module, function.files
+                )
                 await publish_event(
                     request,
                     EVENTS.FUNCTION_CREATED,
@@ -375,10 +385,13 @@ async def update_function_by_id(
 
 async def _update_function(request, id, form_data, user, db, version_id=None):
     try:
+        if form_data.files is None:
+            function = await Functions.get_function_by_id(id, db=db)
+            form_data.files = function.files if function else None
         if version_id is None:
             form_data.content = replace_imports(form_data.content)
         function_module, function_type, frontmatter, source_module = await load_function_module_by_id(
-            id, content=form_data.content
+            id, content=form_data.content, files=form_data.files
         )
         form_data.meta.manifest = frontmatter
 
@@ -391,7 +404,9 @@ async def _update_function(request, id, form_data, user, db, version_id=None):
         )
 
         if function:
-            set_function_module_in_cache(request, function.id, function.content, function_module, source_module)
+            set_function_module_in_cache(
+                request, function.id, function.content, function_module, source_module, function.files
+            )
             await publish_event(
                 request,
                 EVENTS.FUNCTION_UPDATED,
@@ -714,7 +729,7 @@ async def set_function_production(
     await require_function_history_access(id, user, db)
     entry = await require_function_history_entry(id, form_data.version_id, db)
     try:
-        saved = FunctionForm(id=id, **entry.snapshot)
+        saved = FunctionForm(id=id, **function_snapshot(entry.snapshot))
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
     return await _update_function(request, id, saved, user, db, version_id=entry.id)

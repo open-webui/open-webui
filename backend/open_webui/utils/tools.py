@@ -436,9 +436,9 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
             tools_cache = get_tools_cache(request)
             tool_contents_cache = get_tool_contents_cache(request)
             module = tools_cache.get(tool_id)
-            if module is None or tool_contents_cache.get(tool_id) != tool.content:
-                module, _, source_module = await load_tool_module_by_id(tool_id, content=tool.content)
-                set_tool_module_in_cache(request, tool_id, tool.content, module, source_module)
+            if module is None or tool_contents_cache.get(tool_id) != (tool.content, tool.files):
+                module, _, source_module = await load_tool_module_by_id(tool_id, content=tool.content, files=tool.files)
+                set_tool_module_in_cache(request, tool_id, tool.content, module, source_module, tool.files)
 
             __user__ = {
                 **extra_params['__user__'],

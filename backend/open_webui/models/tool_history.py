@@ -6,7 +6,7 @@ from copy import deepcopy
 
 from fastapi import HTTPException
 from open_webui.internal.db import Base, get_async_db_context
-from open_webui.utils.misc import unified_text_diff
+from open_webui.utils.misc import files_text_diff, unified_text_diff
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import JSON, BigInteger, Column, Text, select, update
 
@@ -125,7 +125,9 @@ ToolHistories = ToolHistoryTable()
 
 def tool_snapshot(resource):
     data = (
-        resource if isinstance(resource, dict) else {key: getattr(resource, key) for key in ('name', 'content', 'meta')}
+        resource
+        if isinstance(resource, dict)
+        else {key: getattr(resource, key) for key in ('name', 'content', 'files', 'meta')}
     )
     meta = data.get('meta') or {}
     meta = meta.model_dump() if isinstance(meta, BaseModel) else deepcopy(meta)
@@ -134,7 +136,12 @@ def tool_snapshot(resource):
         meta.pop('i18n', None)
     for key in ('manifest', 'has_user_valves'):
         meta.pop(key, None)
-    return {'name': data.get('name'), 'content': data.get('content') or '', 'meta': meta}
+    return {
+        'name': data.get('name'),
+        'content': data.get('content') or '',
+        'files': data.get('files') or [],
+        'meta': meta,
+    }
 
 
 def tool_diff(before, after):
@@ -152,4 +159,5 @@ def tool_diff(before, after):
         'metadata': metadata,
         'content_diff': patch,
         'line_endings_only': old != new and not patch,
+        'files': files_text_diff(left.get('files') or [], right.get('files') or []),
     }

@@ -17,6 +17,7 @@
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedField from '$lib/components/common/LocalizedField.svelte';
 	import PluginTranslations from '$lib/components/workspace/common/PluginTranslations.svelte';
+	import PluginFiles from '$lib/components/workspace/common/PluginFiles.svelte';
 	import { pruneEmptyLocaleEntries } from '$lib/utils/localizedContent';
 	let locale = '';
 	$: warning = [
@@ -48,6 +49,7 @@
 	let comparisonSelection: string | null | undefined = null;
 	$: if (selected?.id !== comparisonSelection) {
 		comparisonSelection = selected?.id;
+		selectedPath = '';
 		comparison = null;
 		comparing = false;
 		comparisonRequest++;
@@ -70,10 +72,12 @@
 		meta = structuredClone(resource.meta);
 		content = resource.content;
 		_content = content;
+		files = structuredClone(resource.files ?? []);
+		if (!files.some((file) => file.path === selectedPath)) selectedPath = '';
 		version_id = resource.version_id;
 		commitMessage = '';
 		comparison = null;
-		savedDraft = draftSnapshot(id, name, meta, content);
+		savedDraft = draftSnapshot(id, name, meta, content, files);
 	};
 	const productionHandler = async (resource: any) => {
 		await applyProduction(resource);
@@ -93,9 +97,17 @@
 		description: ''
 	};
 	export let content = '';
+	export let files: { path: string; content: string }[] = [];
 	let _content = '';
-	/** @param {string} id @param {string} name @param {Record<string, any>} meta @param {string} content */
-	const draftSnapshot = (id: string, name: string, meta: Record<string, any>, content: string) =>
+	let selectedPath = '';
+	/** @param {string} id @param {string} name @param {Record<string, any>} meta @param {string} content @param {{path: string, content: string}[]} files */
+	const draftSnapshot = (
+		id: string,
+		name: string,
+		meta: Record<string, any>,
+		content: string,
+		files: { path: string; content: string }[]
+	) =>
 		JSON.stringify({
 			id,
 			name,
@@ -106,10 +118,11 @@
 				toggle: undefined,
 				i18n: pruneEmptyLocaleEntries(meta.i18n)
 			},
-			content
+			content,
+			files
 		});
-	let savedDraft = draftSnapshot(id, name, meta, content);
-	$: draft = draftSnapshot(id, name, meta, _content);
+	let savedDraft = draftSnapshot(id, name, meta, content, files);
+	$: draft = draftSnapshot(id, name, meta, _content, files);
 	$: changed = draft !== savedDraft;
 
 	$: _content = content;
@@ -406,13 +419,14 @@ class Pipe:
 		}
 		loading = true;
 		try {
-			const submittedDraft = draftSnapshot(id, name, meta, content);
+			const submittedDraft = draftSnapshot(id, name, meta, content, files);
 			const saved = await onSave({
 				commit_message: commitMessage || null,
 				id,
 				name,
 				meta: { ...meta, i18n: pruneEmptyLocaleEntries(meta.i18n) },
-				content
+				content,
+				files
 			});
 			if (saved) {
 				if (saved.version_id && saved.content !== undefined) await applyProduction(saved);
@@ -615,26 +629,49 @@ class Pipe:
 			{#if comparison}
 				<VersionDiff
 					currentLabel={$i18n.t('Production')}
-					showFileHeaders={false}
+					showFileHeaders={!!comparison.files?.length}
 					diff={{
 						fromId: comparison.from_id,
 						toId: comparison.to_id,
 						metadata: comparison.metadata,
-						files:
-							comparison.content_diff || comparison.line_endings_only
+						files: [
+							...(comparison.content_diff || comparison.line_endings_only
 								? [{ path: `${id}.py`, status: 'modified', binary: false }]
-								: []
+								: []),
+							...(comparison.files ?? []).map((file) => ({ ...file, binary: false }))
+						]
 					}}
-					loadFileDiff={async () => ({
-						diff: comparison.content_diff,
-						line_endings_only: comparison.line_endings_only
-					})}
+					loadFileDiff={async (path: string) =>
+						comparison.files?.find((file) => file.path === path) ?? {
+							diff: comparison.content_diff,
+							line_endings_only: comparison.line_endings_only
+						}}
 					onClose={() => {
 						comparison = null;
 					}}
 				/>
 			{/if}
 			{#if selected && !locale && !comparison}
+				<PluginFiles
+					files={selected.snapshot.files ?? []}
+					bind:selectedPath
+					mainPath={`${id || 'main'}.py`}
+					readOnly
+				/>
+			{:else if !locale && !comparison}
+				<PluginFiles
+					bind:files
+					bind:selectedPath
+					mainPath={`${id || 'main'}.py`}
+					readOnly={selecting || promoting}
+					onSave={async () => {
+						if (formElement) {
+							formElement.requestSubmit();
+						}
+					}}
+				/>
+			{/if}
+			{#if selected && !locale && !comparison && !selectedPath}
 				<CodeEditor
 					value={selected.snapshot.content}
 					lang="python"
@@ -643,7 +680,7 @@ class Pipe:
 					className="text-[0.6875rem]"
 				/>
 			{/if}
-			<div class={locale || comparison || selected ? 'hidden' : 'h-full min-h-0'}>
+			<div class={locale || comparison || selected || selectedPath ? 'hidden' : 'min-h-0 flex-1'}>
 				<CodeEditor
 					bind:this={codeEditor}
 					value={content}

@@ -10,6 +10,8 @@ import tempfile
 import types
 import uuid
 from importlib import util
+from importlib.machinery import ModuleSpec
+from pathlib import PurePosixPath
 from typing import Any
 
 from open_webui.env import (
@@ -21,7 +23,8 @@ from open_webui.env import (
     PIP_PACKAGE_INDEX_OPTIONS,
 )
 from open_webui.models.functions import FunctionModel, Functions
-from open_webui.models.tools import Tools
+from open_webui.models.tools import PluginFile, Tools
+from open_webui.utils.skill_files import validate_path
 
 log = logging.getLogger(__name__)
 
@@ -203,9 +206,62 @@ def replace_imports(content):
     return content
 
 
+class PluginFileFinder:
+    """Imports a plugin's supporting files from memory, so relative imports work without touching disk."""
+
+    def find_spec(
+        self, fullname: str, path: list[str] | None, target: types.ModuleType | None = None
+    ) -> ModuleSpec | None:
+        package_name, _, submodule = fullname.partition('.')
+        files = getattr(sys.modules.get(package_name), '__plugin_files__', None)
+        if not files or not submodule:
+            return None
+        file_path = submodule.replace('.', '/')
+        if f'{file_path}.py' in files:
+            return util.spec_from_loader(fullname, self, origin=f'{file_path}.py')
+        if f'{file_path}/__init__.py' in files:
+            return util.spec_from_loader(fullname, self, origin=f'{file_path}/__init__.py', is_package=True)
+        if any(name.startswith(f'{file_path}/') for name in files):
+            return util.spec_from_loader(fullname, self, is_package=True)
+        return None
+
+    def create_module(self, spec: ModuleSpec) -> None:
+        return None
+
+    def exec_module(self, module: types.ModuleType) -> None:
+        origin = module.__spec__.origin
+        if origin:
+            files = sys.modules[module.__name__.partition('.')[0]].__plugin_files__
+            exec(compile(files[origin], origin, 'exec'), module.__dict__)
+
+
+sys.meta_path.append(PluginFileFinder())
+
+
+def attach_plugin_files(module: types.ModuleType, files: list[PluginFile] | None) -> None:
+    if files:
+        plugin_files = {}
+        for file in files:
+            path = validate_path(file.path)
+            if path in plugin_files:
+                raise ValueError(f'Duplicate file: {path}')
+            plugin_files[path] = file.content
+        for path in plugin_files:
+            if any(str(parent) in plugin_files for parent in PurePosixPath(path).parents if str(parent) != '.'):
+                raise ValueError(f'A file is also used as a directory: {path}')
+        module.__path__ = []
+        module.__package__ = module.__name__
+        module.__plugin_files__ = plugin_files
+
+
+def pop_plugin_modules(module_name: str) -> None:
+    for name in [name for name in sys.modules if name.partition('.')[0] == module_name]:
+        sys.modules.pop(name, None)
+
+
 # Let the care put into this work survive every
 # import and transformation, and serve those who carry it forward.
-async def load_tool_module_by_id(tool_id, content=None):
+async def load_tool_module_by_id(tool_id, content=None, files: list[PluginFile] | None = None):
     """Prepare a Tool instance, frontmatter, and Python module without changing the live cache."""
     if not ENABLE_TOOLS:
         raise RuntimeError('Tools are disabled by ENABLE_PLUGINS or ENABLE_TOOLS')
@@ -217,6 +273,7 @@ async def load_tool_module_by_id(tool_id, content=None):
             raise Exception(f'Toolkit not found: {tool_id}')
 
         content = tool.content
+        files = tool.files
     else:
         frontmatter = extract_frontmatter(content)
         # Install required packages found within the frontmatter.
@@ -227,6 +284,7 @@ async def load_tool_module_by_id(tool_id, content=None):
     content = replace_imports(content)
     module_name = f'tool_{tool_id}_{uuid.uuid4().hex}'
     module = types.ModuleType(module_name)
+    attach_plugin_files(module, files)
     sys.modules[module_name] = module
 
     # Give the module a real __file__; even dynamically loaded code wants an address.
@@ -250,13 +308,16 @@ async def load_tool_module_by_id(tool_id, content=None):
             raise Exception('No Tools class found in the module')
     except Exception as e:
         log.error(f'Error loading module: {tool_id}: {e}')
+        pop_plugin_modules(module_name)
         raise e
     finally:
         os.unlink(temp_file.name)
         sys.modules.pop(module_name, None)
 
 
-async def load_function_module_by_id(function_id: str, content: str | None = None):
+async def load_function_module_by_id(
+    function_id: str, content: str | None = None, files: list[PluginFile] | None = None
+):
     """Prepare a Function instance, type, frontmatter, and Python module without publishing it."""
     if not ENABLE_FUNCTIONS:
         raise RuntimeError('Functions are disabled by ENABLE_PLUGINS or ENABLE_FUNCTIONS')
@@ -267,6 +328,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content
+        files = function.files
     else:
         frontmatter = extract_frontmatter(content)
         # `pip install` via subprocess can block for a long time; offload it.
@@ -275,6 +337,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
     content = replace_imports(content)
     module_name = f'function_{function_id}_{uuid.uuid4().hex}'
     module = types.ModuleType(module_name)
+    attach_plugin_files(module, files)
     sys.modules[module_name] = module
 
     # Give the module a real __file__; even dynamically loaded code wants an address.
@@ -304,6 +367,7 @@ async def load_function_module_by_id(function_id: str, content: str | None = Non
             raise Exception('No Function class found in the module')
     except Exception as e:
         log.error(f'Error loading module: {function_id}: {e}')
+        pop_plugin_modules(module_name)
         raise e
     finally:
         os.unlink(temp_file.name)
@@ -332,24 +396,26 @@ def get_function_contents_cache(request) -> dict:
     return _state_cache(request, 'FUNCTION_CONTENTS')
 
 
-def set_tool_module_in_cache(request, tool_id, content, tool_module, source_module):
+def set_tool_module_in_cache(request, tool_id, content, tool_module, source_module, files: list[PluginFile] | None):
     previous = sys.modules.get(f'tool_{tool_id}')
     if previous is not None:
-        sys.modules.pop(previous.__name__, None)
+        pop_plugin_modules(previous.__name__)
     sys.modules[source_module.__name__] = source_module
     sys.modules[f'tool_{tool_id}'] = source_module
     get_tools_cache(request)[tool_id] = tool_module
-    get_tool_contents_cache(request)[tool_id] = content
+    get_tool_contents_cache(request)[tool_id] = (content, files)
 
 
-def set_function_module_in_cache(request, function_id, content, function_module, source_module):
+def set_function_module_in_cache(
+    request, function_id, content, function_module, source_module, files: list[PluginFile] | None
+):
     previous = sys.modules.get(f'function_{function_id}')
     if previous is not None:
-        sys.modules.pop(previous.__name__, None)
+        pop_plugin_modules(previous.__name__)
     sys.modules[source_module.__name__] = source_module
     sys.modules[f'function_{function_id}'] = source_module
     get_functions_cache(request)[function_id] = function_module
-    get_function_contents_cache(request)[function_id] = content
+    get_function_contents_cache(request)[function_id] = (content, files)
 
 
 async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
@@ -359,6 +425,7 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
     tools_cache = get_tools_cache(request)
     tool_contents_cache = get_tool_contents_cache(request)
     content = None
+    files = None
 
     if load_from_db:
         # Always load from the database by default
@@ -366,17 +433,18 @@ async def get_tool_module_from_cache(request, tool_id, load_from_db=True):
         if not tool:
             raise Exception(f'Tool not found: {tool_id}')
         content = tool.content
+        files = tool.files
 
         if tool_id in tool_contents_cache and tool_id in tools_cache:
-            if tool_contents_cache[tool_id] == content:
+            if tool_contents_cache[tool_id] == (content, files):
                 return tools_cache[tool_id], None
 
     else:
         if tool_id in tools_cache:
             return tools_cache[tool_id], None
 
-    tool_module, frontmatter, source_module = await load_tool_module_by_id(tool_id, content)
-    set_tool_module_in_cache(request, tool_id, content, tool_module, source_module)
+    tool_module, frontmatter, source_module = await load_tool_module_by_id(tool_id, content, files)
+    set_tool_module_in_cache(request, tool_id, content, tool_module, source_module, files)
 
     return tool_module, frontmatter
 
@@ -390,6 +458,7 @@ async def get_function_module_from_cache(
     functions_cache = get_functions_cache(request)
     function_contents_cache = get_function_contents_cache(request)
     content = None
+    files = None
 
     if load_from_db:
         # Always load from the database by default
@@ -401,9 +470,10 @@ async def get_function_module_from_cache(
         if not function:
             raise Exception(f'Function not found: {function_id}')
         content = function.content
+        files = function.files
 
         if function_id in function_contents_cache and function_id in functions_cache:
-            if function_contents_cache[function_id] == content:
+            if function_contents_cache[function_id] == (content, files):
                 return functions_cache[function_id], None, None
 
     else:
@@ -415,13 +485,13 @@ async def get_function_module_from_cache(
 
     try:
         function_module, function_type, frontmatter, source_module = await load_function_module_by_id(
-            function_id, content
+            function_id, content, files
         )
     except Exception:
         await Functions.update_function_by_id(function_id, {'is_active': False})
         raise
 
-    set_function_module_in_cache(request, function_id, content, function_module, source_module)
+    set_function_module_in_cache(request, function_id, content, function_module, source_module, files)
 
     return function_module, function_type, frontmatter
 

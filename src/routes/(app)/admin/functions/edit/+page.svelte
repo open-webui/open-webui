@@ -43,6 +43,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			files: data.files,
 			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -86,6 +87,7 @@
 			name={func.name}
 			meta={func.meta}
 			content={func.content}
+			files={func.files ?? []}
 			version_id={func.version_id}
 			onProduction={async () => {
 				functions.set(await getFunctions(localStorage.token));

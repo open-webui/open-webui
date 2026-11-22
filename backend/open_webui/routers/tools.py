@@ -23,7 +23,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
-from open_webui.models.tool_history import ToolHistories, tool_diff
+from open_webui.models.tool_history import ToolHistories, tool_diff, tool_snapshot
 from open_webui.models.tools import (
     ToolAccessResponse,
     ToolForm,
@@ -586,7 +586,7 @@ async def create_new_tools(
 
             form_data.content = replace_imports(form_data.content)
             tool_module, frontmatter, source_module = await load_tool_module_by_id(
-                form_data.id, content=form_data.content
+                form_data.id, content=form_data.content, files=form_data.files
             )
             form_data.meta.manifest = frontmatter
             form_data.meta.has_user_valves = hasattr(tool_module, 'UserValves')
@@ -598,7 +598,7 @@ async def create_new_tools(
             tool_cache_dir.mkdir(parents=True, exist_ok=True)
 
             if tools:
-                set_tool_module_in_cache(request, tools.id, tools.content, tool_module, source_module)
+                set_tool_module_in_cache(request, tools.id, tools.content, tool_module, source_module, tools.files)
                 await publish_event(
                     request,
                     EVENTS.TOOL_CREATED,
@@ -661,6 +661,7 @@ async def get_tools_by_id(id: str, user=Depends(get_verified_user), db: AsyncSes
             if not write_access:
                 # extra='allow' re-admits content from model_dump; source is writer-only
                 data.pop('content', None)
+                data.pop('files', None)
             return ToolAccessResponse(**data, write_access=write_access)
         else:
             raise HTTPException(
@@ -714,15 +715,22 @@ async def _update_tool(request, id, form_data, user, db, version_id=None):
             detail=ERROR_MESSAGES.UNAUTHORIZED,
         )
 
+    if form_data.files is None:
+        form_data.files = tools.files
+
     # Check again under the row lock when committing, in case Production changes meanwhile.
     allow_code_changes = await can_change_tool_code(user, db)
-    if form_data.content != tools.content and not allow_code_changes:
+    if (
+        form_data.content != tools.content or (form_data.files or []) != (tools.files or [])
+    ) and not allow_code_changes:
         raise HTTPException(401, ERROR_MESSAGES.UNAUTHORIZED)
 
     try:
         if version_id is None:
             form_data.content = replace_imports(form_data.content)
-        tool_module, frontmatter, source_module = await load_tool_module_by_id(id, content=form_data.content)
+        tool_module, frontmatter, source_module = await load_tool_module_by_id(
+            id, content=form_data.content, files=form_data.files
+        )
         form_data.meta.manifest = frontmatter
         form_data.meta.has_user_valves = hasattr(tool_module, 'UserValves')
 
@@ -744,7 +752,7 @@ async def _update_tool(request, id, form_data, user, db, version_id=None):
         )
 
         if tools:
-            set_tool_module_in_cache(request, tools.id, tools.content, tool_module, source_module)
+            set_tool_module_in_cache(request, tools.id, tools.content, tool_module, source_module, tools.files)
             await publish_event(
                 request,
                 EVENTS.TOOL_UPDATED,
@@ -1247,7 +1255,7 @@ async def set_tool_production(
     await require_tool_history_access(id, user, db)
     entry = await require_tool_history_entry(id, form_data.version_id, db)
     try:
-        saved = ToolForm(id=id, **entry.snapshot)
+        saved = ToolForm(id=id, **tool_snapshot(entry.snapshot))
     except ValueError as error:
         raise HTTPException(400, str(error)) from error
     return await _update_tool(request, id, saved, user, db, version_id=entry.id)

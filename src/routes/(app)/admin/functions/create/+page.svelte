@@ -42,6 +42,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			files: data.files,
 			commit_message: data.commit_message
 		}).catch((error) => {
 			toast.error(`${error}`);
@@ -94,6 +95,7 @@
 				name={func?.name ?? ''}
 				meta={func?.meta ?? { description: '' }}
 				content={func?.content ?? ''}
+				files={func?.files ?? []}
 				{clone}
 				onSave={saveHandler}
 			/>

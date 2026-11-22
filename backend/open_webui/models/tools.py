@@ -31,6 +31,7 @@ class Tool(Base):  # database table definition
     user_id = Column(String, index=True)  # owner user id
     name = Column(Text)  # human-readable label
     content = Column(Text)  # Python source code
+    files = Column(JSONField, nullable=True)  # supporting files the code can import or read
     specs = Column(JSONField)  # OpenAPI-style function specs
     meta = Column(JSONField)  # description, manifest, etc.
     valves = Column(JSONField)  # admin-configurable runtime parameters
@@ -38,6 +39,12 @@ class Tool(Base):  # database table definition
 
     updated_at = Column(BigInteger, nullable=False)  # modification timestamp
     created_at = Column(BigInteger, index=True)  # creation timestamp
+
+
+class PluginFile(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    path: str
+    content: str
 
 
 class ToolMeta(BaseModel):
@@ -55,6 +62,7 @@ class ToolModel(BaseModel):
     name: str
     # None when listed with defer_content=True (source skipped for listings)
     content: str | None = None
+    files: list[PluginFile] | None = None
     specs: list[dict]
     meta: ToolMeta
     is_active: bool = True
@@ -101,6 +109,7 @@ class ToolForm(BaseModel):
     id: str
     name: str
     content: str
+    files: list[PluginFile] | None = None
     meta: ToolMeta
     access_grants: list[dict] | None = None
 
@@ -402,7 +411,10 @@ class ToolsTable:
                 tool = await self._lock_tool(session, id)
                 if not tool:
                     raise ValueError('Tool not found')
-                if not allow_code_changes and updated.get('content', tool.content) != tool.content:
+                if not allow_code_changes and (
+                    updated.get('content', tool.content) != tool.content
+                    or (updated.get('files', tool.files) or []) != (tool.files or [])
+                ):
                     raise HTTPException(401, 'You do not have permission to change executable Tool code')
                 updated = dict(updated)
                 updated.pop('access_grants', None)

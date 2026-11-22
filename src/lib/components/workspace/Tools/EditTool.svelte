@@ -41,6 +41,7 @@
 			name: data.name,
 			meta: data.meta,
 			content: data.content,
+			files: data.files,
 			commit_message: data.commit_message,
 			access_grants: data.access_grants
 		}).catch((error) => {
@@ -94,6 +95,7 @@
 			name={tool.name}
 			meta={tool.meta}
 			content={tool.content}
+			files={tool.files ?? []}
 			accessGrants={tool.access_grants ?? []}
 			version_id={tool.version_id}
 			onProduction={async () => {

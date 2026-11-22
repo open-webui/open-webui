@@ -9,6 +9,7 @@ import time
 from fastapi import HTTPException
 from open_webui.internal.db import Base, JSONField, get_async_db_context
 from open_webui.models.function_history import FunctionHistories, FunctionHistory, function_snapshot
+from open_webui.models.tools import PluginFile
 from open_webui.models.users import User, UserResponse, Users, UserSettings
 from open_webui.utils.valves import decrypt_valves, encrypt_valves, validate_valves
 from pydantic import BaseModel, ConfigDict
@@ -27,6 +28,7 @@ class Function(Base):  # database table mapping
     name = Column(Text, nullable=False)  # function identifier
     type = Column(Text, nullable=False)  # function type (pipe, filter, etc.)
     content = Column(Text, nullable=True)  # Python source code
+    files = Column(JSONField, nullable=True)  # supporting files the code can import or read
     meta = Column(JSONField, nullable=True)  # function metadata
     valves = Column(JSONField, nullable=True)  # function configuration valves
     is_active = Column(Boolean, default=False)  # function activation status
@@ -50,6 +52,7 @@ class FunctionModel(BaseModel):
     name: str
     type: str
     content: str
+    files: list[PluginFile] | None = None
     meta: FunctionMeta
     is_active: bool = False
     is_global: bool = False
@@ -67,6 +70,7 @@ class FunctionWithValvesModel(BaseModel):
     name: str
     type: str
     content: str
+    files: list[PluginFile] | None = None
     meta: FunctionMeta
     valves: dict | None = None
     is_active: bool = False
@@ -104,6 +108,7 @@ class FunctionForm(BaseModel):
     id: str
     name: str
     content: str
+    files: list[PluginFile] | None = None
     meta: FunctionMeta
 
 

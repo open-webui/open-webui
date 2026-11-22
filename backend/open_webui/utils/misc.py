@@ -1456,3 +1456,18 @@ def unified_text_diff(old: str, new: str, fromfile: str, tofile: str) -> list[st
     if max(len(old_lines), len(new_lines)) > MAX_DIFF_LINES:
         raise HTTPException(status_code=413, detail=f'Diff is limited to {MAX_DIFF_LINES} lines per version')
     return list(difflib.unified_diff(old_lines, new_lines, fromfile=fromfile, tofile=tofile, lineterm=''))
+
+
+def files_text_diff(old_files: list[dict], new_files: list[dict]) -> list[dict]:
+    old_contents = {file['path']: file['content'] for file in old_files}
+    new_contents = {file['path']: file['content'] for file in new_files}
+    diffs = []
+    for path in sorted(old_contents.keys() | new_contents.keys()):
+        old, new = old_contents.get(path), new_contents.get(path)
+        if old == new:
+            continue
+        status = 'added' if old is None else 'deleted' if new is None else 'modified'
+        old, new = old or '', new or ''
+        patch = '\n'.join(unified_text_diff(old, new, f'selected/{path}', f'production/{path}'))
+        diffs.append({'path': path, 'status': status, 'diff': patch, 'line_endings_only': old != new and not patch})
+    return diffs
