@@ -741,9 +741,7 @@
 						</span>
 					</Tooltip>
 					{#if showSelectedModel}
-						<span class="line-clamp-1 text-xs text-base-500">
-							{$i18n.t('Answered by {{NAME}}', { NAME: selectedModelName })}
-						</span>
+						<span class="truncate text-base-500">{selectedModelName}</span>
 					{/if}
 				</Name>
 			{/if}

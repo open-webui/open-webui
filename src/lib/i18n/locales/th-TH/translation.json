@@ -281,7 +281,6 @@
 	"Animation is unavailable or reduced motion is enabled.": "แอนิเมชันไม่พร้อมใช้งาน หรือเปิดใช้งานการลดการเคลื่อนไหวอยู่",
 	"Annotation without text": "คำอธิบายประกอบที่ไม่มีข้อความ",
 	"Announcement": "ประกาศ",
-	"Answered by {{NAME}}": "",
 	"Anyone": "ใครก็ได้",
 	"Anyone with the link can view": "ทุกคนที่มีลิงก์สามารถดูได้",
 	"API Base URL": "URL พื้นฐานของ API",
