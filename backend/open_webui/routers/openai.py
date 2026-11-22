@@ -1264,6 +1264,10 @@ def convert_to_responses_payload(payload: dict) -> dict:
                 system_content = '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
             continue
 
+        # Reasoning items go back in front of the message or tool calls they led to.
+        if role == 'assistant':
+            input_items.extend(_normalize_stored_item(item) for item in msg.get('reasoning_items') or [])
+
         # Handle assistant messages with tool_calls (from convert_output_to_messages)
         if role == 'assistant' and msg.get('tool_calls'):
             # Add text content as message if present
@@ -1615,6 +1619,8 @@ async def generate_chat_completion(
     # (Chat Completions doesn't support images in tool content).
     if not is_responses and 'messages' in payload:
         for message in payload['messages']:
+            # Responses reasoning items mean nothing to a Chat Completions provider.
+            message.pop('reasoning_items', None)
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
                 parts = message['content']
                 text = ''.join(part.get('text', '') for part in parts if part.get('type') in ('input_text', 'text'))

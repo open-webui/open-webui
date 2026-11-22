@@ -493,41 +493,32 @@ def convert_output_to_messages(
     messages = []
     pending_tool_calls = []
     pending_content = []
-    pending_reasoning = []  # Only populated for top-level structured reasoning fields.
-    pending_reasoning_details = []
+    pending_reasoning = {}  # Reasoning fields for the next assistant message.
     pending_tool_image_urls = []
     pending_tool_outputs = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
-        if not pending_content and not pending_tool_calls and not pending_reasoning and not pending_reasoning_details:
+        nonlocal pending_content, pending_tool_calls, pending_reasoning
+        if not pending_content and not pending_tool_calls and not pending_reasoning:
             return
 
         message = {
             'role': 'assistant',
             'content': '\n'.join(pending_content) if pending_content else (None if pending_tool_calls else ''),
             **({'tool_calls': pending_tool_calls} if pending_tool_calls else {}),
+            **pending_reasoning,
         }
 
-        if pending_reasoning:
-            if reasoning_format == 'thinking':
-                message['thinking'] = '\n'.join(pending_reasoning)
-            elif reasoning_format == 'reasoning':
-                message['reasoning'] = '\n'.join(pending_reasoning)
-            else:
-                message['reasoning_content'] = '\n'.join(pending_reasoning)
+        if reasoning_format in pending_reasoning:
+            message[reasoning_format] = '\n'.join(pending_reasoning[reasoning_format])
         elif pending_tool_calls and reasoning_format == 'reasoning_content':
             # DeepSeek rejects a tool call turn without reasoning_content.
             message['reasoning_content'] = ''
 
-        if pending_reasoning_details:
-            message['reasoning_details'] = pending_reasoning_details
-
         messages.append(message)
         pending_content = []
         pending_tool_calls = []
-        pending_reasoning = []
-        pending_reasoning_details = []
+        pending_reasoning = {}
 
     def flush_tool_images():
         nonlocal pending_tool_image_urls
@@ -636,6 +627,10 @@ def convert_output_to_messages(
             pending_tool_outputs.append(item)
 
         elif item_type == 'reasoning':
+            # Encrypted reasoning only helps the provider if it gets the item back whole.
+            if raw and item.get('encrypted_content'):
+                pending_reasoning.setdefault('reasoning_items', []).append(item)
+
             reasoning_details = item.get('reasoning_details') if raw else None
             if reasoning_details:
                 reasoning_details = reasoning_details if isinstance(reasoning_details, list) else [reasoning_details]
@@ -664,10 +659,10 @@ def convert_output_to_messages(
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
                 elif reasoning_format in {'thinking', 'reasoning_content', 'reasoning'}:
                     # Native providers: collect for their top-level reasoning field.
-                    pending_reasoning.append(reasoning_text)
+                    pending_reasoning.setdefault(reasoning_format, []).append(reasoning_text)
 
             if reasoning_details:
-                pending_reasoning_details.extend(reasoning_details)
+                pending_reasoning.setdefault('reasoning_details', []).extend(reasoning_details)
 
         elif item_type == 'open_webui:code_interpreter':
             # Always include code interpreter content so the LLM knows

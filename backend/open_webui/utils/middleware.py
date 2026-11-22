@@ -1931,7 +1931,9 @@ def get_reasoning_format(model: dict) -> str | None:
 
 def strip_reasoning_details(output: list) -> list:
     return [
-        {key: value for key, value in item.items() if key != 'reasoning_details'} if isinstance(item, dict) else item
+        {key: value for key, value in item.items() if key not in ('reasoning_details', 'encrypted_content')}
+        if isinstance(item, dict)
+        else item
         for item in output
     ]
 
