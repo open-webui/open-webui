@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { writable } from 'svelte/store';
 import { getChatView, updateChatView } from '$lib/apis/chats/view';
-import { terminalRequest, type TerminalTarget } from '$lib/apis/machines';
+import { machineRequest, type MachineTarget } from '$lib/apis/machines';
 import { createBrowserSession } from '$lib/apis/machines/browser';
 import { isSavedChatId } from '$lib/utils/chatId';
 import {
@@ -13,6 +13,7 @@ import {
 	type ChatViewState,
 	type Tab
 } from '$lib/components/chat/Tabs/tabs';
+import { normalizeMetaMachineId, normalizeViewMachineId } from '$lib/utils/machines';
 
 export type EditorDraft = {
 	baseText: string;
@@ -62,7 +63,7 @@ export function serializeChatView(state: ChatViewState): ChatViewState {
 	}
 	return {
 		schemaVersion: 1,
-		selectedTerminalId: state.selectedTerminalId,
+		selectedMachineId: state.selectedMachineId,
 		panels: {
 			...panels,
 			tabs: panels.tabs.map((tab) => ({
@@ -70,7 +71,7 @@ export function serializeChatView(state: ChatViewState): ChatViewState {
 				kind: tab.kind,
 				label: tab.label,
 				href: tab.href,
-				terminalId: tab.terminalId,
+				machineId: tab.machineId,
 				terminalNumber: tab.terminalNumber,
 				chatId: tab.chatId,
 				chatNumber: tab.chatNumber,
@@ -92,7 +93,7 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 		instanceId: uuidv4(),
 		userId,
 		chatId,
-		state: { schemaVersion: 1, selectedTerminalId: null, panels: createTabsState() },
+		state: { schemaVersion: 1, selectedMachineId: null, panels: createTabsState() },
 		drafts: new Map(),
 		transient: {},
 		pending: new Map(),
@@ -118,9 +119,9 @@ export async function loadChatView(entry: Entry) {
 			if (result.state && result.state.schemaVersion !== 1)
 				throw new Error('Unsupported chat view version');
 			if (!entry.loaded && result.state) {
-				entry.state = result.state;
+				entry.state = normalizeViewMachineId(result.state);
 				entry.state.panels.tabs = entry.state.panels.tabs.map((tab) =>
-					normalizeChatTab(tab, entry.chatId)
+					normalizeChatTab(normalizeMetaMachineId(tab), entry.chatId)
 				);
 				entry.persisted = JSON.stringify(serializeChatView(entry.state));
 			}
@@ -214,7 +215,7 @@ export function closeChatTabs(chatId: string) {
 	}
 }
 
-export function createViewSession(entry: Entry, id: string, target: TerminalTarget) {
+export function createViewSession(entry: Entry, id: string, target: MachineTarget) {
 	const pending = entry.pending.get(id);
 	if (pending) return pending;
 	const tab = entry.state.panels.tabs.find((tab) => tab.id === id);
@@ -225,7 +226,7 @@ export function createViewSession(entry: Entry, id: string, target: TerminalTarg
 			const session =
 				tab.kind === 'browser'
 					? await createBrowserSession(target, tab.path ?? '')
-					: await terminalRequest<{ id: string }>(target, '/api/terminals', {
+					: await machineRequest<{ id: string }>(target, '/api/terminals', {
 							method: 'POST'
 						});
 			updateViewTab(entry, id, { sessionId: session.id });

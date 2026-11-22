@@ -5,10 +5,10 @@
 	import { WebLinksAddon } from '@xterm/addon-web-links';
 	import { WebglAddon } from '@xterm/addon-webgl';
 	import '@xterm/xterm/css/xterm.css';
-	import { terminalRequest, TerminalRequestError, type TerminalTarget } from '$lib/apis/machines';
-	import { assignTerminalChat, openTerminalSocket } from '$lib/apis/machines/socket';
+	import { machineRequest, MachineRequestError, type MachineTarget } from '$lib/apis/machines';
+	import { assignTerminalChat, openMachineSocket } from '$lib/apis/machines/socket';
 
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let overlay = false;
 	export let active = true;
@@ -110,9 +110,9 @@
 		connecting = true;
 		try {
 			if (!sessionId) throw new Error('Session no longer available');
-			await terminalRequest(target, `/api/terminals/${encodeURIComponent(sessionId)}`);
+			await machineRequest(target, `/api/terminals/${encodeURIComponent(sessionId)}`);
 			if (destroyed) return;
-			ws = openTerminalSocket(
+			ws = openMachineSocket(
 				target,
 				`/api/terminals/${encodeURIComponent(sessionId)}`,
 				() => {
@@ -229,10 +229,7 @@
 		} catch (error) {
 			if (destroyed) return;
 			disconnect();
-			onUnavailable(
-				String(error),
-				error instanceof TerminalRequestError ? error.status : undefined
-			);
+			onUnavailable(String(error), error instanceof MachineRequestError ? error.status : undefined);
 			write(`\r\n\x1b[31m[${error}]\x1b[0m\r\n`);
 		}
 	}

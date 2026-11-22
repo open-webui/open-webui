@@ -1,8 +1,8 @@
-import type { ListeningPort, TerminalTarget } from './index';
-import { openTerminalSocket } from './socket';
+import type { ListeningPort, MachineTarget } from './index';
+import { openMachineSocket } from './socket';
 
-function watchTerminalEvents(
-	target: TerminalTarget,
+function watchMachineEvents(
+	target: MachineTarget,
 	subscription: { path?: string; ports?: boolean },
 	onMessage: (message: any) => void,
 	onError: (message: string) => void
@@ -12,7 +12,7 @@ function watchTerminalEvents(
 	let retry: ReturnType<typeof setTimeout>;
 	let retryDelay = 1000;
 	const connect = () => {
-		socket = openTerminalSocket(target, '/events', (socket) => {
+		socket = openMachineSocket(target, '/events', (socket) => {
 			socket.send(JSON.stringify({ type: 'subscribe', ...subscription }));
 		});
 		socket.onmessage = (event) => {
@@ -43,13 +43,13 @@ function watchTerminalEvents(
 	};
 }
 
-export function watchTerminalFiles(
-	target: TerminalTarget,
+export function watchMachineFiles(
+	target: MachineTarget,
 	directory: string,
 	onChange: () => void,
 	onError: (message: string) => void
 ) {
-	return watchTerminalEvents(
+	return watchMachineEvents(
 		target,
 		{ path: directory },
 		(message) => {
@@ -59,12 +59,12 @@ export function watchTerminalFiles(
 	);
 }
 
-export function watchTerminalPorts(
-	target: TerminalTarget,
+export function watchMachinePorts(
+	target: MachineTarget,
 	onPorts: (ports: ListeningPort[]) => void,
 	onError: (message: string) => void
 ) {
-	return watchTerminalEvents(
+	return watchMachineEvents(
 		target,
 		{ ports: true },
 		(message) => {

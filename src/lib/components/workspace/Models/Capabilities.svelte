@@ -88,11 +88,11 @@
 		'video_generation',
 		'code_interpreter'
 	] as const;
-	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
+	$: hasMachine = $config?.features?.enable_machines || $config?.features?.tether;
 	$: availableCapabilities = (Object.keys(capabilityLabels) as Capability[]).filter(
 		(key) =>
 			(key !== 'file_context' || capabilities.file_upload) &&
-			(key !== 'terminal' || hasTerminal) &&
+			(key !== 'terminal' || hasMachine) &&
 			(capabilityLabels[key].enabled ?? true)
 	);
 	$: enabledCapabilityIds = availableCapabilities.filter((key) => effectiveCapabilities[key]);

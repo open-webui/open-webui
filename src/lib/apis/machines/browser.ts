@@ -1,4 +1,4 @@
-import { terminalRequest, type TerminalTarget } from './index';
+import { machineRequest, type MachineTarget } from './index';
 
 export type BrowserSession = {
 	id: string;
@@ -9,11 +9,11 @@ export type BrowserSession = {
 	chrome_available: boolean;
 };
 
-export const getBrowserSession = (target: TerminalTarget, id: string) =>
-	terminalRequest<BrowserSession>(target, `/browser/sessions/${encodeURIComponent(id)}`);
+export const getBrowserSession = (target: MachineTarget, id: string) =>
+	machineRequest<BrowserSession>(target, `/browser/sessions/${encodeURIComponent(id)}`);
 
-export const createBrowserSession = async (target: TerminalTarget, url = '') => {
-	const session = await terminalRequest<BrowserSession>(target, '/browser/sessions', {
+export const createBrowserSession = async (target: MachineTarget, url = '') => {
+	const session = await machineRequest<BrowserSession>(target, '/browser/sessions', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ url })
@@ -28,26 +28,26 @@ export const createBrowserSession = async (target: TerminalTarget, url = '') => 
 };
 
 export const updateBrowserSession = (
-	target: TerminalTarget,
+	target: MachineTarget,
 	id: string,
 	fields: Partial<Pick<BrowserSession, 'url' | 'title' | 'mode'>> & {
 		active?: boolean;
 		chat_id?: string;
 	}
 ) =>
-	terminalRequest<BrowserSession>(target, `/browser/sessions/${encodeURIComponent(id)}`, {
+	machineRequest<BrowserSession>(target, `/browser/sessions/${encodeURIComponent(id)}`, {
 		method: 'PATCH',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify(fields)
 	});
 
-export const closeBrowserSession = (target: TerminalTarget, id: string) =>
-	terminalRequest(target, `/browser/sessions/${encodeURIComponent(id)}`, {
+export const closeBrowserSession = (target: MachineTarget, id: string) =>
+	machineRequest(target, `/browser/sessions/${encodeURIComponent(id)}`, {
 		method: 'DELETE',
 		keepalive: true
 	});
 
-export const browserViewUrl = (target: TerminalTarget, session: BrowserSession) =>
+export const browserViewUrl = (target: MachineTarget, session: BrowserSession) =>
 	`${target.baseUrl.replace(/\/$/, '')}/browser/view/${encodeURIComponent(session.id)}/${encodeURIComponent(session.token)}`;
 
 export function browserFrameUrl(prefix: string, value: string) {

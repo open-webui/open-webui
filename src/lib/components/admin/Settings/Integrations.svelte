@@ -9,8 +9,8 @@
 	const dispatch = createEventDispatcher();
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	import { config, models, settings, user, terminalServers, socket } from '$lib/stores';
-	import { getTerminalServers } from '$lib/apis/machines';
+	import { config, models, settings, user, machines, socket } from '$lib/stores';
+	import { getMachines } from '$lib/apis/machines';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -23,7 +23,7 @@
 	import SensitiveInput from '$lib/components/common/SensitiveInput.svelte';
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
-	import AddTerminalServerModal from '$lib/components/AddTerminalServerModal.svelte';
+	import AddMachineModal from '$lib/components/AddMachineModal.svelte';
 	import ExternalKnowledge from './ExternalKnowledge.svelte';
 	import Apps from './Apps.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -32,14 +32,14 @@
 	import {
 		getToolServerConnections,
 		setToolServerConnections,
-		getTerminalServerConnections,
-		setTerminalServerConnections
+		getMachineConnections,
+		setMachineConnections
 	} from '$lib/apis/configs';
 
 	export let saveSettings: Function;
 
 	type ToolServerConnection = any;
-	type TerminalConnection = {
+	type MachineConnection = {
 		id?: string;
 		url?: string;
 		name?: string;
@@ -51,10 +51,10 @@
 	let servers: ToolServerConnection[] | null = null;
 	let showConnectionModal = false;
 
-	// Terminal server admin connections
-	let terminalConnections: TerminalConnection[] = [];
-	let showAddTerminalModal = false;
-	let editTerminalIdx: number | null = null;
+	// Machine admin connections
+	let machineConnections: MachineConnection[] = [];
+	let showAddMachineModal = false;
+	let editMachineIdx: number | null = null;
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];
@@ -74,9 +74,9 @@
 		}
 	};
 
-	const saveTerminalServers = async () => {
-		const res = await setTerminalServerConnections(localStorage.token, {
-			TERMINAL_SERVER_CONNECTIONS: terminalConnections
+	const saveMachines = async () => {
+		const res = await setMachineConnections(localStorage.token, {
+			MACHINE_CONNECTIONS: machineConnections
 		}).catch((err) => {
 			toast.error($i18n.t('Failed to save machines'));
 			return null;
@@ -86,27 +86,26 @@
 			toast.success($i18n.t('Machines saved'));
 			await config.set(await getBackendConfig());
 
-			// Refresh the terminalServers store so changes are reflected immediately
-			const systemTerminals = await getTerminalServers(localStorage.token);
-			const systemEntries = systemTerminals.map((t) => ({
+			// Refresh the machines store so changes are reflected immediately
+			const systemMachines = await getMachines(localStorage.token);
+			const systemEntries = systemMachines.map((t) => ({
 				...t,
 				url: `${WEBUI_API_BASE_URL}/machines/${t.id}`,
 				name: t.name,
 				key: localStorage.token,
 				config: t.config ?? {}
 			}));
-			terminalServers.set(systemEntries as any);
+			machines.set(systemEntries as any);
 		}
 	};
 
-	const addTerminalConnection = async (server: TerminalConnection) => {
+	const addMachineConnection = async (server: MachineConnection) => {
 		if (/^(ssh|local):\/\//.test(String(server.url ?? ''))) {
 			// Installed over SSH or on this computer: the backend already saved the machine.
 			// Reload the list, then apply the rest of the form (name, access, options) to it.
-			const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
-			terminalConnections = (res?.TERMINAL_SERVER_CONNECTIONS ??
-				terminalConnections) as TerminalConnection[];
-			terminalConnections = terminalConnections.map((c) =>
+			const res = await getMachineConnections(localStorage.token).catch(() => null);
+			machineConnections = (res?.MACHINE_CONNECTIONS ?? machineConnections) as MachineConnection[];
+			machineConnections = machineConnections.map((c) =>
 				c.id === server.id
 					? {
 							...c,
@@ -119,23 +118,23 @@
 						}
 					: c
 			);
-			await saveTerminalServers();
+			await saveMachines();
 			return;
 		}
-		terminalConnections = [...terminalConnections, { ...server, id: server.id ?? uuidv4() }];
-		saveTerminalServers();
+		machineConnections = [...machineConnections, { ...server, id: server.id ?? uuidv4() }];
+		saveMachines();
 	};
 
-	const updateTerminalConnection = (idx: number, updated: TerminalConnection) => {
-		terminalConnections = terminalConnections.map((c, i) =>
+	const updateMachineConnection = (idx: number, updated: MachineConnection) => {
+		machineConnections = machineConnections.map((c, i) =>
 			i === idx ? { ...c, ...updated, id: updated.id ?? c.id } : c
 		);
-		saveTerminalServers();
+		saveMachines();
 	};
 
-	const removeTerminalConnection = (idx: number) => {
-		terminalConnections = terminalConnections.filter((_, i) => i !== idx);
-		saveTerminalServers();
+	const removeMachineConnection = (idx: number) => {
+		machineConnections = machineConnections.filter((_, i) => i !== idx);
+		saveMachines();
 	};
 
 	onMount(async () => {
@@ -143,9 +142,9 @@
 		servers = res.TOOL_SERVER_CONNECTIONS as ToolServerConnection[];
 
 		try {
-			const terminalRes = await getTerminalServerConnections(localStorage.token);
-			if (terminalRes?.TERMINAL_SERVER_CONNECTIONS) {
-				terminalConnections = terminalRes.TERMINAL_SERVER_CONNECTIONS as TerminalConnection[];
+			const machineRes = await getMachineConnections(localStorage.token);
+			if (machineRes?.MACHINE_CONNECTIONS) {
+				machineConnections = machineRes.MACHINE_CONNECTIONS as MachineConnection[];
 			}
 		} catch {
 			// Not configured yet
@@ -156,9 +155,9 @@
 	// An SSH install or upgrade finished (here or in another tab): show the machine's new state.
 	const machinesChanged = async (event: { data?: { type?: string } }) => {
 		if (event?.data?.type !== 'machines:changed') return;
-		const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
-		if (res?.TERMINAL_SERVER_CONNECTIONS) {
-			terminalConnections = res.TERMINAL_SERVER_CONNECTIONS as TerminalConnection[];
+		const res = await getMachineConnections(localStorage.token).catch(() => null);
+		if (res?.MACHINE_CONNECTIONS) {
+			machineConnections = res.MACHINE_CONNECTIONS as MachineConnection[];
 		}
 	};
 
@@ -167,23 +166,23 @@
 
 <AddToolServerModal bind:show={showConnectionModal} onSubmit={addConnectionHandler} />
 
-<AddTerminalServerModal
-	bind:show={showAddTerminalModal}
-	edit={editTerminalIdx !== null}
-	connection={editTerminalIdx !== null ? terminalConnections[editTerminalIdx] : null}
-	allowLocal={!terminalConnections.some((c) => c.local)}
-	onSubmit={(c: TerminalConnection) => {
-		if (editTerminalIdx !== null) {
-			updateTerminalConnection(editTerminalIdx, c);
-			editTerminalIdx = null;
+<AddMachineModal
+	bind:show={showAddMachineModal}
+	edit={editMachineIdx !== null}
+	connection={editMachineIdx !== null ? machineConnections[editMachineIdx] : null}
+	allowLocal={!machineConnections.some((c) => c.local)}
+	onSubmit={(c: MachineConnection) => {
+		if (editMachineIdx !== null) {
+			updateMachineConnection(editMachineIdx, c);
+			editMachineIdx = null;
 		} else {
-			addTerminalConnection(c);
+			addMachineConnection(c);
 		}
 	}}
 	onDelete={() => {
-		if (editTerminalIdx !== null) {
-			removeTerminalConnection(editTerminalIdx);
-			editTerminalIdx = null;
+		if (editMachineIdx !== null) {
+			removeMachineConnection(editMachineIdx);
+			editMachineIdx = null;
 		}
 	}}
 />
@@ -292,8 +291,8 @@
 									aria-label={$i18n.t('Add Machine')}
 									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
-										editTerminalIdx = null;
-										showAddTerminalModal = true;
+										editMachineIdx = null;
+										showAddMachineModal = true;
 									}}
 									type="button"
 								>
@@ -303,7 +302,7 @@
 						</div>
 
 						<div class="flex flex-col gap-1.5">
-							{#each terminalConnections as connection, idx}
+							{#each machineConnections as connection, idx}
 								<div class="group/setting-row flex w-full gap-2 items-center">
 									<Tooltip className="w-full relative" content={''} placement="top-start">
 										<div class="flex w-full">
@@ -322,8 +321,8 @@
 												<button
 													type="button"
 													on:click={() => {
-														editTerminalIdx = idx;
-														showAddTerminalModal = true;
+														editMachineIdx = idx;
+														showAddMachineModal = true;
 													}}
 													class="outline-hidden w-full min-w-0 truncate text-left cursor-pointer bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
 												>
@@ -341,8 +340,8 @@
 												aria-label={$i18n.t('Configure')}
 												class="self-center p-1 bg-transparent hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg transition"
 												on:click={() => {
-													editTerminalIdx = idx;
-													showAddTerminalModal = true;
+													editMachineIdx = idx;
+													showAddMachineModal = true;
 												}}
 												type="button"
 											>
@@ -359,10 +358,10 @@
 												id={`terminal-${idx}-control`}
 												state={connection?.enabled !== false}
 												on:change={() => {
-													terminalConnections = terminalConnections.map((c, i) =>
+													machineConnections = machineConnections.map((c, i) =>
 														i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
 													);
-													saveTerminalServers();
+													saveMachines();
 												}}
 											/>
 										</Tooltip>
@@ -371,7 +370,7 @@
 							{/each}
 						</div>
 
-						{#if terminalConnections.length === 0}
+						{#if machineConnections.length === 0}
 							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 								{$i18n.t('No machines configured.')}
 							</div>

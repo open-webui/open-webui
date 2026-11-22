@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 	import { downloadFileBlob, type FileEntry } from '$lib/apis/machines';
 	import { fileIconName } from './fileIcon';
 	import Icon from './Icon.svelte';
@@ -16,7 +16,7 @@
 
 	const observeImage = (node: HTMLElement) => {
 		const extension = entry.name.split('.').pop()?.toLowerCase() ?? '';
-		// shortcut: Bound automatic downloads until the terminal provides resized thumbnails.
+		// shortcut: Bound automatic downloads until the machine provides resized thumbnails.
 		if (
 			entry.type !== 'file' ||
 			!target?.baseUrl ||

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { resolveTerminalTarget, type TerminalTarget } from '$lib/apis/machines';
+	import { resolveMachineTarget, type MachineTarget } from '$lib/apis/machines';
 	import Fuse from 'fuse.js';
 	import { getContext, onDestroy, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
 
-	import { folders, settings, terminalServers, user } from '$lib/stores';
+	import { folders, settings, machines, user } from '$lib/stores';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFolders } from '$lib/apis/folders';
 	import { searchKnowledgeBases, searchKnowledgeFiles } from '$lib/apis/knowledge';
@@ -30,7 +30,7 @@
 	const i18n = getContext<any>('i18n');
 
 	export let query = '';
-	export let selectedTerminalId: Readable<string | null>;
+	export let selectedMachineId: Readable<string | null>;
 	export let modelId: string | null = null;
 	export let onSelect: (e: any) => void = () => {};
 	export let fileUploadEnabled: boolean = true;
@@ -113,22 +113,22 @@
 		searchController?.abort();
 		searchController = new AbortController();
 		const { signal } = searchController;
-		const terminal = getSelectedTerminal();
-		getFilesystemItems(terminal, signal);
+		const machine = getSelectedMachine();
+		getFilesystemItems(machine, signal);
 		getKnowledgeItems(signal);
 		getKnowledgeFileItems(signal);
 	};
 
-	const getFilesystemItems = async (terminal: TerminalTarget | null, signal: AbortSignal) => {
-		if (!terminal) {
+	const getFilesystemItems = async (machine: MachineTarget | null, signal: AbortSignal) => {
+		if (!machine) {
 			filesystemItems = [];
 			return;
 		}
 
-		const terminalId = $selectedTerminalId;
+		const machineId = $selectedMachineId;
 		const sessionId = $activeChatId;
 		const res = await searchFiles(
-			terminal,
+			machine,
 			query,
 			'.',
 			20,
@@ -138,24 +138,21 @@
 		).catch(() => null);
 
 		if (signal.aborted) return;
-		if (terminalId !== $selectedTerminalId || sessionId !== $activeChatId) return;
+		if (machineId !== $selectedMachineId || sessionId !== $activeChatId) return;
 		filesystemItems = (res?.results ?? []).map((item: any) => ({
-			...filesystemFile(item, terminalId!, sessionId || null),
+			...filesystemFile(item, machineId!, sessionId || null),
 			filesystem_type: item.type,
 			description: item.path
 		}));
 	};
 
-	const getSelectedTerminal = (): TerminalTarget | null => {
-		const target = resolveTerminalTarget(
-			$selectedTerminalId,
-			$terminalServers ?? [],
-			localStorage.token,
-			{ chatId: $activeChatId || null, modelId: modelId }
-		);
+	const getSelectedMachine = (): MachineTarget | null => {
+		const target = resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token, {
+			chatId: $activeChatId || null,
+			modelId: modelId
+		});
 		if (
-			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.scope ===
-				'chat' &&
+			($machines ?? []).find((server) => server.id === $selectedMachineId)?.scope === 'chat' &&
 			($temporary || isTemporaryChatId($activeChatId))
 		)
 			return null;

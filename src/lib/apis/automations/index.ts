@@ -2,7 +2,7 @@ import type { AgentModel } from '$lib/stores';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { extractInputVariables } from '$lib/utils';
 
-export type AutomationTerminalConfig = {
+export type AutomationMachineConfig = {
 	server_id: string;
 	cwd?: string;
 };
@@ -39,7 +39,8 @@ export type AutomationData = {
 	model_id: string;
 	/** Empty: no schedule. */
 	rrule: string;
-	terminal?: AutomationTerminalConfig;
+	machine?: AutomationMachineConfig;
+	terminal?: AutomationMachineConfig; // former name of machine, on automations saved before the rename
 	target?: AutomationTarget | null;
 	webhook?: AutomationWebhook | null;
 };
@@ -126,11 +127,11 @@ export const updateAutomationAccessGrants = async (
 
 export const getAutomationModels = async (
 	token: string,
-	terminalId: string,
+	machineId: string,
 	cwd: string,
 	automationId?: string
 ): Promise<AgentModel[]> => {
-	const query = new URLSearchParams({ terminal_id: terminalId });
+	const query = new URLSearchParams({ machine_id: machineId });
 	if (cwd) query.set('cwd', cwd);
 	if (automationId) query.set('automation_id', automationId);
 	const response = await fetch(`${WEBUI_API_BASE_URL}/automations/models?${query}`, {

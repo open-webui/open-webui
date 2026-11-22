@@ -5,7 +5,7 @@ import re
 from open_webui.utils.misc import get_content_from_message, set_last_user_message_content
 
 
-# Match DB skill IDs and terminal skill IDs created by the $ picker.
+# Match DB skill IDs and machine skill IDs created by the $ picker.
 SKILL_ID_RE = r'(?:[a-z0-9_-]+|terminal:[^|>\s]+)'
 SKILL_MENTION_RE = re.compile(rf'<(?:\$({SKILL_ID_RE})(?:\|[^>]*)?|/({SKILL_ID_RE})\|[^>]*)>')
 

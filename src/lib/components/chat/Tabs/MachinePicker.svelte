@@ -1,5 +1,5 @@
 <script lang="ts" context="module">
-	export type TerminalOption = { id: string; label: string; device: boolean };
+	export type MachineOption = { id: string; label: string; device: boolean };
 </script>
 
 <script lang="ts">
@@ -10,21 +10,21 @@
 	import Server from '$lib/components/icons/Server.svelte';
 
 	const i18n = getContext<any>('i18n');
-	export let terminals: TerminalOption[];
+	export let options: MachineOption[];
 	export let onclose: () => void;
 	export let onselect: (id: string) => void;
 
 	let query = '';
 	let selectedIndex = 0;
 
-	$: filteredTerminals = terminals.filter((terminal) =>
-		terminal.label.toLowerCase().includes(query.trim().toLowerCase())
+	$: filteredMachines = options.filter((machine) =>
+		machine.label.toLowerCase().includes(query.trim().toLowerCase())
 	);
-	$: if (selectedIndex >= filteredTerminals.length)
-		selectedIndex = Math.max(0, filteredTerminals.length - 1);
+	$: if (selectedIndex >= filteredMachines.length)
+		selectedIndex = Math.max(0, filteredMachines.length - 1);
 
-	const select = (terminal: TerminalOption) => {
-		onselect(terminal.id);
+	const select = (machine: MachineOption) => {
+		onselect(machine.id);
 		onclose();
 	};
 
@@ -35,15 +35,15 @@
 			event.stopPropagation();
 			selectedIndex = Math.max(
 				0,
-				Math.min(filteredTerminals.length - 1, selectedIndex + (event.key === 'ArrowDown' ? 1 : -1))
+				Math.min(filteredMachines.length - 1, selectedIndex + (event.key === 'ArrowDown' ? 1 : -1))
 			);
 			document
 				.getElementById(`terminal-picker-option-${selectedIndex}`)
 				?.scrollIntoView({ block: 'nearest' });
-		} else if (event.key === 'Enter' && filteredTerminals[selectedIndex]) {
+		} else if (event.key === 'Enter' && filteredMachines[selectedIndex]) {
 			event.preventDefault();
 			event.stopPropagation();
-			select(filteredTerminals[selectedIndex]);
+			select(filteredMachines[selectedIndex]);
 		}
 	};
 </script>
@@ -60,9 +60,9 @@
 			role="combobox"
 			aria-label={$i18n.t('Select a machine')}
 			aria-autocomplete="list"
-			aria-expanded={filteredTerminals.length > 0}
+			aria-expanded={filteredMachines.length > 0}
 			aria-controls="terminal-picker-options"
-			aria-activedescendant={filteredTerminals.length
+			aria-activedescendant={filteredMachines.length
 				? `terminal-picker-option-${selectedIndex}`
 				: undefined}
 			autocomplete="off"
@@ -82,7 +82,7 @@
 		aria-label={$i18n.t('Machines')}
 		class="max-h-[min(20rem,60dvh)] overflow-y-auto px-1 pb-1"
 	>
-		{#each filteredTerminals as terminal, index (terminal.id)}
+		{#each filteredMachines as machine, index (machine.id)}
 			<button
 				type="button"
 				role="option"
@@ -94,20 +94,20 @@
 					? 'bg-base-100/60 dark:bg-base-800/60'
 					: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 				on:mousemove={() => (selectedIndex = index)}
-				on:click={() => select(terminal)}
+				on:click={() => select(machine)}
 			>
 				<span class="shrink-0 text-base-500 dark:text-base-400">
-					{#if terminal.device}
+					{#if machine.device}
 						<Server className="size-3.5" strokeWidth="2" />
 					{:else}
 						<Cloud className="size-3.5" strokeWidth="2" />
 					{/if}
 				</span>
-				<span class="min-w-0 flex-1 truncate">{terminal.label}</span>
+				<span class="min-w-0 flex-1 truncate">{machine.label}</span>
 			</button>
 		{/each}
 	</div>
-	{#if !filteredTerminals.length}
+	{#if !filteredMachines.length}
 		<div role="status" class="px-3 pb-3 pt-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 			{$i18n.t('No machines found')}
 		</div>

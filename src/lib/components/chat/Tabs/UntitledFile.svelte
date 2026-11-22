@@ -5,10 +5,10 @@
 	import {
 		getCwd,
 		listFiles,
-		uploadToTerminal,
-		joinTerminalPath,
+		uploadToMachine,
+		joinMachinePath,
 		type FileEntry,
-		type TerminalTarget
+		type MachineTarget
 	} from '$lib/apis/machines';
 	import FileCodeEditor from '../FileNav/FileCodeEditor.svelte';
 	import Icon from '../FileNav/Icon.svelte';
@@ -18,7 +18,7 @@
 
 	const i18n = getContext<any>('i18n');
 	export let label: string;
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let initialDirectory: string | undefined = undefined;
 	export let dirty = false;
@@ -51,7 +51,7 @@
 	let closeChoice: ((confirmed: boolean) => void) | null = null;
 	$: dirty = value.length > 0;
 	$: byteCount = new TextEncoder().encode(value).length;
-	$: fullPath = joinTerminalPath(directory, fileName.trim());
+	$: fullPath = joinMachinePath(directory, fileName.trim());
 	$: if (fullPath !== replacePath) replacePath = '';
 
 	const browse = async (path: string) => {
@@ -115,7 +115,7 @@
 				error = $i18n.t('A file with this name already exists. Replace it?');
 				return;
 			}
-			const result = await uploadToTerminal(
+			const result = await uploadToMachine(
 				target,
 				directory,
 				new File([value], name, { type: 'text/plain' })
@@ -225,7 +225,7 @@
 						type="button"
 						disabled={saving}
 						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs hover:bg-base-100/40 dark:hover:bg-base-800/25"
-						on:click={() => browse(joinTerminalPath(directory, entry.name))}
+						on:click={() => browse(joinMachinePath(directory, entry.name))}
 						><FileTypeIcon name={entry.name} type="directory" /><span class="truncate"
 							>{entry.name}</span
 						></button

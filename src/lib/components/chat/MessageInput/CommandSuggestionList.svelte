@@ -9,8 +9,8 @@
 
 	export let char = '';
 	export let query = '';
-	export let selectedTerminalId: Readable<string | null>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Readable<string | null>;
+	export let machineSkills: Writable<any[]>;
 	export let modelId: string | null | (() => string | null) = null;
 	$: selectedModelId = typeof modelId === 'function' ? modelId() : modelId;
 	export let command: (payload: {
@@ -117,8 +117,8 @@
 		<div class="max-h-60 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if char === '/'}
 				<SlashCommands
-					{selectedTerminalId}
-					{terminalSkills}
+					{selectedMachineId}
+					{machineSkills}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -222,7 +222,7 @@
 				/>
 			{:else if char === '@'}
 				<AtCommands
-					{selectedTerminalId}
+					{selectedMachineId}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}
@@ -264,8 +264,8 @@
 				/>
 			{:else if char === '$'}
 				<Skills
-					{selectedTerminalId}
-					{terminalSkills}
+					{selectedMachineId}
+					{machineSkills}
 					modelId={selectedModelId}
 					bind:this={suggestionElement}
 					{query}

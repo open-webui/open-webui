@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget } from '$lib/apis/machines';
+	import { resolveMachineTarget } from '$lib/apis/machines';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Terminal unavailable");
 	// $i18n.t("No preview available");
@@ -8,13 +8,7 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
-	import {
-		settings,
-		selectedTerminalId,
-		showTabs,
-		showFileNavPath,
-		terminalServers
-	} from '$lib/stores';
+	import { settings, selectedMachineId, showTabs, showFileNavPath, machines } from '$lib/stores';
 	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/machines';
 	import { getFileContentById } from '$lib/apis/files';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
@@ -61,18 +55,17 @@
 	$: path = String(fileId ? item.name : item?.full_path || item?.path || '');
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
 	$: targetPage = normalizeDocumentTargetPage(item?.page);
-	$: selector = item?.terminal_selector;
-	// Follows the Terminal menu: the card only reaches its file while that terminal is selected.
-	$: terminal =
-		selector && $selectedTerminalId === selector
-			? resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+	$: selector = item?.machine_selector ?? item?.terminal_selector; // terminal_selector: saved before the rename
+	// Follows the machine menu: the card only reaches its file while that machine is selected.
+	$: machine =
+		selector && $selectedMachineId === selector
+			? resolveMachineTarget(selector, $machines ?? [], localStorage.token, {
 					chatId,
 					modelId: item?.model_id ?? modelId
 				})
 			: null;
-	$: unavailable = !terminal && !fileId;
-	$: previewKey =
-		fileId || (terminal ? `${terminal.baseUrl}|${terminal.key}|${path}|${chatId}` : '');
+	$: unavailable = !machine && !fileId;
+	$: previewKey = fileId || (machine ? `${machine.baseUrl}|${machine.key}|${path}|${chatId}` : '');
 
 	$: previewClass = isImage(path)
 		? 'h-[22rem]'
@@ -122,8 +115,8 @@
 				? { blob: new Blob([data], { type: item?.content_type ?? '' }), filename: name }
 				: null;
 		}
-		if (!terminal) return null;
-		return downloadFileBlob(terminal, path);
+		if (!machine) return null;
+		return downloadFileBlob(machine, path);
 	}
 
 	async function loadPreview(key: string) {
@@ -159,7 +152,7 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
+					const preview = machine ? await downloadFilePreview(machine, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -178,7 +171,7 @@
 						excelWorkbook = workbook;
 					}
 				} else if (ext === 'pptx') {
-					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
+					const preview = machine ? await downloadFilePreview(machine, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -194,8 +187,8 @@
 				const result = await blobForPreview();
 				if (!result) throw new Error(t('Preview failed'));
 				fileContent = await result.blob.text();
-			} else if (terminal) {
-				fileContent = await readFile(terminal, path);
+			} else if (machine) {
+				fileContent = await readFile(machine, path);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : t('Preview failed');
@@ -295,7 +288,7 @@
 					{fileModelData}
 					{fileDocxData}
 					{fileContent}
-					target={fileId ? null : terminal}
+					target={fileId ? null : machine}
 					{chatId}
 					{excelWorkbook}
 					{fileOfficeSlides}

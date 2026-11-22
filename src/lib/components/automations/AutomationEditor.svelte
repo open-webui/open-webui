@@ -27,7 +27,7 @@
 		user,
 		type AgentModel
 	} from '$lib/stores';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
 
@@ -64,7 +64,7 @@
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
+	import MachineDropdown from '$lib/components/automations/MachineDropdown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -124,9 +124,9 @@
 	let channel_id = '';
 	let start_new = true;
 	let reply_in_thread = true;
-	let terminalServerId = '';
-	let terminalCwd = '';
-	let terminalServers: TerminalServer[] = [];
+	let machineServerId = '';
+	let machineCwd = '';
+	let machines: MachineServer[] = [];
 	let agentModels: AgentModel[] = [];
 	let scheduleDropdown: ScheduleDropdown;
 	let scheduleTick = 0;
@@ -148,8 +148,8 @@
 		channel_id = source.data.target?.channel_id ?? '';
 		start_new = startsNew(source.data.target);
 		reply_in_thread = repliesInThread(source.data.target);
-		terminalServerId = source.data.terminal?.server_id ?? '';
-		terminalCwd = source.data.terminal?.cwd ?? '';
+		machineServerId = automationMachineOf(source.data)?.server_id ?? '';
+		machineCwd = automationMachineOf(source.data)?.cwd ?? '';
 		webhookEnabled = !!source.data.webhook;
 		webhookAllowGet = !!source.data.webhook?.allow_get;
 		await tick();
@@ -170,24 +170,24 @@
 			channel_id !== (automation.data.target?.channel_id ?? '') ||
 			start_new !== startsNew(automation.data.target) ||
 			reply_in_thread !== repliesInThread(automation.data.target) ||
-			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
-			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
+			machineServerId !== (automationMachineOf(automation.data)?.server_id ?? '') ||
+			machineCwd.trim() !== (automationMachineOf(automation.data)?.cwd ?? '') ||
 			rruleNow(scheduleTick) !== savedRrule ||
 			webhookEnabled !== !!automation.data.webhook ||
 			(webhookEnabled && webhookAllowGet !== !!automation.data.webhook?.allow_get));
 
-	// Agent models depend on the chosen terminal, as in the automation modal.
+	// Agent models depend on the chosen machine, as in the automation modal.
 	let modelRequest = 0;
-	$: void loadAgentModels(terminalServerId, terminalCwd, target_type);
-	async function loadAgentModels(terminalId: string, cwd: string, target: string) {
+	$: void loadAgentModels(machineServerId, machineCwd, target_type);
+	async function loadAgentModels(machineId: string, cwd: string, target: string) {
 		const request = ++modelRequest;
 		agentModels = [];
-		// Only the owner picks the model, through the owner's terminal.
-		if (!terminalId || target !== 'chat' || automation.user_id !== $user?.id) return;
+		// Only the owner picks the model, through the owner's machine.
+		if (!machineId || target !== 'chat' || automation.user_id !== $user?.id) return;
 		try {
 			const available = await getAutomationModels(
 				localStorage.token,
-				terminalId,
+				machineId,
 				cwd.trim(),
 				automation.id
 			);
@@ -222,8 +222,8 @@
 					// An untouched schedule keeps its stored start date.
 					rrule: rrule === savedRrule ? automation.data.rrule : rrule,
 					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
-					terminal: terminalServerId
-						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
+					machine: machineServerId
+						? { server_id: machineServerId, cwd: machineCwd.trim() || undefined }
 						: undefined,
 					target:
 						target_type === 'channel'
@@ -476,11 +476,12 @@
 		showPrompt = !prompt.trim();
 		await ensureFolders();
 		await ensureChannels();
-		terminalServers = await getTerminalServers(localStorage.token).catch(() => []);
+		machines = await getMachines(localStorage.token).catch(() => []);
 		await loadRuns();
 	});
 
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
+	import { automationMachineOf } from '$lib/utils/machines';
 
 	const rowClass =
 		'flex h-7 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50';
@@ -733,10 +734,10 @@
 						><Icon name="terminal" size={12} class="shrink-0" />{$i18n.t('Machine')}</span
 					>
 					<div class="min-w-0 flex-1" inert={!canEdit || undefined}>
-						<TerminalDropdown
-							{terminalServers}
-							bind:terminalServerId
-							bind:terminalCwd
+						<MachineDropdown
+							{machines}
+							bind:machineServerId
+							bind:machineCwd
 							plain
 							side="bottom"
 							align="start"

@@ -52,7 +52,7 @@ log = logging.getLogger(__name__)
 class BrowserCORSMiddleware(CORSMiddleware):
     async def __call__(self, scope, receive, send):
         # Sandboxed pages have an opaque origin; capability routes handle their own CORS.
-        if re.match(r'^/api/v1/(?:machines|terminals)/[^/]+/browser/view/', scope.get('path', '')):
+        if re.match(r'^/api/v1/machines/[^/]+/browser/view/', scope.get('path', '')):
             await self.app(scope, receive, send)
         else:
             await super().__call__(scope, receive, send)

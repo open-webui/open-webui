@@ -22,6 +22,7 @@
 	import type { Visibility } from '$lib/utils/ui-visibility';
 	import { CONTROL_LABELS, type ControlId } from '$lib/utils/ui-visibility';
 	import VisibilitySettings from './Interface/Visibility.svelte';
+	import { isMachine } from '$lib/utils/machines';
 
 	export let saveHandler: () => void;
 
@@ -311,7 +312,7 @@
 
 			workspaceModels = await getBaseModels(localStorage.token);
 			baseModels = (await getModels(localStorage.token)).filter(
-				(model: any) => model.owned_by !== 'terminal'
+				(model: any) => !isMachine(model.owned_by)
 			);
 
 			models = baseModels.map((m: any) => {

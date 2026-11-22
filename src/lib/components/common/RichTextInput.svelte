@@ -4,7 +4,7 @@
 	import { toast } from 'svelte-sonner';
 	import { copyToClipboard } from '$lib/utils';
 	import { equalEditorJSON } from '$lib/utils/editorJson';
-	import { mobile, voiceCall, skills, terminalSkills } from '$lib/stores';
+	import { mobile, voiceCall, skills, machineSkills } from '$lib/stores';
 
 	marked.use({
 		breaks: true,
@@ -657,7 +657,7 @@
 							const mentionId = id || slashSkillId;
 							if (
 								mentionChar === '$' &&
-								![...($skills ?? []), ...($terminalSkills ?? [])].some(
+								![...($skills ?? []), ...($machineSkills ?? [])].some(
 									(skill) => skill.id === mentionId && skill.is_active
 								)
 							) {

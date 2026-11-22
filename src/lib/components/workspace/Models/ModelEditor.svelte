@@ -30,7 +30,7 @@
 	import { WEBUI_BASE_URL, DEFAULT_CAPABILITIES } from '$lib/constants';
 	import { getImageModels } from '$lib/apis/images';
 	import { getVideoModels } from '$lib/apis/videos';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 
 	import { getTools } from '$lib/apis/tools';
 	import { getSkills } from '$lib/apis/skills';
@@ -68,7 +68,7 @@
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from './LocalizedPromptSuggestions.svelte';
 	import PromptSuggestions from './PromptSuggestions.svelte';
-	import TerminalSelector from './TerminalSelector.svelte';
+	import MachineSelector from './MachineSelector.svelte';
 	import ImageModelSelector from './ImageModelSelector.svelte';
 	import VideoModelSelector from './VideoModelSelector.svelte';
 	import TTSVoiceInput from './TTSVoiceInput.svelte';
@@ -87,6 +87,7 @@
 		pruneEmptyLocaleEntries,
 		resolveLocalizedPromptSuggestions
 	} from '$lib/utils/localizedContent';
+	import { isMachine, metaMachineIdOf } from '$lib/utils/machines';
 
 	const i18n: any = getContext('i18n');
 	const formId = `model-editor-${uuidv4()}`;
@@ -273,15 +274,15 @@
 
 	let actionIds = [];
 	let accessGrants: any[] = [];
-	let terminalId = '';
+	let machineId = '';
 	let imageModelId = '';
 	let videoModelId = '';
-	$: hasTerminal = $config?.features?.enable_terminal_servers || $config?.features?.tether;
-	let terminalServers: TerminalServer[] = [];
+	$: hasMachine = $config?.features?.enable_machines || $config?.features?.tether;
+	let machines: MachineServer[] = [];
 
-	$: showMachine = capabilities.terminal && hasTerminal;
-	$: machineSummary = terminalId
-		? (terminalServers.find((t) => t.id === terminalId)?.name ?? terminalId)
+	$: showMachine = capabilities.terminal && hasMachine;
+	$: machineSummary = machineId
+		? (machines.find((t) => t.id === machineId)?.name ?? machineId)
 		: $i18n.t('None');
 
 	const mediaModelName = (list: any[] | null, id: string) => {
@@ -406,7 +407,7 @@
 		return models
 			.filter(
 				(baseModel) =>
-					baseModel.owned_by !== 'terminal' &&
+					!isMachine(baseModel.owned_by) &&
 					(!currentModelId ||
 						baseModel.id !== currentModelId ||
 						(edit && baseModel.id === info.base_model_id)) &&
@@ -554,11 +555,12 @@
 			delete modelInfo.meta.i18n;
 		}
 
-		if (terminalId || defaultMeta.terminalId) {
-			modelInfo.meta.terminalId = terminalId;
+		delete (modelInfo.meta as Record<string, unknown>).terminalId; // former name of machineId
+		if (machineId || metaMachineIdOf(defaultMeta)) {
+			modelInfo.meta.machineId = machineId;
 		} else {
-			if (modelInfo.meta.terminalId) {
-				delete modelInfo.meta.terminalId;
+			if (modelInfo.meta.machineId) {
+				delete modelInfo.meta.machineId;
 			}
 		}
 
@@ -747,7 +749,7 @@
 				const base_model = $baseModels
 					.filter(
 						(m) =>
-							m.owned_by !== 'terminal' &&
+							!isMachine(m.owned_by) &&
 							((!m?.preset && !(m?.router ?? false)) || (edit && m.id === model.base_model_id))
 					)
 					.find((m) => [model.base_model_id, `${model.base_model_id}:latest`].includes(m.id));
@@ -805,7 +807,7 @@
 			};
 			defaultFeatureIds = model?.meta?.defaultFeatureIds ?? defaultMeta.defaultFeatureIds ?? [];
 			builtinTools = model?.meta?.builtinTools ?? defaultMeta.builtinTools ?? {};
-			terminalId = model?.meta?.terminalId ?? defaultMeta.terminalId ?? '';
+			machineId = metaMachineIdOf(model?.meta) ?? metaMachineIdOf(defaultMeta) ?? '';
 			imageModelId = model?.meta?.imageModelId ?? defaultMeta.imageModelId ?? '';
 			videoModelId = model?.meta?.videoModelId ?? defaultMeta.videoModelId ?? '';
 			tts = { voice: model?.meta?.tts?.voice ?? '' };
@@ -853,9 +855,9 @@
 				.catch(() => [])
 				.then((res) => videoModels.set(res));
 		}
-		if (hasTerminal) {
-			getTerminalServers(localStorage.token)
-				.then((res) => (terminalServers = res ?? []))
+		if (hasMachine) {
+			getMachines(localStorage.token)
+				.then((res) => (machines = res ?? []))
 				.catch(() => {});
 		}
 
@@ -870,7 +872,7 @@
 		defaultFeatureIds = defaultMeta.defaultFeatureIds ?? [];
 		builtinTools = defaultMeta.builtinTools ?? {};
 		toolIds = defaultMeta.toolIds ?? [];
-		terminalId = defaultMeta.terminalId ?? '';
+		machineId = metaMachineIdOf(defaultMeta) ?? '';
 		imageModelId = defaultMeta.imageModelId ?? '';
 		videoModelId = defaultMeta.videoModelId ?? '';
 
@@ -1926,7 +1928,7 @@
 											)}
 											summary={machineSummary}
 										>
-											<TerminalSelector bind:terminalId label={$i18n.t('Default')} />
+											<MachineSelector bind:machineId label={$i18n.t('Default')} />
 										</ModelSettingsSection>
 									{/if}
 								</div>

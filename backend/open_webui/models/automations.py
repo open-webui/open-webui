@@ -9,7 +9,7 @@ from open_webui.models.access_grants import AccessGrant, AccessGrantResponse, Ac
 from open_webui.models.users import UserResponse
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.misc import json_text_variants
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -60,7 +60,7 @@ class AutomationRun(Base):
 # Pydantic Models
 
 
-class AutomationTerminalConfig(BaseModel):
+class AutomationMachineConfig(BaseModel):
     server_id: str
     cwd: Optional[str] = None
 
@@ -124,9 +124,20 @@ class AutomationData(BaseModel):
     prompt: str
     model_id: str
     rrule: str = ''  # empty: no schedule
-    terminal: Optional[AutomationTerminalConfig] = None
+    machine: Optional[AutomationMachineConfig] = None
     target: Optional[AutomationTarget] = None
     webhook: Optional[AutomationWebhook] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _former_machine_key(cls, data):
+        # Automations saved before Terminals became Machines keep their settings under `terminal`.
+        if isinstance(data, dict) and 'terminal' in data:
+            data = {**data}
+            legacy = data.pop('terminal')
+            if not data.get('machine'):
+                data['machine'] = legacy
+        return data
 
 
 class AutomationModel(BaseModel):

@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from open_webui.utils.machines import machine_id_of
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.models.chats import Chats
 from open_webui.models.config import Config
@@ -102,7 +103,7 @@ async def resolve_tool_call_output(
         function_call.setdefault('call_id', form_data.call_id)
         tool_name = function_call.get('name')
 
-        # Terminal agent requests carry the provider's event; older saved messages call it 'native'.
+        # Machine agent requests carry the provider's event; older saved messages call it 'native'.
         if function_call.get('provider_data') is not None or function_call.get('native') is not None:
             from open_webui.utils.auth import decode_token
 
@@ -269,7 +270,7 @@ async def build_tool_approval_resume_payload(chat_id: str, message_id: str, chat
         'filter_ids': message_meta.get('filter_ids') or None,
         'tool_ids': message_meta.get('tool_ids') or None,
         'skill_ids': message_meta.get('skill_ids') or None,
-        'terminal_id': message_meta.get('terminal_id') or None,
+        'machine_id': machine_id_of(message_meta),
         'features': message_meta.get('features') or {},
         'variables': message_meta.get('variables') or {},
         'chat_variables': chat.variables if (assistant_message.get('user_id') or chat.user_id) == chat.user_id else {},

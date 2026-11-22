@@ -14,7 +14,7 @@
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
-	import { getTerminalServerConnections, verifyTerminalServerConnection } from '$lib/apis/configs';
+	import { getMachineConnections, verifyMachineConnection } from '$lib/apis/configs';
 	import {
 		createSSHKeypair,
 		formatSSHUrl,
@@ -204,9 +204,8 @@
 		busy = true;
 		error = '';
 		try {
-			const type = (
-				await verifyTerminalServerConnection(localStorage.token, { url, key, auth_type })
-			).type;
+			const type = (await verifyMachineConnection(localStorage.token, { url, key, auth_type }))
+				.type;
 			if (!type) throw new Error('Failed to connect to the machine');
 			serverType = type;
 			if (announce) toast.success($i18n.t('Server connection verified'));
@@ -383,8 +382,8 @@
 				}
 				toast.success($i18n.t('Machine upgraded'));
 				// Show the version that is now installed.
-				const res = await getTerminalServerConnections(localStorage.token).catch(() => null);
-				const updated = res?.TERMINAL_SERVER_CONNECTIONS?.find((c: any) => c.id === connection.id);
+				const res = await getMachineConnections(localStorage.token).catch(() => null);
+				const updated = res?.MACHINE_CONNECTIONS?.find((c: any) => c.id === connection.id);
 				if (updated?.ssh) connection = { ...connection, ssh: updated.ssh };
 				if (updated?.local) connection = { ...connection, local: updated.local };
 			});
@@ -509,7 +508,7 @@
 							class={input}
 							bind:value={url}
 							type="url"
-							placeholder="https://terminal.example.com or ssh://user@host"
+							placeholder="https://machine.example.com or ssh://user@host"
 							required
 							disabled={sshPhase !== 'form'}
 							on:input={() => {

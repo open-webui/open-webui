@@ -2,15 +2,16 @@
 
 import copy
 
+from open_webui.utils.machines import machine_id_of
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64
 from open_webui.utils.misc import get_message_list
-from open_webui.utils.machines import get_terminal_json, upload_files_to_terminal
+from open_webui.utils.machines import get_machine_json, upload_files_to_machine
 
 from .session import get_resume_point
 from .output import Output
-from .transport import TerminalTransport
+from .transport import MachineTransport
 from . import acp, codex, claude_code, pi
 
 PROVIDERS = {
@@ -57,7 +58,7 @@ async def run(request, form_data, user, metadata, model):
         if parent
         else (None, False, False)
     )
-    if previous and any(previous.get(key) != agent[key] for key in ('terminal_id', 'provider')):
+    if previous and any(previous.get(key) != agent[key] for key in ('machine_id', 'provider')):
         previous = None
     # Regenerated and edited messages branch off a reply whose native conversation went on without them;
     # a forked chat's first reply continues the conversation of the chat it was forked from.
@@ -73,8 +74,8 @@ async def run(request, form_data, user, metadata, model):
         else:
             # The agent can't continue from an earlier turn: start a new conversation from the transcript.
             previous = {key: value for key, value in previous.items() if key != 'session_id'}
-    metadata['terminal_id'] = agent['terminal_id']
-    transport = await TerminalTransport.resolve(request, user, metadata)
+    metadata['machine_id'] = agent['machine_id']
+    transport = await MachineTransport.resolve(request, user, metadata)
     output = Output(metadata, user, transport.raise_if_failed, form_data)
     output.state = {
         # A fork is a new native conversation, which records its own id once the agent reports it.
@@ -87,22 +88,22 @@ async def run(request, form_data, user, metadata, model):
         'instance_user_id': (previous or {}).get('instance_user_id') or (previous or {}).get('user') or user.id,
     }
     # Browsing files must not move an existing agent conversation's workspace.
-    cwd = (previous or {}).get('cwd') or metadata.get('initial_terminal_cwd')
+    cwd = (previous or {}).get('cwd') or metadata.get('initial_machine_cwd')
     if not cwd:
-        directory = await get_terminal_json(request, user, metadata, '/files/cwd')
+        directory = await get_machine_json(request, user, metadata, '/files/cwd')
         cwd = (directory or {}).get('cwd')
     if not cwd:
         raise ValueError('Agent working directory is unavailable')
     output.state['cwd'] = cwd
     files = copy.deepcopy(form_data.get('files') or [])
     uploads = [f for f in files if f.get('type') != 'filesystem' and f.get('id')]
-    await upload_files_to_terminal(request, user, uploads, metadata, {})
-    if any(f.get('terminal_error') for f in uploads):
+    await upload_files_to_machine(request, user, uploads, metadata, {})
+    if any(f.get('machine_error') for f in uploads):
         raise ValueError('An attachment could not be uploaded to the agent environment')
-    paths = [f['terminal_path'] for f in uploads]
+    paths = [f['machine_path'] for f in uploads]
     for file in files:
         if file.get('type') == 'filesystem':
-            if file.get('terminal_id') != agent['terminal_id']:
+            if machine_id_of(file) != agent['machine_id']:
                 raise ValueError('Attachment belongs to another machine')
             paths.append(file['path'])
     messages = form_data.get('messages') or []

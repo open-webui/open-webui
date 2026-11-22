@@ -37,7 +37,7 @@ from open_webui.utils.automations import (
     schedule_next_run,
     schedule_next_runs,
     validate_rrule,
-    validate_automation_terminal,
+    validate_automation_machine,
 )
 from open_webui.utils.prompt_variables import PromptVariableError, fill_variables
 from open_webui.utils.rate_limit import RateLimiter
@@ -291,20 +291,24 @@ async def get_automation_items(
 @router.get('/models')
 async def get_automation_models(
     request: Request,
-    terminal_id: str,
+    machine_id: str | None = None,
+    terminal_id: str | None = None,  # former name of machine_id
     cwd: str | None = None,
     automation_id: str | None = None,
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_automations_permission(request, user)
+    machine_id = machine_id or terminal_id
+    if not machine_id:
+        raise HTTPException(400, 'Select a machine for the agent.')
     automation = None
     if automation_id:
         automation = await get_accessible_automation(automation_id, user, 'read', db)
-        # Only the owner picks the model, so the automation's terminal context is the owner's.
+        # Only the owner picks the model, so the automation's machine context is the owner's.
         if automation.user_id != user.id:
             automation = None
-    metadata = {'terminal_id': terminal_id}
+    metadata = {'machine_id': machine_id}
     if automation:
         metadata.update(model_id=automation.data.get('model_id'), automation_id=automation.id)
     return await get_agent_models(request, user, metadata, cwd=cwd)
@@ -323,7 +327,7 @@ async def create_new_automation(
     await check_automations_permission(request, user)
     await check_automation_folder_access(form_data.folder_id, user, db)
     await check_automation_channel_access(form_data, user, db)
-    await validate_automation_terminal(request, user, form_data.data.model_dump())
+    await validate_automation_machine(request, user, form_data.data.model_dump())
     # The first run creates the ongoing chat or thread; a form can't point at one.
     if form_data.data.target:
         form_data.data.target.chat_id = None
@@ -375,7 +379,7 @@ async def update_automation_by_id(
     if automation.user_id == user.id:
         await check_automation_folder_access(form_data.folder_id, user, db)
         await check_automation_channel_access(form_data, user, db)
-        await validate_automation_terminal(request, user, form_data.data.model_dump(), id)
+        await validate_automation_machine(request, user, form_data.data.model_dump(), id)
         await check_automation_triggers(form_data, user, db)
     else:
         # Runs use the owner's account, so others only change when it runs: the name,

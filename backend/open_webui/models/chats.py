@@ -918,6 +918,8 @@ class ChatTable:
 
                 stored = chat_item.chat or {}
                 updated = {**stored, **chat}
+                if 'machine_id' in chat:
+                    updated.pop('terminal_id', None)  # former name; would otherwise linger in the merge
                 if 'history' in chat:
                     # The caller built its history from an earlier read; merge so messages saved since then survive.
                     updated['history'] = self.merge_history(stored.get('history'), chat['history'])

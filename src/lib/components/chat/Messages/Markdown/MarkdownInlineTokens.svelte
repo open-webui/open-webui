@@ -10,20 +10,20 @@
 
 	const i18n = getContext('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
-	const terminalDocument = getContext<
+	const machineDocument = getContext<
 		| {
 				localPath: (ref: string) => string | null;
 				resolveImage: (ref: string) => Promise<string | null>;
 		  }
 		| undefined
-	>('terminal-document');
+	>('machine-document');
 	const markdown = getContext<
 		| { allowRemoteContent: boolean; document?: boolean; parseInline?: (tokens: Token[]) => string }
 		| undefined
 	>('markdown');
 
 	import { WEBUI_BASE_URL } from '$lib/constants';
-	import { skills, terminalSkills } from '$lib/stores';
+	import { skills, machineSkills } from '$lib/stores';
 	import { copyToClipboard, safeLinkUrl, unescapeHtml } from '$lib/utils';
 
 	import Image from '$lib/components/common/Image.svelte';
@@ -132,11 +132,11 @@
 			>
 		{/if}
 	{:else if token.type === 'image'}
-		{#if terminalDocument?.localPath(token.href)}
-			{#await terminalDocument.resolveImage(token.href)}
+		{#if machineDocument?.localPath(token.href)}
+			{#await machineDocument.resolveImage(token.href)}
 				<span class="text-xs text-base-400">{token.text}</span>
 			{:then url}
-				{#if url}<img src={url} alt={token.text} data-terminal-resolved="true" />{:else}<span
+				{#if url}<img src={url} alt={token.text} data-machine-resolved="true" />{:else}<span
 						class="text-xs text-base-400">Image unavailable: {token.text}</span
 					>{/if}
 			{/await}
@@ -173,7 +173,7 @@
 			}}
 		></iframe>
 	{:else if token.type === 'mention'}
-		{#if token.triggerChar === '$' && ![...($skills ?? []), ...($terminalSkills ?? [])].some((skill) => skill.id === token.id && skill.is_active)}
+		{#if token.triggerChar === '$' && ![...($skills ?? []), ...($machineSkills ?? [])].some((skill) => skill.id === token.id && skill.is_active)}
 			{token.raw}
 		{:else}
 			<MentionToken {token} />

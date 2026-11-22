@@ -11,7 +11,7 @@
 		browserFrameUrl,
 		type BrowserSession
 	} from '$lib/apis/machines/browser';
-	import { getPortProxyUrl, TerminalRequestError, type TerminalTarget } from '$lib/apis/machines';
+	import { getPortProxyUrl, MachineRequestError, type MachineTarget } from '$lib/apis/machines';
 	import PortList from '../FileNav/PortList.svelte';
 	import { settings } from '$lib/stores';
 	import Icon from '../FileNav/Icon.svelte';
@@ -19,7 +19,7 @@
 
 	const i18n = getContext<any>('i18n');
 	export let baseUrl = '';
-	export let target: TerminalTarget | null = null;
+	export let target: MachineTarget | null = null;
 
 	export let active = true;
 	export let initialUrl = '';
@@ -275,7 +275,7 @@
 			} catch (reason) {
 				if (disposed) return;
 				error = String(reason);
-				onUnavailable(error, reason instanceof TerminalRequestError ? reason.status : undefined);
+				onUnavailable(error, reason instanceof MachineRequestError ? reason.status : undefined);
 			}
 		})();
 		return () => {
@@ -444,7 +444,10 @@
 					src={frameUrl}
 					title={$i18n.t('Browser')}
 					class="block h-full w-full border-0 bg-base-0"
-					sandbox="allow-scripts{!session && ($settings?.terminalPreviewAllowSameOrigin ?? false)
+					sandbox="allow-scripts{!session &&
+					($settings?.machinePreviewAllowSameOrigin ??
+						$settings?.terminalPreviewAllowSameOrigin ??
+						false)
 						? ' allow-same-origin'
 						: ''} allow-forms allow-popups allow-modals allow-downloads"
 					on:load={loaded}

@@ -2,7 +2,7 @@
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { config, settings } from '$lib/stores';
 	import { transcribeAudio } from '$lib/apis/audio';
-	import { getCwd, uploadNewFileToTerminal, type TerminalTarget } from '$lib/apis/machines';
+	import { getCwd, uploadNewFileToMachine, type MachineTarget } from '$lib/apis/machines';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import Icon from '../FileNav/Icon.svelte';
 	type VoiceNoteDraft = {
@@ -36,7 +36,7 @@
 	};
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let directory: string | undefined = undefined;
 	export let canTranscribe = false;
@@ -222,7 +222,7 @@
 		player?.pause();
 		try {
 			if (!draft.audioPath) {
-				const result = await uploadNewFileToTerminal(
+				const result = await uploadNewFileToMachine(
 					target,
 					draft.directory,
 					new File([draft.audio], `${draft.name.trim()}.${voiceNoteExtension(draft.audio.type)}`, {
@@ -232,7 +232,7 @@
 				if (!result?.path) throw new Error();
 				draft.audioPath = result.path;
 			}
-			const note = await uploadNewFileToTerminal(
+			const note = await uploadNewFileToMachine(
 				target,
 				draft.directory,
 				new File([voiceNoteMarkdown(draft)], `${draft.name.trim()}.md`, { type: 'text/markdown' })

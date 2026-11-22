@@ -63,8 +63,8 @@
 	import {
 		addOpenAIConnection,
 		removeOpenAIConnection,
-		addTerminalConnection,
-		removeTerminalConnection
+		addMachineConnection,
+		removeMachineConnection
 	} from '$lib/utils/connections';
 
 	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -864,13 +864,13 @@
 		try {
 			if (event.type === 'connections:terminal') {
 				if (event.data.action === 'add') {
-					await addTerminalConnection(token, {
+					await addMachineConnection(token, {
 						url: event.data.url,
 						key: event.data.key,
 						name: 'Local Open Terminal'
 					});
 				} else if (event.data.action === 'remove') {
-					await removeTerminalConnection(token, event.data.url);
+					await removeMachineConnection(token, event.data.url);
 				}
 			} else if (event.type === 'connections:openai') {
 				if (event.data.action === 'add') {

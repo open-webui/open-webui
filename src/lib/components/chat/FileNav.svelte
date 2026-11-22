@@ -1,12 +1,12 @@
 <script lang="ts">
 	export let modelId: string | null = null;
-	export let target: TerminalTarget | null | undefined = undefined;
-	import { resolveTerminalTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null | undefined = undefined;
+	import { resolveMachineTarget } from '$lib/apis/machines';
 	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
-	import type { TerminalContext } from '$lib/types';
-	import type { TerminalTarget } from '$lib/apis/machines';
+	import type { MachineContext } from '$lib/types';
+	import type { MachineTarget } from '$lib/apis/machines';
 	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/machines/git';
-	import { watchTerminalFiles } from '$lib/apis/machines/events';
+	import { watchMachineFiles } from '$lib/apis/machines/events';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import CloneRepository from './FileNav/CloneRepository.svelte';
@@ -19,31 +19,31 @@
 	import type { Readable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
 	import {
-		terminalServers,
+		machines,
 		settings,
 		showFileNavPath,
 		showFileNavDir,
 		selectedFolder,
-		selectedTerminalId
+		selectedMachineId
 	} from '$lib/stores';
 	import {
 		getCwd,
-		getTerminalFeatures,
+		getMachineFeatures,
 		getFileMatches,
 		listFiles,
 		readFile,
 		downloadFileBlob,
 		downloadFilePreview,
-		archiveFromTerminal,
-		uploadToTerminal,
+		archiveFromMachine,
+		uploadToMachine,
 		createDirectory,
 		deleteEntry,
 		moveEntry,
 		type FileEntry,
-		type TerminalContentMatch,
-		type TerminalFileMatch,
-		type TerminalFileRoot,
-		type TerminalCwd
+		type MachineContentMatch,
+		type MachineFileMatch,
+		type MachineFileRoot,
+		type MachineCwd
 	} from '$lib/apis/machines';
 	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
@@ -66,16 +66,17 @@
 	import FileGridIcon from './FileNav/FileGridIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import TerminalDock from './TerminalDock.svelte';
+	import { machineIdOf } from '$lib/utils/machines';
 
-	// Directory and preview state belong to this tab, including its terminal connection.
+	// Directory and preview state belong to this tab, including its machine connection.
 	let savedPath = '/';
 	// savedPath is only a placeholder until a directory has loaded.
 	let savedPathLoaded = false;
 	$: folderDirectory =
-		!onSelectDirectory && !chatId && $selectedFolder?.data?.terminal_id === effectiveTerminalId
+		!onSelectDirectory && !chatId && machineIdOf($selectedFolder?.data) === effectiveMachineId
 			? $selectedFolder.data.working_directory
 			: null;
-	let savedFileRoot: TerminalFileRoot | null = null;
+	let savedFileRoot: MachineFileRoot | null = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
 
@@ -134,10 +135,10 @@
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
-	export let gitTarget: TerminalTarget | null = null;
+	export let gitTarget: MachineTarget | null = null;
 	export let gitDiffMode: 'unified' | 'split' = 'unified';
 	export let gitHideWhitespace = false;
-	export let terminalId: string | null = null;
+	export let machineId: string | null = null;
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
 	export let onSelectDirectory: ((path: string) => void) | null = null;
@@ -145,27 +146,27 @@
 	let gitAvailable = false;
 	let cloneSupportVersion = 0;
 	async function checkCloneSupport(
-		terminal: TerminalTarget | null,
+		machine: MachineTarget | null,
 		session: string | null,
 		enabled: boolean
 	) {
 		const version = ++cloneSupportVersion;
 		gitAvailable = false;
 		showCloneRepository = false;
-		if (!terminal || !enabled) return;
-		const features = await getTerminalFeatures(terminal);
+		if (!machine || !enabled) return;
+		const features = await getMachineFeatures(machine);
 		if (!disposed && version === cloneSupportVersion) gitAvailable = features.git === true;
 	}
-	$: void checkCloneSupport(selectedTerminal, chatId, !!onSelectDirectory);
+	$: void checkCloneSupport(selectedMachine, chatId, !!onSelectDirectory);
 	export let manageFileRequests = true;
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
 	export let onFilesMoved: (() => void) | null = null;
-	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
+	$: effectiveMachineId = machineId ?? $selectedMachineId;
 
 	export let chatId: string | null = null;
-	export let terminalContext: TerminalContext | null = null;
+	export let machineContext: MachineContext | null = null;
 	export let onAskFile: ((instruction: string, file: FilesystemFile) => Promise<void>) | null =
 		null;
 	let viewerRoot: HTMLDivElement;
@@ -235,7 +236,7 @@
 	export let dirty = false;
 	let diskChanged = false;
 	let overwriteChoice: ((replace: boolean) => void) | null = null;
-	let selectedFileLocation: (TerminalTarget & { path: string }) | null = null;
+	let selectedFileLocation: (MachineTarget & { path: string }) | null = null;
 	let dirtyChoice: {
 		sending: boolean;
 		resolve: (confirmed: boolean) => void;
@@ -272,8 +273,8 @@
 
 	const publishFile = () => {
 		if (!openedFile) return;
-		terminalContext = {
-			terminalId: openedFile.terminal_id!,
+		machineContext = {
+			machineId: machineIdOf(openedFile)!,
 			currentDirectory: currentPath,
 			file: openedFile
 		};
@@ -333,7 +334,7 @@
 		if (
 			!openedFile ||
 			openedFile.path !== target.path ||
-			openedFile.terminal_id !== effectiveTerminalId ||
+			machineIdOf(openedFile) !== effectiveMachineId ||
 			openedFile.session_id !== chatId
 		)
 			throw new Error('The file or machine changed. Open it again before sending.');
@@ -343,7 +344,7 @@
 	};
 
 	$: {
-		(selectedFile, effectiveTerminalId, chatId);
+		(selectedFile, effectiveMachineId, chatId);
 		fileAsk = null;
 	}
 	$: viewerLabel = selectedExcelSheet
@@ -362,7 +363,7 @@
 			}))
 		)
 			throw new Error('Save cancelled.');
-		const current = getTerminal();
+		const current = getMachine();
 		if (
 			!target ||
 			!current ||
@@ -374,7 +375,7 @@
 			throw new Error('File is not writable.');
 		const name = target.path.split('/').pop()!;
 		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
-		const result = await uploadToTerminal(
+		const result = await uploadToMachine(
 			current,
 			dir,
 			new File([content], name, { type: 'text/plain' })
@@ -399,7 +400,7 @@
 	let pinnedComparison: ComparisonFile | null = null;
 	let comparison: {
 		files: [ComparisonFile, ComparisonFile];
-		terminal: TerminalTarget;
+		machine: MachineTarget;
 		chatId: string | null;
 		opener: HTMLElement | null;
 	} | null = null;
@@ -409,10 +410,10 @@
 		size: entry.size
 	});
 	const openComparison = (files: [ComparisonFile, ComparisonFile]) => {
-		if (!selectedTerminal || files[0].path === files[1].path) return;
+		if (!selectedMachine || files[0].path === files[1].path) return;
 		comparison = {
 			files: files.map((file) => ({ ...file })) as [ComparisonFile, ComparisonFile],
-			terminal: { ...selectedTerminal },
+			machine: { ...selectedMachine },
 			chatId,
 			opener: document.activeElement instanceof HTMLElement ? document.activeElement : null
 		};
@@ -450,7 +451,7 @@
 	// Directory state
 	let currentPath = savedPath;
 	let homeDirectory: string | null = null;
-	let fileRoot: TerminalFileRoot | null = savedFileRoot;
+	let fileRoot: MachineFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
 	let currentWritable = true;
 	let loading = false;
@@ -491,7 +492,7 @@
 		if (showSearch) searchInput?.focus();
 		else containerEl?.querySelector<HTMLButtonElement>('[data-file-search-toggle]')?.focus();
 	};
-	let matchResults: TerminalFileMatch[] | null = null;
+	let matchResults: MachineFileMatch[] | null = null;
 	let matchLoading = false;
 	let matchLoadingMore = false;
 	let matchError: string | null = null;
@@ -694,8 +695,8 @@
 	let showGitDiff = false;
 	let gitFileKey = '';
 	$: treeGitStatuses = gitTreeStatus(gitStatus);
-	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
-		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
+	$: if (gitFileKey !== `${effectiveMachineId}:${selectedFile}`) {
+		gitFileKey = `${effectiveMachineId}:${selectedFile}`;
 		showGitDiff = false;
 	}
 	$: currentGitFile =
@@ -722,7 +723,7 @@
 	let gitBaseGeneration = 0;
 	let gitBaseKey = '';
 	const loadGitBase = async (
-		target: TerminalTarget | null,
+		target: MachineTarget | null,
 		session: string | null,
 		status: GitStatus | null,
 		file: GitFile | null,
@@ -829,45 +830,45 @@
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	// Terminal resolution
-	let selectedTerminal: TerminalTarget | null = null;
-	let terminalChatContextPending = false;
-	let terminalChatContextHidden = false;
-	let isPerChatTerminal = false;
+	// Machine resolution
+	let selectedMachine: MachineTarget | null = null;
+	let machineChatContextPending = false;
+	let machineChatContextHidden = false;
+	let isPerChatMachine = false;
 
-	const getTerminal = (): TerminalTarget | null => {
-		const systemTerminal = effectiveTerminalId
-			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
-			: ($terminalServers?.[0] ?? null);
-		isPerChatTerminal = !!systemTerminal && systemTerminal?.scope === 'chat';
-		terminalChatContextHidden = isPerChatTerminal && isTemporaryChatId(chatId);
-		terminalChatContextPending =
-			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);
-		if (terminalChatContextHidden || terminalChatContextPending) return null;
+	const getMachine = (): MachineTarget | null => {
+		const systemMachine = effectiveMachineId
+			? (($machines ?? []).find((t) => t.id === effectiveMachineId) ?? null)
+			: ($machines?.[0] ?? null);
+		isPerChatMachine = !!systemMachine && systemMachine?.scope === 'chat';
+		machineChatContextHidden = isPerChatMachine && isTemporaryChatId(chatId);
+		machineChatContextPending =
+			isPerChatMachine && !machineChatContextHidden && !isSavedChatId(chatId);
+		if (machineChatContextHidden || machineChatContextPending) return null;
 
 		if (target !== undefined) return target;
-		return resolveTerminalTarget(
-			effectiveTerminalId ?? systemTerminal?.id ?? null,
-			$terminalServers ?? [],
+		return resolveMachineTarget(
+			effectiveMachineId ?? systemMachine?.id ?? null,
+			$machines ?? [],
 			localStorage.token,
 			{ chatId: chatId, modelId: modelId }
 		);
 	};
 
-	// Detect terminal or chat changes — the explicit store references ensure
+	// Detect machine or chat changes — the explicit store references ensure
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
-	let prevTerminalUrl = '';
+	let prevMachineUrl = '';
 	let prevModelId: string | null | undefined;
-	let prevTerminalId = effectiveTerminalId;
+	let prevMachineId = effectiveMachineId;
 	let prevChatId = chatId;
 	let prevFolderDirectory: string | null = null;
 	let mounted = false;
 	let disposed = false;
 	$: {
-		(effectiveTerminalId, target, modelId, $terminalServers, $settings);
-		const terminal = getTerminal();
-		selectedTerminal = terminal;
+		(effectiveMachineId, target, modelId, $machines, $settings);
+		const machine = getMachine();
+		selectedMachine = machine;
 
 		const chatChanged = chatId !== prevChatId;
 		const oldChatId = prevChatId;
@@ -875,44 +876,44 @@
 		const folderChanged = folderDirectory !== prevFolderDirectory;
 		prevFolderDirectory = folderDirectory;
 
-		const terminalChanged =
-			terminal &&
-			(terminal.baseUrl !== prevTerminalUrl ||
-				terminal.context.modelId !== prevModelId ||
-				effectiveTerminalId !== prevTerminalId);
-		if (terminalChanged) {
-			prevTerminalUrl = terminal.baseUrl;
-			prevModelId = terminal.context.modelId;
-			prevTerminalId = effectiveTerminalId;
+		const machineChanged =
+			machine &&
+			(machine.baseUrl !== prevMachineUrl ||
+				machine.context.modelId !== prevModelId ||
+				effectiveMachineId !== prevMachineId);
+		if (machineChanged) {
+			prevMachineUrl = machine.baseUrl;
+			prevModelId = machine.context.modelId;
+			prevMachineId = effectiveMachineId;
 		}
 
-		if (chatChanged || terminalChanged || !terminal) {
+		if (chatChanged || machineChanged || !machine) {
 			comparison = null;
 			pinnedComparison = null;
 		}
 
-		if (mounted && terminal) {
-			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
+		if (mounted && machine) {
+			if (chatChanged && chatId && !oldChatId && !machineChanged) {
 				if (selectedFileLocation)
-					selectedFileLocation = { ...terminal, path: selectedFileLocation.path };
+					selectedFileLocation = { ...machine, path: selectedFileLocation.path };
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
 				}
 				// Keep the draft's browsed path; chat submission initializes the session cwd.
-			} else if (terminalChanged || chatChanged || folderChanged) {
+			} else if (machineChanged || chatChanged || folderChanged) {
 				const generation = ++loadGeneration;
 				savedPathLoaded = false;
 				openedFile = null;
-				if (terminalContext) terminalContext = { ...terminalContext, file: null };
-				// Terminal switched, new chat started, or switched between
+				if (machineContext) machineContext = { ...machineContext, file: null };
+				// Machine switched, new chat started, or switched between
 				// existing chats — re-fetch the session cwd.
 				loading = true;
 				error = null;
 				entries = [];
 				resetTreeState();
 				(async () => {
-					const cwd = await getCwd(terminal);
+					const cwd = await getCwd(machine);
 					if (disposed || generation !== loadGeneration) return;
 					const serverPath = applyCwd(cwd);
 					savedPath = folderDirectory || serverPath;
@@ -1019,7 +1020,7 @@
 
 	const queueFileSearch = (
 		query: string,
-		terminal: TerminalTarget | null,
+		machine: MachineTarget | null,
 		path: string,
 		hiddenVisible: boolean,
 		activeFile: string | null
@@ -1027,7 +1028,7 @@
 		clearMatchRequest();
 		matchRequestId += 1;
 		const requestId = matchRequestId;
-		if (!query || !terminal || activeFile) {
+		if (!query || !machine || activeFile) {
 			resetMatches();
 			return;
 		}
@@ -1045,7 +1046,7 @@
 		const controller = new AbortController();
 		matchController = controller;
 		matchTimer = setTimeout(async () => {
-			const data = await getFileMatches(terminal, query, path, hiddenVisible, 0, controller.signal);
+			const data = await getFileMatches(machine, query, path, hiddenVisible, 0, controller.signal);
 			if (requestId !== matchRequestId) return;
 			if (data) {
 				matchResults = data.results;
@@ -1058,22 +1059,22 @@
 		}, 200);
 	};
 
-	$: queueFileSearch(searchText, selectedTerminal, currentPath, showHidden, selectedFile);
+	$: queueFileSearch(searchText, selectedMachine, currentPath, showHidden, selectedFile);
 
 	const loadMoreMatches = async () => {
 		const offset = nextMatchOffset;
 		if (offset === null || !isSearching || matchLoading || matchLoadingMore || matchLoadMoreError) {
 			return;
 		}
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
 		const requestId = matchRequestId;
 		matchLoadingMore = true;
 		const controller = new AbortController();
 		matchController = controller;
 		const data = await getFileMatches(
-			terminal,
+			machine,
 			searchText,
 			currentPath,
 			showHidden,
@@ -1107,7 +1108,7 @@
 		return parts.at(-1) ?? '/';
 	};
 
-	const setFileRoot = (root?: TerminalFileRoot) => {
+	const setFileRoot = (root?: MachineFileRoot) => {
 		const previousRoot = fileRoot?.path ?? null;
 		fileRoot = root?.path
 			? {
@@ -1130,12 +1131,12 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const rootFromCwd = (cwd: TerminalCwd | null) => {
+	const rootFromCwd = (cwd: MachineCwd | null) => {
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
 		return rootPath && rootPath !== '/' ? cwd?.root : undefined;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null) => {
+	const applyCwd = (cwd: MachineCwd | null) => {
 		homeDirectory = cwd?.home ? asDirectoryPath(cwd.home) : null;
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
 		setFileRoot(rootFromCwd(cwd));
@@ -1208,10 +1209,10 @@
 		if (disposed) return;
 		if (!(await protectBuffer())) return;
 		const generation = ++loadGeneration;
-		const selector = effectiveTerminalId,
+		const selector = effectiveMachineId,
 			session = chatId;
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 		const directory = clampToFileRoot(path);
 		if (options.restoreTree) {
 			restoreTreeState(directory);
@@ -1228,8 +1229,8 @@
 		selectedFileWritable = true;
 		clearFilePreview();
 		clearSelection();
-		if (!options.preserveTree || directory !== currentPath || !terminalContext) {
-			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		if (!options.preserveTree || directory !== currentPath || !machineContext) {
+			machineContext = { machineId: effectiveMachineId, currentDirectory: directory };
 		}
 		currentPath = directory;
 		onViewChange?.(captureView());
@@ -1237,8 +1238,8 @@
 		savedPathLoaded = true;
 		pushNavHistory(directory);
 
-		const result = await listFiles(terminal, directory);
-		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
+		const result = await listFiles(machine, directory);
+		if (generation !== loadGeneration || selector !== effectiveMachineId || session !== chatId)
 			return;
 		loading = false;
 
@@ -1255,11 +1256,11 @@
 	};
 
 	const fetchExpandedDir = async (path: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal) return null;
+		const machine = selectedMachine;
+		if (!machine) return null;
 		const directory = asDirectoryPath(path);
 		loadingDirs = new Set(loadingDirs).add(directory);
-		const result = await listFiles(terminal, directory);
+		const result = await listFiles(machine, directory);
 		const nextLoading = new Set(loadingDirs);
 		nextLoading.delete(directory);
 		loadingDirs = nextLoading;
@@ -1273,12 +1274,12 @@
 	// Re-lists the shown folders in place: no spinner, and selection and preview stay put.
 	let refreshes = 0;
 	const refreshBrowser = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || loading) return;
+		const machine = selectedMachine;
+		if (!machine || loading) return;
 		const refresh = ++refreshes;
 		const generation = loadGeneration;
 		const paths = [currentPath, ...expandedDirs];
-		const listings = await Promise.all(paths.map((path) => listFiles(terminal, path)));
+		const listings = await Promise.all(paths.map((path) => listFiles(machine, path)));
 		if (refresh !== refreshes || generation !== loadGeneration || loading) return;
 		if (listings[0]) {
 			error = null;
@@ -1314,28 +1315,28 @@
 		if (previous) await openEntry(entry, { refresh: true });
 	};
 
-	// The terminal's watcher reports real changes, including ones made outside the chat.
+	// The machine's watcher reports real changes, including ones made outside the chat.
 	let watchedFolder = '';
 	let stopWatching: (() => void) | undefined;
 	let watcherConnected = false;
-	const watchFolder = async (terminal: TerminalTarget | null, directory: string, on: boolean) => {
-		const folder = on && terminal ? `${terminal.baseUrl}:${directory}` : '';
+	const watchFolder = async (machine: MachineTarget | null, directory: string, on: boolean) => {
+		const folder = on && machine ? `${machine.baseUrl}:${directory}` : '';
 		if (folder === watchedFolder) return;
 		watchedFolder = folder;
 		stopWatching?.();
 		stopWatching = undefined;
 		watcherConnected = false;
-		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
+		if (!machine || !folder || !(await getMachineFeatures(machine)).events) return;
 		if (folder !== watchedFolder || disposed) return;
-		stopWatching = watchTerminalFiles(
-			terminal,
+		stopWatching = watchMachineFiles(
+			machine,
 			directory,
 			() => (selectedFile ? refreshSelectedFile() : refreshBrowser()),
 			(message) => (watcherConnected = !message)
 		);
 	};
 	$: void watchFolder(
-		selectedTerminal,
+		selectedMachine,
 		currentPath,
 		mounted && active && savedPathLoaded && !onSelectDirectory
 	);
@@ -1351,7 +1352,7 @@
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
-		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		machineContext = { machineId: effectiveMachineId, currentDirectory: directory };
 		saveTreeState();
 
 		const result = await fetchExpandedDir(directory);
@@ -1397,11 +1398,11 @@
 		selectedFileWritable = entry.writable !== false;
 		pushNavHistory(parentPath, filePath);
 
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
 		const generation = ++loadGeneration;
-		const selector = effectiveTerminalId!,
+		const selector = effectiveMachineId!,
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
@@ -1413,12 +1414,12 @@
 					}
 				: null;
 		const current = () =>
-			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
+			generation === loadGeneration && selector === effectiveMachineId && session === chatId;
 		openedFile = null;
-		if (terminalContext) terminalContext = { ...terminalContext, file: null };
+		if (machineContext) machineContext = { ...machineContext, file: null };
 		dirty = false;
 		diskChanged = false;
-		selectedFileLocation = { ...terminal, path: filePath };
+		selectedFileLocation = { ...machine, path: filePath };
 		pendingFile = filesystemFile(
 			{ path: filePath, name: entry.name, size: entry.size, modified: entry.modified },
 			selector,
@@ -1452,22 +1453,22 @@
 			fileContent: null
 		} as any;
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
 		} else if (
 			isSqlite(filePath) ||
 			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
 		) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) {
 				const data = await result.blob.arrayBuffer();
 				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
@@ -1478,21 +1479,21 @@
 			const ext = getFileExt(filePath);
 			try {
 				if (ext === 'docx') {
-					const preview = await downloadFilePreview(terminal, filePath);
+					const preview = await downloadFilePreview(machine, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(terminal, filePath);
+						const result = await downloadFileBlob(machine, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						next.fileDocxData = arrayBuffer;
 					}
 				} else if (ext === 'pptx') {
-					const preview = await downloadFilePreview(terminal, filePath);
+					const preview = await downloadFilePreview(machine, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(terminal, filePath);
+						const result = await downloadFileBlob(machine, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
@@ -1508,7 +1509,7 @@
 				});
 			}
 		} else {
-			next.fileContent = await readFile(terminal, filePath);
+			next.fileContent = await readFile(machine, filePath);
 		}
 		if (!current()) {
 			[next.fileImageUrl, next.fileVideoUrl, next.fileAudioUrl]
@@ -1552,7 +1553,7 @@
 		}
 	};
 
-	const openFileMatch = async (match: TerminalFileMatch) => {
+	const openFileMatch = async (match: MachineFileMatch) => {
 		if (match.type === 'directory') {
 			searchQuery = '';
 			await loadDir(match.path);
@@ -1569,7 +1570,7 @@
 		} as BrowserRow);
 	};
 
-	const openContentMatch = async (match: TerminalFileMatch, contentMatch: TerminalContentMatch) => {
+	const openContentMatch = async (match: MachineFileMatch, contentMatch: MachineContentMatch) => {
 		await openFileMatch(match);
 		fileSearchTarget = {
 			line: contentMatch.line,
@@ -1582,8 +1583,8 @@
 	let downloading = false;
 
 	const downloadFile = async (path: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || downloading) return;
+		const machine = selectedMachine;
+		if (!machine || downloading) return;
 
 		downloading = true;
 		const toastId = toast.loading($i18n.t('Preparing download...'));
@@ -1591,8 +1592,8 @@
 			// Directories end with '/', downloaded as a ZIP archive
 			const isDir = path.endsWith('/');
 			const result = isDir
-				? await archiveFromTerminal(terminal, [path.replace(/\/$/, '')])
-				: await downloadFileBlob(terminal, path);
+				? await archiveFromMachine(machine, [path.replace(/\/$/, '')])
+				: await downloadFileBlob(machine, path);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -1610,8 +1611,8 @@
 	};
 
 	$: dragContext = JSON.stringify([
-		selectedTerminal?.baseUrl,
-		selectedTerminal?.context.modelId,
+		selectedMachine?.baseUrl,
+		selectedMachine?.context.modelId,
 		chatId ?? null
 	]);
 
@@ -1622,7 +1623,7 @@
 		if (selectedFile) return;
 		if (!currentWritable) return;
 		const types = e.dataTransfer?.types;
-		if (!types?.includes('Files') && !types?.includes('application/x-terminal-file-move')) return;
+		if (!types?.includes('Files') && !types?.includes('application/x-machine-file-move')) return;
 		e.preventDefault();
 		e.stopPropagation();
 		isDragOver = types.includes('Files');
@@ -1633,10 +1634,10 @@
 		e.stopPropagation();
 		isDragOver = false;
 
-		const terminal = selectedTerminal;
-		if (selectedFile || !terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (selectedFile || !machine || !currentWritable) return;
 
-		const rawMove = e.dataTransfer?.getData('application/x-terminal-file-move');
+		const rawMove = e.dataTransfer?.getData('application/x-machine-file-move');
 		if (rawMove) {
 			try {
 				const data = JSON.parse(rawMove);
@@ -1651,8 +1652,8 @@
 	};
 
 	const handleUploadEntries = async (input: UploadEntry[] | Promise<UploadEntry[]>) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable || uploading) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable || uploading) return;
 		const destination = currentPath;
 		const sessionId = chatId ?? undefined;
 		uploading = true;
@@ -1667,19 +1668,15 @@
 				}
 				const path = `${destination.replace(/\/$/, '')}/${entry.path}`;
 				const result = entry.file
-					? await uploadToTerminal(
-							terminal,
-							path.slice(0, path.lastIndexOf('/')) || '/',
-							entry.file
-						)
-					: await createDirectory(terminal, path);
+					? await uploadToMachine(machine, path.slice(0, path.lastIndexOf('/')) || '/', entry.file)
+					: await createDirectory(machine, path);
 				if (!result) throw new Error(entry.path);
 			}
 		} catch (error) {
 			toast.error(`${$i18n.t('Upload failed')}: ${error instanceof Error ? error.message : error}`);
 		} finally {
 			uploading = false;
-			if (selectedTerminal?.baseUrl === terminal.baseUrl && (chatId ?? undefined) === sessionId) {
+			if (selectedMachine?.baseUrl === machine.baseUrl && (chatId ?? undefined) === sessionId) {
 				invalidateTreeCache(destination);
 				if (currentPath === destination && !selectedFile) await refreshBrowser();
 			}
@@ -1715,10 +1712,10 @@
 		newFolderName = '';
 		if (!name) return;
 
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
-		const result = await createDirectory(terminal, `${currentPath}${name}`);
+		const result = await createDirectory(machine, `${currentPath}${name}`);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
@@ -1745,11 +1742,11 @@
 		newFileName = '';
 		if (!name) return;
 
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
-		const result = await uploadToTerminal(terminal, currentPath, emptyFile);
+		const result = await uploadToMachine(machine, currentPath, emptyFile);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
@@ -1759,10 +1756,10 @@
 
 	// Delete
 	const handleDelete = async (path: string, name: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return;
 
-		const result = await deleteEntry(terminal, path);
+		const result = await deleteEntry(machine, path);
 		toast[result ? 'success' : 'error'](
 			result
 				? $i18n.t('{{name}} deleted', { name })
@@ -1786,8 +1783,8 @@
 	};
 
 	const moveOne = async (source: string, destFolder: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return false;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return false;
 
 		const cleanSource = normalizePath(source).replace(/\/$/, '');
 		const fileName = cleanSource.split('/').pop() ?? '';
@@ -1799,7 +1796,7 @@
 		const sourceDir = asDirectoryPath(cleanSource);
 		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return false;
 
-		const result = await moveEntry(terminal, cleanSource, destination);
+		const result = await moveEntry(machine, cleanSource, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 			return false;
@@ -1837,15 +1834,15 @@
 
 	// Rename
 	const handleRename = async (oldPath: string, newName: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !newName || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !newName || !currentWritable) return;
 
 		const dir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1) || currentPath;
 		const destination = `${dir}${newName}`;
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(terminal, oldPath, destination);
+		const result = await moveEntry(machine, oldPath, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -2054,15 +2051,15 @@
 	};
 
 	const dragAttachments = (event: DragEvent, path: string) => {
-		if (!effectiveTerminalId) return;
+		if (!effectiveMachineId) return;
 		const paths = selectedEntries.has(path) ? selectedEntries : new Set([path]);
 		const attachments = visibleEntries
 			.filter((entry) => entry.type === 'file' && paths.has(entry.fullPath))
 			.map((entry) =>
-				filesystemFile({ ...entry, path: entry.fullPath }, effectiveTerminalId!, chatId ?? null)
+				filesystemFile({ ...entry, path: entry.fullPath }, effectiveMachineId!, chatId ?? null)
 			);
 		if (attachments.length)
-			event.dataTransfer?.setData('application/x-terminal-file', JSON.stringify(attachments));
+			event.dataTransfer?.setData('application/x-machine-file', JSON.stringify(attachments));
 	};
 
 	$: selectedCount = selectedEntries.size;
@@ -2115,13 +2112,13 @@
 	};
 
 	const bulkDelete = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || !selectedEntriesWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !selectedEntriesWritable) return;
 
 		const paths = [...selectedEntries];
 		let ok = 0;
 		for (const p of paths) {
-			const result = await deleteEntry(terminal, p.replace(/\/$/, ''));
+			const result = await deleteEntry(machine, p.replace(/\/$/, ''));
 			if (result) ok++;
 		}
 		toast[ok > 0 ? 'success' : 'error'](
@@ -2133,8 +2130,8 @@
 	};
 
 	const bulkDownload = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || downloading) return;
+		const machine = selectedMachine;
+		if (!machine || downloading) return;
 
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
@@ -2149,7 +2146,7 @@
 		const toastId = toast.loading($i18n.t('Preparing download...'));
 		try {
 			// Archive everything into a single ZIP
-			const result = await archiveFromTerminal(terminal, paths);
+			const result = await archiveFromMachine(machine, paths);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -2199,7 +2196,7 @@
 		document.addEventListener('spreadsheetselection', captureSelection);
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';
-		const terminal = getTerminal();
+		const machine = getMachine();
 
 		let handledDisplayFile = false;
 
@@ -2209,7 +2206,7 @@
 				!manageFileRequests ||
 				!active ||
 				!request ||
-				!selectedTerminal ||
+				!selectedMachine ||
 				comparison
 			)
 				return;
@@ -2229,10 +2226,10 @@
 
 			// Always reload directory to ensure entries are fresh
 			if (!(await protectBuffer())) return;
-			const selector = effectiveTerminalId,
+			const selector = effectiveMachineId,
 				session = chatId;
 			await loadDir(dir);
-			if (selector !== effectiveTerminalId || session !== chatId || currentPath !== dir || dirty)
+			if (selector !== effectiveMachineId || session !== chatId || currentPath !== dir || dirty)
 				return;
 			await tick();
 
@@ -2249,8 +2246,8 @@
 			if (
 				onSelectDirectory ||
 				!filePath ||
-				!selectedTerminal ||
-				effectiveTerminalId !== $selectedTerminalId
+				!selectedMachine ||
+				effectiveMachineId !== $selectedMachineId
 			)
 				return;
 			showFileNavDir.set(null);
@@ -2277,16 +2274,16 @@
 			}
 		});
 
-		if (!handledDisplayFile && terminal) {
+		if (!handledDisplayFile && machine) {
 			loading = true;
 
 			void (async () => {
-				const serverCwd = await getCwd(terminal);
+				const serverCwd = await getCwd(machine);
 				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
 				savedPath =
-					terminalContext && terminalContext.terminalId === effectiveTerminalId
-						? terminalContext.currentDirectory
+					machineContext && machineContext.machineId === effectiveMachineId
+						? machineContext.currentDirectory
 						: folderDirectory || serverPath;
 				savedPath = clampToFileRoot(savedPath);
 				if (initialFile) {
@@ -2326,8 +2323,8 @@
 				document.visibilityState === 'visible' &&
 				!comparison &&
 				!selectedFile &&
-				selectedTerminal &&
-				!terminalChatContextPending &&
+				selectedMachine &&
+				!machineChatContextPending &&
 				!loading
 			) {
 				loadDir(currentPath, { preserveTree: true });
@@ -2444,15 +2441,15 @@
 	{#key comparison}
 		<FileComparisonModal
 			files={comparison.files}
-			target={comparison.terminal}
+			target={comparison.machine}
 			onClose={closeComparison}
 		/>
 	{/key}
 {/if}
 
-{#if terminalChatContextHidden}
+{#if machineChatContextHidden}
 	<div class="hidden"></div>
-{:else if terminalChatContextPending}
+{:else if machineChatContextPending}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Icon
 			name="terminal"
@@ -2464,7 +2461,7 @@
 			{$i18n.t('Start the chat to use this machine.')}
 		</div>
 	</div>
-{:else if !selectedTerminal}
+{:else if !selectedMachine}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Icon
 			name="terminal"
@@ -2535,9 +2532,9 @@
 			onGoForward={goForward}
 			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
 			listFolders={async (path) => {
-				const terminal = selectedTerminal;
+				const machine = selectedMachine;
 				const entries =
-					treeCache.get(path) ?? (terminal ? (await listFiles(terminal, path))?.entries : null);
+					treeCache.get(path) ?? (machine ? (await listFiles(machine, path))?.entries : null);
 				return (entries ?? [])
 					.filter((entry) => entry.type === 'directory')
 					.map((entry) => cleanEntryName(entry.name));
@@ -2661,7 +2658,7 @@
 				</button>
 			</Tooltip>
 
-			{#if getFileExt(selectedFile) === 'xlsx' && selectedTerminal}
+			{#if getFileExt(selectedFile) === 'xlsx' && selectedMachine}
 				<Tooltip content={$i18n.t('Save')}>
 					<button
 						type="button"
@@ -2842,8 +2839,8 @@
 					/>
 				{/if}
 				<div class="h-full" class:hidden={showGitDiff}>
-					{#if supportsComments(selectedFile) && selectedTerminal}
-						{#key `${selectedTerminal.baseUrl}|${selectedTerminal.context.modelId}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+					{#if supportsComments(selectedFile) && selectedMachine}
+						{#key `${selectedMachine.baseUrl}|${selectedMachine.context.modelId}|${selectedMachine.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 							<CommentFilePreview
 								bind:this={commentPreviewRef}
 								bind:dirty
@@ -2855,7 +2852,7 @@
 									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
 								}}
 								path={selectedFile}
-								target={selectedTerminal}
+								target={selectedMachine}
 								targetPage={documentTargetPage}
 								initialSheet={selectedExcelSheet}
 								onReady={() => {
@@ -2892,7 +2889,7 @@
 							{fileOfficeSlides}
 							targetPage={documentTargetPage}
 							searchTarget={fileSearchTarget}
-							target={selectedTerminal}
+							target={selectedMachine}
 							overlay={overlay || isDraggingHandle}
 							onSave={saveFile}
 						/>
@@ -3026,7 +3023,7 @@
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
+				{:else if loading || (effectiveMachineId && $machines === null)}
 					<div class="flex h-full items-center justify-center">
 						<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 					</div>
@@ -3040,7 +3037,7 @@
 					</div>
 				{/if}
 
-				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
+				{#if !isSearching && !loading && !error && !uploading && !(effectiveMachineId && $machines === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							data-file-list
@@ -3124,8 +3121,8 @@
 									expanded={expandedDirs.has(entry.fullPath)}
 									loadingChildren={loadingDirs.has(entry.fullPath)}
 									folderContentsVersion={loadGeneration}
-									target={selectedTerminal}
-									terminalSessionId={chatId ?? undefined}
+									target={selectedMachine}
+									machineSessionId={chatId ?? undefined}
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
@@ -3196,19 +3193,19 @@
 
 		{#if onSelectDirectory}
 			<div class="shrink-0 border-t border-base-200/40 pt-3 dark:border-base-850/20">
-				{#if gitAvailable && showCloneRepository && selectedTerminal}
-					{#key `${effectiveTerminalId}:${chatId}`}
+				{#if gitAvailable && showCloneRepository && selectedMachine}
+					{#key `${effectiveMachineId}:${chatId}`}
 						<CloneRepository
-							terminal={selectedTerminal}
+							machine={selectedMachine}
 							directory={currentPath}
 							disabled={loading || !!error || !savedPathLoaded || !currentWritable}
 							onCancel={() => (showCloneRepository = false)}
 							onCloned={async (path) => {
-								const selector = effectiveTerminalId,
+								const selector = effectiveMachineId,
 									session = chatId;
 								showCloneRepository = false;
 								await loadDir(path);
-								if (!disposed && selector === effectiveTerminalId && session === chatId)
+								if (!disposed && selector === effectiveMachineId && session === chatId)
 									onSelectDirectory?.(path);
 							}}
 						/>
@@ -3259,10 +3256,10 @@
 					</div>
 				{/if}
 
-				{#key JSON.stringify([chatId, effectiveTerminalId, modelId])}
+				{#key JSON.stringify([chatId, effectiveMachineId, modelId])}
 					<TerminalDock
 						{modelId}
-						terminalId={effectiveTerminalId}
+						machineId={effectiveMachineId}
 						{active}
 						bind:hasSessions
 						overlay={overlay || isDraggingHandle}

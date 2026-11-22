@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalTarget } from '$lib/apis/machines';
+	import type { MachineTarget } from '$lib/apis/machines';
 	import { cloneRepository } from '$lib/apis/machines/git';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Icon from './Icon.svelte';
 
 	const i18n = getContext<any>('i18n');
-	export let terminal: TerminalTarget;
+	export let machine: MachineTarget;
 
 	export let directory: string;
 	export let disabled = false;
@@ -25,7 +25,7 @@
 		cloningDirectory = directory;
 		error = '';
 		try {
-			const path = await cloneRepository(terminal, directory, url, controller.signal);
+			const path = await cloneRepository(machine, directory, url, controller.signal);
 			if (!controller.signal.aborted) onCloned(path);
 		} catch (err) {
 			if (!controller.signal.aborted)

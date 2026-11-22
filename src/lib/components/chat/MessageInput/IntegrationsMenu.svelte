@@ -8,7 +8,7 @@
 	import {
 		config,
 		settings,
-		terminalServers,
+		machines,
 		user,
 		showSettings,
 		tools as _tools,
@@ -22,11 +22,7 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getImageModels } from '$lib/apis/images';
 	import { getVideoModels } from '$lib/apis/videos';
-	import {
-		listTerminalSkills,
-		resolveTerminalTarget,
-		type TerminalSkill
-	} from '$lib/apis/machines';
+	import { listMachineSkills, resolveMachineTarget, type MachineSkill } from '$lib/apis/machines';
 
 	import { toast } from 'svelte-sonner';
 
@@ -48,12 +44,13 @@
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
+	import { isMachine } from '$lib/utils/machines';
 
 	const { chatId } = getChatContext();
 
 	const i18n = getContext('i18n') as any;
-	export let selectedTerminalId: Readable<string | null>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Readable<string | null>;
+	export let machineSkills: Writable<any[]>;
 
 	type IntegrationItem = {
 		id: string;
@@ -123,11 +120,11 @@
 	].filter(([, ids]) => ids.length > 0);
 	$: skillIds = Object.keys(skills ?? {});
 	$: skillGroups = [
-		[$i18n.t('Workspace'), skillIds.filter((id) => skills?.[id]?.source !== 'terminal')],
+		[$i18n.t('Workspace'), skillIds.filter((id) => !isMachine(skills?.[id]?.source))],
 		[
-			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.name ||
+			($machines ?? []).find((server) => server.id === $selectedMachineId)?.name ||
 				$i18n.t('Machine'),
-			skillIds.filter((id) => skills?.[id]?.source === 'terminal')
+			skillIds.filter((id) => isMachine(skills?.[id]?.source))
 		]
 	].filter(([, ids]) => ids.length > 0);
 
@@ -254,15 +251,13 @@
 		}
 	};
 
-	const getTerminalSkillItems = async (): Promise<TerminalSkill[]> => {
-		const target = resolveTerminalTarget(
-			$selectedTerminalId,
-			$terminalServers ?? [],
-			localStorage.token,
-			{ chatId: $chatId || null, modelId: selectedModels[0] ?? null }
-		);
-		const items = await listTerminalSkills(target).catch(() => []);
-		terminalSkills.set(items);
+	const getMachineSkillItems = async (): Promise<MachineSkill[]> => {
+		const target = resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token, {
+			chatId: $chatId || null,
+			modelId: selectedModels[0] ?? null
+		});
+		const items = await listMachineSkills(target).catch(() => []);
+		machineSkills.set(items);
 		return items;
 	};
 
@@ -287,9 +282,9 @@
 			await _skills.set(await getSkills(localStorage.token));
 		}
 		if (requestId !== skillRequestId) return;
-		const terminalItems = await getTerminalSkillItems();
+		const machineItems = await getMachineSkillItems();
 		if (requestId !== skillRequestId) return;
-		setSkills([...($_skills ?? []), ...terminalItems], q);
+		setSkills([...($_skills ?? []), ...machineItems], q);
 	};
 
 	const scheduleToolSearch = () => {
@@ -859,7 +854,7 @@
 			{:else}
 				<div class="flex flex-col gap-0.5">
 					{#each skillGroups as [label, ids]}
-						{#if skillGroups.length > 1 || skills?.[ids[0]]?.source === 'terminal'}
+						{#if skillGroups.length > 1 || isMachine(skills?.[ids[0]]?.source)}
 							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 								{label}
 							</div>

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget;
 	import { onMount, onDestroy, getContext, createEventDispatcher } from 'svelte';
 	import type { ListeningPort } from '$lib/apis/machines';
-	import { getListeningPorts, getPortProxyUrl, getTerminalFeatures } from '$lib/apis/machines';
-	import { watchTerminalPorts } from '$lib/apis/machines/events';
+	import { getListeningPorts, getPortProxyUrl, getMachineFeatures } from '$lib/apis/machines';
+	import { watchMachinePorts } from '$lib/apis/machines/events';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Icon from './Icon.svelte';
 
@@ -38,11 +38,11 @@
 		context = key;
 		loading = false;
 		if (!enabled || !target.baseUrl) return;
-		const features = await getTerminalFeatures(target);
+		const features = await getMachineFeatures(target);
 		if (current !== generation) return;
 		if (features.events === true) {
 			loading = true;
-			stopWatching = watchTerminalPorts(
+			stopWatching = watchMachinePorts(
 				target,
 				(next) => {
 					ports = next;

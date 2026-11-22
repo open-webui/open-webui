@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget;
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { readComparisonSource } from '$lib/apis/machines';
 	import DiffEditorModal from '$lib/components/common/DiffEditorModal.svelte';

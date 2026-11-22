@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 	import ExcelPreview from '$lib/components/common/ExcelPreview.svelte';
 	import { getContext, tick, onDestroy } from 'svelte';
-	import { downloadFileBlob, terminalRequest } from '$lib/apis/machines';
+	import { downloadFileBlob, machineRequest } from '$lib/apis/machines';
 	import MarkdownFileEditor from './MarkdownFileEditor.svelte';
 	import MarkdownDocument from './MarkdownDocument.svelte';
 	import { settings, config } from '$lib/stores';
@@ -37,7 +37,7 @@
 	export let fileContent: string | null = null;
 	export let gitBaseContent: string | null = null;
 
-	// Terminal connection for notebook execution
+	// Machine connection for notebook execution
 	export let chatId: string | null = null;
 	export let resourceVersion = 0;
 	export let onLocalLink: (path: string) => void = () => {};
@@ -152,7 +152,7 @@
 		}
 		previewPending = true;
 		try {
-			const result = await terminalRequest<{ url: string }>(target, '/files/preview', {
+			const result = await machineRequest<{ url: string }>(target, '/files/preview', {
 				method: 'POST'
 			});
 			if (generation === previewGeneration) serveUrl = result.url + path;

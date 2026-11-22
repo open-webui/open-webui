@@ -8,9 +8,9 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
+	import MachineDropdown from '$lib/components/automations/MachineDropdown.svelte';
 	import WebhookDropdown from '$lib/components/automations/WebhookDropdown.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
@@ -25,6 +25,7 @@
 		type AutomationForm,
 		type AutomationResponse
 	} from '$lib/apis/automations';
+	import { automationMachineOf } from '$lib/utils/machines';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -38,9 +39,9 @@
 	let name = '';
 	let prompt = '';
 	let model_id = '';
-	let terminalServerId = '';
-	let terminalCwd = '';
-	let terminalServers: TerminalServer[] = [];
+	let machineServerId = '';
+	let machineCwd = '';
+	let machines: MachineServer[] = [];
 	let agentModels: AgentModel[] = [];
 	let modelsLoading = false;
 	let initialized = false;
@@ -61,7 +62,7 @@
 
 	const loadAgentModels = (
 		visible: boolean,
-		terminalId: string,
+		machineId: string,
 		cwd: string,
 		target: string,
 		automationId?: string
@@ -69,7 +70,7 @@
 		const request = ++modelRequest;
 		clearTimeout(modelTimer);
 		agentModels = [];
-		modelsLoading = visible && !!terminalId && target === 'chat';
+		modelsLoading = visible && !!machineId && target === 'chat';
 		if (!visible) return;
 		if (!modelsLoading) {
 			if (model_id.startsWith('agent:')) model_id = '';
@@ -79,7 +80,7 @@
 			try {
 				const available = await getAutomationModels(
 					localStorage.token,
-					terminalId,
+					machineId,
 					cwd.trim(),
 					automationId
 				);
@@ -95,13 +96,7 @@
 			}
 		}, 250);
 	};
-	$: loadAgentModels(
-		show && initialized,
-		terminalServerId,
-		terminalCwd,
-		target_type,
-		automation?.id
-	);
+	$: loadAgentModels(show && initialized, machineServerId, machineCwd, target_type, automation?.id);
 	onDestroy(() => {
 		clearTimeout(modelTimer);
 		modelRequest++;
@@ -141,8 +136,8 @@
 					model_id: model_id.trim(),
 					rrule: scheduleDropdown.buildRrule(),
 					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
-					terminal: terminalServerId
-						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
+					machine: machineServerId
+						? { server_id: machineServerId, cwd: machineCwd.trim() || undefined }
 						: undefined,
 					target:
 						target_type === 'channel'
@@ -173,7 +168,7 @@
 	const init = async () => {
 		initialized = false;
 		await tick();
-		terminalServers = await getTerminalServers(localStorage.token);
+		machines = await getMachines(localStorage.token);
 		if (!foldersLoaded && ($folders ?? []).length === 0) {
 			const res = await getFolders(localStorage.token).catch(() => null);
 			if (res) folders.set(res);
@@ -185,8 +180,8 @@
 			channelsLoaded = true;
 		}
 
-		terminalServerId = (automation ?? cloneFrom)?.data.terminal?.server_id ?? '';
-		terminalCwd = (automation ?? cloneFrom)?.data.terminal?.cwd ?? '';
+		machineServerId = automationMachineOf((automation ?? cloneFrom)?.data)?.server_id ?? '';
+		machineCwd = automationMachineOf((automation ?? cloneFrom)?.data)?.cwd ?? '';
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
@@ -314,13 +309,7 @@
 					side="top"
 					align="start"
 				/>
-				<TerminalDropdown
-					{terminalServers}
-					bind:terminalServerId
-					bind:terminalCwd
-					side="top"
-					align="start"
-				/>
+				<MachineDropdown {machines} bind:machineServerId bind:machineCwd side="top" align="start" />
 			</div>
 
 			<div class="flex items-center justify-end gap-2 shrink-0">

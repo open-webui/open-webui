@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import type { TerminalTarget } from '$lib/apis/machines';
+	import type { MachineTarget } from '$lib/apis/machines';
 	import { gitRequest, type GitFile } from '$lib/apis/machines/git';
 	import GitDiff from '../Tabs/GitDiff.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 
-	export let target: TerminalTarget | null;
+	export let target: MachineTarget | null;
 
 	export let root: string;
 	export let file: GitFile | null;
@@ -20,7 +20,7 @@
 	let generation = 0;
 
 	const load = async (
-		server: TerminalTarget | null,
+		server: MachineTarget | null,
 		directory: string,
 		entry: GitFile | null,
 		enabled: boolean,

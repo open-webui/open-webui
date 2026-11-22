@@ -41,6 +41,7 @@ from starsessions import (
 )
 from starsessions.stores.redis import RedisStore
 
+from open_webui.utils.machines import machine_id_of, normalize_machine_id
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     CACHE_DIR,
@@ -292,7 +293,7 @@ from open_webui.utils.tool_approval import (
     build_tool_approval_resume_payload,
     resolve_tool_call_output,
 )
-from open_webui.utils.tools import set_terminal_servers, set_tool_servers
+from open_webui.utils.tools import set_machines, set_tool_servers
 
 if SAFE_MODE:
     print('SAFE MODE ENABLED')
@@ -502,8 +503,8 @@ async def lifespan(app: FastAPI):
             log.warning(f'Failed to initialize tool servers at startup: {e}')
 
         try:
-            await set_terminal_servers(mock_request)
-            log.info('Initialized %s terminal server(s)', len(app.state.TERMINAL_SERVERS))
+            await set_machines(mock_request)
+            log.info('Initialized %s terminal server(s)', len(app.state.MACHINES))
         except Exception as e:
             log.warning(f'Failed to initialize terminal servers at startup: {e}')
 
@@ -610,9 +611,9 @@ app.state.OPENAI_MODELS = {}
 
 app.state.TOOL_SERVERS = []
 
-# Terminal server
+# Machines
 
-app.state.TERMINAL_SERVERS = []
+app.state.MACHINES = []
 
 # SCIM
 
@@ -854,10 +855,6 @@ if ENABLE_ADMIN_ANALYTICS:
     app.include_router(analytics.router, prefix='/api/v1/analytics', tags=['analytics'])
 app.include_router(utils.router, prefix='/api/v1/utils', tags=['utils'])
 app.include_router(machines.router, prefix='/api/v1/machines', tags=['machines'])
-# Deprecated: Terminals became Machines. Kept so older clients and links keep working.
-app.include_router(
-    machines.router, prefix='/api/v1/terminals', tags=['machines'], deprecated=True, include_in_schema=False
-)
 app.include_router(automations.router, prefix='/api/v1/automations', tags=['automations'])
 app.include_router(calendar.router, prefix='/api/v1/calendars', tags=['calendars'])
 
@@ -874,7 +871,8 @@ if ENABLE_SCIM:
 async def get_models(
     request: Request,
     refresh: bool = False,
-    terminal_id: str | None = None,
+    machine_id: str | None = None,
+    terminal_id: str | None = None,  # former name of machine_id
     chat_id: str | None = None,
     cwd: str | None = None,
     user=Depends(get_verified_user),
@@ -928,12 +926,13 @@ async def get_models(
         log.debug(
             f'/api/models returned filtered models accessible to the user: {JSONCodec.dumps([model.get("id") for model in models])}'
         )
-    if terminal_id:
+    machine_id = machine_id or terminal_id
+    if machine_id:
         from open_webui.utils.agents.discovery import get_models as get_agent_models
 
         try:
             models.extend(
-                await get_agent_models(request, user, {'terminal_id': terminal_id, 'chat_id': chat_id}, cwd=cwd)
+                await get_agent_models(request, user, {'machine_id': machine_id, 'chat_id': chat_id}, cwd=cwd)
             )
         except Exception as exc:
             log.debug('Agent discovery unavailable: %s', type(exc).__name__)
@@ -1104,16 +1103,20 @@ async def chat_completion(
     model_id = form_data.get('model', None)
     request.state.model_id = model_id
     tasks = form_data.pop('background_tasks', None)
+    normalize_machine_id(form_data)
 
-    from open_webui.utils.machines import get_folder_terminal_defaults, initialize_terminal_directory
+    from open_webui.utils.machines import get_folder_machine_defaults, initialize_machine_directory
 
     folder_defaults = {}
-    requested_directory = form_data.pop('terminal_cwd', None)
+    requested_directory = form_data.pop('machine_cwd', None)
+    legacy_directory = form_data.pop('terminal_cwd', None)  # former name
+    if requested_directory is None:
+        requested_directory = legacy_directory
     if 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id'):
-        folder_defaults = await get_folder_terminal_defaults(user, form_data.get('folder_id'))
-        if 'terminal_id' not in form_data and folder_defaults.get('terminal_id'):
-            form_data['terminal_id'] = folder_defaults['terminal_id']
-        if requested_directory is None and form_data.get('terminal_id') == folder_defaults.get('terminal_id'):
+        folder_defaults = await get_folder_machine_defaults(user, form_data.get('folder_id'))
+        if 'machine_id' not in form_data and folder_defaults.get('machine_id'):
+            form_data['machine_id'] = folder_defaults['machine_id']
+        if requested_directory is None and form_data.get('machine_id') == folder_defaults.get('machine_id'):
             requested_directory = folder_defaults.get('working_directory')
     else:
         requested_directory = None
@@ -1448,8 +1451,7 @@ async def chat_completion(
                                 'id': chat_id,
                                 'title': 'New Chat',
                                 'models': [entry['model_id'] for entry in message_ids],
-                                'terminal_id': (model.get('agent') or {}).get('terminal_id')
-                                or form_data.get('terminal_id'),
+                                'machine_id': machine_id_of(model.get('agent')) or form_data.get('machine_id'),
                                 'working_directory': requested_directory or '',
                                 'history': {
                                     'currentId': all_assistant_ids[0] if all_assistant_ids else user_message_id,
@@ -1677,8 +1679,8 @@ async def chat_completion(
                 )
                 ctx = None
                 if is_new_chat:
-                    await initialize_terminal_directory(
-                        request, user, metadata, form_data.get('terminal_id'), requested_directory
+                    await initialize_machine_directory(
+                        request, user, metadata, form_data.get('machine_id'), requested_directory
                     )
                 if model.get('agent'):
                     from open_webui.utils.agents.runner import run as run_agent
@@ -1866,7 +1868,7 @@ async def chat_completion(
                     assistant_message_id,
                     {
                         'meta': {'task_id': per_model_metadata['task_id']},
-                        # Agent models disappear with their terminal.
+                        # Agent models disappear with their machine.
                         **({'modelName': agent_model['name']} if agent_model else {}),
                     },
                     touch=False,
@@ -2487,7 +2489,7 @@ async def get_app_config(request: Request):
                     'enable_tools': ENABLE_TOOLS,
                     'enable_functions': ENABLE_FUNCTIONS,
                     'enable_tool_servers': ENABLE_TOOL_SERVERS,
-                    'enable_terminal_servers': ENABLE_TOOL_SERVERS
+                    'enable_machines': ENABLE_TOOL_SERVERS
                     and any(connection.get('enabled', True) for connection in config.get('machines.connections') or []),
                     'enable_folders': config.get('folders.enable'),
                     'folder_max_file_count': config.get('folders.max_file_count'),

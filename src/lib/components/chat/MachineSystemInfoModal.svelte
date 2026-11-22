@@ -1,22 +1,18 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import {
-		terminalRequest,
-		type TerminalTarget,
-		type TerminalSystemInfo
-	} from '$lib/apis/machines';
+	import { machineRequest, type MachineTarget, type MachineSystemInfo } from '$lib/apis/machines';
 	import Icon from './FileNav/Icon.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let label: string;
 	export let onClose: () => void;
 	const i18n = getContext<any>('i18n');
-	let data: TerminalSystemInfo | null = null;
+	let data: MachineSystemInfo | null = null;
 	let error = '';
 	let loading = true;
 	let sort: 'cpu_percent' | 'memory_bytes' = 'cpu_percent';
@@ -32,7 +28,7 @@
 		controller = request;
 		loading = true;
 		try {
-			const next = await terminalRequest<TerminalSystemInfo>(target, '/system/info', {
+			const next = await machineRequest<MachineSystemInfo>(target, '/system/info', {
 				signal: request.signal
 			});
 			if (request.signal.aborted || destroyed) return;

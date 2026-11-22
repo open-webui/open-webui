@@ -12,7 +12,7 @@ export type BridgeSubmission = {
 type CallContext = {
 	chatId?: string;
 	modelId: string;
-	terminalId?: string;
+	machineId?: string;
 	voiceModel?: string;
 	voice?: string;
 	messages: { role: string; content: string }[];
@@ -130,7 +130,7 @@ export class RealtimeCall {
 			this.token = token;
 			this.configuration = JSON.stringify([
 				context.modelId,
-				context.terminalId,
+				context.machineId,
 				context.voiceModel,
 				context.voice
 			]);
@@ -171,7 +171,7 @@ export class RealtimeCall {
 					token,
 					chat_id: context.chatId,
 					model_id: context.modelId,
-					terminal_id: context.terminalId
+					machine_id: context.machineId
 				});
 			ws.onmessage = ({ data }) => {
 				if (session !== this.session) return;
@@ -315,7 +315,7 @@ export class RealtimeCall {
 		const context = this.options.context();
 		if (
 			this.configuration !==
-			JSON.stringify([context.modelId, context.terminalId, context.voiceModel, context.voice])
+			JSON.stringify([context.modelId, context.machineId, context.voiceModel, context.voice])
 		) {
 			const token = this.token;
 			this.end();

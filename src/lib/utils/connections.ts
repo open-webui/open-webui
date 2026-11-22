@@ -5,7 +5,7 @@
  */
 
 import { getOpenAIConfig, updateOpenAIConfig } from '$lib/apis/openai';
-import { getTerminalServerConnections, setTerminalServerConnections } from '$lib/apis/configs';
+import { getMachineConnections, setMachineConnections } from '$lib/apis/configs';
 
 // OpenAI connections
 
@@ -74,18 +74,18 @@ export const removeOpenAIConnection = async (token: string, url: string) => {
 	});
 };
 
-// Terminal server connections
+// Machine connections
 
 /**
- * Add a terminal server connection at the system level.
+ * Add a machine connection at the system level.
  * Mirrors the logic in admin/Settings/Integrations.svelte.
  */
-export const addTerminalConnection = async (
+export const addMachineConnection = async (
 	token: string,
 	connection: { url: string; key?: string; name?: string; auth_type?: string }
 ) => {
-	const current = await getTerminalServerConnections(token);
-	const servers = current?.TERMINAL_SERVER_CONNECTIONS ?? [];
+	const current = await getMachineConnections(token);
+	const servers = current?.MACHINE_CONNECTIONS ?? [];
 
 	// Don't add duplicates
 	if (servers.find((s: any) => s.url === connection.url)) {
@@ -100,22 +100,22 @@ export const addTerminalConnection = async (
 		enabled: true
 	});
 
-	return await setTerminalServerConnections(token, {
-		TERMINAL_SERVER_CONNECTIONS: servers
+	return await setMachineConnections(token, {
+		MACHINE_CONNECTIONS: servers
 	});
 };
 
 /**
- * Remove a terminal server connection by URL at the system level.
+ * Remove a machine connection by URL at the system level.
  */
-export const removeTerminalConnection = async (token: string, url: string) => {
-	const current = await getTerminalServerConnections(token);
-	const servers = current?.TERMINAL_SERVER_CONNECTIONS ?? [];
+export const removeMachineConnection = async (token: string, url: string) => {
+	const current = await getMachineConnections(token);
+	const servers = current?.MACHINE_CONNECTIONS ?? [];
 
 	const filtered = servers.filter((s: any) => s.url !== url);
 	if (filtered.length === servers.length) return current; // nothing to remove
 
-	return await setTerminalServerConnections(token, {
-		TERMINAL_SERVER_CONNECTIONS: filtered
+	return await setMachineConnections(token, {
+		MACHINE_CONNECTIONS: filtered
 	});
 };

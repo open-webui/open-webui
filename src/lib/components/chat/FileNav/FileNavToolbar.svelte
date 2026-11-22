@@ -12,7 +12,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import { formatFileSize } from '$lib/utils';
 
-	export let dragType = 'application/x-terminal-file-move';
+	export let dragType = 'application/x-machine-file-move';
 	export let dragContext = '';
 	const i18n: any = getContext('i18n');
 
@@ -130,9 +130,7 @@
 	}}
 />
 
-<div
-	class="m-0 flex items-center gap-1 px-1 pb-0.75 shrink-0"
->
+<div class="m-0 flex items-center gap-1 px-1 pb-0.75 shrink-0">
 	<div class="flex shrink-0 items-center gap-0.5 px-1">
 		<!-- Back -->
 		<Tooltip content={$i18n.t('Back')}>
@@ -215,7 +213,9 @@
 				{!selectedFile && i === breadcrumbs.length - 1
 					? 'text-base-700 dark:text-base-300'
 					: 'text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400'}
-				{dragOverCrumb === i ? 'bg-base-100 dark:bg-base-0/8 ring-1 ring-base-1000/15 dark:ring-base-0/15' : ''}"
+				{dragOverCrumb === i
+					? 'bg-base-100 dark:bg-base-0/8 ring-1 ring-base-1000/15 dark:ring-base-0/15'
+					: ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
 					if (!writable) return;

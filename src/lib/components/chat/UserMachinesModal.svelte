@@ -23,22 +23,22 @@
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import {
 		templatesApi,
-		getTerminalServers,
-		resolveTerminalTarget,
-		type TerminalTarget
+		getMachines,
+		resolveMachineTarget,
+		type MachineTarget
 	} from '$lib/apis/machines';
-	import { terminalServers } from '$lib/stores';
-	import TerminalSystemInfoModal from './TerminalSystemInfoModal.svelte';
+	import { machines } from '$lib/stores';
+	import MachineSystemInfoModal from './MachineSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Stop from '$lib/components/icons/Stop.svelte';
 	import Play from '$lib/components/icons/Play.svelte';
-	import TerminalFilesModal from './TerminalFilesModal.svelte';
+	import MachineFilesModal from './MachineFilesModal.svelte';
 
-	/** Edits one terminal, or creates one when `terminalId` is null. */
+	/** Edits one machine, or creates one when `machineId` is null. */
 	export let show = true;
-	export let terminalId: string | null = null;
-	/** Connections the user may create terminals on. */
+	export let machineId: string | null = null;
+	/** Connections the user may create machines on. */
 	export let connections: { id: string; name: string }[] = [];
 	export let onCreate: (id: string) => Promise<void> = async () => {};
 
@@ -71,7 +71,7 @@
 	type InstanceAction = 'restart' | 'stop' | 'start' | 'delete';
 
 	let busy = false;
-	let loading = !!terminalId;
+	let loading = !!machineId;
 	let error = '';
 	let connectionId = connections[0]?.id ?? '';
 	let name = '';
@@ -100,13 +100,13 @@
 	// own row instead of on Save, and doesn't lock the form or the other instances.
 	let pending: Record<string, InstanceAction> = {};
 
-	$: serverId = terminalId ? connectionOf(terminalId) : connectionId;
+	$: serverId = machineId ? connectionOf(machineId) : connectionId;
 	$: loadStatus(serverId);
 	$: images = (status?.allowed_images ?? '')
 		.split(',')
 		.map((value: string) => value.trim())
 		.filter((value: string) => value && !value.includes('*'));
-	$: scopeLocked = !!terminalId && instances.length > 0;
+	$: scopeLocked = !!machineId && instances.length > 0;
 	$: cpuMessage = cpuError(cpu, status?.max_cpu);
 	$: memoryMessage = sizeError(memory, status?.max_memory);
 	$: storageMessage = sizeError(storage, status?.max_storage);
@@ -173,19 +173,18 @@
 		}
 	}
 
-	const refreshServers = async () =>
-		terminalServers.set(await getTerminalServers(localStorage.token));
+	const refreshServers = async () => machines.set(await getMachines(localStorage.token));
 
 	async function loadInstances() {
-		if (terminalId) instances = await templatesApi(`${path(terminalId)}/instances`);
+		if (machineId) instances = await templatesApi(`${path(machineId)}/instances`);
 	}
 
 	async function load() {
-		if (!terminalId) return;
-		// The form fills from the terminal alone; instances and access load beside it.
+		if (!machineId) return;
+		// The form fills from the machine alone; instances and access load beside it.
 		const [template, grants] = await Promise.all([
-			templatesApi(path(terminalId)),
-			templatesApi(`${path(terminalId)}/access`).catch(() => []),
+			templatesApi(path(machineId)),
+			templatesApi(`${path(machineId)}/access`).catch(() => []),
 			loadInstances().catch(() => (instances = []))
 		]);
 		const data = template?.data ?? {};
@@ -228,8 +227,8 @@
 		await run(async () => {
 			const data = payload();
 			if (!data.name) throw new Error($i18n.t('Enter a name.'));
-			if (terminalId) {
-				await templatesApi(path(terminalId), 'PATCH', data);
+			if (machineId) {
+				await templatesApi(path(machineId), 'PATCH', data);
 				await refreshServers();
 			} else {
 				const row = await templatesApi('', 'POST', {
@@ -238,21 +237,21 @@
 					data
 				});
 				await refreshServers();
-				await onCreate(row.terminal_id);
+				await onCreate(row.machine_id);
 			}
 			show = false;
 		});
 	}
 
 	async function saveAccess() {
-		if (!terminalId) return;
+		if (!machineId) return;
 		busy = true;
 		try {
-			await templatesApi(`${path(terminalId)}/access`, 'POST', { access_grants: accessGrants });
+			await templatesApi(`${path(machineId)}/access`, 'POST', { access_grants: accessGrants });
 			toast.success($i18n.t('Saved'));
 		} catch (e) {
 			toast.error(`${e}`);
-			accessGrants = await templatesApi(`${path(terminalId)}/access`).catch(() => accessGrants);
+			accessGrants = await templatesApi(`${path(machineId)}/access`).catch(() => accessGrants);
 		} finally {
 			busy = false;
 		}
@@ -271,14 +270,14 @@
 		return instance.label ?? instance.context_id;
 	}
 
-	let info: { target: TerminalTarget; label: string } | null = null;
-	let files: { target: TerminalTarget; label: string } | null = null;
-	// Listing instances takes write access to the terminal's connection, which also opens any of them.
+	let info: { target: MachineTarget; label: string } | null = null;
+	let files: { target: MachineTarget; label: string } | null = null;
+	// Listing instances takes write access to the machine's connection, which also opens any of them.
 	// Only running instances offer System info and files: Terminals won't start one for System info.
 	function instanceTarget(instance: any) {
-		if (!terminalId || instance.status !== 'running') return null;
+		if (!machineId || instance.status !== 'running') return null;
 		const context = instance.context ?? {};
-		return resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
+		return resolveMachineTarget(machineId, $machines ?? [], localStorage.token ?? '', {
 			userId: context.user_id ?? null,
 			chatId: context.chat_id ?? null,
 			modelId: context.model_id ?? null
@@ -310,7 +309,7 @@
 		pending = { ...pending, [instance.id]: action };
 		try {
 			await templatesApi(
-				`${path(terminalId!)}/${action === 'delete' ? 'instance' : action}`,
+				`${path(machineId!)}/${action === 'delete' ? 'instance' : action}`,
 				action === 'delete' ? 'DELETE' : 'POST',
 				instance.context ?? {}
 			);
@@ -335,7 +334,7 @@
 		);
 	}
 
-	function deleteTerminal() {
+	function deleteMachine() {
 		confirm(
 			$i18n.t('Delete {{name}}?', { name }),
 			instances.length
@@ -344,7 +343,7 @@
 			$i18n.t('Delete'),
 			() =>
 				run(async () => {
-					await templatesApi(path(terminalId!), 'DELETE');
+					await templatesApi(path(machineId!), 'DELETE');
 					await refreshServers();
 					show = false;
 				})
@@ -352,22 +351,22 @@
 	}
 
 	onMount(() => {
-		if (terminalId) run(load).finally(() => (loading = false));
+		if (machineId) run(load).finally(() => (loading = false));
 	});
 </script>
 
 <Modal
 	bind:show
 	size="sm"
-	ariaLabel={terminalId ? $i18n.t('Machine settings') : $i18n.t('New machine')}
+	ariaLabel={machineId ? $i18n.t('Machine settings') : $i18n.t('New machine')}
 >
 	<div class="text-base-900 dark:text-base-100">
 		<div class="flex items-center justify-between gap-2 px-5 pb-2 pt-4">
 			<h2 class="font-primary min-w-0 truncate text-sm font-medium">
-				{terminalId ? name || $i18n.t('Machine settings') : $i18n.t('New machine')}
+				{machineId ? name || $i18n.t('Machine settings') : $i18n.t('New machine')}
 			</h2>
 			<div class="flex shrink-0 items-center gap-2">
-				{#if terminalId && !loading}
+				{#if machineId && !loading}
 					<AccessButton
 						disabled={busy}
 						label={accessGrants.length ? $i18n.t('Shared') : $i18n.t('Private')}
@@ -406,7 +405,7 @@
 						/>
 					</UserSettingField>
 
-					{#if !terminalId && connections.length > 1}
+					{#if !machineId && connections.length > 1}
 						<UserSettingRow
 							label={$i18n.t('Server')}
 							description={$i18n.t('Choose the server that runs this machine.')}
@@ -661,7 +660,7 @@
 					{/if}
 				</div>
 
-				{#if terminalId}
+				{#if machineId}
 					<section class="mt-4 w-full">
 						<div class="mb-0.5 flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
 							{$i18n.t('Instances')}
@@ -752,21 +751,21 @@
 
 				<div class="flex items-center justify-between pt-4">
 					<div>
-						{#if terminalId}
+						{#if machineId}
 							<button
 								type="button"
 								class={actionButtonClass}
 								disabled={busy}
-								on:click={deleteTerminal}>{$i18n.t('Delete machine')}</button
+								on:click={deleteMachine}>{$i18n.t('Delete machine')}</button
 							>
 						{/if}
 					</div>
 					<button
 						type="submit"
 						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
-						disabled={busy || invalid || (!terminalId && !connectionId)}
+						disabled={busy || invalid || (!machineId && !connectionId)}
 					>
-						{terminalId ? $i18n.t('Save') : $i18n.t('Create')}
+						{machineId ? $i18n.t('Save') : $i18n.t('Create')}
 						{#if busy}<Spinner className="size-3" />{/if}
 					</button>
 				</div>
@@ -811,17 +810,13 @@
 
 {#if info}
 	{#key info}
-		<TerminalSystemInfoModal
-			target={info.target}
-			label={info.label}
-			onClose={() => (info = null)}
-		/>
+		<MachineSystemInfoModal target={info.target} label={info.label} onClose={() => (info = null)} />
 	{/key}
 {/if}
 
 {#if files}
 	{#key files}
-		<TerminalFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
+		<MachineFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
 	{/key}
 {/if}
 

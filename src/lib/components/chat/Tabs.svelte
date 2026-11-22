@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AppLayoutContext, TerminalContext } from '$lib/types';
+	import type { AppLayoutContext, MachineContext } from '$lib/types';
 	import type { GitStatus } from '$lib/apis/machines/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
@@ -33,7 +33,7 @@
 		config,
 		embed,
 		temporaryChat,
-		terminalServers,
+		machines,
 		showTabs,
 		chatTabRequest,
 		showSidebar,
@@ -43,7 +43,7 @@
 		settings,
 		showFileNav,
 		showFileNavPath,
-		selectedTerminalId,
+		selectedMachineId,
 		user,
 		visibleControls
 	} from '$lib/stores';
@@ -76,10 +76,10 @@
 		type Tab
 	} from './Tabs/tabs';
 	import {
-		resolveTerminalTarget,
-		terminalRequest,
-		TerminalRequestError,
-		type TerminalTarget
+		resolveMachineTarget,
+		machineRequest,
+		MachineRequestError,
+		type MachineTarget
 	} from '$lib/apis/machines';
 	import { formatChord, keybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import HotkeyHint from '../common/HotkeyHint.svelte';
@@ -100,8 +100,9 @@
 	import { fileIconName } from './FileNav/fileIcon';
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
-	import TerminalPicker, { type TerminalOption } from './Tabs/TerminalPicker.svelte';
-	import { selectTerminal, terminalIconName } from '$lib/utils/terminal';
+	import MachinePicker, { type MachineOption } from './Tabs/MachinePicker.svelte';
+	import { selectMachine } from '$lib/utils/machines';
+	import { terminalIconName } from '$lib/utils/terminal';
 	import VoiceNote from './Tabs/VoiceNote.svelte';
 	import Browser from './Tabs/Browser.svelte';
 	import Desktop from './Tabs/Desktop.svelte';
@@ -130,7 +131,7 @@
 	export let chatLoading = false;
 	export let chatStreaming = false;
 	export let folderId: string | null = null;
-	export let terminalContext: TerminalContext | null = null;
+	export let machineContext: MachineContext | null = null;
 	export let chatUser = null;
 	export let mainArtifacts: Readable<{ type: string; content: string }[]> = readable([]);
 
@@ -296,7 +297,7 @@
 		changeChatView(chatView, {
 			...chatView.state,
 			panels: snapshot,
-			selectedTerminalId: $selectedTerminalId
+			selectedMachineId: $selectedMachineId
 		});
 	}
 	const leaveChatView = () => {
@@ -335,7 +336,7 @@
 		entry.state = {
 			...entry.state,
 			panels: carried,
-			selectedTerminalId: $selectedTerminalId
+			selectedMachineId: $selectedMachineId
 		};
 		setView({ status: 'carrying', entry, fromChatId: chatId });
 		tabs = carried;
@@ -404,8 +405,8 @@
 		try {
 			await loadChatView(entry);
 			if (viewState !== loading) return;
-			// The chat restores its terminal and directory together; layouts must not override them.
-			entry.state.selectedTerminalId = $selectedTerminalId;
+			// The chat restores its machine and directory together; layouts must not override them.
+			entry.state.selectedMachineId = $selectedMachineId;
 			entry.state.panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
 			tabs = entry.state.panels;
 			dirtyFiles = {};
@@ -438,12 +439,12 @@
 			void attachChatViewTo(id).catch(() => {});
 		else void restoreChatView(id);
 	}
-	const persistPanels = (nextTabs: typeof tabs, terminalId: string | null, ready: boolean) => {
+	const persistPanels = (nextTabs: typeof tabs, machineId: string | null, ready: boolean) => {
 		if (!ready || !viewEntry || chatLoading || viewEntry.promoting) return;
-		// The Files tab follows the terminal picked for the chat and starts over there.
-		if (terminalId && terminalId !== viewEntry.state.selectedTerminalId) {
+		// The Files tab follows the machine picked for the chat and starts over there.
+		if (machineId && machineId !== viewEntry.state.selectedMachineId) {
 			const moved = nextTabs.tabs.filter(
-				(tab) => tab.kind === 'files' && tab.terminalId !== terminalId
+				(tab) => tab.kind === 'files' && tab.machineId !== machineId
 			);
 			for (const tab of moved) {
 				viewEntry.drafts.delete(tab.id);
@@ -456,7 +457,7 @@
 						? {
 								...tab,
 								label: $i18n.t('Files'),
-								terminalId: terminalId,
+								machineId: machineId,
 								target: undefined,
 								path: undefined,
 								directory: undefined
@@ -465,14 +466,14 @@
 				)
 			};
 		}
-		if (viewEntry.state.panels !== nextTabs || viewEntry.state.selectedTerminalId !== terminalId)
+		if (viewEntry.state.panels !== nextTabs || viewEntry.state.selectedMachineId !== machineId)
 			changeChatView(viewEntry, {
 				...viewEntry.state,
 				panels: nextTabs,
-				selectedTerminalId: terminalId
+				selectedMachineId: machineId
 			});
 	};
-	$: persistPanels(tabs, $selectedTerminalId, viewReady);
+	$: persistPanels(tabs, $selectedMachineId, viewReady);
 	$: if (viewEntry && viewEntry.userId !== $user?.id) {
 		setView({ status: 'idle' });
 		tabs = createTabsState();
@@ -481,21 +482,21 @@
 		chatTabActions = {};
 		clearChatViews();
 	}
-	const forgetDraftsForUnreachableTerminals = (..._connections: unknown[]) => {
+	const forgetDraftsForUnreachableMachines = (..._connections: unknown[]) => {
 		captureView();
 		// A returning component must read disk before restoring its cached draft.
 		for (const tab of tabs.tabs) {
-			if (tab.terminalId && !isTerminalReachable(tab.terminalId)) delete dirtyFiles[tab.id];
+			if (tab.machineId && !isMachineReachable(tab.machineId)) delete dirtyFiles[tab.id];
 		}
 		dirtyFiles = { ...dirtyFiles };
 	};
 	$: if (isMounted && viewReady)
-		forgetDraftsForUnreachableTerminals($terminalServers, $settings, $config, $user);
+		forgetDraftsForUnreachableMachines($machines, $settings, $config, $user);
 	const resolveTabConnection = (tab: Tab) => {
-		if (!tab.terminalId || !isTerminalReachable(tab.terminalId)) return null;
-		const target = resolveTerminalTarget(
-			tab.terminalId,
-			$terminalServers ?? [],
+		if (!tab.machineId || !isMachineReachable(tab.machineId)) return null;
+		const target = resolveMachineTarget(
+			tab.machineId,
+			$machines ?? [],
 			localStorage.token ?? '',
 			tab.target?.context ?? { chatId, modelId: modelId ?? null }
 		);
@@ -522,27 +523,27 @@
 		}
 	> = {};
 	let dirtyFiles: Record<string, boolean> = {};
-	let fileContexts: Record<string, TerminalContext | null> = {};
+	let fileContexts: Record<string, MachineContext | null> = {};
 	let panelTarget: HTMLElement | null = null;
 	let hasExtraTabs = false;
 	let commentAnchor: { comment_id?: string } = {};
 	let closingTabIds = new Set<string>();
-	let selectedConnection: TerminalTarget | null = null;
+	let selectedConnection: MachineTarget | null = null;
 	let showQuickOpen = false;
 	let voiceNote: VoiceNote;
 	let voiceNoteDestination: {
-		target: TerminalTarget;
+		target: MachineTarget;
 		chatId: string | null;
 		directory?: string;
 	} | null = null;
-	$: canVoiceNote = supportsTerminalFiles && !!$user;
+	$: canVoiceNote = supportsMachineFiles && !!$user;
 	$: canTranscribeVoiceNote = $user?.role === 'admin' || ($user?.permissions?.chat?.stt ?? true);
 	const openVoiceNote = () => {
 		if (voiceNoteDestination) {
 			voiceNote?.finishRecording();
 			return;
 		}
-		if (!selectedConnection) return askForTerminal(openVoiceNote);
+		if (!selectedConnection) return askForMachine(openVoiceNote);
 		if (!canVoiceNote || !$user) return;
 		voiceNoteDestination = {
 			target: selectedConnection,
@@ -550,8 +551,8 @@
 			directory: getCurrentDirectory(selectedConnection.selector)
 		};
 	};
-	$: if (!supportsTerminalFiles) showQuickOpen = false;
-	let supportsTerminal = false;
+	$: if (!supportsMachineFiles) showQuickOpen = false;
+	let supportsMachine = false;
 	let supportsDesktop = false;
 	let supportsBrowser = false;
 	let featureCheckRequestId = 0;
@@ -619,9 +620,9 @@
 			? tabs.tabs.find((tab) => tab.id === tabs.history.at(-1))
 			: activeTab;
 	$: activeFileContext = (contextTab && fileContexts[contextTab.id]) ?? contextTab?.context ?? null;
-	/** The folder the active file panel shows on `terminalId`, if it shows one there. */
-	export const getCurrentDirectory = (terminalId: string | null) =>
-		activeFileContext?.terminalId === terminalId ? activeFileContext.currentDirectory : undefined;
+	/** The folder the active file panel shows on `machineId`, if it shows one there. */
+	export const getCurrentDirectory = (machineId: string | null) =>
+		activeFileContext?.machineId === machineId ? activeFileContext.currentDirectory : undefined;
 	$: if (activeTabId && panelTarget) {
 		const id = activeTabId;
 		void tick().then(() =>
@@ -646,7 +647,7 @@
 			timer = undefined;
 		};
 		const over = (event: DragEvent) => {
-			if (!event.dataTransfer?.types.includes('application/x-terminal-file-move') || timer) return;
+			if (!event.dataTransfer?.types.includes('application/x-machine-file-move') || timer) return;
 			if (tabs.groups.some((group) => group.activeId === tab.id)) return;
 			timer = setTimeout(() => {
 				selectTab(tab.id);
@@ -673,10 +674,10 @@
 	const openPanel = (tab: Tab, inSplit = false, besideId?: string) => {
 		if (!viewReady || !viewEntry) return;
 		hasExtraTabs = true;
-		if (tab.terminalId) {
+		if (tab.machineId) {
 			const target =
 				tab.target ??
-				resolveTerminalTarget(tab.terminalId, $terminalServers ?? [], localStorage.token, {
+				resolveMachineTarget(tab.machineId, $machines ?? [], localStorage.token, {
 					chatId: chatId,
 					modelId: modelId ?? null
 				});
@@ -762,15 +763,15 @@
 	}
 
 	const openFiles = (
-		terminalId = $selectedTerminalId,
+		machineId = $selectedMachineId,
 		directory?: string,
 		newTab = false,
 		sourceModelId = modelId
 	) => {
-		if (!terminalId && !showFilesTab)
-			return askForTerminal(() => openFiles($selectedTerminalId, directory, newTab, sourceModelId));
-		if (terminalId ? !isTerminalReachable(terminalId) : !showFilesTab) return;
-		const target = resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token, {
+		if (!machineId && !showFilesTab)
+			return askForMachine(() => openFiles($selectedMachineId, directory, newTab, sourceModelId));
+		if (machineId ? !isMachineReachable(machineId) : !showFilesTab) return;
+		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
 			chatId: chatId,
 			modelId: sourceModelId ?? null
 		});
@@ -781,23 +782,23 @@
 					(tab) =>
 						tab.id === tabs.activeId &&
 						tab.kind === 'files' &&
-						(tab.terminalId ?? null) === terminalId &&
+						(tab.machineId ?? null) === machineId &&
 						(tab.target?.context.modelId ?? null) === pinnedModel
 				) ??
 				tabs.tabs.find(
 					(tab) =>
 						tab.kind === 'files' &&
-						(tab.terminalId ?? null) === terminalId &&
+						(tab.machineId ?? null) === machineId &&
 						(tab.target?.context.modelId ?? null) === pinnedModel
 				));
-		if (!existing && terminalContext?.terminalId === terminalId)
-			directory ??= terminalContext.currentDirectory || undefined;
+		if (!existing && machineContext?.machineId === machineId)
+			directory ??= machineContext.currentDirectory || undefined;
 		const id = existing?.id ?? uuidv4();
 		openPanel({
 			id,
 			kind: 'files',
 			label: $i18n.t('Files'),
-			terminalId: terminalId ?? undefined,
+			machineId: machineId ?? undefined,
 			target: target ?? undefined,
 			path: directory
 		});
@@ -811,12 +812,12 @@
 	};
 	const openFile = (
 		path: string,
-		terminalId: string,
+		machineId: string,
 		page?: number | null,
 		sourceModelId = modelId
 	) => {
-		if (!isTerminalReachable(terminalId)) return;
-		const target = resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token, {
+		if (!isMachineReachable(machineId)) return;
+		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
 			chatId: chatId,
 			modelId: sourceModelId ?? null
 		});
@@ -827,15 +828,15 @@
 				(tab) =>
 					tab.kind === 'file' &&
 					!tab.untitled &&
-					tab.terminalId === terminalId &&
+					tab.machineId === machineId &&
 					(tab.target?.context.modelId ?? null) === pinnedModel &&
 					tab.path === path
-			)?.id ?? fileTabId(JSON.stringify([terminalId, pinnedModel]), path);
+			)?.id ?? fileTabId(JSON.stringify([machineId, pinnedModel]), path);
 		openPanel({
 			id,
 			kind: 'file',
 			label: path.split('/').pop() || path,
-			terminalId: terminalId,
+			machineId: machineId,
 			target: target ?? undefined,
 			path,
 			page
@@ -843,20 +844,18 @@
 		if (page != null) fileViews[id]?.revealPage?.(page);
 	};
 	const openNewFileTab = () => {
-		if (!selectedConnection) return askForTerminal(openNewFileTab);
+		if (!selectedConnection) return askForMachine(openNewFileTab);
 		let number = 1;
 		while (tabs.tabs.some((tab) => tab.untitled && tab.label === `Untitled-${number}`)) number++;
 		openPanel({
 			id: uuidv4(),
 			kind: 'file',
 			label: `Untitled-${number}`,
-			terminalId: selectedConnection.selector,
+			machineId: selectedConnection.selector,
 			target: { ...selectedConnection },
 			untitled: true,
 			context:
-				activeFileContext?.terminalId === selectedConnection.selector
-					? activeFileContext
-					: undefined
+				activeFileContext?.machineId === selectedConnection.selector ? activeFileContext : undefined
 		});
 	};
 	/** Opens the artifacts tab of the chat in `sourceTabId` beside that chat. */
@@ -1108,7 +1107,7 @@
 		isDragging = false;
 	};
 	const openNewTerminalTab = () => {
-		if (!selectedConnection) return askForTerminal(openNewTerminalTab);
+		if (!selectedConnection) return askForMachine(openNewTerminalTab);
 		let terminalNumber = 1;
 		while (
 			tabs.tabs.some((tab) => tab.kind === 'terminal' && tab.terminalNumber === terminalNumber)
@@ -1121,13 +1120,13 @@
 			kind: 'terminal',
 			label: `${$i18n.t('Terminal')} ${terminalNumber}`,
 			terminalNumber,
-			terminalId: selectedConnection.selector,
+			machineId: selectedConnection.selector,
 			target: { ...selectedConnection }
 		});
 		if (viewEntry && viewReady) startSession(viewEntry, tabs.tabs.find((tab) => tab.id === id)!);
 	};
 	const openDesktop = () => {
-		if (!selectedConnection) return askForTerminal(openDesktop);
+		if (!selectedConnection) return askForMachine(openDesktop);
 		openPanel({
 			id: JSON.stringify([
 				'desktop',
@@ -1136,32 +1135,32 @@
 			]),
 			kind: 'desktop',
 			label: $i18n.t('Desktop'),
-			terminalId: selectedConnection.selector,
+			machineId: selectedConnection.selector,
 			target: { ...selectedConnection }
 		});
 	};
-	const getBrowserBaseUrl = (target: TerminalTarget) => {
-		const terminal = ($terminalServers ?? []).find((item) => item.id === target.selector);
-		return chatContextNeedsSavedChat(terminal) && target.context.chatId
+	const getBrowserBaseUrl = (target: MachineTarget) => {
+		const machine = ($machines ?? []).find((item) => item.id === target.selector);
+		return chatContextNeedsSavedChat(machine) && target.context.chatId
 			? `${target.baseUrl}/chats/${encodeURIComponent(target.context.chatId)}`
 			: target.baseUrl;
 	};
 	const openBrowser = (
 		port?: number,
-		terminalId = $selectedTerminalId,
+		machineId = $selectedMachineId,
 		baseUrl?: string,
 		initialUrl?: string
 	) => {
-		if (!terminalId)
-			return askForTerminal(() => openBrowser(port, $selectedTerminalId, baseUrl, initialUrl));
-		if (!isTerminalReachable(terminalId)) return;
+		if (!machineId)
+			return askForMachine(() => openBrowser(port, $selectedMachineId, baseUrl, initialUrl));
+		if (!isMachineReachable(machineId)) return;
 		const url = initialUrl ?? (port ? `http://localhost:${port}/` : undefined);
 		const existing =
 			url &&
 			tabs.tabs.find(
 				(tab) =>
 					tab.kind === 'browser' &&
-					tab.terminalId === terminalId &&
+					tab.machineId === machineId &&
 					tab.path === url &&
 					(tab.target?.context.modelId ?? null) === (selectedConnection?.context.modelId ?? null)
 			);
@@ -1169,17 +1168,17 @@
 			selectTab(existing.id);
 			return;
 		}
-		const target = terminalId
-			? resolveTerminalTarget(terminalId, $terminalServers ?? [], localStorage.token ?? '', {
+		const target = machineId
+			? resolveMachineTarget(machineId, $machines ?? [], localStorage.token ?? '', {
 					chatId: chatId,
 					modelId: modelId ?? null
 				})
 			: null;
 		if (!target) return;
-		const terminal = ($terminalServers ?? []).find((item) => item.id === terminalId);
+		const machine = ($machines ?? []).find((item) => item.id === machineId);
 		const proxyBase =
 			baseUrl ??
-			(target && chatContextNeedsSavedChat(terminal) && chatId
+			(target && chatContextNeedsSavedChat(machine) && chatId
 				? `${target.baseUrl}/chats/${encodeURIComponent(chatId)}`
 				: target?.baseUrl);
 		const id = uuidv4();
@@ -1188,7 +1187,7 @@
 			kind: 'browser',
 			label: port ? `localhost:${port}` : $i18n.t('Browser'),
 			path: url,
-			terminalId: terminalId ?? undefined,
+			machineId: machineId ?? undefined,
 			browserBaseUrl: proxyBase,
 			target: target ?? undefined
 		});
@@ -1256,13 +1255,13 @@
 			}
 			if (target && tab.sessionId) {
 				try {
-					await terminalRequest(
+					await machineRequest(
 						target,
 						`${tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(tab.sessionId)}`,
 						{ method: 'DELETE' }
 					);
 				} catch (error) {
-					if (!(error instanceof TerminalRequestError) || error.status !== 404) {
+					if (!(error instanceof MachineRequestError) || error.status !== 404) {
 						changeChatView(chatView, {
 							...chatView.state,
 							panels:
@@ -1398,20 +1397,20 @@
 
 	$: hasMessages = chatHistory?.messages && Object.keys(chatHistory.messages).length > 0;
 
-	const chatContextNeedsSavedChat = (terminal: any) => terminal?.scope === 'chat';
-	$: selectedSystemTerminal = ($terminalServers ?? []).find(
-		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
+	const chatContextNeedsSavedChat = (machine: any) => machine?.scope === 'chat';
+	$: selectedSystemMachine = ($machines ?? []).find(
+		(t) => !!$selectedMachineId && t.id === $selectedMachineId
 	);
-	$: selectedSystemTerminalAvailable =
-		selectedSystemTerminal &&
-		!(chatContextNeedsSavedChat(selectedSystemTerminal) && !isSavedChatId(chatId));
-	$: supportsTerminalFiles = !!(
+	$: selectedSystemMachineAvailable =
+		selectedSystemMachine &&
+		!(chatContextNeedsSavedChat(selectedSystemMachine) && !isSavedChatId(chatId));
+	$: supportsMachineFiles = !!(
 		$config?.features?.enable_tool_servers &&
-		$selectedTerminalId &&
-		selectedSystemTerminalAvailable
+		$selectedMachineId &&
+		selectedSystemMachineAvailable
 	);
 	$: showFilesTab =
-		supportsTerminalFiles ||
+		supportsMachineFiles ||
 		(codeInterpreterEnabled && $config?.code?.interpreter_engine !== 'jupyter');
 	$: showCommentsTab = !!(
 		$config?.features?.enable_comments &&
@@ -1482,8 +1481,8 @@
 	);
 	$: canOpenNewTab =
 		showFilesTab ||
-		supportsTerminalFiles ||
-		canSelectTerminal ||
+		supportsMachineFiles ||
+		canSelectMachine ||
 		newTabViews.length > 0 ||
 		hasMessages;
 
@@ -1517,19 +1516,19 @@
 		let action: (() => void) | undefined;
 		switch (shortcut) {
 			case Shortcut.VOICE_NOTE:
-				if (voiceNoteDestination || canVoiceNote || canSelectTerminal) action = openVoiceNote;
+				if (voiceNoteDestination || canVoiceNote || canSelectMachine) action = openVoiceNote;
 				break;
 			case Shortcut.QUICK_OPEN:
-				if (supportsTerminalFiles && selectedConnection)
+				if (supportsMachineFiles && selectedConnection)
 					action = () => {
 						showQuickOpen = true;
 					};
 				break;
 			case Shortcut.OPEN_FILES:
-				if (showFilesTab || canSelectTerminal) action = () => openFiles();
+				if (showFilesTab || canSelectMachine) action = () => openFiles();
 				break;
 			case Shortcut.OPEN_DESKTOP:
-				if ((supportsDesktop && selectedConnection) || canSelectTerminal) action = openDesktop;
+				if ((supportsDesktop && selectedConnection) || canSelectMachine) action = openDesktop;
 				break;
 			case Shortcut.NEW_CHAT_TAB:
 				if (canOpenChat) action = () => openFeatureTab('chat');
@@ -1538,15 +1537,15 @@
 				if (showCommentsTab) action = () => openFeatureTab('comments');
 				break;
 			case Shortcut.NEW_FILE:
-				if ((supportsTerminalFiles && selectedConnection) || canSelectTerminal)
+				if ((supportsMachineFiles && selectedConnection) || canSelectMachine)
 					action = openNewFileTab;
 				break;
 			case Shortcut.NEW_TERMINAL:
-				if ((supportsTerminal && selectedConnection) || canSelectTerminal)
+				if ((supportsMachine && selectedConnection) || canSelectMachine)
 					action = openNewTerminalTab;
 				break;
 			case Shortcut.NEW_BROWSER:
-				if ((supportsBrowser && selectedConnection) || canSelectTerminal)
+				if ((supportsBrowser && selectedConnection) || canSelectMachine)
 					action = () => openBrowser();
 				break;
 			case Shortcut.CLOSE_TAB:
@@ -1579,62 +1578,58 @@
 		action();
 	};
 
-	const isTerminalReachable = (terminalId: string) => {
+	const isMachineReachable = (machineId: string) => {
 		if (!$config?.features?.enable_tool_servers) return false;
-		const system = ($terminalServers ?? []).find(
-			(terminal) => !!terminalId && terminal.id === terminalId
-		);
+		const system = ($machines ?? []).find((machine) => !!machineId && machine.id === machineId);
 		return !!system && !(chatContextNeedsSavedChat(system) && !isSavedChatId(chatId));
 	};
 	$: selectedConnection =
-		supportsTerminalFiles && isMounted
-			? resolveTerminalTarget(
-					$selectedTerminalId,
-					$terminalServers ?? [],
-					localStorage.token ?? '',
-					{ chatId: chatId, modelId: modelId ?? null }
-				)
+		supportsMachineFiles && isMounted
+			? resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token ?? '', {
+					chatId: chatId,
+					modelId: modelId ?? null
+				})
 			: null;
-	// Terminals this chat can use, offered when terminal tabs are opened before one is selected.
-	let availableTerminals: TerminalOption[] = [];
-	$: availableTerminals = $config?.features?.enable_tool_servers
+	// Machines this chat can use, offered when terminal tabs are opened before one is selected.
+	let availableMachines: MachineOption[] = [];
+	$: availableMachines = $config?.features?.enable_tool_servers
 		? [
-				...($terminalServers ?? [])
+				...($machines ?? [])
 					.filter(
-						(terminal) =>
-							terminal.id && !(chatContextNeedsSavedChat(terminal) && !isSavedChatId(chatId))
+						(machine) =>
+							machine.id && !(chatContextNeedsSavedChat(machine) && !isSavedChatId(chatId))
 					)
-					.map((terminal) => ({
-						id: terminal.id,
-						label: terminal.name || $i18n.t('Machine'),
-						device: terminal.id.startsWith('tether:')
+					.map((machine) => ({
+						id: machine.id,
+						label: machine.name || $i18n.t('Machine'),
+						device: machine.id.startsWith('tether:')
 					}))
 			]
 		: [];
-	$: canSelectTerminal = !selectedConnection && availableTerminals.length > 0;
-	let pendingTerminalAction: (() => void) | null = null;
-	const askForTerminal = (action: () => void) => {
-		if (availableTerminals.length) pendingTerminalAction = action;
+	$: canSelectMachine = !selectedConnection && availableMachines.length > 0;
+	let pendingMachineAction: (() => void) | null = null;
+	const askForMachine = (action: () => void) => {
+		if (availableMachines.length) pendingMachineAction = action;
 	};
-	const runWithTerminal = async (id: string) => {
-		const action = pendingTerminalAction;
-		pendingTerminalAction = null;
-		selectTerminal(selectedTerminalId, id, chatId);
+	const runWithMachine = async (id: string) => {
+		const action = pendingMachineAction;
+		pendingMachineAction = null;
+		selectMachine(selectedMachineId, id, chatId);
 		await tick();
 		if (selectedConnection) action?.();
 	};
-	const loadTerminalFeatures = async () => {
+	const loadMachineFeatures = async () => {
 		const version = ++featureCheckRequestId;
-		supportsTerminal = false;
+		supportsMachine = false;
 		supportsDesktop = false;
 		supportsBrowser = false;
 		if (!selectedConnection) return;
 		try {
-			const result = await terminalRequest<{
+			const result = await machineRequest<{
 				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean };
 			}>(selectedConnection, '/api/config');
 			if (version === featureCheckRequestId) {
-				supportsTerminal = result.features?.terminal !== false;
+				supportsMachine = result.features?.terminal !== false;
 				supportsDesktop = result.features?.desktop === true;
 				supportsBrowser = result.features?.browser === true;
 			}
@@ -1645,7 +1640,7 @@
 	$: {
 		selectedConnection;
 		chatId;
-		void loadTerminalFeatures();
+		void loadMachineFeatures();
 	}
 
 	$: if (isMounted && !chatLoading && $user?.id) followChat(viewState, chatId);
@@ -1664,12 +1659,12 @@
 					if (view.kind === 'files') openFiles();
 					else openFeatureTab(view.kind as 'artifacts' | 'preview' | 'voice' | 'comments' | 'chat');
 				}),
-			...(supportsTerminalFiles ? [openNewFileTab] : []),
-			...(supportsTerminal ? [openNewTerminalTab] : []),
+			...(supportsMachineFiles ? [openNewFileTab] : []),
+			...(supportsMachine ? [openNewTerminalTab] : []),
 			...(supportsBrowser ? [openBrowser] : []),
 			...(supportsDesktop ? [openDesktop] : [])
 		];
-		if (supportsTerminalFiles || (!hasExtraTabs && showFilesTab)) openFiles();
+		if (supportsMachineFiles || (!hasExtraTabs && showFilesTab)) openFiles();
 		else if (options.length === 1) options[0]();
 		else if (!options.length && !canOpenChat) showTabs.set(false);
 		hasExtraTabs = true;
@@ -1705,14 +1700,14 @@
 	$: if (viewReady && $showFileNav) {
 		const request = $showFileNav;
 		showFileNav.set(null);
-		if (request.chatId === chatId) openFiles(request.terminalId, request.directory, true);
+		if (request.chatId === chatId) openFiles(request.machineId, request.directory, true);
 	}
-	$: if (viewReady && $showFileNavPath && supportsTerminalFiles && $selectedTerminalId) {
+	$: if (viewReady && $showFileNavPath && supportsMachineFiles && $selectedMachineId) {
 		const request = $showFileNavPath;
 		showFileNavPath.set(null);
 		openFile(
 			typeof request === 'string' ? request : request.path,
-			$selectedTerminalId,
+			$selectedMachineId,
 			typeof request === 'string' ? null : request.page
 		);
 	}
@@ -1914,7 +1909,7 @@
 	/>
 {/if}
 
-{#if showQuickOpen && supportsTerminalFiles && selectedConnection}
+{#if showQuickOpen && supportsMachineFiles && selectedConnection}
 	{#key JSON.stringify([selectedConnection.baseUrl, selectedConnection.context.modelId, chatId])}
 		<QuickOpen
 			target={selectedConnection}
@@ -1927,13 +1922,13 @@
 	{/key}
 {/if}
 
-{#if pendingTerminalAction}
-	<TerminalPicker
-		terminals={availableTerminals}
+{#if pendingMachineAction}
+	<MachinePicker
+		options={availableMachines}
 		onclose={() => {
-			pendingTerminalAction = null;
+			pendingMachineAction = null;
 		}}
-		onselect={runWithTerminal}
+		onselect={runWithMachine}
 	/>
 {/if}
 
@@ -2051,7 +2046,7 @@
 		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (tab.kind === 'page' ? tab.id : `${viewEntry?.instanceId}:${tab.id}`)}
 			{@const chatView = viewEntry!}
 			{@const target =
-				isMounted && $config && $user && $settings && $terminalServers !== null
+				isMounted && $config && $user && $settings && $machines !== null
 					? resolveTabConnection(tab)
 					: null}
 			{@const failure = sessionFailures[tab.id]}
@@ -2068,7 +2063,7 @@
 				on:focusin={() => focusGroup(groupByTabId[tab.id].id)}
 				on:pointerdown={() => focusGroup(groupByTabId[tab.id].id)}
 			>
-				{#if tab.terminalId && !target}
+				{#if tab.machineId && !target}
 					<div
 						role="status"
 						class="flex h-full items-center justify-center p-4 text-center text-xs text-base-400 dark:text-base-500"
@@ -2231,7 +2226,7 @@
 									sessionId={tab.sessionId}
 									active={panelVisible && visibleTabIds.has(tab.id)}
 									overlay={isDragging}
-									onOpenBrowser={(url) => openBrowser(undefined, tab.terminalId, undefined, url)}
+									onOpenBrowser={(url) => openBrowser(undefined, tab.machineId, undefined, url)}
 									onNavigate={(path, label) => updateViewTab(chatView, tab.id, { path, label })}
 									onUnavailable={(message, status) => {
 										if (chatView === viewEntry)
@@ -2255,7 +2250,7 @@
 									item.id !== tab.id &&
 									item.kind === 'file' &&
 									!item.untitled &&
-									item.terminalId === tab.terminalId &&
+									item.machineId === tab.machineId &&
 									item.path === path
 							)}
 						onSaved={(path) => {
@@ -2268,7 +2263,7 @@
 							});
 						}}
 					/>
-				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.terminalId}
+				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.machineId}
 					{@const fileTarget = isMounted ? resolveTabConnection(tab) : null}
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
@@ -2299,40 +2294,40 @@
 										if (
 											other.id !== tab.id &&
 											other.kind === 'files' &&
-											other.terminalId === tab.terminalId
+											other.machineId === tab.machineId
 										)
 											void fileViews[other.id]?.refreshDirectory?.();
 									}
 								}}
-								gitStatus={fileGitStatuses[tab.terminalId] ?? null}
+								gitStatus={fileGitStatuses[tab.machineId] ?? null}
 								gitTarget={fileTarget}
-								gitDiffMode={fileGitDiffModes[tab.terminalId] ?? 'unified'}
-								gitHideWhitespace={fileGitHideWhitespace[tab.terminalId] ?? false}
+								gitDiffMode={fileGitDiffModes[tab.machineId] ?? 'unified'}
+								gitHideWhitespace={fileGitHideWhitespace[tab.machineId] ?? false}
 								bind:this={fileViews[tab.id]}
 								bind:dirty={dirtyFiles[tab.id]}
-								terminalId={tab.terminalId}
+								machineId={tab.machineId}
 								initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
 								initialDirectory={tab.kind === 'files' ? (tab.directory ?? tab.path ?? null) : null}
 								active={panelVisible && visibleTabIds.has(tab.id)}
 								manageFileRequests={false}
 								showTerminalDock={tab.kind === 'files'}
 								onOpenFile={(path, page) =>
-									openFile(path, tab.terminalId!, page, fileTarget?.context.modelId)}
+									openFile(path, tab.machineId!, page, fileTarget?.context.modelId)}
 								onBrowseDirectory={(path) =>
-									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
+									openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
 								{onAskFile}
 								overlay={isDragging}
 								chatId={chatView.chatId}
-								bind:terminalContext={fileContexts[tab.id]}
+								bind:machineContext={fileContexts[tab.id]}
 							/>
 						</div>
 						{#if tab.kind === 'files' && fileTarget}
 							<GitBar
 								bind:this={gitViews[tab.id]}
 								initialView={chatView.transient[`git:${tab.id}`]}
-								bind:status={fileGitStatuses[tab.terminalId]}
-								bind:diffMode={fileGitDiffModes[tab.terminalId]}
-								bind:hideWhitespace={fileGitHideWhitespace[tab.terminalId]}
+								bind:status={fileGitStatuses[tab.machineId]}
+								bind:diffMode={fileGitDiffModes[tab.machineId]}
+								bind:hideWhitespace={fileGitHideWhitespace[tab.machineId]}
 								target={fileTarget}
 								chatId={chatView.chatId}
 								directory={fileContexts[tab.id]?.currentDirectory ??
@@ -2341,9 +2336,9 @@
 									'.'}
 								active={panelVisible && visibleTabIds.has(tab.id)}
 								onOpenFile={(path) =>
-									openFile(path, tab.terminalId!, null, fileTarget?.context.modelId)}
+									openFile(path, tab.machineId!, null, fileTarget?.context.modelId)}
 								onOpenDirectory={(path) =>
-									openFiles(tab.terminalId, path, false, fileTarget?.context.modelId)}
+									openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
 								{onDraftPrompt}
 							/>
 						{/if}
@@ -2527,36 +2522,36 @@
 					>
 					<div slot="content">
 						<DropdownMenu className="min-w-56">
-							{#if showFilesTab || canSelectTerminal}
-								<button on:click={() => openFiles($selectedTerminalId, undefined, true)}
+							{#if showFilesTab || canSelectMachine}
+								<button on:click={() => openFiles($selectedMachineId, undefined, true)}
 									><Icon name="folder" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Files')}</span
 									><HotkeyHint name="openFiles" className="ms-auto" /></button
 								>
 							{/if}
-							{#if supportsTerminalFiles || canSelectTerminal}<button on:click={openNewFileTab}
+							{#if supportsMachineFiles || canSelectMachine}<button on:click={openNewFileTab}
 									><Icon name="page" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('New File')}</span
 									><HotkeyHint name="newFile" className="ms-auto" /></button
 								>{/if}
-							{#if supportsTerminal || canSelectTerminal}<button on:click={openNewTerminalTab}
+							{#if supportsMachine || canSelectMachine}<button on:click={openNewTerminalTab}
 									><Icon name="terminal" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('New Terminal')}</span
 									><HotkeyHint name="newTerminal" className="ms-auto" /></button
 								>{/if}
-							{#if canVoiceNote || canSelectTerminal}
+							{#if canVoiceNote || canSelectMachine}
 								<button on:click={openVoiceNote}>
 									<Icon name="microphone" size={14} />
 									<span class="flex-1 text-start">{$i18n.t('Voice Note')}</span>
 									<HotkeyHint name="voiceNote" className="ms-auto" />
 								</button>
 							{/if}
-							{#if supportsBrowser || canSelectTerminal}<button on:click={() => openBrowser()}
+							{#if supportsBrowser || canSelectMachine}<button on:click={() => openBrowser()}
 									><Icon name="browser" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Browser')}</span
 									><HotkeyHint name="newBrowser" className="ms-auto" /></button
 								>{/if}
-							{#if supportsDesktop || canSelectTerminal}<button on:click={openDesktop}
+							{#if supportsDesktop || canSelectMachine}<button on:click={openDesktop}
 									><Icon name="monitor" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Desktop')}</span
 									><HotkeyHint name="openDesktop" className="ms-auto" /></button

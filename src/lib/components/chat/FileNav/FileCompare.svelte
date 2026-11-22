@@ -1,10 +1,10 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget;
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Readable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
-	import { compareFiles, type TerminalComparison, type TerminalDiffLine } from '$lib/apis/machines';
+	import { compareFiles, type MachineComparison, type MachineDiffLine } from '$lib/apis/machines';
 	import Icon from './Icon.svelte';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
@@ -22,7 +22,7 @@
 	let revised = paths[1];
 	let mode: 'unified' | 'split' = 'unified';
 	let ignoreWhitespace = false;
-	let result: TerminalComparison | null = null;
+	let result: MachineComparison | null = null;
 	let loading = true;
 	let error = '';
 	let controller: AbortController | null = null;
@@ -70,8 +70,8 @@
 		void run();
 	}
 
-	function splitRows(lines: TerminalDiffLine[]) {
-		const rows: { original: TerminalDiffLine | null; revised: TerminalDiffLine | null }[] = [];
+	function splitRows(lines: MachineDiffLine[]) {
+		const rows: { original: MachineDiffLine | null; revised: MachineDiffLine | null }[] = [];
 		let index = 0;
 		while (index < lines.length) {
 			if (lines[index].type === 'context') {
@@ -86,8 +86,8 @@
 				});
 				continue;
 			}
-			const removed: TerminalDiffLine[] = [];
-			const added: TerminalDiffLine[] = [];
+			const removed: MachineDiffLine[] = [];
+			const added: MachineDiffLine[] = [];
 			while (index < lines.length && lines[index].type !== 'context') {
 				const line = lines[index++];
 				(line.type === 'removed' ? removed : added).push(line);

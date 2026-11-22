@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { gitRequest } from '$lib/apis/machines/git';
-	import type { TerminalTarget } from '$lib/apis/machines';
+	import type { MachineTarget } from '$lib/apis/machines';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitListDivider from './GitListDivider.svelte';
 	import Dropdown from '../../common/Dropdown.svelte';
@@ -16,7 +16,7 @@
 		relativeTime,
 		issuePrompt
 	} from './gitPanel';
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let directory: string;
 	export let listWidth = 240;

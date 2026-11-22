@@ -2,17 +2,17 @@
 	export let modelId: string | null = null;
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
-	import { templatesApi, resolveTerminalTarget, type TerminalTarget } from '$lib/apis/machines';
-	import UserTerminalsModal from '../UserTerminalsModal.svelte';
+	import { templatesApi, resolveMachineTarget, type MachineTarget } from '$lib/apis/machines';
+	import UserMachinesModal from '../UserMachinesModal.svelte';
 	import { updateChatById } from '$lib/apis/chats';
 	import { toast } from 'svelte-sonner';
-	import TerminalSystemInfoModal from '../TerminalSystemInfoModal.svelte';
-	import TerminalFilesModal from '../TerminalFilesModal.svelte';
+	import MachineSystemInfoModal from '../MachineSystemInfoModal.svelte';
+	import MachineFilesModal from '../MachineFilesModal.svelte';
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
-	import type { TerminalContext } from '$lib/types';
+	import type { MachineContext } from '$lib/types';
 
-	import { config, settings, showSettings, terminalServers, user } from '$lib/stores';
-	import { selectTerminal } from '$lib/utils/terminal';
+	import { config, settings, showSettings, machines, user } from '$lib/stores';
+	import { selectMachine } from '$lib/utils/machines';
 	import { isTemporaryChatId, isSavedChatId } from '$lib/utils/chatId';
 
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
@@ -25,7 +25,7 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import { fly } from 'svelte/transition';
-	import TerminalItemMenu from './TerminalItemMenu.svelte';
+	import MachineItemMenu from './MachineItemMenu.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
@@ -33,7 +33,7 @@
 	const { chatId: activeChatId, temporary } = getChatContext();
 
 	const i18n = getContext<any>('i18n');
-	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
+	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 
 	const rowClass =
 		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40';
@@ -51,13 +51,13 @@
 	};
 	export let disabled = false;
 	export let chatId: string | null = null;
-	export let terminalContext: TerminalContext | null = null;
-	/** Also offers the working directory of the selected terminal. */
+	export let machineContext: MachineContext | null = null;
+	/** Also offers the working directory of the selected machine. */
 	export let showDirectory = true;
 	/** Replaces the icon button that opens the menu; receives the selected ID and its label. */
 	export let trigger: import('svelte').Snippet<[string | null, string]> | undefined = undefined;
 
-	// Connections the user may create terminals on; a terminal on one of them is theirs to manage.
+	// Connections the user may create machines on; a machine on one of them is theirs to manage.
 	let writable: { id: string; name: string }[] = [];
 	$: if (inMenu ? tab === 'terminal' : show)
 		templatesApi('/connections')
@@ -66,10 +66,10 @@
 	$: manageable = new Set(writable.map((c) => c.id));
 	const connectionOf = (id: string) =>
 		id.startsWith('template:') ? id.slice('template:'.length, id.lastIndexOf(':')) : '';
-	const canManage = (terminal: any, ids: Set<string>) =>
-		!!terminal.template_id && ids.has(connectionOf(terminal.id));
+	const canManage = (machine: any, ids: Set<string>) =>
+		!!machine.template_id && ids.has(connectionOf(machine.id));
 
-	// Lifecycle actions act on this chat's instance of a terminal the user manages.
+	// Lifecycle actions act on this chat's instance of a machine the user manages.
 	const instanceContext = () => ({
 		chat_id: isSavedChatId($activeChatId) ? $activeChatId : null,
 		model_id: modelId
@@ -115,47 +115,47 @@
 		showConfirm = true;
 	};
 
-	$: systemTerminals = ($terminalServers ?? []).filter(
+	$: systemMachines = ($machines ?? []).filter(
 		(t) => t.id && !(($temporary || isTemporaryChatId($activeChatId)) && t.scope === 'chat')
 	);
 	// Tether presences are the user's own paired devices, listed apart from servers.
-	const isDevice = (terminal: any) => terminal.id.startsWith('tether:');
+	const isDevice = (machine: any) => machine.id.startsWith('tether:');
 	$: systemSections = [
-		{ devices: false, terminals: systemTerminals.filter((t) => !isDevice(t)) },
-		{ devices: true, terminals: systemTerminals.filter(isDevice) }
-	].filter((section) => !section.devices || section.terminals.length > 0);
+		{ devices: false, machines: systemMachines.filter((t) => !isDevice(t)) },
+		{ devices: true, machines: systemMachines.filter(isDevice) }
+	].filter((section) => !section.devices || section.machines.length > 0);
 
-	const toggleTerminal = (id: string) => {
+	const toggleMachine = (id: string) => {
 		closeMenu();
-		selectTerminal(selectedTerminalId, $selectedTerminalId === id ? null : id, chatId);
+		selectMachine(selectedMachineId, $selectedMachineId === id ? null : id, chatId);
 	};
 
-	$: selectedSystemTerminal = systemTerminals.find(
-		(t) => !!$selectedTerminalId && t.id === $selectedTerminalId
+	$: selectedSystemMachine = systemMachines.find(
+		(t) => !!$selectedMachineId && t.id === $selectedMachineId
 	);
-	$: folderTarget = resolveTerminalTarget($selectedTerminalId, systemTerminals, '', {
+	$: folderTarget = resolveMachineTarget($selectedMachineId, systemMachines, '', {
 		chatId: $activeChatId || null,
 		modelId: modelId
 	});
-	$: selectedDevice = !!selectedSystemTerminal && isDevice(selectedSystemTerminal);
+	$: selectedDevice = !!selectedSystemMachine && isDevice(selectedSystemMachine);
 
 	$: selectedLabel =
-		selectedSystemTerminal?.name ||
-		selectedSystemTerminal?.id ||
-		($selectedTerminalId ? $i18n.t('Unavailable machine') : $i18n.t('Machine'));
+		selectedSystemMachine?.name ||
+		selectedSystemMachine?.id ||
+		($selectedMachineId ? $i18n.t('Unavailable machine') : $i18n.t('Machine'));
 	$: if (disabled && (show || (inMenu && tab === 'terminal'))) closeMenu();
 
-	let showTerminals = false;
-	let managedTerminalId: string | null = null;
-	const openTerminalDialog = (id: string | null) => {
-		managedTerminalId = id;
+	let showMachines = false;
+	let managedMachineId: string | null = null;
+	const openMachineDialog = (id: string | null) => {
+		managedMachineId = id;
 		closeMenu();
-		showTerminals = true;
+		showMachines = true;
 	};
-	let info: { target: TerminalTarget; label: string } | null = null;
-	let files: { target: TerminalTarget; label: string } | null = null;
+	let info: { target: MachineTarget; label: string } | null = null;
+	let files: { target: MachineTarget; label: string } | null = null;
 	const openFiles = async (selector: string, label: string) => {
-		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+		const target = resolveMachineTarget(selector, systemMachines, localStorage.token ?? '', {
 			chatId: $activeChatId || null,
 			modelId: modelId
 		});
@@ -166,11 +166,11 @@
 	};
 	const openInfo = async (selector: string, label: string) => {
 		if (
-			systemTerminals.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
+			systemMachines.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
 			!isSavedChatId($activeChatId)
 		)
 			return;
-		const target = resolveTerminalTarget(selector, systemTerminals, localStorage.token ?? '', {
+		const target = resolveMachineTarget(selector, systemMachines, localStorage.token ?? '', {
 			chatId: $activeChatId || null,
 			modelId: modelId
 		});
@@ -184,7 +184,7 @@
 		(info &&
 			// A new chat has no ID: the store holds '' and the target holds null.
 			((info.target.context.chatId ?? '') !== ($activeChatId || '') ||
-				!systemTerminals.some((t) => t.id === info?.target.selector)))
+				!systemMachines.some((t) => t.id === info?.target.selector)))
 	)
 		info = null;
 
@@ -192,13 +192,13 @@
 		disabled
 			? 'p-1 cursor-not-allowed opacity-40 text-base-400 dark:text-base-600'
 			: `text-base-600 hover:text-base-700 dark:text-base-300 dark:hover:text-base-200 cursor-pointer ${
-					$selectedTerminalId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
+					$selectedMachineId && selectedLabel ? ' p-1 ' : ' p-1 opacity-50'
 				}`
 	}`;
 </script>
 
 {#snippet menuItems()}
-	<!-- Terminals, then the user's own devices -->
+	<!-- Machines, then the user's own devices -->
 	{#each systemSections as section}
 		<div class="flex items-center justify-between pl-2 pr-1 py-1">
 			<span
@@ -214,7 +214,7 @@
 								type="button"
 								aria-label={$i18n.t('New machine')}
 								class={headerButtonClass}
-								on:click|stopPropagation={() => openTerminalDialog(null)}
+								on:click|stopPropagation={() => openMachineDialog(null)}
 							>
 								<Plus className="size-3.5" />
 							</button>
@@ -239,19 +239,19 @@
 			{/if}
 		</div>
 
-		{#each section.terminals as terminal}
-			{@const label = terminal.name || $i18n.t('Machine')}
-			{@const owned = canManage(terminal, manageable)}
-			{@const reachable = terminal.scope !== 'chat' || isSavedChatId($activeChatId)}
+		{#each section.machines as machine}
+			{@const label = machine.name || $i18n.t('Machine')}
+			{@const owned = canManage(machine, manageable)}
+			{@const reachable = machine.scope !== 'chat' || isSavedChatId($activeChatId)}
 			<div class="group/terminal relative rounded-xl">
 				<button
 					type="button"
 					role="menuitemradio"
-					aria-checked={$selectedTerminalId === terminal.id}
-					class="{rowClass} {$selectedTerminalId === terminal.id
+					aria-checked={$selectedMachineId === machine.id}
+					class="{rowClass} {$selectedMachineId === machine.id
 						? 'pr-14 bg-base-50/40 dark:bg-base-800/40'
 						: 'pr-8'}"
-					on:click={() => toggleTerminal(terminal.id)}
+					on:click={() => toggleMachine(machine.id)}
 				>
 					<div class="flex flex-1 gap-2 items-center truncate">
 						{#if section.devices}
@@ -261,26 +261,26 @@
 						{/if}
 						<span class="truncate">{label}</span>
 					</div>
-					{#if $selectedTerminalId === terminal.id}
+					{#if $selectedMachineId === machine.id}
 						<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
 							<Check className="size-3.5" />
 						</div>
 					{/if}
 				</button>
 				<div
-					class="absolute inset-y-0 {$selectedTerminalId === terminal.id
+					class="absolute inset-y-0 {$selectedMachineId === machine.id
 						? 'right-6'
 						: 'right-1'} {moreClass}"
 				>
-					<TerminalItemMenu
+					<MachineItemMenu
 						{label}
-						loadStatus={owned && reachable ? () => instanceStatus(terminal.id) : null}
-						onRestart={() => confirmLifecycle(terminal.id, label, 'restart')}
-						onStop={() => confirmLifecycle(terminal.id, label, 'stop')}
-						onStart={() => runLifecycle(terminal.id, label, 'start')}
-						onInfo={reachable ? () => openInfo(terminal.id, label) : null}
-						onFiles={reachable ? () => openFiles(terminal.id, label) : null}
-						onSettings={owned ? () => openTerminalDialog(terminal.id) : null}
+						loadStatus={owned && reachable ? () => instanceStatus(machine.id) : null}
+						onRestart={() => confirmLifecycle(machine.id, label, 'restart')}
+						onStop={() => confirmLifecycle(machine.id, label, 'stop')}
+						onStart={() => runLifecycle(machine.id, label, 'start')}
+						onInfo={reachable ? () => openInfo(machine.id, label) : null}
+						onFiles={reachable ? () => openFiles(machine.id, label) : null}
+						onSettings={owned ? () => openMachineDialog(machine.id) : null}
 					/>
 				</div>
 			</div>
@@ -344,7 +344,7 @@
 						<Cloud className="size-3.5" strokeWidth="2" />
 					{/if}
 
-					{#if $selectedTerminalId && selectedLabel}
+					{#if $selectedMachineId && selectedLabel}
 						<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
 							>{selectedLabel}</span
 						>
@@ -354,7 +354,7 @@
 		{:else}
 			<Dropdown bind:show align="start">
 				{#if trigger}
-					{@render trigger($selectedTerminalId, selectedLabel)}
+					{@render trigger($selectedMachineId, selectedLabel)}
 				{:else}
 					<Tooltip content={selectedLabel} placement="top">
 						<button type="button" aria-label={selectedLabel} class={triggerClass}>
@@ -364,7 +364,7 @@
 								<Cloud className="size-3.5" strokeWidth="2" />
 							{/if}
 
-							{#if $selectedTerminalId && selectedLabel}
+							{#if $selectedMachineId && selectedLabel}
 								<span data-input-label class="truncate text-[0.8125rem] max-w-[9.375rem]"
 									>{selectedLabel}</span
 								>
@@ -387,15 +387,11 @@
 
 {#if info}
 	{#key info}
-		<TerminalSystemInfoModal
-			target={info.target}
-			label={info.label}
-			onClose={() => (info = null)}
-		/>
+		<MachineSystemInfoModal target={info.target} label={info.label} onClose={() => (info = null)} />
 	{/key}
 {/if}
 
-{#if showDirectory && folderTarget && (selectedSystemTerminal?.scope !== 'chat' || isSavedChatId(chatId))}
+{#if showDirectory && folderTarget && (selectedSystemMachine?.scope !== 'chat' || isSavedChatId(chatId))}
 	{#key `${$user?.id}:${folderTarget.selector}:${chatId ?? ''}`}
 		<WorkingDirectoryMenu
 			{inMenu}
@@ -403,7 +399,7 @@
 			target={folderTarget}
 			{chatId}
 			userId={$user?.id ?? ''}
-			bind:terminalContext
+			bind:machineContext
 			onSelect={async (path) => {
 				if (isSavedChatId(chatId)) {
 					await updateChatById(localStorage.token, chatId!, { working_directory: path });
@@ -414,18 +410,18 @@
 	{/key}
 {/if}
 
-{#if showTerminals}
-	<UserTerminalsModal
-		bind:show={showTerminals}
-		terminalId={managedTerminalId}
+{#if showMachines}
+	<UserMachinesModal
+		bind:show={showMachines}
+		machineId={managedMachineId}
 		connections={writable}
-		onCreate={async (id) => selectTerminal(selectedTerminalId, id, chatId)}
+		onCreate={async (id) => selectMachine(selectedMachineId, id, chatId)}
 	/>
 {/if}
 
 {#if files}
 	{#key files}
-		<TerminalFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
+		<MachineFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
 	{/key}
 {/if}
 

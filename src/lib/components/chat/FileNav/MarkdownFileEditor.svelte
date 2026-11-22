@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 	import { v4 as uuidv4 } from 'uuid';
 	import { getAllContexts, getContext, mount, unmount, onDestroy, tick } from 'svelte';
 	import { Node, type Editor } from '@tiptap/core';
@@ -14,7 +14,7 @@
 	import { toast } from 'svelte-sonner';
 	import RichTextInput from '$lib/components/common/RichTextInput.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import { downloadFileBlob, uploadNewFileToTerminal } from '$lib/apis/machines';
+	import { downloadFileBlob, uploadNewFileToMachine } from '$lib/apis/machines';
 	import MarkdownDocument, { resolveDocumentPath } from './MarkdownDocument.svelte';
 	import KatexRenderer from '../Messages/Markdown/KatexRenderer.svelte';
 	import markedKatexExtension from '$lib/utils/marked/katex-extension';
@@ -267,7 +267,7 @@
 			try {
 				for (const file of files) {
 					if (current !== generation || currentEditor.isDestroyed || readOnly) break;
-					const result = await uploadNewFileToTerminal(capturedTarget!, directory, file);
+					const result = await uploadNewFileToMachine(capturedTarget!, directory, file);
 					if (current !== generation || currentEditor.isDestroyed || readOnly) break;
 					if (!result) throw new Error($i18n.t('Failed to upload file.'));
 					const name = result.path.split('/').pop()!;

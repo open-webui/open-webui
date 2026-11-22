@@ -1,11 +1,11 @@
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import {
-	joinTerminalPath,
-	terminalRequest,
-	terminalHeaders,
-	type TerminalTarget,
-	type TerminalProcessOutput
+	joinMachinePath,
+	machineRequest,
+	machineHeaders,
+	type MachineTarget,
+	type MachineProcessOutput
 } from './index';
 
 export type GitFile = {
@@ -55,7 +55,7 @@ export function gitRemoteWebUrl(remote = ''): string {
 }
 
 export async function gitRequest<T>(
-	target: TerminalTarget,
+	target: MachineTarget,
 	directory: string,
 	operation: string,
 	params: Record<string, string> = {},
@@ -67,7 +67,7 @@ export async function gitRequest<T>(
 	const response = await fetch(`${target.baseUrl}/git/${operation}?${query}`, {
 		method,
 		headers: {
-			...terminalHeaders(target),
+			...machineHeaders(target),
 			...(body ? { 'Content-Type': 'application/json' } : {})
 		},
 		...(body ? { body: JSON.stringify({ root: directory, ...body }) } : {})
@@ -91,7 +91,7 @@ export async function gitRequest<T>(
 }
 
 export function gitAction<T>(
-	target: TerminalTarget,
+	target: MachineTarget,
 	directory: string,
 	action: string,
 	fields: Record<string, unknown>
@@ -131,7 +131,7 @@ const repositoryFolderName = (url: string) =>
 		?.replace(/\.git$/, '') ?? '';
 
 export async function cloneRepository(
-	target: Pick<TerminalTarget, 'baseUrl' | 'key' | 'context'>,
+	target: Pick<MachineTarget, 'baseUrl' | 'key' | 'context'>,
 	directory: string,
 	url: string,
 	signal?: AbortSignal
@@ -148,7 +148,7 @@ export async function cloneRepository(
 	if (!directory) throw new Error('Choose a destination directory');
 
 	const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-	let result = await terminalRequest<TerminalProcessOutput>(target, '/execute?wait=1&tail=20', {
+	let result = await machineRequest<MachineProcessOutput>(target, '/execute?wait=1&tail=20', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
@@ -162,7 +162,7 @@ export async function cloneRepository(
 		signal
 	});
 	while (result.status === 'running') {
-		result = await terminalRequest<TerminalProcessOutput>(
+		result = await machineRequest<MachineProcessOutput>(
 			target,
 			`/execute/${encodeURIComponent(result.id)}/status?wait=1&tail=20`,
 			{ signal }
@@ -176,5 +176,5 @@ export async function cloneRepository(
 				.trim() || 'Failed to clone repository'
 		);
 	}
-	return joinTerminalPath(directory, name);
+	return joinMachinePath(directory, name);
 }

@@ -15,6 +15,7 @@ from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
+from open_webui.utils.machines import automation_machine_of, is_machine_ref, strip_machine_prefix
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
     VIEW_FILE_DEFAULT_MAX_CHARS,
@@ -75,7 +76,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.machines import get_terminal_file, upload_files_to_terminal
+from open_webui.utils.machines import get_machine_file, upload_files_to_machine
 
 log = logging.getLogger(__name__)
 
@@ -385,7 +386,7 @@ async def generate_image(
     :param prompt: A detailed description of the image to generate
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Image URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -404,9 +405,7 @@ async def generate_image(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the images
         image_files = [{'type': 'image', **img} for img in images]
@@ -436,7 +435,7 @@ async def generate_image(
                 {
                     'status': 'success',
                     'message': (
-                        'The image is already visible in chat. Use terminal_path with terminal tools or '
+                        'The image is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'images': images,
@@ -470,7 +469,7 @@ async def edit_image(
     :param image_urls: Source image URLs or absolute file paths to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Image URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -481,7 +480,7 @@ async def edit_image(
         resolved_images = []
         for url in image_urls:
             if (url.startswith('/') or ntpath.isabs(url)) and not url.startswith('/api/v1/files/'):
-                data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
+                data = await get_machine_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
                 url = await asyncio.to_thread(get_image_data_url, data)
             resolved_images.append(url)
         images = await image_edits(
@@ -497,9 +496,7 @@ async def edit_image(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the images
         image_files = [{'type': 'image', **img} for img in images]
@@ -529,7 +526,7 @@ async def edit_image(
                 {
                     'status': 'success',
                     'message': (
-                        'The edited image is already visible in chat. Use terminal_path with terminal tools or '
+                        'The edited image is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'images': images,
@@ -568,7 +565,7 @@ async def generate_video(
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1280x720"), supported by the configured video model.
         Omit to use the configured default.
     :param image_url: Optional image to start the video from, as a URL from the conversation or a terminal path.
-    :return: Video URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Video URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -581,7 +578,7 @@ async def generate_video(
             and (image_url.startswith('/') or ntpath.isabs(image_url))
             and not image_url.startswith('/api/v1/files/')
         ):
-            data = await get_terminal_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
+            data = await get_machine_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
             image_url = await asyncio.to_thread(get_image_data_url, data)
 
         videos = await video_generations(
@@ -601,9 +598,7 @@ async def generate_video(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, videos, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, videos, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the videos
         video_files = [{'type': 'video', **video} for video in videos]
@@ -633,7 +628,7 @@ async def generate_video(
                 {
                     'status': 'success',
                     'message': (
-                        'The video is already visible in chat. Use terminal_path with terminal tools or '
+                        'The video is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'videos': videos,
@@ -3846,12 +3841,11 @@ async def view_skill(
     if __request__ is None or not __user__:
         return JSONCodec.dumps({'error': 'Request and user context required'})
     try:
-        terminal_skill_prefix = 'terminal:'
-        if isinstance(id, str) and id.startswith(terminal_skill_prefix):
-            from open_webui.utils.machines import get_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import get_machine_skill
 
-            skill_name = unquote(id.removeprefix(terminal_skill_prefix))
-            skill = await get_terminal_skill(
+            skill_name = unquote(strip_machine_prefix(id))
+            skill = await get_machine_skill(
                 __request__,
                 __user__,
                 __metadata__ if __metadata__ is not None else {},
@@ -3919,16 +3913,16 @@ async def read_skill_file(
 
         if not __user__ or __request__ is None:
             raise ValueError('Request and user context required')
-        if id.startswith('terminal:'):
-            from open_webui.utils.machines import get_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import get_machine_skill
 
             if path != 'SKILL.md':
                 raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
-            skill = await get_terminal_skill(
+            skill = await get_machine_skill(
                 __request__,
                 __user__,
                 __metadata__ if __metadata__ is not None else {},
-                unquote(id.removeprefix('terminal:')),
+                unquote(strip_machine_prefix(id)),
                 {'__event_call__': __event_call__},
                 offset=offset,
                 max_chars=max_chars,
@@ -3989,7 +3983,7 @@ async def grep_skill_files(
     occurrences, not excerpts. Omitted excerpts have compact locations in omitted_matches; omitted_matches_truncated
     indicates when more locations remain. Terminal skills support SKILL.md only. No skill version is created.
 
-    :param id: Skill ID, including terminal: IDs.
+    :param id: Skill ID, including machine: IDs.
     :param pattern: Text or auto-detected regex to find (up to 4096 characters).
     :param path: Optional exact skill file path; otherwise search all text files, skipping binary files.
     :param case_insensitive: Ignore case when matching (default true).
@@ -4001,16 +3995,16 @@ async def grep_skill_files(
         if __request__ is None or not __user__:
             raise ValueError('Request and user context required')
         metadata = __metadata__ if __metadata__ is not None else {}
-        if id.startswith('terminal:'):
-            from open_webui.utils.machines import load_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import load_machine_skill
 
             if path is not None and path != 'SKILL.md':
                 raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
-            skill = await load_terminal_skill(
+            skill = await load_machine_skill(
                 __request__,
                 __user__,
                 metadata,
-                unquote(id.removeprefix('terminal:')),
+                unquote(strip_machine_prefix(id)),
                 {'__event_call__': __event_call__},
                 refresh=False,
             )
@@ -4557,7 +4551,7 @@ async def update_automation(
             AutomationForm,
             Automations,
             AutomationTarget,
-            AutomationTerminalConfig,
+            AutomationMachineConfig,
             AutomationWebhook,
             has_webhook,
         )
@@ -4615,8 +4609,8 @@ async def update_automation(
                 model_id=new_model_id,
                 rrule=new_rrule,
                 target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
-                terminal=AutomationTerminalConfig(**automation.data['terminal'])
-                if automation.data.get('terminal')
+                machine=AutomationMachineConfig(**automation_machine_of(automation.data))
+                if automation_machine_of(automation.data)
                 else None,
                 webhook=AutomationWebhook(**automation.data['webhook']) if automation.data.get('webhook') else None,
             ),

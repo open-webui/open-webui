@@ -1,7 +1,7 @@
 import { get } from 'svelte/store';
 import { config } from '$lib/stores';
 import { checkSourceSize, readSourceResponse } from './sourceText';
-// The same attachment is used by @mentions, terminal uploads, and Files-pane requests.
+// The same attachment is used by @mentions, machine uploads, and Files-pane requests.
 export type FilesystemFile = {
 	type: 'filesystem';
 	id: string;
@@ -11,12 +11,12 @@ export type FilesystemFile = {
 	status: string;
 	size?: number;
 	modified?: number;
-	terminal_id?: string;
+	machine_id?: string;
 	session_id?: string | null;
 };
 export const filesystemFile = (
 	entry: { path: string; name: string; size?: number; modified?: number },
-	terminalId: string,
+	machineId: string,
 	sessionId: string | null
 ): FilesystemFile => ({
 	type: 'filesystem',
@@ -27,7 +27,7 @@ export const filesystemFile = (
 	size: entry.size,
 	modified: entry.modified,
 	status: 'processed',
-	terminal_id: terminalId,
+	machine_id: machineId,
 	session_id: sessionId
 });
 
@@ -40,36 +40,36 @@ export type FileEntry = {
 	writable?: boolean;
 };
 
-export type TerminalFileList = {
+export type MachineFileList = {
 	entries: FileEntry[];
 	writable?: boolean;
 };
 
-export type TerminalFileSearchResult = FileEntry & {
+export type MachineFileSearchResult = FileEntry & {
 	path: string;
 };
 
-export type TerminalFileSearchResponse = {
-	results: TerminalFileSearchResult[];
+export type MachineFileSearchResponse = {
+	results: MachineFileSearchResult[];
 };
 
-export type TerminalContentMatch = {
+export type MachineContentMatch = {
 	line: number;
 	column: number;
 	text: string;
 };
 
-export type TerminalFileMatch = {
+export type MachineFileMatch = {
 	path: string;
 	relative_path: string;
 	name: string;
 	type: 'file' | 'directory';
 	name_match: boolean;
-	content_matches: TerminalContentMatch[];
+	content_matches: MachineContentMatch[];
 };
 
-export type TerminalFileMatchesResponse = {
-	results: TerminalFileMatch[];
+export type MachineFileMatchesResponse = {
+	results: MachineFileMatch[];
 	next_offset: number | null;
 };
 
@@ -79,7 +79,7 @@ export type ListeningPort = {
 	process: string | null;
 };
 
-export type TerminalSystemInfo = {
+export type MachineSystemInfo = {
 	sampled_at: number;
 	hostname: string;
 	os: string;
@@ -100,7 +100,7 @@ export type TerminalSystemInfo = {
 				memory_bytes: number;
 		  }[]
 		| null;
-	/** Present when the terminal has a setup script. */
+	/** Present when the machine has a setup script. */
 	setup?: {
 		status: 'running' | 'ok' | 'failed';
 		exit_code?: number;
@@ -108,7 +108,7 @@ export type TerminalSystemInfo = {
 	};
 };
 
-export type TerminalFeatures = {
+export type MachineFeatures = {
 	agents?: boolean;
 	terminal?: boolean;
 	browser?: boolean;
@@ -118,12 +118,12 @@ export type TerminalFeatures = {
 };
 
 // Missing flags mean unsupported; never probe a new endpoint on an older server.
-export async function getTerminalFeatures(
-	target: Pick<TerminalTarget, 'baseUrl' | 'key' | 'context'>,
+export async function getMachineFeatures(
+	target: Pick<MachineTarget, 'baseUrl' | 'key' | 'context'>,
 	signal?: AbortSignal
-): Promise<TerminalFeatures> {
+): Promise<MachineFeatures> {
 	try {
-		const result = await terminalRequest<{ features?: TerminalFeatures }>(target, '/api/config', {
+		const result = await machineRequest<{ features?: MachineFeatures }>(target, '/api/config', {
 			signal
 		});
 		return result.features ?? {};
@@ -132,56 +132,56 @@ export async function getTerminalFeatures(
 	}
 }
 
-export type TerminalFileRoot = {
+export type MachineFileRoot = {
 	path: string;
 	label: string;
 };
 
-export type TerminalCwd = {
+export type MachineCwd = {
 	cwd: string | null;
 	home?: string;
-	root?: TerminalFileRoot;
+	root?: MachineFileRoot;
 };
 
-export type TerminalSkill = {
+export type MachineSkill = {
 	id: string;
 	name: string;
 	description: string;
 	is_active: boolean;
-	source: 'terminal';
-	terminal_path: string;
-	terminal_selector: string;
-	terminal_name?: string;
+	source: 'machine';
+	machine_path: string;
+	machine_selector: string;
+	machine_name?: string;
 };
 
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 
-export type TerminalTarget = {
+export type MachineTarget = {
 	selector: string;
 	baseUrl: string;
 	key: string;
 	system: boolean;
-	/** userId names another person's instance; only someone who manages the terminal may reach it. */
+	/** userId names another person's instance; only someone who manages the machine may reach it. */
 	context: { userId?: string | null; chatId: string | null; modelId: string | null };
 };
-export type TerminalProcess = {
+export type MachineProcess = {
 	id: string;
 	command: string;
 	status: 'running' | 'done' | 'killed';
 	exit_code: number | null;
 };
-export type TerminalProcessOutput = TerminalProcess & {
+export type MachineProcessOutput = MachineProcess & {
 	output: { type: string; data: string }[];
 	next_offset: number;
 	truncated: boolean;
 };
 
-export const resolveTerminalTarget = (
+export const resolveMachineTarget = (
 	selector: string | null,
 	servers: any[],
 	token: string,
-	context: Partial<TerminalTarget['context']> = {}
-): TerminalTarget | null => {
+	context: Partial<MachineTarget['context']> = {}
+): MachineTarget | null => {
 	if (!get(config)?.features?.enable_tool_servers || !selector) return null;
 	const server = servers.find((server) => server.id === selector);
 	if (server) {
@@ -204,33 +204,33 @@ export const resolveTerminalTarget = (
 	return null;
 };
 
-export class TerminalRequestError extends Error {
+export class MachineRequestError extends Error {
 	constructor(
 		message: string,
 		public status: number
 	) {
 		super(message);
-		this.name = 'TerminalRequestError';
+		this.name = 'MachineRequestError';
 	}
 }
 
-export const terminalRequest = async <T>(
-	target: Pick<TerminalTarget, 'baseUrl' | 'key' | 'context'>,
+export const machineRequest = async <T>(
+	target: Pick<MachineTarget, 'baseUrl' | 'key' | 'context'>,
 	path: string,
 	options: RequestInit = {}
 ): Promise<T> => {
 	if (!get(config)?.features?.enable_tool_servers)
-		throw new TerminalRequestError('Tool servers are disabled', 403);
+		throw new MachineRequestError('Tool servers are disabled', 403);
 	const response = await fetch(`${target.baseUrl}${path}`, {
 		...options,
 		headers: {
-			...terminalHeaders(target),
+			...machineHeaders(target),
 			...options.headers
 		}
 	});
 	if (!response.ok) {
 		const body = await response.json().catch(() => null);
-		throw new TerminalRequestError(
+		throw new MachineRequestError(
 			typeof body?.detail === 'string'
 				? body.detail
 				: typeof body?.error === 'string'
@@ -242,8 +242,8 @@ export const terminalRequest = async <T>(
 	return response.json();
 };
 
-export const terminalHeaders = (
-	target: Pick<TerminalTarget, 'key' | 'context'>
+export const machineHeaders = (
+	target: Pick<MachineTarget, 'key' | 'context'>
 ): Record<string, string> => {
 	if (!get(config)?.features?.enable_tool_servers) throw new Error('Tool servers are disabled');
 	return {
@@ -254,7 +254,7 @@ export const terminalHeaders = (
 	};
 };
 
-export const joinTerminalPath = (base: string, child: string) => {
+export const joinMachinePath = (base: string, child: string) => {
 	if (!child) return base;
 	if (child.startsWith('/') || /^[A-Za-z]:[\\/]/.test(child)) return child;
 	return `${base.replace(/[\\/]+$/, '')}/${child.replace(/^[\\/]+/, '')}`;
@@ -269,7 +269,7 @@ const hasHiddenPathPart = (path: string) =>
 		.split('/')
 		.some((part) => part.startsWith('.'));
 
-export type TerminalServer = {
+export type MachineServer = {
 	template_id?: string;
 	scope?: 'user' | 'chat' | 'model' | null;
 	id: string;
@@ -281,7 +281,7 @@ export type TerminalServer = {
 	};
 };
 
-export const getTerminalServers = async (token: string): Promise<TerminalServer[]> => {
+export const getMachines = async (token: string): Promise<MachineServer[]> => {
 	if (!get(config)?.features?.enable_tool_servers) return [];
 	const res = await fetch(`${WEBUI_API_BASE_URL}/machines/`, {
 		headers: {
@@ -292,9 +292,9 @@ export const getTerminalServers = async (token: string): Promise<TerminalServer[
 	return res.json().catch(() => []);
 };
 
-export const getCwd = async (target: TerminalTarget): Promise<TerminalCwd | null> => {
+export const getCwd = async (target: MachineTarget): Promise<MachineCwd | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/cwd`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, { headers }).catch(() => null);
 	if (!res || !res.ok) return null;
@@ -308,12 +308,12 @@ export const getCwd = async (target: TerminalTarget): Promise<TerminalCwd | null
 };
 
 export const listFiles = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string = '/'
-): Promise<TerminalFileList | null> => {
+): Promise<MachineFileList | null> => {
 	// The endpoint uses `directory` as the query param name
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/list?directory=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, { headers })
 		.then(async (res) => {
@@ -328,15 +328,15 @@ export const listFiles = async (
 };
 
 export const searchFiles = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	query: string,
 	path: string = '.',
 	limit: number = 20,
 	type: 'file' | 'directory' | 'any' = 'any',
 	showHidden: boolean = false,
 	signal?: AbortSignal
-): Promise<TerminalFileSearchResponse | null> => {
-	const headers: Record<string, string> = terminalHeaders(target);
+): Promise<MachineFileSearchResponse | null> => {
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const searchParams = new URLSearchParams({
 		query,
@@ -379,7 +379,7 @@ export const searchFiles = async (
 		results: (json?.matches ?? [])
 			.filter((item: FileEntry & { path: string }) => showHidden || !hasHiddenPathPart(item.path))
 			.map((item: FileEntry & { path: string }) => ({
-				path: joinTerminalPath(root, item.path),
+				path: joinMachinePath(root, item.path),
 				name: basename(item.path),
 				type: item.type,
 				size: item.size,
@@ -389,14 +389,14 @@ export const searchFiles = async (
 };
 
 export const getFileMatches = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	query: string,
 	path: string = '.',
 	showHidden: boolean = false,
 	offset: number = 0,
 	signal?: AbortSignal
-): Promise<TerminalFileMatchesResponse | null> => {
-	const headers: Record<string, string> = terminalHeaders(target);
+): Promise<MachineFileMatchesResponse | null> => {
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const params = new URLSearchParams({
 		query,
@@ -420,13 +420,13 @@ export const getFileMatches = async (
 };
 
 export const readComparisonSource = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string,
 	signal: AbortSignal,
 	size?: number
 ): Promise<string> => {
 	checkSourceSize(size);
-	const headers = terminalHeaders(target);
+	const headers = machineHeaders(target);
 
 	const response = await fetch(
 		`${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`,
@@ -438,9 +438,9 @@ export const readComparisonSource = async (
 	return readSourceResponse(response, signal);
 };
 
-export const readFile = async (target: TerminalTarget, path: string): Promise<string | null> => {
+export const readFile = async (target: MachineTarget, path: string): Promise<string | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/read?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, { headers }).catch((err) => {
 		console.error('open-terminal readFile error:', err);
@@ -461,30 +461,29 @@ export const readFile = async (target: TerminalTarget, path: string): Promise<st
 	return json?.content ?? null;
 };
 
-export const listTerminalSkills = async (
-	target: TerminalTarget | null
-): Promise<TerminalSkill[]> => {
+export const listMachineSkills = async (target: MachineTarget | null): Promise<MachineSkill[]> => {
 	if (!target) return [];
 
-	const skills = await terminalRequest<TerminalSkill[]>(target, '/skills').catch(() => []);
+	const skills = await machineRequest<MachineSkill[]>(target, '/skills').catch(() => []);
 
 	return (Array.isArray(skills) ? skills : []).map((skill) => ({
 		...skill,
 		is_active: true,
-		source: 'terminal',
-		terminal_path: skill.terminal_path ?? (skill as any).location ?? '',
-		terminal_selector: target.selector,
-		terminal_name: target.selector
+		source: 'machine',
+		machine_path:
+			skill.machine_path ?? (skill as any).terminal_path ?? (skill as any).location ?? '',
+		machine_selector: target.selector,
+		machine_name: target.selector
 	}));
 };
 
 export const downloadFileBlob = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string,
 	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, { headers, signal }).catch(() => null);
 
@@ -497,12 +496,12 @@ export const downloadFileBlob = async (
 };
 
 export const downloadFilePreview = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string,
 	signal?: AbortSignal
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/view?path=${encodeURIComponent(path)}&preview=true`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, { headers, signal }).catch(() => null);
 
@@ -518,13 +517,13 @@ export const downloadFilePreview = async (
 	return { blob, filename };
 };
 
-export const archiveFromTerminal = async (
-	target: TerminalTarget,
+export const archiveFromMachine = async (
+	target: MachineTarget,
 	paths: string[]
 ): Promise<{ blob: Blob; filename: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/archive`;
 	const headers: Record<string, string> = {
-		...terminalHeaders(target),
+		...machineHeaders(target),
 		'Content-Type': 'application/json'
 	};
 
@@ -544,15 +543,15 @@ export const archiveFromTerminal = async (
 	return { blob, filename };
 };
 
-export const uploadToTerminal = async (
-	target: TerminalTarget,
+export const uploadToMachine = async (
+	target: MachineTarget,
 	directory: string,
 	file: File
 ): Promise<{ path: string; size: number } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/upload?directory=${encodeURIComponent(directory)}`;
 	const body = new FormData();
 	body.append('file', file);
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, {
 		method: 'POST',
@@ -564,7 +563,7 @@ export const uploadToTerminal = async (
 			return res.json();
 		})
 		.catch((err) => {
-			console.error('open-terminal uploadToTerminal error:', err);
+			console.error('open-terminal uploadToMachine error:', err);
 			return null;
 		});
 	return res;
@@ -573,8 +572,8 @@ export const uploadToTerminal = async (
 // ponytail: serialize new uploads in this page; cross-client races need server-side protection.
 let newFileUploadQueue: Promise<void> = Promise.resolve();
 
-export const uploadNewFileToTerminal = async (
-	target: TerminalTarget,
+export const uploadNewFileToMachine = async (
+	target: MachineTarget,
 	directory: string,
 	file: File
 ): Promise<{ path: string; size: number } | null> => {
@@ -595,7 +594,7 @@ export const uploadNewFileToTerminal = async (
 			name === file.name
 				? file
 				: new File([file], name, { type: file.type, lastModified: file.lastModified });
-		return uploadToTerminal(target, directory, uploadFile);
+		return uploadToMachine(target, directory, uploadFile);
 	});
 	newFileUploadQueue = upload.then(
 		() => undefined,
@@ -605,12 +604,12 @@ export const uploadNewFileToTerminal = async (
 };
 
 export const createDirectory = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string
 ): Promise<{ path: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/mkdir`;
 	const headers: Record<string, string> = {
-		...terminalHeaders(target),
+		...machineHeaders(target),
 		'Content-Type': 'application/json'
 	};
 
@@ -631,11 +630,11 @@ export const createDirectory = async (
 };
 
 export const deleteEntry = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string
 ): Promise<{ path: string; type: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/delete?path=${encodeURIComponent(path)}`;
-	const headers: Record<string, string> = terminalHeaders(target);
+	const headers: Record<string, string> = machineHeaders(target);
 
 	const res = await fetch(url, {
 		method: 'DELETE',
@@ -653,12 +652,12 @@ export const deleteEntry = async (
 };
 
 export const setCwd = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string
 ): Promise<{ cwd: string } | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = {
-		...terminalHeaders(target),
+		...machineHeaders(target),
 		'Content-Type': 'application/json'
 	};
 
@@ -679,13 +678,13 @@ export const setCwd = async (
 };
 
 export const moveEntry = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	source: string,
 	destination: string
 ): Promise<{ source: string; destination: string } | { error: string }> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/move`;
 	const headers: Record<string, string> = {
-		...terminalHeaders(target),
+		...machineHeaders(target),
 		'Content-Type': 'application/json'
 	};
 
@@ -705,11 +704,11 @@ export const moveEntry = async (
 	return res;
 };
 
-export const getListeningPorts = async (target: TerminalTarget): Promise<ListeningPort[]> => {
+export const getListeningPorts = async (target: MachineTarget): Promise<ListeningPort[]> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/ports`;
 	const res = await fetch(url, {
 		headers: {
-			...terminalHeaders(target)
+			...machineHeaders(target)
 		}
 	}).catch(() => null);
 	if (!res || !res.ok) return [];
@@ -725,14 +724,14 @@ export const getPortProxyUrl = (baseUrl: string, port: number, path: string = ''
 // Notebook execution
 
 export const createNotebookSession = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: string
 ): Promise<{ id: string; kernel: string; status: string } | { error: string }> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/notebooks`;
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			...terminalHeaders(target),
+			...machineHeaders(target),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify({ path })
@@ -752,7 +751,7 @@ export const createNotebookSession = async (
 };
 
 export const executeNotebookCell = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	sessionId: string,
 	cellIndex: number,
 	source?: string
@@ -764,7 +763,7 @@ export const executeNotebookCell = async (
 	const res = await fetch(url, {
 		method: 'POST',
 		headers: {
-			...terminalHeaders(target),
+			...machineHeaders(target),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(body)
@@ -784,18 +783,18 @@ export const executeNotebookCell = async (
 };
 
 export const stopNotebookSession = async (
-	target: TerminalTarget,
+	target: MachineTarget,
 	sessionId: string
 ): Promise<boolean> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/notebooks/${sessionId}`;
 	const res = await fetch(url, {
 		method: 'DELETE',
-		headers: { ...terminalHeaders(target) }
+		headers: { ...machineHeaders(target) }
 	}).catch(() => null);
 	return res?.ok ?? false;
 };
 
-export type TerminalDiffLine = {
+export type MachineDiffLine = {
 	type: 'added' | 'removed' | 'context';
 	oldNumber: number | null;
 	newNumber: number | null;
@@ -803,29 +802,29 @@ export type TerminalDiffLine = {
 	revisedContent?: string;
 	segments: { text: string; changed: boolean }[];
 };
-export type TerminalComparisonRequest = {
+export type MachineComparisonRequest = {
 	original: string;
 	revised: string;
 	ignore_whitespace: boolean;
 };
-export type TerminalComparison = {
+export type MachineComparison = {
 	original: { name: string; path: string; notices: string[] };
 	revised: { name: string; path: string; notices: string[] };
 	additions: number;
 	deletions: number;
-	hunks: { header: string; lines: TerminalDiffLine[] }[];
+	hunks: { header: string; lines: MachineDiffLine[] }[];
 };
 
 export const compareFiles = async (
-	target: TerminalTarget,
-	request: TerminalComparisonRequest,
+	target: MachineTarget,
+	request: MachineComparisonRequest,
 	signal?: AbortSignal
-): Promise<TerminalComparison> => {
+): Promise<MachineComparison> => {
 	const response = await fetch(`${target.baseUrl.replace(/\/$/, '')}/files/compare`, {
 		method: 'POST',
 		signal,
 		headers: {
-			...terminalHeaders(target),
+			...machineHeaders(target),
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(request)
@@ -900,7 +899,7 @@ export const parseSSHUrl = (value: string): SSHTarget | null => {
 export const formatSSHUrl = ({ username, host, port }: SSHTarget) =>
 	`ssh://${username}@${host.includes(':') ? `[${host}]` : host}${port === 22 ? '' : `:${port}`}`;
 
-const machineRequest = async <T>(
+const managedMachineRequest = async <T>(
 	token: string,
 	path: string,
 	method = 'GET',
@@ -932,11 +931,16 @@ const managedPath = (id: string, action = '') => `/managed/${encodeURIComponent(
 
 /** Fetch the machine's host key without logging in, so the admin can confirm it. */
 export const probeSSHMachine = (token: string, target: SSHTarget) =>
-	machineRequest<{ host_key: string; fingerprint: string }>(token, '/ssh/probe', 'POST', target);
+	managedMachineRequest<{ host_key: string; fingerprint: string }>(
+		token,
+		'/ssh/probe',
+		'POST',
+		target
+	);
 
 /** Create the machine's id and the key Open WebUI will log in with. */
 export const createSSHKeypair = (token: string) =>
-	machineRequest<{ id: string; public_key: string }>(token, '/ssh/keypair', 'POST');
+	managedMachineRequest<{ id: string; public_key: string }>(token, '/ssh/keypair', 'POST');
 
 /** Log in once with a password or private key to add Open WebUI's key. Neither is stored. */
 export const installSSHKey = (
@@ -949,27 +953,27 @@ export const installSSHKey = (
 		private_key?: string;
 		passphrase?: string;
 	}
-) => machineRequest<{ status: boolean }>(token, '/ssh/install-key', 'POST', form);
+) => managedMachineRequest<{ status: boolean }>(token, '/ssh/install-key', 'POST', form);
 
 /** Start installing Open Terminal. Progress arrives as `machines:progress` socket events. */
 export const installSSHMachine = (
 	token: string,
 	form: SSHTarget & { host_key: string; id: string; name: string; version?: string }
-) => machineRequest<{ id: string; status: string }>(token, '/ssh', 'POST', form);
+) => managedMachineRequest<{ id: string; status: string }>(token, '/ssh', 'POST', form);
 
 /** Where sessions on this computer start by default, and whether it is already added. */
 export const getLocalMachineDefaults = (token: string) =>
-	machineRequest<{ folder: string; added: boolean }>(token, '/local');
+	managedMachineRequest<{ folder: string; added: boolean }>(token, '/local');
 
 /** Install Open Terminal on the computer Open WebUI runs on (experimental). Empty folder: the project folder Open WebUI picks. */
 export const installLocalMachine = (
 	token: string,
 	form: { id: string; name?: string; version?: string; folder?: string }
-) => machineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
+) => managedMachineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
 
 /** Install the machine's Open Terminal again: `version` is 'latest' or an exact version (omit to keep the current choice). */
 export const upgradeMachine = (token: string, id: string, version?: string) =>
-	machineRequest<{ id: string; status: string }>(
+	managedMachineRequest<{ id: string; status: string }>(
 		token,
 		managedPath(id, '/upgrade'),
 		'POST',
@@ -978,14 +982,18 @@ export const upgradeMachine = (token: string, id: string, version?: string) =>
 
 /** Change where terminal sessions start, then restart Open Terminal there. */
 export const setMachineFolder = (token: string, id: string, folder: string) =>
-	machineRequest<{ status: boolean }>(token, managedPath(id, '/folder'), 'POST', { folder });
+	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/folder'), 'POST', { folder });
 
 export const restartMachine = (token: string, id: string) =>
-	machineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');
+	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');
 
 export const getMachineLogs = (token: string, id: string, lines = 200) =>
-	machineRequest<{ logs: string }>(token, managedPath(id, `/logs?lines=${lines}`));
+	managedMachineRequest<{ logs: string }>(token, managedPath(id, `/logs?lines=${lines}`));
 
 /** Uninstall Open Terminal and remove the machine. `force` removes it even if it is unreachable. */
 export const removeMachine = (token: string, id: string, force = false) =>
-	machineRequest<{ status: boolean }>(token, managedPath(id, force ? '?force=true' : ''), 'DELETE');
+	managedMachineRequest<{ status: boolean }>(
+		token,
+		managedPath(id, force ? '?force=true' : ''),
+		'DELETE'
+	);

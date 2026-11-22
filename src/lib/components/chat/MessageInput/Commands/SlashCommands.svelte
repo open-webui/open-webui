@@ -5,12 +5,8 @@
 	import type { Readable, Writable } from 'svelte/store';
 	import { getPrompts } from '$lib/apis/prompts';
 	import { getSkillItems } from '$lib/apis/skills';
-	import {
-		listTerminalSkills,
-		resolveTerminalTarget,
-		type TerminalSkill
-	} from '$lib/apis/machines';
-	import { user, settings, terminalServers, visibleControls } from '$lib/stores';
+	import { listMachineSkills, resolveMachineTarget, type MachineSkill } from '$lib/apis/machines';
+	import { user, settings, machines, visibleControls } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import ChatBubbleDotted from '$lib/components/icons/ChatBubbleDotted.svelte';
 	import ChatBubbleDottedChecked from '$lib/components/icons/ChatBubbleDottedChecked.svelte';
@@ -28,8 +24,8 @@
 	const i18n: any = getContext('i18n');
 
 	export let query = '';
-	export let selectedTerminalId: Readable<string | null>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Readable<string | null>;
+	export let machineSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 	export let canCompact = false;
 	export let canCompare = false;
@@ -125,15 +121,13 @@
 		clearTimeout(searchDebounceTimer);
 	});
 
-	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
-		const target = resolveTerminalTarget(
-			$selectedTerminalId,
-			$terminalServers ?? [],
-			localStorage.token,
-			{ chatId: $chatId || null, modelId: modelId }
-		);
-		const items = await listTerminalSkills(target).catch(() => []);
-		terminalSkills.set(items);
+	const getMachineItems = async (query = ''): Promise<MachineSkill[]> => {
+		const target = resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token, {
+			chatId: $chatId || null,
+			modelId: modelId
+		});
+		const items = await listMachineSkills(target).catch(() => []);
+		machineSkills.set(items);
 		const q = query.trim().toLowerCase();
 		return q
 			? items.filter((skill) => `${skill.name} ${skill.description}`.toLowerCase().includes(q))
@@ -141,17 +135,17 @@
 	};
 
 	const getItems = async () => {
-		const [promptRes, skillRes, terminalItems] = await Promise.all([
+		const [promptRes, skillRes, machineItems] = await Promise.all([
 			getPrompts(localStorage.token).catch(() => null),
 			getSkillItems(localStorage.token, query).catch(() => null),
-			getTerminalItems(query)
+			getMachineItems(query)
 		]);
 
 		if (promptRes) {
 			prompts = promptRes;
 		}
 
-		skills = [...(skillRes?.items ?? []), ...terminalItems];
+		skills = [...(skillRes?.items ?? []), ...machineItems];
 	};
 
 	export const selectUp = () => {

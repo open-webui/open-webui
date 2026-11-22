@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import type { TerminalTarget } from '$lib/apis/machines';
-	import { openTerminalSocket } from '$lib/apis/machines/socket';
+	import type { MachineTarget } from '$lib/apis/machines';
+	import { openMachineSocket } from '$lib/apis/machines/socket';
 	import Icon from '../FileNav/Icon.svelte';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let fullscreenEnabled: boolean;
 	const mime = 'audio/webm; codecs="opus"';
@@ -83,7 +83,7 @@
 						buffer = source.addSourceBuffer(mime);
 						buffer.onupdateend = append;
 						buffer.onerror = failed;
-						socket = openTerminalSocket(target, '/desktop/audio');
+						socket = openMachineSocket(target, '/desktop/audio');
 						socket.onmessage = (event) => {
 							if (!(event.data instanceof ArrayBuffer) || !event.data.byteLength) return failed();
 							queuedBytes += event.data.byteLength;

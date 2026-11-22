@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getCwd, setCwd, type TerminalTarget } from '$lib/apis/machines';
+	import { getCwd, setCwd, type MachineTarget } from '$lib/apis/machines';
 	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/machines/recentFolders';
 	import { selectedFolder, showFileNav } from '$lib/stores';
-	import type { TerminalContext } from '$lib/types';
+	import type { MachineContext } from '$lib/types';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -18,12 +18,13 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FileNav from '../FileNav.svelte';
+	import { machineIdOf } from '$lib/utils/machines';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 	export let chatId: string | null = null;
 	export let userId: string;
-	export let terminalContext: TerminalContext | null = null;
+	export let machineContext: MachineContext | null = null;
 	export let disabled = false;
 	export let inMenu = false;
 	export let tab = '';
@@ -47,7 +48,7 @@
 	const folderName = (path: string) => path.replace(/\/+$/, '').split('/').pop() || '/';
 	const normalize = (path: string) => path.replace(/\/+$/, '') || '/';
 
-	$: if (terminalContext?.terminalId === target.selector) cwd = terminalContext.currentDirectory;
+	$: if (machineContext?.machineId === target.selector) cwd = machineContext.currentDirectory;
 	$: directory = cwd;
 	$: options = [...new Set([directory, ...recent].filter(Boolean).map(normalize))].filter((path) =>
 		path.toLowerCase().includes(search.trim().toLowerCase())
@@ -77,17 +78,16 @@
 	}
 
 	onMount(() => {
-		if (!chatId && terminalContext?.terminalId !== target.selector) {
-			terminalContext = {
-				terminalId: target.selector,
+		if (!chatId && machineContext?.machineId !== target.selector) {
+			machineContext = {
+				machineId: target.selector,
 				currentDirectory:
-					$selectedFolder?.data?.terminal_id === target.selector
+					machineIdOf($selectedFolder?.data) === target.selector
 						? ($selectedFolder.data.working_directory ?? '')
 						: ''
 			};
 		}
-		const selectedContext =
-			terminalContext?.terminalId === target.selector ? terminalContext : null;
+		const selectedContext = machineContext?.machineId === target.selector ? machineContext : null;
 		if (selectedContext) cwd = selectedContext.currentDirectory;
 		initialization = getCwd(target).then((result) => {
 			if (disposed) return;
@@ -102,7 +102,7 @@
 	async function selectDirectory(path: string) {
 		if (disabled || saving) return;
 		saving = true;
-		// A draft has no terminal session yet; submission applies this choice after creating the chat.
+		// A draft has no machine session yet; submission applies this choice after creating the chat.
 		const result = chatId ? await setCwd(target, path) : { cwd: path || home };
 		if (disposed) return;
 		if (!result?.cwd) {
@@ -110,9 +110,9 @@
 			toast.error($i18n.t('Failed to load folder'));
 			return;
 		}
-		// An empty path resets the terminal to its default directory.
+		// An empty path resets the machine to its default directory.
 		cwd = path ? result.cwd : '';
-		terminalContext = { terminalId: target.selector, currentDirectory: cwd };
+		machineContext = { machineId: target.selector, currentDirectory: cwd };
 		try {
 			await onSelect(cwd);
 		} catch (error) {
@@ -220,7 +220,7 @@
 								on:click|stopPropagation={() => {
 									closeMenu();
 									showFileNav.set({
-										terminalId: target.selector,
+										machineId: target.selector,
 										directory: path,
 										chatId
 									});
@@ -342,7 +342,7 @@
 			</div>
 			<div class="h-[60dvh] min-h-0" aria-busy={saving}>
 				<FileNav
-					terminalId={target.selector}
+					machineId={target.selector}
 					{chatId}
 					initialDirectory={directory || null}
 					manageFileRequests={false}

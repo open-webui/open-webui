@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
-	import { getTerminalFeatures, type TerminalTarget } from '$lib/apis/machines';
-	import { watchTerminalFiles } from '$lib/apis/machines/events';
+	import { getMachineFeatures, type MachineTarget } from '$lib/apis/machines';
+	import { watchMachineFiles } from '$lib/apis/machines/events';
 	import {
 		gitRequest,
 		gitAction,
@@ -24,7 +24,7 @@
 	import GitIssues from './GitIssues.svelte';
 	import { relativeTime } from './gitPanel';
 
-	export let target: TerminalTarget | null = null;
+	export let target: MachineTarget | null = null;
 	export let directory = '.';
 	export let chatId: string | null = null;
 	export let active = false;
@@ -283,7 +283,7 @@
 			resetSelection();
 		}
 		if (enabled && target) {
-			const features = await getTerminalFeatures(target);
+			const features = await getMachineFeatures(target);
 			if (version !== configuration || !mounted) return;
 			gitEnabled = features.git === true;
 			if (!gitEnabled) {
@@ -293,7 +293,7 @@
 			void refresh();
 			if (features.events !== true) return;
 			const current = generation;
-			stopWatching = watchTerminalFiles(
+			stopWatching = watchMachineFiles(
 				target,
 				directory,
 				async () => {

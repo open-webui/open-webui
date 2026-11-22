@@ -4,43 +4,43 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import ModelSettingsLabel from './ModelSettingsLabel.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/machines';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 
 	const i18n = getContext<any>('i18n');
 
-	export let terminalId: string = '';
+	export let machineId: string = '';
 	export let label = '';
 	export let description = '';
 	export let onChange: () => void = () => {};
 
-	let terminals: TerminalServer[] = [];
+	let machineList: MachineServer[] = [];
 	let show = false;
 	let valueElement: HTMLElement | null = null;
 
 	onMount(async () => {
-		terminals = await getTerminalServers(localStorage.token);
+		machineList = await getMachines(localStorage.token);
 	});
 
 	$: items = [
 		{ value: '', label: $i18n.t('None') },
-		...(terminalId && !terminals.some((terminal) => terminal.id === terminalId)
-			? [{ value: terminalId, label: $i18n.t('Unavailable') }]
+		...(machineId && !machineList.some((machine) => machine.id === machineId)
+			? [{ value: machineId, label: $i18n.t('Unavailable') }]
 			: []),
-		...terminals.map((terminal) => ({
-			value: terminal.id,
-			label: terminal.name || terminal.id
+		...machineList.map((machine) => ({
+			value: machine.id,
+			label: machine.name || machine.id
 		}))
 	];
-	$: selectedLabel = items.find((item) => item.value === terminalId)?.label ?? $i18n.t('None');
+	$: selectedLabel = items.find((item) => item.value === machineId)?.label ?? $i18n.t('None');
 
 	const select = (value: string) => {
-		terminalId = value;
+		machineId = value;
 		show = false;
 		onChange();
 	};
 </script>
 
-{#if terminals.length > 0 || terminalId}
+{#if machineList.length > 0 || machineId}
 	<Dropdown anchorElement={valueElement} bind:show>
 		<button
 			type="button"
@@ -68,11 +68,11 @@
 					<button
 						type="button"
 						class="flex min-h-7 w-full items-center justify-between gap-2 rounded-xl px-2 py-1 text-left text-xs hover:bg-base-50 dark:hover:bg-base-800"
-						aria-pressed={item.value === terminalId}
+						aria-pressed={item.value === machineId}
 						on:click={() => select(item.value)}
 					>
 						<span class="min-w-0 flex-1 truncate">{item.label}</span>
-						{#if item.value === terminalId}<Check
+						{#if item.value === machineId}<Check
 								className="size-3.5 shrink-0 text-base-500 dark:text-base-400"
 							/>{/if}
 					</button>

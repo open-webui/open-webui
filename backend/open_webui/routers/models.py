@@ -878,7 +878,7 @@ async def _verify_version_dependencies(request, form, user, db):
     from open_webui.models.knowledge import Knowledges
     from open_webui.models.notes import Notes
     from open_webui.models.skills import Skills
-    from open_webui.routers.machines import list_terminal_servers
+    from open_webui.routers.machines import list_machines
     from open_webui.routers.tools import get_tools
 
     async def require_resource(resource_type, resource_id, resource):
@@ -917,8 +917,8 @@ async def _verify_version_dependencies(request, form, user, db):
             function = await Functions.get_function_by_id(function_id, db=db)
             if not function or not function.is_active:
                 raise HTTPException(400, f'A referenced function is unavailable: {function_id}')
-    terminal_id = getattr(form.meta, 'terminalId', None)
-    if terminal_id and terminal_id not in {t['id'] for t in await list_terminal_servers(request, user=user)}:
+    machine_id = getattr(form.meta, 'machineId', None) or getattr(form.meta, 'terminalId', None)
+    if machine_id and machine_id not in {t['id'] for t in await list_machines(request, user=user)}:
         raise HTTPException(400, 'The referenced machine is missing or inaccessible.')
 
 

@@ -27,6 +27,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import automation_machine_of, machine_id_of
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.internal.db import get_async_db
@@ -50,7 +51,7 @@ from open_webui.utils.recurrence import (
 from open_webui.utils.prompt_variables import fill_variables
 from open_webui.utils.task import prompt_template
 from open_webui.utils.agents.discovery import get_models as get_agent_models
-from open_webui.utils.machines import initialize_terminal_directory, resolve_terminal_connection
+from open_webui.utils.machines import initialize_machine_directory, resolve_machine_connection
 from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
@@ -183,7 +184,7 @@ async def _resolve_model_defaults(app, model_id: str) -> dict:
     defaults = {
         'tool_ids': list(meta.get('toolIds') or []),
         'filter_ids': list(meta.get('defaultFilterIds') or []),
-        'terminal_id': meta.get('terminalId'),
+        'machine_id': machine_id_of(meta, 'machineId'),
     }
     defaults = {key: value for key, value in defaults.items() if value}
     default_feature_ids = meta.get('defaultFeatureIds', [])
@@ -212,33 +213,33 @@ async def _resolve_model_defaults(app, model_id: str) -> dict:
     return defaults
 
 
-async def validate_automation_terminal(request, user, data: dict, automation_id: str | None = None):
-    terminal = data.get('terminal') or {}
+async def validate_automation_machine(request, user, data: dict, automation_id: str | None = None):
+    machine = automation_machine_of(data)
     model_id = data['model_id']
     is_agent = model_id.startswith('agent:')
-    if not terminal.get('server_id'):
+    if not machine.get('server_id'):
         if is_agent:
             raise HTTPException(400, 'Select a machine for the agent.')
         return
-    if terminal['server_id'].startswith('template:'):
+    if machine['server_id'].startswith('template:'):
         from open_webui.utils.machines import template_connection, require_model_access
 
-        _, template = await template_connection(user, terminal['server_id'])
+        _, template = await template_connection(user, machine['server_id'])
         scope = (template.get('data') or {}).get('scope')
         if (data.get('target') or {}).get('type') == 'channel' and (is_agent or scope == 'chat'):
             raise HTTPException(400, 'This machine requires a chat destination.')
         if scope == 'model':
-            await require_model_access(user, model_id, terminal['server_id'], request)
+            await require_model_access(user, model_id, machine['server_id'], request)
         return
-    metadata = {'terminal_id': terminal['server_id'], 'model_id': model_id}
+    metadata = {'machine_id': machine['server_id'], 'model_id': model_id}
     if automation_id:
         metadata['automation_id'] = automation_id
-    if not await resolve_terminal_connection(request, user, metadata):
+    if not await resolve_machine_connection(request, user, metadata):
         raise HTTPException(400, 'The configured machine is unavailable for this automation.')
     if is_agent:
         if (data.get('target') or {}).get('type') == 'channel':
             raise HTTPException(400, 'Agent automations require a chat destination.')
-        available = await get_agent_models(request, user, metadata, cwd=terminal.get('cwd'))
+        available = await get_agent_models(request, user, metadata, cwd=machine.get('cwd'))
         if not any(model['id'] == model_id for model in available):
             raise HTTPException(400, 'Agent model is unavailable on the configured machine.')
 
@@ -344,15 +345,15 @@ async def _execute_channel_automation(
         'automation_id': automation.id,
         'background_tasks': {},
     }
-    terminal = automation.data.get('terminal') or {}
-    if terminal.get('server_id'):
-        form_data['terminal_id'] = terminal['server_id']
-        await initialize_terminal_directory(
+    machine = automation_machine_of(automation.data)
+    if machine.get('server_id'):
+        form_data['machine_id'] = machine['server_id']
+        await initialize_machine_directory(
             request,
             user,
             {'chat_id': form_data['chat_id'], 'automation_id': automation.id, 'model_id': model_id},
-            terminal['server_id'],
-            terminal.get('cwd'),
+            machine['server_id'],
+            machine.get('cwd'),
         )
     await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
@@ -440,7 +441,7 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
             await get_all_models(_build_request(app, token=token), user=user)
 
         request = _build_request(app, token=token)
-        await validate_automation_terminal(request, user, automation.data, automation.id)
+        await validate_automation_machine(request, user, automation.data, automation.id)
 
         target = automation.data.get('target') or {}
         if target.get('type') == 'channel':
@@ -532,15 +533,15 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)
-        terminal = automation.data.get('terminal') or {}
-        if terminal.get('server_id'):
-            form_data['terminal_id'] = terminal['server_id']
-            await initialize_terminal_directory(
+        machine = automation_machine_of(automation.data)
+        if machine.get('server_id'):
+            form_data['machine_id'] = machine['server_id']
+            await initialize_machine_directory(
                 request,
                 user,
                 {'chat_id': chat.id, 'automation_id': automation.id, 'model_id': model_id},
-                terminal['server_id'],
-                terminal.get('cwd'),
+                machine['server_id'],
+                machine.get('cwd'),
             )
         await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 

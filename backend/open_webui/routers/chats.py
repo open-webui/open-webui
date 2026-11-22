@@ -7,6 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import normalize_machine_id
 from open_webui.config import (
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     CONTEXT_COMPACTION_TOKEN_THRESHOLD,
@@ -1508,13 +1509,14 @@ async def update_chat_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
+    normalize_machine_id(form_data.chat)
     chat = await Chats.get_chat_by_id(id, db=db)
     if chat and chat.user_id != user.id:
         if form_data.variables is not None or form_data.folder_id is not None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
         if not (
             bool(form_data.chat)
-            and set(form_data.chat) <= {'models', 'terminal_id', 'working_directory'}
+            and set(form_data.chat) <= {'models', 'machine_id', 'working_directory'}
             and await Chats.has_chat_access(id, user, db=db, permission='write', chat=chat)
         ):
             folder = (

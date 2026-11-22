@@ -15,8 +15,8 @@ export enum TTS_RESPONSE_SPLIT {
 	NONE = 'none'
 }
 
-export type TerminalContext = {
-	terminalId: string | null;
+export type MachineContext = {
+	machineId: string | null;
 	currentDirectory: string;
 	file?: import('$lib/apis/machines').FilesystemFile | null;
 };
@@ -37,8 +37,8 @@ export type ChatContext = {
 	temporary: typeof import('$lib/stores').temporaryChat;
 	audioQueue: typeof import('$lib/stores').audioQueue;
 	submitPrompt?: (prompt: string) => void;
-	/** The folder the chat's file panel shows on a terminal, if it shows one there. */
-	getCurrentDirectory?: (terminalId: string | null) => string | undefined;
+	/** The folder the chat's file panel shows on a machine, if it shows one there. */
+	getCurrentDirectory?: (machineId: string | null) => string | undefined;
 };
 
 export type WorkspaceContext = {

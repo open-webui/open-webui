@@ -13,7 +13,7 @@
 	import { getFolders } from '$lib/apis/folders';
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
-	import { getTerminalServers } from '$lib/apis/machines';
+	import { getMachines } from '$lib/apis/machines';
 	import { getUserSettings } from '$lib/apis/users';
 	import { setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
@@ -35,8 +35,8 @@
 		showSettings,
 		showChangelog,
 		temporaryChat,
-		terminalServers,
-		selectedTerminalId,
+		machines,
+		selectedMachineId,
 		showSearch,
 		showSidebar,
 		showTabs,
@@ -98,19 +98,19 @@
 		models.set(await getModels(localStorage.token));
 	};
 
-	const refreshTerminalServers = async () => {
+	const refreshMachines = async () => {
 		if (!$config?.features?.enable_tool_servers) {
-			terminalServers.set([]);
+			machines.set([]);
 			return;
 		}
 		const userId = $user?.id;
 		if (!userId || !localStorage.token) return;
-		const systemTerminals = await getTerminalServers(localStorage.token);
+		const systemMachines = await getMachines(localStorage.token);
 		if ($user?.id !== userId || !$config?.features?.enable_tool_servers) return;
-		terminalServers.set(
-			systemTerminals.map((terminal) => ({
-				...terminal,
-				url: `${WEBUI_API_BASE_URL}/machines/${terminal.id}`,
+		machines.set(
+			systemMachines.map((machine) => ({
+				...machine,
+				url: `${WEBUI_API_BASE_URL}/machines/${machine.id}`,
 				key: localStorage.token
 			}))
 		);
@@ -142,7 +142,7 @@
 				getBackendConfig().then((value) => config.set(value)),
 				setModels(),
 				setTools(),
-				refreshTerminalServers(),
+				refreshMachines(),
 				getSkills(localStorage.token).then((value) => skills.set(value)),
 				getFolders(localStorage.token)
 					.catch(() => [])
@@ -159,9 +159,7 @@
 	onMount(() => {
 		const socketInstance = $socket;
 		const changed = () => {
-			void refreshTerminalServers().catch((error) =>
-				console.error('Unable to refresh terminals', error)
-			);
+			void refreshMachines().catch((error) => console.error('Unable to refresh terminals', error));
 		};
 		const eventHandler = (event: { data?: { type?: string } }) => {
 			if (event?.data?.type === 'machines:changed') {
@@ -267,13 +265,16 @@
 			return;
 		}
 
-		await refreshTerminalServers().catch((e) => {
-			console.error('Failed to load terminals:', e);
+		await refreshMachines().catch((e) => {
+			console.error('Failed to load machines:', e);
 		});
-		selectedTerminalId.set(
+		// selectedTerminalId is the former key.
+		const storedMachineId = localStorage.selectedMachineId ?? localStorage.selectedTerminalId;
+		delete localStorage.selectedTerminalId;
+		selectedMachineId.set(
 			$config?.features?.enable_tool_servers &&
-				$terminalServers?.some((terminal) => terminal.id === localStorage.selectedTerminalId)
-				? localStorage.selectedTerminalId
+				$machines?.some((machine) => machine.id === storedMachineId)
+				? storedMachineId
 				: null
 		);
 
@@ -412,13 +413,13 @@
 			localStorage.showTabs = value ? 'true' : 'false';
 		});
 
-		// Persist selectedTerminalId across page loads
-		selectedTerminalId.subscribe((value) => {
+		// Persist selectedMachineId across page loads
+		selectedMachineId.subscribe((value) => {
 			if (!$config?.features?.enable_tool_servers) return;
 			if (value === null) {
-				delete localStorage.selectedTerminalId;
+				delete localStorage.selectedMachineId;
 			} else {
-				localStorage.selectedTerminalId = value;
+				localStorage.selectedMachineId = value;
 			}
 		});
 
@@ -429,11 +430,11 @@
 
 	$: if (
 		loaded &&
-		$selectedTerminalId &&
-		$terminalServers !== null &&
-		!$terminalServers.some((terminal) => terminal.id === $selectedTerminalId)
+		$selectedMachineId &&
+		$machines !== null &&
+		!$machines.some((machine) => machine.id === $selectedMachineId)
 	) {
-		selectedTerminalId.set(null);
+		selectedMachineId.set(null);
 	}
 
 	// `$page.url` must be referenced here: `$:` only tracks variables used in

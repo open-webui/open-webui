@@ -109,7 +109,7 @@ class InterfaceSettings(BaseModel):
     iframeSandboxAllowSameOrigin: bool | None = None
     iframeSandboxAllowForms: bool | None = None
     iframeSandboxAllowDownloads: bool | None = None
-    terminalPreviewAllowSameOrigin: bool | None = None
+    machinePreviewAllowSameOrigin: bool | None = None
     stylizedPdfExport: bool | None = None
     hapticFeedback: bool | None = None
     ctrlEnterToSend: bool | None = None
@@ -119,7 +119,7 @@ class InterfaceSettings(BaseModel):
 
     landingPageMode: Literal['', 'chat'] | None = None
     chatDirection: Literal['LTR', 'RTL', 'auto'] | None = None
-    terminalFileDisplay: Literal['sidebar', 'inline'] | None = None
+    machineFileDisplay: Literal['sidebar', 'inline'] | None = None
     defaultUploadContext: Literal['full', 'focused'] | None = None
     webSearch: Literal['always'] | None = None
     models: list[str] | None = None
@@ -129,6 +129,20 @@ class InterfaceSettings(BaseModel):
     title: InterfaceTitleSettings | None = None
     imageCompressionSize: InterfaceImageCompressionSize | None = None
     floatingActionButtons: list[InterfaceFloatingActionButton] | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _former_machine_keys(cls, data):
+        # Settings named before Terminals became Machines.
+        if isinstance(data, dict) and ('terminalFileDisplay' in data or 'terminalPreviewAllowSameOrigin' in data):
+            data = {**data}
+            for old, new in (
+                ('terminalFileDisplay', 'machineFileDisplay'),
+                ('terminalPreviewAllowSameOrigin', 'machinePreviewAllowSameOrigin'),
+            ):
+                if old in data:
+                    data.setdefault(new, data.pop(old))
+        return data
 
 
 class UserSettings(BaseModel):

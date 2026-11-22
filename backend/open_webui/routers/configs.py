@@ -33,10 +33,10 @@ from open_webui.utils.tool_search import ToolSearchError, validate_decisions_con
 from open_webui.utils.tools import (
     get_tool_server_data,
     get_tool_server_url,
-    set_terminal_servers,
+    set_machines,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 router = APIRouter()
 
@@ -317,7 +317,7 @@ async def set_tool_servers_config(
     return {'TOOL_SERVER_CONNECTIONS': connections}
 
 
-class TerminalServerConnection(BaseModel):
+class MachineConnection(BaseModel):
     id: str | None = ''
     name: str | None = ''
 
@@ -336,25 +336,26 @@ class TerminalServerConnection(BaseModel):
     model_config = ConfigDict(extra='allow')
 
 
-class TerminalServersConfigForm(BaseModel):
-    TERMINAL_SERVER_CONNECTIONS: list[TerminalServerConnection]
+class MachinesConfigForm(BaseModel):
+    # TERMINAL_SERVER_CONNECTIONS is the former name, still accepted.
+    MACHINE_CONNECTIONS: list[MachineConnection] = Field(
+        validation_alias=AliasChoices('MACHINE_CONNECTIONS', 'TERMINAL_SERVER_CONNECTIONS')
+    )
 
 
 @router.get('/machines')
-@router.get('/terminal_servers', deprecated=True, include_in_schema=False)
-async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
-    return {'TERMINAL_SERVER_CONNECTIONS': await Config.get('machines.connections')}
+async def get_machines_config(request: Request, user=Depends(get_admin_user)):
+    return {'MACHINE_CONNECTIONS': await Config.get('machines.connections')}
 
 
 @router.post('/machines')
-@router.post('/terminal_servers', deprecated=True, include_in_schema=False)
-async def set_terminal_servers_config(
+async def set_machines_config(
     request: Request,
-    form_data: TerminalServersConfigForm,
+    form_data: MachinesConfigForm,
     user=Depends(get_admin_user),
 ):
     connections = [
-        connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.TERMINAL_SERVER_CONNECTIONS
+        connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.MACHINE_CONNECTIONS
     ]
 
     # Managed machines (SSH, this computer) are run by /api/v1/machines: the browser can rename
@@ -378,24 +379,21 @@ async def set_terminal_servers_config(
 
     await Config.upsert({'machines.connections': connections})
 
-    await set_terminal_servers(request)
+    await set_machines(request)
 
     await publish_event(
         request,
-        EVENTS.CONFIG_TERMINAL_SERVERS_UPDATED,
+        EVENTS.CONFIG_MACHINES_UPDATED,
         actor=user,
         subject_id='machines.connections',
         subject_type='config',
         data={'count': len(connections)},
     )
-    return {'TERMINAL_SERVER_CONNECTIONS': connections}
+    return {'MACHINE_CONNECTIONS': connections}
 
 
 @router.post('/machines/verify')
-@router.post('/terminal_servers/verify', deprecated=True, include_in_schema=False)
-async def verify_terminal_server_connection(
-    request: Request, form_data: TerminalServerConnection, user=Depends(get_admin_user)
-):
+async def verify_machine_connection(request: Request, form_data: MachineConnection, user=Depends(get_admin_user)):
     """
     Verify the connection to a terminal server by detecting its type.
 
@@ -423,7 +421,7 @@ async def verify_terminal_server_connection(
 
     try:
         async with client as session:
-            # Orchestrators expose a templates API; plain terminals don't.
+            # Orchestrators expose a templates API; plain machines don't.
             try:
                 async with session.get(
                     f'{base_url}/api/v1/terminals/templates', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL

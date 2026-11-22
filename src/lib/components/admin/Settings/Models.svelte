@@ -71,6 +71,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import AdminViewSelector from './Models/AdminViewSelector.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
+	import { isMachine } from '$lib/utils/machines';
 
 	type ModelListItem = { id: string; name?: string; owned_by?: string };
 
@@ -295,7 +296,7 @@
 		}
 
 		allModels = (await getModels(localStorage.token)).filter(
-			(model: ModelListItem) => model.owned_by !== 'terminal'
+			(model: ModelListItem) => !isMachine(model.owned_by)
 		);
 
 		const providerModels = await getModels(localStorage.token, true);

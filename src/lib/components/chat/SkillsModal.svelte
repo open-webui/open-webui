@@ -7,15 +7,16 @@
 	import Modal from '../common/Modal.svelte';
 	import Collapsible from '../common/Collapsible.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import { isMachine } from '$lib/utils/machines';
 
-	export let terminalSkills: Writable<any[]>;
+	export let machineSkills: Writable<any[]>;
 
 	export let show = false;
 	export let selectedSkillIds = [];
 
 	let selectedSkills = [];
 
-	$: selectedSkills = [...($skills ?? []), ...($terminalSkills ?? [])].filter((skill) =>
+	$: selectedSkills = [...($skills ?? []), ...($machineSkills ?? [])].filter((skill) =>
 		selectedSkillIds.includes(skill.id)
 	);
 
@@ -56,7 +57,7 @@
 										{resolveLocalizedResource(skill, $i18n.language, 'description')}
 									</div>
 								{/if}
-								{#if skill.source === 'terminal'}
+								{#if isMachine(skill.source)}
 									<div class="text-xs text-base-500">{$i18n.t('Machine')}</div>
 								{/if}
 							</div>

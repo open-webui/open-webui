@@ -415,7 +415,7 @@ async def provision(
     """
     from open_webui.socket.main import emit_to_users
     from open_webui.utils.machines import notify_machines_changed
-    from open_webui.utils.tools import set_terminal_servers
+    from open_webui.utils.tools import set_machines
 
     async def step(value: str, **extra):
         await emit_to_users(
@@ -475,7 +475,7 @@ async def provision(
 
         await step('health')
         await tunnels.socket_for(machine_id)
-        await set_terminal_servers(request)  # load its OpenAPI spec like any other terminal
+        await set_machines(request)  # load its OpenAPI spec like any other machine
         await notify_machines_changed([admin_id])
         await step('ready')
     except Exception as error:

@@ -15,6 +15,7 @@ import type { AudioQueue, NotificationSoundStyle } from '$lib/utils/audio';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
+import { isMachine } from '$lib/utils/machines';
 
 // Backend identity and session state
 export const WEBUI_NAME = writable(APP_NAME);
@@ -83,13 +84,13 @@ export const selectedFolder = writable<FolderDetails | null>(null);
 export const models: Writable<Model[]> = writable([]);
 
 export const baseModels = derived(models, ($models) =>
-	$models.filter((model) => model.owned_by !== 'terminal')
+	$models.filter((model) => !isMachine(model.owned_by))
 );
 
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const skills: Writable<null | any[]> = writable(null);
-export const terminalSkills: Writable<any[]> = writable([]);
+export const machineSkills: Writable<any[]> = writable([]);
 export const functions = writable(null);
 
 export type ImageModel = {
@@ -126,7 +127,7 @@ export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
-export const terminalServers: Writable<any[] | null> = writable(null);
+export const machines: Writable<any[] | null> = writable(null);
 
 // Persistent Pyodide worker for code interpreter FS
 export const pyodideWorker: Writable<Worker | null> = writable(null);
@@ -201,14 +202,14 @@ export const showEmbeds = writable(false);
 /** A voice call is open in the main chat's voice tab. */
 export const voiceCall = writable(false);
 export const showFileNav = writable<{
-	terminalId: string;
+	machineId: string;
 	directory: string;
 	chatId: string | null;
 } | null>(null);
 export type FileNavOpenRequest = string | { path: string; page?: number | null };
 export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
-export const selectedTerminalId: Writable<string | null> = writable(null);
+export const selectedMachineId: Writable<string | null> = writable(null);
 
 export const embed = writable(null);
 
@@ -237,9 +238,9 @@ export const isLastActiveTab = writable(true);
 export type Model = OpenAIModel | OllamaModel | AgentModel | RouterModel;
 
 export interface AgentModel extends BaseModel {
-	owned_by: 'terminal';
+	owned_by: 'machine' | 'terminal'; // 'terminal' from older servers
 	agent: {
-		terminal_id: string;
+		machine_id: string;
 		// Built-in ids such as 'codex' or 'claude-code', or 'acp-<id>' for agents configured in Open Terminal.
 		provider: string;
 		model: string;
@@ -250,7 +251,7 @@ type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'router' | 'terminal';
+	owned_by: 'ollama' | 'openai' | 'router' | 'machine' | 'terminal';
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -342,10 +343,12 @@ type Settings = {
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	iframeSandboxAllowDownloads?: boolean;
-	terminalPreviewAllowSameOrigin?: boolean;
+	machinePreviewAllowSameOrigin?: boolean;
+	terminalPreviewAllowSameOrigin?: boolean; // former name
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
-	terminalFileDisplay?: 'sidebar' | 'inline';
+	machineFileDisplay?: 'sidebar' | 'inline';
+	terminalFileDisplay?: 'sidebar' | 'inline'; // former name
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -476,8 +479,8 @@ type Config = {
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
-		enable_terminal_servers?: boolean;
-		// The user's own terminals, models and tool servers come from their Tether.
+		enable_machines?: boolean;
+		// The user's own machines, models and tool servers come from their Tether.
 		tether?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;

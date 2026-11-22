@@ -9,6 +9,7 @@ import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
 import { getChatListByFolderId } from '$lib/apis/chats';
 import { getModels } from '$lib/apis';
 import type { Model } from '$lib/stores';
+import { isMachine, machineIdOf } from '$lib/utils/machines';
 
 export type FolderDetails = {
 	id: string;
@@ -16,7 +17,7 @@ export type FolderDetails = {
 	parent_id?: string | null;
 	user_id?: string;
 	data?: {
-		terminal_id?: string;
+		machine_id?: string;
 		working_directory?: string;
 		model_ids?: string[];
 		[key: string]: any;
@@ -52,7 +53,7 @@ export type FolderState = {
 	chatPages: Record<string, FolderChatPage>;
 	sidebarPage: number;
 	agentModels: {
-		terminalId: string;
+		machineId: string;
 		directory: string;
 		connectionRevision: number;
 		models: Model[];
@@ -332,7 +333,7 @@ export function setFolderModelConnections(configuration: unknown) {
 export function getFolderAgentModels(folder: FolderDetails): Model[] | null {
 	const loaded = entries[folder.id]?.agentModels;
 	return loaded &&
-		loaded.terminalId === folder.data?.terminal_id &&
+		loaded.machineId === machineIdOf(folder.data) &&
 		loaded.directory === (folder.data?.working_directory ?? '') &&
 		loaded.connectionRevision === connectionRevision
 		? loaded.models
@@ -346,11 +347,11 @@ export async function loadFolderAgentModels(
 ): Promise<Model[]> {
 	const loaded = getFolderAgentModels(folder);
 	if (loaded && !refresh) return loaded;
-	const terminalId = folder.data?.terminal_id;
-	if (!terminalId) return [];
+	const machineId = machineIdOf(folder.data);
+	if (!machineId) return [];
 	const directory = folder.data?.working_directory ?? '';
 	const version = connectionRevision;
-	const resource = `models:${JSON.stringify([terminalId, directory, version])}`;
+	const resource = `models:${JSON.stringify([machineId, directory, version])}`;
 	return request(
 		folder.id,
 		resource,
@@ -358,10 +359,10 @@ export async function loadFolderAgentModels(
 			let discovery = agentRequests.get(resource);
 			if (!discovery) {
 				discovery = getModels(token, false, false, {
-					terminalId,
+					machineId,
 					chatId: null,
 					cwd: directory || null
-				}).then((models) => models.filter((model: Model) => model.owned_by === 'terminal'));
+				}).then((models) => models.filter((model: Model) => isMachine(model.owned_by)));
 				agentRequests.set(resource, discovery);
 			}
 			try {
@@ -375,13 +376,13 @@ export async function loadFolderAgentModels(
 			const details = current.details;
 			if (
 				details &&
-				(details.data?.terminal_id !== terminalId ||
+				(machineIdOf(details.data) !== machineId ||
 					(details.data?.working_directory ?? '') !== directory)
 			)
 				return;
 			if (version === connectionRevision)
 				current.agentModels = {
-					terminalId,
+					machineId,
 					directory,
 					connectionRevision: version,
 					models

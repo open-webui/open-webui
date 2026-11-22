@@ -1,32 +1,32 @@
 import {
-	joinTerminalPath,
-	terminalRequest,
-	TerminalRequestError,
-	type TerminalTarget,
-	type TerminalFileList
+	joinMachinePath,
+	machineRequest,
+	MachineRequestError,
+	type MachineTarget,
+	type MachineFileList
 } from './index';
 import { computeFileHash } from '$lib/utils/hash';
 
 const historyDirectory = (home: string, userId: string) => {
 	if (!home || !userId || userId === '.' || userId === '..')
 		throw new Error('Machine home and a valid user are required');
-	return joinTerminalPath(home, `.open-webui/users/${encodeURIComponent(userId)}/folders`);
+	return joinMachinePath(home, `.open-webui/users/${encodeURIComponent(userId)}/folders`);
 };
 
 export async function loadRecentFolders(
-	target: TerminalTarget,
+	target: MachineTarget,
 	home: string,
 	userId: string
 ): Promise<string[]> {
 	const directory = historyDirectory(home, userId);
-	let listing: TerminalFileList;
+	let listing: MachineFileList;
 	try {
-		listing = await terminalRequest(
+		listing = await machineRequest(
 			target,
 			`/files/list?directory=${encodeURIComponent(directory)}`
 		);
 	} catch (error) {
-		if (error instanceof TerminalRequestError && error.status === 404) return [];
+		if (error instanceof MachineRequestError && error.status === 404) return [];
 		throw error;
 	}
 	const entries = listing.entries
@@ -36,9 +36,9 @@ export async function loadRecentFolders(
 	const paths = await Promise.all(
 		entries.map(async (entry) => {
 			try {
-				const result = await terminalRequest<{ content: string }>(
+				const result = await machineRequest<{ content: string }>(
 					target,
-					`/files/read?path=${encodeURIComponent(joinTerminalPath(directory, entry.name))}`
+					`/files/read?path=${encodeURIComponent(joinMachinePath(directory, entry.name))}`
 				);
 				const record = JSON.parse(result.content);
 				return typeof record?.path === 'string' && record.path ? record.path : null;
@@ -46,7 +46,7 @@ export async function loadRecentFolders(
 				// A missing or partially written record must not hide the rest of the history.
 				if (
 					error instanceof SyntaxError ||
-					(error instanceof TerminalRequestError && error.status === 404)
+					(error instanceof MachineRequestError && error.status === 404)
 				)
 					return null;
 				throw error;
@@ -57,7 +57,7 @@ export async function loadRecentFolders(
 }
 
 export async function rememberRecentFolder(
-	target: TerminalTarget,
+	target: MachineTarget,
 	home: string,
 	userId: string,
 	path: string
@@ -66,11 +66,11 @@ export async function rememberRecentFolder(
 	const normalized = path.replace(/\/+$/, '') || '/';
 	const hash = await computeFileHash(new File([normalized], 'folder'));
 	// Separate records preserve simultaneous selections in different browsers.
-	await terminalRequest(target, '/files/write', {
+	await machineRequest(target, '/files/write', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
-			path: joinTerminalPath(historyDirectory(home, userId), `${hash}.json`),
+			path: joinMachinePath(historyDirectory(home, userId), `${hash}.json`),
 			content: JSON.stringify({ path: normalized })
 		})
 	});

@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 MAX_STRING_LENGTH = 1000
 EVENT_WEBHOOKS_CONFIG_KEY = 'events.webhooks'
+# Renamed events, so saved webhook filters that name the old event keep working (and are not skipped as invalid).
+LEGACY_EVENT_NAMES = {'config.terminal_servers.updated': 'config.machines.updated'}
 LEGACY_WEBHOOK_CONFIG_KEY = 'webhook_url'
 DEFAULT_WEBHOOK_ID = 'default'
 
@@ -83,8 +85,8 @@ class EventDefinitions(BaseModel):
         description='Tool server configuration was updated.',
         message='Config Tool Servers updated',
     )
-    CONFIG_TERMINAL_SERVERS_UPDATED: EventDefinition = EventDefinition(
-        name='config.terminal_servers.updated',
+    CONFIG_MACHINES_UPDATED: EventDefinition = EventDefinition(
+        name='config.machines.updated',
         description='Machine configuration was updated.',
         message='Config Machines updated',
     )
@@ -774,6 +776,7 @@ def normalize_event_webhook(webhook: dict[str, Any], *, create: bool = False) ->
     url = str(webhook.get('url') or '').strip()
 
     events = [str(event).strip() for event in (webhook.get('events') or ['*']) if str(event).strip()]
+    events = [LEGACY_EVENT_NAMES.get(event, event) for event in events]
     events = events or ['*']
     for event_filter in events:
         if event_filter == '*':

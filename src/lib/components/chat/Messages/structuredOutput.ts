@@ -200,7 +200,10 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 	}
 
 	const result = parseJSONStringValue(getToolResultText(resultItem)) as Record<string, unknown>;
-	const isTerminalFile = result?.source === 'open_terminal' && !!result.terminal_selector;
+	if (result && result.machine_selector === undefined && result.terminal_selector !== undefined) {
+		result.machine_selector = result.terminal_selector; // saved before the rename
+	}
+	const isMachineFile = result?.source === 'open_terminal' && !!result.machine_selector;
 	const isOpenWebUIFile = result?.source === 'open_webui';
 	if (
 		!result ||
@@ -208,7 +211,7 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 		result.type !== 'file' ||
 		!result.path ||
 		result.exists === false ||
-		!(isTerminalFile || isOpenWebUIFile)
+		!(isMachineFile || isOpenWebUIFile)
 	) {
 		return null;
 	}

@@ -7,7 +7,7 @@
 		canUseWebSearch,
 		isSettingsAdmin
 	} from '$lib/utils/settings-access';
-	import { config, settings, terminalServers, user, visibleControls } from '$lib/stores';
+	import { config, settings, machines, user, visibleControls } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -30,9 +30,9 @@
 	$: externalSettings = settingsValue !== null;
 	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
 	// Defaults apply to every user, so they follow what the instance offers.
-	$: hasTerminal =
+	$: hasMachine =
 		$config?.features?.enable_tool_servers &&
-		(($terminalServers ?? []).some((server) => server.id) ||
+		(($machines ?? []).some((server) => server.id) ||
 			(externalSettings && $config?.features?.tether));
 
 	let backgroundImageUrl: string | null = null;
@@ -49,7 +49,7 @@
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
 	let scrollOnResponseGeneration = true;
-	let terminalFileDisplay: 'sidebar' | 'inline' = 'sidebar';
+	let machineFileDisplay: 'sidebar' | 'inline' = 'sidebar';
 	let userLocation = false;
 
 	// Interface
@@ -121,7 +121,7 @@
 	let iframeSandboxAllowSameOrigin = false;
 	let iframeSandboxAllowForms = true;
 	let iframeSandboxAllowDownloads = true;
-	let terminalPreviewAllowSameOrigin = false;
+	let machinePreviewAllowSameOrigin = false;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
@@ -375,7 +375,10 @@
 		splitLargeChunks = currentSettings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = currentSettings?.scrollOnBranchChange ?? true;
 		scrollOnResponseGeneration = currentSettings?.scrollOnResponseGeneration ?? true;
-		terminalFileDisplay = currentSettings?.terminalFileDisplay === 'inline' ? 'inline' : 'sidebar';
+		machineFileDisplay =
+			(currentSettings?.machineFileDisplay ?? currentSettings?.terminalFileDisplay) === 'inline'
+				? 'inline'
+				: 'sidebar';
 
 		temporaryChatByDefault = currentSettings?.temporaryChatByDefault ?? false;
 		chatDirection = currentSettings?.chatDirection ?? 'auto';
@@ -386,7 +389,10 @@
 		iframeSandboxAllowSameOrigin = currentSettings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? true;
 		iframeSandboxAllowDownloads = currentSettings?.iframeSandboxAllowDownloads ?? true;
-		terminalPreviewAllowSameOrigin = currentSettings?.terminalPreviewAllowSameOrigin ?? false;
+		machinePreviewAllowSameOrigin =
+			currentSettings?.machinePreviewAllowSameOrigin ??
+			currentSettings?.terminalPreviewAllowSameOrigin ??
+			false;
 
 		stylizedPdfExport = currentSettings?.stylizedPdfExport ?? true;
 
@@ -1510,7 +1516,7 @@
 	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
 	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
 	-->
-	{#if hasTerminal}
+	{#if hasMachine}
 		<div>
 			<div class={settingRowClass}>
 				<label
@@ -1518,7 +1524,7 @@
 					class={settingLabelClass}
 					for="terminal-file-display-label-control"
 				>
-					{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
+					{$i18n.t('settings.personal.interface.machineFileDisplay.label')}
 				</label>
 
 				<button
@@ -1526,18 +1532,18 @@
 					aria-labelledby="terminal-file-display-label terminal-file-display-state"
 					class={actionButtonClass}
 					on:click={() => {
-						terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
-						saveSettings({ terminalFileDisplay });
+						machineFileDisplay = machineFileDisplay === 'inline' ? 'sidebar' : 'inline';
+						saveSettings({ machineFileDisplay });
 					}}
 					type="button"
 				>
 					<span id="terminal-file-display-state">
-						{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
+						{machineFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
 					</span>
 				</button>
 			</div>
 			<p class={settingDescriptionClass}>
-				{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
+				{$i18n.t('settings.personal.interface.machineFileDisplay.description')}
 			</p>
 		</div>
 
@@ -1548,23 +1554,23 @@
 					class={settingLabelClass}
 					for="terminal-preview-allow-same-origin-label-control"
 				>
-					{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
+					{$i18n.t('settings.personal.interface.machinePreviewAllowSameOrigin.label')}
 				</label>
 
 				<div class={settingControlClass}>
 					<Switch
 						ariaLabelledbyId="terminal-preview-allow-same-origin-label"
 						tooltip={true}
-						bind:state={terminalPreviewAllowSameOrigin}
-						inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
+						bind:state={machinePreviewAllowSameOrigin}
+						inherited={isDefaultSetting('machinePreviewAllowSameOrigin')}
 						on:change={() => {
-							saveSettings({ terminalPreviewAllowSameOrigin });
+							saveSettings({ machinePreviewAllowSameOrigin });
 						}}
 					/>
 				</div>
 			</div>
 			<p class={settingDescriptionClass}>
-				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
+				{$i18n.t('settings.personal.interface.machinePreviewAllowSameOrigin.description')}
 			</p>
 		</div>
 	{/if}

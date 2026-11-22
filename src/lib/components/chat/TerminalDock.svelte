@@ -2,20 +2,20 @@
 	export let modelId: string | null = null;
 	import { getContext, onMount, tick } from 'svelte';
 	import type { Readable } from 'svelte/store';
-	import { settings, terminalServers, selectedTerminalId } from '$lib/stores';
+	import { settings, machines, selectedMachineId } from '$lib/stores';
 	import {
-		resolveTerminalTarget,
-		terminalRequest,
-		type TerminalTarget,
-		type TerminalProcess,
-		type TerminalProcessOutput
+		resolveMachineTarget,
+		machineRequest,
+		type MachineTarget,
+		type MachineProcess,
+		type MachineProcessOutput
 	} from '$lib/apis/machines';
 	import { readTerminalStream } from '$lib/apis/machines/socket';
 	import XTerminal from './XTerminal.svelte';
 	import Icon from './FileNav/Icon.svelte';
 
 	export let chatId: string | null = null;
-	export let terminalId: string | null = null;
+	export let machineId: string | null = null;
 	export let active = true;
 	export let expanded = false;
 	export let height = 200;
@@ -30,13 +30,13 @@
 	// t('Open terminal')
 	// t('Collapse terminal')
 	// t('Expand terminal')
-	type Tab = TerminalProcess & {
+	type Tab = MachineProcess & {
 		offset: number;
 		loaded: boolean;
 		available: boolean;
 		finished: boolean;
 	};
-	let target: TerminalTarget | null = null;
+	let target: MachineTarget | null = null;
 	let tabs: Tab[] = [];
 	let activeId = '';
 	let error = '';
@@ -63,7 +63,7 @@
 		stopOutput?.();
 		stopOutput = undefined;
 		if (id && target) {
-			stopOutput = readTerminalStream<TerminalProcessOutput>(
+			stopOutput = readTerminalStream<MachineProcessOutput>(
 				target,
 				() =>
 					`/execute/${encodeURIComponent(id)}/status?offset=${tabs.find((tab) => tab.id === id)?.offset ?? 0}&tail=1000`,
@@ -80,7 +80,7 @@
 	$: hasSessions = tabs.length > 0;
 	$: running = tabs.filter((tab) => tab.status === 'running' && tab.available).length;
 
-	function updateProcesses(processes: TerminalProcess[]) {
+	function updateProcesses(processes: MachineProcess[]) {
 		const live = new Map(processes.map((process) => [process.id, process]));
 		tabs = tabs.map((tab) => ({ ...tab, ...live.get(tab.id), available: live.has(tab.id) }));
 		const known = new Set(tabs.map((tab) => tab.id));
@@ -95,7 +95,7 @@
 		if (!tabs.some((tab) => tab.id === activeId)) activeId = tabs[0]?.id ?? '';
 	}
 
-	async function writeOutput(result: TerminalProcessOutput) {
+	async function writeOutput(result: MachineProcessOutput) {
 		await tick();
 		const tab = tabs.find((item) => item.id === result.id);
 		if (!tab) return;
@@ -123,7 +123,7 @@
 		if (!target || streaming || !active || polling || disposed || document.hidden) return;
 		polling = true;
 		try {
-			const processes = await terminalRequest<TerminalProcess[]>(target, '/execute', {
+			const processes = await machineRequest<MachineProcess[]>(target, '/execute', {
 				signal: controller.signal
 			});
 			if (disposed) return;
@@ -133,7 +133,7 @@
 			if (expanded && tab?.available && !tab.finished) {
 				await tick();
 				if (!panes[tab.id]) return;
-				const result = await terminalRequest<TerminalProcessOutput>(
+				const result = await machineRequest<MachineProcessOutput>(
 					target,
 					`/execute/${encodeURIComponent(tab.id)}/status?wait=0&offset=${tab.offset}&tail=1000`,
 					{ signal: controller.signal }
@@ -179,14 +179,14 @@
 	}
 
 	onMount(() => {
-		target = resolveTerminalTarget(
-			terminalId ?? $selectedTerminalId,
-			$terminalServers ?? [],
+		target = resolveMachineTarget(
+			machineId ?? $selectedMachineId,
+			$machines ?? [],
 			localStorage.getItem('token') ?? '',
 			{ chatId: chatId, modelId: modelId }
 		);
 		if (target) {
-			stopList = readTerminalStream<TerminalProcess[]>(
+			stopList = readTerminalStream<MachineProcess[]>(
 				target,
 				() => '/execute',
 				updateProcesses,

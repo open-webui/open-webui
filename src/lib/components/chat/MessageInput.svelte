@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { resolveTerminalTarget } from '$lib/apis/machines';
-	import type { TerminalContext } from '$lib/types';
+	import { resolveMachineTarget } from '$lib/apis/machines';
+	import type { MachineContext } from '$lib/types';
 	import {
 		estimateTokens,
 		estimateMessagesTokens,
@@ -39,7 +39,7 @@
 		voiceCall,
 		tools,
 		skills,
-		terminalServers,
+		machines,
 		user as _user,
 		showTabs,
 		showSettings,
@@ -72,12 +72,7 @@
 		isRasterImageContentType
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
-	import {
-		filesystemFile,
-		getCwd,
-		templatesApi,
-		uploadNewFileToTerminal
-	} from '$lib/apis/machines';
+	import { filesystemFile, getCwd, templatesApi, uploadNewFileToMachine } from '$lib/apis/machines';
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
@@ -121,7 +116,7 @@
 	import Voice from '../icons/Voice.svelte';
 	import Terminal from '../icons/Terminal.svelte';
 	import IntegrationsMenu from './MessageInput/IntegrationsMenu.svelte';
-	import TerminalMenu from './MessageInput/TerminalMenu.svelte';
+	import MachineMenu from './MessageInput/MachineMenu.svelte';
 	import PlusAlt from '../icons/PlusAlt.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 
@@ -138,12 +133,13 @@
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
+	import { machineIdOf } from '$lib/utils/machines';
 
 	const { models, temporary, getCurrentDirectory } = getChatContext();
 
 	const i18n: any = getContext('i18n');
-	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
+	export let machineSkills: Writable<any[]>;
 
 	type AskUserPrompt = {
 		id?: string;
@@ -174,8 +170,8 @@
 	export let inputId = 'chat-input';
 	export let messagesContainerId = 'messages-container';
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
-	export let terminalContext: TerminalContext | null = null;
-	export let terminalSelectionEnabled = true;
+	export let machineContext: MachineContext | null = null;
+	export let machineSelectionEnabled = true;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
@@ -277,8 +273,8 @@
 	}[] = [];
 	export let oauthRedirectHandler: Function = () => {};
 
-	let showTerminalMenu = false;
-	let terminalControlsInMenu = false;
+	let showMachineMenu = false;
+	let machineControlsInMenu = false;
 
 	function fitControlLabels(controls: HTMLElement) {
 		let frame: number;
@@ -292,8 +288,8 @@
 				// Measure all labels together so separate controls cannot compete for the same space.
 				for (const label of labels) label.style.display = '';
 				if (directoryControl) directoryControl.style.display = '';
-				terminalControlsInMenu = controls.scrollWidth > controls.clientWidth;
-				if (terminalControlsInMenu) {
+				machineControlsInMenu = controls.scrollWidth > controls.clientWidth;
+				if (machineControlsInMenu) {
 					for (const label of labels) label.style.display = 'none';
 					if (directoryControl) directoryControl.style.display = 'none';
 				}
@@ -902,7 +898,7 @@
 
 	let fileUploadEnabled: boolean = true;
 	$: fileUploadEnabled =
-		(getFilesystemUploadTerminal($selectedTerminalId, $terminalServers) ||
+		(getFilesystemUploadMachine($selectedMachineId, $machines) ||
 			fileUploadCapableModels.length === selectedModelIds.length) &&
 		($_user?.role === 'admin' || $_user?.permissions?.chat?.file_upload);
 
@@ -934,19 +930,15 @@
 		modelCapabilitiesById
 	);
 
-	// With no terminal yet, the menu still shows when the user may create one: it holds New terminal.
-	let canCreateTerminal = false;
-	$: if (
-		$config?.features?.enable_tool_servers &&
-		$terminalServers &&
-		!$terminalServers.some((t) => t.id)
-	)
+	// With no machine yet, the menu still shows when the user may create one: it holds New machine.
+	let canCreateMachine = false;
+	$: if ($config?.features?.enable_tool_servers && $machines && !$machines.some((t) => t.id))
 		templatesApi('/connections')
-			.then((rows) => (canCreateTerminal = rows.length > 0))
-			.catch(() => (canCreateTerminal = false));
-	$: showTerminalSelector =
+			.then((rows) => (canCreateMachine = rows.length > 0))
+			.catch(() => (canCreateMachine = false));
+	$: showMachineSelector =
 		$config?.features?.enable_tool_servers &&
-		(($terminalServers ?? []).some((t) => t.id) || canCreateTerminal);
+		(($machines ?? []).some((t) => t.id) || canCreateMachine);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(
@@ -968,7 +960,7 @@
 	let showSkillsButton = false;
 	$: showSkillsButton =
 		($skills ?? []).some((skill) => skill.is_active) ||
-		($terminalSkills ?? []).some((skill) => skill.is_active);
+		($machineSkills ?? []).some((skill) => skill.is_active);
 
 	let showWebSearchButton = false;
 	$: showWebSearchButton =
@@ -990,7 +982,7 @@
 
 	let showCodeInterpreterButton = false;
 	$: showCodeInterpreterButton =
-		!$selectedTerminalId &&
+		!$selectedMachineId &&
 		selectedModelIds.length === codeInterpreterCapableModels.length &&
 		$config?.features?.enable_code_interpreter &&
 		($_user.role === 'admin' || $_user?.permissions?.features?.code_interpreter);
@@ -1017,8 +1009,8 @@
 		if (filterIds.length !== selectedFilterIds.length) selectedFilterIds = filterIds;
 	}
 
-	// Disable code interpreter when terminal is active (mutually exclusive)
-	$: if ($selectedTerminalId && codeInterpreterEnabled) {
+	// Disable code interpreter when a machine is active (mutually exclusive)
+	$: if ($selectedMachineId && codeInterpreterEnabled) {
 		codeInterpreterEnabled = false;
 	}
 
@@ -1068,9 +1060,9 @@
 		}
 	};
 
-	const getFilesystemUploadTerminal = (
-		selectedId = $selectedTerminalId,
-		servers: any[] | null = $terminalServers
+	const getFilesystemUploadMachine = (
+		selectedId = $selectedMachineId,
+		servers: any[] | null = $machines
 	) => {
 		if (!selectedId) return null;
 		return (
@@ -1080,32 +1072,32 @@
 		);
 	};
 
-	const uploadTerminalFile = async (fileItem, sessionId: string | null) => {
+	const uploadMachineFile = async (fileItem, sessionId: string | null) => {
 		fileItem.status = 'uploading';
 		fileItem.error = '';
 		files = files;
 		try {
-			const server = getFilesystemUploadTerminal(fileItem.terminal_id);
-			const terminal = server
-				? resolveTerminalTarget(fileItem.terminal_id, $terminalServers ?? [], localStorage.token, {
+			const server = getFilesystemUploadMachine(machineIdOf(fileItem));
+			const machine = server
+				? resolveMachineTarget(machineIdOf(fileItem), $machines ?? [], localStorage.token, {
 						chatId: sessionId,
 						modelId: selectedModels[0] ?? null
 					})
 				: null;
-			if (!terminal) throw new Error('The attached file’s machine is unavailable.');
+			if (!machine) throw new Error('The attached file’s machine is unavailable.');
 			if (fileItem.session_id && fileItem.session_id !== sessionId)
 				throw new Error('Attached files must belong to this chat.');
 			if (server.scope === 'chat' && !isSavedChatId(sessionId))
 				throw new Error('A saved chat is required for this machine');
 
 			const cwd =
-				getCurrentDirectory?.(fileItem.terminal_id) ||
-				(terminalContext?.terminalId === fileItem.terminal_id
-					? terminalContext?.currentDirectory
+				getCurrentDirectory?.(machineIdOf(fileItem)) ||
+				(machineContext?.machineId === machineIdOf(fileItem)
+					? machineContext?.currentDirectory
 					: null) ||
-				(await getCwd(terminal))?.cwd;
+				(await getCwd(machine))?.cwd;
 			if (!cwd) throw new Error($i18n.t('Could not determine the upload folder.'));
-			const uploadedFile = await uploadNewFileToTerminal(terminal, cwd, fileItem.file);
+			const uploadedFile = await uploadNewFileToMachine(machine, cwd, fileItem.file);
 			if (!uploadedFile) throw new Error($i18n.t('Failed to upload file.'));
 
 			fileItem.status = 'uploaded';
@@ -1134,7 +1126,7 @@
 			(item) => item.status === 'pending' && item.file instanceof File
 		)) {
 			if (chatId !== sessionId) return false;
-			if (!(await uploadTerminalFile(fileItem, sessionId))) {
+			if (!(await uploadMachineFile(fileItem, sessionId))) {
 				fileItem.status = 'pending';
 				files = files;
 				return false;
@@ -1179,9 +1171,9 @@
 			return null;
 		}
 
-		const filesystemUploadTerminal = getFilesystemUploadTerminal();
+		const filesystemUploadMachine = getFilesystemUploadMachine();
 
-		if (!filesystemUploadTerminal && fileUploadCapableModels.length !== selectedModelIds.length) {
+		if (!filesystemUploadMachine && fileUploadCapableModels.length !== selectedModelIds.length) {
 			toast.error($i18n.t('Model(s) do not support file upload'));
 			return null;
 		}
@@ -1211,18 +1203,18 @@
 
 		files = [...files, fileItem];
 
-		if (filesystemUploadTerminal) {
+		if (filesystemUploadMachine) {
 			fileItem.type = 'filesystem';
 			fileItem.file = file;
-			fileItem.terminal_id = $selectedTerminalId;
+			fileItem.machine_id = $selectedMachineId;
 			fileItem.session_id = chatId || null;
-			if (!chatId && filesystemUploadTerminal.scope === 'chat') {
+			if (!chatId && filesystemUploadMachine.scope === 'chat') {
 				fileItem.status = 'pending';
 				files = files;
 				return;
 			}
 
-			if (!(await uploadTerminalFile(fileItem, fileItem.session_id))) {
+			if (!(await uploadMachineFile(fileItem, fileItem.session_id))) {
 				files = files.filter((item) => item?.itemId !== tempItemId);
 			}
 			onUpdate({ file: fileItem });
@@ -1469,11 +1461,11 @@
 		// (e.g. Notes, Workspace, pinned Models), which also set 'text/plain'.
 		if (
 			e.dataTransfer?.types?.includes('Files') ||
-			e.dataTransfer?.types?.includes('application/x-terminal-file') ||
+			e.dataTransfer?.types?.includes('application/x-machine-file') ||
 			e.dataTransfer?.types?.includes('application/x-open-webui-drag')
 		) {
 			dragged = true;
-			if (e.dataTransfer?.types.includes('application/x-terminal-file'))
+			if (e.dataTransfer?.types.includes('application/x-machine-file'))
 				e.dataTransfer.dropEffect = 'copy';
 		} else {
 			dragged = false;
@@ -1490,14 +1482,14 @@
 	const onDrop = async (e: DragEvent) => {
 		if (!isAttachmentDrop(e)) return;
 		e.preventDefault();
-		const terminalFiles = e.dataTransfer?.getData('application/x-terminal-file');
-		if (terminalFiles) {
+		const machineFiles = e.dataTransfer?.getData('application/x-machine-file');
+		if (machineFiles) {
 			e.stopPropagation();
 			dragged = false;
 			try {
 				if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true))
 					throw new Error($i18n.t('You do not have permission to upload files.'));
-				const entries = JSON.parse(terminalFiles);
+				const entries = JSON.parse(machineFiles);
 				if (
 					!Array.isArray(entries) ||
 					entries.some(
@@ -1506,21 +1498,21 @@
 							typeof entry.path !== 'string' ||
 							!entry.path ||
 							typeof entry.name !== 'string' ||
-							typeof entry.terminal_id !== 'string' ||
-							!entry.terminal_id ||
+							typeof machineIdOf(entry) !== 'string' ||
+							!machineIdOf(entry) ||
 							(entry.session_id !== null && typeof entry.session_id !== 'string')
 					)
 				)
 					throw new Error($i18n.t('Invalid file attachment.'));
 				const attachments = entries.map((entry) =>
-					filesystemFile(entry, entry.terminal_id, entry.session_id)
+					filesystemFile(entry, machineIdOf(entry)!, entry.session_id)
 				);
 				const existing = files.filter((file) => file.type === 'filesystem');
-				const terminalId = existing[0]?.terminal_id ?? attachments[0]?.terminal_id;
+				const machineId = machineIdOf(existing[0]) ?? machineIdOf(attachments[0]);
 				if (
 					attachments.some(
 						(file) =>
-							file.terminal_id !== terminalId || (file.session_id && file.session_id !== chatId)
+							machineIdOf(file) !== machineId || (file.session_id && file.session_id !== chatId)
 					)
 				)
 					throw new Error($i18n.t('Attached files must belong to this chat and the same machine.'));
@@ -1686,8 +1678,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -1786,8 +1778,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
 					compactDisabled: () => isActive,
 					canStatus: () => !!history?.currentId,
@@ -1857,8 +1849,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					fileUploadEnabled: () => fileUploadEnabled,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -1899,8 +1891,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
 					},
@@ -1924,8 +1916,8 @@
 				render: getSuggestionRenderer(CommandSuggestionList, {
 					modelId: () => selectedModels[0] ?? null,
 					i18n,
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					onSelect: (e) => {
 						focus({ preventScroll: true });
 					},
@@ -2004,7 +1996,7 @@
 	onConnect={(id) =>
 		oauthRedirectHandler({ id, serverId: id.split(':').at(-1), authType: 'mcp' }, chatInputDraft)}
 />
-<SkillsModal bind:show={showSkills} {selectedSkillIds} {terminalSkills} />
+<SkillsModal bind:show={showSkills} {selectedSkillIds} {machineSkills} />
 
 <InputVariablesModal
 	bind:show={showInputVariablesModal}
@@ -2661,9 +2653,9 @@
 										{chatId}
 										bind:files
 										selectedModels={selectedModelIds}
-										fileUploadCapableModels={getFilesystemUploadTerminal(
-											$selectedTerminalId,
-											$terminalServers
+										fileUploadCapableModels={getFilesystemUploadMachine(
+											$selectedMachineId,
+											$machines
 										)
 											? selectedModelIds
 											: fileUploadCapableModels}
@@ -2731,15 +2723,15 @@
 										</button>
 
 										<svelte:fragment slot="terminal">
-											{#if showTerminalSelector && terminalControlsInMenu}
-												<TerminalMenu
-													{selectedTerminalId}
+											{#if showMachineSelector && machineControlsInMenu}
+												<MachineMenu
+													{selectedMachineId}
 													modelId={selectedModels[0] ?? null}
 													inMenu
 													bind:tab={inputMenuTab}
 													{chatId}
-													bind:terminalContext
-													disabled={isActive || !terminalSelectionEnabled}
+													bind:machineContext
+													disabled={isActive || !machineSelectionEnabled}
 												/>
 												{#if inputMenuTab === ''}
 													<div class="h-px mx-1 my-1 bg-base-100 dark:bg-base-800"></div>
@@ -2751,8 +2743,8 @@
 										<svelte:fragment slot="integrations">
 											{#if showWebSearchButton || showImageGenerationButton || showVideoGenerationButton || showCodeInterpreterButton || showToolsButton || showSkillsButton || (toggleFilters && toggleFilters.length > 0)}
 												<IntegrationsMenu
-													{selectedTerminalId}
-													{terminalSkills}
+													{selectedMachineId}
+													{machineSkills}
 													bind:show={showInputMenu}
 													bind:tab={inputMenuTab}
 													selectedModels={selectedModelIds}
@@ -3034,15 +3026,15 @@
 										{/if}
 
 										<!-- Keep this instance mounted to measure the full labels even while the controls are in the menu. -->
-										{#if showTerminalSelector}
-											<div data-terminal-controls class="flex items-center gap-1.5 shrink-0">
-												<TerminalMenu
-													{selectedTerminalId}
+										{#if showMachineSelector}
+											<div data-machine-controls class="flex items-center gap-1.5 shrink-0">
+												<MachineMenu
+													{selectedMachineId}
 													modelId={selectedModels[0] ?? null}
-													bind:show={showTerminalMenu}
+													bind:show={showMachineMenu}
 													{chatId}
-													bind:terminalContext
-													disabled={isActive || !terminalSelectionEnabled}
+													bind:machineContext
+													disabled={isActive || !machineSelectionEnabled}
 												/>
 											</div>
 										{/if}

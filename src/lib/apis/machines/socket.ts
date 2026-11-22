@@ -1,4 +1,4 @@
-import type { TerminalTarget } from './index';
+import type { MachineTarget } from './index';
 
 export function assignTerminalChat(socket: WebSocket, chatId: string): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -35,8 +35,8 @@ export function assignTerminalChat(socket: WebSocket, chatId: string): Promise<v
 	});
 }
 
-export function openTerminalSocket(
-	target: TerminalTarget,
+export function openMachineSocket(
+	target: MachineTarget,
 	path: string,
 	onOpen?: (socket: WebSocket) => void,
 	resume?: { resume: true; cursor: number; flow_control?: true; process_info?: true }
@@ -63,7 +63,7 @@ export function openTerminalSocket(
 
 // Streams use the same response bodies as their HTTP endpoints.
 export function readTerminalStream<T>(
-	target: TerminalTarget,
+	target: MachineTarget,
 	path: () => string,
 	onData: (data: T) => void | Promise<void>,
 	onError: (message: string) => void,
@@ -79,7 +79,7 @@ export function readTerminalStream<T>(
 		// Apply all received output before constructing the reconnect cursor.
 		await pending;
 		if (stopped) return;
-		socket = openTerminalSocket(target, path());
+		socket = openMachineSocket(target, path());
 		socket.onmessage = (event) => {
 			pending = pending
 				.then(async () => {

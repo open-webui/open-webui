@@ -5,11 +5,11 @@
 	import { toast } from 'svelte-sonner';
 	import type RFB from '@novnc/novnc';
 	import Icon from '../FileNav/Icon.svelte';
-	import { terminalRequest, type TerminalTarget } from '$lib/apis/machines';
-	import { openTerminalSocket } from '$lib/apis/machines/socket';
+	import { machineRequest, type MachineTarget } from '$lib/apis/machines';
+	import { openMachineSocket } from '$lib/apis/machines/socket';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 	export let chatId: string | null = null;
 	export let active = true;
 	export let overlay = false;
@@ -67,7 +67,7 @@
 		error = '';
 		status = $i18n.t('Connecting…');
 		try {
-			const info = await terminalRequest<{
+			const info = await machineRequest<{
 				transport?: string;
 				audio?: boolean;
 				clipboard?: boolean;
@@ -79,7 +79,7 @@
 			await tick();
 			if (version !== generation) return;
 			if (transport === 'frames') {
-				socket = openTerminalSocket(target, '/desktop/stream');
+				socket = openMachineSocket(target, '/desktop/stream');
 				let framePending = Promise.resolve();
 				socket.onmessage = async (event) => {
 					if (version !== generation) return;
@@ -100,7 +100,7 @@
 			} else {
 				const { default: RFB } = await import('@novnc/novnc');
 				if (version !== generation) return;
-				socket = openTerminalSocket(target, '/desktop/stream', (channel) => {
+				socket = openMachineSocket(target, '/desktop/stream', (channel) => {
 					if (version !== generation) return;
 					viewer = new RFB(surface, channel);
 					const cursor = viewer._cursor;

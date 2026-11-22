@@ -17,9 +17,10 @@
 	import AdvancedParams from '$lib/components/chat/Settings/Advanced/AdvancedParams.svelte';
 	import Capabilities from '$lib/components/workspace/Models/Capabilities.svelte';
 	import ToolsSelector from '$lib/components/workspace/Models/ToolsSelector.svelte';
-	import TerminalSelector from '$lib/components/workspace/Models/TerminalSelector.svelte';
+	import MachineSelector from '$lib/components/workspace/Models/MachineSelector.svelte';
 	import LanguageModeSelect from '$lib/components/common/LanguageModeSelect.svelte';
 	import LocalizedPromptSuggestions from '$lib/components/workspace/Models/LocalizedPromptSuggestions.svelte';
+	import { metaMachineIdOf } from '$lib/utils/machines';
 
 	export let initHandler = () => {};
 	export let dirty = false;
@@ -35,7 +36,7 @@
 	let defaultCapabilities = {};
 	let defaultFeatureIds = [];
 	let toolIds = [];
-	let terminalId = '';
+	let machineId = '';
 	let defaultParams = {};
 	let builtinTools = {};
 	let promptSuggestions = [];
@@ -47,9 +48,8 @@
 	$: configuredParams = Object.entries(defaultParams ?? {}).filter(
 		([_, value]) => value !== null && value !== '' && value !== undefined
 	);
-	$: hasTerminal =
-		$appConfig?.features?.enable_terminal_servers ||
-		$appConfig?.features?.enable_direct_integrations;
+	$: hasMachine =
+		$appConfig?.features?.enable_machines || $appConfig?.features?.enable_direct_integrations;
 	$: enabledCapabilities = Object.entries(defaultCapabilities ?? {}).filter(([_, value]) => value);
 	$: translatedPromptLocales = Object.entries(promptSuggestionsI18n ?? {})
 		.filter(([_, value]) => Array.isArray(value?.suggestion_prompts))
@@ -61,7 +61,7 @@
 			defaultCapabilities,
 			defaultFeatureIds,
 			toolIds,
-			terminalId,
+			machineId,
 			defaultParams: Object.fromEntries(configuredParams),
 			builtinTools,
 			promptSuggestions: useDefaultPromptSuggestions
@@ -75,7 +75,7 @@
 		dirty = savedSnapshot !== '' && getSnapshot() !== savedSnapshot;
 	};
 
-	$: (toolIds, terminalId, updateDirty());
+	$: (toolIds, machineId, updateDirty());
 
 	const resetPromptSuggestions = () => {
 		useDefaultPromptSuggestions = true;
@@ -93,13 +93,13 @@
 			defaultFeatureIds = savedMeta.defaultFeatureIds ?? [];
 			builtinTools = savedMeta.builtinTools ?? {};
 			toolIds = savedMeta.toolIds ?? [];
-			terminalId = savedMeta.terminalId ?? '';
+			machineId = metaMachineIdOf(savedMeta) ?? '';
 		} else {
 			defaultCapabilities = { ...DEFAULT_CAPABILITIES };
 			defaultFeatureIds = [];
 			builtinTools = {};
 			toolIds = [];
-			terminalId = '';
+			machineId = '';
 		}
 
 		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
@@ -127,7 +127,7 @@
 			...(defaultFeatureIds.length > 0 ? { defaultFeatureIds } : {}),
 			...(Object.keys(builtinTools).length > 0 ? { builtinTools } : {}),
 			...(toolIds.length > 0 ? { toolIds } : {}),
-			...(terminalId ? { terminalId } : {})
+			...(machineId ? { machineId } : {})
 		};
 
 		config = await getModelsConfig(localStorage.token);
@@ -234,9 +234,9 @@
 
 				<ToolsSelector bind:selectedToolIds={toolIds} tools={$tools ?? []} />
 
-				{#if defaultCapabilities.terminal && hasTerminal}
-					<TerminalSelector
-						bind:terminalId
+				{#if defaultCapabilities.terminal && hasMachine}
+					<MachineSelector
+						bind:machineId
 						description={$i18n.t(
 							'Choose the machine selected by default for chats with models that do not set their own.'
 						)}

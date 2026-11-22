@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminalContext } from '$lib/types';
+	import type { MachineContext } from '$lib/types';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
@@ -56,9 +56,9 @@
 
 	export let prompt = '';
 	export let files = [];
-	export let terminalContext: TerminalContext | null = null;
-	export let selectedTerminalId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
-	export let terminalSkills: Writable<any[]>;
+	export let machineContext: MachineContext | null = null;
+	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
+	export let machineSkills: Writable<any[]>;
 	export let messageInput = null;
 
 	export let selectedToolIds = [];
@@ -152,11 +152,11 @@
 
 {#snippet composer(placeholder = '')}
 	<MessageInput
-		{selectedTerminalId}
-		{terminalSkills}
+		{selectedMachineId}
+		{machineSkills}
 		{chatId}
 		{onTemporaryChange}
-		bind:terminalContext
+		bind:machineContext
 		{callActive}
 		{callEnabled}
 		bind:this={messageInput}

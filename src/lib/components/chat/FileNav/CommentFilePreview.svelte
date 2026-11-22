@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget;
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import type { WorkBook } from 'xlsx';
 	export let onReady = () => {};
@@ -15,7 +15,7 @@
 	};
 	$: (loading, previewError, reportReady());
 
-	import { downloadFileBlob, downloadFilePreview, uploadToTerminal } from '$lib/apis/machines';
+	import { downloadFileBlob, downloadFilePreview, uploadToMachine } from '$lib/apis/machines';
 	import { readOfficeComments } from '$lib/utils/comments/office';
 	import {
 		commentThreads,
@@ -74,8 +74,8 @@
 				throw new Error(
 					'The workbook changed on disk. Your edits are preserved. Reload the file before saving.'
 				);
-			// shortcut: the terminal upload API has no conditional write; it cannot prevent a concurrent write after this check.
-			const result = await uploadToTerminal(
+			// shortcut: the machine upload API has no conditional write; it cannot prevent a concurrent write after this check.
+			const result = await uploadToMachine(
 				target,
 				path.slice(0, path.lastIndexOf('/') + 1) || '/',
 				new File([bytes], path.split('/').pop()!, {

@@ -3,8 +3,8 @@
 </script>
 
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/machines';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 	import { toast } from 'svelte-sonner';
 	import { LinkPreview } from 'bits-ui';
 	import { mobile, settings } from '$lib/stores';
@@ -20,7 +20,7 @@
 	import Icon from './Icon.svelte';
 	import FolderOpen from '$lib/components/icons/FolderOpen.svelte';
 
-	export let dragType = 'application/x-terminal-file-move';
+	export let dragType = 'application/x-machine-file-move';
 	export let dragContext = '';
 	export let variant: 'terminal' | 'workspace' = 'terminal';
 	export let viewMode: 'grid' | 'list' = 'list';
@@ -95,7 +95,7 @@
 	export let expanded = false;
 	export let loadingChildren = false;
 	export let folderContentsVersion = 0;
-	export let terminalSessionId: string | undefined = undefined;
+	export let machineSessionId: string | undefined = undefined;
 
 	export let onOpen: (entry: FileEntry) => void = () => {};
 	export let onDragStart: ((event: DragEvent, path: string) => void) | null = null;
@@ -635,7 +635,7 @@
 						{#if viewMode === 'list'}
 							<FileTypeIcon name={entry.name} type={entry.type} size={14} />
 						{:else}
-							{#key JSON.stringify( [target?.baseUrl, target?.key, terminalSessionId, entryPath, entry.modified, entry.size] )}
+							{#key JSON.stringify( [target?.baseUrl, target?.key, machineSessionId, entryPath, entry.modified, entry.size] )}
 								<FileGridIcon {entry} path={entryPath} {target} itemCount={folderItemCount} />
 							{/key}
 						{/if}
@@ -727,14 +727,14 @@
 				{/snippet}
 			</LinkPreview.Trigger>
 			{#if openPreview && target}
-				{#key JSON.stringify( [target?.baseUrl, target?.key, terminalSessionId, entryPath, entry.modified, entry.size] )}
+				{#key JSON.stringify( [target?.baseUrl, target?.key, machineSessionId, entryPath, entry.modified, entry.size] )}
 					{#await import('./FileHoverPreview.svelte') then { default: FileHoverPreview }}
 						<FileHoverPreview
 							{entry}
 							sideOffset={viewMode === 'grid' ? 4 : 12}
 							path={entryPath}
 							{target}
-							sessionId={terminalSessionId}
+							sessionId={machineSessionId}
 						/>
 					{/await}
 				{/key}

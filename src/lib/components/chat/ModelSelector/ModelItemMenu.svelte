@@ -14,6 +14,7 @@
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 	import { config, pinnedModels, settings, showSettings, user, visibleControls } from '$lib/stores';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import { isMachine } from '$lib/utils/machines';
 
 	const i18n = getContext('i18n');
 
@@ -28,7 +29,7 @@
 	export let onClose: Function = () => {};
 
 	$: canEdit =
-		model?.owned_by !== 'terminal' &&
+		!isMachine(model?.owned_by) &&
 		(model?.preset || model?.info?.base_model_id
 			? model?.info?.user_id === $user?.id
 			: $user?.role === 'admin');

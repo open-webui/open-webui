@@ -2,8 +2,8 @@
 	import { getContext, onDestroy } from 'svelte';
 	import {
 		searchFiles,
-		type TerminalTarget,
-		type TerminalFileSearchResult
+		type MachineTarget,
+		type MachineFileSearchResult
 	} from '$lib/apis/machines';
 	import { settings } from '$lib/stores';
 	import { matchKeybinding, Shortcut } from '$lib/shortcuts';
@@ -13,20 +13,20 @@
 	import { fileIconName } from '../FileNav/fileIcon';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 	export let chatId: string | null = null;
 	export let onclose: () => void;
 	export let onselect: (path: string) => void;
 
 	let query = '';
-	let results: TerminalFileSearchResult[] = [];
+	let results: MachineFileSearchResult[] = [];
 	let loading = false;
 	let failed = false;
 	let selectedIndex = 0;
 	let timer: ReturnType<typeof setTimeout>;
 	let requestVersion = 0;
 
-	const queueSearch = (query: string, target: TerminalTarget, chatId: string | null) => {
+	const queueSearch = (query: string, target: MachineTarget, chatId: string | null) => {
 		clearTimeout(timer);
 		const version = ++requestVersion;
 		results = [];
@@ -58,7 +58,7 @@
 		requestVersion++;
 	});
 
-	const selectResult = (result: TerminalFileSearchResult) => {
+	const selectResult = (result: MachineFileSearchResult) => {
 		onclose();
 		onselect(result.path);
 	};

@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import machine_id_of
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
@@ -145,7 +146,7 @@ def get_pending_run(metadata: dict, model_id: str | None = None) -> dict:
         'skill_ids': metadata.get('skill_ids') or [],
         'chat_context': metadata.get('chat_context'),
         'filter_ids': metadata.get('filter_ids') or [],
-        'terminal_id': metadata.get('terminal_id'),
+        'machine_id': metadata.get('machine_id'),
         'features': metadata.get('features') or {},
         'variables': metadata.get('variables') or {},
     }
@@ -395,8 +396,8 @@ async def process_pending_internal_messages(
             'variables': run.get('variables') or {},
             'chat_variables': chat_context.get('chat_variables'),
         }
-        if run.get('terminal_id'):
-            form_data['terminal_id'] = run['terminal_id']
+        if machine_id_of(run):
+            form_data['machine_id'] = machine_id_of(run)
 
         request = await _build_request(source_request, user.id, internal=False)
         request.state.chat_context = chat_context
@@ -467,7 +468,7 @@ async def delegate(
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
-        'terminal_id': metadata.get('terminal_id'),
+        'machine_id': metadata.get('machine_id'),
         'features': features,
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
@@ -637,8 +638,8 @@ async def delegate(
                 'chat_variables': chat_context.get('chat_variables'),
                 'folder_id': run.get('folder_id'),
             }
-            if run.get('terminal_id'):
-                form_data['terminal_id'] = run['terminal_id']
+            if machine_id_of(run):
+                form_data['machine_id'] = machine_id_of(run)
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
             message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
             if not message:

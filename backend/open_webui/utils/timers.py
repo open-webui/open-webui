@@ -12,6 +12,7 @@ from typing import Literal
 from uuid import uuid4
 
 from fastapi import HTTPException, Request
+from open_webui.utils.machines import machine_id_of
 from open_webui.internal.db import get_async_db
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chat, ChatForm, Chats
@@ -110,7 +111,7 @@ async def create_timer(
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
-        'terminal_id': metadata.get('terminal_id'),
+        'machine_id': metadata.get('machine_id'),
         'features': copy.deepcopy(metadata.get('features') or {}),
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
@@ -406,8 +407,8 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
             'variables': run.get('variables') or {},
             'chat_variables': chat_context.get('chat_variables'),
         }
-        if run.get('terminal_id'):
-            form_data['terminal_id'] = run['terminal_id']
+        if machine_id_of(run):
+            form_data['machine_id'] = machine_id_of(run)
         request = Request(
             {
                 'type': 'http',
