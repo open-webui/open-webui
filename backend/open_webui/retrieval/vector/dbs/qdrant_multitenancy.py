@@ -70,6 +70,7 @@ class QdrantClient(VectorDBBase):
                 port=http_port,
                 grpc_port=self.GRPC_PORT,
                 prefer_grpc=self.PREFER_GRPC,
+                https=parsed.scheme == 'https' if parsed.scheme in ('http', 'https') else None,
                 api_key=self.QDRANT_API_KEY,
                 timeout=self.QDRANT_TIMEOUT,
             )
