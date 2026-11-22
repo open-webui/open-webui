@@ -1351,7 +1351,7 @@
 		else await refresh();
 	};
 
-	$: if ($selectedMachineId !== lastMachineSkillSelector) {
+	$: if ($models !== null && $selectedMachineId !== lastMachineSkillSelector) {
 		if (machineContext?.machineId !== $selectedMachineId) machineContext = null;
 		selectedSkillIds = selectedSkillIds.filter((id) => !isMachineRef(id));
 		machineSkills.set([]);
