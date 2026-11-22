@@ -1055,7 +1055,7 @@
 							</div>
 
 							<div class="text-xs leading-5 text-base-500">
-								{$i18n.t('Create your first note from the Create menu.')}
+								{$i18n.t('Create your first note from the + menu.')}
 							</div>
 						</div>
 					</div>
