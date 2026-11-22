@@ -43,7 +43,7 @@
 				onClose();
 			}}
 		>
-			<div class="h-screen max-h-dvh flex flex-col">
+			<div class="flex max-h-[70dvh] flex-col">
 				<slot />
 			</div>
 		</Drawer>
