@@ -6116,10 +6116,7 @@ async def streaming_chat_response_handler(response, ctx):
                         }
 
                         if ENABLE_RESPONSES_API_STATEFUL and last_response_id:
-                            system_message = get_system_message(form_data['messages'])
-                            new_form_data['messages'] = (
-                                [system_message] if system_message else []
-                            ) + convert_output_to_messages(
+                            new_form_data['messages'] = convert_output_to_messages(
                                 strip_tool_images(output, model), raw=True, reasoning_format=get_reasoning_format(model)
                             )
                             new_form_data['previous_response_id'] = last_response_id
