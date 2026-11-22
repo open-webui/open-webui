@@ -443,7 +443,7 @@
 			}, '')) + ' / Open WebUI'}
 	/>
 {:else}
-	<PageTitle title={'#' + (channel?.name ?? 'Channel') + ' / Open WebUI'} />
+	<PageTitle title={(channel?.name ?? 'Channel') + ' / Open WebUI'} />
 {/if}
 
 {#if !channel || messages === null}
