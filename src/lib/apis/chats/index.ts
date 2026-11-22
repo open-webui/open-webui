@@ -207,6 +207,7 @@ export const getChatList = async (
 	view: {
 		sortBy?: 'updated_at' | 'created_at';
 		status?: 'active' | 'archived' | 'all';
+		limit?: number;
 	} = {}
 ) => {
 	let error = null;
@@ -214,6 +215,10 @@ export const getChatList = async (
 
 	if (page !== null) {
 		searchParams.append('page', `${page}`);
+	}
+
+	if (view.limit) {
+		searchParams.append('limit', `${view.limit}`);
 	}
 
 	if (view.sortBy) {

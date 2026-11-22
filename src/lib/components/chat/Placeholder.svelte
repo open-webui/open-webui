@@ -384,15 +384,20 @@
 		</div>
 
 		<div class="mx-auto max-w-2xl mt-3" in:fade={{ duration: 200, delay: 200 }}>
-			<div class="mx-5">
+			<!-- Held at the height of either list, so the centred composer doesn't jump when it arrives. -->
+			<div class="mx-5 min-h-[10.5rem]">
 				{#if showRecentChats}
-					<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+					<div in:fade={{ duration: 150 }}>
+						<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+					</div>
 				{:else if !waitingForRecentChats}
-					<Suggestions
-						suggestionPrompts={selectedSuggestionPrompts}
-						inputValue={prompt}
-						{onSelect}
-					/>
+					<div in:fade={{ duration: 150 }}>
+						<Suggestions
+							suggestionPrompts={selectedSuggestionPrompts}
+							inputValue={prompt}
+							{onSelect}
+						/>
+					</div>
 				{/if}
 			</div>
 		</div>

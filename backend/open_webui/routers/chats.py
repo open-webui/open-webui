@@ -4,7 +4,7 @@ import logging
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from open_webui.utils.machines import normalize_machine_id
@@ -341,6 +341,7 @@ async def get_session_user_chat_list(
     request: Request,
     user=Depends(get_verified_user),
     page: int | None = None,
+    limit: int | None = Query(None, ge=1),
     include_pinned: bool | None = False,
     include_folders: bool | None = False,
     sort_by: str = 'updated_at',
@@ -350,7 +351,8 @@ async def get_session_user_chat_list(
 ):
     try:
         if page is not None:
-            limit = 60
+            # Page size; a caller may ask for fewer, never more.
+            limit = min(limit or 60, 60)
             skip = (page - 1) * limit
 
             chats = await Chats.get_chat_title_id_list_by_user_id(

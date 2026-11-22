@@ -179,15 +179,20 @@
 			</div>
 		</div>
 
-		<div class=" w-full" in:fade={{ duration: 200, delay: 300 }}>
+		<!-- Held at the height of either list, so the centred block doesn't jump when it arrives. -->
+		<div class=" w-full min-h-[10.5rem]" in:fade={{ duration: 200, delay: 300 }}>
 			{#if showRecentChats}
-				<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+				<div in:fade={{ duration: 150 }}>
+					<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />
+				</div>
 			{:else if !waitingForRecentChats}
-				<Suggestions
-					className="grid grid-cols-2"
-					suggestionPrompts={selectedSuggestionPrompts}
-					{onSelect}
-				/>
+				<div in:fade={{ duration: 150 }}>
+					<Suggestions
+						className="grid grid-cols-2"
+						suggestionPrompts={selectedSuggestionPrompts}
+						{onSelect}
+					/>
+				</div>
 			{/if}
 		</div>
 	</div>

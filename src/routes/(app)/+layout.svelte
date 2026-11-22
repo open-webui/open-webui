@@ -44,7 +44,8 @@
 		mobile,
 		chatId,
 		chats,
-		folders
+		folders,
+		refreshRecentChats
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -257,6 +258,8 @@
 		// Requested beside settings. The page is drawn once settings are in;
 		// each of these shows up when it arrives.
 		void setBanners().catch((e) => console.error('Failed to load banners:', e));
+		// The new-chat page lists these under the composer; started now so they're in before it draws.
+		void refreshRecentChats(localStorage.token);
 		const lists = Promise.all([
 			setTools().catch((e) => console.error('Failed to load tools:', e)),
 			refreshMachines().catch((e) => console.error('Failed to load machines:', e)),

@@ -20,12 +20,15 @@ export const pinnedChats = readonly(pinnedChatsStore);
 const recentChatsStore = writable<ChatListItem[] | null>(null);
 export const recentChats = readonly(recentChatsStore);
 
+const RECENT_CHATS_LIMIT = 5;
+
 export const refreshRecentChats = async (token: string = '') => {
 	const list = (await getChatList(token, 1, true, true, {
 		sortBy: 'updated_at',
-		status: 'active'
+		status: 'active',
+		limit: RECENT_CHATS_LIMIT
 	}).catch(() => [])) as ChatListItem[];
-	recentChatsStore.set((list ?? []).slice(0, 5));
+	recentChatsStore.set((list ?? []).slice(0, RECENT_CHATS_LIMIT));
 };
 
 // How the sidebar's chat list is filtered and sorted; remembered per browser.
