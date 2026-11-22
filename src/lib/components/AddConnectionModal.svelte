@@ -670,6 +670,8 @@
 											<option value="llama.cpp">{$i18n.t('llama.cpp')}</option>
 											<option value="lmstudio">{$i18n.t('LM Studio')}</option>
 											<option value="litellm">{$i18n.t('LiteLLM')}</option>
+											<option value="vllm">{$i18n.t('vLLM')}</option>
+											<option value="openrouter">{$i18n.t('OpenRouter')}</option>
 										</select>
 									</div>
 								</div>

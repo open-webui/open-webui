@@ -481,6 +481,8 @@ def convert_output_to_messages(
               (for legacy providers that expect reasoning as tagged content).
             - ``'reasoning_content'``: set as ``reasoning_content`` top-level field
               (for llama.cpp, which routes it via the chat template).
+            - ``'reasoning'``: set as ``reasoning`` top-level field
+              (for vLLM and OpenRouter).
         flatten_tool_images: Move tool output images into a following user
             message for Chat Completions providers.
     """
@@ -510,6 +512,8 @@ def convert_output_to_messages(
         if pending_reasoning:
             if reasoning_format == 'thinking':
                 message['thinking'] = '\n'.join(pending_reasoning)
+            elif reasoning_format == 'reasoning':
+                message['reasoning'] = '\n'.join(pending_reasoning)
             else:
                 message['reasoning_content'] = '\n'.join(pending_reasoning)
         elif pending_tool_calls and reasoning_format == 'reasoning_content':
@@ -658,7 +662,7 @@ def convert_output_to_messages(
                     start_tag = item.get('start_tag', '<think>')
                     end_tag = item.get('end_tag', '</think>')
                     pending_content.append(f'{start_tag}{reasoning_text}{end_tag}')
-                elif reasoning_format in {'thinking', 'reasoning_content'}:
+                elif reasoning_format in {'thinking', 'reasoning_content', 'reasoning'}:
                     # Native providers: collect for their top-level reasoning field.
                     pending_reasoning.append(reasoning_text)
 

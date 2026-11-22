@@ -1916,6 +1916,7 @@ def get_reasoning_format(model: dict) -> str | None:
         'thinking': Ollama expects reasoning in the native thinking field.
         'think_tags': wrap reasoning in <think> tags inside content.
         'reasoning_content': llama.cpp supports reasoning_content as a top-level field.
+        'reasoning': vLLM and OpenRouter accept reasoning as a top-level field.
         None: skip reasoning (safe default for strict providers).
     """
     provider = model.get('provider', '')
@@ -1923,6 +1924,8 @@ def get_reasoning_format(model: dict) -> str | None:
         return 'thinking'
     if provider == 'llama.cpp':
         return 'reasoning_content'
+    if provider in ('vllm', 'openrouter'):
+        return 'reasoning'
     return None
 
 
