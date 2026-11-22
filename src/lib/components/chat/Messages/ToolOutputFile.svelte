@@ -22,7 +22,7 @@
 
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
-	let expanded = true;
+	export let expanded = true;
 	let loading = false;
 	let loadedKey = '';
 	let error = '';

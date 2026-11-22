@@ -10,6 +10,7 @@
 
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
+	import ToolOutputFile from '$lib/components/chat/Messages/ToolOutputFile.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -56,6 +57,21 @@
 			);
 		}
 	}
+
+	// The cited file as a display_file card, opened at the cited page.
+	const getFilePreviewItem = (doc: any) => {
+		const { file_id, name, page } = doc?.metadata ?? {};
+		const fileName = String(name ?? doc?.source?.name ?? '');
+		if (!file_id || !fileName.toLowerCase().endsWith('.pdf')) return null;
+		return {
+			type: 'file',
+			source: 'open_webui',
+			path: `/api/v1/files/${file_id}/content`,
+			name: fileName,
+			content_type: 'application/pdf',
+			...(Number.isInteger(page) ? { page: page + 1 } : {})
+		};
+	};
 
 	const decodeString = (str: string) => {
 		try {
@@ -143,7 +159,7 @@
 
 		<div class="flex flex-col md:flex-row w-full px-5 pb-5 md:space-x-4">
 			<div
-				class="flex flex-col w-full dark:text-base-200 overflow-y-scroll max-h-[22rem] scrollbar-thin gap-1"
+				class="flex flex-col w-full dark:text-base-200 overflow-y-scroll max-h-[70vh] scrollbar-thin gap-1"
 			>
 				{#each mergedDocuments as document, documentIdx}
 					<div class="flex flex-col w-full gap-2">
@@ -212,6 +228,11 @@
 									</span>
 								{/if}
 							</div>
+
+							{#if getFilePreviewItem(document)}
+								<!-- Only the first source loads its file until another is opened -->
+								<ToolOutputFile item={getFilePreviewItem(document)} expanded={documentIdx === 0} />
+							{/if}
 
 							{#if document.metadata?.html}
 								<iframe
