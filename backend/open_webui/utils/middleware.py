@@ -2791,7 +2791,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     )
             except Exception as e:
                 log.exception(e)
-                raise HTTPException(status_code=503, detail=f'Terminal unavailable: {e}') from e
+                raise HTTPException(status_code=503, detail=f'Machine unavailable: {e}') from e
 
         if terminal_id and terminal_capability:
             from open_webui.utils.machines import add_terminal_agents_md, get_terminal_agents_md

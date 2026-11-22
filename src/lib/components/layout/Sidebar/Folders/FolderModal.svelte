@@ -369,7 +369,7 @@
 								<ModelSettingsLabel
 									label={$i18n.t('Default machine')}
 									description={$i18n.t(
-										'Select the terminal used by default for new chats in this folder.'
+										'Select the machine used by default for new chats in this folder.'
 									)}
 								/>
 								<div class="flex min-w-0">
@@ -398,7 +398,7 @@
 										<ModelSettingsLabel
 											label={$i18n.t('Working directory')}
 											description={$i18n.t(
-												'Path on the selected terminal. Applies to new chats only.'
+												'Path on the selected machine. Applies to new chats only.'
 											)}
 										/>
 									</label>
@@ -407,7 +407,7 @@
 											id="folder-working-directory"
 											class="min-w-0 flex-1 bg-transparent text-xs font-normal text-base-900 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-600"
 											bind:value={data.working_directory}
-											placeholder={$i18n.t('Use the terminal’s default directory')}
+											placeholder={$i18n.t('Use the machine’s default directory')}
 										/>
 										<button
 											type="button"

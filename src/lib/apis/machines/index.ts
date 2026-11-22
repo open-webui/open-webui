@@ -859,7 +859,7 @@ export async function templatesApi(path = '', method = 'GET', body?: unknown) {
 	});
 	const data = await response.json().catch(() => null);
 	if (!response.ok)
-		throw new Error(typeof data?.detail === 'string' ? data.detail : 'Terminal request failed');
+		throw new Error(typeof data?.detail === 'string' ? data.detail : 'Machine request failed');
 	return data;
 }
 

@@ -919,7 +919,7 @@ async def _verify_version_dependencies(request, form, user, db):
                 raise HTTPException(400, f'A referenced function is unavailable: {function_id}')
     terminal_id = getattr(form.meta, 'terminalId', None)
     if terminal_id and terminal_id not in {t['id'] for t in await list_terminal_servers(request, user=user)}:
-        raise HTTPException(400, 'The referenced terminal is missing or inaccessible.')
+        raise HTTPException(400, 'The referenced machine is missing or inaccessible.')
 
 
 class ModelVersionForm(BaseModel):

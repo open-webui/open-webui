@@ -523,11 +523,11 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
     connection = await find_terminal_connection(user, server_id, context, request=request)
 
     if connection is None:
-        return JSONResponse({'error': f"Terminal server '{server_id}' not found"}, status_code=404)
+        return JSONResponse({'error': f"Machine '{server_id}' not found"}, status_code=404)
 
     base_url = get_terminal_server_url(connection)
     if not base_url:
-        return JSONResponse({'error': 'Terminal server URL not configured'}, status_code=503)
+        return JSONResponse({'error': 'Machine URL not configured'}, status_code=503)
 
     safe_path = _sanitize_proxy_path(path)
     if safe_path is None:
@@ -707,11 +707,11 @@ async def _proxy_terminal(server_id, path, request, user, *, context, browser_au
     except (aiohttp.ClientConnectionError, TimeoutError) as error:
         await session.close()
         log.error('Terminal proxy error: %s', str(error) or type(error).__name__)
-        return JSONResponse({'error': f'Terminal proxy error: {error}'}, status_code=502)
+        return JSONResponse({'error': f'Machine proxy error: {error}'}, status_code=502)
     except Exception as error:
         await session.close()
         log.exception('Terminal proxy error: %s', error)
-        return JSONResponse({'error': f'Terminal proxy error: {error}'}, status_code=502)
+        return JSONResponse({'error': f'Machine proxy error: {error}'}, status_code=502)
 
 
 # WebSocket proxy for interactive terminal sessions
@@ -778,7 +778,7 @@ async def _resolve_terminal_access(ws: WebSocket, server_id: str, token: str):
         if server_id.startswith('tether:'):
             await ws.close(code=1013, reason='Tether is offline. Reconnecting.')
         else:
-            await ws.close(code=4004, reason='Terminal server not found')
+            await ws.close(code=4004, reason='Machine not found')
         return None
 
     return user, connection
@@ -837,7 +837,7 @@ async def _proxy_terminal_websocket(
 
     base_url = get_terminal_server_url(connection)
     if not base_url:
-        await ws.close(code=4003, reason='Terminal server URL not configured')
+        await ws.close(code=4003, reason='Machine URL not configured')
         return
 
     # Build upstream WebSocket URL (no token in URL)

@@ -4839,9 +4839,9 @@
 						(file.session_id && file.session_id !== $chatId)
 				)
 			)
-				throw new Error('Attached files must belong to this chat and the same terminal.');
+				throw new Error('Attached files must belong to this chat and the same machine.');
 			if (terminal && !isTerminalAvailable(terminal))
-				throw new Error('The attached file’s terminal is unavailable.');
+				throw new Error('The attached file’s machine is unavailable.');
 		}
 		if (autoScroll) {
 			scrollToBottom();

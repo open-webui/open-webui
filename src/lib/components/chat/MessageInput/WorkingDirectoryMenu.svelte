@@ -65,7 +65,7 @@
 				if (disposed) return;
 				home = result?.home ?? '';
 			}
-			if (!home) throw new Error('Terminal home is unavailable');
+			if (!home) throw new Error('Machine home is unavailable');
 			const paths = await loadRecentFolders(target, home, userId);
 			if (disposed || version !== historyVersion) return;
 			recent = paths;

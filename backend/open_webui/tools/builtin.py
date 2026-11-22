@@ -3923,7 +3923,7 @@ async def read_skill_file(
             from open_webui.utils.machines import get_terminal_skill
 
             if path != 'SKILL.md':
-                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
+                raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
             skill = await get_terminal_skill(
                 __request__,
                 __user__,
@@ -4005,7 +4005,7 @@ async def grep_skill_files(
             from open_webui.utils.machines import load_terminal_skill
 
             if path is not None and path != 'SKILL.md':
-                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
+                raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
             skill = await load_terminal_skill(
                 __request__,
                 __user__,

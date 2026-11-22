@@ -218,7 +218,7 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
     is_agent = model_id.startswith('agent:')
     if not terminal.get('server_id'):
         if is_agent:
-            raise HTTPException(400, 'Select a terminal for the agent.')
+            raise HTTPException(400, 'Select a machine for the agent.')
         return
     if terminal['server_id'].startswith('template:'):
         from open_webui.utils.machines import template_connection, require_model_access
@@ -226,7 +226,7 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
         _, template = await template_connection(user, terminal['server_id'])
         scope = (template.get('data') or {}).get('scope')
         if (data.get('target') or {}).get('type') == 'channel' and (is_agent or scope == 'chat'):
-            raise HTTPException(400, 'This terminal requires a chat destination.')
+            raise HTTPException(400, 'This machine requires a chat destination.')
         if scope == 'model':
             await require_model_access(user, model_id, terminal['server_id'], request)
         return
@@ -234,13 +234,13 @@ async def validate_automation_terminal(request, user, data: dict, automation_id:
     if automation_id:
         metadata['automation_id'] = automation_id
     if not await resolve_terminal_connection(request, user, metadata):
-        raise HTTPException(400, 'The configured terminal is unavailable for this automation.')
+        raise HTTPException(400, 'The configured machine is unavailable for this automation.')
     if is_agent:
         if (data.get('target') or {}).get('type') == 'channel':
             raise HTTPException(400, 'Agent automations require a chat destination.')
         available = await get_agent_models(request, user, metadata, cwd=terminal.get('cwd'))
         if not any(model['id'] == model_id for model in available):
-            raise HTTPException(400, 'Agent model is unavailable in the configured terminal.')
+            raise HTTPException(400, 'Agent model is unavailable on the configured machine.')
 
 
 async def _execute_channel_automation(

@@ -1134,7 +1134,7 @@ async def chat_completion(
         )
         agent_model = next((item for item in candidates if item['id'] == model_id), None)
         if agent_model is None:
-            raise HTTPException(400, 'Agent model is unavailable in the selected terminal')
+            raise HTTPException(400, 'Agent model is unavailable on the selected machine')
 
     metadata = {}
     try:

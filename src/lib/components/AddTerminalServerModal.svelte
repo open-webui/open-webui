@@ -771,7 +771,7 @@
 		{/if}
 		{#if serverType === 'orchestrator'}
 			<p class="text-xs text-base-500">
-				{$i18n.t('Create and configure terminals from the terminal selector.')}
+				{$i18n.t('Create and configure machines from the machine selector.')}
 			</p>
 		{/if}
 		<div>

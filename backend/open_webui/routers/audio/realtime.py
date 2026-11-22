@@ -409,7 +409,7 @@ async def realtime_call(ws: WebSocket):
 
             terminal_id = auth.get('terminal_id')
             if not isinstance(terminal_id, str) or not terminal_id:
-                raise ValueError('Select a terminal to call an agent')
+                raise ValueError('Select a machine to call an agent')
             parts = model_id.split(':', 3)
             if len(parts) != 4:
                 raise ValueError('Invalid agent model')
@@ -420,7 +420,7 @@ async def realtime_call(ws: WebSocket):
             )
             model = next((item for item in candidates if item['id'] == model_id), None)
             if model is None:
-                raise ValueError('Agent model is unavailable in the selected terminal')
+                raise ValueError('Agent model is unavailable on the selected machine')
         else:
             if not ws.app.state.MODELS:
                 await get_all_models(ws, user=user)

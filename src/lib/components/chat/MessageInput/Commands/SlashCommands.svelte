@@ -477,13 +477,10 @@
 				</span>
 			</button>
 		{:else if item.data.id === 'skills:create'}
-			<Tooltip
-				content={$i18n.t('Create a reusable terminal skill from this chat.')}
-				placement="top"
-			>
+			<Tooltip content={$i18n.t('Create a reusable machine skill from this chat.')} placement="top">
 				<button
 					type="button"
-					aria-label={$i18n.t('Create skill: create a reusable terminal skill from this chat.')}
+					aria-label={$i18n.t('Create skill: create a reusable machine skill from this chat.')}
 					class="slash-command-row flex items-center gap-2 w-full h-6 px-2 rounded-xl text-[0.8125rem] text-left transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40
 						{commandIdx === selectedIdx ? 'app-interactive-active selected-command-option-button' : ''}"
 					on:mousedown={(e) => e.preventDefault()}

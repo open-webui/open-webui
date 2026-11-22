@@ -1611,13 +1611,13 @@ async def get_terminal_tools(
         user, terminal_id, extra_params.get('__metadata__', {}), request=request
     )
     if connection is None:
-        raise RuntimeError(f"Terminal server '{terminal_id}' not found")
+        raise RuntimeError(f"Machine '{terminal_id}' not found")
     if not connection.get('enabled', True):
-        raise RuntimeError(f"Terminal server '{terminal_id}' is disabled")
+        raise RuntimeError(f"Machine '{terminal_id}' is disabled")
 
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
     if not await has_connection_access(user, connection, user_group_ids):
-        raise RuntimeError(f'Access denied to terminal {terminal_id}')
+        raise RuntimeError(f'Access denied to machine {terminal_id}')
 
     # Find the cached spec data for this terminal
     if connection.get('template_id'):
@@ -1645,11 +1645,11 @@ async def get_terminal_tools(
         terminal_servers = await get_terminal_servers(request)
         server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
     if server_data is None:
-        raise RuntimeError(f"Terminal server '{terminal_id}' is unavailable")
+        raise RuntimeError(f"Machine '{terminal_id}' is unavailable")
 
     specs = server_data.get('specs', [])
     if not specs:
-        raise RuntimeError(f"Terminal server '{terminal_id}' has no available tools")
+        raise RuntimeError(f"Machine '{terminal_id}' has no available tools")
 
     # Build auth headers
     auth_type = connection.get('auth_type', 'bearer')
@@ -1710,7 +1710,7 @@ async def get_terminal_tools(
                         user, terminal_id, {**metadata, 'scope': connection.get('scope')}, request=request
                     )
                     if current is None:
-                        raise HTTPException(403, 'Terminal access revoked')
+                        raise HTTPException(403, 'Machine access revoked')
                     call_headers.update(terminal_headers(current))
                 params = dict(kwargs)
                 if fn_name == 'display_file':

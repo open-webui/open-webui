@@ -85,8 +85,8 @@ class EventDefinitions(BaseModel):
     )
     CONFIG_TERMINAL_SERVERS_UPDATED: EventDefinition = EventDefinition(
         name='config.terminal_servers.updated',
-        description='Terminal server configuration was updated.',
-        message='Config Terminal Servers updated',
+        description='Machine configuration was updated.',
+        message='Config Machines updated',
     )
     CONFIG_CODE_EXECUTION_UPDATED: EventDefinition = EventDefinition(
         name='config.code_execution.updated',

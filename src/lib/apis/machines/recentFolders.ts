@@ -9,7 +9,7 @@ import { computeFileHash } from '$lib/utils/hash';
 
 const historyDirectory = (home: string, userId: string) => {
 	if (!home || !userId || userId === '.' || userId === '..')
-		throw new Error('Terminal home and a valid user are required');
+		throw new Error('Machine home and a valid user are required');
 	return joinTerminalPath(home, `.open-webui/users/${encodeURIComponent(userId)}/folders`);
 };
 

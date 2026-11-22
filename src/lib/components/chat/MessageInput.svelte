@@ -1092,11 +1092,11 @@
 						modelId: selectedModels[0] ?? null
 					})
 				: null;
-			if (!terminal) throw new Error('The attached file’s terminal is unavailable.');
+			if (!terminal) throw new Error('The attached file’s machine is unavailable.');
 			if (fileItem.session_id && fileItem.session_id !== sessionId)
 				throw new Error('Attached files must belong to this chat.');
 			if (server.scope === 'chat' && !isSavedChatId(sessionId))
-				throw new Error('A saved chat is required for this terminal');
+				throw new Error('A saved chat is required for this machine');
 
 			const cwd =
 				getCurrentDirectory?.(fileItem.terminal_id) ||
@@ -1523,9 +1523,7 @@
 							file.terminal_id !== terminalId || (file.session_id && file.session_id !== chatId)
 					)
 				)
-					throw new Error(
-						$i18n.t('Attached files must belong to this chat and the same terminal.')
-					);
+					throw new Error($i18n.t('Attached files must belong to this chat and the same machine.'));
 				const additions = attachments.filter(
 					(file, index) =>
 						!existing.some((item) => (item.path ?? item.url ?? item.id) === file.path) &&

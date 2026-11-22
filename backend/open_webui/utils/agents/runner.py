@@ -47,7 +47,7 @@ async def run(request, form_data, user, metadata, model):
     agent = model['agent']
     run_provider = provider_runner(agent['provider'])
     if run_provider is None:
-        raise ValueError('Unsupported terminal agent')
+        raise ValueError('Unsupported machine agent')
     chat = await Chats.get_accessible_chat_by_id(metadata['chat_id'], user, permission='write')
     if chat is None:
         raise ValueError('Chat reply access denied')
@@ -103,7 +103,7 @@ async def run(request, form_data, user, metadata, model):
     for file in files:
         if file.get('type') == 'filesystem':
             if file.get('terminal_id') != agent['terminal_id']:
-                raise ValueError('Attachment belongs to another terminal')
+                raise ValueError('Attachment belongs to another machine')
             paths.append(file['path'])
     messages = form_data.get('messages') or []
     user_message = metadata.get('user_message') or next((m for m in reversed(messages) if m.get('role') == 'user'), {})

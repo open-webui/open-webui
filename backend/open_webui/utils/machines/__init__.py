@@ -114,9 +114,9 @@ async def get_connection(user, connection_id):
     connections = await Config.get('machines.connections', []) or []
     connection = next((c for c in connections if c.get('id') == connection_id), None)
     if not connection or not connection.get('enabled', True) or connection.get('server_type') != 'orchestrator':
-        raise HTTPException(404, 'Managed terminal connection not found')
+        raise HTTPException(404, 'Managed machine connection not found')
     if not await has_connection_access(user, connection) and not await has_connection_write_access(user, connection):
-        raise HTTPException(403, 'Terminal connection access denied')
+        raise HTTPException(403, 'Machine connection access denied')
     return connection
 
 
@@ -149,7 +149,7 @@ async def has_terminal_write_access(user, terminal_id):
 
 def split_template_id(terminal_id):
     if not terminal_id.startswith('template:'):
-        raise HTTPException(400, 'Invalid template terminal ID')
+        raise HTTPException(400, 'Invalid template machine ID')
     connection_id, separator, encoded = terminal_id.removeprefix('template:').rpartition(':')
     template_id = unquote(encoded)
     if (
@@ -158,7 +158,7 @@ def split_template_id(terminal_id):
         or not template_id
         or template_terminal_id(connection_id, template_id) != terminal_id
     ):
-        raise HTTPException(400, 'Invalid template terminal ID')
+        raise HTTPException(400, 'Invalid template machine ID')
     return connection_id, template_id
 
 
@@ -170,7 +170,7 @@ async def require_terminal_access(user, terminal_id):
         return
     if await AccessGrants.has_access(user.id, 'terminal', terminal_id, 'read'):
         return
-    raise HTTPException(403, 'Terminal access denied')
+    raise HTTPException(403, 'Machine access denied')
 
 
 async def template_connection(user, terminal_id, permission='read'):
@@ -178,7 +178,7 @@ async def template_connection(user, terminal_id, permission='read'):
     connection = await get_connection(user, connection_id)
     if not await has_connection_write_access(user, connection):
         if permission == 'write':
-            raise HTTPException(403, 'Terminal connection write access required')
+            raise HTTPException(403, 'Machine connection write access required')
         await require_terminal_access(user, terminal_id)
     template = await server_request(connection, f'api/v1/terminals/templates/{quote(template_id, safe="")}')
     return connection, template
@@ -265,7 +265,7 @@ async def require_model_access(user, model_id, terminal_id, request=None):
     if model_id.startswith('agent:'):
         parts = model_id.split(':', 3)
         if len(parts) != 4 or unquote(parts[1]) != terminal_id or not all(parts[1:]):
-            raise HTTPException(403, 'Agent model does not belong to this terminal')
+            raise HTTPException(403, 'Agent model does not belong to this machine')
         # Agent access follows its terminal. Execution still validates the live agent catalog.
         return
     from open_webui.models.models import Models
@@ -352,7 +352,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
             instance_user_id = shared_session.get('instance_user_id') or shared_session['user']
             instance_user = user if instance_user_id == user.id else await Users.get_user_by_id(instance_user_id)
             if instance_user is None:
-                raise HTTPException(403, 'Agent terminal owner is unavailable')
+                raise HTTPException(403, 'Agent machine owner is unavailable')
 
     def authorized_connection(connection):
         if shared_session:
@@ -369,7 +369,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
         ):
             return None
         if is_terminal_orchestrator(connection):
-            raise HTTPException(409, 'Select a terminal template')
+            raise HTTPException(409, 'Select a machine template')
         return authorized_connection(connection)
 
     connection_id, template_id = split_template_id(terminal_id)
@@ -380,9 +380,9 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
     if chat and not shared_session:
         stored = (chat.chat or {}).get('terminal_id')
         if chat.user_id != user.id and stored != terminal_id:
-            raise HTTPException(403, 'Use the terminal selected by the chat owner')
+            raise HTTPException(403, 'Use the machine selected by the chat owner')
         if stored and stored != terminal_id:
-            raise HTTPException(409, 'Chat terminal selection changed; refresh the chat')
+            raise HTTPException(409, 'Chat machine selection changed; refresh the chat')
 
     principal = instance_user
     if not shared_session and scope == 'chat' and chat:
@@ -394,7 +394,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
             and not await has_connection_access(owner, connection)
             and not await has_connection_write_access(owner, connection)
         ):
-            raise HTTPException(403, 'Terminal connection access denied')
+            raise HTTPException(403, 'Machine connection access denied')
         principal = owner
     if not await has_connection_write_access(principal, connection):
         await require_terminal_access(principal, terminal_id)
@@ -407,7 +407,7 @@ async def find_terminal_connection(user, terminal_id, metadata=None, request=Non
 
         automation = await Automations.get_by_id(metadata['automation_id'])
         if not automation or automation.user_id != user.id:
-            raise HTTPException(403, 'Automation terminal access denied')
+            raise HTTPException(403, 'Automation machine access denied')
     return authorized_connection(
         {
             **connection,
@@ -511,7 +511,7 @@ async def get_terminal_json(
                     return await response.json() if 200 <= response.status < 300 else None
         except TimeoutError as error:
             raise TimeoutError(
-                f"Terminal '{connection.get('name') or terminal_id}' timed out. "
+                f"Machine '{connection.get('name') or terminal_id}' timed out. "
                 'It may still be starting. Please try again.'
             ) from error
     return None
@@ -554,7 +554,7 @@ async def initialize_terminal_directory(request, user, metadata, terminal_id, pa
         body={'path': path},
     )
     if not result or not result.get('cwd'):
-        raise HTTPException(400, 'Working directory is unavailable. Check the terminal connection and path.')
+        raise HTTPException(400, 'Working directory is unavailable. Check the machine connection and path.')
     metadata['initial_terminal_cwd'] = result['cwd']
 
 
@@ -612,7 +612,7 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
         )
         directory = cwd.get('cwd') if isinstance(cwd, dict) else None
         if not directory:
-            raise ValueError('Terminal working directory unavailable')
+            raise ValueError('Machine working directory unavailable')
         path = f'/files/upload?directory={quote(directory, safe="")}'
         for entry in files:
             try:
@@ -623,7 +623,7 @@ async def upload_files_to_terminal(request, user, files: list[dict], metadata: d
                     timeout=AIOHTTP_CLIENT_TIMEOUT_TERMINAL,
                 )
                 if not isinstance(result, dict) or not isinstance(result.get('path'), str) or not result['path']:
-                    raise ValueError('Terminal upload failed')
+                    raise ValueError('Machine upload failed')
                 entry['terminal_path'] = result['path']
             except Exception as error:
                 log.warning('File terminal upload failed (%s)', type(error).__name__)
@@ -641,7 +641,7 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
 
     resolved = await resolve_terminal_connection(request, user, metadata)
     if not resolved:
-        raise ValueError('Reading files requires a terminal connection reachable by Open WebUI.')
+        raise ValueError('Reading files requires a machine connection reachable by Open WebUI.')
     connection, headers, cookies = resolved
     base_url = get_terminal_server_url(connection)
     async with get_machine_client(
@@ -659,7 +659,7 @@ async def get_terminal_file(request, user, metadata: dict, path: str, *, max_byt
             allow_redirects=False,
         ) as response:
             if response.status != 200:
-                raise ValueError(f'Could not read {path} from the terminal.')
+                raise ValueError(f'Could not read {path} from the machine.')
             data = bytearray()
             async for chunk in response.content.iter_chunked(64 * 1024):
                 if len(data) + len(chunk) > max_bytes:

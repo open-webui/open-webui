@@ -33,7 +33,7 @@ class TerminalTransport:
     async def resolve(cls, request, user, metadata):
         resolved = await resolve_terminal_connection(request, user, metadata)
         if not resolved:
-            raise ValueError('Select an accessible server or Tether terminal to use agents')
+            raise ValueError('Select an accessible machine to use agents')
         return cls(*resolved, resolved[0].get('instance_user_id', user.id))
 
     async def request(self, method, path, body=None):

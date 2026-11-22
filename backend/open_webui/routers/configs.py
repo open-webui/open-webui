@@ -407,7 +407,7 @@ async def verify_terminal_server_connection(
 
     base_url = (form_data.url or '').rstrip('/')
     if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+        raise HTTPException(status_code=400, detail='Machine URL is required')
 
     headers = {}
     if form_data.auth_type in ('bearer', 'session') and form_data.key:
@@ -446,7 +446,7 @@ async def verify_terminal_server_connection(
     except Exception as e:
         log.debug('Failed to connect to the terminal server: %s', e)
 
-    raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
+    raise HTTPException(status_code=400, detail='Failed to connect to the machine')
 
 
 @router.post('/tool_servers/verify')

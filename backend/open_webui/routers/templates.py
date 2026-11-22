@@ -135,7 +135,7 @@ async def set_shares(terminal_id: str, body: ShareForm, user=Depends(get_verifie
         g.get('principal_type') not in ('user', 'group') or g.get('principal_id') in (None, '', '*')
         for g in body.access_grants
     ):
-        raise HTTPException(400, 'Public terminal sharing is not allowed')
+        raise HTTPException(400, 'Public machine sharing is not allowed')
     grants = await validate_access_grants(
         await Config.get('user.permissions'), user.id, user.role, body.access_grants, resource_type='terminal'
     )

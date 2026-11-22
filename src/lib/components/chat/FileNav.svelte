@@ -336,7 +336,7 @@
 			openedFile.terminal_id !== effectiveTerminalId ||
 			openedFile.session_id !== chatId
 		)
-			throw new Error('The file or terminal changed. Open it again before sending.');
+			throw new Error('The file or machine changed. Open it again before sending.');
 		if (diskChanged)
 			throw new Error('The file changed on disk. Reload and select the content again.');
 		return structuredClone(openedFile);
@@ -2461,7 +2461,7 @@
 			class="text-base-300 dark:text-base-600 mb-2"
 		/>
 		<div class="text-xs text-base-500 dark:text-base-400">
-			{$i18n.t('Start the chat to use this terminal.')}
+			{$i18n.t('Start the chat to use this machine.')}
 		</div>
 	</div>
 {:else if !selectedTerminal}
