@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Fuse from 'fuse.js';
-	import Bolt from '$lib/components/icons/Bolt.svelte';
 	import { getContext } from 'svelte';
 	import { settings, WEBUI_NAME } from '$lib/stores';
 	import { WEBUI_VERSION } from '$lib/constants';
@@ -64,7 +63,6 @@
 
 <div class="mb-1 flex gap-1 text-xs font-normal items-center text-base-600 dark:text-base-400">
 	{#if filteredPrompts.length > 0}
-		<Bolt />
 		<h3 id="suggestions-heading">{$i18n.t('Suggested')}</h3>
 	{:else}
 		<!-- Keine Vorschläge -->
@@ -93,7 +91,7 @@
 				<div role="listitem" class="contents">
 					<button
 						class="waterfall flex flex-col flex-1 shrink-0 w-full justify-between
-				       px-2.5 py-1.5 rounded-lg bg-transparent transition-colors
+				       px-1 py-1.5 rounded-lg bg-transparent transition-colors
 				       hover:text-base-950 dark:hover:text-base-0 group"
 						style="animation-delay: {idx * 45}ms"
 						on:click={() => onSelect({ type: 'prompt', data: prompt.content })}

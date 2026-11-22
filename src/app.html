@@ -61,12 +61,19 @@
 					localStorage.theme = 'system';
 				}
 
+				// OLED Dark is now the dark theme with a black background colour.
+				if (localStorage.theme === 'oled-dark') {
+					localStorage.theme = 'dark';
+					try {
+						const colors = JSON.parse(localStorage.themeColors ?? '{}');
+						colors.dark ??= { bg: '#000000', fg: '#ffffff' };
+						localStorage.themeColors = JSON.stringify(colors);
+					} catch {}
+				}
+
 				if (localStorage.theme === 'system') {
 					document.documentElement.classList.add(prefersDarkTheme ? 'dark' : 'light');
 					metaThemeColorTag.setAttribute('content', prefersDarkTheme ? '#171717' : '#ffffff');
-				} else if (localStorage.theme === 'oled-dark') {
-					document.documentElement.classList.add('dark', 'oled-dark');
-					metaThemeColorTag.setAttribute('content', '#000000');
 				} else if (localStorage.theme === 'light') {
 					document.documentElement.classList.add('light');
 					metaThemeColorTag.setAttribute('content', '#ffffff');
