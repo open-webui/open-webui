@@ -873,9 +873,18 @@
 			sourceTabId
 		);
 	};
-	const openOverview = () => {
-		if (!hasMessages) return;
-		openPanel({ id: 'overview', kind: 'overview', label: $i18n.t('Overview') });
+	const openOverview = (sourceTabId = mainChatTabId) => {
+		if (sourceTabId === mainChatTabId) {
+			if (!hasMessages) return;
+			openPanel({ id: 'overview', kind: 'overview', label: $i18n.t('Overview') });
+			return;
+		}
+		openPanel({
+			id: `overview:${sourceTabId}`,
+			kind: 'overview',
+			label: $i18n.t('Overview'),
+			sourceTabId
+		});
 	};
 	$: if (viewReady && queuedArtifactCode) {
 		const { code } = queuedArtifactCode;
@@ -1394,6 +1403,14 @@
 	};
 
 	$: hasMessages = chatHistory?.messages && Object.keys(chatHistory.messages).length > 0;
+	const groupChatTabId = (group: TabGroup) => {
+		const tab = tabs.tabs.find((item) => item.id === group.activeId);
+		return tab?.kind === 'chat' && tab.id !== mainChatTabId ? tab.id : undefined;
+	};
+	const groupChatOverview = (group: TabGroup) => {
+		const id = groupChatTabId(group);
+		return id ? (chatViews[id]?.getOverview() ?? null) : null;
+	};
 
 	const chatContextNeedsSavedChat = (machine: any) => machine?.scope === 'chat';
 	$: selectedSystemMachine = ($machines ?? []).find(
@@ -1450,11 +1467,13 @@
 					...commentAnchor
 				}
 			: null;
-	// A chat's artifacts tab names the chat it belongs to.
+	// A chat's artifacts or Overview tab names the chat it belongs to.
 	$: tabLabel = (tab: Tab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		const source =
-			tab.kind === 'artifacts' && tab.sourceTabId !== mainChatTabId
+			(tab.kind === 'artifacts' || tab.kind === 'overview') &&
+			tab.sourceTabId &&
+			tab.sourceTabId !== mainChatTabId
 				? tabs.tabs.find((item) => item.id === tab.sourceTabId)
 				: null;
 		return source ? `${tab.label} · ${source.label}` : tab.label;
@@ -2105,14 +2124,25 @@
 					/>
 				{:else if tab.kind === 'overview'}
 					{#await import('./Overview.svelte') then { default: Overview }}
+						{@const sourceTabId =
+							tab.sourceTabId && tab.sourceTabId !== mainChatTabId ? tab.sourceTabId : null}
+						{@const sourceChat = sourceTabId
+							? (chatViews[sourceTabId]?.getOverview() ?? null)
+							: null}
 						<Overview
-							history={chatHistory}
-							{chatUser}
+							history={sourceChat?.history ?? chatHistory}
+							chatUser={sourceChat ? sourceChat.chatUser : chatUser}
 							onNodeClick={(e: any) => {
 								const { node } = e;
-								chatHistory.messages[node.data.message.id].favorite = node.data.message.favorite
+								const target = sourceChat?.history ?? chatHistory;
+								target.messages[node.data.message.id].favorite = node.data.message.favorite
 									? true
 									: null;
+								if (sourceChat && sourceTabId) {
+									if (!visibleTabIds.has(sourceTabId)) selectTab(sourceTabId);
+									sourceChat.showMessage(node.data.message, true);
+									return;
+								}
 								if (!visibleTabIds.has(mainChatTabId)) focusMainChat();
 								showMessage(node.data.message, true);
 							}}
@@ -2579,8 +2609,8 @@
 									{/if}
 								</button>
 							{/each}
-							{#if hasMessages}
-								<button on:click={openOverview}>
+							{#if groupChatOverview(group) ? Object.keys(groupChatOverview(group)?.history?.messages ?? {}).length > 0 : hasMessages}
+								<button on:click={() => openOverview(groupChatTabId(group))}>
 									<Map className="size-3.5 shrink-0" strokeWidth="1.5" />
 									<span class="flex-1 text-start">{$i18n.t('Overview')}</span>
 								</button>

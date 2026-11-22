@@ -25,7 +25,7 @@ export type Tab = {
 	chatNumber?: number;
 	/** Set only when a new conversation explicitly inherits another chat's context. */
 	parentChatId?: string;
-	/** For an artifacts tab: the tab of the chat whose artifacts it shows. */
+	/** For an artifacts or Overview tab: the tab of the chat it shows. */
 	sourceTabId?: string;
 	machineId?: string;
 	terminalNumber?: number;
