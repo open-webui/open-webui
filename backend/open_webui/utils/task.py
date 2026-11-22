@@ -313,14 +313,15 @@ async def rag_template(template: str, context: str, query: str):
     return template
 
 
-async def title_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
-    prompt = get_last_user_message(messages)
-    template = replace_prompt_variable(template, prompt)
+async def render_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+    """Fill {{prompt}}, {{MESSAGES}} and user variables in a task template."""
+    template = replace_prompt_variable(template, get_last_user_message(messages) or '')
     template = replace_messages_variable(template, messages)
+    return await prompt_template(template, user)
 
-    template = await prompt_template(template, user)
 
-    return template
+async def title_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
+    return await render_template(template, messages, user)
 
 
 async def follow_up_generation_template(
@@ -377,21 +378,11 @@ def parse_follow_ups(content: str, max_count: int = 5) -> list[str]:
 
 
 async def tags_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
-    prompt = get_last_user_message(messages)
-    template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
-
-    template = await prompt_template(template, user)
-    return template
+    return await render_template(template, messages, user)
 
 
 async def image_prompt_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
-    prompt = get_last_user_message(messages)
-    template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
-
-    template = await prompt_template(template, user)
-    return template
+    return await render_template(template, messages, user)
 
 
 async def emoji_generation_template(template: str, prompt: str, user: Optional[Any] = None) -> str:
@@ -417,12 +408,7 @@ async def autocomplete_generation_template(
 
 
 async def query_generation_template(template: str, messages: list[dict], user: Optional[Any] = None) -> str:
-    prompt = get_last_user_message(messages)
-    template = replace_prompt_variable(template, prompt)
-    template = replace_messages_variable(template, messages)
-
-    template = await prompt_template(template, user)
-    return template
+    return await render_template(template, messages, user)
 
 
 def moa_response_generation_template(template: str, prompt: str, responses: list[str]) -> str:
