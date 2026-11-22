@@ -1470,6 +1470,8 @@
 	// A chat's artifacts or Overview tab names the chat it belongs to.
 	$: tabLabel = (tab: Tab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
+		// A cited file is named like any other file tab.
+		if (tab.kind === 'preview' && $embed?.file) return $embed.title || tab.label;
 		const source =
 			(tab.kind === 'artifacts' || tab.kind === 'overview') &&
 			tab.sourceTabId &&
@@ -1707,7 +1709,8 @@
 		openFeatureTab('comments');
 	}
 	$: if (viewReady && $showEmbeds && showPreviewTab) {
-		openFeatureTab('preview');
+		// A cited file opens beside the chat, so the answer stays readable.
+		openFeatureTab('preview', !!$embed?.file);
 		showEmbeds.set(false);
 	}
 	$: if (viewReady && $voiceCall) openFeatureTab('voice');
@@ -2472,8 +2475,8 @@
 								{:else}
 									<Icon name="folder" size={14} />
 								{/if}
-							{:else if tab.kind === 'file'}
-								<Icon name={fileIconName(tab.label)} size={14} strokeWidth={1.4} />
+							{:else if tab.kind === 'file' || (tab.kind === 'preview' && $embed?.file)}
+								<Icon name={fileIconName(tabLabel(tab))} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'terminal'}
 								<Icon
 									name={terminalIconName(

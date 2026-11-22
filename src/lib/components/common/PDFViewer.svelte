@@ -6,7 +6,15 @@
 	import Spinner from './Spinner.svelte';
 	import { readPdfComments } from '$lib/utils/comments/pdf';
 	import { mapWordComments, type PdfTextRun } from '$lib/utils/comments/pdfAnchors';
-	import { findTextRange, highlightRange, commentPin } from '$lib/utils/comments/highlights';
+	import {
+		findTextRange,
+		highlightRange,
+		markRange,
+		markAt,
+		rangeOf,
+		textIndex,
+		commentPin
+	} from '$lib/utils/comments/highlights';
 	import type { FileComment, CommentResult } from '$lib/utils/comments/types';
 
 	const i18n: any = getContext('i18n');
@@ -23,6 +31,10 @@
 	export let onCommentSelect: ((comment: FileComment) => void) | null = null;
 	export let selectedComment: FileComment | null = null;
 	export let sourceComments: FileComment[] | null = null;
+	/** Text to mark on whichever rendered pages contain it, such as a cited passage. */
+	export let highlightQuotes: string[] | null = null;
+	/** Called with the index of the quote under the pointer and where its mark sits, or null. */
+	export let onQuoteHover: ((index: number | null, rect: DOMRect | null) => void) | null = null;
 	export let onAnchors: ((ids: string[]) => void) | null = null;
 	let mappedSource: FileComment[] | null = null;
 	let mappedDoc: PdfDocument | null = null;
@@ -93,8 +105,45 @@
 	let lastWidth = 0;
 	let lastHeight = 0;
 	let resizeTimer: ReturnType<typeof setTimeout>;
+	const renderQuoteHighlights = () => {
+		for (const wrapper of Array.from(
+			sceneElement?.querySelectorAll<HTMLElement>('.pdf-page-wrapper') ?? []
+		)) {
+			wrapper.querySelector('.quote-highlight-layer')?.remove();
+			if (!highlightQuotes?.length || !wrapper.querySelector('.textLayer')?.hasChildNodes())
+				continue;
+			const layer = document.createElement('div');
+			layer.className = 'quote-highlight-layer';
+			Object.assign(layer.style, {
+				position: 'absolute',
+				inset: '0',
+				pointerEvents: 'none',
+				zIndex: '3'
+			});
+			const text = textIndex(wrapper);
+			highlightQuotes.forEach((quote, index) => {
+				// A quote found more than once on the page is left unmarked
+				const range = rangeOf(text, quote);
+				if (range) markRange(wrapper, layer, range, String(index));
+			});
+			if (layer.hasChildNodes()) wrapper.appendChild(layer);
+		}
+	};
+
+	// Marks let the text under them be selected, so the pointer is matched to them by position.
+	let hoveredQuote: number | null = null;
+	const handleQuoteHover = (event: MouseEvent | null) => {
+		if (!onQuoteHover) return;
+		const mark = event ? markAt(sceneElement, event.clientX, event.clientY) : undefined;
+		const index = mark ? Number(mark.dataset.quote) : null;
+		if (index === hoveredQuote) return;
+		hoveredQuote = index;
+		onQuoteHover(index, mark?.getBoundingClientRect() ?? null);
+	};
+
 	const renderCommentMarkers = async () => {
 		const token = ++markerToken;
+		renderQuoteHighlights();
 		if (!sceneElement || !pdfDoc || (!onComments && !sourceComments)) return;
 		const doc = pdfDoc;
 		for (const wrapper of Array.from(
@@ -725,6 +774,7 @@
 	$: if (sourceComments && pdfDoc) void mapSourceComments();
 
 	$: if (selectedComment && !loading) void renderCommentMarkers();
+	$: if (highlightQuotes && !loading) void renderCommentMarkers();
 
 	onDestroy(() => {
 		markerToken++;
@@ -767,6 +817,8 @@
 		on:wheel|nonpassive={handleWheel}
 		on:dblclick|capture|stopPropagation={() => {}}
 		on:pointerdown={focusViewer}
+		on:mousemove={handleQuoteHover}
+		on:mouseleave={() => handleQuoteHover(null)}
 		on:keydown={handleKeyDown}
 	>
 		<div

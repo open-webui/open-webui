@@ -17,6 +17,8 @@
 	export let onCommentSelect: ((comment: FileComment) => void) | null = null;
 	export let selectedComment: FileComment | null = null;
 	export let sourceComments: FileComment[] | null = null;
+	export let highlightQuotes: string[] | null = null;
+	export let onQuoteHover: ((index: number | null, rect: DOMRect | null) => void) | null = null;
 	export let onAnchors: ((ids: string[]) => void) | null = null;
 
 	type PdfDocument = import('pdfjs-dist').PDFDocumentProxy;
@@ -209,6 +211,8 @@
 				{onCommentSelect}
 				{selectedComment}
 				{sourceComments}
+				{highlightQuotes}
+				{onQuoteHover}
 				{onAnchors}
 				className="w-full h-full"
 			/>

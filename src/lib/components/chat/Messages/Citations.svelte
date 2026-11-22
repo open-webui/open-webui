@@ -42,6 +42,32 @@
 		if (citations[index]) {
 			console.log('Showing citation modal for:', citations[index]);
 
+			// A cited document whose layout the retrieved text loses opens beside the chat,
+			// at the cited page when one is known. Plain text files read the same in the popup.
+			const metadata = citations[index].metadata?.[0];
+			const fileName = String(metadata?.name ?? citations[index].source?.name ?? '');
+			if (!readOnly && metadata?.file_id && /\.(pdf|docx|pptx|xlsx|xls)$/i.test(fileName)) {
+				showTabs.set(true);
+				showEmbeds.set(true);
+				embed.set({
+					file: {
+						id: metadata.file_id,
+						page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
+						// The cited passages of this file, each with its page
+						passages: (citations[index].document ?? [])
+							.map((text, i) => ({ text, metadata: citations[index].metadata?.[i] }))
+							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
+							.map(({ text, metadata }) => ({
+								text,
+								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null
+							}))
+					},
+					title: fileName,
+					chatId: chatId
+				});
+				return;
+			}
+
 			if (citations[index]?.source?.embed_url) {
 				const embedUrl = citations[index].source.embed_url;
 				// The embed panel renders anything it cannot read as a URL as raw HTML
