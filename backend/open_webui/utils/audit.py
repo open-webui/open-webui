@@ -186,10 +186,14 @@ class AuditLoggingMiddleware:
         # Paths are fixed for the process lifetime; compile once instead of
         # per request. None means the corresponding mode has nothing to match.
         self._included_pattern = (
-            re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.included_paths) + r')\b') if self.included_paths else None
+            re.compile(r'^(?:/api(?:/v1)?)?/(' + '|'.join(self.included_paths) + r')\b')
+            if self.included_paths
+            else None
         )
         self._excluded_pattern = (
-            re.compile(r'^/api(?:/v1)?/(' + '|'.join(self.excluded_paths) + r')\b') if self.excluded_paths else None
+            re.compile(r'^(?:/api(?:/v1)?)?/(' + '|'.join(self.excluded_paths) + r')\b')
+            if self.excluded_paths
+            else None
         )
 
         if self.included_paths and self.excluded_paths:
