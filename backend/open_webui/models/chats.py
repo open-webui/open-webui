@@ -1383,7 +1383,7 @@ class ChatTable:
             history = (chat.chat or {}).get('history') or {'messages': {}, 'currentId': None}
             messages = history.get('messages') or {}
             user_message_id = user_message.get('id')
-            assistant_ids = [entry.get('message_id') for entry in message_ids]
+            assistant_ids = [assistant_message.get('message_id') for assistant_message in message_ids]
             ids = [user_message_id, *assistant_ids] if user_message else assistant_ids
             if not all(isinstance(mid, str) and mid for mid in ids) or len(set(ids)) != len(ids):
                 raise HTTPException(409, 'Message already exists or has an invalid ID.')
@@ -1428,8 +1428,8 @@ class ChatTable:
                 turn[user_message_id] = self.upsert_message_to_history(
                     history, user_message_id, self._clean_null_bytes(message)
                 )
-            for entry in message_ids:
-                mid = entry['message_id']
+            for assistant_message in message_ids:
+                mid = assistant_message['message_id']
                 turn[mid] = self.upsert_message_to_history(
                     history,
                     mid,
@@ -1440,10 +1440,12 @@ class ChatTable:
                         'role': 'assistant',
                         'content': '',
                         'done': False,
-                        'model': entry['model_id'],
-                        'modelIdx': entry.get('modelIdx'),
+                        'model': assistant_message['model_id'],
+                        'modelIdx': assistant_message.get('modelIdx'),
                         'timestamp': int(time.time()),
                         'user_id': user.id,
+                        'meta': assistant_message['meta'],
+                        **({'modelName': assistant_message['modelName']} if assistant_message['modelName'] else {}),
                     },
                 )
             chat.chat = {**(chat.chat or {}), 'history': history}

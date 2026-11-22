@@ -1267,7 +1267,7 @@ async def chat_completion(
             message_ids = [{'model_id': model_id, 'message_id': form_data.pop('id', None)}]
 
         user_message = form_data.pop('user_message', None) or form_data.pop('parent_message', None)
-        if any(str(entry.get('model_id', '')).startswith('agent:') for entry in message_ids):
+        if any(str(assistant_message.get('model_id', '')).startswith('agent:') for assistant_message in message_ids):
             if agent_model is None or len(message_ids) != 1 or message_ids[0]['model_id'] != model_id:
                 raise HTTPException(400, 'Use one agent at a time in a conversation')
         chat_id = form_data.pop('chat_id', None) or ''
@@ -1341,6 +1341,15 @@ async def chat_completion(
         if is_new_chat:
             metadata['chat_id'] = str(uuid4())
 
+        # New replies are saved with their task and start in the same write as the turn.
+        for assistant_message in message_ids:
+            assistant_message['meta'] = {
+                **({'task_id': str(uuid4())} if metadata.get('session_id') else {}),
+                'response_started_at': time.time(),
+            }
+            # Agent models disappear with their machine.
+            assistant_message['modelName'] = agent_model['name'] if agent_model else None
+
         if is_temporary_chat_id(metadata.get('chat_id')):
             session_id = metadata.get('session_id')
             if not isinstance(session_id, str) or not await register_temporary_chat_session(
@@ -1390,8 +1399,8 @@ async def chat_completion(
                                 status_code=status.HTTP_403_FORBIDDEN,
                                 detail=ERROR_MESSAGES.DEFAULT(),
                             )
-                for entry in message_ids:
-                    target_message_id = entry.get('message_id')
+                for assistant_message in message_ids:
+                    target_message_id = assistant_message.get('message_id')
                     if not target_message_id:
                         continue
                     target_message = await Messages.get_message_by_id(target_message_id)
@@ -1420,7 +1429,11 @@ async def chat_completion(
                     user_message_id = user_message.get('id') if user_message else None
 
                     history_messages = {}
-                    all_assistant_ids = [entry['message_id'] for entry in message_ids if entry.get('message_id')]
+                    all_assistant_ids = [
+                        assistant_message['message_id']
+                        for assistant_message in message_ids
+                        if assistant_message.get('message_id')
+                    ]
 
                     if user_message_id and user_message:
                         user_message['childrenIds'] = all_assistant_ids
@@ -1428,11 +1441,11 @@ async def chat_completion(
                         user_message['user'] = {'id': user.id, 'name': user.name}
                         history_messages[user_message_id] = user_message
 
-                    for entry in message_ids:
-                        target_model_id = entry['model_id']
-                        assistant_message_id = entry['message_id']
+                    for assistant_message in message_ids:
+                        target_model_id = assistant_message['model_id']
+                        assistant_message_id = assistant_message['message_id']
                         if assistant_message_id:
-                            assistant_message = {
+                            placeholder = {
                                 'id': assistant_message_id,
                                 'parentId': user_message_id,
                                 'childrenIds': [],
@@ -1441,12 +1454,18 @@ async def chat_completion(
                                 'done': False,
                                 'model': target_model_id,
                                 'timestamp': int(time.time()),
+                                'meta': assistant_message['meta'],
+                                **(
+                                    {'modelName': assistant_message['modelName']}
+                                    if assistant_message['modelName']
+                                    else {}
+                                ),
                             }
                             # Preserve the side-by-side column index so duplicate
                             # models don't collapse into one another on reload.
-                            if entry.get('modelIdx') is not None:
-                                assistant_message['modelIdx'] = entry['modelIdx']
-                            history_messages[assistant_message_id] = assistant_message
+                            if assistant_message.get('modelIdx') is not None:
+                                placeholder['modelIdx'] = assistant_message['modelIdx']
+                            history_messages[assistant_message_id] = placeholder
 
                     await Chats.insert_new_chat(
                         chat_id,
@@ -1455,7 +1474,7 @@ async def chat_completion(
                             chat={
                                 'id': chat_id,
                                 'title': 'New Chat',
-                                'models': [entry['model_id'] for entry in message_ids],
+                                'models': [assistant_message['model_id'] for assistant_message in message_ids],
                                 'machine_id': machine_id_of(model.get('agent')) or form_data.get('machine_id'),
                                 'working_directory': requested_directory or '',
                                 'history': {
@@ -1495,8 +1514,8 @@ async def chat_completion(
                                 'content_preview': user_message.get('content', '')[:300],
                             },
                         )
-                    for entry in message_ids:
-                        assistant_message_id = entry.get('message_id')
+                    for assistant_message in message_ids:
+                        assistant_message_id = assistant_message.get('message_id')
                         if assistant_message_id:
                             await publish_event(
                                 request,
@@ -1506,7 +1525,7 @@ async def chat_completion(
                                 data={
                                     'chat_id': chat_id,
                                     'role': 'assistant',
-                                    'model': entry.get('model_id'),
+                                    'model': assistant_message.get('model_id'),
                                 },
                             )
 
@@ -1578,7 +1597,10 @@ async def chat_completion(
                         message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
                         if not message or (message.get('user_id') or chat.user_id) != user.id:
                             raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-                        if any(entry.get('message_id') != assistant_message_id for entry in message_ids):
+                        if any(
+                            assistant_message.get('message_id') != assistant_message_id
+                            for assistant_message in message_ids
+                        ):
                             raise HTTPException(status_code=400, detail='Invalid response ID.')
                         metadata['user_message_id'] = message.get('parentId')
                     else:
@@ -1618,7 +1640,7 @@ async def chat_completion(
 
                     if chat.user_id == user.id:
                         selected_chat_models = user_message.get('models') or [
-                            entry['model_id'] for entry in message_ids
+                            assistant_message['model_id'] for assistant_message in message_ids
                         ]
                         chat_fields = {'models': selected_chat_models}
                         if metadata.get('files') is not None:
@@ -1656,21 +1678,27 @@ async def chat_completion(
             detail=str(e),
         )
 
+    async def continue_assistant_message(message_id, task_id):
+        """Mark a continued assistant message as running under its new task, before the task starts."""
+        if not (is_saved_chat_id(metadata.get('chat_id')) and metadata.get('assistant_message_id')):
+            return
+        async with Chats.edit_message_output(metadata['chat_id'], message_id) as message:
+            if message is not None:
+                # Continuations retain the original start, including approval pauses.
+                # A historical response without a recorded start remains unknown.
+                response_meta = dict(message.get('meta') or {})
+                response_meta.pop('response_ended_at', None)
+                if task_id:
+                    response_meta['task_id'] = task_id
+                message['meta'] = response_meta
+                message['done'] = False
+                if agent_model:
+                    message['modelName'] = agent_model['name']
+
     async def process_chat(request, form_data, user, metadata, model, tasks=None):
         error_detail = None
         try:
             try:
-                if is_saved_chat_id(metadata.get('chat_id')) and metadata.get('message_id'):
-                    async with Chats.edit_message_output(metadata['chat_id'], metadata['message_id']) as message:
-                        if message is not None:
-                            response_meta = dict(message.get('meta') or {})
-                            # Continuations retain the original start, including approval pauses.
-                            # A historical response without a recorded start remains unknown.
-                            if not metadata.get('assistant_message_id'):
-                                response_meta['response_started_at'] = time.time()
-                            response_meta.pop('response_ended_at', None)
-                            message['meta'] = response_meta
-                            message['done'] = False
                 target = (
                     model_info if form_data['model'] == model_id else await Models.get_model_by_id(form_data['model'])
                 )
@@ -1849,9 +1877,9 @@ async def chat_completion(
         is_internal = getattr(request.state, 'internal', False) is True
         chat_id = metadata['chat_id']
 
-        for idx, entry in enumerate(message_ids):
-            target_model_id = entry['model_id']
-            assistant_message_id = entry['message_id']
+        for idx, assistant_message in enumerate(message_ids):
+            target_model_id = assistant_message['model_id']
+            assistant_message_id = assistant_message['message_id']
             if not assistant_message_id:
                 continue
 
@@ -1861,23 +1889,14 @@ async def chat_completion(
             # Per-model metadata: own message_id + model
             per_model_metadata = {
                 **metadata,
-                'model_id': entry['model_id'],
+                'model_id': assistant_message['model_id'],
                 'chat_context': copy.deepcopy(metadata['chat_context']),
                 'message_id': assistant_message_id,
-                'task_id': str(uuid4()),
+                'task_id': assistant_message['meta']['task_id'],
             }
 
-            if is_saved_chat_id(chat_id):
-                await Chats.upsert_message_to_chat_by_id_and_message_id(
-                    chat_id,
-                    assistant_message_id,
-                    {
-                        'meta': {'task_id': per_model_metadata['task_id']},
-                        # Agent models disappear with their machine.
-                        **({'modelName': agent_model['name']} if agent_model else {}),
-                    },
-                    touch=False,
-                )
+            # New replies were saved with their task; a continuation is saved before its task runs.
+            await continue_assistant_message(assistant_message_id, assistant_message['meta']['task_id'])
 
             # Per-model form_data: own model
             model_form_data = {
@@ -1947,6 +1966,8 @@ async def chat_completion(
         # Legacy/direct: single model, synchronous
         metadata['message_id'] = message_ids[0]['message_id']
         try:
+            if metadata['message_id']:
+                await continue_assistant_message(metadata['message_id'], message_ids[0]['meta'].get('task_id'))
             return await process_chat(request, form_data, user, metadata, model, tasks)
         except HTTPException:
             raise
