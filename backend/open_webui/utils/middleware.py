@@ -6265,9 +6265,13 @@ async def streaming_chat_response_handler(response, ctx):
                         final_answer_requested = bool(stop_reason) or (
                             max_tool_call_iterations is not None and tool_call_iterations >= max_tool_call_iterations
                         )
+                        # Normalize first: appending the final-answer instruction afterwards keeps it as the last
+                        # message, next to the tool results. Before, it was a system message that the normalization
+                        # merged into the first system message — far above the tool results — which some models
+                        # (Gemma on vLLM) answer with empty content (#34750).
+                        new_form_data = normalize_messages_for_model(new_form_data)
                         if final_answer_requested:
                             new_form_data = final_answer_payload(new_form_data)
-                        new_form_data = normalize_messages_for_model(new_form_data)
 
                         res = await generate_chat_completion(
                             request,

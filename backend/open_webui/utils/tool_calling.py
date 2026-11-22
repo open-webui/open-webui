@@ -333,9 +333,13 @@ def prepare_tool_call(call, schema=None, *, display_labels=False, approval_revie
 
 
 def final_answer_payload(payload):
-    """Make one OpenAI-compatible continuation request with tool calls turned off."""
+    """Make one OpenAI-compatible continuation request with tool calls turned off.
+
+    The instruction is a user message appended after the rest of the conversation: keeping it next to the tool
+    results works with chat templates that require exactly one leading system message, and some models (Gemma on
+    vLLM) answer empty when the stop instruction sits in a system message far above them."""
     return {
         **payload,
         'tool_choice': 'none',
-        'messages': [*payload.get('messages', []), {'role': 'system', 'content': FINAL_ANSWER_PROMPT}],
+        'messages': [*payload.get('messages', []), {'role': 'user', 'content': FINAL_ANSWER_PROMPT}],
     }
