@@ -1190,6 +1190,7 @@
 						<Switch
 							id={`knowledge-connection-${connection.id}-control`}
 							state={connection.enabled !== false}
+							ariaLabel={`${$i18n.t('Enabled')}: ${connection.name}`}
 							on:change={() => toggleConnection(connection)}
 						/>
 					</Tooltip>
@@ -1251,6 +1252,7 @@
 						<Switch
 							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
+							ariaLabel={`${$i18n.t('Enabled')}: ${item.name}`}
 							on:change={() => {
 								toggleConnection(connection);
 							}}

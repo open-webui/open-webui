@@ -76,6 +76,7 @@
 			<Switch
 				id={`${settingId}-control`}
 				state={connection?.config?.enable ?? true}
+				ariaLabel={`${$i18n.t('Enabled')}: ${connection?.name || connection?.url}`}
 				on:change={() => {
 					connection = {
 						...connection,
