@@ -429,10 +429,7 @@
 		const storedMachineId = localStorage.selectedMachineId ?? localStorage.selectedTerminalId;
 		delete localStorage.selectedTerminalId;
 		selectedMachineId.set(
-			$config?.features?.enable_tool_servers &&
-				$machines?.some((machine) => machine.id === storedMachineId)
-				? storedMachineId
-				: null
+			$config?.features?.enable_tool_servers ? (storedMachineId ?? null) : null
 		);
 
 		// Persist selectedMachineId across page loads
@@ -450,12 +447,7 @@
 		models.set(await modelList);
 	});
 
-	$: if (
-		loaded &&
-		$selectedMachineId &&
-		$machines !== null &&
-		!$machines.some((machine) => machine.id === $selectedMachineId)
-	) {
+	$: if (loaded && $selectedMachineId && !$config?.features?.enable_tool_servers) {
 		selectedMachineId.set(null);
 	}
 

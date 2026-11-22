@@ -41,6 +41,7 @@
 	/** Connections the user may create machines on. */
 	export let connections: { id: string; name: string }[] = [];
 	export let onCreate: (id: string) => Promise<void> = async () => {};
+	export let onDelete: (id: string) => Promise<void> = async () => {};
 
 	const i18n = getContext<any>('i18n');
 	const path = (id: string) => `/${encodeURIComponent(id)}`;
@@ -344,6 +345,7 @@
 			() =>
 				run(async () => {
 					await templatesApi(path(machineId!), 'DELETE');
+					await onDelete(machineId!);
 					await refreshServers();
 					show = false;
 				})

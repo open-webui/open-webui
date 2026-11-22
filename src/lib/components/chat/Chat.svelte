@@ -3381,7 +3381,7 @@
 					machines.set(servers);
 				}
 				const machineId = machineIdOf(chatContent);
-				selectedMachineId.set(machineId && isMachineAvailable(machineId) ? machineId : null);
+				selectedMachineId.set($config?.features?.enable_tool_servers ? (machineId ?? null) : null);
 				machineContext =
 					$selectedMachineId &&
 					$selectedMachineId === machineId &&
@@ -4569,6 +4569,8 @@
 		if (initializedMachineChatId === id) return;
 		if (!$config?.features?.enable_tool_servers || !context?.currentDirectory) return;
 		const userSettings: any = $settings;
+		if (!isMachineAvailable(context.machineId ?? ''))
+			machines.set(await getMachines(localStorage.token));
 		const target = resolveMachineTarget(context.machineId, $machines ?? [], localStorage.token, {
 			chatId: id,
 			modelId: selectedModels[0] ?? null

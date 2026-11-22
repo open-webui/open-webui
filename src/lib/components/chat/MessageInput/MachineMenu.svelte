@@ -198,6 +198,25 @@
 </script>
 
 {#snippet menuItems()}
+	{#if $selectedMachineId && !selectedSystemMachine}
+		<div class="relative rounded-xl">
+			<button
+				type="button"
+				role="menuitemradio"
+				aria-checked="true"
+				class="{rowClass} pr-8 bg-base-50/40 dark:bg-base-800/40"
+				on:click={() => toggleMachine($selectedMachineId)}
+			>
+				<div class="flex flex-1 gap-2 items-center truncate">
+					<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+					<span class="truncate">{selectedLabel}</span>
+				</div>
+				<div class="absolute right-2 text-emerald-600 dark:text-emerald-400">
+					<Check className="size-3.5" />
+				</div>
+			</button>
+		</div>
+	{/if}
 	<!-- Machines, then the user's own devices -->
 	{#each systemSections as section}
 		<div class="flex items-center justify-between pl-2 pr-1 py-1">
@@ -416,6 +435,9 @@
 		machineId={managedMachineId}
 		connections={writable}
 		onCreate={async (id) => selectMachine(selectedMachineId, id, chatId)}
+		onDelete={async (id) => {
+			if ($selectedMachineId === id) selectMachine(selectedMachineId, null, chatId);
+		}}
 	/>
 {/if}
 

@@ -938,7 +938,7 @@
 			.catch(() => (canCreateMachine = false));
 	$: showMachineSelector =
 		$config?.features?.enable_tool_servers &&
-		(($machines ?? []).some((t) => t.id) || canCreateMachine);
+		(($machines ?? []).some((t) => t.id) || canCreateMachine || !!$selectedMachineId);
 
 	let canCreateSkill: boolean = false;
 	$: canCreateSkill = selectedModelIds.every(
