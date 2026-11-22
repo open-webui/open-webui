@@ -2012,6 +2012,17 @@ class ChatTable:
         except Exception:
             return None
 
+    async def get_chat_without_history_by_id(self, id: str) -> tuple[str, str, dict, str | None, str | None] | None:
+        """Return (id, user_id, meta, folder_id, current_message_id) for a chat, without its history."""
+        try:
+            async with get_async_db_context() as session:
+                result = await session.execute(
+                    select(Chat.id, Chat.user_id, Chat.meta, Chat.folder_id, Chat.current_message_id).filter_by(id=id)
+                )
+                return result.first()
+        except Exception:
+            return None
+
     async def get_chat_by_share_id(self, id: str, db: AsyncSession | None = None) -> ChatModel | None:
         """Look up a shared chat snapshot by its share token."""
         from open_webui.models.shared_chats import SharedChats

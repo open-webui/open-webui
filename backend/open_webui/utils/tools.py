@@ -148,6 +148,7 @@ async def build_tool_server_headers(
     user,
     server_id: str = '',
     metadata: dict | None = None,
+    refresh: bool = False,
 ) -> tuple[dict, dict]:
     """Build auth headers and cookies for a tool server connection.
 
@@ -177,7 +178,7 @@ async def build_tool_server_headers(
             oauth_server_id = splits[-1] if len(splits) > 1 else server_id
             connection_type = connection.get('type', 'openapi')
             oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(
-                user.id, f'{connection_type}:{oauth_server_id}'
+                user.id, f'{connection_type}:{oauth_server_id}', force_refresh=refresh
             )
             if oauth_token:
                 headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
@@ -253,17 +254,18 @@ async def connect_mcp_server(
 
     metadata = extra_params.get('__metadata__', {})
 
-    async def get_headers():
+    async def get_headers(refresh=False):
         headers, _ = await build_tool_server_headers(
-            mcp_server_connection, request, user, server_id=server_id, metadata=metadata
+            mcp_server_connection, request, user, server_id=server_id, metadata=metadata, refresh=refresh
         )
         return headers
 
-    auth = OAuthTokenAuth(get_headers) if mcp_server_connection.get('auth_type') == 'system_oauth' else None
-    headers = {} if auth else await get_headers()
-
-    if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
+    auth_type = mcp_server_connection.get('auth_type')
+    if auth_type in ('oauth_2.1', 'oauth_2.1_static') and not (await get_headers()).get('Authorization'):
         raise HTTPException(status_code=401, detail='Auth required')
+
+    auth = OAuthTokenAuth(get_headers) if auth_type in ('system_oauth', 'oauth_2.1', 'oauth_2.1_static') else None
+    headers = {} if auth else await get_headers()
 
     client = MCPClient(
         event_caller=extra_params.get('__event_call__') if metadata.get('session_id') else None,

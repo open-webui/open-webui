@@ -479,6 +479,26 @@ class ChatMessageTable:
 
         return messages_map
 
+    async def get_message_parents_map_by_chat_id(
+        self, chat_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
+        """Like ``get_messages_map_by_chat_id``, with only each message's ``parentId`` and ``meta``."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChatMessage.id, ChatMessage.parent_id, ChatMessage.meta).filter_by(chat_id=chat_id)
+            )
+            rows = result.all()
+
+        if not rows:
+            return None
+
+        prefix = f'{chat_id}-'
+        prefix_len = len(prefix)
+        return {
+            (row_id[prefix_len:] if row_id.startswith(prefix) else row_id): {'parentId': parent_id, 'meta': meta}
+            for row_id, parent_id, meta in rows
+        }
+
     async def get_messages_by_user_id(
         self,
         user_id: str,
