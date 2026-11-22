@@ -20,6 +20,14 @@ log = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def require_admin_chat_access(user=Depends(get_admin_user)):
+    from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS
+
+    if not ENABLE_ADMIN_CHAT_ACCESS:
+        raise HTTPException(403, detail='Admin chat access is disabled')
+    return user
+
+
 # Response Models
 
 
@@ -123,7 +131,7 @@ async def get_messages(
     end_date: Optional[int] = Query(None, description='End timestamp (epoch)'),
     skip: int = Query(0),
     limit: int = Query(50, le=100),
-    user=Depends(get_admin_user),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Query messages with filters."""
@@ -309,7 +317,7 @@ async def get_model_chats(
     order_by: str = Query('updated_at'),
     direction: str = Query('desc'),
     group_id: Optional[str] = Query(None, description='Filter by user group ID'),
-    user=Depends(get_admin_user),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     """Get chats that used a specific model, with preview and feedback info."""
@@ -442,14 +450,6 @@ async def get_model_overview(
 # Session Explorer
 
 
-def require_session_access(user=Depends(get_admin_user)):
-    from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS
-
-    if not ENABLE_ADMIN_CHAT_ACCESS:
-        raise HTTPException(403, detail='Admin chat access is disabled')
-    return user
-
-
 def validate_session_range(start_date, end_date):
     if start_date is not None and end_date is not None and start_date > end_date:
         raise HTTPException(400, detail='Start date must be before end date')
@@ -470,7 +470,7 @@ async def get_sessions(
     token_max: int | None = Query(None, ge=1),
     skip: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=50),
-    user=Depends(require_session_access),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     from open_webui.models.analytics_sessions import list_sessions
@@ -504,7 +504,7 @@ async def get_session_messages(
     group_id: str | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=50),
-    user=Depends(require_session_access),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     from open_webui.models.analytics_sessions import session_messages
@@ -527,7 +527,7 @@ async def get_session_events(
     group_id: str | None = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=50),
-    user=Depends(require_session_access),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     from open_webui.models.analytics_sessions import message_events
@@ -551,7 +551,7 @@ async def get_session_trace(
     limit: int = Query(50, ge=1, le=50),
     view: Literal['all', 'tools', 'errors'] = 'all',
     include_chart: bool = False,
-    user=Depends(require_session_access),
+    user=Depends(require_admin_chat_access),
     db: AsyncSession = Depends(get_async_session),
 ):
     from open_webui.models.analytics_sessions import session_trace
