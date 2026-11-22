@@ -339,6 +339,7 @@
 				id: machine.id,
 				name: name.trim(),
 				version: openTerminalVersion.trim() || 'latest',
+				folder: folder.trim(),
 				...installForm
 			})
 		);

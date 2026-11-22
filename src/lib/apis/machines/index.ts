@@ -966,6 +966,7 @@ export const installSSHMachine = (
 		id: string;
 		name: string;
 		version?: string;
+		folder?: string;
 		deps?: string[];
 		packages?: string[];
 	}

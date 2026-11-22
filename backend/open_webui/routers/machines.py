@@ -95,6 +95,7 @@ class CreateForm(Pinned):
     id: str = Field(pattern=SSH_MACHINE_ID)
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
+    folder: str = Field('', max_length=1024)
     # For `open-terminal install-deps`: dependency sets it knows by name, and apt packages. Needs passwordless sudo.
     deps: list[str] = Field(default_factory=list, max_length=16)
     packages: list[str] = Field(default_factory=list, max_length=64)
@@ -169,6 +170,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
     try:
         version = managed.requested_version(form.version)
         managed.install_args(form.deps, form.packages)
+        folder = managed.clean_folder(form.folder) or None
     except MachineError as error:
         _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
@@ -180,6 +182,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
             name=form.name or form.host,
             target=target,
             version=version,
+            folder=folder,
             deps=form.deps,
             packages=form.packages,
         )
