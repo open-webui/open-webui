@@ -82,6 +82,7 @@ from open_webui.env import (
     BYPASS_MODEL_ACCESS_CONTROL,
     CHANGELOG,
     DEPLOYMENT_ID,
+    ENABLE_AUDIT_ANONYMOUS_REQUESTS,
     ENABLE_AUDIT_GET_REQUESTS,
     ENABLE_COMPRESSION_MIDDLEWARE,
     ENABLE_CUSTOM_MODEL_FALLBACK,
@@ -786,6 +787,7 @@ if audit_level != AuditLevel.NONE:
         excluded_paths=AUDIT_EXCLUDED_PATHS,
         included_paths=AUDIT_INCLUDED_PATHS,
         audit_get_requests=ENABLE_AUDIT_GET_REQUESTS,
+        audit_anonymous_requests=ENABLE_AUDIT_ANONYMOUS_REQUESTS,
         max_body_size=MAX_BODY_LOG_SIZE,
     )
 

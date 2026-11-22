@@ -1250,6 +1250,9 @@ AUDIT_INCLUDED_PATHS = [
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
 
+# When enabled, anonymous requests (no credential) are also audited (disabled by default, anyone can send them)
+ENABLE_AUDIT_ANONYMOUS_REQUESTS = os.getenv('ENABLE_AUDIT_ANONYMOUS_REQUESTS', 'False').lower() == 'true'
+
 
 # OpenTelemetry
 

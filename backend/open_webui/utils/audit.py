@@ -174,6 +174,7 @@ class AuditLoggingMiddleware:
         max_body_size: int = MAX_BODY_LOG_SIZE,
         audit_level: AuditLevel = AuditLevel.NONE,
         audit_get_requests: bool = False,
+        audit_anonymous_requests: bool = False,
     ) -> None:
         self.app = app
         self.audit_logger = AuditLogger(logger)
@@ -187,6 +188,7 @@ class AuditLoggingMiddleware:
         self.audited_methods = set(self.DEFAULT_AUDITED_METHODS)
         if audit_get_requests:
             self.audited_methods.add('GET')
+        self.audit_anonymous_requests = audit_anonymous_requests
         self.audit_level = audit_level
 
         # Paths are fixed for the process lifetime; compile once instead of
@@ -302,9 +304,9 @@ class AuditLoggingMiddleware:
             if path.startswith(endpoint):
                 return False  # Do NOT skip logging for auth endpoints
 
-        # Skip logging if the request is not authenticated
+        # Skip logging anonymous requests unless opted in
         # Token is set by AppHTTPMiddleware from any accepted credential
-        if not getattr(request.state, 'token', None):
+        if not self.audit_anonymous_requests and not getattr(request.state, 'token', None):
             return True
 
         # Whitelist mode: only log paths that match included_paths
