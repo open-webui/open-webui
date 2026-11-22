@@ -116,13 +116,19 @@ class AuditContext:
             self.response_body.extend(chunk[: self.max_body_size - len(self.response_body)])
 
 
-def log_model_usage(request: Request, user: UserModel, model_id: str, usage: Optional[Dict]):
+def log_model_usage(
+    request: Request, user: UserModel, model_id: str, usage: Optional[Dict], task: Optional[str] = None
+):
     """Write a model call's usage separately from its originating HTTP request."""
     request_id = getattr(request.state, 'audit_request_id', None)
     if not request_id or not usage:
         return
     try:
         usage = normalize_usage(usage)
+        extra = {'event': 'model_usage', 'request_id': request_id}
+        if task:
+            # Background calls name their task; chat replies carry none.
+            extra['task'] = task
         AuditLogger(logger).write(
             AuditLogEntry(
                 id=str(uuid.uuid4()),
@@ -135,7 +141,7 @@ def log_model_usage(request: Request, user: UserModel, model_id: str, usage: Opt
                 model_id=model_id,
                 usage={key: usage[key] for key in ('input_tokens', 'output_tokens', 'total_tokens') if key in usage},
             ),
-            extra={'event': 'model_usage', 'request_id': request_id},
+            extra=extra,
         )
     except Exception as e:
         logger.error('Failed to log model usage: {}', e)

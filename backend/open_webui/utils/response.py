@@ -48,6 +48,15 @@ def normalize_usage(usage: dict) -> dict:
     return result
 
 
+def get_response_usage(response: dict) -> dict | None:
+    """Read a completion's usage, with llama.cpp timings folded in."""
+    usage = response.get('usage') or {}
+    timings = response.get('timings') or {}
+    if not isinstance(usage, dict) or not isinstance(timings, dict):
+        return None
+    return {**usage, **timings} or None
+
+
 USAGE_TOKEN_KEYS = {
     'input_tokens',
     'output_tokens',

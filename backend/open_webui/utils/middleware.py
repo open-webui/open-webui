@@ -143,6 +143,7 @@ from open_webui.utils.plugin import load_function_module_by_id
 from open_webui.utils.response import (
     convert_responses_stream_to_chat_completions,
     get_response_delta_key,
+    get_response_usage,
     handle_responses_streaming_event,
     merge_usage,
     normalize_usage,
@@ -4044,15 +4045,12 @@ async def non_streaming_chat_response_handler(response, ctx):
     if response_data is None:
         return response
 
-    usage = response_data.get('usage') or {}
-    timings = response_data.get('timings') or {}
-    if isinstance(usage, dict) and isinstance(timings, dict):
-        log_model_usage(
-            request,
-            user,
-            response_data.get('selected_model_id') or ctx['form_data']['model'],
-            {**usage, **timings},
-        )
+    log_model_usage(
+        request,
+        user,
+        response_data.get('selected_model_id') or ctx['form_data']['model'],
+        get_response_usage(response_data),
+    )
 
     chat_id = metadata.get('chat_id') or ''
     save_to_chat = is_saved_chat_id(chat_id)
@@ -6663,10 +6661,7 @@ async def streaming_chat_response_handler(response, ctx):
                                         payload = (
                                             event.get('response') if isinstance(event.get('response'), dict) else event
                                         )
-                                        usage = payload.get('usage') or {}
-                                        timings = payload.get('timings') or {}
-                                        if isinstance(usage, dict) and isinstance(timings, dict) and (usage or timings):
-                                            current_usage = {**usage, **timings}
+                                        current_usage = get_response_usage(payload) or current_usage
                                     if filter_functions:
                                         event, _ = await process_filter_functions(
                                             request=request,

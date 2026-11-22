@@ -24,6 +24,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+from open_webui.utils.audit import log_model_usage
 from open_webui.utils.chat_id import get_temporary_chat_session_id
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -35,6 +36,7 @@ from open_webui.utils.payload import apply_system_prompt_to_body, convert_chat_c
 from open_webui.utils.response import (
     convert_ollama_response_to_chat_completions,
     convert_ollama_stream_to_chat_completions,
+    get_response_usage,
 )
 from open_webui.utils.router_models import resolve_router_model
 from starlette.responses import JSONResponse, Response, StreamingResponse
@@ -103,7 +105,7 @@ async def register_temporary_chat_session(redis, chat_id, user_id, session_id, s
 
 # When the question has been asked, let silence not be the
 # answer. But if the answer must wait, let it come honest.
-async def generate_chat_completion(
+async def dispatch_chat_completion(
     request: Request,
     form_data: dict,
     user: Any,
@@ -175,7 +177,7 @@ async def generate_chat_completion(
                 async for chunk in stream:
                     yield chunk
 
-            response = await generate_chat_completion(
+            response = await dispatch_chat_completion(
                 request,
                 form_data,
                 user,
@@ -191,7 +193,7 @@ async def generate_chat_completion(
                 background=response.background,
             )
         else:
-            response = await generate_chat_completion(
+            response = await dispatch_chat_completion(
                 request,
                 form_data,
                 user,
@@ -236,6 +238,31 @@ async def generate_chat_completion(
             form_data=form_data,
             user=user,
         )
+
+
+async def generate_chat_completion(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    bypass_filter: bool = False,
+    bypass_system_prompt: bool = False,
+):
+    # Read before dispatch; pipes take the metadata and may swap in their base model.
+    model_id = form_data.get('model')
+    task = (form_data.get('metadata') or {}).get('task')
+
+    response = await dispatch_chat_completion(request, form_data, user, bypass_filter, bypass_system_prompt)
+
+    # Task calls never reach the chat response handler, which logs chat replies.
+    if task and isinstance(response, dict):
+        log_model_usage(
+            request,
+            user,
+            response.get('selected_model_id') or model_id,
+            get_response_usage(response),
+            task=task,
+        )
+    return response
 
 
 chat_completion = generate_chat_completion
