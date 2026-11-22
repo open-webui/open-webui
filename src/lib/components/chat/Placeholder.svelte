@@ -207,7 +207,7 @@
 <div
 	class="w-full {$selectedFolder
 		? 'flex h-full min-h-0 flex-col overflow-hidden'
-		: 'm-auto max-w-[58rem] overflow-x-clip px-1 md:@3xl:px-20 translate-y-6 py-24'} text-center"
+		: 'm-auto max-w-[58rem] overflow-x-clip px-1 md:@3xl:px-20 py-24'} text-center"
 >
 	<!-- In a folder, temporary mode shows on the composer alone. -->
 	{#if $temporary && !$selectedFolder}
