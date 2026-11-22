@@ -108,7 +108,7 @@
 				data: {
 					user: chatUser ?? $user,
 					message: history.messages[id],
-					model: $models.find((model) => model.id === history.messages[id].model),
+					model: ($models ?? []).find((model) => model.id === history.messages[id].model),
 					direction
 				},
 				position: { x, y }

@@ -100,7 +100,7 @@
 							: label;
 			} else if (idType === 'M') {
 				// Model
-				const model = $models.find((m) => m.id === id);
+				const model = ($models ?? []).find((m) => m.id === id);
 				if (model) {
 					label = model.name;
 				} else {

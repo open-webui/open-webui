@@ -81,10 +81,11 @@ export const folders = writable([]);
 
 export const selectedFolder = writable<FolderDetails | null>(null);
 
-export const models: Writable<Model[]> = writable([]);
+// null until the first list has loaded; an empty list means there are no models
+export const models: Writable<Model[] | null> = writable(null);
 
 export const baseModels = derived(models, ($models) =>
-	$models.filter((model) => !isMachine(model.owned_by))
+	($models ?? []).filter((model) => !isMachine(model.owned_by))
 );
 
 export const knowledge: Writable<null | Document[]> = writable(null);
@@ -146,7 +147,7 @@ export const pinnedModels = derived([settings, config], ([$settings, $config]) =
 // Pins for models the user cannot see are kept in their settings but left out of the sidebar
 export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedModels, $models]) =>
 	$pinnedModels.filter((id) =>
-		$models.some((model) => model.id === id && !model.info?.meta?.hidden)
+		($models ?? []).some((model) => model.id === id && !model.info?.meta?.hidden)
 	)
 );
 

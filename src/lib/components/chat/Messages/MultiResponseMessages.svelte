@@ -258,7 +258,7 @@
 									{@const _messageId =
 										groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
-									{@const model = $models.find((m) => m.id === history.messages[_messageId]?.model)}
+									{@const model = ($models ?? []).find((m) => m.id === history.messages[_messageId]?.model)}
 
 									<button
 										class="min-w-fit {selectedModelIdx == modelIdx

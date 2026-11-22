@@ -16,7 +16,7 @@
 	$: bridge.animationPlayer = (name) =>
 		showAvatar ? (avatarView?.playAnimation(name) ?? 'unavailable') : 'unavailable';
 	let readyAvatar = '';
-	$: avatar = $models.find((model) => model.id === modelId)?.info?.meta?.voice_avatar;
+	$: avatar = ($models ?? []).find((model) => model.id === modelId)?.info?.meta?.voice_avatar;
 	$: showAvatar = avatar?.file_id && failedAvatar !== avatar.file_id;
 
 	const i18n = getContext<any>('i18n');

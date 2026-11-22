@@ -74,7 +74,7 @@
 	let showAccessControlModal = false;
 	let defaultOpen = false;
 
-	$: targetModels = $models.filter((m) => m?.owned_by !== 'router');
+	$: targetModels = ($models ?? []).filter((m) => m?.owned_by !== 'router');
 
 	const countSummary = (routes) => (routes.length > 0 ? `${routes.length}` : $i18n.t('None'));
 	$: defaultSummary =
@@ -207,7 +207,7 @@
 			strategy = model.meta?.strategy ?? 'first';
 			decisions = { ...DEFAULT_DECISIONS, ...(model.config?.decisions ?? {}) };
 			accessGrants =
-				/** @type {any} */ ($models.find((m) => m.id === model.id))?.info?.access_grants ?? [];
+				/** @type {any} */ (($models ?? []).find((m) => m.id === model.id))?.info?.access_grants ?? [];
 		}
 	};
 

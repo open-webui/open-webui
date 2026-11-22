@@ -42,7 +42,7 @@
 		if (trigger) document.getElementById(trigger.id)?.focus();
 	};
 	$: available = selectedModels
-		.map((id) => $models.find((model) => model.id === id))
+		.map((id) => ($models ?? []).find((model) => model.id === id))
 		.filter(
 			(model): model is Model =>
 				!!model &&

@@ -196,7 +196,7 @@
 	$: selectedModelIds = atSelectedModel !== undefined ? [atSelectedModel.id] : selectedModels;
 	$: hasChatVariables = selectedModelIds.some(
 		(modelId) =>
-			($models.find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema?.fields
+			(($models ?? []).find((model) => model.id === modelId)?.info?.meta?.chat_variables_schema?.fields
 				?.length ?? 0) > 0
 	);
 
@@ -944,12 +944,12 @@
 	$: canCreateSkill = selectedModelIds.every(
 		(id) =>
 			(modelCapabilitiesById[id]?.builtin_tools ?? true) &&
-			($models.find((model) => model.id === id)?.info?.meta?.builtinTools?.skills ?? true)
+			(($models ?? []).find((model) => model.id === id)?.info?.meta?.builtinTools?.skills ?? true)
 	);
 
 	let toggleFilters = [];
 	$: toggleFilters = (atSelectedModel?.id ? [atSelectedModel.id] : selectedModels)
-		.map((id) => ($models.find((model) => model.id === id) || {})?.filters ?? [])
+		.map((id) => (($models ?? []).find((model) => model.id === id) || {})?.filters ?? [])
 		.reduce((acc, filters) => acc.filter((f1) => filters.some((f2) => f2.id === f1.id)));
 
 	$: showInputSelections = $settings?.showInputSelections ?? false;
@@ -1596,7 +1596,7 @@
 					return;
 				} else if (data.type === 'model' && data.id) {
 					// Find the model from the store and set as @-selected model
-					const model = $models.find((m) => m.id === data.id);
+					const model = ($models ?? []).find((m) => m.id === data.id);
 					if (model) {
 						atSelectedModel = model;
 					}
@@ -2318,7 +2318,7 @@
 											<img
 												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
-												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${$models.find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${($models ?? []).find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
 											/>
 											<div class="translate-y-[0.5px]">
 												<span class="">{atSelectedModelName}</span>
@@ -2806,7 +2806,7 @@
 									use:fitControlLabels
 									class="flex flex-1 items-center min-w-0 overflow-x-auto scrollbar-none"
 								>
-									{#if selectedModelIds.length === 1 && $models.find((m) => m.id === selectedModelIds[0])?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
+									{#if selectedModelIds.length === 1 && ($models ?? []).find((m) => m.id === selectedModelIds[0])?.has_user_valves && ($_user?.role === 'admin' || ($_user?.permissions?.chat?.valves ?? true))}
 										<div class="ml-1 flex gap-1.5 shrink-0">
 											<Tooltip content={$i18n.t('Valves')} placement="top">
 												<button

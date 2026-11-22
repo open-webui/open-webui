@@ -59,7 +59,7 @@
 					tab.postMessage(
 						JSON.stringify({
 							chat: _chat,
-							models: $models.filter((m) => _chat.models.includes(m.id))
+							models: ($models ?? []).filter((m) => _chat.models.includes(m.id))
 						}),
 						'*'
 					);

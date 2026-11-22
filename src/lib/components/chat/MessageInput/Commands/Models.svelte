@@ -23,7 +23,7 @@
 	export let filteredItems = [];
 
 	$: fuse = new Fuse(
-		$models
+		($models ?? [])
 			.filter((model) => !model?.info?.meta?.hidden)
 			.map((model) => {
 				const _item = {
@@ -44,7 +44,7 @@
 		? fuse.search(query).map((e) => {
 				return e.item;
 			})
-		: $models.filter((model) => !model?.info?.meta?.hidden);
+		: ($models ?? []).filter((model) => !model?.info?.meta?.hidden);
 
 	$: if (query) {
 		selectedIdx = 0;

@@ -62,7 +62,7 @@
 	let playbackSource: MediaElementAudioSourceNode | undefined;
 	let playbackAnalyser: AnalyserNode | undefined;
 	let playbackFrame = 0;
-	$: avatar = $models.find((m) => m.id === modelId)?.info?.meta?.voice_avatar;
+	$: avatar = ($models ?? []).find((m) => m.id === modelId)?.info?.meta?.voice_avatar;
 	$: showAvatar = !!avatar?.file_id && failedAvatar !== avatar.file_id;
 	$: if (camera) {
 		avatarView?.cancelAnimation();
@@ -138,7 +138,7 @@
 		assistantSpeaking = bridge.speaking;
 		muted = bridge.muted;
 		loading = bridge.connecting || (bridge.working && !bridge.speaking);
-		model = $models.find((m) => m.id === modelId);
+		model = ($models ?? []).find((m) => m.id === modelId);
 	}
 
 	const getVideoInputDevices = async () => {
@@ -838,7 +838,7 @@
 			document.addEventListener('keydown', handleKeydown);
 			return;
 		}
-		model = $models.find((m) => m.id === modelId);
+		model = ($models ?? []).find((m) => m.id === modelId);
 
 		if ($settings.audio?.tts?.engine === 'browser-kokoro' && !$TTSWorker) {
 			try {

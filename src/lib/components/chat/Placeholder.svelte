@@ -111,7 +111,7 @@
 	let selectedModelDescription = '';
 	let selectedSuggestionPrompts = [];
 
-	$: models = selectedModels.map((id) => $_models.find((m) => m.id === id));
+	$: models = selectedModels.map((id) => ($_models ?? []).find((m) => m.id === id));
 	$: selectedModel = atSelectedModel ?? models[selectedModelIdx];
 	$: selectedModelName = resolveLocalizedModelName(selectedModel, $i18n.language);
 	$: selectedModelDescription =

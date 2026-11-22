@@ -40,7 +40,7 @@
 	$: comparing = compare && chartView === 'volume' && selectedPeriod !== 'all' && validRange;
 	$: modelNames = Object.fromEntries([
 		...modelStats.map((model) => [model.model_id, model.name || model.model_id]),
-		...$models.map((model) => [model.id, model.name || model.id])
+		...($models ?? []).map((model) => [model.id, model.name || model.id])
 	]);
 
 	// Custom date range (YYYY-MM-DD) - persist in localStorage

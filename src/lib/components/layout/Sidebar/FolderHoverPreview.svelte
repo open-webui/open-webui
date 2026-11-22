@@ -30,7 +30,7 @@
 	$: total = $folderStates[folder.id]?.chatPages[folderChatPageKey()]?.total ?? null;
 
 	$: modelNames = (details?.data?.model_ids ?? []).map(
-		(id) => $models.find((model) => model.id === id)?.name ?? id
+		(id) => ($models ?? []).find((model) => model.id === id)?.name ?? id
 	);
 	$: files = details?.data?.files ?? [];
 

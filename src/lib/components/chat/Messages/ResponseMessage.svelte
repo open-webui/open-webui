@@ -204,9 +204,9 @@
 	$: localizedModelName = model
 		? resolveLocalizedModelName(model, $i18n.language)
 		: message.modelName || message.model;
-	$: model = $models.find((m) => m.id === message.model);
+	$: model = ($models ?? []).find((m) => m.id === message.model);
 	$: selectedModel = message?.selectedModelId
-		? $models.find((m) => m.id === message.selectedModelId)
+		? ($models ?? []).find((m) => m.id === message.selectedModelId)
 		: null;
 	$: selectedModelName = selectedModel
 		? resolveLocalizedModelName(selectedModel, $i18n.language)
@@ -552,7 +552,7 @@
 			feedbackItem.data.model_id,
 			...(feedbackItem.data.sibling_model_ids ?? [])
 		].reduce((acc, modelId) => {
-			const model = $models.find((m) => m.id === modelId);
+			const model = ($models ?? []).find((m) => m.id === modelId);
 			if (model) {
 				acc[model.id] = model?.info?.base_model_id ?? null;
 			} else {
