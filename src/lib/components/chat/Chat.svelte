@@ -3962,10 +3962,12 @@
 				scrollToBottom();
 			}
 
-			if (!$chatId) {
-				await initChatHandler(history);
+			const _chatId = $chatId || (await getChatId(history));
+			if (_chatId === null) return;
+			if (_chatId) {
+				await saveChatHandler(_chatId, history);
 			} else {
-				await saveChatHandler($chatId, history);
+				await initChatHandler(history);
 			}
 		}
 	};
