@@ -266,7 +266,7 @@ async def video_generations(
         else:
             # The create request is multipart, so the connection's JSON content type does not apply.
             headers.pop('Content-Type', None)
-            form = aiohttp.FormData()
+            form = aiohttp.FormData(default_to_multipart=True)
             if model:
                 form.add_field('model', model)
             form.add_field('prompt', form_data.prompt)
