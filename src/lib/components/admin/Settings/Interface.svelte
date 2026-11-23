@@ -302,18 +302,17 @@
 
 	const init = async () => {
 		try {
-			[taskConfig, chatConfig] = await Promise.all([
+			[taskConfig, chatConfig, workspaceModels, baseModels] = await Promise.all([
 				getTaskConfig(localStorage.token),
-				getChatConfig(localStorage.token)
+				getChatConfig(localStorage.token),
+				getBaseModels(localStorage.token),
+				getModels(localStorage.token)
 			]);
 			taskConfig.TASK_MODEL_PARAMS = taskConfig.TASK_MODEL_PARAMS ?? {};
 			toolSearchAlwaysLoaded = (chatConfig.TOOL_SEARCH_ALWAYS_LOADED ?? []).join(', ');
 			readChatConfigMetadata();
 
-			workspaceModels = await getBaseModels(localStorage.token);
-			baseModels = (await getModels(localStorage.token)).filter(
-				(model: any) => !isMachine(model.owned_by)
-			);
+			baseModels = baseModels.filter((model: any) => !isMachine(model.owned_by));
 
 			models = baseModels.map((m: any) => {
 				const workspaceModel = workspaceModels.find((wm: any) => wm.id === m.id);
