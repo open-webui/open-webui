@@ -82,7 +82,7 @@
 	</div>
 {:else}
 	{@const groups = groupNotes(notes)}
-	<div class="scrollbar-hidden h-full overflow-y-auto px-3 pb-6 @container">
+	<div class="scrollbar-hidden h-full overflow-y-auto px-3 pt-1.5 pb-6 @container">
 		{#each groups as [timeRange, notesList], idx (timeRange)}
 			<div class="w-full px-2 pb-1 text-xs text-base-500 dark:text-base-500">
 				{$i18n.t(timeRange)}

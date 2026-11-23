@@ -43,7 +43,7 @@
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteItem from './Notes/NoteItem.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
-	import { refreshFolderChatLists } from '$lib/stores/chatList';
+	import { refreshFolderChatLists, registerFolderRefreshHandler } from '$lib/stores/chatList';
 	import TagIcon from '../icons/Tag.svelte';
 	import { tagDot, type FolderTag } from '$lib/utils/tags';
 	import FileNavIcon from '../chat/FileNav/Icon.svelte';
@@ -171,7 +171,7 @@
 		if (!res) return;
 
 		toast.success($i18n.t('Note moved successfully'));
-		getItemsPage(true);
+		await getItemsPage(true);
 		for (const id of [note.folder_id, folderId]) if (id) void refreshFolderChatLists(id);
 	};
 
@@ -484,12 +484,18 @@
 			shiftKey = false;
 		};
 
+		// A note dropped on a sidebar folder.
+		const unregister = registerFolderRefreshHandler(() => {
+			if ($active) return getItemsPage(true);
+		});
+
 		window.addEventListener('focusin', onFocusIn);
 		window.addEventListener('keydown', onKeyDown);
 		window.addEventListener('keyup', onKeyUp);
 		window.addEventListener('blur', onBlur);
 
 		return () => {
+			unregister();
 			searchController?.abort();
 			clearTimeout(searchDebounceTimer);
 

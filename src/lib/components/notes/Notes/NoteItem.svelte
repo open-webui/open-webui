@@ -47,9 +47,7 @@
 	let menuOpen = false;
 	$: if (shiftKey) menuOpen = false;
 
-	// $folders holds the user's own folders: their owner may also move others' notes within them.
 	$: folder = note.folder_id ? $folders.find((item) => item.id === note.folder_id) : null;
-	$: isOwner = note.user_id === $user?.id;
 
 	// Inline rename, like the folder chat list.
 	let renaming = false;
@@ -251,7 +249,7 @@
 						show={menuOpen}
 						folderId={note.folder_id}
 						onRename={editable ? startRename : null}
-						onMove={isOwner || folder ? moveHandler : null}
+						onMove={note.user_id === $user?.id ? moveHandler : null}
 						onDownload={downloadHandler}
 						onCopyLink={copyLinkHandler}
 						onDelete={onDelete ? () => onDelete?.(true) : null}
