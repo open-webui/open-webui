@@ -45,7 +45,8 @@
 		chatId,
 		chats,
 		folders,
-		refreshRecentChats
+		refreshRecentChats,
+		userSettingsRequest
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -83,7 +84,9 @@
 	};
 
 	const setUserSettings = async (cb?: () => Promise<void>) => {
-		const userSettings = await getUserSettings(localStorage.token);
+		const request = $userSettingsRequest ?? getUserSettings(localStorage.token);
+		userSettingsRequest.set(null);
+		const userSettings = await request;
 
 		if (userSettings?.ui) {
 			settings.set(userSettings.ui);

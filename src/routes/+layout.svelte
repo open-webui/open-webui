@@ -40,7 +40,8 @@
 		channelId,
 		channelRequestQueues,
 		pyodideWorker,
-		desktopEvent
+		desktopEvent,
+		userSettingsRequest
 	} from '$lib/stores';
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import { clearFolderStates } from '$lib/stores/folderStates';
@@ -1084,6 +1085,18 @@
 
 		const sessionUserRequest = localStorage.token ? getSessionUser(localStorage.token) : null;
 		sessionUserRequest?.catch(() => {});
+		// The app is drawn once settings are in, so they load beside the config and translations.
+		if ($page.route.id?.startsWith('/(app)')) {
+			sessionUserRequest
+				?.then((sessionUser) => {
+					if (['user', 'admin'].includes(sessionUser?.role)) {
+						const request = getUserSettings(localStorage.token);
+						request.catch(() => {});
+						userSettingsRequest.set(request);
+					}
+				})
+				.catch(() => {});
+		}
 
 		let backendConfig = null;
 		try {

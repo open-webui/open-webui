@@ -136,6 +136,7 @@ export const pyodideWorker: Writable<Worker | null> = writable(null);
 export const banners: Writable<Banner[]> = writable([]);
 
 export const settings: Writable<Settings> = writable({});
+export const userSettingsRequest = writable<Promise<any> | null>(null);
 
 // Users who never pinned a model follow the admin default, so changes to it keep reaching them
 export const pinnedModels = derived([settings, config], ([$settings, $config]) =>
