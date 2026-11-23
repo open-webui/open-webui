@@ -92,6 +92,7 @@ known_source_ext = [
     'yml',
     'toml',
     'svg',
+    'mdx',
 ]
 
 
@@ -715,7 +716,7 @@ class Loader:
                     return CSVLoaderWithSummary(file_path, filename, self._detect_text_encoding(file_path))
                 if file_ext in ['htm', 'html']:
                     return HTMLLoader(file_path, encoding=self._detect_text_encoding(file_path))
-                if file_ext in ['txt', 'md', 'markdown', 'rst', 'xml'] or self._is_text_file(
+                if file_ext in ['txt', 'md', 'markdown', 'mdx', 'rst', 'xml'] or self._is_text_file(
                     file_ext, file_content_type
                 ):
                     return TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
@@ -757,7 +758,7 @@ class Loader:
                     loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_ext in ['htm', 'html']:
                 loader = HTMLLoader(file_path, encoding=self._detect_text_encoding(file_path))
-            elif file_ext == 'md':
+            elif file_ext in ['md', 'mdx']:
                 loader = TextLoader(file_path, encoding=self._detect_text_encoding(file_path))
             elif file_content_type == 'application/epub+zip':
                 try:
