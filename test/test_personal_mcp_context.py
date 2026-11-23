@@ -96,8 +96,8 @@ class ContextTests(unittest.IsolatedAsyncioTestCase):
         for name in (
             'start_founder_research',
             'get_founder_research',
-            'start_disposable_task',
-            'get_disposable_task',
+            'start_agent_task',
+            'get_agent_task',
         ):
             self.assertIn(self.module.HEADER, await self.headers(tool_name=name))
             self.assertNotIn(self.module.HEADER, await self.headers(tool_name=name, automation_id='job'))
