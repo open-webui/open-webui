@@ -114,6 +114,20 @@
 		}
 	);
 
+	/** @type {{ token: string, request: Promise<any> } | null} */
+	let userSettingsRequest = null;
+	// Used once, so a later app load gets fresh settings
+	setContext(
+		'getUserSettings',
+		/** @param {string} token */
+		(token) => {
+			const request =
+				userSettingsRequest?.token === token ? userSettingsRequest.request : getUserSettings(token);
+			userSettingsRequest = null;
+			return request;
+		}
+	);
+
 	const bc = new BroadcastChannel('active-tab-channel');
 
 	let loaded = false;
@@ -1082,8 +1096,18 @@
 		};
 		window.addEventListener('beforeunload', beforeUnloadHandler);
 
-		const sessionUserRequest = localStorage.token ? getSessionUser(localStorage.token) : null;
-		sessionUserRequest?.catch(() => {});
+		const token = localStorage.token;
+		const sessionUserRequest = token ? getSessionUser(token) : null;
+		// The app is drawn once settings are in, so they load beside the config and translations.
+		sessionUserRequest
+			?.then((sessionUser) => {
+				if ($page.route.id?.startsWith('/(app)') && ['user', 'admin'].includes(sessionUser?.role)) {
+					const request = getUserSettings(token);
+					request.catch(() => {});
+					userSettingsRequest = { token, request };
+				}
+			})
+			.catch(() => {});
 
 		let backendConfig = null;
 		try {

@@ -15,7 +15,6 @@
 	import { getSessionUser } from '$lib/apis/auths';
 	import { getBanners } from '$lib/apis/configs';
 	import { getMachines } from '$lib/apis/machines';
-	import { getUserSettings } from '$lib/apis/users';
 	import { setAppFontFamily, setTextScale } from '$lib/utils/text-scale';
 
 	import { WEBUI_VERSION, WEBUI_API_BASE_URL, WEBUI_BUILD_CHANNEL } from '$lib/constants';
@@ -59,6 +58,7 @@
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
 	const i18n = getContext('i18n');
+	const getUserSettings = getContext<(token: string) => Promise<any>>('getUserSettings');
 	const appLayout = setContext<AppLayoutContext>('appLayout', {});
 
 	let loaded = false;
