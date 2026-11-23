@@ -159,6 +159,8 @@ ENABLE_ORJSON = os.getenv('ENABLE_ORJSON', 'True').lower() == 'true'
 # Function to parse each section
 def parse_section(section):
     items = []
+    if section is None:
+        return items
     for li in section.find_all('li'):
         # Extract raw HTML string
         raw_html = str(li)
@@ -182,6 +184,11 @@ try:
 
 except Exception:
     changelog_content = (pkgutil.get_data('open_webui', 'CHANGELOG.md') or b'').decode()
+
+# The popup only shows the latest five versions
+version_headings = list(re.finditer(r'^## \[', changelog_content, re.MULTILINE))
+if len(version_headings) > 5:
+    changelog_content = changelog_content[: version_headings[5].start()]
 
 # Convert markdown content to HTML
 html_content = markdown.markdown(changelog_content)
