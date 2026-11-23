@@ -499,18 +499,22 @@ async def lifespan(app: FastAPI):
             }
         )
 
-        log.info('Initializing tool servers...')
-        try:
-            await set_tool_servers(mock_request)
-            log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
-        except Exception as e:
-            log.warning(f'Failed to initialize tool servers at startup: {e}')
+        async def prefetch_tool_servers():
+            log.info('Initializing tool servers...')
+            try:
+                await set_tool_servers(mock_request)
+                log.info('Initialized %s tool server(s)', len(app.state.TOOL_SERVERS))
+            except Exception as e:
+                log.warning(f'Failed to initialize tool servers at startup: {e}')
 
-        try:
-            await set_machines(mock_request)
-            log.info('Initialized %s terminal server(s)', len(app.state.MACHINES))
-        except Exception as e:
-            log.warning(f'Failed to initialize terminal servers at startup: {e}')
+            try:
+                await set_machines(mock_request)
+                log.info('Initialized %s terminal server(s)', len(app.state.MACHINES))
+            except Exception as e:
+                log.warning(f'Failed to initialize terminal servers at startup: {e}')
+
+        # Don't hold startup on unreachable servers
+        app.state.prefetch_tool_servers = asyncio.create_task(prefetch_tool_servers())
 
     # Mark application as ready to accept traffic from a startup perspective.
     if license_task:
@@ -539,6 +543,9 @@ async def lifespan(app: FastAPI):
 
     if hasattr(app.state, 'redis_task_heartbeat'):
         app.state.redis_task_heartbeat.cancel()
+
+    if hasattr(app.state, 'prefetch_tool_servers'):
+        app.state.prefetch_tool_servers.cancel()
 
     app.state.periodic_socket_authentication.cancel()
     app.state.periodic_usage_pool_cleanup.cancel()
