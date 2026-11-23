@@ -715,10 +715,7 @@
 			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition {$selectedFolder?.id ===
-				folderId
-					? 'bg-base-100/80 dark:bg-base-850/50 selected'
-					: ''}"
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition"
 				on:click|stopPropagation
 			>
 				<button
