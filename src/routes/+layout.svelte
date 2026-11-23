@@ -50,7 +50,7 @@
 	import { beforeNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 
-	import i18n, { initI18n, getLanguages, changeLanguage } from '$lib/i18n';
+	import i18n, { initI18n, getLanguages, changeLanguage, loadBundledResource } from '$lib/i18n';
 
 	import '../tailwind.css';
 	import '../app.css';
@@ -900,6 +900,10 @@
 	};
 
 	onMount(async () => {
+		// Download translations alongside the config request instead of after it.
+		loadBundledResource('en-US').catch(() => {});
+		if (localStorage.locale) loadBundledResource(localStorage.locale).catch(() => {});
+
 		const originalFetch = window.fetch.bind(window);
 		stopTether = await initializeTether(originalFetch);
 		window.fetch = async (input, init) => {
