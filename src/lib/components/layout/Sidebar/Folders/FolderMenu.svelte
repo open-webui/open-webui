@@ -10,6 +10,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import EditPencil from '../icons/EditPencil.svelte';
 	import FolderIcon from '../icons/Folder.svelte';
+	import NotesIcon from '../icons/Notes.svelte';
 	import TrashIcon from '../icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Download from '../icons/Download.svelte';
@@ -18,6 +19,8 @@
 
 	export let align: 'start' | 'end' = 'start';
 	export let onNewChat = () => {};
+	/** Shown only when the user can make notes. */
+	export let onNewNote: (() => void) | null = null;
 	export let onEdit = () => {};
 	export let onExport = () => {};
 	export let onDelete = () => {};
@@ -61,6 +64,15 @@
 				<EditPencil className="size-3.5" />
 				<div class="flex items-center">{$i18n.t('New Chat')}</div>
 			</button>
+			{#if onNewNote}
+				<button
+					class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
+					on:click={() => onNewNote?.()}
+				>
+					<NotesIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('New Note')}</div>
+				</button>
+			{/if}
 			<button
 				class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
 				on:click={() => onCreateSubFolder()}

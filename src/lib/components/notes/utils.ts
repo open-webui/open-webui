@@ -2,6 +2,7 @@ import DOMPurify from 'dompurify';
 import { toast } from 'svelte-sonner';
 
 import { createNewNote } from '$lib/apis/notes';
+import { getTimeRange } from '$lib/utils';
 import { safeImageUrl } from '$lib/utils/safeImageUrl';
 import { marked } from 'marked';
 // @ts-expect-error The installed file-saver package has no type declarations.
@@ -237,7 +238,39 @@ export const downloadPdf = async (note) => {
 	pdf.save(`${note.title}.pdf`);
 };
 
-export const createNoteHandler = async (title: string, md?: string, html?: string) => {
+// Notes by when they were updated, as [time range, notes] in the list's order.
+export const groupNotes = (notes: any[] | null): [string, any[]][] => {
+	const groups = new Map<string, any[]>();
+	for (const note of notes ?? []) {
+		const timeRange = getTimeRange(note.updated_at / 1000000000);
+		groups.set(timeRange, [...(groups.get(timeRange) ?? []), note]);
+	}
+	return [...groups];
+};
+
+// Same payload as sidebar page links, so a note can be dropped into split view;
+// the text/plain note entry lets the chat composer attach it and a folder take it.
+export const setNoteDragData = (
+	event: DragEvent,
+	note: { id: string; title: string },
+	href: string
+) => {
+	if (!event.dataTransfer) return;
+	event.dataTransfer.setData(
+		'application/x-open-webui-page',
+		JSON.stringify({ type: 'page', href, label: note.title })
+	);
+	event.dataTransfer.setData('application/x-open-webui-drag', '');
+	event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'note', id: note.id }));
+	event.dataTransfer.effectAllowed = 'copyMove';
+};
+
+export const createNoteHandler = async (
+	title: string,
+	md?: string,
+	html?: string,
+	folderId: string | null = null
+) => {
 	//  $i18n.t('New Note'),
 	const res = await createNewNote(localStorage.token, {
 		// YYYY-MM-DD
@@ -250,6 +283,7 @@ export const createNoteHandler = async (title: string, md?: string, html?: strin
 			}
 		},
 		meta: null,
+		folder_id: folderId,
 		access_grants: []
 	}).catch((error) => {
 		toast.error(`${error}`);

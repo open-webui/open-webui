@@ -41,6 +41,7 @@
 	import FolderStatusesModal from './FolderStatusesModal.svelte';
 	import {
 		updateFolderById,
+		getFolderNotes,
 		getFolderTags,
 		getFolderUsers,
 		updateFolderChatStatus,
@@ -57,9 +58,11 @@
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import FolderAutomations from './FolderAutomations.svelte';
+	import FolderNotes from './FolderNotes.svelte';
 	import FolderKnowledge from './FolderKnowledge.svelte';
 	import KnowledgeSelector from '$lib/components/workspace/Models/Knowledge/KnowledgeSelector.svelte';
 	import Database from '$lib/components/icons/Database.svelte';
+	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
 	import { getFolderAutomations, type FolderAutomation } from '$lib/apis/automations';
 	import AdjustmentsHorizontal from '$lib/components/icons/AdjustmentsHorizontal.svelte';
 	import TagIcon from '$lib/components/icons/Tag.svelte';
@@ -74,8 +77,48 @@
 
 	export let folder: FolderDetails | null = null;
 	export let readOnly = false;
-	/** Which part of the folder is showing: its chats, automations or knowledge. */
-	export let folderSection: 'chats' | 'automations' | 'knowledge' = 'chats';
+	/** Which part of the folder is showing: its chats, notes, automations or knowledge. */
+	export let folderSection: 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
+
+	let notes: any[] = [];
+	let notesTotal = 0;
+	let notesPage = 1;
+	let notesLoading = false;
+	let notesView: FolderNotes;
+
+	$: canUseNotes =
+		($config?.features?.enable_notes ?? false) &&
+		($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true));
+	$: if (!canUseNotes && folderSection === 'notes') folderSection = 'chats';
+
+	// Refreshes keep every page already loaded.
+	async function loadNotes(pages = notesPage) {
+		const folderId = folder?.id;
+		if (!folderId || !canUseNotes) return;
+		notesLoading = true;
+		try {
+			const results = await Promise.all(
+				Array.from({ length: pages }, (_, index) =>
+					getFolderNotes(localStorage.token, folderId, index + 1)
+				)
+			);
+			if (folder?.id !== folderId) return;
+			notes = [
+				...new Map(results.flatMap((page) => page.items).map((note) => [note.id, note])).values()
+			];
+			notesTotal = results[results.length - 1].total;
+			notesPage = pages;
+		} catch (error) {
+			if (folder?.id === folderId) toast.error(`${error}`);
+		} finally {
+			notesLoading = false;
+		}
+	}
+
+	async function loadMoreNotes() {
+		if (!notesLoading) await loadNotes(notesPage + 1);
+	}
+
 	let automations: FolderAutomation[] = [];
 	let automationsLoading = false;
 	let automationsView: FolderAutomations;
@@ -109,11 +152,18 @@
 	$: canUploadKnowledge =
 		$user?.role === 'admin' || ($user?.permissions?.chat?.file_upload ?? true);
 
-	function showSection(section: 'chats' | 'automations' | 'knowledge') {
+	function showSection(section: 'chats' | 'notes' | 'automations' | 'knowledge') {
 		folderSection = section;
+		if (section === 'notes') void loadNotes();
 		if (section === 'automations') void loadAutomations();
 	}
 	export let onNewChat: () => void = () => {};
+
+	async function newNote() {
+		showSection('notes');
+		await tick();
+		await notesView?.startNew();
+	}
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 
 	type GroupKey = string;
@@ -909,7 +959,7 @@
 
 	onMount(() => {
 		const unregister = registerFolderRefreshHandler((id) => {
-			if (id == null || id === folder?.id) return load();
+			if (id == null || id === folder?.id) return Promise.all([load(), loadNotes()]);
 		});
 		const connection = $socket;
 		const events = (event: {
@@ -971,8 +1021,11 @@
 		clearTimeout(timer);
 		folderSection = 'chats';
 		automations = [];
+		notes = [];
+		notesTotal = 0;
 		void loadOptions();
 		void load(true);
+		void loadNotes(1);
 		void loadAutomations();
 	}
 
@@ -1110,6 +1163,7 @@
 		{folder}
 		{readOnly}
 		{onNewChat}
+		onNewNote={canUseNotes ? newNote : null}
 		bind:folderTabActions
 		onUpdate={async () => {
 			await Promise.all([refreshChatList(localStorage.token), refreshFolderChatLists(null)]);
@@ -1163,7 +1217,10 @@
 					class="-mx-1 flex shrink-0 items-center gap-1 rounded-md px-1 transition-colors hover:bg-base-100 dark:hover:bg-base-850"
 					aria-label={$i18n.t('Switch section')}
 				>
-					{#if folderSection === 'automations'}
+					{#if folderSection === 'notes'}
+						<span>{$i18n.t('Notes')}</span>
+						{#if notesTotal}<span class="text-sm opacity-60">{formatNumber(notesTotal)}</span>{/if}
+					{:else if folderSection === 'automations'}
 						<span>{$i18n.t('Automations')}</span>
 						{#if automations.length}<span class="text-sm opacity-60">{automations.length}</span
 							>{/if}
@@ -1194,6 +1251,21 @@
 							>{/if}
 						{#if folderSection === 'chats'}<Check className="size-3! shrink-0" />{/if}
 					</button>
+					{#if canUseNotes}
+						<button
+							type="button"
+							role="menuitemradio"
+							aria-checked={folderSection === 'notes'}
+							on:click={() => showSection('notes')}
+						>
+							<NotesIcon className="size-3.5" strokeWidth="1.5" />
+							<span class="flex-1 text-left">{$i18n.t('Notes')}</span>
+							{#if notesTotal}<span class="text-xs tabular-nums text-base-400"
+									>{formatNumber(notesTotal)}</span
+								>{/if}
+							{#if folderSection === 'notes'}<Check className="size-3! shrink-0" />{/if}
+						</button>
+					{/if}
 					{#if canUseAutomations}
 						<button
 							type="button"
@@ -1227,7 +1299,18 @@
 		</h2>
 
 		<div class="ml-auto flex items-center gap-1">
-			{#if folderSection === 'automations'}
+			{#if folderSection === 'notes'}
+				{#if !readOnly}
+					<button
+						type="button"
+						class={iconButton}
+						aria-label={$i18n.t('New Note')}
+						title={$i18n.t('New Note')}
+						on:click={() => notesView?.startNew()}
+						><Plus className="size-3.5" strokeWidth="2" /></button
+					>
+				{/if}
+			{:else if folderSection === 'automations'}
 				{#if !readOnly}
 					<button
 						type="button"
@@ -1647,7 +1730,18 @@
 	{/if}
 
 	<div class="min-h-0 min-w-0 flex-1 overflow-hidden">
-		{#if folderSection === 'automations'}
+		{#if folderSection === 'notes'}
+			<FolderNotes
+				bind:this={notesView}
+				folderId={folder?.id ?? ''}
+				{notes}
+				total={notesTotal}
+				loading={notesLoading}
+				canCreate={!readOnly}
+				onReload={() => loadNotes()}
+				onMore={loadMoreNotes}
+			/>
+		{:else if folderSection === 'automations'}
 			<FolderAutomations
 				bind:this={automationsView}
 				folderId={folder?.id ?? ''}

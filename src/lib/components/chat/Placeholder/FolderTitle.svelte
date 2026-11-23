@@ -34,6 +34,7 @@
 	export let folder: FolderDetails | null = null;
 	export let readOnly: boolean = false;
 	export let onNewChat: () => void = () => {};
+	export let onNewNote: (() => void) | null = null;
 	export let folderTabActions: import('svelte').Snippet | undefined = undefined;
 	$: folderTabActions = renderFolderActions;
 
@@ -167,6 +168,7 @@
 			<FolderMenu
 				align="end"
 				{onNewChat}
+				{onNewNote}
 				onEdit={() => {
 					showFolderModal = true;
 				}}

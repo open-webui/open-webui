@@ -18,46 +18,32 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, getContext, onDestroy, tick } from 'svelte';
+	import { onMount, getContext } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	import {
-		WEBUI_NAME,
-		config,
-		user,
-		pinnedNotes,
-		mobile,
-		showSidebar,
-		settings
-	} from '$lib/stores';
+	import { WEBUI_NAME, config, user, pinnedNotes, mobile, showSidebar } from '$lib/stores';
 	import {
 		createNewNote,
 		deleteNoteById,
 		getNoteById,
 		getNoteList,
 		searchNotes,
-		updateNoteById,
+		updateNoteFolderIdById,
 		getNoteTags,
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
-	import {
-		capitalizeFirstLetter,
-		copyToClipboard,
-		formatDateDetails,
-		formatShortDate,
-		getTimeRange
-	} from '$lib/utils';
-	import { downloadNote, createNoteHandler } from './utils';
+	import { copyToClipboard } from '$lib/utils';
+	import { downloadNote, createNoteHandler, groupNotes, setNoteDragData } from './utils';
 
-	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
+	import NoteItem from './Notes/NoteItem.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
-	import FolderTags from '../chat/Placeholder/FolderTags.svelte';
+	import { refreshFolderChatLists } from '$lib/stores/chatList';
 	import TagIcon from '../icons/Tag.svelte';
 	import { tagDot, type FolderTag } from '$lib/utils/tags';
 	import FileNavIcon from '../chat/FileNav/Icon.svelte';
@@ -68,7 +54,6 @@
 	import Plus from '../icons/Plus.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import AdjustmentsHorizontal from '../icons/AdjustmentsHorizontal.svelte';
-	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
 	import FilesOverlay from '../chat/MessageInput/FilesOverlay.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import Loader from '../common/Loader.svelte';
@@ -176,32 +161,18 @@
 		}
 	};
 
-	// Inline rename, like the folder chat list.
-	let renaming = '';
-	let renameValue = '';
-	const startRename = async (note) => {
-		renaming = note.id;
-		renameValue = note.title;
-		await tick();
-		const input = containerElement?.querySelector<HTMLInputElement>('[data-rename-input]');
-		input?.focus();
-		input?.select();
-	};
-	const saveRename = async (note) => {
-		if (renaming !== note.id) return;
-		const title = renameValue.trim();
-		renaming = '';
-		if (!title || title === note.title) return;
-
-		const res = await updateNoteById(localStorage.token, note.id, { title }).catch((error) => {
-			toast.error(`${error}`);
-			return null;
-		});
+	const moveNoteHandler = async (note, folderId: string | null) => {
+		const res = await updateNoteFolderIdById(localStorage.token, note.id, folderId).catch(
+			(error) => {
+				toast.error(`${error}`);
+				return null;
+			}
+		);
 		if (!res) return;
 
-		items = (items ?? []).map((item) => (item.id === note.id ? { ...item, title } : item));
-		pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+		toast.success($i18n.t('Note moved successfully'));
 		getItemsPage(true);
+		for (const id of [note.folder_id, folderId]) if (id) void refreshFolderChatLists(id);
 	};
 
 	const inputFilesHandler = async (inputFiles: File[]) => {
@@ -319,19 +290,6 @@
 	const iconButton =
 		'relative flex size-6.5 shrink-0 items-center justify-center rounded-full border border-base-100 bg-base-50/60 text-base-500 transition-colors hover:bg-base-100 hover:text-base-900 aria-expanded:bg-base-100 aria-expanded:text-base-900 dark:border-base-850 dark:bg-base-850/50 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0 dark:aria-expanded:bg-base-850 dark:aria-expanded:text-base-0';
 
-	// Same payload as sidebar page links, so a note can be dropped into split view;
-	// the text/plain note entry still lets the chat composer attach it.
-	const noteDragStartHandler = (event: DragEvent, note) => {
-		if (!event.dataTransfer) return;
-		event.dataTransfer.setData(
-			'application/x-open-webui-page',
-			JSON.stringify({ type: 'page', href: noteUrl(note), label: note.title })
-		);
-		event.dataTransfer.setData('application/x-open-webui-drag', '');
-		event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'note', id: note.id }));
-		event.dataTransfer.effectAllowed = 'copyMove';
-	};
-
 	// Loads the next page, or with `refresh` every page already on screen, so a delete,
 	// rename or access change never collapses the list back to its first page.
 	const getItemsPage = async (refresh = false) => {
@@ -405,12 +363,6 @@
 			.trim()}`;
 	};
 
-	const openNote = (event: MouseEvent, note) => {
-		if ((event.target as Element).closest('a, button, input, [role="menu"]')) return;
-		if (window.getSelection()?.toString()) return;
-		goto(noteUrl(note));
-	};
-
 	// j/k and arrow keys move between rows, like the folder chat list.
 	const navigate = (event: KeyboardEvent) => {
 		const keys: Record<string, number> = { ArrowDown: 1, j: 1, ArrowUp: -1, k: -1 };
@@ -453,31 +405,6 @@
 			query = '';
 			handleSearchInput();
 		}
-	};
-
-	const groupNotes = (res) => {
-		if (!Array.isArray(res)) {
-			return []; // Return empty array for invalid input
-		}
-
-		// Build the grouped object while tracking order
-		const grouped: Record<string, any[]> = {};
-		const orderedKeys: string[] = [];
-
-		for (const note of res) {
-			const timeRange = getTimeRange(note.updated_at / 1000000000);
-			if (!grouped[timeRange]) {
-				grouped[timeRange] = [];
-				orderedKeys.push(timeRange);
-			}
-			grouped[timeRange].push({
-				...note,
-				timeRange
-			});
-		}
-
-		// Return as array of [timeRange, notes] to preserve insertion order
-		return orderedKeys.map((key) => [key, grouped[key]] as [string, any[]]);
 	};
 
 	const setSortKey = (key: string) => {
@@ -1050,193 +977,26 @@
 										<!-- Preserve the former row label for i18n extraction: $i18n.t('Open note') -->
 										{#each notesList as note (note.id)}
 											{@const snippet = query ? searchSnippet(note, query) : ''}
-											<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
-											<li
-												data-note-item
-												class="group flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-900 dark:focus-within:bg-base-900"
-												draggable={renaming !== note.id}
-												on:dragstart={(e) => noteDragStartHandler(e, note)}
-												on:click={(e) => openNote(e, note)}
-											>
-												<div class="flex min-w-0 flex-1 items-center gap-2">
-													{#if renaming === note.id}
-														<input
-															data-rename-input
-															class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-base-0"
-															aria-label={$i18n.t('Rename')}
-															bind:value={renameValue}
-															on:blur={() => saveRename(note)}
-															on:keydown={(event) => {
-																if (event.isComposing || event.keyCode === 229) return;
-																if (event.key === 'Enter') {
-																	event.preventDefault();
-																	saveRename(note);
-																} else if (event.key === 'Escape') {
-																	event.preventDefault();
-																	renaming = '';
-																}
-															}}
-														/>
-													{:else}
-														<Tooltip content={note.title} className="min-w-0" placement="top-start">
-															<a
-																data-row-link
-																href={noteUrl(note)}
-																dir="auto"
-																class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
-															>
-																{note.title}
-															</a>
-														</Tooltip>
-
-														{#if snippet}
-															<span
-																dir="auto"
-																class="hidden min-w-0 flex-1 truncate text-xs text-base-400 @lg:block dark:text-base-500"
-																>{snippet}</span
-															>
-														{/if}
-													{/if}
-												</div>
-
-												<div class="ml-2 flex shrink-0 items-center justify-end gap-3">
-													<div class="hidden @md:flex">
-														<FolderTags
-															resourceType="notes"
-															chat={note}
-															editable={permission !== 'read_only'}
-															onChange={tagsChanged}
-														/>
-													</div>
-													<div
-														class="hidden max-w-44 shrink-0 truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
-													>
-														<Tooltip
-															content={note?.user?.email ?? $i18n.t('Deleted User')}
-															className="min-w-0"
-															placement="top-start"
-														>
-															<span class="flex min-w-0 max-w-44 items-center gap-1.75">
-																<ProfileImage
-																	src={note?.user?.id
-																		? `/api/v1/users/${note.user.id}/profile/image`
-																		: '/user.png'}
-																	className="size-4 shrink-0 rounded-full!"
-																/>
-																<span class="min-w-0 max-w-24 truncate">
-																	{capitalizeFirstLetter(
-																		note?.user?.name ?? note?.user?.email ?? $i18n.t('Deleted User')
-																	)}
-																</span>
-															</span>
-														</Tooltip>
-													</div>
-
-													<!-- The menu takes the date's place on hover, so nothing shifts. -->
-													<div
-														class="date-slot relative flex w-14 shrink-0 items-center justify-end"
-														class:open={shiftKey || openNoteMenuId === note.id}
-													>
-														<Tooltip
-															as="span"
-															className="row-date flex shrink-0"
-															placement="top-end"
-															content={formatDateDetails(
-																note.updated_at / 1000000000,
-																$i18n.language
-															)}
-														>
-															<time
-																class="w-14 text-right text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
-																datetime={new Date(note.updated_at / 1000000).toISOString()}
-																>{formatShortDate(
-																	note.updated_at / 1000000000,
-																	$i18n.language
-																)}</time
-															>
-														</Tooltip>
-
-														<div class="note-menu absolute inset-y-0 right-0 flex items-center">
-															{#if shiftKey}
-																<Tooltip content={$i18n.t('Delete')}>
-																	<button
-																		class="flex {($settings?.highContrastMode ?? false)
-																			? 'size-6'
-																			: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
-																		type="button"
-																		aria-label={$i18n.t('Delete')}
-																		on:click={(e) => {
-																			e.preventDefault();
-																			e.stopPropagation();
-																			deleteNoteHandler(note.id);
-																		}}
-																	>
-																		<GarbageBin className="size-3.5" />
-																	</button>
-																</Tooltip>
-															{:else}
-																<NoteMenu
-																	onAccess={(note.user_id === $user?.id &&
-																		$user?.permissions?.sharing?.notes) ||
-																	$user?.role === 'admin'
-																		? () => accessModal.open(note.id)
-																		: null}
-																	show={openNoteMenuId === note.id}
-																	onRename={permission === 'read_only'
-																		? null
-																		: () => startRename(note)}
-																	onDownload={(type) => {
-																		selectedNote = note;
-
-																		downloadHandler(type);
-																	}}
-																	onCopyLink={async () => {
-																		const baseUrl = window.location.origin;
-																		const res = await copyToClipboard(
-																			`${baseUrl}/notes/${note.id}`
-																		);
-
-																		if (res) {
-																			toast.success($i18n.t('Copied link to clipboard'));
-																		} else {
-																			toast.error($i18n.t('Failed to copy link'));
-																		}
-																	}}
-																	onDelete={() => {
-																		selectedNote = note;
-																		showDeleteConfirm = true;
-																	}}
-																	isPinned={$pinnedNotes.some((n) => n.id === note.id)}
-																	onPin={async () => {
-																		await toggleNotePinnedStatusById(localStorage.token, note.id);
-																		pinnedNotes.set(
-																			await getPinnedNoteList(localStorage.token).catch(() => [])
-																		);
-																	}}
-																	onChange={(state) => {
-																		openNoteMenuId = state ? note.id : null;
-																	}}
-																>
-																	<button
-																		class="flex {($settings?.highContrastMode ?? false)
-																			? 'size-6'
-																			: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
-																		type="button"
-																		aria-label={$i18n.t('Note Menu')}
-																		on:click={(e) => {
-																			e.preventDefault();
-																			e.stopPropagation();
-																			openNoteMenuId = openNoteMenuId === note.id ? null : note.id;
-																		}}
-																	>
-																		<EllipsisHorizontal className="size-3.5" />
-																	</button>
-																</NoteMenu>
-															{/if}
-														</div>
-													</div>
-												</div>
-											</li>
+											<NoteItem
+												{note}
+												href={noteUrl(note)}
+												{snippet}
+												{shiftKey}
+												showFolder
+												editable={permission !== 'read_only'}
+												onOpen={goto}
+												onChange={tagsChanged}
+												onDelete={(confirm) => {
+													if (!confirm) return deleteNoteHandler(note.id);
+													selectedNote = note;
+													showDeleteConfirm = true;
+												}}
+												onAccess={(note.user_id === $user?.id &&
+													$user?.permissions?.sharing?.notes) ||
+												$user?.role === 'admin'
+													? () => accessModal.open(note.id)
+													: null}
+											/>
 										{/each}
 									</ul>
 								{:else if displayOption === 'grid'}
@@ -1249,7 +1009,7 @@
 											<div class="group relative min-w-0 self-start rounded-xl">
 												<a
 													href={noteUrl(note)}
-													on:dragstart={(e) => noteDragStartHandler(e, note)}
+													on:dragstart={(e) => setNoteDragData(e, note, noteUrl(note))}
 													class="focus-ring flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 pt-2 pb-1.5 text-center transition-colors duration-75 hover:bg-base-50/60 dark:hover:bg-base-0/4"
 													aria-label={note.title}
 												>
@@ -1333,6 +1093,10 @@
 															? () => accessModal.open(note.id)
 															: null}
 														show={openNoteMenuId === note.id}
+														folderId={note.folder_id}
+														onMove={note.user_id === $user?.id
+															? (folderId) => moveNoteHandler(note, folderId)
+															: null}
 														onDownload={(type) => {
 															selectedNote = note;
 
@@ -1421,7 +1185,7 @@
 								<button
 									type="button"
 									class="mt-2 text-xs text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
-									on:click={clearFilters}>{$i18n.t('Clear filters')}</button
+									on:click={() => clearFilters()}>{$i18n.t('Clear filters')}</button
 								>
 							{/if}
 						</div>
@@ -1439,28 +1203,3 @@
 		</div>
 	{/if}
 </div>
-
-<style>
-	/* The menu replaces the date on hover, focus, or while open; touch shows the menu. */
-	@media (hover: hover) {
-		.date-slot:not(.open) .note-menu {
-			opacity: 0;
-			pointer-events: none;
-		}
-		:global([data-note-item]:hover) .date-slot .note-menu,
-		:global([data-note-item]:focus-within) .date-slot .note-menu {
-			opacity: 1;
-			pointer-events: auto;
-		}
-		.date-slot.open :global(.row-date),
-		:global([data-note-item]:hover) .date-slot :global(.row-date),
-		:global([data-note-item]:focus-within) .date-slot :global(.row-date) {
-			opacity: 0;
-		}
-	}
-	@media (hover: none) {
-		.date-slot :global(.row-date) {
-			opacity: 0;
-		}
-	}
-</style>

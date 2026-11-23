@@ -421,6 +421,37 @@ export const getFolderUsers = async (token: string, id: string, signal?: AbortSi
 	return res;
 };
 
+export const getFolderNotes = async (token: string, id: string, page: number = 1) => {
+	let error = null;
+
+	const res = await fetch(
+		`${WEBUI_API_BASE_URL}/folders/${encodeURIComponent(id)}/notes?page=${page}`,
+		{
+			method: 'GET',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json',
+				authorization: `Bearer ${token}`
+			}
+		}
+	)
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
 export const getFolderTags = async (token: string, id: string, signal?: AbortSignal) => {
 	let error = null;
 

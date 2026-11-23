@@ -101,8 +101,8 @@
 
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
-	// The composer only belongs with the folder's chats, not its automations.
-	let folderSection: 'chats' | 'automations' | 'knowledge' = 'chats';
+	// The composer only belongs with the folder's chats, not its notes or automations.
+	let folderSection: 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
 
 	let models = [];
 	export let selectedModelIdx = 0;

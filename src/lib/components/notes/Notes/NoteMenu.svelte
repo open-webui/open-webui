@@ -16,6 +16,9 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Bold from '$lib/components/icons/Bold.svelte';
+	import FolderIcon from '$lib/components/layout/Sidebar/icons/Folder.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import { folders } from '$lib/stores';
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
@@ -26,7 +29,10 @@
 	export let onDownload = (type) => {};
 	export let onAccess: (() => void) | null = null;
 	export let onRename: (() => void) | null = null;
-	export let onDelete = () => {};
+	export let onMove: ((folderId: string | null) => void) | null = null;
+	/** The note's current folder, for the Move submenu. */
+	export let folderId: string | null = null;
+	export let onDelete: (() => void) | null = () => {};
 	export let onPin = null;
 	export let isPinned = false;
 	export let onUploadFiles = null;
@@ -72,6 +78,38 @@
 					<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
 					<div class="flex items-center">{$i18n.t('Rename')}</div>
 				</button>
+			{/if}
+
+			{#if onMove && (folderId || $folders.length > 0)}
+				<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
+					<button
+						slot="trigger"
+						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					>
+						<FolderIcon className="size-3.5" />
+						<div class="flex items-center">{$i18n.t('Move')}</div>
+					</button>
+
+					{#if folderId}
+						<button
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+							on:click={() => onMove?.(null)}
+						>
+							<div class="flex items-center">{$i18n.t('No folder')}</div>
+						</button>
+					{/if}
+					{#each [...$folders].sort((a, b) => b.updated_at - a.updated_at) as folder (folder.id)}
+						<button
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+							disabled={folder.id === folderId}
+							on:click={() => onMove?.(folder.id)}
+						>
+							<div class="shrink-0"><FolderIcon className="size-3.5" /></div>
+							<div class="min-w-0 flex-1 truncate text-left">{folder?.name ?? 'Folder'}</div>
+							{#if folder.id === folderId}<Check className="size-3! shrink-0" />{/if}
+						</button>
+					{/each}
+				</DropdownSub>
 			{/if}
 
 			{#if showAutoFormat}
@@ -195,15 +233,17 @@
 				</button>
 			{/if}
 
-			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
-				on:click={() => {
-					onDelete();
-				}}
-			>
-				<GarbageBin className="size-3.5" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</button>
+			{#if onDelete}
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					on:click={() => {
+						onDelete?.();
+					}}
+				>
+					<GarbageBin className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</button>
+			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>

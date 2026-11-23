@@ -78,12 +78,14 @@
 		getNoteById,
 		getNoteChatsById,
 		updateNoteById,
+		updateNoteFolderIdById,
 		updateNotePages,
 		updateNoteAccessGrants,
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
 	import { deleteChatById } from '$lib/apis/chats';
+	import { refreshFolderChatLists } from '$lib/stores/chatList';
 
 	import RichTextInput from '../common/RichTextInput.svelte';
 	import { fileUploadsKey } from '../common/RichTextInput/FileAttachment';
@@ -465,6 +467,19 @@
 		}
 
 		loading = false;
+	};
+
+	const moveHandler = async (folderId: string | null) => {
+		const previous = note.folder_id;
+		const res = await updateNoteFolderIdById(localStorage.token, id, folderId).catch((e) => {
+			toast.error(`${e}`);
+			return null;
+		});
+		if (!res) return;
+
+		note.folder_id = folderId;
+		toast.success($i18n.t('Note moved successfully'));
+		for (const moved of [previous, folderId]) if (moved) void refreshFolderChatLists(moved);
 	};
 
 	let debounceTimeout: NodeJS.Timeout | null = null;
@@ -1285,6 +1300,8 @@ ${content}
 									bind:autoFormat
 									showAutoFormat={note?.write_access ?? false}
 									onUploadFiles={note?.write_access ? uploadNoteFilesHandler : null}
+									folderId={note?.folder_id}
+									onMove={note?.user_id === $user?.id ? moveHandler : null}
 									onDownload={(type) => {
 										downloadHandler(type);
 									}}

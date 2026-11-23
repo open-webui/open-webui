@@ -6,6 +6,7 @@
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext('appLayout');
 	const dispatch = createEventDispatcher();
 
 	import DOMPurify from 'dompurify';
@@ -17,7 +18,15 @@
 	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, chatTabRequest, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+	import {
+		chatId,
+		chatTabRequest,
+		config,
+		mobile,
+		selectedFolder,
+		showSidebar,
+		user
+	} from '$lib/stores';
 	import {
 		folderStates,
 		folderChatPageKey,
@@ -31,6 +40,9 @@
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
+	import { updateNoteFolderIdById } from '$lib/apis/notes';
+	import { createNoteHandler } from '$lib/components/notes/utils';
+	import dayjs from '$lib/dayjs';
 
 	import {
 		deleteFolderById,
@@ -263,6 +275,18 @@
 								if (res) {
 									updateFolderDetails(id, res);
 									dispatch('update');
+								}
+							} else if (type === 'note') {
+								const res = await updateNoteFolderIdById(localStorage.token, id, folderId).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+
+								if (res) {
+									toast.success($i18n.t('Note moved successfully'));
+									void refreshFolderChatLists();
 								}
 							} else if (type === 'chat') {
 								open = true;
@@ -579,6 +603,22 @@
 		if ($mobile) showSidebar.set(false);
 	};
 
+	const newNoteHandler = async () => {
+		const note = await createNoteHandler(
+			dayjs().locale($i18n.language).format('YYYY-MM-DD'),
+			'',
+			'',
+			folderId
+		);
+		if (!note) return;
+
+		if (appLayout?.openPageTab)
+			appLayout.openPageTab({ href: `/notes/${note.id}`, label: note.title });
+		else await goto(`/notes/${note.id}`);
+		if ($mobile) showSidebar.set(false);
+		void refreshFolderChatLists(folderId);
+	};
+
 	const renameHandler = async () => {
 		console.log('Edit');
 		await tick();
@@ -869,6 +909,10 @@
 								if ($page.params.folderId === folderId) chatTabRequest.set({ folderId });
 								if ($mobile) showSidebar.set(false);
 							}}
+							onNewNote={($config?.features?.enable_notes ?? false) &&
+							($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+								? newNoteHandler
+								: null}
 							onEdit={() => {
 								showFolderModal = true;
 							}}
