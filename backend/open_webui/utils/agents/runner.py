@@ -4,6 +4,7 @@ import copy
 
 from open_webui.utils.machines import machine_id_of
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64
 from open_webui.utils.misc import get_message_list
@@ -97,6 +98,10 @@ async def run(request, form_data, user, metadata, model):
     output.state['cwd'] = cwd
     files = copy.deepcopy(form_data.get('files') or [])
     uploads = [f for f in files if f.get('type') != 'filesystem' and f.get('id')]
+    for upload in uploads:
+        source = await Files.get_file_by_id(upload['id'])
+        if not source or source.user_id != user.id:
+            raise ValueError('An attachment could not be uploaded to the agent environment')
     await upload_files_to_machine(request, user, uploads, metadata, {})
     if any(f.get('machine_error') for f in uploads):
         raise ValueError('An attachment could not be uploaded to the agent environment')

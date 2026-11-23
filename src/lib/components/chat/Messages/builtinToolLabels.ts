@@ -118,6 +118,8 @@ const labels = (t: Translate, name: string): Labels | null => {
 			return [t('Reading file'), t('Read file'), t('Failed to read file')];
 		case 'display_file':
 			return [t('Showing file'), t('Showed file'), t('Failed to show file')];
+		case 'copy_file_to_machine':
+			return [t('Copying file'), t('Copied file'), t('Failed to copy file')];
 
 		// Channels
 		case 'search_channels':

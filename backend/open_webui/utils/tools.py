@@ -50,6 +50,7 @@ from open_webui.tools.builtin import (
     add_memory,
     ask_user,
     calculate_timestamp,
+    copy_file_to_machine,
     create_automation,
     create_calendar_event,
     create_tasks,
@@ -787,6 +788,13 @@ async def get_builtin_tools(
         and await has_user_chat_permission('file_upload')
     ):
         builtin_functions.extend([list_chat_files, query_chat_files, grep_chat_files, view_file, display_file])
+
+    if (
+        metadata.get('machine_id')
+        and get_model_capability('terminal')
+        and (is_builtin_tool_enabled('files') or is_builtin_tool_enabled('knowledge'))
+    ):
+        builtin_functions.append(copy_file_to_machine)
 
     # Knowledge base tools - conditional injection based on model knowledge
     # If model has attached knowledge (any type), only provide query_knowledge_files

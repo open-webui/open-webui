@@ -536,7 +536,7 @@ async def get_machine_json(
             from open_webui.storage.provider import Storage
 
             source = await Files.get_file_by_id(file['id'])
-            if not source or source.user_id != (user.id if hasattr(user, 'id') else user['id']) or not source.path:
+            if not source or not source.path:
                 return None
             local_path = await asyncio.to_thread(Storage.get_file, source.path)
             body = aiohttp.FormData()

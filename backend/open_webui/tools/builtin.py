@@ -3341,6 +3341,42 @@ async def display_file(
         return JSONCodec.dumps({'error': str(e), 'exists': False})
 
 
+async def copy_file_to_machine(
+    file_id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+    __model_knowledge__: Optional[list[dict]] = None,
+) -> str:
+    """
+    Copy a chat or knowledge file to the selected terminal's working directory.
+
+    :param file_id: The ID of the file to copy
+    :return: JSON with the file's machine_path on the terminal
+    """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available'})
+
+    if not __user__:
+        return JSONCodec.dumps({'error': 'User context not available'})
+
+    try:
+        from open_webui.models.files import Files
+
+        file = await Files.get_file_by_id(file_id)
+        if not file or not await _has_read_access_to_file(file, __user__, __model_knowledge__):
+            return JSONCodec.dumps({'error': 'File not found'})
+
+        entry = {'id': file.id, 'name': file.filename}
+        await upload_files_to_machine(__request__, __user__, [entry], __metadata__ or {}, {})
+        if entry.get('machine_error'):
+            return JSONCodec.dumps({'error': entry['machine_error']})
+        return JSONCodec.dumps({'machine_path': entry['machine_path']}, ensure_ascii=False)
+    except Exception as e:
+        log.exception('copy_file_to_machine error: %s', e)
+        return JSONCodec.dumps({'error': str(e)})
+
+
 async def list_knowledge(
     knowledge_id: Optional[str] = None,
     skip: int = 0,
