@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import { embed, showTabs, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
+	import { getCitations } from '$lib/utils/citations';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
@@ -25,19 +26,9 @@
 	let selectedCitation: any = null;
 
 	export const showSourceModal = (sourceId) => {
-		let index;
-		let suffix = null;
-
-		if (typeof sourceId === 'string') {
-			const output = sourceId.split('#');
-			index = parseInt(output[0]) - 1;
-
-			if (output.length > 1) {
-				suffix = output[1];
-			}
-		} else {
-			index = sourceId - 1;
-		}
+		// "2#page" and 2 both name citation number 2
+		const number = typeof sourceId === 'string' ? parseInt(sourceId.split('#')[0]) : sourceId;
+		const index = citations.findIndex((citation) => citation.number === number);
 
 		if (citations[index]) {
 			console.log('Showing citation modal for:', citations[index]);
@@ -132,46 +123,7 @@
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
-			if (Object.keys(source).length === 0) {
-				return acc;
-			}
-
-			source?.document?.forEach((document, index) => {
-				const metadata = source?.metadata?.[index];
-				const distance = source?.distances?.[index];
-
-				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				let _source = source?.source;
-
-				if (metadata?.name) {
-					_source = { ..._source, name: metadata.name };
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					_source = { ..._source, name: metadata?.external ? _source.name : id, url: id };
-				}
-
-				const existingSource = acc.find((item) => item.id === id);
-
-				if (existingSource) {
-					existingSource.document.push(document);
-					existingSource.metadata.push(metadata);
-					if (distance !== undefined) existingSource.distances.push(distance);
-				} else {
-					acc.push({
-						id: id,
-						source: _source,
-						document: [document],
-						metadata: metadata ? [metadata] : [],
-						distances: distance !== undefined ? [distance] : []
-					});
-				}
-			});
-
-			return acc;
-		}, []);
+		citations = getCitations(sources);
 		console.log('citations', citations);
 
 		showRelevance = calculateShowRelevance(citations);

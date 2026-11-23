@@ -37,6 +37,7 @@
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
 	import { isTemporaryChatId } from '$lib/utils/chatId';
+	import { getCarriedSources } from '$lib/utils/citations';
 	import equal from 'fast-deep-equal';
 
 	import Name from './Name.svelte';
@@ -160,6 +161,14 @@
 			}
 		}
 	}
+
+	// The message's own sources, plus any from earlier turns that it cites.
+	const getCitationSources = (message: any) => {
+		const sources = message?.sources ?? message?.citations;
+		const carriedSources = getCarriedSources(history.messages, message);
+		return carriedSources.length > 0 ? [...(sources ?? []), ...carriedSources] : sources;
+	};
+	$: citationSources = getCitationSources(message);
 
 	export let siblings;
 
@@ -944,7 +953,7 @@
 									messageId={message.id}
 									content={message.content ?? ''}
 									output={message.output}
-									sources={message.sources}
+									sources={citationSources}
 									floatingButtons={message?.done &&
 										!readOnly &&
 										($settings?.showFloatingActionButtons ?? true)}
@@ -1011,12 +1020,12 @@
 								<Error content={message?.error?.content ?? message.content} />
 							{/if}
 
-							{#if (message?.sources || message?.citations) && (model?.info?.meta?.capabilities?.citations ?? true)}
+							{#if citationSources && (model?.info?.meta?.capabilities?.citations ?? true)}
 								<Citations
 									bind:this={citationsElement}
 									id={message?.id}
 									{chatId}
-									sources={message?.sources ?? message?.citations}
+									sources={citationSources}
 									{readOnly}
 								/>
 							{/if}
