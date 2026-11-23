@@ -20,6 +20,7 @@
 	let frames: FrameCanvas;
 	let transport = '';
 	let vncSurface: HTMLDivElement;
+	let ime: HTMLTextAreaElement;
 	let viewer: RFB | null = null;
 	let vncSocket: WebSocket | null = null;
 	let vncGeneration = 0;
@@ -70,6 +71,7 @@
 				if (generation !== vncGeneration) return;
 				viewer = new RFB(vncSurface, channel);
 				viewer.scaleViewport = true;
+				viewer.focusOnClick = false;
 				viewer.resizeSession = false;
 				viewer.qualityLevel = { low: 4, balanced: 6, crisp: 9 }[quality];
 				viewer.addEventListener('connect', () => {
@@ -141,7 +143,6 @@
 		if (!image) return;
 		const box = image.getBoundingClientRect();
 		event.preventDefault();
-		if (type === 'mousePressed') surface.focus();
 		command('mouse', {
 			event: type,
 			x: Math.max(0, Math.min(width, ((event.clientX - box.left) * width) / box.width)),
@@ -164,6 +165,7 @@
 				else pressedModifiers.delete(event.code);
 			}
 		}
+		if (event.isComposing || event.keyCode === 229 || event.key === 'Dead') return;
 		if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'v') return;
 		event.preventDefault();
 		const editing =
@@ -309,6 +311,16 @@
 		event.preventDefault();
 		command('paste', { text: event.clipboardData?.getData('text/plain') ?? '' });
 	}}
+	on:pointerdown|capture={(event) => {
+		// Touch keeps the non-editable surface so no on-screen keyboard pops up.
+		if (event.pointerType !== 'mouse') {
+			surface.focus();
+			return;
+		}
+		if (ime.value) ime.blur();
+		ime.focus({ preventScroll: true });
+	}}
+	on:mousedown|capture|preventDefault
 	on:mousedown={(event) => mouse(event, 'mousePressed')}
 	on:mouseup={(event) => mouse(event, 'mouseReleased')}
 	on:mousemove={(event) => mouse(event, 'mouseMoved')}
@@ -345,6 +357,31 @@
 			{/if}
 		</div>
 	{/if}
+	<textarea
+		bind:this={ime}
+		class="sr-only"
+		tabindex="-1"
+		aria-label="Browser page"
+		on:compositionend={(event) => {
+			command('paste', { text: event.data });
+			ime.value = '';
+		}}
+		on:beforeinput={(event) => {
+			if (event.inputType === 'insertText') {
+				event.preventDefault();
+				command('paste', { text: event.data });
+			} else if (event.inputType === 'insertLineBreak') {
+				event.preventDefault();
+				command('key', {
+					event: 'keyDown',
+					key: 'Enter',
+					code: 'Enter',
+					windowsVirtualKeyCode: 13
+				});
+				command('key', { event: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+			}
+		}}
+	></textarea>
 </div>
 
 <style>

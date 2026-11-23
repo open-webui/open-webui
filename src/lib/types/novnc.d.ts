@@ -4,6 +4,7 @@ declare module '@novnc/novnc' {
 		// shortcut: noVNC 1.7 has no public cursor container option; recheck on upgrades.
 		_cursor: { _canvas: HTMLCanvasElement; detach(): void };
 		scaleViewport: boolean;
+		focusOnClick: boolean;
 		resizeSession: boolean;
 		qualityLevel: number;
 		viewOnly: boolean;
