@@ -128,7 +128,7 @@
 		const routes = [
 			...patternRoutes
 				.filter((route) => route.model_id && route.pattern.trim())
-				.map((route) => ({ model_id: route.model_id, pattern: route.pattern.trim() })),
+				.map((route) => ({ model_id: route.model_id, pattern: route.pattern })),
 			...conditions.map((route) => ({
 				model_id: route.model_id,
 				condition: route.condition.trim()

@@ -730,10 +730,17 @@ class RouterModelRoute(BaseModel):
     pattern: str | None = None
     model_config = ConfigDict(extra='forbid')
 
-    @field_validator('condition', 'pattern', mode='before')
+    @field_validator('condition', mode='before')
     @classmethod
-    def normalize_empty(cls, value):
+    def normalize_empty_condition(cls, value):
         return (value or '').strip() or None
+
+    @field_validator('pattern', mode='before')
+    @classmethod
+    def normalize_empty_pattern(cls, value):
+        if value is None or not str(value).strip():
+            return None
+        return value
 
     @model_validator(mode='after')
     def validate_match(self):
