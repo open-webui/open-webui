@@ -109,6 +109,7 @@ from open_webui.tools.builtin import (
     grep_skill_files,
     create_skill,
     update_skill_files,
+    copy_skill_to_machine,
     write_note,
 )
 from open_webui.tools.visualizations import DEFAULT_VISUALIZATION_PROMPT_TEMPLATE
@@ -945,6 +946,8 @@ async def get_builtin_tools(
             builtin_functions.extend([view_skill, read_skill_file, grep_skill_files])
         if workspace_skill_ids:
             builtin_functions.append(update_skill_files)
+            if metadata.get('machine_id') and get_model_capability('terminal'):
+                builtin_functions.append(copy_skill_to_machine)
         if user.get('role') == 'admin' or await has_permission(
             user.get('id', ''), 'workspace.skills', await Config.get('user.permissions')
         ):

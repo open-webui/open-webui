@@ -4150,6 +4150,43 @@ async def update_skill_files(
         return JSONCodec.dumps({'error': detail})
 
 
+async def copy_skill_to_machine(
+    id: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __metadata__: dict = None,
+) -> str:
+    """Copy every file of a workspace skill to skills/<id> in the selected terminal's working directory.
+    Existing files with the same path are overwritten; other files there are kept. Copied scripts are not executable; run them with their interpreter.
+
+    :param id: Workspace skill ID.
+    """
+    try:
+        from types import SimpleNamespace
+
+        from open_webui.models.skills import get_skill_snapshot
+        from open_webui.routers.skills import authorized_skill
+        from open_webui.utils.machines import upload_skill_to_machine
+
+        if __request__ is None or not __user__:
+            raise ValueError('Request and user context required')
+        actor = SimpleNamespace(**__user__)
+        skill = await authorized_skill(id, actor)
+        if not skill.is_active:
+            await authorized_skill(id, actor, 'write')
+        metadata = __metadata__ if __metadata__ is not None else {}
+        context = metadata.get('chat_context') or {}
+        metadata['chat_context'] = context
+        versions = context.setdefault('skill_versions', {})
+        version_id = versions.get(skill.id) or skill.version_id
+        snapshot = await get_skill_snapshot(skill, version_id)
+        versions[skill.id] = version_id
+        path = await upload_skill_to_machine(__request__, __user__, metadata, skill.id, snapshot['data']['files'])
+        return JSONCodec.dumps({'path': path}, ensure_ascii=False)
+    except Exception as error:
+        return JSONCodec.dumps({'error': getattr(error, 'detail', str(error))})
+
+
 # Tool search
 
 

@@ -177,6 +177,8 @@ const labels = (t: Translate, name: string): Labels | null => {
 			return [t('Searching skill'), t('Searched skill'), t('Failed to search skill')];
 		case 'update_skill_files':
 			return [t('Updating skill'), t('Updated skill'), t('Failed to update skill')];
+		case 'copy_skill_to_machine':
+			return [t('Copying skill'), t('Copied skill'), t('Failed to copy skill')];
 		case 'create_skill':
 			return [t('Creating skill'), t('Created skill'), t('Failed to create skill')];
 		case 'create_tool':

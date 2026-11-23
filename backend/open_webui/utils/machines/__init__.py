@@ -10,7 +10,7 @@ from urllib.parse import quote, unquote, urlsplit
 
 import aiohttp
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT_MACHINE, ENABLE_TOOL_SERVERS
 from open_webui.utils.headers import bearer_auth_header
@@ -23,6 +23,7 @@ from open_webui.utils.chat_id import (
 from open_webui.utils.skill_files import (
     SKILL_CONTENT_MAX_CHARS,
     bounded_skill_manifest,
+    file_bytes,
     format_skill_content,
     skill_content_page,
     skill_overview,
@@ -831,6 +832,49 @@ async def get_chat_folder_directory(metadata: dict) -> str | None:
     if not folder_machine or folder_machine['machine_id'] != metadata.get('machine_id'):
         return None
     return folder_machine['working_directory']
+
+
+async def upload_skill_to_machine(
+    request: Request, user: dict, metadata: dict, skill_id: str, files: list[dict]
+) -> str:
+    """Copy skill files to skills/<skill_id> in the terminal's working directory and return that folder."""
+    from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
+
+    cwd = await get_machine_json(request, user, metadata, '/files/cwd')
+    if not isinstance(cwd, dict) or not cwd.get('cwd'):
+        raise ValueError('Machine working directory unavailable')
+    root = posixpath.join(cwd['cwd'], 'skills', skill_id)
+    connection, headers, cookies = await resolve_machine_connection(request, user, metadata)
+    headers = {key: value for key, value in headers.items() if key.lower() != 'content-type'}
+    base_url = get_machine_url(connection)
+    try:
+        async with get_machine_client(
+            base_url,
+            connection.get('instance_user_id') or user['id'],
+            service=connection.get('service', 'open_terminal'),
+            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_MACHINE),
+            trust_env=True,
+        ) as session:
+            for file in files:
+                directory, name = posixpath.split(posixpath.join(root, file['path']))
+                body = aiohttp.FormData()
+                body.add_field('file', file_bytes(file), filename=name)
+                async with session.post(
+                    f'{base_url}/files/upload?directory={quote(directory, safe="")}',
+                    headers=headers,
+                    cookies=cookies,
+                    data=body,
+                    ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL,
+                    allow_redirects=False,
+                ) as response:
+                    if response.status != 200:
+                        raise ValueError(f'Could not copy {file["path"]} to the machine.')
+    except TimeoutError as error:
+        raise TimeoutError(
+            f"Machine '{connection.get('name') or metadata.get('machine_id')}' timed out. "
+            'It may still be starting. Please try again.'
+        ) from error
+    return root
 
 
 async def get_machine_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:
