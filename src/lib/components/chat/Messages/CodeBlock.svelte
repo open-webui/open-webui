@@ -1,5 +1,4 @@
 <script lang="ts">
-	import hljs from 'highlight.js';
 	import { highlightCodeBlock } from '$lib/utils/codeHighlight';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
@@ -614,10 +613,13 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{#if lang && hljs.getLanguage(lang)}{@html hljs.highlight(code, {
-										language: lang,
-										ignoreIllegals: true
-									}).value}{:else}{code}{/if}</code
+								>{#await import('highlight.js')}{code}{:then { default: hljs }}{#if lang && hljs.getLanguage(lang)}{@html hljs.highlight(
+											code,
+											{
+												language: lang,
+												ignoreIllegals: true
+											}
+										).value}{:else}{code}{/if}{:catch}{code}{/await}</code
 							></pre>
 					{/if}
 				{:else}

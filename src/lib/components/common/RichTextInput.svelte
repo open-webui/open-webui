@@ -266,7 +266,8 @@
 
 	import { PASTED_TEXT_CHARACTER_LIMIT } from '$lib/constants';
 	import { createLowlight } from 'lowlight';
-	import hljs from 'highlight.js';
+	import plaintext from 'highlight.js/lib/languages/plaintext';
+	import type { HLJSApi } from 'highlight.js';
 
 	import type { SocketIOCollaborationProvider } from './RichTextInput/Collaboration';
 
@@ -274,16 +275,17 @@
 	export let oncompositionend = (e) => {};
 	export let onChange = (e) => {};
 
-	// create a lowlight instance with all languages loaded
-	const lowlight = createLowlight(
-		hljs.listLanguages().reduce(
-			(obj, lang) => {
-				obj[lang] = () => hljs.getLanguage(lang);
-				return obj;
-			},
-			{} as Record<string, any>
-		)
-	);
+	const lowlight = createLowlight({ plaintext });
+	const registerLanguages = (hljs: HLJSApi) =>
+		lowlight.register(
+			hljs.listLanguages().reduce(
+				(obj, lang) => {
+					obj[lang] = () => hljs.getLanguage(lang);
+					return obj;
+				},
+				{} as Record<string, any>
+			)
+		);
 
 	export let editor: Editor | null = null;
 	$: eventDispatch('editor', editor);
@@ -951,6 +953,11 @@
 			}
 		}
 
+		if (richText && !messageInput) {
+			const { default: hljs } = await import('highlight.js');
+			registerLanguages(hljs);
+		}
+
 		if (collaboration && editable && documentId && socket && user) {
 			const { SocketIOCollaborationProvider } = await import('./RichTextInput/Collaboration');
 			if (destroyed) return;
@@ -994,6 +1001,12 @@
 								// Auto-detecting the language freezes long documents.
 								lowlight: {
 									...lowlight,
+									// tiptap checks highlight.js's global registry, which may list languages this lowlight lacks.
+									highlight: (language: string, code: string) =>
+										lowlight.highlight(
+											lowlight.registered(language) ? language : 'plaintext',
+											code
+										),
 									highlightAuto: (code: string) => lowlight.highlight('plaintext', code)
 								}
 							}),
@@ -1507,6 +1520,17 @@
 
 		if (messageInput) {
 			selectTemplate();
+		}
+
+		if (richText && messageInput) {
+			const { default: hljs } = await import('highlight.js');
+			if (destroyed) return;
+			registerLanguages(hljs);
+			const { tr } = editor.state;
+			editor.state.doc.descendants((node, pos) => {
+				if (node.type.name === 'codeBlock') tr.setNodeMarkup(pos, undefined, node.attrs);
+			});
+			if (tr.docChanged) editor.view.dispatch(tr.setMeta('addToHistory', false));
 		}
 	});
 
