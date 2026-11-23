@@ -57,7 +57,7 @@
 	};
 
 	onMount(async () => {
-		await loadCounts();
+		loadCounts();
 		loaded = true;
 
 		const containerElement = document.getElementById('users-tabs-container');

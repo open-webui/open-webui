@@ -94,7 +94,7 @@
 	const debouncedLoad = () => {
 		loading = true;
 		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => loadLeaderboard(query), 500);
+		debounceTimer = setTimeout(() => loadLeaderboard(query), query ? 500 : 0);
 	};
 
 	$: if (query !== null) {
