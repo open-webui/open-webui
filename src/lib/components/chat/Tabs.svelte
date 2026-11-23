@@ -508,6 +508,36 @@
 			void createViewSession(chatView, tab.id, target);
 		}
 	};
+	const followModel = (..._model: unknown[]) => {
+		const chatView = viewEntry!;
+		for (const tab of tabs.tabs) {
+			const previous = tab.target;
+			const target =
+				previous &&
+				resolveMachineTarget(tab.machineId!, $machines ?? [], localStorage.token ?? '', {
+					...previous.context,
+					modelId
+				});
+			if (!target || dirtyFiles[tab.id] || target.context.modelId === previous.context.modelId)
+				continue;
+			tab.target = target;
+			if (tab.kind !== 'terminal' && tab.kind !== 'browser') continue;
+			void (async () => {
+				// Wait so a session still starting in the old instance gets stopped too.
+				await chatView.pending.get(tab.id);
+				const current = chatView.state.panels.tabs.find((item) => item.id === tab.id);
+				if (!current?.sessionId) return;
+				void machineRequest(
+					previous,
+					`${current.kind === 'terminal' ? '/api/terminals' : '/browser/sessions'}/${encodeURIComponent(current.sessionId)}`,
+					{ method: 'DELETE' }
+				).catch(() => {});
+				startSession(chatView, current);
+			})();
+		}
+		tabs = tabs;
+	};
+	$: if (viewReady && !chatLoading) followModel(modelId);
 
 	let fileViews: Record<
 		string,
@@ -1135,11 +1165,7 @@
 	const openDesktop = () => {
 		if (!selectedConnection) return askForMachine(openDesktop);
 		openPanel({
-			id: JSON.stringify([
-				'desktop',
-				selectedConnection.baseUrl,
-				selectedConnection.context.modelId
-			]),
+			id: JSON.stringify(['desktop', selectedConnection.baseUrl]),
 			kind: 'desktop',
 			label: $i18n.t('Desktop'),
 			machineId: selectedConnection.selector,
@@ -2186,12 +2212,14 @@
 						/>
 					{/key}
 				{:else if tab.kind === 'desktop' && target}
-					<Desktop
-						target={target!}
-						chatId={chatView.chatId}
-						active={panelVisible && visibleTabIds.has(tab.id)}
-						overlay={isDragging}
-					/>
+					{#key target.context.modelId}
+						<Desktop
+							target={target!}
+							chatId={chatView.chatId}
+							active={panelVisible && visibleTabIds.has(tab.id)}
+							overlay={isDragging}
+						/>
+					{/key}
 				{:else if tab.kind === 'browser' || tab.kind === 'terminal'}
 					{#if chatView.pending.has(tab.id)}
 						<p
@@ -2300,63 +2328,65 @@
 					{@const fileTarget = isMounted ? resolveTabConnection(tab) : null}
 					<div class="flex h-full min-h-0 flex-col">
 						<div class="min-h-0 flex-1">
-							{#await import('./FileNav.svelte') then { default: FileNav }}
-								<FileNav
-									target={fileTarget}
-									modelId={fileTarget?.context.modelId ?? null}
-									onFileSaved={(content) => {
-										const draft = chatView.drafts.get(tab.id);
-										if (draft?.preview) {
-											draft.preview.baseText = content;
-											draft.dirty = draft.preview.dirty = draft.preview.text !== content;
-										}
-									}}
-									initialView={chatView.drafts.get(tab.id)}
-									onViewChange={(view) => {
-										chatView.drafts.set(tab.id, view);
-										if (tab.kind === 'files')
-											updateViewTab(chatView, tab.id, {
-												directory: view.directory,
-												label: view.isHome
-													? $i18n.t('Home')
-													: view.directory?.split('/').filter(Boolean).pop() || $i18n.t('Files')
-											});
-									}}
-									onFilesMoved={() => {
-										if (chatView !== viewEntry) return;
-										for (const other of tabs.tabs) {
-											if (
-												other.id !== tab.id &&
-												other.kind === 'files' &&
-												other.machineId === tab.machineId
-											)
-												void fileViews[other.id]?.refreshDirectory?.();
-										}
-									}}
-									gitStatus={fileGitStatuses[tab.machineId] ?? null}
-									gitTarget={fileTarget}
-									gitDiffMode={fileGitDiffModes[tab.machineId] ?? 'unified'}
-									gitHideWhitespace={fileGitHideWhitespace[tab.machineId] ?? false}
-									bind:this={fileViews[tab.id]}
-									bind:dirty={dirtyFiles[tab.id]}
-									machineId={tab.machineId}
-									initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
-									initialDirectory={tab.kind === 'files'
-										? (tab.directory ?? tab.path ?? null)
-										: null}
-									active={panelVisible && visibleTabIds.has(tab.id)}
-									manageFileRequests={false}
-									showTerminalDock={tab.kind === 'files'}
-									onOpenFile={(path, page) =>
-										openFile(path, tab.machineId!, page, fileTarget?.context.modelId)}
-									onBrowseDirectory={(path) =>
-										openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
-									{onAskFile}
-									overlay={isDragging}
-									chatId={chatView.chatId}
-									bind:machineContext={fileContexts[tab.id]}
-								/>
-							{/await}
+							{#key tab.kind === 'file' && fileTarget?.context.modelId}
+								{#await import('./FileNav.svelte') then { default: FileNav }}
+									<FileNav
+										target={fileTarget}
+										modelId={fileTarget?.context.modelId ?? null}
+										onFileSaved={(content) => {
+											const draft = chatView.drafts.get(tab.id);
+											if (draft?.preview) {
+												draft.preview.baseText = content;
+												draft.dirty = draft.preview.dirty = draft.preview.text !== content;
+											}
+										}}
+										initialView={chatView.drafts.get(tab.id)}
+										onViewChange={(view) => {
+											chatView.drafts.set(tab.id, view);
+											if (tab.kind === 'files')
+												updateViewTab(chatView, tab.id, {
+													directory: view.directory,
+													label: view.isHome
+														? $i18n.t('Home')
+														: view.directory?.split('/').filter(Boolean).pop() || $i18n.t('Files')
+												});
+										}}
+										onFilesMoved={() => {
+											if (chatView !== viewEntry) return;
+											for (const other of tabs.tabs) {
+												if (
+													other.id !== tab.id &&
+													other.kind === 'files' &&
+													other.machineId === tab.machineId
+												)
+													void fileViews[other.id]?.refreshDirectory?.();
+											}
+										}}
+										gitStatus={fileGitStatuses[tab.machineId] ?? null}
+										gitTarget={fileTarget}
+										gitDiffMode={fileGitDiffModes[tab.machineId] ?? 'unified'}
+										gitHideWhitespace={fileGitHideWhitespace[tab.machineId] ?? false}
+										bind:this={fileViews[tab.id]}
+										bind:dirty={dirtyFiles[tab.id]}
+										machineId={tab.machineId}
+										initialFile={tab.kind === 'file' ? { path: tab.path!, page: tab.page } : null}
+										initialDirectory={tab.kind === 'files'
+											? (tab.directory ?? tab.path ?? null)
+											: null}
+										active={panelVisible && visibleTabIds.has(tab.id)}
+										manageFileRequests={false}
+										showTerminalDock={tab.kind === 'files'}
+										onOpenFile={(path, page) =>
+											openFile(path, tab.machineId!, page, fileTarget?.context.modelId)}
+										onBrowseDirectory={(path) =>
+											openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
+										{onAskFile}
+										overlay={isDragging}
+										chatId={chatView.chatId}
+										bind:machineContext={fileContexts[tab.id]}
+									/>
+								{/await}
+							{/key}
 						</div>
 						{#if tab.kind === 'files' && fileTarget}
 							<GitBar
