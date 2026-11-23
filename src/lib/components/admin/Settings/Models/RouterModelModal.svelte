@@ -160,8 +160,18 @@
 
 		try {
 			if ((await onSubmit(model, accessGrants)) === false) return;
-		} catch (error) {
-			toast.error(String(error));
+		} catch (error: any) {
+			const detail = error?.detail ?? error;
+			const msg = Array.isArray(detail)
+				? detail
+						.map((e: { msg?: string }) => e?.msg || (typeof e === 'string' ? e : JSON.stringify(e)))
+						.join(', ')
+				: error instanceof Error
+					? error.message
+					: typeof detail === 'string'
+						? detail
+						: JSON.stringify(detail);
+			toast.error(msg);
 			return;
 		} finally {
 			loading = false;

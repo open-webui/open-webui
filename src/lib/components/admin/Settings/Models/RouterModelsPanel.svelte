@@ -30,6 +30,17 @@
 	};
 	let showAddModel = false;
 
+	const formatError = (err: any): string => {
+		const detail = err?.detail ?? err;
+		if (Array.isArray(detail)) {
+			return detail
+				.map((e: { msg?: string }) => e?.msg || (typeof e === 'string' ? e : JSON.stringify(e)))
+				.join(', ');
+		}
+		if (typeof detail === 'string') return detail;
+		return err?.message ?? JSON.stringify(detail);
+	};
+
 	// Access lives on the model row, like any model, so it's saved through the model API.
 	const submitHandler = async (
 		nextConfig = routerModelsConfig,
@@ -37,7 +48,7 @@
 		accessGrants = null
 	) => {
 		const result = await setRouterModelsConfig(localStorage.token, nextConfig).catch((err) => {
-			toast.error(`${err?.detail ?? err}`);
+			toast.error(formatError(err));
 			return null;
 		});
 
@@ -45,7 +56,7 @@
 			routerModelsConfig = result;
 			if (model && accessGrants) {
 				await updateModelAccessGrants(localStorage.token, model.id, model.name, accessGrants).catch(
-					(err) => toast.error(`${err?.detail ?? err}`)
+					(err) => toast.error(formatError(err))
 				);
 			}
 			toast.success($i18n.t('Settings saved successfully!'));
@@ -88,7 +99,7 @@
 
 	onMount(async () => {
 		routerModelsConfig = await getRouterModelsConfig(localStorage.token).catch((err) => {
-			toast.error(`${err?.detail ?? err}`);
+			toast.error(formatError(err));
 			return null;
 		});
 	});
