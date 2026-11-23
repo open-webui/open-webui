@@ -147,7 +147,12 @@
 		{:else}
 			<ChatBubble className="size-3.5 shrink-0" />
 		{/if}
-		<span class="min-w-0 truncate">{destinationLabel}</span>
+		<span
+			class:sr-only={!plain && target_type === 'chat' && !folder_id && start_new}
+			class="min-w-0 truncate"
+		>
+			{destinationLabel}
+		</span>
 		{#if !plain}<ChevronDown className="size-2.5 shrink-0" strokeWidth="2.5" />{/if}
 	</button>
 

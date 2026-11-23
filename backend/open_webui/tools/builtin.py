@@ -4352,7 +4352,7 @@ async def _validate_owned_automation_folder(user_id: str, folder_id: Optional[st
 async def create_automation(
     name: str,
     prompt: str,
-    rrule: str,
+    rrule: str = '',
     folder_id: Optional[str] = None,
     new_chat: bool = True,
     __request__: Request = None,
@@ -4360,11 +4360,10 @@ async def create_automation(
     __metadata__: dict = None,
 ) -> str:
     """
-    Create a scheduled automation that runs a prompt on a recurring or one-time schedule.
-    Use this when the user wants to schedule a task to run automatically.
+    Create an automation that runs a prompt manually or on a recurring or one-time schedule.
     The automation will use the current chat model.
 
-    The rrule parameter must be a valid iCalendar RRULE string. Common examples:
+    For scheduled runs, provide a valid iCalendar RRULE string. Common examples:
     - Every day at 9am: "DTSTART:20250101T090000\nRRULE:FREQ=DAILY"
     - Every Monday at 8am: "DTSTART:20250106T080000\nRRULE:FREQ=WEEKLY;BYDAY=MO"
     - Every hour: "RRULE:FREQ=HOURLY;INTERVAL=1"
@@ -4376,7 +4375,7 @@ async def create_automation(
 
     :param name: A short descriptive name for the automation
     :param prompt: The prompt/instructions to execute on each run
-    :param rrule: An iCalendar RRULE string defining the schedule
+    :param rrule: An iCalendar RRULE string defining the schedule. Omit for manual runs only.
     :param folder_id: Optional owner-owned folder ID for generated chats
     :param new_chat: True starts each run in a new chat. False continues this chat on every run (in a channel, one thread), so each run sees the earlier ones.
     :return: JSON with the created automation details including id, next scheduled runs
@@ -4391,7 +4390,7 @@ async def create_automation(
         from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
-        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
+        from open_webui.utils.automations import schedule_next_run, schedule_next_runs, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4411,11 +4410,11 @@ async def create_automation(
         except ValueError as e:
             return JSONCodec.dumps({'error': str(e)})
 
-        # Validate the RRULE
-        try:
-            await validate_rrule(rrule, tz=user.timezone)
-        except ValueError as e:
-            return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
+        if rrule:
+            try:
+                await validate_rrule(rrule, tz=user.timezone)
+            except ValueError as e:
+                return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
             await check_automation_limits(__request__, user, rrule, None, is_create=True)
@@ -4451,7 +4450,7 @@ async def create_automation(
             is_active=True,
         )
 
-        automation = await Automations.insert(user_id, form, await next_run_ns(rrule, tz=tz))
+        automation = await Automations.insert(user_id, form, await schedule_next_run(form.data.model_dump(), tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -4462,7 +4461,7 @@ async def create_automation(
                 'model_id': model_id,
                 'target': automation.data.get('target'),
                 'is_active': automation.is_active,
-                'next_runs': await next_n_runs_ns(rrule, tz=tz),
+                'next_runs': await schedule_next_runs(automation.data, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -4487,7 +4486,7 @@ async def update_automation(
     :param automation_id: The ID of the automation to update
     :param name: New name for the automation (optional)
     :param prompt: New prompt/instructions (optional)
-    :param rrule: New iCalendar RRULE schedule string (optional). See create_automation for format examples.
+    :param rrule: New iCalendar RRULE string. Omit to keep the schedule or pass an empty string to remove it.
     :param model_id: New model ID to use (optional); blank values are ignored
     :param folder_id: New owner-owned folder ID (optional); omit or pass blank to keep unchanged, pass null to clear
     :return: JSON with the updated automation details
@@ -4506,7 +4505,6 @@ async def update_automation(
             AutomationTarget,
             AutomationMachineConfig,
             AutomationWebhook,
-            has_webhook,
         )
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
@@ -4537,9 +4535,6 @@ async def update_automation(
                 new_folder_id = await _validate_owned_automation_folder(user_id, folder_id.strip())
             except ValueError as e:
                 return JSONCodec.dumps({'error': str(e)})
-
-        if not new_rrule and not has_webhook(automation.data):
-            return JSONCodec.dumps({'error': 'An automation without a webhook needs a schedule'})
 
         # Validate RRULE if changed
         if rrule:

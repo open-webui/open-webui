@@ -83,8 +83,6 @@ async def check_automation_triggers(form_data: AutomationForm, user, db, is_crea
     data = form_data.data
     if data.webhook and not await can_use_automation_webhooks(user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.UNAUTHORIZED)
-    if not data.rrule and not data.webhook:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Add a schedule or a webhook')
     if data.rrule:
         try:
             await validate_rrule(data.rrule, tz=user.timezone)
@@ -391,8 +389,6 @@ async def update_automation_by_id(
             meta=automation.meta,
             is_active=form_data.is_active,
         )
-        if not form_data.data.rrule and not form_data.data.webhook:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Add a schedule or a webhook')
         if form_data.data.rrule:
             try:
                 await validate_rrule(form_data.data.rrule, tz=await get_owner_timezone(automation, user))

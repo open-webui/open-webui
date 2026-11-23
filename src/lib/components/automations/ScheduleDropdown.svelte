@@ -16,8 +16,6 @@
 	export let onceDate = '';
 	export let onceTime = '09:00';
 	export let customRrule = '';
-	/** Offer "None", for automations that run only on a webhook. */
-	export let allowNone = false;
 
 	export let side: 'top' | 'bottom' = 'top';
 	export let align: 'start' | 'end' = 'start';
@@ -30,7 +28,7 @@
 	let showDropdown = false;
 
 	$: FREQUENCIES = [
-		...(allowNone || frequency === 'NONE' ? [{ key: 'NONE', label: $i18n.t('None') }] : []),
+		{ key: 'NONE', label: $i18n.t('None') },
 		{ key: 'ONCE', label: $i18n.t('Once') },
 		{ key: 'HOURLY', label: $i18n.t('Hourly') },
 		{ key: 'DAILY', label: $i18n.t('Daily') },
@@ -187,7 +185,12 @@
 					d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
 				/>
 			</svg>{/if}
-		<span class={plain ? 'truncate' : 'whitespace-nowrap'}>{scheduleLabel}</span>
+		<span
+			class:sr-only={!plain && frequency === 'NONE'}
+			class={plain ? 'truncate' : 'whitespace-nowrap'}
+		>
+			{!plain && frequency === 'NONE' ? $i18n.t('Schedule') : scheduleLabel}
+		</span>
 		{#if !plain}<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"

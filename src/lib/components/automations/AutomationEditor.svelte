@@ -207,8 +207,8 @@
 			return;
 		}
 		const rrule = scheduleDropdown.buildRrule();
-		if (!rrule && !webhookEnabled) {
-			toast.error($i18n.t('Add a schedule or a webhook'));
+		if (scheduleDropdown.frequency === 'CUSTOM' && !rrule.trim()) {
+			toast.error($i18n.t('Invalid value') + ': ' + $i18n.t('Custom schedule'));
 			return;
 		}
 		saving = true;
@@ -668,7 +668,6 @@
 					<div class="min-w-0 flex-1" inert={!canManage || undefined}>
 						<ScheduleDropdown
 							bind:this={scheduleDropdown}
-							allowNone={webhookEnabled}
 							plain
 							side="bottom"
 							align="start"

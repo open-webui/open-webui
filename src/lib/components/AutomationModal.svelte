@@ -115,8 +115,8 @@
 			toast.error($i18n.t('Channel is required'));
 			return;
 		}
-		if (!scheduleDropdown.buildRrule() && !webhookEnabled) {
-			toast.error($i18n.t('Add a schedule or a webhook'));
+		if (scheduleDropdown.frequency === 'CUSTOM' && !scheduleDropdown.buildRrule().trim()) {
+			toast.error($i18n.t('Invalid value') + ': ' + $i18n.t('Custom schedule'));
 			return;
 		}
 		if (scheduleDropdown?.frequency === 'ONCE') {
@@ -274,12 +274,7 @@
 			class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 pb-3.5 pt-1 gap-2"
 		>
 			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
-				<ScheduleDropdown
-					bind:this={scheduleDropdown}
-					allowNone={webhookEnabled}
-					side="top"
-					align="start"
-				/>
+				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
 				{#if allowWebhook || webhookEnabled}
 					<WebhookDropdown
