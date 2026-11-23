@@ -1417,6 +1417,8 @@ async def get_tool_servers(request: Request):
                         tool_servers = None
             except Exception as e:
                 log.error(f'Error fetching tool_servers from Redis: {e}')
+        elif request.app.state.TOOL_SERVERS:
+            tool_servers = request.app.state.TOOL_SERVERS
 
         if tool_servers is None:
             tool_servers = await set_tool_servers(request)
@@ -1583,6 +1585,8 @@ async def get_machines(request: Request):
                     machines = None
         except Exception as e:
             log.error(f'Error fetching machines from Redis: {e}')
+    elif request.app.state.MACHINES:
+        machines = request.app.state.MACHINES
 
     if machines is None:
         machines = await set_machines(request)
