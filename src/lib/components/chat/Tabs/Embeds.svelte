@@ -17,13 +17,14 @@
 	let fileDocxData: ArrayBuffer | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
+	let fileContent: string | null = null;
 	let selectedExcelSheet = '';
 	$: fileName = String($embed?.title ?? '');
 	$: fileExt = fileName.split('.').pop()?.toLowerCase() ?? '';
 
 	const loadFile = async (id: string, ext: string) => {
 		fileId = id;
-		fileData = fileDocxData = fileOfficeSlides = excelWorkbook = null;
+		fileData = fileDocxData = fileOfficeSlides = excelWorkbook = fileContent = null;
 		selectedExcelSheet = '';
 		fileLoading = !!id;
 		if (!id) return;
@@ -32,6 +33,7 @@
 			if (fileId !== id || !data) return;
 			if (ext === 'pdf') fileData = data;
 			else if (ext === 'docx') fileDocxData = data;
+			else if (ext === 'md' || ext === 'markdown') fileContent = new TextDecoder().decode(data);
 			else if (ext === 'pptx') {
 				const { pptxToImages } = await import('$lib/utils/pptxToHtml');
 				const slides = (await pptxToImages(data)).images;
@@ -175,7 +177,7 @@
 							className="w-full h-full"
 						/>
 					{/key}
-				{:else if fileDocxData || fileOfficeSlides || excelWorkbook}
+				{:else if fileDocxData || fileOfficeSlides || excelWorkbook || fileContent !== null}
 					<!-- Previews drawn as real text get the cited passages marked too -->
 					<div
 						class="flex h-full min-h-0 flex-col"
@@ -185,6 +187,7 @@
 							selectedFile={fileName}
 							fileLoading={false}
 							{fileDocxData}
+							{fileContent}
 							{fileOfficeSlides}
 							{excelWorkbook}
 							bind:selectedExcelSheet

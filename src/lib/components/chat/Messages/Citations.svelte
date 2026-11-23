@@ -34,10 +34,16 @@
 			console.log('Showing citation modal for:', citations[index]);
 
 			// A cited document whose layout the retrieved text loses opens beside the chat,
-			// at the cited page when one is known. Plain text files read the same in the popup.
+			// at the cited page when one is known. Plain text files read the same in the popup,
+			// unless only part of a Markdown file is cited.
 			const metadata = citations[index].metadata?.[0];
 			const fileName = String(metadata?.name ?? citations[index].source?.name ?? '');
-			if (!readOnly && metadata?.file_id && /\.(pdf|docx|pptx|xlsx|xls)$/i.test(fileName)) {
+			if (
+				!readOnly &&
+				metadata?.file_id &&
+				(/\.(pdf|docx|pptx|xlsx|xls)$/i.test(fileName) ||
+					(/\.(md|markdown)$/i.test(fileName) && Number.isInteger(metadata.start_index)))
+			) {
 				showTabs.set(true);
 				showEmbeds.set(true);
 				embed.set({
