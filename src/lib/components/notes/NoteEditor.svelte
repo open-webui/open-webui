@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { updateFolderChatLists } from '$lib/stores/folderStates';
+	import { folderStates, loadFolderDetails, updateFolderChatLists } from '$lib/stores/folderStates';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
 	import { getPageContext, onTabLeave } from '$lib/utils/page';
 	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
@@ -103,6 +103,8 @@
 	import ArrowUturnLeft from '../icons/ArrowUturnLeft.svelte';
 	import ArrowUturnRight from '../icons/ArrowUturnRight.svelte';
 	import Sidebar from '../icons/Sidebar.svelte';
+	import Emoji from '../common/Emoji.svelte';
+	import Icon from '../chat/FileNav/Icon.svelte';
 
 	export let id: null | string = null;
 	let noteRoot: HTMLDivElement;
@@ -151,6 +153,9 @@
 	$: activeDocumentId = activePage
 		? `note:${note.id}:page:${activePage.id}:${activePage.generation}`
 		: '';
+	$: folderId = note?.folder_id;
+	$: if (folderId) loadFolderDetails(localStorage.token, folderId).catch(() => null);
+	$: folder = folderId ? $folderStates[folderId]?.details : null;
 	let presenceNoteId = '';
 	let cursorTarget = null;
 	let liveParticipants: {
@@ -1144,6 +1149,21 @@ ${content}
 				</div>
 			{:else if note && activePage}
 				<div class=" w-full flex flex-col {loading ? 'opacity-20' : ''}">
+					{#if folder}
+						<div class="shrink-0 flex px-1.5 pt-1 md:px-3">
+							<a
+								href={`/folders/${folder.id}`}
+								class="flex min-w-0 items-center gap-1.5 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
+							>
+								{#if folder.meta?.icon}
+									<Emoji shortCode={folder.meta.icon} className="size-3.5 shrink-0" />
+								{:else}
+									<Icon name="folder" size={14} />
+								{/if}
+								<span class="truncate">{folder.name}</span>
+							</a>
+						</div>
+					{/if}
 					<div class="shrink-0 w-full flex justify-between items-center px-1.5 md:px-3">
 						<div class="w-full min-w-0 flex items-center">
 							{#if $mobile && !pageTab}
