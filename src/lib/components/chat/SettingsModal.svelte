@@ -9,7 +9,7 @@
 	import { getContext, tick } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
-	import { config, mobile, models, settings, user, visibleControls } from '$lib/stores';
+	import { config, mobile, settings, user, visibleControls } from '$lib/stores';
 	import type { SettingsModalRequest } from '$lib/stores';
 	import { getUserSettings, updateUserSettings } from '$lib/apis/users';
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
@@ -447,7 +447,6 @@
 		await settings.set(
 			mergeUiSettings($config?.ui?.default_interface_settings ?? {}, personalUiSettings)
 		);
-		await models.set(await getModels());
 	};
 
 	const getModels = async () => {
