@@ -77,11 +77,11 @@ def requested_version(value: str | None) -> str:
     return value
 
 
-def clean_folder(value: str | None) -> str:
+def clean_start_dir(value: str | None) -> str:
     """Where terminal sessions start. Empty means the default (home over SSH)."""
     value = (value or '').strip()
     if value and (not value.startswith('/') or any(c in value for c in '\n\r\0')):
-        raise MachineError('Use an absolute folder path, like /home/me/project.')
+        raise MachineError('Use an absolute path, like /home/me/project.')
     return value
 
 
@@ -157,7 +157,7 @@ async def run_bootstrap(
     api_key: str,
     on_step,
     version: str = 'latest',
-    folder: str = '',
+    start_dir: str = '',
     install: str = '',
 ) -> tuple[str, str, str | None]:
     """Install or upgrade Open Terminal and start it. Returns (install root, installed version, warning).
@@ -165,7 +165,7 @@ async def run_bootstrap(
     `install` (see install_args) also runs `open-terminal install-deps`. When that fails the
     machine is still set up, with a warning.
     """
-    script = f'FOLDER={shlex.quote(folder)}\nDEPS={shlex.quote(install)}\n' + render(
+    script = f'START_DIR={shlex.quote(start_dir)}\nDEPS={shlex.quote(install)}\n' + render(
         BOOTSTRAP,
         ID=machine_id,
         VERSION=requested_version(version),
@@ -445,13 +445,13 @@ async def provision(
     target: dict | None = None,
     is_local: bool = False,
     version: str | None = None,
-    folder: str | None = None,
+    start_dir: str | None = None,
     deps: list[str] | None = None,
     packages: list[str] | None = None,
 ):
     """Create (target given, or is_local) or upgrade/repair (neither) a machine, streaming progress to the admin.
 
-    `version` is 'latest' or an exact Open Terminal version, `folder` is where sessions start,
+    `version` is 'latest' or an exact Open Terminal version, `start_dir` is where sessions start,
     and `deps` and `packages` are what `open-terminal install-deps` adds (see install_args).
     When omitted, the machine keeps what the admin chose last time.
     """
@@ -470,10 +470,10 @@ async def provision(
     source = current if existing else (target or {})
     api_key = (existing or {}).get('key') or secrets.token_urlsafe(32)
     requested = requested_version(version if version is not None else current.get('requested_version'))
-    if folder is None:
-        folder = current.get('folder') or ''
-    if is_local and not folder:
-        folder = local.default_folder()
+    if start_dir is None:
+        start_dir = current.get('start_dir') or ''
+    if is_local and not start_dir:
+        start_dir = local.default_start_dir()
     if deps is None:
         deps = current.get('deps') or []
     if packages is None:
@@ -487,7 +487,7 @@ async def provision(
         machine = existing or ({'id': machine_id, 'local': {}} if is_local else {'id': machine_id, 'ssh': target})
         async with await open_host(machine) as host:
             root, installed, warning = await run_bootstrap(
-                host, machine_id, api_key, step, requested, folder, install_args(deps, packages)
+                host, machine_id, api_key, step, requested, start_dir, install_args(deps, packages)
             )
             transport = await host.transport(root)
 
@@ -503,7 +503,7 @@ async def provision(
         entry['local' if is_local else 'ssh'] = {
             **({} if is_local else {k: source[k] for k in ('host', 'port', 'username', 'host_key')}),
             'root': root,
-            'folder': folder,
+            'start_dir': start_dir,
             'version': installed,
             'requested_version': requested,
             'deps': deps,
@@ -530,21 +530,21 @@ async def provision(
         await step('error', message=message)
 
 
-async def set_folder(machine_id: str, folder: str):
+async def set_start_dir(machine_id: str, start_dir: str):
     """Change where sessions start, then restart Open Terminal there."""
     machine = await get_machine(machine_id)
     root = state(machine)['root']
-    folder = clean_folder(folder) or (local.default_folder() if kind(machine) == 'local' else '')
+    start_dir = clean_start_dir(start_dir) or (local.default_start_dir() if kind(machine) == 'local' else '')
     q = shlex.quote
     await tunnels.drop(machine_id)
     async with await open_host(machine) as host:
         await host.sh(
-            f'F={q(folder)}\n'
-            'if [ -n "$F" ] && [ ! -d "$F" ]; then echo "Folder not found: $F" >&2; exit 1; fi\n'
-            f'printf %s "$F" > {q(root + "/folder")}\n'
+            f'D={q(start_dir)}\n'
+            'if [ -n "$D" ] && [ ! -d "$D" ]; then echo "Start directory not found: $D" >&2; exit 1; fi\n'
+            f'printf %s "$D" > {q(root + "/start_dir")}\n'
             f'{q(root + "/stop.sh")}\n{q(root + "/start.sh")}\n'
         )
-    await update_state(machine_id, folder=folder)
+    await update_state(machine_id, start_dir=start_dir)
 
 
 async def install(request, machine_id: str, admin_id: str, deps: list[str], packages: list[str]):

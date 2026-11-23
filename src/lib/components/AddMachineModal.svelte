@@ -28,7 +28,7 @@
 		probeSSHMachine,
 		removeMachine,
 		restartMachine,
-		setMachineFolder,
+		setMachineStartDir,
 		upgradeMachine,
 		type ManagedMachineInfo,
 		type SSHMachineInfo
@@ -75,8 +75,8 @@
 	let openTerminalVersion = ''; // empty means latest
 	// Type when adding: Remote (a URL or ssh://) or Local (the server Open WebUI runs on).
 	let target: 'url' | 'local' = 'url';
-	let folder = ''; // where terminal sessions start; empty is the default
-	let localDefaults: { folder: string; added: boolean } | null = null;
+	let startDir = ''; // where terminal sessions start; empty is the default
+	let localDefaults: { start_dir: string; added: boolean } | null = null;
 	let passphrase = '';
 	let keyFileInput: HTMLInputElement;
 	let sshPhase: 'form' | 'fingerprint' | 'authorize' | 'installing' = 'form';
@@ -130,7 +130,7 @@
 			current?.requested_version && current.requested_version !== 'latest'
 				? current.requested_version
 				: '';
-		folder = current?.folder ?? '';
+		startDir = current?.start_dir ?? '';
 		toInstall = [...(current?.deps ?? []), ...(current?.packages ?? [])].join(' ');
 		target = 'url';
 		localDefaults = null;
@@ -247,8 +247,8 @@
 		busy = true;
 		error = '';
 		try {
-			if (managed && folder.trim() !== (managed.folder ?? '')) {
-				await setMachineFolder(localStorage.token, connection.id, folder.trim());
+			if (managed && startDir.trim() !== (managed.start_dir ?? '')) {
+				await setMachineStartDir(localStorage.token, connection.id, startDir.trim());
 			}
 			const result = {
 				...(connection ?? {}),
@@ -339,6 +339,7 @@
 				id: machine.id,
 				name: name.trim(),
 				version: openTerminalVersion.trim() || 'latest',
+				start_dir: startDir.trim(),
 				...installForm
 			})
 		);
@@ -351,7 +352,7 @@
 				id: machineId,
 				name: name.trim(),
 				version: openTerminalVersion.trim() || 'latest',
-				folder: folder.trim()
+				start_dir: startDir.trim()
 			})
 		);
 	}
@@ -807,18 +808,18 @@
 				<div class="mb-0.5 flex text-xs text-base-500">
 					<Tooltip placement="top-start" content={$i18n.t('Where terminal sessions start.')}>
 						<label
-							for="machine-folder"
+							for="machine-start-dir"
 							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
-							>{$i18n.t('Folder')}</label
+							>{$i18n.t('Start directory')}</label
 						>
 					</Tooltip>
 				</div>
 				<input
-					id="machine-folder"
+					id="machine-start-dir"
 					class={input}
-					bind:value={folder}
+					bind:value={startDir}
 					placeholder={installingLocal || localMachine
-						? (localDefaults?.folder ?? $i18n.t('Project folder'))
+						? (localDefaults?.start_dir ?? $i18n.t('Project folder'))
 						: $i18n.t('Home folder')}
 					autocomplete="off"
 					spellcheck="false"

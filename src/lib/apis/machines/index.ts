@@ -870,7 +870,7 @@ export type SSHTarget = { host: string; port: number; username: string };
 /** Install state shared by both kinds (`connection.ssh` or `connection.local`). */
 export type ManagedMachineInfo = {
 	root?: string;
-	folder?: string; // where terminal sessions start; empty is home
+	start_dir?: string; // where terminal sessions start; empty is home
 	version?: string;
 	requested_version?: string; // 'latest' or an exact version
 	deps?: string[]; // installed with the machine by `open-terminal install-deps`, by name
@@ -966,6 +966,7 @@ export const installSSHMachine = (
 		id: string;
 		name: string;
 		version?: string;
+		start_dir?: string;
 		deps?: string[];
 		packages?: string[];
 	}
@@ -973,12 +974,12 @@ export const installSSHMachine = (
 
 /** Where sessions on this computer start by default, and whether it is already added. */
 export const getLocalMachineDefaults = (token: string) =>
-	managedMachineRequest<{ folder: string; added: boolean }>(token, '/local');
+	managedMachineRequest<{ start_dir: string; added: boolean }>(token, '/local');
 
-/** Install Open Terminal on the computer Open WebUI runs on (experimental). Empty folder: the project folder Open WebUI picks. */
+/** Install Open Terminal on the computer Open WebUI runs on (experimental). Empty start_dir: the project folder Open WebUI picks. */
 export const installLocalMachine = (
 	token: string,
-	form: { id: string; name?: string; version?: string; folder?: string }
+	form: { id: string; name?: string; version?: string; start_dir?: string }
 ) => managedMachineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
 
 /** Install the machine's Open Terminal again: `version` is 'latest' or an exact version. Omitted fields keep the current choice. */
@@ -1008,8 +1009,10 @@ export const installMachinePackages = (
 	);
 
 /** Change where terminal sessions start, then restart Open Terminal there. */
-export const setMachineFolder = (token: string, id: string, folder: string) =>
-	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/folder'), 'POST', { folder });
+export const setMachineStartDir = (token: string, id: string, startDir: string) =>
+	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/start-dir'), 'POST', {
+		start_dir: startDir
+	});
 
 export const restartMachine = (token: string, id: string) =>
 	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');

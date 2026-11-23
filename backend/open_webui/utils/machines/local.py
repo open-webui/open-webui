@@ -37,7 +37,7 @@ def root_for(machine_id: str) -> str:
     return root
 
 
-def default_folder() -> str:
+def default_start_dir() -> str:
     """Where sessions start, like Open WebUI Computer: your project, not Open WebUI's own files."""
     if Path('/workspace').is_dir():
         return '/workspace'  # the Docker docs mount the project here

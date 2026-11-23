@@ -95,6 +95,7 @@ class CreateForm(Pinned):
     id: str = Field(pattern=SSH_MACHINE_ID)
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
+    start_dir: str = Field('', max_length=1024)
     # For `open-terminal install-deps`: dependency sets it knows by name, and apt packages. Needs passwordless sudo.
     deps: list[str] = Field(default_factory=list, max_length=16)
     packages: list[str] = Field(default_factory=list, max_length=64)
@@ -104,7 +105,7 @@ class LocalForm(BaseModel):
     id: str = Field(pattern=SSH_MACHINE_ID)  # picked by the browser so it can follow progress from the start
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)
-    folder: str = Field('', max_length=1024)  # empty: the project folder Open WebUI picks
+    start_dir: str = Field('', max_length=1024)  # empty: the project folder Open WebUI picks
 
 
 class UpgradeForm(BaseModel):
@@ -118,8 +119,8 @@ class InstallForm(BaseModel):
     packages: list[str] = Field(default_factory=list, max_length=64)
 
 
-class FolderForm(BaseModel):
-    folder: str = Field('', max_length=1024)  # empty: the default (home over SSH)
+class StartDirForm(BaseModel):
+    start_dir: str = Field('', max_length=1024)  # empty: the default (home over SSH)
 
 
 def _ssh_fail(error: BaseException):
@@ -169,6 +170,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
     try:
         version = managed.requested_version(form.version)
         managed.install_args(form.deps, form.packages)
+        start_dir = managed.clean_start_dir(form.start_dir) or None
     except MachineError as error:
         _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
@@ -180,6 +182,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
             name=form.name or form.host,
             target=target,
             version=version,
+            start_dir=start_dir,
             deps=form.deps,
             packages=form.packages,
         )
@@ -192,7 +195,7 @@ async def get_local_machine_defaults(user=Depends(get_admin_user)):
     """What adding this computer would do: where sessions start by default, and whether it is already added."""
     connections = await managed.list_connections()
     return {
-        'folder': local_machines.default_folder(),
+        'start_dir': local_machines.default_start_dir(),
         'added': any(managed.kind(c) == 'local' for c in connections),
     }
 
@@ -207,11 +210,13 @@ async def create_local_machine(request: Request, form: LocalForm, user=Depends(g
         raise HTTPException(409, 'A machine with this id already exists.')
     try:
         version = managed.requested_version(form.version)
-        folder = managed.clean_folder(form.folder) or None
+        start_dir = managed.clean_start_dir(form.start_dir) or None
     except MachineError as error:
         _ssh_fail(error)
     _ssh_start(
-        managed.provision(request, form.id, user.id, name=form.name, is_local=True, version=version, folder=folder)
+        managed.provision(
+            request, form.id, user.id, name=form.name, is_local=True, version=version, start_dir=start_dir
+        )
     )
     return {'id': form.id, 'status': 'installing'}
 
@@ -253,11 +258,11 @@ async def install_machine_packages(request: Request, machine_id: str, form: Inst
     return {'id': machine_id, 'status': 'installing'}
 
 
-@router.post('/managed/{machine_id}/folder')
-async def set_machine_folder(machine_id: str, form: FolderForm, user=Depends(get_admin_user)):
+@router.post('/managed/{machine_id}/start-dir')
+async def set_machine_start_dir(machine_id: str, form: StartDirForm, user=Depends(get_admin_user)):
     """Change where terminal sessions start, then restart Open Terminal there."""
     try:
-        await managed.set_folder(machine_id, form.folder)
+        await managed.set_start_dir(machine_id, form.start_dir)
     except Exception as error:
         _ssh_fail(error)
     return {'status': True}
