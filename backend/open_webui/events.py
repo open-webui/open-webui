@@ -365,6 +365,9 @@ class EventDefinitions(BaseModel):
     NOTE_ACCESS_UPDATED: EventDefinition = EventDefinition(
         name='note.access_updated', description='Note access was updated.', message='Note access updated'
     )
+    NOTE_FOLDER_UPDATED: EventDefinition = EventDefinition(
+        name='note.folder_updated', description='A note folder assignment was updated.', message='Note folder updated'
+    )
     NOTE_PINNED: EventDefinition = EventDefinition(
         name='note.pinned', description='A note was pinned.', message='Note pinned'
     )
@@ -1156,7 +1159,7 @@ class NotificationEventSink:
 
 class SocketSessionEventSink:
     async def handle_event(self, request: Request, event: Event) -> None:
-        from open_webui.socket.main import refresh_chat_access
+        from open_webui.socket.main import refresh_chat_access, refresh_note_access
 
         if event.event in {
             EVENTS.FOLDER_ACCESS_UPDATED.name,
@@ -1166,6 +1169,10 @@ class SocketSessionEventSink:
             EVENTS.CHAT_DELETED_ALL.name,
         }:
             await refresh_chat_access()
+            if event.event != EVENTS.CHAT_DELETED_ALL.name:
+                await refresh_note_access()
+        elif event.event == EVENTS.NOTE_FOLDER_UPDATED.name:
+            await refresh_note_access((event.subject or {}).get('id'))
         elif event.event in {
             EVENTS.CHAT_SHARED.name,
             EVENTS.CHAT_UNSHARED.name,

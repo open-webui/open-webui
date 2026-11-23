@@ -52,6 +52,7 @@ from open_webui.retrieval.vector.main import GetResult, SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
 from open_webui.utils.access_control.files import get_owner_accessible_folder_files, has_access_to_file
 from open_webui.utils.access_control.folders import has_folder_access
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.headers import get_json_bearer_headers, include_user_info_headers
 from open_webui.utils.misc import get_content_from_message, get_message_list, strict_match_mime_type
 
@@ -1457,16 +1458,7 @@ async def get_sources_from_items(
             # Note Attached
             note = await Notes.get_note_by_id(item.get('id'))
 
-            if note and (
-                user.role == 'admin'
-                or note.user_id == user.id
-                or await AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='note',
-                    resource_id=note.id,
-                    permission='read',
-                )
-            ):
+            if note and (user.role == 'admin' or await has_note_access(user.id, note, 'read')):
                 # User has access to the note
                 query_result = {
                     'documents': [[page['content'].get('md', '') for page in note.data['pages']]],

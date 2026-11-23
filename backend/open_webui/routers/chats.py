@@ -43,7 +43,7 @@ from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import has_permission, validate_access_grants
-from open_webui.utils.access_control.folders import has_chat_move_access, has_folder_write_access
+from open_webui.utils.access_control.folders import has_folder_move_access, has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
 from open_webui.utils.chat_fork import build_fork_history
 from open_webui.utils.context_compaction import compact_chat_branch, get_chat_context_usage
@@ -2354,7 +2354,7 @@ async def update_chat_folder_id_by_id(
 ):
     chat = await Chats.get_chat_by_id(id, db=db)
     if chat and chat.user_id != user.id:
-        if not await has_chat_move_access(user.id, chat.folder_id, form_data.folder_id, db=db):
+        if not await has_folder_move_access(user.id, chat.folder_id, form_data.folder_id, db=db):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
     if chat:
         # None is allowed: it moves the chat out of any folder.

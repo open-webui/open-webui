@@ -27,17 +27,18 @@ from open_webui.models.notes import (
     get_content_files,
     get_note_files,
     matching_page,
-    normalize_pages,
 )
 from open_webui.models.tags import TagModel, Tags, get_tag_id
 from open_webui.models.users import UserModel, UserResponse, Users
-from open_webui.socket.main import close_changed_note_documents, leave_room_for_users, sio
+from open_webui.socket.main import close_changed_note_documents, close_note, leave_room_for_users, note_rooms, sio
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
     has_permission,
     validate_access_grants,
 )
 from open_webui.utils.access_control.files import has_access_to_note_files
+from open_webui.utils.access_control.folders import has_folder_move_access, has_folder_write_access
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,7 +64,7 @@ async def check_notes_access(user: UserModel, db: AsyncSession):
         )
 
 
-def _truncate_note_data(data: Optional[dict], max_length: int = 1000, query: str = '') -> Optional[dict]:
+def truncate_note_data(data: Optional[dict], max_length: int = 1000, query: str = '') -> Optional[dict]:
     if not data:
         return data
     page = matching_page(data, query)
@@ -87,12 +88,11 @@ async def leave_note_rooms_for_revoked_users(
         return
 
     users = await Users.get_users_by_user_ids(list(revoked_user_ids), db=db)
-    # Admins retain access to notes regardless of grants.
-    user_ids = [user.id for user in users if user.role != 'admin']
-    page_rooms = [
-        f'doc_note:{note.id}:page:{p["id"]}:{p.get("generation", 0)}' for p in normalize_pages(note.data)['pages']
+    # Admins retain access to notes regardless of grants, and the note's folder may still give it.
+    user_ids = [
+        user.id for user in users if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db)
     ]
-    for room in [f'note:{note.id}', f'doc_note:{note.id}', *page_rooms]:
+    for room in note_rooms(note):
         await leave_room_for_users(room, user_ids)
 
 
@@ -138,7 +138,7 @@ async def get_notes(
             **{
                 **note.model_dump(),
                 'is_pinned': note.id in pinned_note_ids,
-                'data': _truncate_note_data(note.data),
+                'data': truncate_note_data(note.data),
                 'user': UserResponse(**users[note.user_id].model_dump()),
             }
         )
@@ -170,7 +170,7 @@ async def get_pinned_notes(
             **{
                 **note.model_dump(),
                 'is_pinned': True,
-                'data': _truncate_note_data(note.data),
+                'data': truncate_note_data(note.data),
                 'user': UserResponse(**users[note.user_id].model_dump()),
             }
         )
@@ -228,7 +228,7 @@ async def search_notes(
     pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
     for note in result.items:
         note.is_pinned = note.id in pinned_note_ids
-        note.data = _truncate_note_data(note.data, query=query or '')
+        note.data = truncate_note_data(note.data, query=query or '')
     return result
 
 
@@ -275,16 +275,7 @@ async def get_note_with_tag_access(id: str, user, db: AsyncSession):
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='write',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'write', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
     return note
 
@@ -301,16 +292,7 @@ async def get_note_tags_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     return await Tags.get_tags_by_resource('note', id, db=db)
@@ -377,6 +359,9 @@ async def create_new_note(
 ):
     await check_notes_access(user, db=db)
 
+    if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
     form_data.access_grants = await filter_allowed_access_grants(
         await Config.get('user.permissions'),
         user.id,
@@ -396,7 +381,7 @@ async def create_new_note(
             EVENTS.NOTE_CREATED,
             actor=user,
             subject_id=note.id,
-            data={'title': note.title},
+            data={'title': note.title, 'folder_id': note.folder_id},
         )
         return note
     except Exception as e:
@@ -424,30 +409,12 @@ async def get_note_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and (
-            not await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='note',
-                resource_id=note.id,
-                permission='read',
-                db=db,
-            )
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     write_access = (
         user.role == 'admin'
-        or (user.id == note.user_id)
-        or await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='write',
-            db=db,
-        )
+        or await has_note_access(user.id, note, 'write', db)
         or has_public_write_access_grant(note.access_grants)
     )
 
@@ -472,16 +439,7 @@ async def get_note_chat_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     chat = await Chats.get_internal_chat_by_note_id(note.id, user.id, db=db)
@@ -556,16 +514,7 @@ async def get_note_chats_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     chats = await Chats.get_internal_chats_by_note_id(note.id, user.id, db=db)
@@ -608,16 +557,7 @@ async def create_note_chat_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     chat_id = str(uuid4())
@@ -670,16 +610,7 @@ async def update_note_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='write',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'write', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     if form_data.data and not await has_access_to_note_files(
@@ -795,6 +726,49 @@ async def update_note_access_by_id(
     return note
 
 
+# Update Note Folder By Id
+
+
+class NoteFolderIdForm(BaseModel):
+    folder_id: Optional[str] = None
+
+
+@router.post('/{id}/folder', response_model=Optional[NoteModel])
+async def update_note_folder_id_by_id(
+    request: Request,
+    id: str,
+    form_data: NoteFolderIdForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_notes_access(user, db=db)
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if note.user_id != user.id and not await has_folder_move_access(
+        user.id, note.folder_id, form_data.folder_id, db=db
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    # None is allowed: it moves the note out of any folder.
+    if form_data.folder_id is not None and not await has_folder_write_access(user.id, form_data.folder_id, db=db):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    note = await Notes.update_note_folder_id_by_id(id, form_data.folder_id, db=db)
+    pinned_note_ids = await Notes.get_pinned_note_ids(user.id, db=db)
+    note.is_pinned = note.id in pinned_note_ids
+    await publish_event(
+        request,
+        EVENTS.NOTE_FOLDER_UPDATED,
+        actor=user,
+        subject_id=note.id,
+        data={'folder_id': form_data.folder_id},
+    )
+    return note
+
+
 # Pin Note By Id
 
 
@@ -811,16 +785,7 @@ async def pin_note_by_id(
     if not note:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
 
-    if user.role != 'admin' and (
-        user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-            db=db,
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read', db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     note = await Notes.toggle_note_pinned_by_id(id, user.id, db=db)
@@ -865,14 +830,8 @@ async def delete_note_by_id(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
     try:
-        previous = note
-        page_rooms = [
-            f'doc_note:{id}:page:{p["id"]}:{p.get("generation", 0)}' for p in normalize_pages(note.data)['pages']
-        ]
-        note = await Notes.delete_note_by_id(id, db=db)
-        await close_changed_note_documents(previous, None)
-        for room in [f'note:{id}', f'doc_note:{id}', *page_rooms]:
-            await sio.close_room(room)
+        await Notes.delete_note_by_id(id, db=db)
+        await close_note(note)
 
         await publish_event(
             request,

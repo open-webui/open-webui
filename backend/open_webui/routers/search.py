@@ -323,7 +323,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
                 SharedChat.updated_at,
             )
 
-    if 'note' in enabled and kind in ('all', 'note') and not scope and not chat_filtered:
+    if 'note' in enabled and kind in ('all', 'note') and not scope.startswith('channel:') and not chat_filtered:
         pinned = select(PinnedNote.id).where(PinnedNote.note_id == Note.id, PinnedNote.user_id == user.id).exists()
         note_shared = (
             select(AccessGrant.id)
@@ -334,10 +334,16 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
             )
             .exists()
         )
-        stmt = AccessGrants.has_permission_filter(
-            select(Note, pinned, note_shared), Note, {'user_id': user.id, 'group_ids': groups}, 'note', 'read', db=db
+        stmt = select(Note, pinned, note_shared).where(
+            or_(
+                Note.user_id == user.id,
+                AccessGrants.has_grant_expression(user.id, 'note', Note.id, 'read', groups),
+                Note.folder_id.in_(select(folders.c.id)),
+            ),
+            sharing_filter(Note.user_id),
         )
-        stmt = stmt.where(sharing_filter(Note.user_id))
+        if scope:
+            stmt = stmt.where(Note.folder_id.in_(scoped_folders))
         stmt = apply_match(
             stmt, Note, func.coalesce(Note.data['search_text'].as_string(), Note.data['content']['md'].as_string())
         )
@@ -440,15 +446,17 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         elif match.source == 'note':
             page = matching_page(item.data, query)
             content = page['content'].get('md', '')
+            folder = folder_map.get(item.folder_id)
+            is_shared = item.user_id != user.id or row[2] or item.folder_id in shared_folder_ids
             append_result(
                 'note:' + item.id,
                 'note',
                 item.title,
-                'Shared note' if item.user_id != user.id or row[2] else 'Personal note',
+                folder.name if folder else ('Shared note' if is_shared else 'Personal note'),
                 content if isinstance(content, str) else '',
                 '/notes/' + item.id + '?' + urlencode({'page': page['id'], 'search': query}),
                 match.updated_at,
-                item.user_id != user.id or row[2],
+                is_shared,
                 row[1],
                 match.rank,
             )

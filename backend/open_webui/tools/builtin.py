@@ -71,6 +71,7 @@ from open_webui.socket.main import close_changed_note_documents, sio
 from open_webui.tools.visualizations import render_visualization  # noqa: F401 — re-exported
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.access_control.files import has_access_to_note_files
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
@@ -81,22 +82,6 @@ from open_webui.utils.machines import get_machine_file, upload_files_to_machine
 log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
-
-
-async def _has_write_access_to_note(note, user_id: str) -> bool:
-    if note.user_id == user_id:
-        return True
-
-    from open_webui.models.access_grants import AccessGrants
-
-    user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, include_inherited=True)]
-    return await AccessGrants.has_access(
-        user_id=user_id,
-        resource_type='note',
-        resource_id=note.id,
-        permission='write',
-        user_group_ids=set(user_group_ids),
-    )
 
 
 async def _emit_note_updated(request: Request, user: dict, note) -> None:
@@ -1378,21 +1363,7 @@ async def view_note(
 
         # Check access permission
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, include_inherited=True)]
-
-        from open_webui.models.access_grants import AccessGrants
-
-        if (
-            __user__.get('role') != 'admin'
-            and note.user_id != user_id
-            and not await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='note',
-                resource_id=note.id,
-                permission='read',
-                user_group_ids=set(user_group_ids),
-            )
-        ):
+        if __user__.get('role') != 'admin' and not await has_note_access(user_id, note, 'read'):
             return JSONCodec.dumps({'error': 'Access denied'})
 
         page = get_page(note.data, page_id) if page_id or len(note.data['pages']) == 1 else None
@@ -1525,7 +1496,7 @@ async def replace_note_content(
             return JSONCodec.dumps({'error': 'Note not found', 'code': 'not_found'})
 
         user_id = __user__.get('id')
-        if __user__.get('role') != 'admin' and not await _has_write_access_to_note(note, user_id):
+        if __user__.get('role') != 'admin' and not await has_note_access(user_id, note, 'write'):
             return JSONCodec.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
 
         page = get_page(note.data, page_id)
@@ -3453,16 +3424,7 @@ async def list_knowledge(
 
             elif item_type == 'note':
                 note = await Notes.get_note_by_id(item_id)
-                if note and (
-                    user_role == 'admin'
-                    or note.user_id == user_id
-                    or await AccessGrants.has_access(
-                        user_id=user_id,
-                        resource_type='note',
-                        resource_id=note.id,
-                        permission='read',
-                    )
-                ):
+                if note and (user_role == 'admin' or await has_note_access(user_id, note, 'read')):
                     notes.append(
                         {
                             'id': note.id,
@@ -3581,16 +3543,7 @@ async def query_knowledge_files(
                 elif item_type == 'note':
                     # Note - always return full content as context
                     note = await Notes.get_note_by_id(item_id)
-                    if note and (
-                        user_role == 'admin'
-                        or note.user_id == user_id
-                        or await AccessGrants.has_access(
-                            user_id=user_id,
-                            resource_type='note',
-                            resource_id=note.id,
-                            permission='read',
-                        )
-                    ):
+                    if note and (user_role == 'admin' or await has_note_access(user_id, note, 'read')):
                         content = note.data.get('content', {}).get('md', '')
                         note_results.append(
                             {

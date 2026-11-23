@@ -22,7 +22,9 @@ from sqlalchemy import (
     BigInteger,
     Column,
     ForeignKey,
+    Index,
     Text,
+    and_,
     cast,
     delete,
     func,
@@ -411,9 +413,12 @@ class Note(Base):
     title = Column(Text)
     data = Column(JSON, nullable=True)
     meta = Column(JSON, nullable=True)
+    folder_id = Column(Text, nullable=True)
 
     created_at = Column(BigInteger)
     updated_at = Column(BigInteger)
+
+    __table_args__ = (Index('ix_note_folder_id', 'folder_id'),)
 
 
 def sanitize_note_data(data: Optional[dict]) -> Optional[dict]:
@@ -451,6 +456,7 @@ class NoteModel(BaseModel):
     title: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    folder_id: Optional[str] = None
     is_pinned: Optional[bool] = False
 
     access_grants: list[AccessGrantModel] = Field(default_factory=list)
@@ -480,6 +486,7 @@ class NoteForm(BaseModel):
     title: str
     data: Optional[dict] = None
     meta: Optional[dict] = None
+    folder_id: Optional[str] = None
     access_grants: Optional[list[dict]] = None
 
     @field_validator('data', mode='before')
@@ -545,14 +552,32 @@ class NoteTable:
         return note_model
 
     def _has_permission(self, db, query, filter: dict, permission: str = 'read'):
-        return AccessGrants.has_permission_filter(
-            db=db,
-            query=query,
-            DocumentModel=Note,
-            filter=filter,
-            resource_type='note',
-            permission=permission,
-        )
+        from open_webui.utils.access_control.folders import accessible_folder_ids
+
+        user_id = filter.get('user_id')
+        group_ids = filter.get('group_ids', [])
+        if not user_id:
+            return AccessGrants.has_permission_filter(
+                db=db,
+                query=query,
+                DocumentModel=Note,
+                filter=filter,
+                resource_type='note',
+                permission=permission,
+            )
+
+        def allowed(permission):
+            return or_(
+                AccessGrants.has_grant_expression(user_id, 'note', Note.id, permission, group_ids),
+                and_(
+                    Note.folder_id.is_not(None),
+                    Note.folder_id.in_(accessible_folder_ids(user_id, group_ids, permission)),
+                ),
+            )
+
+        if permission == 'read_only':
+            return query.filter(Note.user_id != user_id, allowed('read'), ~allowed('write'))
+        return query.filter(or_(Note.user_id == user_id, allowed(permission)))
 
     async def insert_new_note(
         self, user_id: str, form_data: NoteForm, db: Optional[AsyncSession] = None
@@ -629,6 +654,9 @@ class NoteTable:
                 # 'none' means untagged, as in a folder's chat list.
                 if filter.get('tag_ids'):
                     stmt = stmt.filter(resource_tag_filter('note', Note.id, filter['tag_ids']))
+
+                if filter.get('folder_id'):
+                    stmt = stmt.filter(Note.folder_id == filter['folder_id'])
 
                 view_option = filter.get('view_option')
                 if view_option == 'created':
@@ -870,6 +898,28 @@ class NoteTable:
                 return True
         except Exception:
             return False
+
+    async def get_notes_by_folder_id_and_user_id(
+        self, folder_id: str, user_id: str, db: Optional[AsyncSession] = None
+    ) -> list[NoteModel]:
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Note).filter_by(folder_id=folder_id, user_id=user_id))
+            return [await self._to_note_model(note, db=db) for note in result.scalars().all()]
+
+    async def update_note_folder_id_by_id(
+        self, id: str, folder_id: Optional[str], db: Optional[AsyncSession] = None
+    ) -> Optional[NoteModel]:
+        async with get_async_db_context(db) as db:
+            await db.execute(update(Note).filter_by(id=id).values(folder_id=folder_id))
+            await db.commit()
+            return await self.get_note_by_id(id, db=db)
+
+    async def move_notes_by_folder_id(
+        self, folder_id: str, new_folder_id: Optional[str], db: Optional[AsyncSession] = None
+    ) -> None:
+        async with get_async_db_context(db) as db:
+            await db.execute(update(Note).filter_by(folder_id=folder_id).values(folder_id=new_folder_id))
+            await db.commit()
 
     async def get_tag_counts(
         self, filter: dict, permission: str = 'write', db: Optional[AsyncSession] = None

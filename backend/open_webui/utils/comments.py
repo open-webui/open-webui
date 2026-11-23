@@ -8,6 +8,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.notes import has_note_access
 from sqlalchemy import select
 
 
@@ -74,7 +75,11 @@ async def comment_resource(resource_type, resource_id, user, db, *, lock=False, 
         allowed = (
             allowed
             or (user.role == 'admin' and (resource_type == 'note' or BYPASS_ADMIN_ACCESS_CONTROL))
-            or await AccessGrants.has_access(user.id, resource_type, resource_id, 'read', db=db)
+            or (
+                await has_note_access(user.id, resource, 'read', db)
+                if resource_type == 'note'
+                else await AccessGrants.has_access(user.id, resource_type, resource_id, 'read', db=db)
+            )
         )
     if not allowed:
         raise HTTPException(404, 'Resource not found')

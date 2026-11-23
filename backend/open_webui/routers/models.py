@@ -52,6 +52,7 @@ from open_webui.utils.access_control import (
     validate_access_grants,
 )
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.models import get_all_models
@@ -885,8 +886,12 @@ async def _verify_version_dependencies(request, form, user, db):
         if not resource or getattr(resource, 'is_active', True) is False:
             raise HTTPException(400, f'Referenced {resource_type} is unavailable: {resource_id}')
         if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) and resource.user_id != user.id:
-            if not await AccessGrants.has_access(
-                user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+            if not (
+                await has_note_access(user.id, resource, 'read', db)
+                if resource_type == 'note'
+                else await AccessGrants.has_access(
+                    user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+                )
             ):
                 raise HTTPException(403, f'Referenced {resource_type} is not accessible: {resource_id}')
 

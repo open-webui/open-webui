@@ -35,7 +35,6 @@ from open_webui.env import (
     WEBSOCKET_SERVER_PING_INTERVAL,
     WEBSOCKET_SERVER_PING_TIMEOUT,
 )
-from open_webui.models.access_grants import AccessGrants
 from open_webui.models.channels import Channels
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
@@ -56,6 +55,7 @@ from open_webui.tasks import (
 )
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.files import has_access_to_note_files
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.auth import get_verified_user_by_token
 from open_webui.utils.chat_id import is_saved_chat_id, is_temporary_chat_id
 from open_webui.utils.json_codec import SOCKETIO_JSON, JSONCodec, dumps_bytes
@@ -734,6 +734,29 @@ async def refresh_chat_access(chat_id=None):
         await publish_chat_presence(cid)
 
 
+async def refresh_note_access(note_id=None):
+    """Make users who lost access to notes they have open, e.g. through a folder, leave their rooms."""
+    user_ids_by_note: dict[str, set[str]] = {}
+    for batch in get_session_pool_batches():
+        for _, session in batch:
+            for id in (session or {}).get('note_ids') or []:
+                if not note_id or id == note_id:
+                    user_ids_by_note.setdefault(id, set()).add(session['id'])
+
+    for id, user_ids in user_ids_by_note.items():
+        note = await Notes.get_note_by_id(id)
+        if not note:
+            continue
+        users = await Users.get_users_by_user_ids(list(user_ids))
+        revoked = [
+            user.id for user in users if user.role != 'admin' and not await has_note_access(user.id, note, 'read')
+        ]
+        if not revoked:
+            continue
+        for room in note_rooms(note):
+            await leave_room_for_users(room, revoked)
+
+
 @sio.on('heartbeat')
 async def heartbeat(sid, data):
     user = await get_socket_session_user(sid)
@@ -796,16 +819,7 @@ async def join_note(sid, data):
         log.error(f'Note {data["note_id"]} not found for user {user.id}')
         return
 
-    if (
-        user.role != 'admin'
-        and user.id != note.user_id
-        and not await AccessGrants.has_access(
-            user_id=user.id,
-            resource_type='note',
-            resource_id=note.id,
-            permission='read',
-        )
-    ):
+    if user.role != 'admin' and not await has_note_access(user.id, note, 'read'):
         log.error(f'User {user.id} does not have access to note {data["note_id"]}')
         return
 
@@ -984,6 +998,22 @@ def normalize_document_id(document_id: str) -> str:
     return document_id
 
 
+def note_rooms(note) -> list[str]:
+    pages = normalize_pages(note.data)['pages']
+    return [
+        f'note:{note.id}',
+        f'doc_note:{note.id}',
+        *[f'doc_note:{note.id}:page:{page["id"]}:{page.get("generation", 0)}' for page in pages],
+    ]
+
+
+async def close_note(note):
+    """Close a deleted note's documents and rooms."""
+    await close_changed_note_documents(note, None)
+    for room in note_rooms(note):
+        await sio.close_room(room)
+
+
 async def close_changed_note_documents(previous, current):
     remaining = {p['id']: p.get('generation', 0) for p in normalize_pages(current.data)['pages']} if current else {}
     for page in normalize_pages(previous.data)['pages']:
@@ -1035,16 +1065,7 @@ async def ydoc_document_join(sid, data):
                 return
             page = document_page(note.data, document_id)
 
-            if (
-                user.get('role') != 'admin'
-                and user.get('id') != note.user_id
-                and not await AccessGrants.has_access(
-                    user_id=user.get('id'),
-                    resource_type='note',
-                    resource_id=note.id,
-                    permission='read',
-                )
-            ):
+            if user.get('role') != 'admin' and not await has_note_access(user.get('id'), note, 'read'):
                 log.error(f'User {user.get("id")} does not have access to note {note_id}')
                 return
         else:
@@ -1130,16 +1151,7 @@ async def document_save_handler(document_id, data, user):
             log.error(f'Note {note_id} not found')
             return
 
-        if (
-            user.get('role') != 'admin'
-            and user.get('id') != note.user_id
-            and not await AccessGrants.has_access(
-                user_id=user.get('id'),
-                resource_type='note',
-                resource_id=note.id,
-                permission='write',
-            )
-        ):
+        if user.get('role') != 'admin' and not await has_note_access(user.get('id'), note, 'write'):
             log.error(f'User {user.get("id")} does not have write access to note {note_id}')
             return
 
@@ -1249,16 +1261,7 @@ async def yjs_document_update(sid, data):
                 return
             page = document_page(note.data, document_id)
 
-            if (
-                user.get('role') != 'admin'
-                and user.get('id') != note.user_id
-                and not await AccessGrants.has_access(
-                    user_id=user.get('id'),
-                    resource_type='note',
-                    resource_id=note.id,
-                    permission='write',
-                )
-            ):
+            if user.get('role') != 'admin' and not await has_note_access(user.get('id'), note, 'write'):
                 log.warning(f'User {user.get("id")} does not have write access to note {note_id}. Rejecting update.')
                 return
 

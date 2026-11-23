@@ -26,8 +26,11 @@ from open_webui.models.folders import (
     folder_status_ids,
 )
 from open_webui.models.groups import Groups
+from open_webui.models.notes import NoteListResponse, Notes, NoteUserResponse
 from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.users import Users
+from open_webui.routers.notes import check_notes_access, truncate_note_data
+from open_webui.socket.main import close_note
 from open_webui.tasks import has_active_tasks
 from open_webui.utils.access_control import (
     has_permission,
@@ -789,6 +792,57 @@ async def get_folder_automations(
     ]
 
 
+class FolderNoteResponse(NoteUserResponse):
+    write_access: bool = False
+
+
+class FolderNoteListResponse(NoteListResponse):
+    items: list[FolderNoteResponse]
+
+
+@router.get('/{id}/notes', response_model=FolderNoteListResponse)
+async def get_folder_notes(
+    request: Request,
+    id: str,
+    page: int = Query(1, ge=1),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """The folder's notes, whoever made them. Anyone who can read the folder can read its notes."""
+    folder = await check_folder_read_access(request, id, user, db)
+    await check_notes_access(user, db=db)
+    result = await Notes.search_notes(
+        user.id, {'folder_id': id}, skip=(page - 1) * FOLDER_PAGE_SIZE, limit=FOLDER_PAGE_SIZE, db=db
+    )
+    has_write = (
+        user.role == 'admin' or folder.user_id == user.id or await _has_folder_access(user.id, folder, 'write', db)
+    )
+    shared_write = (
+        set()
+        if has_write
+        else await AccessGrants.get_accessible_resource_ids(
+            user_id=user.id,
+            resource_type='note',
+            resource_ids=[note.id for note in result.items],
+            permission='write',
+            db=db,
+        )
+    )
+    return FolderNoteListResponse(
+        items=[
+            FolderNoteResponse(
+                **{
+                    **note.model_dump(),
+                    'data': truncate_note_data(note.data),
+                    'write_access': has_write or note.user_id == user.id or note.id in shared_write,
+                }
+            )
+            for note in result.items
+        ],
+        total=result.total,
+    )
+
+
 @router.get('/{id}/users')
 async def get_folder_users(
     request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
@@ -931,8 +985,12 @@ async def delete_folder_by_id(
                 for folder_id in folder_ids:
                     if delete_contents:
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
+                        for note in await Notes.get_notes_by_folder_id_and_user_id(folder_id, folder_owner_id, db=db):
+                            await Notes.delete_note_by_id(note.id, db=db)
+                            await close_note(note)
 
                     await Chats.move_chats_by_folder_id(folder_id, None, db=db)
+                    await Notes.move_notes_by_folder_id(folder_id, None, db=db)
 
                     # Clean up access grants for this folder
                     await AccessGrants.revoke_all_access('folder', folder_id, db=db)

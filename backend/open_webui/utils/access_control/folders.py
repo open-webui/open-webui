@@ -1,5 +1,6 @@
 from open_webui.models.access_grants import AccessGrants
-from open_webui.models.folders import FolderModel, Folders
+from open_webui.models.folders import Folder, FolderModel, Folders
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -34,10 +35,21 @@ async def has_folder_write_access(user_id: str, folder_id: str, db: AsyncSession
     return await has_folder_access(user_id, folder, 'write', db)
 
 
-async def has_chat_move_access(
+def accessible_folder_ids(user_id: str, group_ids, permission: str = 'read'):
+    """Select of the folders has_folder_access allows, for filtering lists in SQL."""
+    granted = AccessGrants.has_grant_expression(user_id, 'folder', Folder.id, permission, group_ids)
+    # UNION (not UNION ALL) terminates even if a parent loop exists.
+    folders = (
+        select(Folder.id).where(or_(Folder.user_id == user_id, granted)).cte(f'{permission}_folders', recursive=True)
+    )
+    folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
+    return select(folders.c.id)
+
+
+async def has_folder_move_access(
     user_id: str, source_folder_id: str | None, target_folder_id: str | None, db: AsyncSession | None = None
 ) -> bool:
-    """Only the owner may reorganize another user's chat within the same folder tree."""
+    """Only the owner may reorganize another user's chat or note within the same folder tree."""
 
     async def get_owned_folder_root_id(folder_id):
         seen_ids = set()
