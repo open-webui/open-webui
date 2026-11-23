@@ -1470,8 +1470,8 @@
 	// A chat's artifacts or Overview tab names the chat it belongs to.
 	$: tabLabel = (tab: Tab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
-		// A cited file is named like any other file tab.
-		if (tab.kind === 'preview' && $embed?.file) return $embed.title || tab.label;
+		// A cited source is named after itself.
+		if (tab.kind === 'preview') return $embed?.title || tab.label;
 		const source =
 			(tab.kind === 'artifacts' || tab.kind === 'overview') &&
 			tab.sourceTabId &&
@@ -1710,10 +1710,10 @@
 		openFeatureTab('comments');
 	}
 	$: if (viewReady && $showEmbeds && showPreviewTab) {
-		// A cited file opens beside the chat, so the answer stays readable.
+		// A cited file or web page opens beside the chat, so the answer stays readable.
 		openPanel(
 			{ id: 'preview', kind: 'preview', label: $i18n.t('Preview') },
-			!!$embed?.file,
+			true,
 			embedSourceTab?.id
 		);
 		showEmbeds.set(false);
