@@ -1438,9 +1438,10 @@
 			) =>
 				featureAvailable(feature) &&
 				currentModels.every((model) => model.info?.meta?.defaultFeatureIds?.includes(feature));
-			// Loading a saved chat must preserve its machine, including an explicit deselection.
+			// A saved chat keeps its machine, including an explicit deselection, and a folder's machine
+			// overrides the model's.
 			const machineId =
-				(loading && $chatId) || (!history.currentId && $selectedFolder)
+				(loading && $chatId) || (!history.currentId && machineIdOf($selectedFolder?.data))
 					? null
 					: metaMachineIdOf(currentModels[0]?.info?.meta);
 			const defaults: Record<string, any> = {
@@ -3192,15 +3193,8 @@
 		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
-		const previousChatId = $chatId;
-		const previousMessageId = history.currentId;
-		await resetInput();
 		if (signal.aborted) return;
-		// A chat opened or a message sent in the meantime keeps its id and history
-		if (($chatId && $chatId !== previousChatId) || history.currentId !== previousMessageId) {
-			loading = false;
-			return;
-		}
+		// Clear the previous chat first, so its id and history don't affect the new chat's defaults.
 		await chatId.set('');
 		if (preserveTabs) {
 			chatIdProp = '';
@@ -3216,14 +3210,22 @@
 			currentId: null
 		};
 
-		// Apply folder defaults after restoring the draft and model defaults.
-		applyFolderMachine(destinationFolder);
-
 		chatFiles = [];
 		params = {};
 		chatVariables = {};
 		taskIds = null;
 		chatTasks = [];
+
+		await resetInput();
+		if (signal.aborted) return;
+		// A chat opened or a message sent in the meantime keeps its id and history
+		if ($chatId || history.currentId) {
+			loading = false;
+			return;
+		}
+
+		// Apply folder defaults after restoring the draft and model defaults.
+		applyFolderMachine(destinationFolder);
 
 		const youtube = searchParams.get('youtube');
 		const loadUrl = searchParams.get('load-url');
