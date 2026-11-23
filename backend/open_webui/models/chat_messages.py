@@ -479,10 +479,10 @@ class ChatMessageTable:
 
         return messages_map
 
-    async def get_message_parents_map_by_chat_id(
+    async def get_message_metadata_map_by_chat_id(
         self, chat_id: str, db: Optional[AsyncSession] = None
     ) -> Optional[dict]:
-        """Like ``get_messages_map_by_chat_id``, with only each message's ``parentId`` and ``meta``."""
+        """Build a {message_id: {parentId, meta}} map, without loading message content."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChatMessage.id, ChatMessage.parent_id, ChatMessage.meta).filter_by(chat_id=chat_id)
@@ -493,11 +493,7 @@ class ChatMessageTable:
             return None
 
         prefix = f'{chat_id}-'
-        prefix_len = len(prefix)
-        return {
-            (row_id[prefix_len:] if row_id.startswith(prefix) else row_id): {'parentId': parent_id, 'meta': meta}
-            for row_id, parent_id, meta in rows
-        }
+        return {row.id.removeprefix(prefix): {'parentId': row.parent_id, 'meta': row.meta} for row in rows}
 
     async def get_messages_by_user_id(
         self,

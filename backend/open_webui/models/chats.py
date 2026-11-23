@@ -32,6 +32,7 @@ from sqlalchemy import (
     Column,
     ForeignKey,
     Index,
+    Row,
     String,
     Text,
     UniqueConstraint,
@@ -2003,8 +2004,11 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_without_history_by_id(self, id: str) -> tuple[str, str, dict, str | None, str | None] | None:
-        """Return (id, user_id, meta, folder_id, current_message_id) for a chat, without its history."""
+    async def get_chat_metadata_by_id(self, id: str) -> Row | None:
+        """
+        Fetch only the id, user_id, meta, folder_id and current_message_id columns
+        for a chat, without loading the full JSON blob.
+        """
         try:
             async with get_async_db_context() as session:
                 result = await session.execute(
@@ -2076,7 +2080,7 @@ class ChatTable:
         db: AsyncSession | None = None,
         *,
         permission: Literal['read', 'write'] = 'read',
-        chat: Chat | ChatModel | None = None,
+        chat: Chat | ChatModel | Row | None = None,
     ) -> bool:
         if user.role not in {'user', 'admin'}:
             return False

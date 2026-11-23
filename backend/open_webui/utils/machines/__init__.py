@@ -383,7 +383,7 @@ async def find_machine_connection(user, machine_id, metadata=None, request=None)
     instance_user = user
     chat_id = metadata.get('chat_id')
     if chat_id and is_saved_chat_id(chat_id):
-        chat = await Chats.get_chat_without_history_by_id(chat_id)
+        chat = await Chats.get_chat_metadata_by_id(chat_id)
         if chat is None or not await Chats.has_chat_access(chat_id, user, permission='write', chat=chat):
             if chat is None or not await has_machine_write_access(user, machine_id):
                 raise HTTPException(403, 'Chat access denied')
@@ -395,11 +395,12 @@ async def find_machine_connection(user, machine_id, metadata=None, request=None)
             return await find_machine_connection(user, machine_id, metadata, request=request)
         from open_webui.utils.agents.session import get_session, model_id
 
-        # Without a current message id only the full chat knows where the history ends.
-        session_chat = chat if chat.current_message_id else await Chats.get_chat_by_id(chat_id)
-        if session_chat is None:
-            raise HTTPException(403, 'Chat access denied')
-        shared_session = await get_session(session_chat)
+        if not chat.current_message_id:
+            # Only the full chat knows where the history ends.
+            chat = await Chats.get_chat_by_id(chat_id)
+            if chat is None:
+                raise HTTPException(403, 'Chat access denied')
+        shared_session = await get_session(chat)
         if shared_session and shared_session['machine_id'] != machine_id:
             shared_session = None
         if shared_session:

@@ -78,7 +78,7 @@ async def get_session(chat, message_id=None):
     )
     if not message_id:
         return None
-    messages = await ChatMessages.get_message_parents_map_by_chat_id(chat.id)
+    messages = await ChatMessages.get_message_metadata_map_by_chat_id(chat.id)
     if not messages or Chats.get_unresolved_parent_ids(messages):
         messages = await Chats.get_messages_map_by_chat_id(chat.id) or {}
     return _find(chat, messages, message_id)[0]
