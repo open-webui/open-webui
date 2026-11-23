@@ -4552,13 +4552,18 @@
 		const id = $chatId;
 		generatingTitle = true;
 		titleDraft = '';
-		const messages = createMessagesList(history, history.currentId).map((message) => ({
+		const branch = createMessagesList(history, history.currentId);
+		const messages = branch.map((message) => ({
 			role: message.role,
 			content: getOutputText(message.output) || message.content || ''
 		}));
+		const modelId = selectedModels.find((modelId: string) => modelId) ?? '';
+		const responseMessage = branch
+			.filter((message) => message.role === 'assistant' && message.model === modelId)
+			.at(-1);
 		const generatedTitle = await generateTitle(
 			localStorage.token,
-			selectedModels.find((modelId: string) => modelId) ?? '',
+			responseMessage?.selectedModelId ?? modelId,
 			messages
 		).catch((error) => {
 			toast.error(`${error}`);
