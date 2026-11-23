@@ -1,3 +1,5 @@
+import { decodeString, isValidHttpUrl } from '$lib/utils';
+
 // A cited document is identified by its metadata source, falling back to the source id.
 const getDocumentId = (source: any, index: number): string =>
 	source?.metadata?.[index]?.source ?? source?.source?.id ?? 'N/A';
@@ -55,6 +57,48 @@ export const getCitations = (sources: any[] | null | undefined) => {
 	}
 
 	return citations;
+};
+
+const PASSAGE_PREVIEW_LIMIT = 400;
+
+const getPassagePreview = (passage: string, isHtml: boolean): string => {
+	let text = passage ?? '';
+	if (isHtml) {
+		const body = new DOMParser().parseFromString(text, 'text/html').body;
+		body.querySelectorAll('script, style').forEach((element) => element.remove());
+		text = body.textContent ?? '';
+	}
+
+	return text
+		.trim()
+		.slice(0, PASSAGE_PREVIEW_LIMIT)
+		.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+		.replace(/^\s*(?:#{1,6}|>)\s+/gm, '')
+		.replace(/\*\*(.+?)\*\*/g, '$1')
+		.replace(/\s+/g, ' ');
+};
+
+/** What a hovered citation shows: its title, and the passage the citation modal lists first. */
+export const getCitationPreview = (citation: any) => {
+	const { document, metadata, distances } = citation;
+	const isRanked =
+		distances.length === document.length &&
+		distances.every((distance: any) => typeof distance === 'number');
+	const index = isRanked ? distances.indexOf(Math.max(...distances)) : 0;
+	const passageMetadata = metadata[index];
+
+	const name = decodeString(citation.title);
+	const url = isValidHttpUrl(citation.source?.url) ? citation.source.url : null;
+
+	return {
+		// A page is known by its title, or by its domain when it has none
+		title: url
+			? passageMetadata?.title || (isValidHttpUrl(name) ? new URL(url).hostname : name)
+			: name,
+		url,
+		page: Number.isInteger(passageMetadata?.page) ? passageMetadata.page + 1 : null,
+		passage: getPassagePreview(document[index], !!passageMetadata?.html)
+	};
 };
 
 // [1], [1, 2] or [1#page]; not a link label like [1](url)

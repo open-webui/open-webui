@@ -6,7 +6,8 @@
 		selectedComment
 	} from '$lib/components/comments/anchors';
 	import { config, user, mobile, settings, showEmbeds } from '$lib/stores';
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext, setContext } from 'svelte';
+	import { writable } from 'svelte/store';
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
@@ -111,14 +112,19 @@
 	let usingFloatingButtons = false;
 
 	let sourceIds = [];
+	/** @type {import('svelte/store').Writable<any[]>} */
+	const citations = writable([]);
+	setContext('citations', citations);
 	$: getSourceIds(sources);
 
 	const getSourceIds = (sources) => {
+		const showCitations = model?.info?.meta?.capabilities?.citations ?? true;
+		const sourceCitations = getCitations(sources);
+		citations.set(showCitations ? sourceCitations : []);
 		// Titles by citation number; numbers are shared across the chat, so there can be gaps.
 		const result = [];
-		for (const citation of getCitations(sources)) {
-			result[citation.number - 1] =
-				model?.info?.meta?.capabilities?.citations == false ? 'N/A' : citation.title;
+		for (const citation of sourceCitations) {
+			result[citation.number - 1] = showCitations ? citation.title : 'N/A';
 		}
 		sourceIds = result;
 	};

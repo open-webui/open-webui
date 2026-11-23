@@ -28,7 +28,6 @@
 
 	import Image from '$lib/components/common/Image.svelte';
 	import KatexRenderer from './KatexRenderer.svelte';
-	import Source from './Source.svelte';
 	import HtmlToken from './HTMLToken.svelte';
 	import TextToken from './MarkdownInlineTokens/TextToken.svelte';
 	import CodespanToken from './MarkdownInlineTokens/CodespanToken.svelte';
@@ -184,7 +183,7 @@
 		) || ''}
 	{:else if token.type === 'citation'}
 		{#if (sourceIds ?? []).length > 0}
-			<SourceToken {id} {token} {sourceIds} onClick={onSourceClick} />
+			<SourceToken {token} onClick={onSourceClick} />
 		{:else}
 			<TextToken {token} {done} />
 		{/if}
