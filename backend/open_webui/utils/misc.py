@@ -472,7 +472,9 @@ def convert_output_to_messages(
     Args:
         output: List of OR-aligned output items (Responses API format).
         raw: If True, include code interpreter blocks for LLM re-processing
-             follow-ups.
+             follow-ups, and preserve Responses API reasoning items as
+             ``reasoning_items`` on the assistant message so they can be
+             replayed to the provider on follow-ups.
         reasoning_format: How to include reasoning blocks in the output:
             - None: skip reasoning (default, safe for strict providers).
             - ``'thinking'``: set as ``thinking`` top-level field
@@ -493,12 +495,24 @@ def convert_output_to_messages(
     pending_content = []
     pending_reasoning = []  # Only populated for top-level structured reasoning fields.
     pending_reasoning_details = []
+    pending_reasoning_items = []  # Raw Responses reasoning items, kept when raw=True for replay.
     pending_tool_image_urls = []
     pending_tool_outputs = []
 
     def flush_pending():
-        nonlocal pending_content, pending_tool_calls, pending_reasoning, pending_reasoning_details
-        if not pending_content and not pending_tool_calls and not pending_reasoning and not pending_reasoning_details:
+        nonlocal \
+            pending_content, \
+            pending_tool_calls, \
+            pending_reasoning, \
+            pending_reasoning_details, \
+            pending_reasoning_items
+        if (
+            not pending_content
+            and not pending_tool_calls
+            and not pending_reasoning
+            and not pending_reasoning_details
+            and not pending_reasoning_items
+        ):
             return
 
         message = {
@@ -519,11 +533,15 @@ def convert_output_to_messages(
         if pending_reasoning_details:
             message['reasoning_details'] = pending_reasoning_details
 
+        if pending_reasoning_items:
+            message['reasoning_items'] = pending_reasoning_items
+
         messages.append(message)
         pending_content = []
         pending_tool_calls = []
         pending_reasoning = []
         pending_reasoning_details = []
+        pending_reasoning_items = []
 
     def flush_tool_images():
         nonlocal pending_tool_image_urls
@@ -641,6 +659,12 @@ def convert_output_to_messages(
                     if isinstance(detail, dict)
                     and (detail.get('format') != 'anthropic-claude-v1' or detail.get('signature'))
                 ]
+            if raw:
+                # Keep the raw item so Responses API follow-ups can replay the
+                # encrypted reasoning. Without this, reasoning is dropped when
+                # reasoning_format is None (the OpenAI default) and the
+                # provider never sees it again (open-webui/open-webui#33956).
+                pending_reasoning_items.append(item)
             if not reasoning_format and not reasoning_details:
                 continue
 

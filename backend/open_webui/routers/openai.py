@@ -1215,7 +1215,8 @@ RESPONSES_ALLOWED_FIELDS: dict[str, set[str]] = {
     'message': {'type', 'role', 'content'},
     'function_call': {'type', 'call_id', 'name', 'arguments', 'id'},
     'function_call_output': {'type', 'call_id', 'output'},
-    'reasoning': {'type', 'id', 'summary', 'encrypted_content', 'content'},
+    'reasoning': {'type', 'id', 'summary', 'encrypted_content', 'encrypted_reasoning', 'content'},
+    # 'encrypted_reasoning' is Azure OpenAI's preview field for the same data.
 }
 
 
@@ -1233,6 +1234,18 @@ def _normalize_stored_item(item: dict) -> dict:
     if item_type == 'function_call':
         item = {**item, **get_provider_function(item)}
     return {k: v for k, v in item.items() if k in allowed}
+
+
+def _strip_reasoning_items(messages: list[dict]) -> None:
+    """Drop Responses-only reasoning replay data from a Chat Completions payload.
+
+    Assistant messages carry ``reasoning_items`` so Responses API follow-ups
+    can replay encrypted reasoning. Standard Chat Completions providers
+    reject the unknown field, so remove it when not routing to Responses.
+    """
+    for message in messages:
+        if isinstance(message, dict):
+            message.pop('reasoning_items', None)
 
 
 def convert_to_responses_payload(payload: dict) -> dict:
@@ -1266,6 +1279,11 @@ def convert_to_responses_payload(payload: dict) -> dict:
 
         # Handle assistant messages with tool_calls (from convert_output_to_messages)
         if role == 'assistant' and msg.get('tool_calls'):
+            # Replay the reasoning that led to these calls first: the
+            # Responses API requires encrypted reasoning items to precede
+            # the function_call (or message) they relate to.
+            for reasoning_item in msg.get('reasoning_items') or []:
+                input_items.append(_normalize_stored_item(reasoning_item))
             # Add text content as message if present
             if content:
                 text = (
@@ -1334,6 +1352,13 @@ def convert_to_responses_payload(payload: dict) -> dict:
                             content_parts.append({'type': 'input_file', **file_part})
         else:
             content_parts = [{'type': text_type, 'text': str(content)}]
+
+        if role == 'assistant' and msg.get('reasoning_items'):
+            for reasoning_item in msg['reasoning_items']:
+                input_items.append(_normalize_stored_item(reasoning_item))
+            # A turn that only carried reasoning has no message to send.
+            if not content:
+                continue
 
         input_items.append({'type': 'message', 'role': role, 'content': content_parts})
 
@@ -1614,6 +1639,7 @@ async def generate_chat_completion(
     # For Chat Completions, strip image parts from multimodal tool messages
     # (Chat Completions doesn't support images in tool content).
     if not is_responses and 'messages' in payload:
+        _strip_reasoning_items(payload['messages'])
         for message in payload['messages']:
             if message.get('role') == 'tool' and isinstance(message.get('content'), list):
                 parts = message['content']

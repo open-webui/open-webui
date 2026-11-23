@@ -1918,10 +1918,24 @@ def get_reasoning_format(model: dict) -> str | None:
 
 
 def strip_reasoning_details(output: list) -> list:
-    return [
-        {key: value for key, value in item.items() if key != 'reasoning_details'} if isinstance(item, dict) else item
-        for item in output
-    ]
+    """Drop model-bound reasoning from stored output when the model changes.
+
+    Reasoning items carry encrypted content bound to the model that produced
+    them; replaying them to a different model is rejected upstream, so the
+    items go along with the ``reasoning_details`` key. All call sites run
+    only when the assistant message's model differs from the current model.
+    """
+    stripped = []
+    for item in output:
+        if not isinstance(item, dict):
+            stripped.append(item)
+            continue
+        if item.get('type') == 'reasoning':
+            continue
+        if 'reasoning_details' in item:
+            item = {key: value for key, value in item.items() if key != 'reasoning_details'}
+        stripped.append(item)
+    return stripped
 
 
 def strip_tool_images(output: list, model: dict) -> list:

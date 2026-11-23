@@ -1,134 +1,126 @@
-<h2>Open WebUI</h2>
+# Fix: Responses API connections never send the model's reasoning back
 
-<p>Open WebUI is <a href="https://docs.openwebui.com/"><strong>a home for AI</strong></a>: an extensible, easy-to-use, self-hosted platform built to run entirely offline. Connect local models through Ollama or use OpenAI-compatible APIs for local and cloud models.</p>
+**Repo:** [open-webui/open-webui](https://github.com/open-webui/open-webui) — 158,930 stars (verified via the GitHub API, Nov 17, 2026), MIT-style source-available project (Open WebUI License), last commit Nov 17, 2026.
+**Issue:** [open-webui/open-webui#33956](https://github.com/open-webui/open-webui/issues/33956) — "Responses API connections never send the model's reasoning back, although the docs say they do" (open, label `bug`, filed Nov 8, 2026). No PR exists for it; one commenter (Nov 9) verified the root cause and offered to PR, but has not opened one.
 
-[English](README.md) |
-[简体中文](README.zh.md) |
-[繁體中文](README.zht.md) |
-[한국어](README.ko.md) |
-[Deutsch](README.de.md) |
-[Español](README.es.md) |
-[Français](README.fr.md) |
-[Italiano](README.it.md) |
-[Dansk](README.da.md) |
-[日本語](README.ja.md) |
-[Polski](README.pl.md) |
-[Русский](README.ru.md) |
-[Bosanski](README.bs.md) |
-[العربية](README.ar.md) |
-[Norsk](README.no.md) |
-[Português (Brasil)](README.br.md) |
-[ไทย](README.th.md) |
-[Türkçe](README.tr.md) |
-[Українська](README.uk.md) |
-[বাংলা](README.bn.md) |
-[Ελληνικά](README.gr.md) |
-[Tiếng Việt](README.vi.md)
+**Note on the repo's license:** Open WebUI is source-available under the Open WebUI License (BSD-3-Clause plus a branding clause), not an OSI-approved open-source license. It is the most-starred LLM-platform repo and accepts external contributions. Flagging this so you can judge the EB1A framing; the contribution itself (a public, merged PR to a 159k-star project) is the same either way.
 
-[![Open WebUI Demo](https://cdn.openwebui.com/open-webui-demo.gif)](https://docs.openwebui.com/)
+## What was wrong
 
-![GitHub stars](https://img.shields.io/github/stars/open-webui/open-webui?style=social)
-![GitHub forks](https://img.shields.io/github/forks/open-webui/open-webui?style=social)
-![GitHub watchers](https://img.shields.io/github/watchers/open-webui/open-webui?style=social)
-![GitHub repo size](https://img.shields.io/github/repo-size/open-webui/open-webui)
-![GitHub language count](https://img.shields.io/github/languages/count/open-webui/open-webui)
-![GitHub top language](https://img.shields.io/github/languages/top/open-webui/open-webui)
-![GitHub last commit](https://img.shields.io/github/last-commit/open-webui/open-webui?color=red)
-[![Discord](https://img.shields.io/badge/Discord-Open_WebUI-blue?logo=discord&logoColor=white)](https://discord.gg/5rJgQTnV4s)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=Support&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/open-webui)
+On a connection set to the Responses API with a reasoning model, the reasoning
+items the model returns (with their id and encrypted reasoning) are saved with
+the reply but never sent back to the provider — not in the follow-up after a
+tool result in the same reply, and not on later messages. The docs page for
+reasoning models says "Stored reasoning items sent back" for this connection
+type. Two root causes, both verified by reproducing them locally:
 
-[Explore Open WebUI →](https://docs.openwebui.com/)
+1. `backend/open_webui/utils/misc.py` — `convert_output_to_messages()` drops
+   `type: 'reasoning'` items when `reasoning_format` is `None` (the default
+   for OpenAI models; `get_reasoning_format()` only returns a format for
+   Ollama / llama.cpp). The history rebuilt for a follow-up therefore has no
+   reasoning in it at all.
+2. `backend/open_webui/routers/openai.py` — `convert_to_responses_payload()`
+   never replays reasoning into the Responses `input`, and
+   `RESPONSES_ALLOWED_FIELDS['reasoning']` only permits `encrypted_content`,
+   dropping Azure OpenAI's preview field `encrypted_reasoning`.
 
-### Installation
+## What the fix does
 
-#### Python
+- `backend/open_webui/utils/misc.py` — when `raw=True`,
+  `convert_output_to_messages()` keeps raw reasoning items as
+  `reasoning_items` on the flushed assistant message (existing
+  `thinking` / `reasoning_content` / `reasoning_details` behaviour is
+  unchanged; `raw=False` still drops reasoning, as before).
+- `backend/open_webui/routers/openai.py` — `convert_to_responses_payload()`
+  prepends the normalised reasoning items into `input` immediately before
+  the `function_call` or assistant `message` they relate to (the order the
+  Responses API requires); a turn that only carried reasoning emits no empty
+  message. `RESPONSES_ALLOWED_FIELDS['reasoning']` now also permits
+  `encrypted_reasoning`. New helper `_strip_reasoning_items()` removes the
+  Responses-only key from Chat Completions payloads in
+  `generate_chat_completion()`, so it never leaks to providers that reject
+  unknown fields.
+- `backend/open_webui/utils/middleware.py` — `strip_reasoning_details()`
+  now also drops `type: 'reasoning'` items. It is only called when the
+  assistant message's model differs from the current model, and encrypted
+  reasoning is bound to the model that produced it — replaying it to a
+  different model gets a 400 from the provider.
+
+## Test outcome (honest)
+
+12 tests in `test_reasoning_replay_33956.py`: **12 passed** against the
+patched code. The same suite against the **unpatched** code: **9 failed,
+3 passed** — the 3 passing are behaviour-preservation checks (reasoning still
+dropped when `raw=False`, `reasoning_details` still attached, stored-`output`
+replay which already worked). So the tests catch the bug and the fix resolves
+it. The end-to-end test replays a stored tool-call turn (reasoning + text +
+function call + tool result) through message reconstruction into a Responses
+payload and asserts the reasoning item lands in `input` before the
+`function_call`, with the follow-up user message last.
+
+How it was run (no live server, no API key, no network calls to a provider):
+the published `open-webui==0.13.3` package was installed in a venv, the three
+patched `main` files were overlaid (plus `main`'s `utils/tether.py`, which
+`main`'s `routers/openai.py` imports), and the suite was run with
+`WEBUI_SECRET_KEY=<test value>` and `FRONTEND_BUILD_DIR=<venv>/.../open_webui`.
+The three patched functions are identical between `main` and 0.13.3 except one
+unrelated line in `misc.py` (message `content` is `None` vs `''` when a
+tool-call turn has no text), so the results transfer to `main`. The
+`middleware.py` test ran against the same patch text applied to the 0.13.3
+file, because `main`'s `middleware.py` imports newer helpers that don't exist
+in 0.13.3. Ruff format (repo config) and the CI pyflakes check
+(`ruff check --select=F`) pass on all three patched files.
+
+What was NOT verified live: no real Responses API call was made (that needs an
+OpenAI key and a reasoning model), and the fix was not run inside the full app
+— the PR should be checked against a real reasoning-model conversation with a
+tool call before merging.
+
+## Local test steps (for Bhavana)
+
+These are the exact steps that produced the 12/12 result above (the repo has
+no backend pytest suite — CI only runs Ruff — so the tests run against the
+installed package with the patched files overlaid):
 
 ```bash
-# With uv installed (macOS/Linux)
-DATA_DIR=~/.open-webui uvx --python 3.12 open-webui@latest serve
-
-# Or install and run with pip (Python 3.12)
-pip install open-webui
-open-webui serve
+python -m venv .venv && source .venv/bin/activate
+export TMPDIR=$PWD/tmp-pip        # /tmp is small on some machines; use a
+                                  # directory with room if the install fails
+pip install --no-cache-dir --no-deps open-webui==0.13.3 pytest
+# install the import-time deps the backend modules need (iterate on
+# ModuleNotFoundError if one is missing):
+pip install --no-cache-dir typer uvicorn fastapi aiohttp aiocache aiofiles \
+  "pydantic==2.13.4" "sqlalchemy[asyncio]==2.0.50" markdown redis \
+  beautifulsoup4 requests cryptography authlib loguru tiktoken openai \
+  anthropic chromadb langchain-core langchain-text-splitters langchain-classic \
+  bcrypt argon2-cffi pyotp pydub soundfile boto3 azure-identity \
+  azure-storage-blob azure-ai-documentintelligence google-cloud-storage \
+  asgiref aiodns hiredis einops docx2txt pypandoc opensearch-py
+# overlay the patched files from this folder's fix.patch onto the install
+# (in a checkout of open-webui with the patch applied; SITE points at the
+# scratch venv created above):
+SITE=<scratch dir>/.venv/lib/python3.12/site-packages/open_webui
+cp backend/open_webui/utils/misc.py       $SITE/utils/misc.py
+cp backend/open_webui/routers/openai.py   $SITE/routers/openai.py
+cp backend/open_webui/utils/tether.py     $SITE/utils/tether.py
+# (middleware.py from main imports newer helpers, so for the test run use the
+#  0.13.3 middleware.py with the same strip_reasoning_details change applied;
+#  the function is identical between main and 0.13.3)
+WEBUI_SECRET_KEY=<a long random value> \
+FRONTEND_BUILD_DIR=$SITE \
+python -m pytest test_reasoning_replay_33956.py -v
 ```
 
-Then open [http://localhost:8080](http://localhost:8080).
+To see the tests catch the bug, restore the three pristine files from the
+installed 0.13.3 package and re-run: expect 9 failed, 3 passed.
 
-#### Docker
+## PR rules
 
-```bash
-docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
-```
-
-Then open [http://localhost:3000](http://localhost:3000).
-
-| Image tag | Includes                                                                                 |
-| --------- | ---------------------------------------------------------------------------------------- |
-| `:main`   | Standard image with local AI dependencies                                                |
-| `:slim`   | Lightweight image using external services for embeddings, document extraction, and voice |
-| `:cuda`   | Open WebUI with CUDA acceleration                                                        |
-| `:ollama` | Open WebUI bundled with Ollama                                                           |
-| `:dev`    | Latest development build                                                                 |
-
-Add these options to `docker run` before the image name as needed:
-
-| Option                                               | Purpose                                                                                  |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `-e OLLAMA_BASE_URL=http://your-ollama-server:11434` | Connect to Ollama on another server                                                      |
-| `-e OPENAI_API_KEY=your_secret_key`                  | Set your OpenAI API key                                                                  |
-| `-e HF_HUB_OFFLINE=1`                                | Disable Hugging Face model downloads for offline use                                     |
-| `--gpus all`                                         | Enable Nvidia GPU access for `:cuda` or `:ollama`; requires the Nvidia Container Toolkit |
-
-See the [Docker installation guide](https://docs.openwebui.com/getting-started/quick-start/) for setup instructions and configuration options.
-
-#### Desktop App
-
-[Download the native desktop app](https://github.com/open-webui/desktop) for macOS, Windows, and Linux.
-
-[Read the docs →](https://docs.openwebui.com/getting-started/)
-
-### Ecosystem
-
-- [Open Terminal](https://github.com/open-webui/open-terminal) / [Terminals (Enterprise)](https://github.com/open-webui/terminals): The action layer that turns Open WebUI into a full agent harness, with enterprise orchestration for per-user workspaces.
-- [Knowledge Base Sync (oikb)](https://github.com/open-webui/oikb): Mirror folders, repos, buckets, and wikis into Open WebUI Knowledge Bases with incremental sync.
-- [Open WebUI Computer](https://github.com/open-webui/computer): Your computer in any browser: files, editor, terminal, git, and optional AI agents, running on your real machine.
-
-See the [ecosystem documentation](https://docs.openwebui.com/ecosystem/) for details.
-
-### Troubleshooting and Updates
-
-See the [troubleshooting guide](https://docs.openwebui.com/troubleshooting/) for connection issues and the [updating guide](https://docs.openwebui.com/getting-started/updating) to update your installation.
-
-### Documentation
-
-See the [docs](https://docs.openwebui.com/) for configuration and usage, and the [roadmap](https://docs.openwebui.com/roadmap/) for planned work.
-
-For Docker Compose, Kubernetes, and other setups, see the [installation docs](https://docs.openwebui.com/getting-started/).
-
-### Support
-
-[Open an issue](https://github.com/open-webui/open-webui/issues) or [start a discussion](https://github.com/open-webui/open-webui/discussions).
-
-Find us on [Reddit](https://www.reddit.com/r/OpenWebUI/), [X](https://x.com/OpenWebUI), and [Discord](https://discord.gg/5rJgQTnV4s).
-
-### Security
-
-Report vulnerabilities privately through [GitHub security advisories](https://github.com/open-webui/open-webui/security). Security reports are accepted only through GitHub.
-
-### Star History
-
-<a href="https://star-history.com/#open-webui/open-webui&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=open-webui/open-webui&type=Date" />
-  </picture>
-</a>
-
-#### License
-
-Includes code under the Open WebUI License, which requires preserving the Open WebUI branding, and prior contributions under their original licenses. See [LICENSE](./LICENSE) and [LICENSE_HISTORY](./LICENSE_HISTORY) for terms and history.
-
-[Enterprise](https://docs.openwebui.com/enterprise) · [Careers](https://careers.openwebui.com/) · [Sponsor](https://github.com/sponsors/open-webui)
-
-Created by [Timothy Jaeryang Baek](https://github.com/tjbck).
+- Reference the open issue: fix for #33956 — do NOT open a new issue.
+- Target the `dev` branch (the repo's contribution flow; `main` is the
+  release branch).
+- The PR description should carry the before/after evidence: the new tests
+  fail 9/12 on unpatched code and pass 12/12 patched.
+- Do not claim a live end-to-end verification — that still needs a real
+  reasoning-model run; say so in the PR.
+- Nothing here touches ADP work; this is a personal open-source contribution.
