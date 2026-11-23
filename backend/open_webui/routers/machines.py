@@ -258,7 +258,7 @@ async def install_machine_packages(request: Request, machine_id: str, form: Inst
     return {'id': machine_id, 'status': 'installing'}
 
 
-@router.post('/managed/{machine_id}/start-dir')
+@router.post('/managed/{machine_id}/directory')
 async def set_machine_start_dir(machine_id: str, form: StartDirForm, user=Depends(get_admin_user)):
     """Change where terminal sessions start, then restart Open Terminal there."""
     try:

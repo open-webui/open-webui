@@ -1010,7 +1010,7 @@ export const installMachinePackages = (
 
 /** Change where terminal sessions start, then restart Open Terminal there. */
 export const setMachineStartDir = (token: string, id: string, startDir: string) =>
-	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/start-dir'), 'POST', {
+	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/directory'), 'POST', {
 		start_dir: startDir
 	});
 
