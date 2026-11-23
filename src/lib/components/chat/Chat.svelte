@@ -97,6 +97,7 @@
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
 	import { createTemporaryChatId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
+	import { resolveLocalizedModelPromptSuggestions } from '$lib/utils/localizedContent';
 	import { resumeTemporaryChat } from '$lib/apis';
 	import {
 		applyResponseStreamEvent,
@@ -164,6 +165,7 @@
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
 	import WebSearchConfirmDialog from '../common/ConfirmDialog.svelte';
 	import Placeholder from './Placeholder.svelte';
+	import Suggestions from './Suggestions.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
 	import NotificationToast from '../NotificationToast.svelte';
 	import Spinner from '../common/Spinner.svelte';
@@ -364,6 +366,12 @@
 	} else {
 		selectedModelIds = selectedModels;
 	}
+	$: modelSuggestionPrompts =
+		resolveLocalizedModelPromptSuggestions(atSelectedModel, $i18n.language) ??
+		resolveLocalizedModelPromptSuggestions(
+			($models ?? []).find((model) => model.id === selectedModels[selectedModelIdx]),
+			$i18n.language
+		);
 	let serverContextUsage = null;
 	let contextUsage = null;
 
@@ -6523,6 +6531,15 @@
 											</p>
 										</div>
 									</div>
+									{#if modelSuggestionPrompts?.length}
+										<div class="mx-auto w-full max-w-2xl px-5 pb-3">
+											<Suggestions
+												suggestionPrompts={modelSuggestionPrompts}
+												inputValue={prompt}
+												{onSelect}
+											/>
+										</div>
+									{/if}
 								{:else if suggestedPrompts.length > 0 && !embeddedCollapsed}
 									<div class="flex flex-1 items-end px-5 pb-8">
 										<div class="w-full">
