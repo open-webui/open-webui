@@ -130,7 +130,7 @@
 						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
 					<div class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">
-						{skill.source === 'terminal' ? $i18n.t('Machine') : skill.id}
+						{skill.source === 'machine' ? $i18n.t('Machine') : skill.id}
 					</div>
 				</div>
 			</button>
