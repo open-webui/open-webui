@@ -1241,7 +1241,7 @@
 		await oauthRedirectHandler(nextTool);
 	};
 
-	const resetInput = async () => {
+	const resetInput = async (controls?: ReturnType<typeof getChatInputControls>) => {
 		// Let the $: update finish first, or webSearchActive misses the default-feature writes
 		await tick();
 		selectedToolIds = [];
@@ -1254,9 +1254,14 @@
 		selectedImageModelId = '';
 		videoGenerationEnabled = false;
 		selectedVideoModelId = '';
+		if (controls) {
+			// An empty baseline adds the model's defaults to the picks.
+			modelDefaults = getChatInputControls();
+			applyChatInputControls(controls);
+		}
 
 		if (selectedModelIds.filter((id) => id).length > 0) {
-			await setDefaults();
+			await setDefaults(!!controls);
 		}
 	};
 
@@ -2864,10 +2869,8 @@
 		} else if ($page.params.folderId || $page.url.pathname === '/') {
 			selectedFolder.set($page.data.folder ?? null);
 			// On a first load the input is on screen before set-up, which resets it;
-			// what was typed there goes back in.
-			const typed = preserveTabs ? '' : prompt;
-			await initNewChat({ preserveTabs, url: $page.url });
-			if (typed) messageInput?.setText(typed);
+			// what was typed or picked there goes back in.
+			await initNewChat({ preserveTabs, preserveInput: !preserveTabs, url: $page.url });
 		} else if (initialPage) {
 			if (!preserveTabs) await initNewChat();
 			loading = false;
@@ -3033,6 +3036,7 @@
 
 	const initNewChat: NonNullable<AppLayoutContext['initNewChat']> = async ({
 		preserveTabs = false,
+		preserveInput = false,
 		temporary,
 		url = initialPage || preserveTabs ? undefined : $page.url
 	} = {}) => {
@@ -3187,12 +3191,14 @@
 
 		autoScroll = true;
 
+		const input = preserveInput ? { prompt, files, controls: getChatInputControls() } : null;
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
 		prompt = '';
 		files = [];
 		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
+		if (input) files = [...input.files, ...files];
 		if (signal.aborted) return;
 		// Clear the previous chat first, so its id and history don't affect the new chat's defaults.
 		await chatId.set('');
@@ -3216,7 +3222,7 @@
 		taskIds = null;
 		chatTasks = [];
 
-		await resetInput();
+		await resetInput(input?.controls);
 		if (signal.aborted) return;
 		// A chat opened or a message sent in the meantime keeps its id and history
 		if ($chatId || history.currentId) {
@@ -3281,7 +3287,7 @@
 		await tick();
 		if (signal.aborted) return;
 		// The new-chat input stays mounted through set-up, so set its text either way.
-		messageInput?.setText(chatInputPrompt ?? '');
+		messageInput?.setText(input?.prompt || chatInputPrompt || '');
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume call requests or the acknowledged Tether handoff.

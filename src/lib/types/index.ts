@@ -25,6 +25,7 @@ export type AppLayoutContext = {
 	openPageTab?: (tab: { href: string; label: string; inSplit?: boolean }) => void;
 	initNewChat?: (options?: {
 		preserveTabs?: boolean;
+		preserveInput?: boolean;
 		temporary?: boolean;
 		url?: URL;
 	}) => Promise<void>;
