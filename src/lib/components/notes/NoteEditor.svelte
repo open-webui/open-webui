@@ -377,6 +377,8 @@
 	};
 	let noteChatId = null;
 	let noteChatExpanded = false;
+	let noteChatExpandButtonElement: HTMLButtonElement;
+	let noteChatMessageInput = null;
 	// The chat composer records audio; in a note chat it lands in the note instead of the message.
 	$: noteAudioHandler = note?.write_access ? (file: File) => inputFileHandler(file) : null;
 	// Opening a note lands in its body; the docked chat composer no longer takes focus.
@@ -1649,7 +1651,13 @@ ${content}
 												class="mb-0.5 ml-3 flex max-w-full items-center gap-1 self-start rounded-lg px-1.5 py-0.5 text-xs text-base-500 transition hover:text-base-800 dark:text-base-400 dark:hover:text-base-100"
 												aria-label={$i18n.t('Expand')}
 												aria-expanded="false"
-												on:click={() => (noteChatExpanded = true)}
+												bind:this={noteChatExpandButtonElement}
+												on:click={async () => {
+													noteChatExpanded = true;
+													await tick();
+													if (!$mobile && document.activeElement === document.body)
+														noteChatMessageInput?.focus({ preventScroll: true });
+												}}
 											>
 												<ChevronUp className="size-3 shrink-0" strokeWidth="2" />
 												<span class="truncate"
@@ -1673,7 +1681,13 @@ ${content}
 														embeddedCollapsed={!noteChatExpanded}
 														embeddedInset
 														onRecordedAudio={noteAudioHandler}
-														onCollapseEmbedded={() => (noteChatExpanded = false)}
+														bind:messageInput={noteChatMessageInput}
+														onCollapseEmbedded={async () => {
+															noteChatExpanded = false;
+															await tick();
+															if (document.activeElement === document.body)
+																noteChatExpandButtonElement?.focus();
+														}}
 														onBeforeNoteSubmit={async () => {
 															noteChatExpanded = true;
 															await flushActivePage();
