@@ -65,6 +65,7 @@
 	import { contentFiles, downloadNote } from './utils';
 	import NoteTabs from './NoteTabs.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
+	import ChevronLeft from '../icons/ChevronLeft.svelte';
 	import type { NotePage, NotePageOperation } from '$lib/apis/notes';
 
 	import Chat from '$lib/components/chat/Chat.svelte';
@@ -1168,10 +1169,19 @@ ${content}
 								</Tooltip>
 							{/if}
 
+							<Tooltip content={$i18n.t('Back')} className="flex shrink-0 ml-px md:-ml-1">
+								<button
+									class="flex h-6 w-4 items-center justify-center rounded-md text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
+									aria-label={$i18n.t('Back')}
+									type="button"
+									on:click={() => goto('/notes')}
+								>
+									<ChevronLeft className="size-3" strokeWidth="2" />
+								</button>
+							</Tooltip>
+
 							<input
-								class="w-full text-sm font-normal bg-transparent outline-hidden {$mobile && !pageTab
-									? 'ml-1'
-									: ''}"
+								class="w-full min-w-0 ml-0.5 text-sm font-normal bg-transparent outline-hidden"
 								type="text"
 								bind:this={titleInputElement}
 								bind:value={note.title}
