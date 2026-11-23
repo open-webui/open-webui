@@ -10,6 +10,7 @@ the container is recreated, so it lives in the data volume instead.
 import asyncio
 import os
 import signal
+import sys
 from contextlib import suppress
 from pathlib import Path
 
@@ -77,8 +78,11 @@ class LocalHost:
     async def start(self, script: str) -> _Process:
         BASE.mkdir(parents=True, exist_ok=True)
         proc = await asyncio.create_subprocess_exec(
-            'sh',
-            '-s',
+            sys.executable,
+            '-I',
+            '-S',
+            '-c',
+            "import os\nos.closerange(3, os.sysconf('SC_OPEN_MAX'))\nos.execlp('sh', 'sh', '-s')\n",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
