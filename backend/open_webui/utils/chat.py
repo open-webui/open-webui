@@ -160,7 +160,16 @@ async def dispatch_chat_completion(
     # Fallback for paths that skip process_chat_payload (title, tags, follow-ups),
     # so background tasks for sensitive chats are routed too.
     if not selected_model_id and model.get('owned_by') == 'router':
-        selected_model_id, strategy = await resolve_router_model(model['id'], form_data, user)
+        # Tasks route on the text they are about, not on their own instructions.
+        task_body = metadata.get('task_body')
+        routing_form_data = form_data
+        if task_body:
+            messages = list(task_body.get('messages') or [])
+            if task_body.get('prompt'):
+                messages.append({'role': 'user', 'content': task_body['prompt']})
+            messages += [{'role': 'assistant', 'content': content} for content in task_body.get('responses') or []]
+            routing_form_data = {**form_data, 'messages': messages}
+        selected_model_id, strategy = await resolve_router_model(model['id'], routing_form_data, user)
         form_data['model'] = selected_model_id
 
         # bypass_filter recursion below skips the access check; gate the resolved model here.
