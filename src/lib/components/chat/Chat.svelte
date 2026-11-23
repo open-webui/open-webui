@@ -115,7 +115,6 @@
 		forkChatById,
 		getAllTags,
 		getChatById,
-		getTagsById,
 		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
@@ -560,7 +559,6 @@
 	$: canOpenArtifacts = !embedded || !!onOpenArtifacts;
 
 	let chat: any = null;
-	let tags = [];
 
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
 	$: isShared = chat != null && chat.user_id !== $user?.id;
@@ -1115,7 +1113,6 @@
 		loading = true;
 		loadedChatIdProp = '';
 		chat = null;
-		tags = [];
 		taskIds = null;
 		chatTasks = [];
 		serverContextUsage = null;
@@ -3186,7 +3183,6 @@
 			chatIdProp = '';
 			loadedChatIdProp = '';
 			chat = null;
-			tags = [];
 			serverContextUsage = null;
 		}
 		await chatTitle.set('');
@@ -3348,18 +3344,7 @@
 		});
 
 		if (loadedChat) {
-			const loadedTags = await getTagsById(localStorage.token, id, signal).catch(async (error) => {
-				console.warn('[note-chat] getTagsById failed; continuing without tags', {
-					chatIdProp,
-					activeChatId: $chatId,
-					error
-				});
-				return [];
-			});
-			if (signal.aborted) return;
 			chat = loadedChat;
-			tags = loadedTags;
-			noteChatDebug('getTagsById completed', { tagCount: tags?.length ?? 0 });
 
 			const chatContent = chat.chat;
 			chatVariables = chat?.variables ?? {};
@@ -3423,7 +3408,7 @@
 				}
 
 				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
-				// Keep live updates received while the chat and tags were loading.
+				// Keep live updates received while the chat was loading.
 				for (const [id, message] of Object.entries(history.messages)) {
 					if (initialHistory.messages[id] !== message)
 						chatContent.history.messages[id] = { ...chatContent.history.messages[id], ...message };
