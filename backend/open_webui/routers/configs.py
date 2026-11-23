@@ -106,6 +106,10 @@ async def import_config(request: Request, form_data: ImportConfigForm, user=Depe
     from open_webui.utils.mfa import update_mfa_config
 
     await update_mfa_config(request, form_data.config)
+    if 'tool_server.connections' in form_data.config:
+        await set_tool_servers(request)
+    if 'machines.connections' in form_data.config:
+        await set_machines(request)
     await publish_event(
         request,
         EVENTS.CONFIG_IMPORTED,
