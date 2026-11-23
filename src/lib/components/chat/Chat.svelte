@@ -1074,7 +1074,10 @@
 
 		clearTimeout(saveControlsTimer);
 		await saveControls();
-		if (signal.aborted) return;
+		if (signal.aborted) {
+			pendingChatRequest = null;
+			return;
+		}
 		loading = true;
 
 		prompt = '';
@@ -2868,6 +2871,15 @@
 		routeChanged = false;
 		void followRoute();
 	}
+	// A chat opened by link needs no model list, so its request starts before the list is in.
+	let pendingChatRequest: { id: string; promise: ReturnType<typeof getChatById> } | null = null;
+	$: if (routeChanged && $models === null && $page.params.id !== pendingChatRequest?.id) {
+		pendingChatRequest =
+			$page.route.id === '/(app)/c/[id]'
+				? { id: $page.params.id, promise: getChatById(localStorage.token, $page.params.id) }
+				: null;
+		pendingChatRequest?.promise.catch(() => {});
+	}
 	afterNavigate(() => {
 		routeChanged = !embedded;
 		stopAudio();
@@ -3330,7 +3342,12 @@
 		}
 
 		const id = $chatId;
-		const loadedChat = await getChatById(localStorage.token, id, signal).catch(async (error) => {
+		const request =
+			pendingChatRequest?.id === id
+				? pendingChatRequest.promise
+				: getChatById(localStorage.token, id, signal);
+		pendingChatRequest = null;
+		const loadedChat = await request.catch(async (error) => {
 			if (tabbed && !signal.aborted) toast.error(`${error}`);
 			console.error('[note-chat] getChatById failed', {
 				chatIdProp,
