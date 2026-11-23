@@ -149,7 +149,7 @@ async def probe(form: SSHTarget, user=Depends(get_admin_user)):
     return {'host_key': host_key, 'fingerprint': fingerprint}
 
 
-@router.post('/ssh/install-key')
+@router.post('/ssh/authorize')
 async def install_key(form: InstallKeyForm, user=Depends(get_admin_user)):
     try:
         await ssh_machines.install_public_key(

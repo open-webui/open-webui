@@ -956,7 +956,7 @@ export const installSSHKey = (
 		private_key?: string;
 		passphrase?: string;
 	}
-) => managedMachineRequest<{ status: boolean }>(token, '/ssh/install-key', 'POST', form);
+) => managedMachineRequest<{ status: boolean }>(token, '/ssh/authorize', 'POST', form);
 
 /** Start installing Open Terminal. Progress arrives as `machines:progress` socket events. */
 export const installSSHMachine = (
