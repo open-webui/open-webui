@@ -207,10 +207,7 @@
 						name: `${idx + 1} ${decodeString(citation.source.name)}`
 					})}
 					class="no-toggle outline-hidden flex dark:text-base-300 bg-transparent text-base-600 rounded-xl gap-1.5 items-center"
-					on:click={() => {
-						showCitationModal = true;
-						selectedCitation = citation;
-					}}
+					on:click={() => showSourceModal(citation.number)}
 				>
 					<div class=" font-normal bg-base-50 dark:bg-base-850 rounded-md px-1">
 						{idx + 1}
