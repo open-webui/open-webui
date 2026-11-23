@@ -833,16 +833,22 @@
 
 	onMount(async () => {
 		languages = await getLanguages();
-		await tools.set((await getTools(localStorage.token).catch(() => null)) ?? []);
-		skillsList = (await getSkills(localStorage.token).catch(() => null)) ?? [];
+		getTools(localStorage.token)
+			.catch(() => null)
+			.then((res) => tools.set(res ?? []));
+		getSkills(localStorage.token)
+			.catch(() => null)
+			.then((res) => (skillsList = res ?? []));
 		if (!$functions) {
-			await functions.set(await getFunctions(localStorage.token));
+			getFunctions(localStorage.token)
+				.then((res) => functions.set(res))
+				.catch(() => {});
 		}
 		if (suggestionTags.length === 0) {
-			await loadSuggestionTags();
+			loadSuggestionTags();
 		}
 		if (voices.length === 0) {
-			await loadVoices();
+			loadVoices();
 		}
 
 		if ($config?.features?.enable_image_generation && $imageModels === null) {
