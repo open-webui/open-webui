@@ -3727,6 +3727,7 @@ async def background_tasks_handler(ctx):
             message = {**message, 'model': form_data.get('model')}
 
     if message and 'model' in message:
+        model_id = form_data['model'] if ctx.get('model', {}).get('owned_by') == 'router' else message['model']
         if tasks and messages:
             if TASKS.FOLLOW_UP_GENERATION in tasks and tasks[TASKS.FOLLOW_UP_GENERATION]:
                 follow_up_messages = list(messages)
@@ -3743,7 +3744,7 @@ async def background_tasks_handler(ctx):
                 res = await generate_follow_ups(
                     request,
                     {
-                        'model': message['model'],
+                        'model': model_id,
                         'messages': follow_up_messages,
                         'message_id': metadata['message_id'],
                         'chat_id': metadata['chat_id'],
@@ -3809,7 +3810,7 @@ async def background_tasks_handler(ctx):
                         res = await generate_title(
                             request,
                             {
-                                'model': message['model'],
+                                'model': model_id,
                                 'messages': messages,
                                 'chat_id': metadata['chat_id'],
                             },
@@ -3872,7 +3873,7 @@ async def background_tasks_handler(ctx):
                     res = await generate_chat_tags(
                         request,
                         {
-                            'model': message['model'],
+                            'model': model_id,
                             'messages': messages,
                             'chat_id': metadata['chat_id'],
                         },
