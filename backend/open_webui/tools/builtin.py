@@ -3349,9 +3349,9 @@ async def copy_file_to_machine(
     __model_knowledge__: Optional[list[dict]] = None,
 ) -> str:
     """
-    Copy a chat or knowledge file to the selected terminal's working directory.
+    Copy a chat, knowledge or model file to the selected terminal's working directory.
 
-    :param file_id: The ID of the file to copy
+    :param file_id: The file ID, a file-<id> value or a /api/v1/files/<id>/content URL
     :return: JSON with the file's machine_path on the terminal
     """
     if __request__ is None:
@@ -3363,6 +3363,9 @@ async def copy_file_to_machine(
     try:
         from open_webui.models.files import Files
 
+        if '/api/v1/files/' in file_id:
+            file_id = file_id.split('/api/v1/files/')[1].split('/')[0]
+        file_id = file_id.removeprefix('file-')
         file = await Files.get_file_by_id(file_id)
         if not file or not await _has_read_access_to_file(file, __user__, __model_knowledge__):
             return JSONCodec.dumps({'error': 'File not found'})
