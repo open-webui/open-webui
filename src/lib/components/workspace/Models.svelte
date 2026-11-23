@@ -44,7 +44,6 @@
 	} from '$lib/apis/models';
 
 	import { getModels } from '$lib/apis';
-	import { getGroups } from '$lib/apis/groups';
 	import { updateUserSettings } from '$lib/apis/users';
 
 	import { capitalizeFirstLetter, copyToClipboard } from '$lib/utils';
@@ -92,8 +91,6 @@
 
 	let selectedModel = null;
 	let updatingModels: Record<string, boolean> = {};
-
-	let groupIds = [];
 
 	let tags = [];
 	let selectedTag = '';
@@ -466,9 +463,6 @@
 	onMount(async () => {
 		viewOption = localStorage.workspaceViewOption ?? '';
 		page = 1;
-
-		let groups = await getGroups(localStorage.token);
-		groupIds = groups.map((group) => group.id);
 
 		await tick();
 		loaded = true;
