@@ -296,6 +296,8 @@ async def update_timezone(
     db: AsyncSession = Depends(get_async_session),
 ):
     if session_user:
+        if form_data.timezone == session_user.timezone:
+            return {'status': True}
         await Users.update_user_by_id(
             session_user.id,
             {'timezone': form_data.timezone},
