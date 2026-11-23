@@ -94,6 +94,7 @@
 		requestId: number;
 	} | null = null;
 
+	export let wrapLines = false;
 	export let saving = false;
 
 	export const discard = () => {
@@ -363,6 +364,7 @@
 				<FileCodeEditor
 					{gitBaseContent}
 					readOnly={readOnly || !onSave}
+					{wrapLines}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
 					filePath={selectedFile}
@@ -479,6 +481,7 @@
 				<FileCodeEditor
 					{gitBaseContent}
 					readOnly={readOnly || !onSave}
+					{wrapLines}
 					bind:this={fileCodeEditorRef}
 					bind:value={codeValue}
 					filePath={selectedFile}

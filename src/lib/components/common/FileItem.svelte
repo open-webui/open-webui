@@ -3,7 +3,8 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { formatFileSize, safeLinkUrl } from '$lib/utils';
-	import { settings, showFileNavPath } from '$lib/stores';
+	import type { AppLayoutContext } from '$lib/types';
+	import { settings, showFileNavPath, user } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -12,6 +13,7 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
@@ -38,6 +40,14 @@
 	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
+	// The composer asks for the modal instead, as it holds the attachment's retrieval setting.
+	const canOpenKnowledge = () =>
+		!modal &&
+		item?.type === 'collection' &&
+		!!item.id &&
+		!!appLayout?.openPageTab &&
+		($user?.role === 'admin' || !!$user?.permissions?.workspace?.knowledge);
+
 	const decodeString = (str: string) => {
 		try {
 			return decodeURIComponent(str);
@@ -63,6 +73,13 @@
 
 			if (filesystemPath) {
 				showFileNavPath.set(filesystemPath);
+			} else if (canOpenKnowledge()) {
+				// Opens beside the chat, so the conversation stays readable
+				appLayout?.openPageTab?.({
+					href: `/workspace/knowledge/${item.id}`,
+					label: name,
+					inSplit: true
+				});
 			} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
 				showModal = !showModal;
 			} else {

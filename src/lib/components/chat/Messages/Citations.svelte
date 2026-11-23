@@ -33,11 +33,18 @@
 		if (citations[index]) {
 			console.log('Showing citation modal for:', citations[index]);
 
-			// A cited document whose layout the retrieved text loses opens beside the chat,
-			// at the cited page when one is known. Plain text files read the same in the popup.
+			// A cited file opens beside the chat, at the cited page when one is known. Web pages,
+			// and files that cannot be previewed, show their retrieved text in the popup.
 			const metadata = citations[index].metadata?.[0];
 			const fileName = String(metadata?.name ?? citations[index].source?.name ?? '');
-			if (!readOnly && metadata?.file_id && /\.(pdf|docx|pptx|xlsx|xls)$/i.test(fileName)) {
+			if (
+				!readOnly &&
+				metadata?.file_id &&
+				!metadata.external &&
+				!['note', 'chat'].includes(citations[index].source?.type) &&
+				!isValidHttpUrl(fileName) &&
+				!/\.(doc|ppt|odt|ods|odp|rtf|epub|msg)$/i.test(fileName)
+			) {
 				showTabs.set(true);
 				showEmbeds.set(true);
 				embed.set({
@@ -207,10 +214,7 @@
 						name: `${idx + 1} ${decodeString(citation.source.name)}`
 					})}
 					class="no-toggle outline-hidden flex dark:text-base-300 bg-transparent text-base-600 rounded-xl gap-1.5 items-center"
-					on:click={() => {
-						showCitationModal = true;
-						selectedCitation = citation;
-					}}
+					on:click={() => showSourceModal(citation.number)}
 				>
 					<div class=" font-normal bg-base-50 dark:bg-base-850 rounded-md px-1">
 						{idx + 1}

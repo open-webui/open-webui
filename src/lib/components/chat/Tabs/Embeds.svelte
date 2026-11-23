@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
-	import { embed } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFileContentById } from '$lib/apis/files';
 	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
 
@@ -16,34 +16,66 @@
 	let fileLoading = false;
 	let fileData: ArrayBuffer | null = null;
 	let fileDocxData: ArrayBuffer | null = null;
+	let fileSqliteData: ArrayBuffer | null = null;
+	let fileModelData: ArrayBuffer | null = null;
+	let fileImageUrl: string | null = null;
+	let fileVideoUrl: string | null = null;
+	let fileAudioUrl: string | null = null;
+	let fileContent: string | null = null;
 	let fileOfficeSlides: string[] | null = null;
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 	let selectedExcelSheet = '';
-	$: fileName = String($embed?.title ?? '');
+	$: fileName = String(embed?.title ?? '');
 	$: fileExt = fileName.split('.').pop()?.toLowerCase() ?? '';
+
+	const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'ico', 'avif']);
+	const VIDEO_EXTS = new Set(['mp4', 'webm', 'mov', 'ogv', 'avi', 'mkv']);
+	const AUDIO_EXTS = new Set(['mp3', 'wav', 'ogg', 'oga', 'flac', 'm4a', 'aac', 'wma', 'opus']);
+	const SQLITE_EXTS = new Set(['db', 'sqlite', 'sqlite3', 'db3']);
+	const MODEL_EXTS = new Set(['glb', 'gltf', 'stl', 'obj', 'ply']);
+	const EXCEL_EXTS = new Set(['xlsx', 'xls']);
+	const LAID_OUT_EXTS = new Set(['pdf', 'docx', 'pptx', ...EXCEL_EXTS]);
+	// Text the preview draws as something other than its lines
+	const DRAWN_TEXT_EXTS = new Set(
+		'md markdown mdx csv tsv html htm json jsonc jsonl json5 svg ipynb'.split(' ')
+	);
 
 	const loadFile = async (id: string, ext: string) => {
 		fileId = id;
-		fileData = fileDocxData = fileOfficeSlides = excelWorkbook = null;
+		fileData = fileDocxData = fileSqliteData = fileModelData = null;
+		fileImageUrl = fileVideoUrl = fileAudioUrl = null;
+		fileContent = fileOfficeSlides = excelWorkbook = null;
 		selectedExcelSheet = '';
 		fileLoading = !!id;
 		if (!id) return;
 		try {
+			const url = `${WEBUI_API_BASE_URL}/files/${id}/content`;
+			if (IMAGE_EXTS.has(ext)) fileImageUrl = url;
+			else if (VIDEO_EXTS.has(ext)) fileVideoUrl = url;
+			else if (AUDIO_EXTS.has(ext)) fileAudioUrl = url;
+			if (fileImageUrl || fileVideoUrl || fileAudioUrl) return;
+
 			const data = await getFileContentById(id);
 			if (fileId !== id || !data) return;
 			if (ext === 'pdf') fileData = data;
 			else if (ext === 'docx') fileDocxData = data;
+			else if (SQLITE_EXTS.has(ext)) fileSqliteData = data;
+			else if (MODEL_EXTS.has(ext)) fileModelData = data;
 			else if (ext === 'pptx') {
 				const { pptxToImages } = await import('$lib/utils/pptxToHtml');
 				const slides = (await pptxToImages(data)).images;
 				if (fileId === id) fileOfficeSlides = slides;
-			} else {
+			} else if (EXCEL_EXTS.has(ext)) {
 				const { readExcelWorkbook } = await import('$lib/utils/excelToTable');
 				const workbook = await readExcelWorkbook(data);
 				if (fileId === id && workbook.SheetNames.length > 0) {
 					selectedExcelSheet = workbook.SheetNames[0];
 					excelWorkbook = workbook;
 				}
+			} else {
+				// Anything that is not readable as text fails here
+				const text = new TextDecoder('utf-8', { fatal: true }).decode(data);
+				if (!text.includes('\0')) fileContent = text;
 			}
 		} catch (e) {
 			console.error(e);
@@ -51,7 +83,51 @@
 			if (fileId === id) fileLoading = false;
 		}
 	};
-	$: if (($embed?.file?.id ?? '') !== fileId) loadFile($embed?.file?.id ?? '', fileExt);
+	$: hasPreview =
+		fileDocxData ||
+		fileSqliteData ||
+		fileModelData ||
+		fileImageUrl ||
+		fileVideoUrl ||
+		fileAudioUrl ||
+		fileContent !== null ||
+		fileOfficeSlides ||
+		excelWorkbook;
+	$: if ((embed?.file?.id ?? '') !== fileId) loadFile(embed?.file?.id ?? '', fileExt);
+	$: isPlainText = !DRAWN_TEXT_EXTS.has(fileExt) && !LAID_OUT_EXTS.has(fileExt);
+	// Code and plain text are drawn as they are, so the lines are matched as they are
+	const textLines = (passage: string) => [
+		...new Set(
+			passage
+				.split('\n')
+				.map((line) => line.trim())
+				.filter((line) => line.length >= 6)
+		)
+	];
+	// Only the lines in view are drawn, so the first cited one is scrolled to
+	let textTargetId = 0;
+	const getTextTarget = (content: string, passages: { text: string }[]) => {
+		for (const { text } of passages) {
+			const passage = (text ?? '').trim();
+			const quote = [passage, ...textLines(passage)].find(
+				(quote) => quote && content.includes(quote)
+			);
+			if (!quote) continue;
+
+			const before = content.slice(0, content.indexOf(quote)).split(/\r\n?|\n/);
+			return {
+				line: before.length,
+				column: before[before.length - 1].length + 1,
+				length: quote.split('\n')[0].length,
+				requestId: ++textTargetId
+			};
+		}
+		return null;
+	};
+	$: textTarget =
+		fileContent !== null && isPlainText
+			? getTextTarget(fileContent, embed?.file?.passages ?? [])
+			: null;
 	let filePage: number | null = null;
 	let fileQuotes: string[] = [];
 	// Hovering a mark shows the retrieved passage it came from.
@@ -94,14 +170,19 @@
 	$: shownQuotes = showQuotes ? fileQuotes : NO_QUOTES;
 	$: if (!showQuotes) hoveredText = null;
 	let fileSource: any = null;
-	$: if ($embed?.file !== fileSource) {
-		fileSource = $embed?.file ?? null;
+	$: if (embed?.file !== fileSource) {
+		fileSource = embed?.file ?? null;
 		filePage = fileSource?.page ?? null;
 		// The cited passages are marked on the pages they appear on
 		// Overlapping passages share lines; each line is marked once
 		const seen = new Set<string>();
 		const quotes = (fileSource?.passages ?? [])
-			.flatMap((passage) => quoteLines(passage.text ?? '').map((quote) => ({ quote, passage })))
+			.flatMap((passage) =>
+				(isPlainText ? textLines : quoteLines)(passage.text ?? '').map((quote) => ({
+					quote,
+					passage
+				}))
+			)
 			.filter(({ quote }) => !seen.has(quote) && seen.add(quote));
 		fileQuotes = quotes.map(({ quote }) => quote);
 		fileQuoteTexts = quotes.map(({ passage }) => passage);
@@ -110,6 +191,8 @@
 
 	const i18n = getContext<any>('i18n');
 
+	/** The cited source this tab shows. */
+	export let embed: any;
 	export let overlay = false;
 	// Preserve the former embed close label for i18n extraction.
 	// t('Close embed')
@@ -147,21 +230,21 @@
 	};
 </script>
 
-{#if $embed}
+{#if embed}
 	<div class="h-full w-full flex flex-col">
 		<!-- A cited file is named by its tab, like other file tabs -->
-		{#if !$embed?.file}
+		{#if !embed?.file}
 			<div
 				class="pointer-events-auto z-20 flex justify-between items-center pb-3 px-2 font-primar text-base-900 dark:text-base-0 flex-shrink-0"
 			>
 				<div class="flex-1 flex items-center justify-between pl-2">
 					<a
 						class="flex items-center space-x-2 hover:underline"
-						href={$embed?.url}
+						href={embed?.url}
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						{$embed?.title ?? 'Embedded Content'}
+						{embed?.title ?? 'Embedded Content'}
 					</a>
 				</div>
 			</div>
@@ -172,7 +255,7 @@
 				<div class=" absolute top-0 left-0 right-0 bottom-0 z-10"></div>
 			{/if}
 
-			{#if $embed?.file}
+			{#if embed?.file}
 				{#if fileData}
 					{#key fileSource}
 						<PdfPagesPreview
@@ -217,16 +300,29 @@
 							</svelte:fragment>
 						</PdfPagesPreview>
 					{/key}
-				{:else if fileDocxData || fileOfficeSlides || excelWorkbook}
+				{:else if hasPreview}
 					<!-- Previews drawn as real text get the cited passages marked too -->
 					<div
 						class="flex h-full min-h-0 flex-col"
-						use:quoteMarks={{ quotes: shownQuotes, onHover: showQuoteText }}
+						use:quoteMarks={{
+							quotes: shownQuotes,
+							// Plain text already reads as its passage does
+							onHover: isPlainText ? undefined : showQuoteText
+						}}
 					>
 						<FilePreview
 							selectedFile={fileName}
 							fileLoading={false}
 							{fileDocxData}
+							{fileContent}
+							{fileSqliteData}
+							{fileModelData}
+							{fileImageUrl}
+							{fileVideoUrl}
+							{fileAudioUrl}
+							searchTarget={textTarget}
+							wrapLines={true}
+							allowScripts={false}
 							{fileOfficeSlides}
 							{excelWorkbook}
 							bind:selectedExcelSheet
@@ -270,6 +366,14 @@
 							</svelte:fragment>
 						</FilePreview>
 					</div>
+				{:else if !fileLoading && fileSource?.passages?.length}
+					<!-- The file itself cannot be shown, but what was retrieved from it can -->
+					<FilePreview
+						selectedFile={isPlainText ? fileName : `${fileName}.md`}
+						fileContent={fileSource.passages.map((passage) => passage.text ?? '').join('\n\n')}
+						wrapLines={true}
+						readOnly={true}
+					/>
 				{:else}
 					<div
 						class="flex h-full items-center justify-center text-xs text-base-500 dark:text-base-400"
@@ -316,8 +420,8 @@
 				{/if}
 			{:else}
 				<FullHeightIframe
-					src={getSrcUrl($embed?.url ?? '', $embed?.chatId, $embed?.messageId, $embed?.sourceId)}
-					payload={$embed?.source ?? null}
+					src={getSrcUrl(embed?.url ?? '', embed?.chatId, embed?.messageId, embed?.sourceId)}
+					payload={embed?.source ?? null}
 					iframeClassName="w-full h-full"
 				/>
 			{/if}

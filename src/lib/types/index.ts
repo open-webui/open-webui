@@ -22,7 +22,7 @@ export type MachineContext = {
 };
 
 export type AppLayoutContext = {
-	openPageTab?: (tab: { href: string; label: string }) => void;
+	openPageTab?: (tab: { href: string; label: string; inSplit?: boolean }) => void;
 	initNewChat?: (options?: {
 		preserveTabs?: boolean;
 		temporary?: boolean;

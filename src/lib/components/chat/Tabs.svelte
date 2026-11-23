@@ -28,7 +28,7 @@
 	import { pageTabKey } from './Tabs/tabs';
 	import Page from './Tabs/Page.svelte';
 	let pageViews: Record<string, Page> = {};
-	let pendingPageTab: { href: string; label: string } | null = null;
+	let pendingPageTab: { href: string; label: string; inSplit?: boolean } | null = null;
 	import {
 		config,
 		embed,
@@ -706,7 +706,7 @@
 				(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
 				(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
 		);
-	export const openPageTab = (request: { href: string; label: string }) => {
+	export const openPageTab = (request: { href: string; label: string; inSplit?: boolean }) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
 		if (!viewReady) {
@@ -726,7 +726,7 @@
 				url.pathname !== '/workspace'
 			)
 				void navigatePageTab(existing.id, request.href);
-		} else openPanel(createPageTab(request));
+		} else openPanel(createPageTab(request), request.inSplit);
 	};
 	const navigatePageTab = async (id: string, href: string) => {
 		const url = new URL(href, location.origin);
@@ -899,6 +899,7 @@
 	) => {
 		if (!availableViews.some((view) => view.kind === kind && view.available)) return;
 		if (kind === 'artifacts') return openArtifacts(undefined, mainChatTabId, inSplit);
+		if (kind === 'preview') return openPreview();
 		const view = availableViews.find((view) => view.kind === kind)!;
 		if (kind === 'chat') {
 			if (!viewReady || !viewEntry) return false;
@@ -926,6 +927,23 @@
 			return true;
 		}
 		openPanel({ id: kind, kind, label: view.label }, inSplit);
+	};
+	const openPreview = () => {
+		const sourceTabId = embedSourceTab?.id;
+		const sourceGroup = tabs.groups.find((group) => group.tabIds.some((id) => id === sourceTabId));
+		// Each cited source has its own tab; citing it again shows the new passages there.
+		const id = `preview:${$embed.file?.id ?? $embed.url}`;
+		tabs = {
+			...tabs,
+			tabs: tabs.tabs.map((tab) => (tab.id === id ? { ...tab, embed: $embed } : tab))
+		};
+		// A file cited in the main chat opens beside it, so the answer stays readable.
+		openPanel(
+			{ id, kind: 'preview', label: $i18n.t('Preview'), embed: $embed },
+			!sourceGroup && !!$embed.file
+		);
+		// A source cited in a chat tab opens in that tab's group, so the main chat stays in view.
+		if (sourceGroup) tabs = moveTabToGroup(tabs, id, sourceGroup.id);
 	};
 
 	type SplitDrop = GroupRect & { groupId: string; edge: SplitEdge | null };
@@ -1471,7 +1489,7 @@
 	$: tabLabel = (tab: Tab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		// A cited file is named like any other file tab.
-		if (tab.kind === 'preview' && $embed?.file) return $embed.title || tab.label;
+		if (tab.kind === 'preview' && tab.embed?.file) return tab.embed.title || tab.label;
 		const source =
 			(tab.kind === 'artifacts' || tab.kind === 'overview') &&
 			tab.sourceTabId &&
@@ -1481,7 +1499,11 @@
 		return source ? `${tab.label} · ${source.label}` : tab.label;
 	};
 	$: showArtifactsTab = $mainArtifacts.length > 0 && $visibleControls['chat.artifacts'];
-	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
+	$: embedSourceTab =
+		$embed?.chatId && $embed.chatId !== chatId
+			? tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === $embed.chatId)
+			: undefined;
+	$: showPreviewTab = !!$embed && ($embed.chatId === chatId || !!embedSourceTab);
 	$: availableViews = [
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
 		{
@@ -1709,8 +1731,7 @@
 		openFeatureTab('comments');
 	}
 	$: if (viewReady && $showEmbeds && showPreviewTab) {
-		// A cited file opens beside the chat, so the answer stays readable.
-		openFeatureTab('preview', !!$embed?.file);
+		openPreview();
 		showEmbeds.set(false);
 	}
 	$: if (viewReady && $voiceCall) openFeatureTab('voice');
@@ -2114,7 +2135,7 @@
 						on:close={() => closeTab(tab.id)}
 					/>
 				{:else if tab.kind === 'preview'}
-					<Embeds overlay={isDragging} />
+					<Embeds embed={tab.embed} overlay={isDragging} />
 				{:else if tab.kind === 'artifacts'}
 					{@const source = tabs.tabs.find((item) => item.id === tab.sourceTabId)}
 					<Artifacts
@@ -2475,7 +2496,7 @@
 								{:else}
 									<Icon name="folder" size={14} />
 								{/if}
-							{:else if tab.kind === 'file' || (tab.kind === 'preview' && $embed?.file)}
+							{:else if tab.kind === 'file' || (tab.kind === 'preview' && tab.embed?.file)}
 								<Icon name={fileIconName(tabLabel(tab))} size={14} strokeWidth={1.4} />
 							{:else if tab.kind === 'terminal'}
 								<Icon

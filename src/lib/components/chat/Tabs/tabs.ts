@@ -38,6 +38,8 @@ export type Tab = {
 	target?: MachineTarget;
 	browserBaseUrl?: string;
 	context?: MachineContext | null;
+	/** For a preview tab: the cited source it shows. */
+	embed?: any;
 };
 export type TabGroup = { id: string; tabIds: string[]; activeId: string };
 export type SplitEdge = 'left' | 'right' | 'top' | 'bottom';

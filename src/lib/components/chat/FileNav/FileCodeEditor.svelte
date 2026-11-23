@@ -29,6 +29,7 @@
 
 	export let value = '';
 	export let readOnly = false;
+	export let wrapLines = false;
 	export let placeholder = '';
 	export let ariaLabel = '';
 	export let filePath: string | null = null;
@@ -223,6 +224,7 @@
 
 		extensions = [
 			basicSetup,
+			wrapLines ? EditorView.lineWrapping : [],
 			gitLineChanges,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			Prec.high(
