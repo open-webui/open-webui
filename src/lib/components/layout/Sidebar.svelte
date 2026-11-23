@@ -528,7 +528,17 @@
 		}
 	};
 
+	// Only fetch channels if the feature is enabled and user has permission
+	$: canUseChannels =
+		$config?.features?.enable_channels &&
+		($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true));
+	$: if (canUseChannels) initChannels();
+
 	const initChannels = async () => {
+		if (!canUseChannels) {
+			return;
+		}
+
 		const res = await getChannels(localStorage.token).catch((error) => {
 			return null;
 		});
@@ -567,14 +577,6 @@
 	};
 
 	const initSidebarData = async () => {
-		// Only fetch channels if the feature is enabled and user has permission
-		if (
-			$config?.features?.enable_channels &&
-			($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
-		) {
-			initChannels();
-		}
-
 		await initChatList();
 	};
 
