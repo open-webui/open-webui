@@ -280,25 +280,28 @@
 	const init = async () => {
 		models = null;
 
-		modelsConfig = await getModelsConfig(localStorage.token);
+		[modelsConfig, savedModels, allModels] = await Promise.all([
+			getModelsConfig(localStorage.token),
+			getAllModels(localStorage.token),
+			getModels(localStorage.token)
+		]);
+		_models.set(allModels);
+
 		modelOrderList = modelsConfig?.MODEL_ORDER_LIST ?? [];
 		defaultModelIds = (modelsConfig?.DEFAULT_MODELS ?? '').split(',').filter((id) => id);
 		defaultPinnedModelIds = (modelsConfig?.DEFAULT_PINNED_MODELS ?? '')
 			.split(',')
 			.filter((id) => id);
 
-		savedModels = (await getAllModels(localStorage.token)).filter(
-			(model: ModelListItem) => !model.id.startsWith('agent:')
-		);
+		savedModels = savedModels.filter((model: ModelListItem) => !model.id.startsWith('agent:'));
 		tags = [...new Set(savedModels.flatMap(modelTags))].sort();
 		if (selectedTag && !tags.includes(selectedTag)) {
 			selectedTag = '';
 		}
 
-		allModels = (await getModels(localStorage.token)).filter(
-			(model: ModelListItem) => !isMachine(model.owned_by)
-		);
+		allModels = allModels.filter((model: ModelListItem) => !isMachine(model.owned_by));
 
+		// run after /api/models to reuse its cached provider response
 		const providerModels = await getModels(localStorage.token, true);
 		const allModelIds = new Set<string>(allModels.map((model: ModelListItem) => model.id));
 		allModels = [
@@ -335,8 +338,6 @@
 				.sort((a, b) => a.localeCompare(b))
 		];
 		modelOrderDirty = false;
-
-		_models.set(await getModels(localStorage.token));
 	};
 
 	const saveModelOrder = async (orderedModelIds: string[]) => {
