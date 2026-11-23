@@ -59,9 +59,9 @@ async def get_skills(
     db: AsyncSession = Depends(get_async_session),
 ):
     if user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
-        skills = await Skills.get_skills(db=db)
+        skills = await Skills.get_skills(defer_content=True, db=db)
     else:
-        skills = await Skills.get_skills(db=db, user_id=user.id)
+        skills = await Skills.get_skills(defer_content=True, db=db, user_id=user.id)
 
     if query:
         q = query.casefold()

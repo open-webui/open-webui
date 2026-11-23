@@ -49,7 +49,8 @@ class FunctionModel(BaseModel):
     user_id: str | None = None  # may be null for legacy/malformed records
     name: str
     type: str
-    content: str
+    # None when listed with defer_content=True (source skipped for listings)
+    content: str | None = None
     meta: FunctionMeta
     is_active: bool = False
     is_global: bool = False
@@ -251,15 +252,35 @@ class FunctionsTable:
             return []
 
     async def get_functions(
-        self, active_only=False, include_valves=False, db: AsyncSession | None = None
+        self,
+        active_only=False,
+        include_valves=False,
+        defer_content: bool = False,
+        db: AsyncSession | None = None,
     ) -> list[FunctionModel | FunctionWithValvesModel]:
         async with get_async_db_context(db) as db:
+            stmt = (
+                select(
+                    Function.id,
+                    Function.version_id,
+                    Function.user_id,
+                    Function.name,
+                    Function.type,
+                    Function.meta,
+                    Function.is_active,
+                    Function.is_global,
+                    Function.updated_at,
+                    Function.created_at,
+                )
+                if defer_content
+                else select(Function)
+            )
             if active_only:
-                result = await db.execute(select(Function).filter_by(is_active=True))
+                result = await db.execute(stmt.filter_by(is_active=True))
             else:
-                result = await db.execute(select(Function))
+                result = await db.execute(stmt)
 
-            functions = result.scalars().all()
+            functions = result.all() if defer_content else result.scalars().all()
 
             if include_valves:
                 return [

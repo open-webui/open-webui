@@ -50,7 +50,7 @@ async def get_functions(user=Depends(get_verified_user), db: AsyncSession = Depe
     if not ENABLE_FUNCTIONS:
         return []
 
-    return await Functions.get_functions(db=db)
+    return await Functions.get_functions(defer_content=True, db=db)
 
 
 @router.get('/list', response_model=list[FunctionUserResponse])

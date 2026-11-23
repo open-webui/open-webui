@@ -48,8 +48,9 @@ class SkillModel(BaseModel):
     user_id: str
     name: str
     description: Optional[str] = None
-    content: str
-    data: dict
+    # None when listed with defer_content=True (skill files skipped for listings)
+    content: str | None = None
+    data: dict | None = None
     version_id: str | None = None
     meta: SkillMeta
     is_active: bool = True
@@ -227,10 +228,25 @@ class SkillsTable:
         self,
         user_id: str | None = None,
         ids: list[str] | None = None,
+        defer_content: bool = False,
         db: AsyncSession | None = None,
     ) -> list[SkillUserModel]:
         async with get_async_db_context(db) as db:
-            stmt = select(Skill).order_by(Skill.updated_at.desc())
+            stmt = (
+                select(
+                    Skill.id,
+                    Skill.user_id,
+                    Skill.name,
+                    Skill.description,
+                    Skill.version_id,
+                    Skill.meta,
+                    Skill.is_active,
+                    Skill.updated_at,
+                    Skill.created_at,
+                )
+                if defer_content
+                else select(Skill)
+            ).order_by(Skill.updated_at.desc())
 
             if ids is not None:
                 stmt = stmt.filter(Skill.id.in_(ids))
@@ -249,7 +265,7 @@ class SkillsTable:
                 )
 
             result = await db.execute(stmt)
-            all_skills = result.scalars().all()
+            all_skills = result.all() if defer_content else result.scalars().all()
 
             user_ids = list(set(skill.user_id for skill in all_skills))
             skill_ids = [skill.id for skill in all_skills]
