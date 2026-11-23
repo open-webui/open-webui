@@ -287,7 +287,7 @@
 
 	const init = async () => {
 		tools = await getToolList(localStorage.token);
-		_tools.set(await getTools(localStorage.token));
+		getTools(localStorage.token).then((value) => _tools.set(value));
 	};
 
 	onMount(async () => {
