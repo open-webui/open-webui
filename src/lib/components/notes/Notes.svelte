@@ -18,7 +18,7 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, getContext, onDestroy } from 'svelte';
+	import { onMount, getContext, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -37,10 +37,18 @@
 		getNoteById,
 		getNoteList,
 		searchNotes,
+		updateNoteById,
+		getNoteTags,
 		toggleNotePinnedStatusById,
 		getPinnedNoteList
 	} from '$lib/apis/notes';
-	import { capitalizeFirstLetter, copyToClipboard, getTimeRange } from '$lib/utils';
+	import {
+		capitalizeFirstLetter,
+		copyToClipboard,
+		formatDateDetails,
+		formatShortDate,
+		getTimeRange
+	} from '$lib/utils';
 	import { downloadNote, createNoteHandler } from './utils';
 
 	import EllipsisHorizontal from '../icons/EllipsisHorizontal.svelte';
@@ -49,6 +57,9 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import NoteMenu from './Notes/NoteMenu.svelte';
+	import FolderTags from '../chat/Placeholder/FolderTags.svelte';
+	import TagIcon from '../icons/Tag.svelte';
+	import { tagDot, type FolderTag } from '$lib/utils/tags';
 	import FileNavIcon from '../chat/FileNav/Icon.svelte';
 	import Dropdown from '../common/Dropdown.svelte';
 	import DropdownMenu from '../common/DropdownMenu.svelte';
@@ -84,16 +95,54 @@
 	let searchDebounceTimer: ReturnType<typeof setTimeout>;
 	let searchController: AbortController;
 
-	let sortKey = 'updated_at';
-	let sortDirection = 'desc';
+	// Layout and ordering are personal preferences, like the folder view's.
+	let sortKey = localStorage?.noteSortKey === 'name' ? 'name' : 'updated_at';
+	let sortDirection =
+		localStorage?.noteSortDirection === 'asc' || localStorage?.noteSortDirection === 'desc'
+			? localStorage.noteSortDirection
+			: sortKey === 'name'
+				? 'asc'
+				: 'desc';
+	$: if (loaded) {
+		localStorage.noteSortKey = sortKey;
+		localStorage.noteSortDirection = sortDirection;
+	}
 	let displayOption: string | null = null;
 	let viewOption: string | null = null;
 	let permission: string | null = null;
+
+	// Tag id 'none' means untagged, as in a folder's chat list.
+	const UNTAGGED = 'none';
+	let selectedTags: string[] = [];
+	let tagOptions: FolderTag[] = [];
+	let tagQuery = '';
+
+	$: tagFilterOptions = [
+		{ id: UNTAGGED, name: $i18n.t('Untagged') } as FolderTag,
+		...tagOptions
+	].filter((tag) => tag.name.toLowerCase().includes(tagQuery.trim().toLowerCase()));
+
+	const loadTagOptions = async () => {
+		tagOptions = await getNoteTags(localStorage.token, permission).catch(() => tagOptions);
+	};
+	const toggleTag = (id: string) => {
+		selectedTags = selectedTags.includes(id)
+			? selectedTags.filter((tag) => tag !== id)
+			: [...selectedTags, id];
+	};
+	const tagsChanged = async () => {
+		await Promise.all([getItemsPage(true), loadTagOptions()]);
+	};
 
 	let page = 1;
 
 	let itemsLoading = false;
 	let allItemsLoaded = false;
+	let error = '';
+
+	let containerElement: HTMLDivElement;
+	let searchInputElement: HTMLInputElement;
+	let filterDropdown: Dropdown;
 
 	const downloadHandler = async (type) => {
 		// Fetch the full note since the list response may not contain full content
@@ -119,9 +168,40 @@
 
 		if (res) {
 			closePageTabs(`/notes/${id}`);
+			// The row goes right away; the refresh reconciles the pages already loaded.
+			items = (items ?? []).filter((note) => note.id !== id);
+			total = Math.max(0, (total ?? 1) - 1);
 			pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
-			init();
+			getItemsPage(true);
 		}
+	};
+
+	// Inline rename, like the folder chat list.
+	let renaming = '';
+	let renameValue = '';
+	const startRename = async (note) => {
+		renaming = note.id;
+		renameValue = note.title;
+		await tick();
+		const input = containerElement?.querySelector<HTMLInputElement>('[data-rename-input]');
+		input?.focus();
+		input?.select();
+	};
+	const saveRename = async (note) => {
+		if (renaming !== note.id) return;
+		const title = renameValue.trim();
+		renaming = '';
+		if (!title || title === note.title) return;
+
+		const res = await updateNoteById(localStorage.token, note.id, { title }).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return;
+
+		items = (items ?? []).map((item) => (item.id === note.id ? { ...item, title } : item));
+		pinnedNotes.set(await getPinnedNoteList(localStorage.token).catch(() => []));
+		getItemsPage(true);
 	};
 
 	const inputFilesHandler = async (inputFiles: File[]) => {
@@ -182,6 +262,7 @@
 
 	const init = async () => {
 		reset();
+		loadTagOptions();
 		await getItemsPage();
 	};
 
@@ -202,7 +283,8 @@
 		sortKey !== undefined &&
 		sortDirection !== undefined &&
 		permission !== undefined &&
-		viewOption !== undefined
+		viewOption !== undefined &&
+		selectedTags !== undefined
 	) {
 		init();
 	}
@@ -212,7 +294,7 @@
 			? `/notes/${note.id}?page=${encodeURIComponent(note.data.page_id)}&search=${encodeURIComponent(query)}`
 			: `/notes/${note.id}`;
 
-	$: filterCount = (viewOption ? 1 : 0) + (permission ? 1 : 0);
+	$: filterCount = (viewOption ? 1 : 0) + (permission ? 1 : 0) + (selectedTags.length ? 1 : 0);
 
 	const setViewOption = (value: string | null) => {
 		viewOption = value;
@@ -250,7 +332,9 @@
 		event.dataTransfer.effectAllowed = 'copyMove';
 	};
 
-	const getItemsPage = async () => {
+	// Loads the next page, or with `refresh` every page already on screen, so a delete,
+	// rename or access change never collapses the list back to its first page.
+	const getItemsPage = async (refresh = false) => {
 		searchController?.abort();
 		searchController = new AbortController();
 		const { signal } = searchController;
@@ -261,42 +345,114 @@
 			permission = null;
 		}
 
-		const res = await searchNotes(
-			localStorage.token,
-			query,
-			viewOption,
-			permission,
-			sortKey,
-			page,
-			sortKey ? sortDirection : null,
-			signal
-		).catch(() => {
-			return [];
+		const pageNumbers = refresh ? Array.from({ length: page }, (_, index) => index + 1) : [page];
+		let failure = '';
+		const results = await Promise.all(
+			pageNumbers.map((pageNumber) =>
+				searchNotes(
+					localStorage.token,
+					query,
+					viewOption,
+					permission,
+					sortKey,
+					pageNumber,
+					sortKey ? sortDirection : null,
+					selectedTags,
+					signal
+				)
+			)
+		).catch((error) => {
+			failure = `${error}`;
+			return null;
 		});
 
 		if (signal.aborted) return;
 
-		if (res) {
-			total = res.total;
-			const pageItems = res.items;
+		if (results && results.every(Boolean)) {
+			const last = results[results.length - 1];
+			const pageItems = results.flatMap((res) => res.items ?? []);
+			const merged = items && page > 1 && !refresh ? [...items, ...pageItems] : pageItems;
 
-			if ((pageItems ?? []).length === 0) {
-				allItemsLoaded = true;
-			} else {
-				allItemsLoaded = false;
-			}
-
-			if (items && page > 1) {
-				const existingIds = new Set(items.map((item) => item.id));
-				const newItems = pageItems.filter((item) => !existingIds.has(item.id));
-				items = [...items, ...newItems];
-			} else {
-				items = pageItems;
-			}
+			error = '';
+			total = last.total;
+			items = [...new Map(merged.map((item) => [item.id, item])).values()];
+			allItemsLoaded = (last.items ?? []).length === 0 || items.length >= total;
+		} else {
+			error = failure || $i18n.t('Something went wrong :/');
+			// A failed next page is asked for again by Retry.
+			if (!refresh && page > 1) page -= 1;
+			items = items ?? [];
+			total = total ?? 0;
 		}
 
 		itemsLoading = false;
-		return res;
+	};
+
+	// The text around the first search hit, shown beside the title like a chat's search snippet.
+	const searchSnippet = (note, search: string) => {
+		const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+		const md: string = note.data?.content?.md ?? '';
+		if (!words.length || !md) return '';
+
+		const text = md.toLowerCase();
+		const hits = words.map((word) => text.indexOf(word)).filter((index) => index >= 0);
+		if (!hits.length) return '';
+
+		const start = Math.max(0, Math.min(...hits) - 24);
+		return `${start ? '…' : ''}${md
+			.slice(start, start + 160)
+			.replace(/\s+/g, ' ')
+			.trim()}`;
+	};
+
+	const openNote = (event: MouseEvent, note) => {
+		if ((event.target as Element).closest('a, button, input, [role="menu"]')) return;
+		if (window.getSelection()?.toString()) return;
+		goto(noteUrl(note));
+	};
+
+	// j/k and arrow keys move between rows, like the folder chat list.
+	const navigate = (event: KeyboardEvent) => {
+		const keys: Record<string, number> = { ArrowDown: 1, j: 1, ArrowUp: -1, k: -1 };
+		const step = keys[event.key];
+		if (!step || event.metaKey || event.ctrlKey || event.altKey) return;
+		const target = event.target as HTMLElement;
+		if (!target.matches('[data-row-link]')) return;
+		const links = [...containerElement.querySelectorAll<HTMLElement>('[data-row-link]')];
+		const next = links[links.indexOf(target) + step];
+		if (!next) return;
+		event.preventDefault();
+		next.focus();
+		next.scrollIntoView({ block: 'nearest' });
+	};
+
+	// Same single-key shortcuts as the folder view: / searches, F opens the filter.
+	const shortcuts = (event: KeyboardEvent) => {
+		if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
+		if (!$active || !containerElement?.offsetParent) return;
+		const target = event.target as HTMLElement | null;
+		if (
+			target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"]') ||
+			document.querySelector('[aria-modal="true"]')
+		)
+			return;
+		if (event.key === '/') {
+			event.preventDefault();
+			searchInputElement?.focus();
+		} else if (event.key === 'f') {
+			event.preventDefault();
+			filterDropdown?.openWithFocus();
+		}
+	};
+
+	const clearFilters = (search = true) => {
+		setViewOption(null);
+		permission = null;
+		selectedTags = [];
+		if (search && query) {
+			query = '';
+			handleSearchInput();
+		}
 	};
 
 	const groupNotes = (res) => {
@@ -425,7 +581,40 @@
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
 
-<WorkspaceAccessModal bind:this={accessModal} resourceType="notes" onUpdated={init} />
+<WorkspaceAccessModal
+	bind:this={accessModal}
+	resourceType="notes"
+	onUpdated={() => getItemsPage(true)}
+/>
+
+<svelte:window on:keydown={shortcuts} />
+
+{#snippet chip(label: string, value: string, onClear: () => void, dots: string[] = [])}
+	<div
+		class="inline-flex h-6 max-w-full items-center overflow-hidden rounded-full border border-base-100 bg-base-50/60 text-xs dark:border-base-850 dark:bg-base-850/50"
+	>
+		<span class="flex h-full items-center pl-2 pr-1.5 text-base-500 dark:text-base-400"
+			>{label}</span
+		>
+		<span class="flex h-full items-center px-1 text-base-400 dark:text-base-500"
+			>{$i18n.t('is')}</span
+		>
+		<button
+			type="button"
+			class="flex h-full min-w-0 items-center px-1.5 text-base-700 transition-colors hover:bg-base-100 dark:text-base-200 dark:hover:bg-base-800"
+			on:click={() => filterDropdown?.openWithFocus()}
+		>
+			{#each dots as dot}<span class="mr-1.5 size-1.5 shrink-0 rounded-full {dot}"></span>{/each}
+			<span class="truncate">{value}</span>
+		</button>
+		<button
+			type="button"
+			class="flex h-full w-6 shrink-0 items-center justify-center border-l border-base-100 text-base-400 transition-colors hover:bg-base-100 hover:text-base-700 dark:border-base-850 dark:hover:bg-base-800 dark:hover:text-base-200"
+			aria-label={$i18n.t('Remove filter')}
+			on:click={onClear}><XMark className="size-3" /></button
+		>
+	</div>
+{/snippet}
 
 <!-- LICENSE covers this Open WebUI browser-title identifier.
 	Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -434,7 +623,7 @@
 
 <FilesOverlay show={dragged} />
 
-<div id="notes-container" class="w-full min-h-full h-full">
+<div id="notes-container" bind:this={containerElement} class="w-full min-h-full h-full">
 	{#if loaded && items !== null && total !== null}
 		<input
 			id="notes-import-input"
@@ -502,14 +691,17 @@
 					<FileNavIcon name="search" size={14} class="shrink-0" />
 					<input
 						class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-500"
+						bind:this={searchInputElement}
 						bind:value={query}
 						on:input={handleSearchInput}
 						on:keydown={(event) => {
-							if (event.key === 'Escape' && query) {
+							if (event.key !== 'Escape') return;
+							if (query) {
 								query = '';
 								handleSearchInput();
-							}
+							} else searchInputElement.blur();
 						}}
+						title={`${$i18n.t('Search Notes')}  /`}
 						placeholder={$i18n.t('Search Notes')}
 						aria-label={$i18n.t('Search Notes')}
 					/>
@@ -529,12 +721,12 @@
 				</label>
 
 				<div class="flex shrink-0 items-center gap-1">
-					<Dropdown align="end">
+					<Dropdown bind:this={filterDropdown} align="end">
 						<button
 							type="button"
 							class="{iconButton} {filterCount ? 'text-base-800 dark:text-base-100' : ''}"
 							aria-label={$i18n.t('Filter')}
-							title={$i18n.t('Filter')}
+							title={`${$i18n.t('Filter')}  F`}
 						>
 							<svg
 								class="size-3.75"
@@ -545,11 +737,6 @@
 								stroke-linecap="round"
 								aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" /></svg
 							>
-							{#if filterCount}
-								<span
-									class="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-base-800 dark:bg-base-100"
-								></span>
-							{/if}
 						</button>
 
 						<DropdownMenu slot="content" className="w-48">
@@ -582,15 +769,74 @@
 								{/each}
 							{/if}
 
+							<hr class="border-base-50/30 dark:border-base-800/30" />
+							<DropdownSub
+								contentClass="select-none z-50 max-h-80 overflow-y-auto"
+								maxWidth={320}
+								sideOffset={6}
+							>
+								<button
+									slot="trigger"
+									type="button"
+									class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
+								>
+									<span class="text-base-500 dark:text-base-400"
+										><TagIcon className="size-3.5" strokeWidth="1.5" /></span
+									>
+									<span class="min-w-0 flex-1 truncate text-left">{$i18n.t('Tags')}</span>
+									{#if selectedTags.length}<span class="text-xs tabular-nums text-base-400"
+											>{selectedTags.length}</span
+										>{/if}
+									<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
+								</button>
+
+								{#if tagOptions.length > 8}
+									<div class="flex h-[1.6875rem] items-center gap-2 px-2">
+										<FileNavIcon
+											name="search"
+											size={12}
+											class="shrink-0 text-base-400 dark:text-base-500"
+										/>
+										<input
+											class="min-w-0 flex-1 bg-transparent text-[0.8125rem] outline-none placeholder:text-base-400 dark:placeholder:text-base-500"
+											aria-label={$i18n.t('Find tags')}
+											placeholder={$i18n.t('Find tags…')}
+											bind:value={tagQuery}
+										/>
+									</div>
+								{/if}
+								{#each tagFilterOptions as tag (tag.id)}
+									<button
+										type="button"
+										role="menuitemcheckbox"
+										aria-checked={selectedTags.includes(tag.id)}
+										on:click={() => toggleTag(tag.id)}
+									>
+										<span class="flex size-3.5 shrink-0 items-center justify-center"
+											><span
+												class="size-2 rounded-full {tag.id === UNTAGGED
+													? 'border border-dashed border-base-400 dark:border-base-500'
+													: tagDot(tag)}"
+											></span></span
+										>
+										<span class="min-w-0 flex-1 truncate text-left" title={tag.name}
+											>{tag.name}</span
+										>
+										{#if tag.count != null}<span class="shrink-0 text-xs tabular-nums text-base-400"
+												>{tag.count}</span
+											>{/if}
+										{#if selectedTags.includes(tag.id)}<Check className="size-3! shrink-0" />{/if}
+									</button>
+								{:else}
+									<div class="px-2 py-1.5 text-xs text-base-400 dark:text-base-500">
+										{$i18n.t('No results')}
+									</div>
+								{/each}
+							</DropdownSub>
+
 							{#if filterCount}
 								<hr class="border-base-50/30 dark:border-base-800/30" />
-								<button
-									type="button"
-									on:click={() => {
-										setViewOption(null);
-										permission = null;
-									}}
-								>
+								<button type="button" on:click={() => clearFilters(false)}>
 									<XMark className="size-3.5" />{$i18n.t('Clear filters')}
 								</button>
 							{/if}
@@ -690,11 +936,68 @@
 				</div>
 			</div>
 
+			{#if filterCount}
+				<div class="flex flex-wrap items-center gap-1 px-1 pb-0.5">
+					<!-- i18n:parse cannot see keys passed in as variables; these already live in the filter menu above. -->
+					{#if viewOption}
+						{@render chip(
+							$i18n.t('Show'),
+							$i18n.t(viewOption === 'created' ? 'Created by you' : 'Shared with you'),
+							() => setViewOption(null)
+						)}
+					{/if}
+					{#if permission}
+						{@render chip($i18n.t('Access'), $i18n.t('Read Only'), () => (permission = null))}
+					{/if}
+					{#if selectedTags.length}
+						{@const picked = selectedTags.map(
+							(id) =>
+								tagOptions.find((tag) => tag.id === id) ?? {
+									id,
+									name: id === UNTAGGED ? $i18n.t('Untagged') : id.replaceAll('_', ' ')
+								}
+						)}
+						{@render chip(
+							$i18n.t('Tags'),
+							picked.length > 2
+								? $i18n.t('{{count}} selected', { count: picked.length })
+								: picked.map((tag) => tag.name).join(', '),
+							() => (selectedTags = []),
+							picked
+								.slice(0, 3)
+								.map((tag) =>
+									tag.id === UNTAGGED ? 'border border-dashed border-base-400' : tagDot(tag)
+								)
+						)}
+					{/if}
+					<button
+						type="button"
+						class="flex size-5 items-center justify-center rounded-full text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
+						aria-label={$i18n.t('Clear filters')}
+						title={$i18n.t('Clear filters')}
+						on:click={() => clearFilters(false)}><XMark className="size-3" /></button
+					>
+				</div>
+			{/if}
+
+			{#if error}
+				<div
+					role="alert"
+					class="mx-1 flex items-center justify-between gap-3 rounded-xl bg-red-50/60 px-3 py-2 text-xs text-red-600 dark:bg-red-500/5 dark:text-red-400"
+				>
+					<span class="min-w-0 truncate">{error}</span>
+					<button type="button" class="shrink-0 underline" on:click={() => getItemsPage(true)}
+						>{$i18n.t('Retry')}</button
+					>
+				</div>
+			{/if}
+
 			{#if items !== null && total !== null}
 				{#if (items ?? []).length > 0}
 					{@const groupedNotes = groupNotes(items)}
 
-					<div class="@container h-full my-1">
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div class="@container h-full my-1" on:keydown={navigate}>
 						<div>
 							{#if displayOption === null}
 								<div
@@ -717,75 +1020,94 @@
 										</button>
 									</div>
 
-									<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
-										<div class="hidden w-44 shrink-0 md:block"></div>
-										<div class="size-5 shrink-0"></div>
-										<button
-											class="flex w-24 shrink-0 items-center justify-end gap-1 py-0.5 text-right"
-											type="button"
-											on:click={() => setSortKey('updated_at')}
-										>
-											{$i18n.t('Updated at')}
-											{#if sortKey === 'updated_at'}
-												{#if sortDirection === 'asc'}
-													<ChevronUp className="size-2" />
-												{:else}
-													<ChevronDown className="size-2" />
-												{/if}
+									<button
+										class="flex shrink-0 items-center justify-end gap-1 py-0.5 text-right"
+										type="button"
+										on:click={() => setSortKey('updated_at')}
+									>
+										{$i18n.t('Updated at')}
+										{#if sortKey === 'updated_at'}
+											{#if sortDirection === 'asc'}
+												<ChevronUp className="size-2" />
+											{:else}
+												<ChevronDown className="size-2" />
 											{/if}
-										</button>
-									</div>
+										{/if}
+									</button>
 								</div>
 							{/if}
 
-							{#each groupedNotes as [timeRange, notesList], idx}
+							{#each groupedNotes as [timeRange, notesList], idx (timeRange)}
 								<div class="w-full px-2 pb-1 text-xs text-base-500 dark:text-base-500">
 									{$i18n.t(timeRange)}
 								</div>
 
 								{#if displayOption === null}
-									<div
-										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} gap-y-0.5 flex flex-col"
+									<ul
+										class="{groupedNotes.length - 1 !== idx ? 'mb-3' : ''} flex flex-col gap-y-0.5"
+										aria-label={$i18n.t(timeRange)}
 									>
 										<!-- Preserve the former row label for i18n extraction: $i18n.t('Open note') -->
-										{#each notesList as note, idx (note.id)}
-											<div
-												class="group flex min-h-8 w-full items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-900 dark:focus-within:bg-base-900"
-												role="presentation"
-												draggable="true"
+										{#each notesList as note (note.id)}
+											{@const snippet = query ? searchSnippet(note, query) : ''}
+											<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-noninteractive-element-interactions -->
+											<li
+												data-note-item
+												class="group flex min-h-8 w-full cursor-pointer items-center gap-2 rounded-xl px-2 py-[0.375rem] text-left transition hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-900 dark:focus-within:bg-base-900"
+												draggable={renaming !== note.id}
 												on:dragstart={(e) => noteDragStartHandler(e, note)}
-												on:click={(e) => {
-													if (e.target instanceof Element && e.target.closest('a')) return;
-													goto(noteUrl(note));
-												}}
+												on:click={(e) => openNote(e, note)}
 											>
 												<div class="flex min-w-0 flex-1 items-center gap-2">
-													<Tooltip content={note.title} className="min-w-0" placement="top-start">
-														<a
-															href={noteUrl(note)}
-															dir="auto"
-															class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
-														>
-															{note.title}
-														</a>
-													</Tooltip>
+													{#if renaming === note.id}
+														<input
+															data-rename-input
+															class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-base-0"
+															aria-label={$i18n.t('Rename')}
+															bind:value={renameValue}
+															on:blur={() => saveRename(note)}
+															on:keydown={(event) => {
+																if (event.isComposing || event.keyCode === 229) return;
+																if (event.key === 'Enter') {
+																	event.preventDefault();
+																	saveRename(note);
+																} else if (event.key === 'Escape') {
+																	event.preventDefault();
+																	renaming = '';
+																}
+															}}
+														/>
+													{:else}
+														<Tooltip content={note.title} className="min-w-0" placement="top-start">
+															<a
+																data-row-link
+																href={noteUrl(note)}
+																dir="auto"
+																class="focus-ring block h-[1.25rem] truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
+															>
+																{note.title}
+															</a>
+														</Tooltip>
 
-													<Tooltip
-														content={dayjs(note.updated_at / 1000000)
-															.locale($i18n.language)
-															.format('LLLL')}
-													>
-														<div
-															class="shrink-0 truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
-														>
-															{dayjs(note.updated_at / 1000000)
-																.locale($i18n.language)
-																.fromNow()}
-														</div>
-													</Tooltip>
+														{#if snippet}
+															<span
+																dir="auto"
+																class="hidden min-w-0 flex-1 truncate text-xs text-base-400 @lg:block dark:text-base-500"
+																>{snippet}</span
+															>
+														{/if}
+													{/if}
 												</div>
 
-												<div class="ml-2 flex shrink-0 items-center justify-end gap-2">
+												<div class="ml-2 flex shrink-0 items-center justify-end gap-3">
+													<div class="hidden @md:flex">
+														<FolderTags
+															resourceType="notes"
+															chat={note}
+															editable={permission !== 'read_only'}
+															onChange={tagsChanged}
+														/>
+													</div>
 													<div
 														class="hidden max-w-44 shrink-0 truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
 													>
@@ -810,89 +1132,120 @@
 														</Tooltip>
 													</div>
 
-													{#if shiftKey}
-														<Tooltip content={$i18n.t('Delete')}>
-															<button
-																class="flex {($settings?.highContrastMode ?? false)
-																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
-																type="button"
-																aria-label={$i18n.t('Delete')}
-																on:click={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	deleteNoteHandler(note.id);
-																}}
-															>
-																<GarbageBin className="size-3.5" />
-															</button>
-														</Tooltip>
-													{:else}
-														<NoteMenu
-															onAccess={(note.user_id === $user?.id &&
-																$user?.permissions?.sharing?.notes) ||
-															$user?.role === 'admin'
-																? () => accessModal.open(note.id)
-																: null}
-															show={openNoteMenuId === note.id}
-															onDownload={(type) => {
-																selectedNote = note;
-
-																downloadHandler(type);
-															}}
-															onCopyLink={async () => {
-																const baseUrl = window.location.origin;
-																const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
-
-																if (res) {
-																	toast.success($i18n.t('Copied link to clipboard'));
-																} else {
-																	toast.error($i18n.t('Failed to copy link'));
-																}
-															}}
-															onDelete={() => {
-																selectedNote = note;
-																showDeleteConfirm = true;
-															}}
-															isPinned={$pinnedNotes.some((n) => n.id === note.id)}
-															onPin={async () => {
-																await toggleNotePinnedStatusById(localStorage.token, note.id);
-																pinnedNotes.set(
-																	await getPinnedNoteList(localStorage.token).catch(() => [])
-																);
-																init();
-															}}
-															onChange={(state) => {
-																openNoteMenuId = state ? note.id : null;
-															}}
+													<!-- The menu takes the date's place on hover, so nothing shifts. -->
+													<div
+														class="date-slot relative flex w-14 shrink-0 items-center justify-end"
+														class:open={shiftKey || openNoteMenuId === note.id}
+													>
+														<Tooltip
+															as="span"
+															className="row-date flex shrink-0"
+															placement="top-end"
+															content={formatDateDetails(
+																note.updated_at / 1000000000,
+																$i18n.language
+															)}
 														>
-															<button
-																class="flex {($settings?.highContrastMode ?? false)
-																	? 'size-6'
-																	: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
-																type="button"
-																aria-label={$i18n.t('Note Menu')}
-																on:click={(e) => {
-																	e.preventDefault();
-																	e.stopPropagation();
-																	openNoteMenuId = openNoteMenuId === note.id ? null : note.id;
-																}}
+															<time
+																class="w-14 text-right text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
+																datetime={new Date(note.updated_at / 1000000).toISOString()}
+																>{formatShortDate(
+																	note.updated_at / 1000000000,
+																	$i18n.language
+																)}</time
 															>
-																<EllipsisHorizontal className="size-3.5" />
-															</button>
-														</NoteMenu>
-													{/if}
+														</Tooltip>
+
+														<div class="note-menu absolute inset-y-0 right-0 flex items-center">
+															{#if shiftKey}
+																<Tooltip content={$i18n.t('Delete')}>
+																	<button
+																		class="flex {($settings?.highContrastMode ?? false)
+																			? 'size-6'
+																			: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
+																		type="button"
+																		aria-label={$i18n.t('Delete')}
+																		on:click={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			deleteNoteHandler(note.id);
+																		}}
+																	>
+																		<GarbageBin className="size-3.5" />
+																	</button>
+																</Tooltip>
+															{:else}
+																<NoteMenu
+																	onAccess={(note.user_id === $user?.id &&
+																		$user?.permissions?.sharing?.notes) ||
+																	$user?.role === 'admin'
+																		? () => accessModal.open(note.id)
+																		: null}
+																	show={openNoteMenuId === note.id}
+																	onRename={permission === 'read_only'
+																		? null
+																		: () => startRename(note)}
+																	onDownload={(type) => {
+																		selectedNote = note;
+
+																		downloadHandler(type);
+																	}}
+																	onCopyLink={async () => {
+																		const baseUrl = window.location.origin;
+																		const res = await copyToClipboard(
+																			`${baseUrl}/notes/${note.id}`
+																		);
+
+																		if (res) {
+																			toast.success($i18n.t('Copied link to clipboard'));
+																		} else {
+																			toast.error($i18n.t('Failed to copy link'));
+																		}
+																	}}
+																	onDelete={() => {
+																		selectedNote = note;
+																		showDeleteConfirm = true;
+																	}}
+																	isPinned={$pinnedNotes.some((n) => n.id === note.id)}
+																	onPin={async () => {
+																		await toggleNotePinnedStatusById(localStorage.token, note.id);
+																		pinnedNotes.set(
+																			await getPinnedNoteList(localStorage.token).catch(() => [])
+																		);
+																	}}
+																	onChange={(state) => {
+																		openNoteMenuId = state ? note.id : null;
+																	}}
+																>
+																	<button
+																		class="flex {($settings?.highContrastMode ?? false)
+																			? 'size-6'
+																			: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
+																		type="button"
+																		aria-label={$i18n.t('Note Menu')}
+																		on:click={(e) => {
+																			e.preventDefault();
+																			e.stopPropagation();
+																			openNoteMenuId = openNoteMenuId === note.id ? null : note.id;
+																		}}
+																	>
+																		<EllipsisHorizontal className="size-3.5" />
+																	</button>
+																</NoteMenu>
+															{/if}
+														</div>
+													</div>
 												</div>
-											</div>
+											</li>
 										{/each}
-									</div>
+									</ul>
 								{:else if displayOption === 'grid'}
 									<div
 										class="{groupedNotes.length - 1 !== idx
 											? 'mb-3'
 											: ''} grid grid-cols-[repeat(auto-fill,minmax(min(104px,100%),1fr))] gap-1.5 p-2"
 									>
-										{#each notesList as note, idx (note.id)}
+										{#each notesList as note (note.id)}
 											<div class="group relative min-w-0 self-start rounded-xl">
 												<a
 													href={noteUrl(note)}
@@ -1005,7 +1358,6 @@
 															pinnedNotes.set(
 																await getPinnedNoteList(localStorage.token).catch(() => [])
 															);
-															init();
 														}}
 														onChange={(state) => {
 															openNoteMenuId = state ? note.id : null;
@@ -1047,16 +1399,31 @@
 							{/if}
 						</div>
 					</div>
-				{:else}
+				{:else if itemsLoading}
+					<div class="w-full h-full flex justify-center items-center py-10">
+						<Spinner className="size-4" />
+					</div>
+				{:else if !error}
+					{@const filtered = Boolean(query || filterCount)}
 					<div class="flex min-h-[calc(100dvh-13rem)] w-full flex-col items-center justify-center">
 						<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 							<div class="mb-1.5 text-sm">
-								{$i18n.t('No Notes')}
+								{filtered ? $i18n.t('No notes found') : $i18n.t('No Notes')}
 							</div>
 
 							<div class="text-xs leading-5 text-base-500">
-								{$i18n.t('Create your first note from the + menu.')}
+								{filtered
+									? $i18n.t('Try a different search or remove a filter.')
+									: $i18n.t('Create your first note from the + menu.')}
 							</div>
+
+							{#if filtered}
+								<button
+									type="button"
+									class="mt-2 text-xs text-base-400 transition-colors hover:text-base-600 dark:text-base-500 dark:hover:text-base-300"
+									on:click={clearFilters}>{$i18n.t('Clear filters')}</button
+								>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -1072,3 +1439,28 @@
 		</div>
 	{/if}
 </div>
+
+<style>
+	/* The menu replaces the date on hover, focus, or while open; touch shows the menu. */
+	@media (hover: hover) {
+		.date-slot:not(.open) .note-menu {
+			opacity: 0;
+			pointer-events: none;
+		}
+		:global([data-note-item]:hover) .date-slot .note-menu,
+		:global([data-note-item]:focus-within) .date-slot .note-menu {
+			opacity: 1;
+			pointer-events: auto;
+		}
+		.date-slot.open :global(.row-date),
+		:global([data-note-item]:hover) .date-slot :global(.row-date),
+		:global([data-note-item]:focus-within) .date-slot :global(.row-date) {
+			opacity: 0;
+		}
+	}
+	@media (hover: none) {
+		.date-slot :global(.row-date) {
+			opacity: 0;
+		}
+	}
+</style>

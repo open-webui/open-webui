@@ -167,11 +167,16 @@ export function quoteMarks(node: HTMLElement, options: QuoteMarkOptions) {
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	let hovered: number | null = null;
 	let revealed = false;
+	let revealedQuotes: string[] | null = null;
 
-	const observer = new MutationObserver(() => {
+	const redraw = () => {
 		if (timer) clearTimeout(timer);
 		timer = setTimeout(draw, 200);
-	});
+	};
+	const observer = new MutationObserver(redraw);
+	// A centred page moves when its pane is resized, with nothing inside it changing
+	const resizeObserver = new ResizeObserver(redraw);
+	resizeObserver.observe(node);
 	const observe = () =>
 		observer.observe(node, {
 			subtree: true,
@@ -205,9 +210,21 @@ export function quoteMarks(node: HTMLElement, options: QuoteMarkOptions) {
 				zIndex: '3'
 			});
 			scroller.prepend(layer);
-			for (const { i, range } of ranges) markRange(layer, layer, range, String(i));
+			// Text already marked by an earlier quote is not marked again, so no mark looks darker
+			const drawn: Range[] = [];
+			for (const { i, range } of ranges) {
+				const overlaps = drawn.some(
+					(other) =>
+						range.compareBoundaryPoints(Range.END_TO_START, other) < 0 &&
+						range.compareBoundaryPoints(Range.START_TO_END, other) > 0
+				);
+				if (overlaps) continue;
+				drawn.push(range);
+				markRange(layer, layer, range, String(i));
+			}
 			if (!revealed && layer.firstElementChild) {
 				revealed = true;
+				revealedQuotes = options.quotes;
 				layer.firstElementChild.scrollIntoView({ block: 'center' });
 			}
 		}
@@ -231,11 +248,13 @@ export function quoteMarks(node: HTMLElement, options: QuoteMarkOptions) {
 			const changed = next.quotes !== options.quotes;
 			options = next;
 			if (!changed) return;
-			revealed = false;
+			// Marks switched back on stay where the reader is; only new quotes scroll into view
+			if (next.quotes.length && next.quotes !== revealedQuotes) revealed = false;
 			draw();
 		},
 		destroy() {
 			observer.disconnect();
+			resizeObserver.disconnect();
 			if (timer) clearTimeout(timer);
 			node.removeEventListener('mousemove', hover);
 			node.removeEventListener('mouseleave', leave);

@@ -9,6 +9,7 @@
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	// A cited upload, shown at its cited page. PDFs also mark the cited text.
 	let fileId = '';
@@ -87,14 +88,21 @@
 		};
 	};
 	onDestroy(keepQuoteText);
+	// The marks can be put away to read the page undisturbed
+	let showQuotes = true;
+	const NO_QUOTES: string[] = [];
+	$: shownQuotes = showQuotes ? fileQuotes : NO_QUOTES;
+	$: if (!showQuotes) hoveredText = null;
 	let fileSource: any = null;
 	$: if ($embed?.file !== fileSource) {
 		fileSource = $embed?.file ?? null;
 		filePage = fileSource?.page ?? null;
 		// The cited passages are marked on the pages they appear on
-		const quotes = (fileSource?.passages ?? []).flatMap((passage) =>
-			quoteLines(passage.text ?? '').map((quote) => ({ quote, passage }))
-		);
+		// Overlapping passages share lines; each line is marked once
+		const seen = new Set<string>();
+		const quotes = (fileSource?.passages ?? [])
+			.flatMap((passage) => quoteLines(passage.text ?? '').map((quote) => ({ quote, passage })))
+			.filter(({ quote }) => !seen.has(quote) && seen.add(quote));
 		fileQuotes = quotes.map(({ quote }) => quote);
 		fileQuoteTexts = quotes.map(({ passage }) => passage);
 		hoveredText = null;
@@ -170,16 +178,50 @@
 						<PdfPagesPreview
 							data={fileData}
 							targetPage={filePage}
-							highlightQuotes={fileQuotes}
+							highlightQuotes={shownQuotes}
 							onQuoteHover={showQuoteText}
 							className="w-full h-full"
-						/>
+						>
+							<svelte:fragment slot="toolbar">
+								{#if fileQuotes.length}
+									<Tooltip
+										content={showQuotes ? $i18n.t('Hide highlights') : $i18n.t('Show highlights')}
+									>
+										<button
+											type="button"
+											class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md transition {showQuotes
+												? 'bg-base-100 text-base-900 dark:bg-base-800 dark:text-base-0'
+												: 'text-base-500 hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800'}"
+											aria-label={showQuotes
+												? $i18n.t('Hide highlights')
+												: $i18n.t('Show highlights')}
+											aria-pressed={showQuotes}
+											on:click={() => (showQuotes = !showQuotes)}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												class="size-3.5"
+											>
+												<path d="m9 11-6 6v3h9l3-3" />
+												<path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
+							</svelte:fragment>
+						</PdfPagesPreview>
 					{/key}
 				{:else if fileDocxData || fileOfficeSlides || excelWorkbook}
 					<!-- Previews drawn as real text get the cited passages marked too -->
 					<div
 						class="flex h-full min-h-0 flex-col"
-						use:quoteMarks={{ quotes: fileQuotes, onHover: showQuoteText }}
+						use:quoteMarks={{ quotes: shownQuotes, onHover: showQuoteText }}
 					>
 						<FilePreview
 							selectedFile={fileName}
@@ -192,7 +234,41 @@
 							targetPage={filePage}
 							target={null}
 							readOnly={true}
-						/>
+						>
+							<svelte:fragment slot="toolbar">
+								{#if fileQuotes.length}
+									<Tooltip
+										content={showQuotes ? $i18n.t('Hide highlights') : $i18n.t('Show highlights')}
+									>
+										<button
+											type="button"
+											class="shrink-0 min-w-7 h-7 inline-flex items-center justify-center p-1.5 rounded-md transition {showQuotes
+												? 'bg-base-100 text-base-900 dark:bg-base-800 dark:text-base-0'
+												: 'text-base-500 hover:bg-base-100 dark:text-base-400 dark:hover:bg-base-800'}"
+											aria-label={showQuotes
+												? $i18n.t('Hide highlights')
+												: $i18n.t('Show highlights')}
+											aria-pressed={showQuotes}
+											on:click={() => (showQuotes = !showQuotes)}
+										>
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="1.75"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												class="size-3.5"
+											>
+												<path d="m9 11-6 6v3h9l3-3" />
+												<path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
+											</svg>
+										</button>
+									</Tooltip>
+								{/if}
+							</svelte:fragment>
+						</FilePreview>
 					</div>
 				{:else}
 					<div

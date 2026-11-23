@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from open_webui.config import (
     BYPASS_ADMIN_ACCESS_CONTROL,
     ENABLE_ADMIN_CHAT_ACCESS,
@@ -29,6 +29,7 @@ from open_webui.models.notes import (
     matching_page,
     normalize_pages,
 )
+from open_webui.models.tags import TagModel, Tags
 from open_webui.models.users import UserModel, UserResponse, Users
 from open_webui.socket.main import close_changed_note_documents, leave_room_for_users, sio
 from open_webui.utils.access_control import (
@@ -38,7 +39,7 @@ from open_webui.utils.access_control import (
 )
 from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -187,10 +188,14 @@ async def search_notes(
     order_by: Optional[str] = None,
     direction: Optional[str] = None,
     page: Optional[int] = 1,
+    tag_ids: list[str] = Query(default=[]),
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_notes_access(user, db=db)
+
+    if len(tag_ids) > 50:
+        raise HTTPException(status_code=422, detail='Too many filters')
 
     limit = None
     skip = None
@@ -201,6 +206,8 @@ async def search_notes(
     filter = {}
     if query:
         filter['query'] = query
+    if tag_ids:
+        filter['tag_ids'] = tag_ids
     if view_option:
         filter['view_option'] = view_option
     if permission:
@@ -223,6 +230,139 @@ async def search_notes(
         note.is_pinned = note.id in pinned_note_ids
         note.data = _truncate_note_data(note.data, query=query or '')
     return result
+
+
+# Note Tags
+
+
+@router.get('/tags', response_model=list[dict])
+async def get_note_tag_counts(
+    permission: Optional[str] = None,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Tags on the notes the list shows, with note counts, for its tag filter."""
+    await check_notes_access(user, db=db)
+
+    filter = {}
+    if not user.role == 'admin' or not BYPASS_ADMIN_ACCESS_CONTROL:
+        groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        if groups:
+            filter['group_ids'] = [group.id for group in groups]
+
+        filter['user_id'] = user.id
+
+    return await Notes.get_tag_counts(filter, permission=permission or 'write', db=db)
+
+
+class NoteTagForm(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+
+
+class NoteTagColorForm(NoteTagForm):
+    # A palette name chosen by the frontend, e.g. 'blue'; the server only stores it.
+    color: str = Field(min_length=1, max_length=32, pattern=r'^[a-z][a-z0-9-]*$')
+
+
+async def get_note_with_tag_access(id: str, user, db: AsyncSession):
+    """The note whose tags this user may change: anyone who can edit it.
+
+    Tags are the note owner's records, so an editor's change is made in the owner's tags.
+    """
+    await check_notes_access(user, db=db)
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='write',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+    return note
+
+
+@router.get('/{id}/tags', response_model=list[TagModel])
+async def get_note_tags_by_id(
+    id: str,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_notes_access(user, db=db)
+
+    note = await Notes.get_note_by_id(id, db=db)
+    if not note:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    if user.role != 'admin' and (
+        user.id != note.user_id
+        and not await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='note',
+            resource_id=note.id,
+            permission='read',
+            db=db,
+        )
+    ):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
+
+    return await Notes.get_note_tags_by_id(id, db=db)
+
+
+@router.post('/{id}/tags', response_model=list[TagModel])
+async def add_note_tag_by_id(
+    id: str,
+    form_data: NoteTagForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await get_note_with_tag_access(id, user, db)
+
+    # 'none' is how filters name untagged notes.
+    if form_data.name.replace(' ', '_').lower() == 'none':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Tag name cannot be "None"')
+        )
+
+    await Notes.add_note_tag_by_id(id, form_data.name, db=db)
+    return await Notes.get_note_tags_by_id(id, db=db)
+
+
+@router.delete('/{id}/tags', response_model=list[TagModel])
+async def delete_note_tag_by_id(
+    id: str,
+    form_data: NoteTagForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await get_note_with_tag_access(id, user, db)
+
+    await Notes.delete_note_tag_by_id(id, form_data.name, db=db)
+    return await Notes.get_note_tags_by_id(id, db=db)
+
+
+@router.patch('/{id}/tags', response_model=list[TagModel])
+async def update_note_tag_color(
+    id: str,
+    form_data: NoteTagColorForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    note = await get_note_with_tag_access(id, user, db)
+
+    tag_id = form_data.name.replace(' ', '_').lower()
+    if tag_id not in (note.meta or {}).get('tags', []):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, note.user_id, form_data.color, db=db):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
+    return await Notes.get_note_tags_by_id(id, db=db)
 
 
 # Create New Note

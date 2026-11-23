@@ -9,16 +9,28 @@
 		getTagsById,
 		updateTagColorById
 	} from '$lib/apis/chats';
+	import {
+		addNoteTagById,
+		deleteNoteTagById,
+		getNoteTagsById,
+		updateNoteTagColorById
+	} from '$lib/apis/notes';
 	import { colorDot, tagColor, tagColors, tagDot, type FolderTag } from '$lib/utils/tags';
 	import Check from '$lib/components/icons/Check.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	/** Search, toggle, create and recolor a chat's tags. Render it inside a menu. */
-	export let chatId: string;
-	/** The chat's tags; null fetches them when the picker opens. */
+	/** Search, toggle, create and recolor a chat's or note's tags. Render it inside a menu. */
+	export let resourceType: 'chats' | 'notes' = 'chats';
+	export let id: string;
+	/** The current tags; null fetches them when the picker opens. */
 	export let assigned: FolderTag[] | null = null;
+
+	const loaders = { chats: getTagsById, notes: getNoteTagsById };
+	const adders = { chats: addTagById, notes: addNoteTagById };
+	const removers = { chats: deleteTagById, notes: deleteNoteTagById };
+	const colorers = { chats: updateTagColorById, notes: updateNoteTagColorById };
 	export let onChange: (assigned: FolderTag[]) => Promise<void> | void = () => {};
 
 	let query = '';
@@ -64,8 +76,8 @@
 	const toggle = (tag: FolderTag) =>
 		mutate(() =>
 			isAssigned(tag)
-				? deleteTagById(localStorage.token, chatId, tag.name)
-				: addTagById(localStorage.token, chatId, tag.name)
+				? removers[resourceType](localStorage.token, id, tag.name)
+				: adders[resourceType](localStorage.token, id, tag.name)
 		);
 
 	onMount(async () => {
@@ -73,7 +85,7 @@
 		try {
 			const [all, mine] = await Promise.all([
 				getAllTags(localStorage.token),
-				assigned ? Promise.resolve(assigned) : getTagsById(localStorage.token, chatId)
+				assigned ? Promise.resolve(assigned) : loaders[resourceType](localStorage.token, id)
 			]);
 			$userTags = all;
 			assigned = mine ?? [];
@@ -88,7 +100,7 @@
 		const exact = options.find((tag) => tag.name.toLowerCase() === needle);
 		if (exact) void toggle(exact);
 		else if (canCreate)
-			void mutate(() => addTagById(localStorage.token, chatId, query.trim()), true);
+			void mutate(() => adders[resourceType](localStorage.token, id, query.trim()), true);
 	}}
 >
 	<input
@@ -161,7 +173,7 @@
 						class="flex size-5 items-center justify-center rounded-md hover:bg-base-50 dark:hover:bg-base-800"
 						disabled={busy}
 						on:click={() =>
-							mutate(() => updateTagColorById(localStorage.token, chatId, tag.name, color))}
+							mutate(() => colorers[resourceType](localStorage.token, id, tag.name, color))}
 					>
 						<span
 							class="size-2 rounded-full {colorDot(color)} {tagColor(tag) === color
@@ -179,7 +191,8 @@
 			type="button"
 			class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
 			disabled={busy}
-			on:click={() => mutate(() => addTagById(localStorage.token, chatId, query.trim()), true)}
+			on:click={() =>
+				mutate(() => adders[resourceType](localStorage.token, id, query.trim()), true)}
 		>
 			<Plus className="size-3 text-base-400" />
 			<span class="min-w-0 truncate">{$i18n.t('Create “{{name}}”', { name: query.trim() })}</span>

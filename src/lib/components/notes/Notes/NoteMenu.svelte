@@ -16,6 +16,7 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Bold from '$lib/components/icons/Bold.svelte';
+	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -24,6 +25,7 @@
 
 	export let onDownload = (type) => {};
 	export let onAccess: (() => void) | null = null;
+	export let onRename: (() => void) | null = null;
 	export let onDelete = () => {};
 	export let onPin = null;
 	export let isPinned = false;
@@ -58,6 +60,17 @@
 				>
 					<LockClosed className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Access')}</div>
+				</button>
+			{/if}
+
+			{#if onRename}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					on:click={() => onRename?.()}
+				>
+					<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Rename')}</div>
 				</button>
 			{/if}
 

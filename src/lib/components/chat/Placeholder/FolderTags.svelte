@@ -11,8 +11,11 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
-	export let chat: WorkspaceChat;
+	export let chat: Pick<WorkspaceChat, 'id' | 'title' | 'tags'>;
 	export let max = 2;
+	/** A notes list passes its notes here; it has no folder to say who may edit. */
+	export let resourceType: 'chats' | 'notes' = 'chats';
+	export let editable: boolean | null = null;
 	export let onChange: () => Promise<void> = async () => {};
 
 	let show = false;
@@ -41,7 +44,7 @@
 	{/if}
 {/snippet}
 
-{#if $canEdit?.(chat)}
+{#if editable ?? $canEdit?.(chat as WorkspaceChat)}
 	<Dropdown bind:show align="end">
 		<button
 			type="button"
@@ -62,7 +65,8 @@
 
 		<DropdownMenu slot="content" className="w-52 text-base-700 dark:text-base-200">
 			<TagPicker
-				chatId={chat.id}
+				{resourceType}
+				id={chat.id}
 				{assigned}
 				onChange={async (next) => {
 					assigned = next;
@@ -82,7 +86,9 @@
 		}
 		.tag-add.open,
 		:global([data-folder-item]:hover) .tag-add,
-		:global([data-folder-item]:focus-within) .tag-add {
+		:global([data-folder-item]:focus-within) .tag-add,
+		:global([data-note-item]:hover) .tag-add,
+		:global([data-note-item]:focus-within) .tag-add {
 			opacity: 1;
 		}
 	}

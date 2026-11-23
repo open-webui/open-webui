@@ -105,10 +105,26 @@ class TagTable:
             await db.commit()
             return True
 
+    async def get_tag_ids_used_by_notes(self, ids: list[str], user_id: str, db: AsyncSession) -> set[str]:
+        """The *ids* one of this user's notes still carries.
+
+        Chats drop a tag's row once no chat uses it; notes share those rows, so they
+        are checked here, where every deletion ends up.
+        """
+        # Imported here: notes pull in far more models than tags should.
+        from open_webui.models.notes import Note
+
+        if not ids:
+            return set()
+        metas = (await db.execute(select(Note.meta).filter_by(user_id=user_id))).scalars().all()
+        return {tag_id for meta in metas for tag_id in (meta or {}).get('tags') or []} & set(ids)
+
     async def delete_tag_by_name_and_user_id(self, name: str, user_id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as db:
                 id = name.replace(' ', '_').lower()
+                if await self.get_tag_ids_used_by_notes([id], user_id, db):
+                    return False
                 result = await db.execute(delete(Tag).filter_by(id=id, user_id=user_id))
                 log.debug('res: %s', result.rowcount)
                 await db.commit()
@@ -125,6 +141,10 @@ class TagTable:
             return True
         try:
             async with get_async_db_context(db) as db:
+                kept = await self.get_tag_ids_used_by_notes(ids, user_id, db)
+                ids = [tag_id for tag_id in ids if tag_id not in kept]
+                if not ids:
+                    return True
                 await db.execute(delete(Tag).filter(Tag.id.in_(ids), Tag.user_id == user_id))
                 await db.commit()
                 return True

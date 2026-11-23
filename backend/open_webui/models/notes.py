@@ -13,10 +13,25 @@ from open_webui.models.comments import delete_resource_comments
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.models.access_grants import AccessGrantModel, AccessGrants
 from open_webui.models.groups import Groups
+from open_webui.models.tags import Tag, TagModel, Tags
 from open_webui.models.users import User, UserModel, UserResponse
 from open_webui.utils.json_codec import JSONCodec
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import JSON, BigInteger, Column, ForeignKey, Text, cast, delete, func, or_, select, update
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Column,
+    ForeignKey,
+    Text,
+    bindparam,
+    cast,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -494,6 +509,8 @@ class NoteUpdateForm(BaseModel):
 
 class NoteUserResponse(NoteModel):
     user: Optional[UserResponse] = None
+    # The note's tags as list rows show them: id, name and color.
+    tags: list[dict] = Field(default_factory=list)
 
 
 class NoteItemResponse(BaseModel):
@@ -611,6 +628,23 @@ class NoteTable:
                             )
                         )
 
+                # 'none' means untagged, as in a folder's chat list.
+                tag_ids = set(filter.get('tag_ids') or [])
+                if tag_ids:
+                    if (await db.connection()).dialect.name == 'sqlite':
+                        tags = "json_each(CASE WHEN json_type(note.meta, '$.tags') = 'array' THEN json_extract(note.meta, '$.tags') ELSE '[]' END)"
+                    else:
+                        tags = "json_array_elements_text(CASE WHEN json_typeof(note.meta->'tags') = 'array' THEN note.meta->'tags' ELSE '[]'::json END)"
+                    named = sorted(tag_ids - {'none'})
+                    matches = [text(f'NOT EXISTS (SELECT 1 FROM {tags} tag)')] if 'none' in tag_ids else []
+                    if named:
+                        matches.append(
+                            text(f'EXISTS (SELECT 1 FROM {tags} tag WHERE tag.value IN :note_tag_ids)').bindparams(
+                                bindparam('note_tag_ids', named, expanding=True)
+                            )
+                        )
+                    stmt = stmt.filter(or_(*matches))
+
                 view_option = filter.get('view_option')
                 if view_option == 'created':
                     stmt = stmt.filter(Note.user_id == user_id)
@@ -668,6 +702,7 @@ class NoteTable:
 
             note_ids = [note.id for note, _ in items]
             grants_map = await AccessGrants.get_grants_by_resources('note', note_ids, db=db)
+            labels = await self._get_tag_labels([(note.user_id, note.meta) for note, _ in items], db)
 
             notes = []
             for note, user in items:
@@ -681,6 +716,10 @@ class NoteTable:
                             )
                         ).model_dump(),
                         user=(UserResponse(**UserModel.model_validate(user).model_dump()) if user else None),
+                        tags=[
+                            self._tag_item(tag_id, labels.get((note.user_id, tag_id)))
+                            for tag_id in dict.fromkeys((note.meta or {}).get('tags') or [])
+                        ],
                     )
                 )
 
@@ -848,6 +887,82 @@ class NoteTable:
                 return True
         except Exception:
             return False
+
+    # Tags live in meta.tags as ids, like a chat's, and are the note owner's records:
+    # the same names and colors as on that user's chats.
+
+    @staticmethod
+    def _tag_item(tag_id: str, tag: Optional[Tag]) -> dict:
+        return {
+            'id': tag_id,
+            'name': tag.name if tag else tag_id.replace('_', ' '),
+            # The palette and default color live in the frontend.
+            'color': (tag.meta or {}).get('color') if tag else None,
+        }
+
+    async def _get_tag_labels(self, notes: list[tuple[str, Optional[dict]]], db: AsyncSession) -> dict:
+        """Tag rows by (owner id, tag id) for (owner id, meta) pairs."""
+        tag_ids = {tag_id for _, meta in notes for tag_id in (meta or {}).get('tags') or []}
+        if not tag_ids:
+            return {}
+        owners = {owner_id for owner_id, _ in notes}
+        result = await db.execute(select(Tag).where(Tag.user_id.in_(owners), Tag.id.in_(tag_ids)))
+        return {(tag.user_id, tag.id): tag for tag in result.scalars().all()}
+
+    async def get_note_tags_by_id(self, id: str, db: Optional[AsyncSession] = None) -> list[TagModel]:
+        async with get_async_db_context(db) as db:
+            row = (await db.execute(select(Note.user_id, Note.meta).filter_by(id=id))).one_or_none()
+            if row is None:
+                return []
+            return await Tags.get_tags_by_ids_and_user_id((row[1] or {}).get('tags') or [], row[0], db=db)
+
+    async def add_note_tag_by_id(self, id: str, tag_name: str, db: Optional[AsyncSession] = None) -> None:
+        """Add one tag to a note. updated_at stays put, so tagging doesn't reorder lists."""
+        async with get_async_db_context(db) as db:
+            row = (await db.execute(select(Note.user_id, Note.meta).filter_by(id=id))).one_or_none()
+            if row is None:
+                return
+            owner_id, meta = row[0], row[1] or {}
+            tags = meta.get('tags') or []
+            tag_id = tag_name.replace(' ', '_').lower()
+            await Tags.ensure_tags_exist([tag_name], owner_id, db=db)
+            if tag_id not in tags:
+                await db.execute(update(Note).filter_by(id=id).values(meta={**meta, 'tags': [*tags, tag_id]}))
+                await db.commit()
+
+    async def delete_note_tag_by_id(self, id: str, tag_name: str, db: Optional[AsyncSession] = None) -> None:
+        async with get_async_db_context(db) as db:
+            row = (await db.execute(select(Note.meta).filter_by(id=id))).one_or_none()
+            if row is None:
+                return
+            meta = row[0] or {}
+            tag_id = tag_name.replace(' ', '_').lower()
+            tags = [tag for tag in meta.get('tags') or [] if tag != tag_id]
+            await db.execute(update(Note).filter_by(id=id).values(meta={**meta, 'tags': tags}))
+            await db.commit()
+
+    async def get_tag_counts(
+        self, filter: dict, permission: str = 'write', db: Optional[AsyncSession] = None
+    ) -> list[dict]:
+        """Tags on the notes a list shows, with how many notes carry each, for its tag filter."""
+        async with get_async_db_context(db) as db:
+            stmt = self._has_permission(db, select(Note.user_id, Note.meta), filter, permission=permission)
+            notes = [(owner_id, meta) for owner_id, meta in (await db.execute(stmt)).all()]
+            labels = await self._get_tag_labels(notes, db)
+
+            counts: dict[str, int] = {}
+            owners: dict[str, str] = {}
+            for owner_id, meta in notes:
+                for tag_id in dict.fromkeys((meta or {}).get('tags') or []):
+                    counts[tag_id] = counts.get(tag_id, 0) + 1
+                    owners.setdefault(tag_id, owner_id)
+            return sorted(
+                (
+                    {**self._tag_item(tag_id, labels.get((owners[tag_id], tag_id))), 'count': count}
+                    for tag_id, count in counts.items()
+                ),
+                key=lambda item: item['name'].lower(),
+            )
 
     async def get_pinned_note_ids(self, user_id: str, db: Optional[AsyncSession] = None) -> list[str]:
         async with get_async_db_context(db) as db:

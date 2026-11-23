@@ -567,7 +567,7 @@
 							<ChevronRight className="size-3.5 shrink-0 text-base-400 rtl:rotate-180" />
 						</button>
 						<TagPicker
-							chatId={chat.id}
+							id={chat.id}
 							onChange={(next) => {
 								if (chat?.meta) chat.meta.tags = next.map((tag) => tag.id);
 							}}

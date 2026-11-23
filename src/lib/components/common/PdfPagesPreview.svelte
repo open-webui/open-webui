@@ -215,7 +215,9 @@
 				{onQuoteHover}
 				{onAnchors}
 				className="w-full h-full"
-			/>
+			>
+				<slot name="toolbar" slot="toolbar" />
+			</PDFViewer>
 		{:else}
 			<div class="flex h-full items-center justify-center">
 				<Spinner className="size-5" />

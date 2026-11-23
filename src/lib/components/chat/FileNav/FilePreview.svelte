@@ -344,7 +344,9 @@
 	{:else if fileSqliteData !== null}
 		<SqliteView data={fileSqliteData} />
 	{:else if fileDocxData !== null}
-		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full" />
+		<DocxPreview data={fileDocxData} {targetPage} className="w-full h-full">
+			<slot name="toolbar" slot="toolbar" />
+		</DocxPreview>
 	{:else if excelWorkbook !== null}
 		<ExcelPreview workbook={excelWorkbook} bind:selectedSheet={selectedExcelSheet} />
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}

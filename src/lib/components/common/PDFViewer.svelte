@@ -922,6 +922,7 @@
 					/>
 				</svg>
 			</button>
+			<slot name="toolbar" />
 		</div>
 	{/if}
 </div>
