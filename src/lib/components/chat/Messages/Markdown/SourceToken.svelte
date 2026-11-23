@@ -10,6 +10,27 @@
 
 	let containerElement;
 	let openPreview = false;
+	let buttonElement: HTMLButtonElement;
+	let contentElement: HTMLDivElement;
+
+	const handleKeydown = (e: KeyboardEvent) => {
+		if (e.key === 'Escape' && openPreview) {
+			openPreview = false;
+			buttonElement.focus();
+		} else if (e.key === 'Tab' && openPreview) {
+			const buttons = [buttonElement, ...contentElement.querySelectorAll('button')];
+			const targetButton =
+				buttons[buttons.indexOf(e.target as HTMLButtonElement) + (e.shiftKey ? -1 : 1)];
+			if (targetButton) {
+				e.preventDefault();
+				targetButton.focus();
+			} else {
+				openPreview = false;
+				// Let Tab continue from the marker
+				buttonElement.focus();
+			}
+		}
+	};
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -48,11 +69,13 @@
 		<LinkPreview.Root openDelay={0} bind:open={openPreview}>
 			<LinkPreview.Trigger>
 				<button
+					bind:this={buttonElement}
 					aria-label={`${getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))} +${(token?.ids ?? []).length - 1} more sources`}
 					class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-base-0/5 dark:text-base-0/80 dark:hover:text-base-0 bg-base-50 text-base-1000/80 hover:text-base-1000 transition rounded-xl"
 					on:click={() => {
 						openPreview = !openPreview;
 					}}
+					on:keydown={handleKeydown}
 				>
 					<span class="line-clamp-1">
 						{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
@@ -61,8 +84,17 @@
 				</button>
 			</LinkPreview.Trigger>
 			<LinkPreview.Portal>
-				<LinkPreview.Content class="z-[999]" align="start" strategy="fixed" sideOffset={6}>
-					<div class="bg-base-50 dark:bg-base-850 rounded-xl p-1 cursor-pointer">
+				<LinkPreview.Content
+					class="z-[999]"
+					align="start"
+					strategy="fixed"
+					sideOffset={6}
+					onkeydown={handleKeydown}
+				>
+					<div
+						bind:this={contentElement}
+						class="bg-base-50 dark:bg-base-850 rounded-xl p-1 cursor-pointer"
+					>
 						{#each token.citationIdentifiers ?? token.ids as identifier}
 							{@const id =
 								typeof identifier === 'string' ? parseInt(identifier.split('#')[0]) : identifier}
