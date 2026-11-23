@@ -3,6 +3,7 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFileContentById } from '$lib/apis/files';
 	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
+	import { getPassagePreview } from '$lib/utils/citations';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import PdfPagesPreview from '$lib/components/common/PdfPagesPreview.svelte';
@@ -10,6 +11,7 @@
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import RelevanceBadge from '$lib/components/chat/Messages/Citations/RelevanceBadge.svelte';
 
 	// A cited upload, shown at its cited page. PDFs also mark the cited text.
 	let fileId = '';
@@ -131,10 +133,11 @@
 	let filePage: number | null = null;
 	let fileQuotes: string[] = [];
 	// Hovering a mark shows the retrieved passage it came from.
-	let fileQuoteTexts: { text: string; page: number | null }[] = [];
+	let fileQuoteTexts: { text: string; page: number | null; distance?: number }[] = [];
 	let hoveredText: {
 		text: string;
 		page: number | null;
+		distance?: number;
 		left: number;
 		top: number;
 		above: boolean;
@@ -169,6 +172,12 @@
 	const NO_QUOTES: string[] = [];
 	$: shownQuotes = showQuotes ? fileQuotes : NO_QUOTES;
 	$: if (!showQuotes) hoveredText = null;
+	// Best first when every passage has a relevance, as the citation dialog lists them
+	const rankPassages = <T extends { distance?: number }>(passages: T[]) =>
+		passages.every((passage) => passage.distance !== undefined)
+			? [...passages].sort((a, b) => b.distance! - a.distance!)
+			: passages;
+	$: rankedPassages = rankPassages(embed?.file?.passages ?? []);
 	let fileSource: any = null;
 	$: if (embed?.file !== fileSource) {
 		fileSource = embed?.file ?? null;
@@ -247,6 +256,26 @@
 						{embed?.title ?? 'Embedded Content'}
 					</a>
 				</div>
+			</div>
+		{:else if rankedPassages.some((passage) => passage.distance !== undefined)}
+			<div
+				class="flex shrink-0 items-center gap-x-3 overflow-x-auto scrollbar-thin px-3 pb-1 text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
+			>
+				<span class="shrink-0">{$i18n.t('Relevance')}</span>
+				{#each rankedPassages as passage}
+					<Tooltip
+						className="flex shrink-0 items-center gap-1.5"
+						content={getPassagePreview(passage.text, false)}
+					>
+						{#if passage.page}
+							<span>{$i18n.t('Page')} {passage.page}</span>
+						{/if}
+						<RelevanceBadge
+							distance={passage.distance}
+							showPercentage={embed.file.showPercentage}
+						/>
+					</Tooltip>
+				{/each}
 			</div>
 		{/if}
 
@@ -386,6 +415,7 @@
 					</div>
 				{/if}
 				{#if hoveredText}
+					{@const hasLabel = hoveredText.page || hoveredText.distance !== undefined}
 					<!-- Styled as the file and chat hover previews are -->
 					<div
 						role="tooltip"
@@ -397,17 +427,22 @@
 						on:mouseleave={() => closeQuoteText(150)}
 					>
 						<!-- Labelled as the comment popover on a file is: one quiet line above the text -->
-						{#if hoveredText.page}
+						{#if hasLabel}
 							<div
-								class="shrink-0 px-3 pt-2 text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
+								class="shrink-0 flex items-center gap-1.5 px-3 pt-2 text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
 							>
-								{$i18n.t('Page')}
-								{hoveredText.page}
+								{#if hoveredText.page}
+									<span>{$i18n.t('Page')} {hoveredText.page}</span>
+								{/if}
+								<RelevanceBadge
+									distance={hoveredText.distance}
+									showPercentage={embed.file.showPercentage}
+								/>
 							</div>
 						{/if}
 						<!-- Everything at the small preview size, headings and tables included -->
 						<div
-							class="markdown-prose-xs min-h-0 min-w-full max-w-full flex-1 overflow-auto scrollbar-thin px-3 pb-2 {hoveredText.page
+							class="markdown-prose-xs min-h-0 min-w-full max-w-full flex-1 overflow-auto scrollbar-thin px-3 pb-2 {hasLabel
 								? 'pt-1'
 								: 'pt-2'} !leading-snug text-base-800 dark:text-base-200 [&_*]:!text-xs [&_*]:!leading-snug [&_:is(h1,h2,h3,h4,h5,h6)]:!my-1 [&_:is(h1,h2,h3,h4,h5,h6)]:!font-medium [&_:is(td,th)]:!px-1.5 [&_:is(td,th)]:!py-0.5 [&_:is(td,th)]:!text-[0.6875rem] [&_strong]:!font-medium"
 						>

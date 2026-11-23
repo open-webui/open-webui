@@ -51,14 +51,20 @@
 					file: {
 						id: metadata.file_id,
 						page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
-						// The cited passages of this file, each with its page
+						// The cited passages of this file, each with its page and relevance
 						passages: (citations[index].document ?? [])
-							.map((text, i) => ({ text, metadata: citations[index].metadata?.[i] }))
-							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
-							.map(({ text, metadata }) => ({
+							.map((text, i) => ({
 								text,
-								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null
+								metadata: citations[index].metadata?.[i],
+								distance: showRelevance ? citations[index].distances?.[i] : undefined
 							}))
+							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
+							.map(({ text, metadata, distance }) => ({
+								text,
+								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
+								distance
+							})),
+						showPercentage
 					},
 					title: fileName,
 					chatId: chatId

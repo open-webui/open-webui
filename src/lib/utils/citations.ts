@@ -61,7 +61,7 @@ export const getCitations = (sources: any[] | null | undefined) => {
 
 const PASSAGE_PREVIEW_LIMIT = 400;
 
-const getPassagePreview = (passage: string, isHtml: boolean): string => {
+export const getPassagePreview = (passage: string, isHtml: boolean): string => {
 	let text = passage ?? '';
 	if (isHtml) {
 		const body = new DOMParser().parseFromString(text, 'text/html').body;
