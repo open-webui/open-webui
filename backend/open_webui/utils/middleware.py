@@ -3893,7 +3893,7 @@ async def background_tasks_handler(ctx):
 
                         try:
                             tags = JSONCodec.loads(tags_string).get('tags', [])
-                            await Chats.update_chat_tags_by_id(metadata['chat_id'], tags, user)
+                            await Chats.update_chat_tags_by_id(metadata['chat_id'], tags)
 
                             await event_emitter(
                                 {

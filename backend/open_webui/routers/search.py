@@ -16,6 +16,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.messages import Message
 from open_webui.models.notes import Note, PinnedNote, matching_page
 from open_webui.models.shared_chats import SharedChat
+from open_webui.models.tags import resource_tag_filter
 from open_webui.models.users import User
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_verified_user
@@ -306,18 +307,8 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         if folder_names:
             matched_folders = await Folders.search_folders_by_names(user.id, folder_names, db=db)
             stmt = stmt.where(Chat.folder_id.in_([folder.id for folder in matched_folders]))
-        tags, tag = (
-            ("json_each(chat.meta, '$.tags') AS tag", 'tag.value')
-            if dialect == 'sqlite'
-            else ("json_array_elements_text(chat.meta->'tags') AS tag", 'tag')
-        )
-        for index, tag_id in enumerate(tag_ids):
-            key = f'tag_{index}'
-            stmt = stmt.where(
-                text(f'NOT EXISTS (SELECT 1 FROM {tags})')
-                if tag_id == 'none'
-                else text(f'EXISTS (SELECT 1 FROM {tags} WHERE {tag} = :{key})').bindparams(**{key: tag_id})
-            )
+        for tag_id in tag_ids:
+            stmt = stmt.where(resource_tag_filter('chat', Chat.id, [tag_id]))
         sources['chat'] = (Chat, apply_match(stmt, Chat), rank, Chat.updated_at)
         if not scope and sharing != 'mine' and not chat_filtered:
             stmt = select(SharedChat).where(

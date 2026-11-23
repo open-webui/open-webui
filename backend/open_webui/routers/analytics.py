@@ -9,6 +9,7 @@ from open_webui.models.chat_messages import ChatMessageModel, ChatMessages
 from open_webui.models.chats import Chats
 from open_webui.models.feedbacks import Feedbacks
 from open_webui.models.groups import Groups
+from open_webui.models.tags import Tags
 from open_webui.models.users import Users
 from open_webui.utils.auth import get_admin_user
 from pydantic import BaseModel
@@ -432,14 +433,9 @@ async def get_model_overview(
     # Get chat tags
     tag_counts: dict[str, int] = defaultdict(int)
     if chat_ids:
-        chat_metas = await Chats.get_chat_metas_by_chat_ids(
-            chat_ids,
-            include_archived=True,
-            db=db,
-        )
-        for meta in chat_metas:
-            for tag in meta.get('tags', []):
-                tag_counts[tag] += 1
+        for tags in (await Tags.get_tags_by_resources('chat', list(chat_ids), db=db)).values():
+            for tag in tags:
+                tag_counts[tag['id']] += 1
 
     # Sort by count and take top 10
     tags = [TagEntry(tag=tag, count=count) for tag, count in sorted(tag_counts.items(), key=lambda x: -x[1])[:10]]

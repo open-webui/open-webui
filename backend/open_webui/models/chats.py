@@ -20,7 +20,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.automations import AutomationRun
 from open_webui.models.chat_messages import ChatMessage, ChatMessages
 from open_webui.models.folders import Folders
-from open_webui.models.tags import Tag, TagModel, Tags
+from open_webui.models.tags import Tags, delete_resource_tags, get_tag_id, resource_tag_filter
 from open_webui.tasks import has_active_tasks
 from open_webui.utils.misc import get_output_text, sanitize_data_for_db, sanitize_text_for_db
 from open_webui.utils.session_records import has_pending_tool_approval
@@ -819,7 +819,8 @@ class ChatTable:
                 'user_id': user_id,
                 'title': self._clean_null_bytes(form_data.chat['title'] if 'title' in form_data.chat else 'New Chat'),
                 'chat': self._clean_null_bytes(form_data.chat),
-                'meta': form_data.meta,
+                # Tags are stored as links, see import_chats.
+                'meta': {key: value for key, value in (form_data.meta or {}).items() if key != 'tags'},
                 'variables': form_data.variables or {},
                 'pinned': form_data.pinned,
                 'archived': form_data.archived,
@@ -873,6 +874,13 @@ class ChatTable:
 
             session.add_all(chats)
             await session.commit()
+
+            tags = {}
+            for form_data, imported_chat in zip(chat_import_forms, chats):
+                names = (form_data.meta or {}).get('tags')
+                if isinstance(names, list):
+                    tags[imported_chat.id] = [get_tag_id(name) for name in names if isinstance(name, str)]
+            await Tags.add_tags_to_resources('chat', tags, user_id)
 
             # Dual-write messages to chat_message table
             for form_data, imported_chat in zip(chat_import_forms, chats):
@@ -1087,31 +1095,12 @@ class ChatTable:
         except Exception:
             return None
 
-    async def update_chat_tags_by_id(self, id: str, tags: list[str], user) -> None:
-        """Replace a chat's tags. Runs after every completion with tag
-        generation enabled, so only the meta column is read and written,
-        never the chat blob."""
+    async def update_chat_tags_by_id(self, id: str, tags: list[str]) -> None:
+        """Replace a chat's tags. Runs after every completion with tag generation enabled."""
         async with get_async_db_context() as session:
-            row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
-            if row is None:
-                return None
-
-            meta = row[0] or {}
-            old_tags = meta.get('tags', [])
-            new_tags = [t for t in tags if t.replace(' ', '_').lower() != 'none']
-            new_tag_ids = [t.replace(' ', '_').lower() for t in new_tags]
-
-            # Single meta update
-            await session.execute(update(Chat).filter_by(id=id).values(meta={**meta, 'tags': new_tag_ids}))
-            await session.commit()
-
-            # Batch-create any missing tag rows
-            await Tags.ensure_tags_exist(new_tags, user.id, db=session)
-
-            # Clean up orphaned old tags
-            removed = set(old_tags) - set(new_tag_ids)
-            if removed:
-                await self.delete_orphan_tags_for_user(list(removed), user.id, db=session)
+            owner_id = (await session.execute(select(Chat.user_id).filter_by(id=id))).scalar_one_or_none()
+        if owner_id is not None:
+            await Tags.set_resource_tags('chat', id, tags, owner_id)
 
     async def get_chat_title_by_id(self, id: str) -> str | None:
         async with get_async_db_context() as session:
@@ -2457,66 +2446,16 @@ class ChatTable:
                 else:
                     stmt = stmt.filter(exact_match_clause)
 
-            if dialect_name == 'sqlite':
-                # Check if there are any tags to filter
-                if 'none' in tag_ids:
-                    stmt = stmt.filter(
-                        text("""
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_each(Chat.meta, '$.tags') AS tag
-                            )
-                            """)
-                    )
-                elif tag_ids:
-                    stmt = stmt.filter(
-                        and_(
-                            *[
-                                text(f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_each(Chat.meta, '$.tags') AS tag
-                                        WHERE tag.value = :tag_id_{tag_idx}
-                                    )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
+            # Every tag must match, unless 'none' asks for untagged chats.
+            for tag_id in ['none'] if 'none' in tag_ids else tag_ids:
+                stmt = stmt.filter(resource_tag_filter('chat', Chat.id, [tag_id]))
 
-            elif dialect_name == 'postgresql':
+            if dialect_name == 'postgresql':
                 # Safety filter: JSON field must not contain \u0000
                 stmt = stmt.filter(text("Chat.chat::text NOT LIKE '%\\\\u0000%'"))
 
                 # Safety filter: title must not contain actual null bytes
                 stmt = stmt.filter(text("Chat.title::text NOT LIKE '%\\x00%'"))
-
-                if 'none' in tag_ids:
-                    stmt = stmt.filter(
-                        text("""
-                            NOT EXISTS (
-                                SELECT 1
-                                FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                            )
-                            """)
-                    )
-                elif tag_ids:
-                    stmt = stmt.filter(
-                        and_(
-                            *[
-                                text(f"""
-                                    EXISTS (
-                                        SELECT 1
-                                        FROM json_array_elements_text(Chat.meta->'tags') AS tag
-                                        WHERE tag = :tag_id_{tag_idx}
-                                    )
-                                    """).params(**{f'tag_id_{tag_idx}': tag_id})
-                                for tag_idx, tag_id in enumerate(tag_ids)
-                            ]
-                        )
-                    )
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
 
             if exact_match_clause is not None:
                 stmt = stmt.order_by(case((exact_match_clause, 0), else_=1), Chat.updated_at.desc(), Chat.id)
@@ -2732,21 +2671,8 @@ class ChatTable:
             )
 
         # 'none' means untagged, as in the sidebar search's tag:none.
-        tag_ids = set(tag_ids or [])
         if tag_ids:
-            if dialect_name == 'sqlite':
-                tags = "json_each(CASE WHEN json_type(chat.meta, '$.tags') = 'array' THEN json_extract(chat.meta, '$.tags') ELSE '[]' END)"
-            else:
-                tags = "json_array_elements_text(CASE WHEN json_typeof(chat.meta->'tags') = 'array' THEN chat.meta->'tags' ELSE '[]'::json END)"
-            named = sorted(tag_ids - {'none'})
-            matches = [text(f'NOT EXISTS (SELECT 1 FROM {tags} tag)')] if 'none' in tag_ids else []
-            if named:
-                matches.append(
-                    text(f'EXISTS (SELECT 1 FROM {tags} tag WHERE tag.value IN :folder_tag_ids)').bindparams(
-                        bindparam('folder_tag_ids', named, expanding=True)
-                    )
-                )
-            conditions.append(or_(*matches))
+            conditions.append(resource_tag_filter('chat', Chat.id, tag_ids))
 
         # 'not_started' was the default status's earlier name.
         status_ids = {NO_FOLDER_STATUS if value == 'not_started' else value for value in status_ids or []}
@@ -2882,18 +2808,7 @@ class ChatTable:
                 .all()
             )
 
-            tag_ids = {tag_id for row in rows for tag_id in (row['meta'] or {}).get('tags', [])}
-            owners = {row['user_id'] for row in rows}
-            labels = (
-                {
-                    (tag.user_id, tag.id): tag
-                    for tag in (await session.execute(select(Tag).where(Tag.user_id.in_(owners), Tag.id.in_(tag_ids))))
-                    .scalars()
-                    .all()
-                }
-                if tag_ids
-                else {}
-            )
+            tags = await Tags.get_tags_by_resources('chat', [row['id'] for row in rows], db=session)
 
             bodies = {}
             if chat_search_content_query(search) and rows:
@@ -2910,17 +2825,7 @@ class ChatTable:
         for row in rows:
             chat = dict(row)
             meta = chat.pop('meta') or {}
-            chat['tags'] = []
-            for tag_id in dict.fromkeys(meta.get('tags', [])):
-                tag = labels.get((chat['user_id'], tag_id))
-                chat['tags'].append(
-                    {
-                        'id': tag_id,
-                        'name': tag.name if tag else tag_id.replace('_', ' '),
-                        # The palette and default color live in the frontend.
-                        'color': (tag.meta or {}).get('color') if tag else None,
-                    }
-                )
+            chat['tags'] = tags.get(chat['id'], [])
             status = meta.get('folder_status')
             chat['status'] = status if status in valid_status_ids else None
             chat['status_since'] = folder_status_since(meta, chat['status'])
@@ -2964,26 +2869,12 @@ class ChatTable:
 
     async def get_tag_counts_by_folder_id(self, folder_id: str, db: AsyncSession | None = None) -> list[dict]:
         """Tags used in a folder with chat counts, aggregated in SQL without loading chats."""
-        async with get_async_db_context(db) as session:
-            dialect_name = (await session.connection()).dialect.name
-            if dialect_name == 'sqlite':
-                source = "json_each(chat.meta, '$.tags')"
-                internal = "COALESCE(json_extract(chat.meta, '$.internal'), 0) != 1"
-                color = "json_extract(label.meta, '$.color')"
-            else:
-                source = "json_array_elements_text(chat.meta->'tags')"
-                internal = "COALESCE((chat.meta->>'internal')::boolean, false) = false"
-                color = "label.meta->>'color'"
-            query = text(f"""
-                SELECT tag.value AS id, MIN(COALESCE(label.name, tag.value)) AS name,
-                    MIN({color}) AS color, COUNT(DISTINCT chat.id) AS count
-                FROM chat CROSS JOIN {source} tag
-                LEFT JOIN tag label ON label.id = tag.value AND label.user_id = chat.user_id
-                WHERE chat.folder_id = :folder_id AND chat.archived = false AND {internal}
-                GROUP BY tag.value ORDER BY name
-            """)
-            result = await session.execute(query, {'folder_id': folder_id})
-            return [dict(row) for row in result.mappings()]
+        chat_ids = select(Chat.id).where(
+            Chat.folder_id == folder_id,
+            Chat.archived.is_(False),
+            Chat.meta['internal'].as_boolean().is_not(True),
+        )
+        return await Tags.get_tag_counts('chat', chat_ids, db=db)
 
     async def update_chat_folder_status_by_id(
         self, id: str, folder_id: str, user_id: str | None, status: str | None, db: AsyncSession | None = None
@@ -3103,16 +2994,6 @@ class ChatTable:
         except Exception:
             return None
 
-    async def get_chat_tags_by_id_and_user_id(
-        self, id: str, user_id: str, db: AsyncSession | None = None
-    ) -> list[TagModel]:
-        async with get_async_db_context(db) as session:
-            stmt = select(Chat.meta).where(Chat.id == id)
-            result = await session.execute(stmt)
-            meta = result.scalar_one_or_none()
-            tag_ids = (meta or {}).get('tags', [])
-            return await Tags.get_tags_by_ids_and_user_id(tag_ids, user_id, db=session)
-
     async def get_chat_list_by_user_id_and_tag_name(
         self,
         user_id: str,
@@ -3126,22 +3007,7 @@ class ChatTable:
                 user_id=user_id
             )
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
-            tag_id = tag_name.replace(' ', '_').lower()
-
-            bind = await session.connection()
-            dialect_name = bind.dialect.name
-            log.info('DB dialect name: %s', dialect_name)
-            if dialect_name == 'sqlite':
-                stmt = stmt.filter(
-                    text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :tag_id)")
-                ).params(tag_id=tag_id)
-            elif dialect_name == 'postgresql':
-                stmt = stmt.filter(
-                    text("EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :tag_id)")
-                ).params(tag_id=tag_id)
-            else:
-                raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
-
+            stmt = stmt.filter(resource_tag_filter('chat', Chat.id, [get_tag_id(tag_name)]))
             stmt = stmt.order_by(Chat.updated_at.desc(), Chat.id)
 
             if skip:
@@ -3163,91 +3029,6 @@ class ChatTable:
                 )
                 for chat in all_chats
             ]
-
-    async def add_chat_tag_by_id_and_user_id_and_tag_name(
-        self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
-    ) -> None:
-        """Add one tag to a chat's meta. Meta-column-only, never the blob."""
-        tag_id = tag_name.replace(' ', '_').lower()
-        await Tags.ensure_tags_exist([tag_name], user_id, db=db)
-        try:
-            async with get_async_db_context(db) as session:
-                row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
-                if row is None:
-                    return None
-
-                meta = row[0] or {}
-                if tag_id not in meta.get('tags', []):
-                    await session.execute(
-                        update(Chat)
-                        .filter_by(id=id)
-                        .values(meta={**meta, 'tags': list(set(meta.get('tags', []) + [tag_id]))})
-                    )
-                    await session.commit()
-        except Exception:
-            return None
-
-    async def count_chats_by_tag_name_and_user_id(
-        self, tag_name: str, user_id: str, db: AsyncSession | None = None
-    ) -> int:
-        tag_id = tag_name.replace(' ', '_').lower()
-        counts = await self.count_chats_by_tag_ids_and_user_id([tag_id], user_id, db=db)
-        return counts.get(tag_id, 0)
-
-    async def count_chats_by_tag_ids_and_user_id(
-        self, tag_ids: list[str], user_id: str, db: AsyncSession | None = None
-    ) -> dict[str, int]:
-        """Per-tag chat counts in one round trip (one scalar subquery per tag)."""
-        if not tag_ids:
-            return {}
-        async with get_async_db_context(db) as session:
-            bind = await session.connection()
-            dialect_name = bind.dialect.name
-
-            columns = []
-            for index, tag_id in enumerate(tag_ids):
-                tag_id = tag_id.replace(' ', '_').lower()
-                stmt = select(func.count(Chat.id)).filter_by(user_id=user_id)
-                stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
-                param = f'tag_id_{index}'
-                if dialect_name == 'sqlite':
-                    stmt = stmt.filter(
-                        text(f"EXISTS (SELECT 1 FROM json_each(Chat.meta, '$.tags') WHERE json_each.value = :{param})")
-                    ).params(**{param: tag_id})
-                elif dialect_name == 'postgresql':
-                    stmt = stmt.filter(
-                        text(
-                            f"EXISTS (SELECT 1 FROM json_array_elements_text(Chat.meta->'tags') elem WHERE elem = :{param})"
-                        )
-                    ).params(**{param: tag_id})
-                else:
-                    raise NotImplementedError(f'Unsupported dialect: {dialect_name}')
-                columns.append(stmt.scalar_subquery().label(f'count_{index}'))
-
-            row = (await session.execute(select(*columns))).one()
-            return dict(zip(tag_ids, row))
-
-    async def delete_orphan_tags_for_user(
-        self,
-        tag_ids: list[str],
-        user_id: str,
-        threshold: int = 0,
-        db: AsyncSession | None = None,
-    ) -> None:
-        """Delete tag rows from *tag_ids* that appear in at most *threshold*
-        chats for *user_id*.  One query to find orphans, one to
-        delete them.
-
-        Use threshold=0 after a tag is already removed from a chat's meta.
-        Use threshold=1 when the chat itself is about to be deleted (the
-        referencing chat still exists at query time).
-        """
-        if not tag_ids:
-            return
-        async with get_async_db_context(db) as session:
-            counts = await self.count_chats_by_tag_ids_and_user_id(tag_ids, user_id, db=session)
-            orphans = [tag_id for tag_id in tag_ids if counts.get(tag_id, 0) <= threshold]
-            await Tags.delete_tags_by_ids_and_user_id(orphans, user_id, db=session)
 
     async def count_chats_by_folder_id_and_user_id(
         self, folder_id: str, user_id: str, db: AsyncSession | None = None
@@ -3274,32 +3055,13 @@ class ChatTable:
             log.info("Count of chats for folders '%s': %s", folder_ids, count)
             return count
 
-    async def delete_tag_by_id_and_user_id_and_tag_name(
-        self, id: str, user_id: str, tag_name: str, db: AsyncSession | None = None
-    ) -> bool:
-        try:
-            async with get_async_db_context(db) as session:
-                row = (await session.execute(select(Chat.meta).filter_by(id=id))).one_or_none()
-                if row is None:
-                    return False
-
-                meta = row[0]
-                tags = meta.get('tags', [])
-                tag_id = tag_name.replace(' ', '_').lower()
-
-                tags = [tag for tag in tags if tag != tag_id]
-                await session.execute(update(Chat).filter_by(id=id).values(meta={**meta, 'tags': list(set(tags))}))
-                await session.commit()
-                return True
-        except Exception:
-            return False
-
     async def delete_chat_by_id(self, id: str, db: AsyncSession | None = None) -> bool:
         try:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
                 await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 recipients = await delete_resource_comments('chat', select(Chat.id).filter_by(id=id), db=session)
+                await delete_resource_tags('chat', select(Chat.id).filter_by(id=id), session)
                 await session.execute(
                     delete(ChatViewState).where(ChatViewState.chat_id.in_(select(Chat.id).filter_by(id=id)))
                 )
@@ -3319,6 +3081,7 @@ class ChatTable:
                 recipients = await delete_resource_comments(
                     'chat', select(Chat.id).filter_by(id=id, user_id=user_id), db=session
                 )
+                await delete_resource_tags('chat', select(Chat.id).filter_by(id=id, user_id=user_id), session)
                 await session.execute(
                     delete(ChatViewState).where(
                         ChatViewState.chat_id.in_(select(Chat.id).filter_by(id=id, user_id=user_id))
@@ -3349,6 +3112,7 @@ class ChatTable:
                 recipients = await delete_resource_comments(
                     'chat', select(Chat.id).filter_by(user_id=user_id), db=session
                 )
+                await delete_resource_tags('chat', select(Chat.id).filter_by(user_id=user_id), session)
                 await session.execute(
                     delete(ChatViewState).where(ChatViewState.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
@@ -3373,6 +3137,7 @@ class ChatTable:
                 )
                 await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
                 recipients = await delete_resource_comments('chat', chat_ids_stmt, db=session)
+                await delete_resource_tags('chat', chat_ids_stmt, session)
                 await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
                 recipients.update(
                     await delete_resource_comments(

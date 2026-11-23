@@ -1613,7 +1613,13 @@ ${content}
 									? ''
 									: 'bg-linear-to-t from-base-0 from-40% to-transparent pt-8 dark:from-base-900'}"
 							>
-								<div class="flex justify-center">
+								{#if noteChatExpanded}
+									<!-- The fade stays at the composer's height, so text beside the open chat stays readable. -->
+									<div
+										class="absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-base-0 from-40% to-transparent dark:from-base-900"
+									></div>
+								{/if}
+								<div class="relative flex justify-center">
 									<!-- Side padding lives on the column so the composer keeps its box in both states. -->
 									<div
 										class="pointer-events-auto flex w-full max-w-3xl flex-col rounded-t-3xl border border-b-0 {noteChatExpanded

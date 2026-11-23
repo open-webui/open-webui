@@ -38,7 +38,7 @@ from open_webui.models.chats import (
 from open_webui.models.config import Config
 from open_webui.models.folders import Folders
 from open_webui.models.shared_chats import ChatShareMode, ShareChatForm, SharedChatResponse, SharedChats
-from open_webui.models.tags import TagModel, Tags
+from open_webui.models.tags import TagModel, Tags, get_tag_id
 from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_emitter
 from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
@@ -158,10 +158,26 @@ async def can_read_shared_chat(user, shared, db: AsyncSession) -> bool:
     )
 
 
+async def chat_responses(chats, db=None) -> list[ChatResponse]:
+    """Full chats as the API returns them, with their tag ids in meta.tags."""
+    tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in chats], db=db)
+    responses = []
+    for chat in chats:
+        response = ChatResponse.model_validate(chat, from_attributes=True)
+        if chat.id in tags:
+            response.meta = {**response.meta, 'tags': [tag['id'] for tag in tags[chat.id]]}
+        responses.append(response)
+    return responses
+
+
+async def chat_response(chat, db=None) -> ChatResponse:
+    return (await chat_responses([chat], db=db))[0]
+
+
 async def shared_chat_response(chat, user=None, db=None):
     from open_webui.models.users import Users
 
-    data = ChatResponse.model_validate(chat, from_attributes=True).model_dump()
+    data = (await chat_response(chat, db=db)).model_dump()
     if user is None or chat.user_id != user.id:
         data['variables'] = {}
         for key in ('params', 'tool_servers', 'tool_ids', 'filter_ids', 'variables'):
@@ -413,6 +429,7 @@ async def get_session_user_chat_usage_stats(
 
         chats = result.items
         total = result.total
+        tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in chats], db=db)
 
         chat_stats = []
         for chat in chats:
@@ -487,7 +504,7 @@ async def get_session_user_chat_usage_stats(
                             'average_response_time': average_response_time,
                             'average_user_message_content_length': average_user_message_content_length,
                             'average_assistant_message_content_length': average_assistant_message_content_length,
-                            'tags': chat.meta.get('tags', []),
+                            'tags': [tag['id'] for tag in tags.get(chat.id, [])],
                             'last_message_at': message_list[-1].get('timestamp', None),
                             'updated_at': chat.updated_at,
                             'created_at': chat.created_at,
@@ -516,7 +533,7 @@ class ChatStatsExportList(BaseModel):
     page: int
 
 
-def _process_chat_for_export(chat) -> ChatStatsExport | None:
+def _process_chat_for_export(chat, chat_tags: list[dict]) -> ChatStatsExport | None:
     try:
 
         def get_message_content_length(message):
@@ -632,7 +649,7 @@ def _process_chat_for_export(chat) -> ChatStatsExport | None:
             user_id=chat.user_id,
             created_at=chat.created_at,
             updated_at=chat.updated_at,
-            tags=chat.meta.get('tags', []),
+            tags=[tag['id'] for tag in chat_tags],
             stats=stats,
             chat=chat_body,
         )
@@ -652,9 +669,10 @@ async def calculate_chat_stats(user_id, skip=0, limit=10, filter=None):
         filter=filter,
     )
 
+    tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in result.items])
     chat_stats_export_list = []
     for chat in result.items:
-        chat_stat = _process_chat_for_export(chat)
+        chat_stat = _process_chat_for_export(chat, tags.get(chat.id, []))
         if chat_stat:
             chat_stats_export_list.append(chat_stat)
 
@@ -687,9 +705,10 @@ async def generate_chat_stats_jsonl_generator(user_id, filter):
         if not result.items:
             break
 
+        tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in result.items])
         for chat in result.items:
             try:
-                chat_stat = _process_chat_for_export(chat)
+                chat_stat = _process_chat_for_export(chat, tags.get(chat.id, []))
                 if chat_stat:
                     yield chat_stat.model_dump_json() + '\n'
             except Exception as e:
@@ -776,8 +795,9 @@ async def export_single_chat_stats(
                 detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
             )
 
+        tags = await Tags.get_tags_by_resources('chat', [chat.id], db=db)
         # Process the chat for export (pure computation, no DB)
-        chat_stats = _process_chat_for_export(chat)
+        chat_stats = _process_chat_for_export(chat, tags.get(chat.id, []))
 
         if not chat_stats:
             raise HTTPException(
@@ -806,10 +826,8 @@ async def delete_all_user_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    tag_ids = [tag.id for tag in await Tags.get_tags_by_user_id(user.id, db=db)]
     result = await Chats.delete_chats_by_user_id(user.id, db=db)
     if result:
-        await Chats.delete_orphan_tags_for_user(tag_ids, user.id, db=db)
         await publish_event(
             request,
             EVENTS.CHAT_DELETED_ALL,
@@ -882,7 +900,7 @@ async def create_new_chat(
             subject_id=chat.id,
             data={'title': chat.title, 'folder_id': chat.folder_id},
         )
-        return ChatResponse.model_validate(chat, from_attributes=True)
+        return await chat_response(chat, db=db)
     except HTTPException:
         raise
     except Exception as e:
@@ -906,8 +924,9 @@ async def import_chats(
         for chat_form in form_data.chats:
             set_message_authors(chat_form.chat, user)
         chats = await Chats.import_chats(user.id, form_data.chats, db=db)
+        responses = await chat_responses(chats, db=db)
         await Tags.ensure_tags_exist(
-            list({tag_id for chat in chats for tag_id in (chat.meta or {}).get('tags', [])}), user.id, db=db
+            list({tag_id for response in responses for tag_id in response.meta.get('tags', [])}), user.id, db=db
         )
         await publish_event(
             request,
@@ -916,7 +935,7 @@ async def import_chats(
             subject_type='chat.import',
             data={'count': len(chats), 'chat_ids': [chat.id for chat in chats]},
         )
-        return chats
+        return responses
     except HTTPException:
         raise
     except Exception as e:
@@ -1000,15 +1019,6 @@ async def search_user_chats(
 
     chat_list = await Chats.get_chats_by_user_id_and_search_text(user.id, text, skip=skip, limit=limit, db=db)
 
-    # Delete tag if no chat is found
-    words = text.strip().split(' ')
-    if page == 1 and len(words) == 1 and words[0].startswith('tag:'):
-        tag_id = words[0].replace('tag:', '')
-        if len(chat_list) == 0 and await Chats.count_chats_by_tag_name_and_user_id(tag_id, user.id, db=db) == 0:
-            if await Tags.get_tag_by_name_and_user_id(tag_id, user.id, db=db):
-                log.debug('deleting tag: %s', tag_id)
-                await Tags.delete_tag_by_name_and_user_id(tag_id, user.id, db=db)
-
     return await add_active_state_to_chat_list(request, chat_list, db=db)
 
 
@@ -1035,10 +1045,7 @@ async def get_chats_by_folder_id(
     if children_folders:
         folder_ids.extend([folder.id for folder in children_folders])
 
-    return [
-        ChatResponse.model_validate(chat, from_attributes=True)
-        for chat in await Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db)
-    ]
+    return await chat_responses(await Chats.get_chats_by_folder_ids_and_user_id(folder_ids, user.id, db=db), db=db)
 
 
 @router.get('/folder/{folder_id}/list', response_model=list[ChatTitleIdResponse])
@@ -1106,9 +1113,9 @@ async def generate_chat_export_ndjson(user_id: str):
         if not result.items:
             break
 
-        for chat in result.items:
+        for chat in await chat_responses(result.items):
             try:
-                yield ChatResponse.model_validate(chat, from_attributes=True).model_dump_json() + '\n'
+                yield chat.model_dump_json() + '\n'
             except Exception as e:
                 log.exception(f'Error serializing chat {chat.id}: {e}')
 
@@ -1131,10 +1138,7 @@ async def get_user_chats(user=Depends(get_verified_user)):
 
 @router.get('/all/archived', response_model=list[ChatResponse])
 async def get_user_archived_chats(user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
-    return [
-        ChatResponse.model_validate(chat, from_attributes=True)
-        for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)
-    ]
+    return await chat_responses(await Chats.get_archived_chats_by_user_id(user.id, db=db), db=db)
 
 
 # Get All Tags
@@ -1157,7 +1161,7 @@ async def get_all_user_tags(user=Depends(get_verified_user), db: AsyncSession = 
 async def get_all_user_chats_in_db(user=Depends(get_admin_user), db: AsyncSession = Depends(get_async_session)):
     if not ENABLE_ADMIN_EXPORT:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    return [ChatResponse.model_validate(chat, from_attributes=True) for chat in await Chats.get_chats(db=db)]
+    return await chat_responses(await Chats.get_chats(db=db), db=db)
 
 
 # Get Archived Chats
@@ -1228,11 +1232,9 @@ async def archive_all_chats(
 async def unarchive_all_chats(
     request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    tag_ids = {
-        tag_id
-        for chat in await Chats.get_archived_chats_by_user_id(user.id, db=db)
-        for tag_id in chat.meta.get('tags', [])
-    }
+    chats = await Chats.get_archived_chats_by_user_id(user.id, db=db)
+    tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in chats], db=db)
+    tag_ids = {tag['id'] for chat_tags in tags.values() for tag in chat_tags}
     result = await Chats.unarchive_all_chats_by_user_id(user.id, db=db)
     if result:
         await Tags.ensure_tags_exist(list(tag_ids), user.id, db=db)
@@ -1370,9 +1372,6 @@ async def get_user_chat_list_by_tag_name(
     chats = await Chats.get_chat_list_by_user_id_and_tag_name(
         user.id, form_data.name, form_data.skip, form_data.limit, db=db
     )
-    if len(chats) == 0:
-        await Tags.delete_tag_by_name_and_user_id(form_data.name, user.id, db=db)
-
     return await add_active_state_to_chat_list(request, chats, db=db)
 
 
@@ -1665,7 +1664,7 @@ async def update_chat_message_by_id(
         subject_id=message_id,
         data={'chat_id': id, 'content_preview': (form_data.content or '')[:300]},
     )
-    return ChatResponse.model_validate(chat, from_attributes=True)
+    return await chat_response(chat, db=db)
 
 
 @router.delete('/{id}/messages/{message_id}', response_model=ChatResponse | None)
@@ -1704,7 +1703,7 @@ async def delete_chat_message_by_id(
         subject_id=message_id,
         data={'chat_id': id},
     )
-    return ChatResponse.model_validate(chat, from_attributes=True)
+    return await chat_response(chat, db=db)
 
 
 # Send Chat Message Event By Id
@@ -1794,7 +1793,6 @@ async def delete_chat_by_id(
     # Cancel any in-flight LLM tasks (streaming, title/tags generation) before
     # deleting the chat to prevent orphaned requests.
     await stop_item_tasks(request.app.state.redis, id)
-    await Chats.delete_orphan_tags_for_user(chat.meta.get('tags', []), chat.user_id, threshold=1, db=db)
 
     # Cascade to internal child chats spawned from this one.
     for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
@@ -1848,7 +1846,7 @@ async def pin_chat_by_id(
             subject_id=id,
             subject_type='chat',
         )
-        return chat
+        return await chat_response(chat, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -1948,8 +1946,9 @@ async def fork_chat_by_id(
                 message['user_id'] = user.id
                 if message.get('role') == 'user':
                     message['user'] = {'id': user.id, 'name': user.name}
+    # A chat read through its share link carries its tags in meta; they are copied as links below.
     meta = {
-        **((chat.meta or {}) if is_owner else {}),
+        **({key: value for key, value in (chat.meta or {}).items() if key != 'tags'} if is_owner else {}),
         'forked_from': chat.id,
         'forked_from_message_id': source_message_id,
     }
@@ -1967,6 +1966,11 @@ async def fork_chat_by_id(
         internal_meta=meta,
     )
 
+    if fork and is_owner:
+        tags = await Tags.get_tags_by_resources('chat', [chat.id], db=db)
+        tag_ids = [tag['id'] for tag in tags.get(chat.id, [])]
+        await Tags.add_tags_to_resources('chat', {fork.id: tag_ids}, user.id, db=db)
+
     if fork and is_owner and chat.variables:
         fork = await Chats.update_chat_variables_by_id(fork.id, chat.variables, db=db, touch=False) or fork
 
@@ -1983,7 +1987,7 @@ async def fork_chat_by_id(
         subject_id=fork.id,
         data={'original_chat_id': id, 'forked_from_message_id': source_message_id},
     )
-    return ChatResponse.model_validate(fork, from_attributes=True)
+    return await chat_response(fork, db=db)
 
 
 @router.post('/{id}/clone', response_model=ChatResponse | None)
@@ -2011,7 +2015,7 @@ async def clone_chat_by_id(
                 ChatImportForm(
                     **{
                         'chat': updated_chat,
-                        'meta': chat.meta,
+                        'meta': (await chat_response(chat, db=db)).meta,
                         'variables': chat.variables or {},
                         'pinned': chat.pinned,
                         'folder_id': chat.folder_id,
@@ -2030,7 +2034,7 @@ async def clone_chat_by_id(
                 subject_id=chat.id,
                 data={'original_chat_id': id},
             )
-            return ChatResponse.model_validate(chat, from_attributes=True)
+            return await chat_response(chat, db=db)
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -2102,7 +2106,7 @@ async def clone_shared_chat_by_id(
             ChatImportForm(
                 **{
                     'chat': updated_chat,
-                    'meta': chat.meta,
+                    'meta': (await chat_response(chat, db=db)).meta,
                     'variables': {},
                     'pinned': chat.pinned,
                     'folder_id': None,
@@ -2114,7 +2118,7 @@ async def clone_shared_chat_by_id(
 
     if chats:
         chat = chats[0]
-        return ChatResponse.model_validate(chat, from_attributes=True)
+        return await chat_response(chat, db=db)
     else:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -2136,13 +2140,13 @@ async def archive_chat_by_id(
     if chat:
         chat = await Chats.toggle_chat_archive_by_id(id, db=db)
 
-        tag_ids = chat.meta.get('tags', [])
+        response = await chat_response(chat, db=db)
         if chat.archived:
             # Cancel any in-flight LLM tasks before archiving
             await stop_item_tasks(request.app.state.redis, id)
         else:
             # Unarchived — ensure tag rows exist
-            await Tags.ensure_tags_exist(tag_ids, user.id, db=db)
+            await Tags.ensure_tags_exist(response.meta.get('tags', []), user.id, db=db)
 
         await publish_event(
             request,
@@ -2151,7 +2155,7 @@ async def archive_chat_by_id(
             subject_id=id,
             subject_type='chat',
         )
-        return ChatResponse.model_validate(chat, from_attributes=True)
+        return await chat_response(chat, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -2186,7 +2190,7 @@ async def share_chat_by_id(
                 subject_id=id,
                 data={'share_id': chat.share_id, 'updated': True},
             )
-            return ChatResponse.model_validate(chat, from_attributes=True)
+            return await chat_response(chat, db=db)
 
     # Create a new share
     shared = await SharedChats.create(id, user.id, db=db, share_mode=form_data.share_mode if form_data else None)
@@ -2204,7 +2208,7 @@ async def share_chat_by_id(
         subject_id=id,
         data={'share_id': shared.id},
     )
-    return ChatResponse.model_validate(chat, from_attributes=True)
+    return await chat_response(chat, db=db)
 
 
 # Delete shared chat
@@ -2277,7 +2281,7 @@ async def update_shared_chat_access_by_id(
 
     await refresh_chat_access(id)
 
-    return ChatResponse.model_validate(chat, from_attributes=True)
+    return await chat_response(chat, db=db)
 
 
 # Get Shared Chat Access By Id
@@ -2370,7 +2374,7 @@ async def update_chat_folder_id_by_id(
         )
         if chat.user_id != user.id:
             return await shared_chat_response(chat, user, db=db)
-        return ChatResponse.model_validate(chat, from_attributes=True)
+        return await chat_response(chat, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -2387,8 +2391,7 @@ async def get_chat_tags_by_id(id: str, user=Depends(get_verified_user), db: Asyn
     )
 
     if chat:
-        tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, chat.user_id, db=db)
+        return await Tags.get_tags_by_resource('chat', id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -2424,9 +2427,8 @@ async def add_tag_by_id_and_tag_name(
 ):
     chat = await get_chat_with_tag_access(id, user, db)
     if chat:
-        owner_id = chat.user_id
-        tags = chat.meta.get('tags', [])
-        tag_id = form_data.name.replace(' ', '_').lower()
+        tags = await Tags.get_tags_by_resources('chat', [id], db=db)
+        tag_id = get_tag_id(form_data.name)
 
         if tag_id == 'none':
             raise HTTPException(
@@ -2434,8 +2436,8 @@ async def add_tag_by_id_and_tag_name(
                 detail=ERROR_MESSAGES.DEFAULT("Tag name cannot be 'None'"),
             )
 
-        if tag_id not in tags:
-            await Chats.add_chat_tag_by_id_and_user_id_and_tag_name(id, owner_id, form_data.name, db=db)
+        if tag_id not in [tag['id'] for tag in tags.get(id, [])]:
+            await Tags.add_tag_to_resource('chat', id, form_data.name, chat.user_id, db=db)
             await publish_event(
                 request,
                 EVENTS.CHAT_TAG_ADDED,
@@ -2444,9 +2446,7 @@ async def add_tag_by_id_and_tag_name(
                 data={'tag': form_data.name},
             )
 
-        chat = await Chats.get_chat_by_id_and_user_id(id, owner_id, db=db)
-        tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, owner_id, db=db)
+        return await Tags.get_tags_by_resource('chat', id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.DEFAULT())
 
@@ -2464,8 +2464,7 @@ async def delete_tag_by_id_and_tag_name(
 ):
     chat = await get_chat_with_tag_access(id, user, db)
     if chat:
-        owner_id = chat.user_id
-        await Chats.delete_tag_by_id_and_user_id_and_tag_name(id, owner_id, form_data.name, db=db)
+        await Tags.remove_tag_from_resource('chat', id, form_data.name, chat.user_id, db=db)
         await publish_event(
             request,
             EVENTS.CHAT_TAG_REMOVED,
@@ -2474,12 +2473,7 @@ async def delete_tag_by_id_and_tag_name(
             data={'tag': form_data.name},
         )
 
-        if await Chats.count_chats_by_tag_name_and_user_id(form_data.name, owner_id, db=db) == 0:
-            await Tags.delete_tag_by_name_and_user_id(form_data.name, owner_id, db=db)
-
-        chat = await Chats.get_chat_by_id_and_user_id(id, owner_id, db=db)
-        tags = chat.meta.get('tags', [])
-        return await Tags.get_tags_by_ids_and_user_id(tags, owner_id, db=db)
+        return await Tags.get_tags_by_resource('chat', id, db=db)
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)
 
@@ -2498,11 +2492,11 @@ async def update_chat_tag_color(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    tag_id = form_data.name.replace(' ', '_').lower()
     chat = await get_chat_with_tag_access(id, user, db)
-    if not chat or tag_id not in (chat.meta or {}).get('tags', []):
+    tags = await Tags.get_tags_by_resources('chat', [id], db=db)
+    if not chat or get_tag_id(form_data.name) not in [tag['id'] for tag in tags.get(id, [])]:
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, chat.user_id, form_data.color, db=db):
         raise HTTPException(status_code=403, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     await publish_event(request, EVENTS.CHAT_UPDATED, actor=user, subject_id=id, data={'tag': form_data.name})
-    return await Tags.get_tags_by_ids_and_user_id((chat.meta or {}).get('tags', []), chat.user_id, db=db)
+    return await Tags.get_tags_by_resource('chat', id, db=db)

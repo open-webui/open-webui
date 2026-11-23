@@ -29,7 +29,7 @@ from open_webui.models.notes import (
     matching_page,
     normalize_pages,
 )
-from open_webui.models.tags import TagModel, Tags
+from open_webui.models.tags import TagModel, Tags, get_tag_id
 from open_webui.models.users import UserModel, UserResponse, Users
 from open_webui.socket.main import close_changed_note_documents, leave_room_for_users, sio
 from open_webui.utils.access_control import (
@@ -313,7 +313,7 @@ async def get_note_tags_by_id(
     ):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.DEFAULT())
 
-    return await Notes.get_note_tags_by_id(id, db=db)
+    return await Tags.get_tags_by_resource('note', id, db=db)
 
 
 @router.post('/{id}/tags', response_model=list[TagModel])
@@ -323,16 +323,16 @@ async def add_note_tag_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await get_note_with_tag_access(id, user, db)
+    note = await get_note_with_tag_access(id, user, db)
 
     # 'none' is how filters name untagged notes.
-    if form_data.name.replace(' ', '_').lower() == 'none':
+    if get_tag_id(form_data.name) == 'none':
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT('Tag name cannot be "None"')
         )
 
-    await Notes.add_note_tag_by_id(id, form_data.name, db=db)
-    return await Notes.get_note_tags_by_id(id, db=db)
+    await Tags.add_tag_to_resource('note', id, form_data.name, note.user_id, db=db)
+    return await Tags.get_tags_by_resource('note', id, db=db)
 
 
 @router.delete('/{id}/tags', response_model=list[TagModel])
@@ -342,10 +342,10 @@ async def delete_note_tag_by_id(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await get_note_with_tag_access(id, user, db)
+    note = await get_note_with_tag_access(id, user, db)
 
-    await Notes.delete_note_tag_by_id(id, form_data.name, db=db)
-    return await Notes.get_note_tags_by_id(id, db=db)
+    await Tags.remove_tag_from_resource('note', id, form_data.name, note.user_id, db=db)
+    return await Tags.get_tags_by_resource('note', id, db=db)
 
 
 @router.patch('/{id}/tags', response_model=list[TagModel])
@@ -357,12 +357,12 @@ async def update_note_tag_color(
 ):
     note = await get_note_with_tag_access(id, user, db)
 
-    tag_id = form_data.name.replace(' ', '_').lower()
-    if tag_id not in (note.meta or {}).get('tags', []):
+    tags = await Tags.get_tags_by_resources('note', [id], db=db)
+    if get_tag_id(form_data.name) not in [tag['id'] for tag in tags.get(id, [])]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
     if not await Tags.update_tag_color_by_name_and_user_id(form_data.name, note.user_id, form_data.color, db=db):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=ERROR_MESSAGES.ACCESS_PROHIBITED)
-    return await Notes.get_note_tags_by_id(id, db=db)
+    return await Tags.get_tags_by_resource('note', id, db=db)
 
 
 # Create New Note
