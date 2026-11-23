@@ -278,12 +278,17 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
 
     sources = {}
     if 'chat' in enabled and kind in ('all', 'chat') and not scope.startswith('channel:'):
-        continue_shared = select(SharedChat.chat_id).where(
-            SharedChat.chat['share_mode'].as_string() == 'continue', granted('shared_chat', SharedChat.chat_id)
-        )
-        live_access = or_(
-            Chat.user_id == user.id, Chat.folder_id.in_(select(folders.c.id)), Chat.id.in_(continue_shared)
-        )
+        shared_chats = []
+        if not scope and sharing != 'mine' and not chat_filtered:
+            shared_chats = (
+                await db.execute(
+                    select(
+                        SharedChat.id, SharedChat.chat_id, SharedChat.chat['share_mode'].as_string().label('share_mode')
+                    ).where(granted('shared_chat', SharedChat.chat_id))
+                )
+            ).all()
+        continue_shared = [shared_chat.chat_id for shared_chat in shared_chats if shared_chat.share_mode == 'continue']
+        live_access = or_(Chat.user_id == user.id, Chat.folder_id.in_(folder_map), Chat.id.in_(continue_shared))
         live_ids = select(Chat.id).where(live_access)
         rank = (
             title_rank(Chat.title, query)
@@ -312,7 +317,7 @@ async def search_workspace(  # noqa: C901 — keep permission scoping and source
         sources['chat'] = (Chat, apply_match(stmt, Chat), rank, Chat.updated_at)
         if not scope and sharing != 'mine' and not chat_filtered:
             stmt = select(SharedChat).where(
-                granted('shared_chat', SharedChat.chat_id), ~SharedChat.chat_id.in_(live_ids)
+                SharedChat.id.in_([shared_chat.id for shared_chat in shared_chats]), ~SharedChat.chat_id.in_(live_ids)
             )
             if sharing == 'shared':
                 stmt = stmt.where(SharedChat.user_id != user.id)
