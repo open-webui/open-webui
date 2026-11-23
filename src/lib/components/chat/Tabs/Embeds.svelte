@@ -1,12 +1,15 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { embed } from '$lib/stores';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFileContentById } from '$lib/apis/files';
 	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import PdfPagesPreview from '$lib/components/common/PdfPagesPreview.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 
@@ -156,6 +159,19 @@
 						{$embed?.title ?? 'Embedded Content'}
 					</a>
 				</div>
+			</div>
+		{:else}
+			<div class="flex justify-end px-2 pb-1 flex-shrink-0">
+				<Tooltip content={$i18n.t('Download')}>
+					<a
+						class="flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
+						href={`${WEBUI_API_BASE_URL}/files/${fileId}/content?attachment=true`}
+						download
+						aria-label={$i18n.t('Download')}
+					>
+						<Icon name="download" size={11} strokeWidth={1.4} />
+					</a>
+				</Tooltip>
 			</div>
 		{/if}
 
