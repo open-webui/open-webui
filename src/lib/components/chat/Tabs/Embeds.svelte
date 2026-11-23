@@ -174,7 +174,7 @@
 
 			{#if $embed?.file}
 				{#if fileData}
-					{#key `${fileId}:${filePage}`}
+					{#key fileSource}
 						<PdfPagesPreview
 							data={fileData}
 							targetPage={filePage}
