@@ -166,6 +166,7 @@
 						<ModelSettingToggle
 							label={capabilityLabels[key].label}
 							description={`${capabilityLabels[key].description}. ${$i18n.t('Start enabled in new chats')}.`}
+							ariaLabel={`${$i18n.t('Start enabled in new chats')}: ${capabilityLabels[key].label}`}
 							checked={defaultFeatureIds.includes(key)}
 							{disabled}
 							on:change={(e) => setDefault(key, e.detail)}
