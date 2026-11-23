@@ -40,9 +40,7 @@
 	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
-	// The composer asks for the modal instead, as it holds the attachment's retrieval setting.
 	const canOpenKnowledge = () =>
-		!modal &&
 		item?.type === 'collection' &&
 		!!item.id &&
 		!!appLayout?.openPageTab &&

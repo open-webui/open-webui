@@ -91,9 +91,10 @@
 						? $i18n.t('View source: {{title}}', { title: label })
 						: `${getDisplayTitle(label)} +${sources.length - 1} more sources`}
 					class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-base-0/5 dark:text-base-0/80 dark:hover:text-base-0 bg-base-50 text-base-1000/80 hover:text-base-1000 transition rounded-xl"
-					on:click={() => {
-						if (sources.length === 1) {
-							openSource(sources[0].id);
+					on:click={(e) => {
+						// From the keyboard, the marker opens the source its card shows.
+						if (sources.length === 1 || (openPreview && e.detail === 0)) {
+							openSource(sources[sourceIdx].id);
 						} else {
 							openPreview = !openPreview;
 						}
