@@ -567,13 +567,13 @@
 			} catch {}
 		}
 
-		if (!model && history?.messages && history?.currentId) {
+		if (history?.messages && history?.currentId) {
 			let currentId = history.currentId;
 			while (currentId) {
 				const msg = history.messages[currentId];
 				if (!msg) break;
-				if (msg.role === 'assistant' && msg.model) {
-					model = msg.model;
+				if (msg.role === 'assistant' && msg.model && (!model || msg.model === model)) {
+					model = msg.selectedModelId ?? msg.model;
 					break;
 				}
 				currentId = msg.parentId;
