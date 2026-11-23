@@ -177,12 +177,18 @@ async def get_accessible_folder_files(
             group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
         }
 
+    file_owner_ids = await Files.get_owner_ids_by_file_ids(
+        [entry.get('id') for entry in entries if entry.get('type') == 'file' and isinstance(entry.get('id'), str)],
+        db=db,
+    )
+
     accessible: list[dict] = []
     for entry in entries:
         entry_type = entry.get('type')
         entry_id = entry.get('id')
         if entry_type == 'file':
-            if await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
+            is_own_file = isinstance(entry_id, str) and file_owner_ids.get(entry_id) == user.id
+            if is_own_file or await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
                 accessible.append(entry)
         elif entry_type == 'collection':
             if await Knowledges.check_access_by_user_id(
