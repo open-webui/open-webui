@@ -1481,7 +1481,8 @@
 		return source ? `${tab.label} · ${source.label}` : tab.label;
 	};
 	$: showArtifactsTab = $mainArtifacts.length > 0 && $visibleControls['chat.artifacts'];
-	$: showPreviewTab = !!$embed && $embed.chatId === chatId;
+	$: embedSourceTab = tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === $embed?.chatId);
+	$: showPreviewTab = !!$embed && ($embed.chatId === chatId || !!embedSourceTab);
 	$: availableViews = [
 		{ kind: 'files', label: $i18n.t('Files'), available: showFilesTab },
 		{
@@ -1710,7 +1711,11 @@
 	}
 	$: if (viewReady && $showEmbeds && showPreviewTab) {
 		// A cited file opens beside the chat, so the answer stays readable.
-		openFeatureTab('preview', !!$embed?.file);
+		openPanel(
+			{ id: 'preview', kind: 'preview', label: $i18n.t('Preview') },
+			!!$embed?.file,
+			embedSourceTab?.id
+		);
 		showEmbeds.set(false);
 	}
 	$: if (viewReady && $voiceCall) openFeatureTab('voice');
