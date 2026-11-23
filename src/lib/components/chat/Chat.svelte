@@ -1304,6 +1304,21 @@
 			),
 			...(retained ?? [])
 		]);
+		// A machine per chat lists its agents only once the chat is saved.
+		if (
+			!folder &&
+			!$chatId &&
+			($machines ?? []).find((server) => server.id === machineId)?.scope === 'chat'
+		) {
+			const remaining = selectedModels.filter(
+				(id) => !id.startsWith('agent:') || decodeURIComponent(id.split(':')[1]) === machineId
+			);
+			selectedModels =
+				remaining.length || equal(remaining, selectedModels)
+					? remaining
+					: normalizeSelectedModels(remaining);
+			return;
+		}
 
 		const refresh = async () => {
 			try {
@@ -4270,6 +4285,7 @@
 		saveSessionSelectedModels();
 
 		const currentHistory = history;
+		const unsaved = !$chatId;
 		let _chatId: string | null = null;
 		processing = 'uploading';
 		try {
@@ -4285,6 +4301,12 @@
 			if (!existingUserMessage && history === currentHistory) await unsendMessage(userMessageId);
 			return { status: 'rejected' as const };
 		}
+		if (
+			unsaved &&
+			($machines ?? []).find((server) => server.id === $selectedMachineId)?.scope === 'chat' &&
+			selectedModels.some((modelId) => modelId.startsWith('agent:'))
+		)
+			await refreshAgentModels();
 
 		return await sendMessage(history, userMessageId, {
 			modelId: bridgeRequest?.modelId ?? null
@@ -4619,7 +4641,13 @@
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
-			if (!_chatId && (tabbed || context?.currentDirectory || tabs?.hasTerminalTabs())) {
+			if (
+				!_chatId &&
+				(tabbed ||
+					context?.currentDirectory ||
+					tabs?.hasTerminalTabs() ||
+					($machines ?? []).find((server) => server.id === machineId)?.scope === 'chat')
+			) {
 				_chatId = await initChatHandler(_history);
 			}
 			await tick();
