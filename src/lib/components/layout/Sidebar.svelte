@@ -23,6 +23,7 @@
 		pinnedNotes,
 		channels,
 		socket,
+		socketConnected,
 		config,
 		visiblePinnedModels,
 		visibleControls,
@@ -856,9 +857,14 @@
 	});
 
 	onMount(() => {
-		const socketInstance = $socket;
-		socketInstance?.on('connect', initChannels);
-		return () => socketInstance?.off('connect', initChannels);
+		let wasDisconnected = false;
+		return socketConnected.subscribe((connected) => {
+			if (connected && wasDisconnected) {
+				initChannels();
+				refreshChatRows();
+			}
+			wasDisconnected = !connected;
+		});
 	});
 
 	onMount(async () => {
@@ -924,7 +930,6 @@
 
 		const socketInstance = $socket;
 		socketInstance?.on('events', chatActiveEventHandler);
-		socketInstance?.on('connect', refreshChatRows);
 
 		const unregisterFolderRefreshHandler = registerFolderRefreshHandler(async (folderId, chat) => {
 			// null refreshes the folder tree; undefined refreshes all folder chat lists.
@@ -959,7 +964,6 @@
 			}
 
 			socketInstance?.off('events', chatActiveEventHandler);
-			socketInstance?.off('connect', refreshChatRows);
 
 			unregisterFolderRefreshHandler();
 		};

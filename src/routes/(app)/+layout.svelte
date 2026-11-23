@@ -30,6 +30,7 @@
 		tools,
 		skills,
 		socket,
+		socketConnected,
 		functions,
 		tags,
 		banners,
@@ -174,10 +175,14 @@
 			} else if (event?.data?.type === 'access:updated') void refreshAccess();
 		};
 		socketInstance?.on('events', eventHandler);
-		socketInstance?.on('connect', changed);
+		let wasDisconnected = false;
+		const unsubscribeSocketConnected = socketConnected.subscribe((connected) => {
+			if (connected && wasDisconnected) changed();
+			wasDisconnected = !connected;
+		});
 		return () => {
 			socketInstance?.off('events', eventHandler);
-			socketInstance?.off('connect', changed);
+			unsubscribeSocketConnected();
 		};
 	});
 
