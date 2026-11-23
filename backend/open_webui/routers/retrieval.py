@@ -3159,6 +3159,15 @@ async def process_files_batch(
                     },
                 )
             ]
+            # Reuse file-{id} chunks so loader metadata like PDF pages survives
+            file_result = await ASYNC_VECTOR_DB_CLIENT.query(
+                collection_name=f'file-{file.id}', filter={'file_id': file.id}
+            )
+            if has_vector_results(file_result):
+                docs = [
+                    Document(page_content=text, metadata={**metadata, 'name': file.filename, 'hash': hash})
+                    for text, metadata in zip(file_result.documents[0], file_result.metadatas[0])
+                ]
 
             all_docs.extend(docs)
 
