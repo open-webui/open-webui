@@ -269,7 +269,8 @@ async def publish_chat_finished_event(
             'chat_id': chat_id,
             'message_id': metadata.get('message_id'),
             'model_id': metadata.get('model_id'),
-            'model_name': model.get('name'),
+            # Machine agents and Tether models are not in the shared model list.
+            'model_name': model.get('name') or (metadata.get('model') or {}).get('name'),
             'title': title,
             'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',
             'message': content,

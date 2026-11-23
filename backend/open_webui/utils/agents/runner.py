@@ -1,11 +1,12 @@
 """Run native agent turns with terminal attachments and saved conversation state."""
 
 import copy
+import logging
 
 from open_webui.utils.machines import machine_id_of
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
-from open_webui.utils.middleware import convert_url_images_to_base64
+from open_webui.utils.middleware import convert_url_images_to_base64, publish_chat_finished_event
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.machines import get_machine_json, upload_files_to_machine
 
@@ -13,6 +14,8 @@ from .session import get_resume_point
 from .output import Output
 from .transport import MachineTransport
 from . import acp, codex, claude_code, pi
+
+log = logging.getLogger(__name__)
 
 PROVIDERS = {
     'codex': codex.run,
@@ -183,4 +186,10 @@ async def run(request, form_data, user, metadata, model):
             if item.get('status') in {'pending', 'in_progress'}:
                 item['status'] = 'completed' if succeeded else 'incomplete'
         await output.flush(done=True, force=True)
+    try:
+        title = await Chats.get_chat_title_by_id(metadata['chat_id'])
+        await publish_chat_finished_event(request, user, metadata, title, output.content, output.items)
+    except Exception:
+        # The reply is already saved; a failed notification must not mark it as an error.
+        log.exception('Failed to publish chat finished event')
     return {'status': True, 'chat_id': metadata['chat_id']}
