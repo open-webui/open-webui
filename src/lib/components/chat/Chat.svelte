@@ -5560,6 +5560,7 @@
 		if (history.messages[message.id].done == true) {
 			const responseMessage = history.messages[message.id];
 			responseMessage.done = false;
+			responseMessage.error = null;
 			await tick();
 
 			const model = ($models ?? [])

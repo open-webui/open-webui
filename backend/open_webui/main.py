@@ -1692,6 +1692,7 @@ async def chat_completion(
                     response_meta['task_id'] = task_id
                 message['meta'] = response_meta
                 message['done'] = False
+                message['error'] = None
                 if agent_model:
                     message['modelName'] = agent_model['name']
 
