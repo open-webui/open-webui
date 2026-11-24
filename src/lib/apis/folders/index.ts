@@ -38,6 +38,7 @@ export const createNewFolder = async (token: string, folderForm: FolderForm) => 
 export type ActiveFolder = {
 	id: string;
 	name: string;
+	machine_id?: string | null;
 	directory?: string | null;
 	waiting: boolean;
 	running: boolean;

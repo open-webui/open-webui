@@ -41,6 +41,7 @@ from open_webui.utils.access_control import (
 )
 from open_webui.utils.access_control.files import can_read_all_folder_files, get_accessible_folder_files
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.machines import machine_id_of
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -157,6 +158,7 @@ async def get_folders(
 class ActiveFolderResponse(BaseModel):
     id: str
     name: str
+    machine_id: str | None = None
     directory: str | None = None
     waiting: bool = False
     running: bool = False
@@ -181,7 +183,10 @@ async def get_active_folders(
 
     active = {
         folder.id: ActiveFolderResponse(
-            id=folder.id, name=folder.name, directory=(folder.data or {}).get('working_directory')
+            id=folder.id,
+            name=folder.name,
+            machine_id=machine_id_of(folder.data or {}),
+            directory=(folder.data or {}).get('working_directory'),
         )
         for folder in folders.values()
     }
