@@ -314,7 +314,8 @@
 			resolveDefaultModelIds(
 				$baseModels,
 				$settings?.models,
-				$config?.default_models?.split(',')
+				$config?.default_models?.split(','),
+				$config?.fallback_default_models?.split(',')
 			)[0] ?? '';
 		loaded = true;
 	});

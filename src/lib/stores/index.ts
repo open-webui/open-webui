@@ -462,6 +462,7 @@ type Config = {
 	default_locale: string;
 	i18n?: I18nOverrides;
 	default_models: string;
+	fallback_default_models?: string | null;
 	default_pinned_models?: string | null;
 	default_prompt_suggestions: PromptSuggestion[] | null;
 	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;

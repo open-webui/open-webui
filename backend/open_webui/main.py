@@ -2418,20 +2418,6 @@ async def get_app_config(request: Request):
         group_defaults, _ = resolve_group_default_models(
             await Groups.get_groups_by_member_id(user.id, include_inherited=True)
         )
-        if group_defaults:
-            try:
-                if not request.app.state.MODELS:
-                    await get_all_models(request, user=user)
-                models = await get_filtered_models(list(request.app.state.MODELS.values()), user)
-                available = {
-                    model['id']
-                    for model in models
-                    if not ((model.get('info') or {}).get('meta') or {}).get('hidden', False)
-                }
-                group_defaults = [model_id for model_id in group_defaults if model_id in available]
-            except Exception:
-                log.exception('Unable to resolve available group default models')
-                group_defaults = None
 
     onboarding = False
     if user is None:
@@ -2613,7 +2599,9 @@ async def get_app_config(request: Request):
         },
         **(
             {
+                # Availability is checked by the client, against the model list it loads.
                 'default_models': ','.join(group_defaults) if group_defaults else config.get('ui.default_models'),
+                'fallback_default_models': config.get('ui.default_models'),
                 'default_pinned_models': config.get('ui.default_pinned_models'),
                 'default_prompt_suggestions': config.get('ui.prompt_suggestions'),
                 'default_prompt_suggestions_i18n': config.get('ui.prompt_suggestions_i18n'),
