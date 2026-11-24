@@ -12,7 +12,6 @@ import ntpath
 import time
 from typing import Literal, Optional
 from urllib.parse import unquote
-from uuid import uuid4
 
 from fastapi import HTTPException, Request
 

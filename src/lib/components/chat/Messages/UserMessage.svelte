@@ -13,7 +13,8 @@
 		copyToClipboard as _copyToClipboard,
 		formatMessageTimestamp,
 		formatMessageTimestampFull,
-		isRasterImageContentType
+		isRasterImageContentType,
+		isInternalMessage
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import equal from 'fast-deep-equal';
@@ -183,9 +184,7 @@
 			</ProfilePreview>
 		</div>
 	{/if}
-	<div
-		class="flex-auto w-0 max-w-full {isInternalMessage(message) ? '' : 'pl-1'}"
-	>
+	<div class="flex-auto w-0 max-w-full {isInternalMessage(message) ? '' : 'pl-1'}">
 		{#if !compactPreview && (!chatBubble || !isOwn) && !isInternalMessage(message)}
 			<div class={chatBubble ? 'mb-1 ps-2 text-xs text-base-400 dark:text-base-500' : ''}>
 				{#if chatBubble}
