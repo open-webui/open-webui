@@ -137,6 +137,82 @@ async def queue_user_message(
     return True
 
 
+async def get_queued_messages(chat_id: str, user_id: str, reply_id: str) -> list[dict]:
+    """The messages the user queued under a running reply, oldest first."""
+    if not await ChatMessages.has_queued_message(chat_id, reply_id):
+        return []
+    chat = await Chats.get_chat_by_id(chat_id)
+    if not chat or chat.user_id != user_id:
+        return []
+    messages = ((chat.chat or {}).get('history') or {}).get('messages') or {}
+    return [
+        message
+        for message in messages.values()
+        if message.get('role') == 'user'
+        and message.get('parentId') == reply_id
+        and (message.get('meta') or {}).get('status') == 'pending'
+        and (message.get('meta') or {}).get('internal') is not True
+    ]
+
+
+async def insert_queued_turn(
+    chat_id: str, user: UserModel, reply_id: str, queued: list[dict], assistant_meta: dict
+) -> dict | None:
+    """Replace queued messages the running agent has been given with one message, and start the reply after it."""
+    queued_ids = {message['id'] for message in queued}
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
+            history = copy.deepcopy((chat.chat or {}).get('history') or {}) if chat else {}
+            messages = history.get('messages') or {}
+            reply = messages.get(reply_id)
+            if not reply:
+                return None
+            for message_id in queued_ids:
+                messages.pop(message_id, None)
+            now = int(time.time())
+            user_message = {
+                'id': str(uuid4()),
+                'parentId': reply_id,
+                'role': 'user',
+                'content': '\n\n'.join(message.get('content', '') for message in queued),
+                'model': reply.get('model'),
+                'user_id': user.id,
+                'user': {'id': user.id, 'name': user.name},
+                'timestamp': now,
+            }
+            assistant_message = {
+                **{key: reply[key] for key in ('model', 'modelName', 'modelIdx', 'user_id') if key in reply},
+                'id': str(uuid4()),
+                'parentId': user_message['id'],
+                'childrenIds': [],
+                'role': 'assistant',
+                'content': '',
+                'done': False,
+                'meta': assistant_meta,
+                'timestamp': now,
+            }
+            user_message['childrenIds'] = [assistant_message['id']]
+            reply['childrenIds'] = [
+                *(child_id for child_id in reply.get('childrenIds', []) if child_id not in queued_ids),
+                user_message['id'],
+            ]
+            turn = {message['id']: message for message in (user_message, assistant_message)}
+            messages.update(turn)
+            history['messages'] = messages
+            history['currentId'] = assistant_message['id']
+            chat.chat = {**(chat.chat or {}), 'history': history}
+            chat.current_message_id = assistant_message['id']
+            chat.updated_at = now
+            await ChatMessages.delete_message_ids_by_chat_id(chat_id, queued_ids, db=session)
+            for message_id, message in turn.items():
+                await ChatMessages.upsert_message(message_id, chat_id, user.id, message, db=session)
+    return {
+        'user_message': user_message,
+        'assistant_message': assistant_message,
+        'children_ids': reply['childrenIds'],
+    }
+
+
 def get_pending_run(metadata: dict, model_id: str | None = None) -> dict:
     """The settings a turn started for pending messages takes from the turn before it."""
     return {

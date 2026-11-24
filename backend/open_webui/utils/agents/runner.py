@@ -1,16 +1,21 @@
 """Run native agent turns with terminal attachments and saved conversation state."""
 
+import asyncio
 import base64
+import contextlib
 import copy
 import logging
 import mimetypes
+import time
 
+from open_webui.events import EVENTS, publish_event
 from open_webui.utils.machines import machine_id_of
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64, publish_chat_finished_event
 from open_webui.utils.misc import get_message_list
 from open_webui.utils.machines import get_machine_file, get_machine_json, upload_files_to_machine
+from open_webui.utils.subagents import get_queued_messages, insert_queued_turn
 
 from .session import get_resume_point
 from .output import Output
@@ -48,6 +53,65 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024
 def provider_runner(provider):
     # Agents configured in Open Terminal's OPEN_TERMINAL_ACP_AGENTS arrive as `acp-<id>`.
     return PROVIDERS.get(provider) or (acp.run if provider.startswith('acp-') else None)
+
+
+async def steer_queued_messages(request, user, output, ended):
+    """Give the agent messages the user sends while it works; what it does next becomes their reply."""
+    metadata = output.metadata
+    while not ended.is_set():
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(ended.wait(), 1)
+        if not output.can_steer():
+            continue
+        reply_id = metadata['message_id']
+        queued = await get_queued_messages(metadata['chat_id'], user.id, reply_id)
+        # Attachments are sent with the next turn.
+        if not queued or any(message.get('files') for message in queued):
+            continue
+        if ended.is_set() or not output.can_steer():
+            continue
+        try:
+            await output.steer('\n\n'.join(message.get('content', '') for message in queued))
+        except Exception:
+            # The messages stay queued and are answered after this turn.
+            log.warning('The agent did not take a message during its turn', exc_info=True)
+            output.steer = None
+            continue
+        turn = await insert_queued_turn(
+            metadata['chat_id'],
+            user,
+            reply_id,
+            queued,
+            {'task_id': metadata.get('task_id'), 'response_started_at': time.time()},
+        )
+        if turn is None:
+            continue
+        user_message, assistant_message = turn['user_message'], turn['assistant_message']
+        await output.continue_in(user_message['id'], assistant_message['id'])
+        await output.emitter(
+            {
+                'type': 'chat:messages',
+                'data': {
+                    'messages': {
+                        reply_id: {'id': reply_id, 'done': True, 'childrenIds': turn['children_ids']},
+                        **{
+                            message['id']: {key: value for key, value in message.items() if key != 'meta'}
+                            for message in (user_message, assistant_message)
+                        },
+                    },
+                    'currentId': assistant_message['id'],
+                },
+            }
+        )
+        await output.emitter({'type': 'chat:reload'})
+        for message in (user_message, assistant_message):
+            await publish_event(
+                request,
+                EVENTS.MESSAGE_CREATED,
+                actor=user,
+                subject_id=message['id'],
+                data={'chat_id': metadata['chat_id'], 'role': message['role'], 'model': message.get('model')},
+            )
 
 
 async def run(request, form_data, user, metadata, model):
@@ -176,6 +240,8 @@ async def run(request, form_data, user, metadata, model):
         'approval_mode': (metadata.get('params') or {}).get('tool_approval_mode', 'full'),
     }
     succeeded = False
+    ended = asyncio.Event()
+    steering = asyncio.create_task(steer_queued_messages(request, user, output, ended))
     try:
         session = await transport.start(agent['provider'], options)
         if (
@@ -196,6 +262,10 @@ async def run(request, form_data, user, metadata, model):
         )
         succeeded = True
     finally:
+        ended.set()
+        [failure] = await asyncio.gather(steering, return_exceptions=True)
+        if isinstance(failure, Exception):
+            log.error('Failed to pass queued messages to the agent', exc_info=failure)
         await transport.close()
         for item in output.items:
             if item.get('status') in {'pending', 'in_progress'}:

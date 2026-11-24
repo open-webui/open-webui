@@ -112,6 +112,14 @@ async def run(transport, output, prompt, images, options):
         turn_id = result['turn']['id']
         # Later regenerations and edits fork the thread through this turn.
         output.state['turn'] = turn_id
+
+        async def steer(text):
+            await client.request(
+                'turn/steer',
+                {'threadId': thread_id, 'expectedTurnId': turn_id, 'input': [{'type': 'text', 'text': text}]},
+            )
+
+        output.steer = steer
         while True:
             event = await client.events.get()
             if isinstance(event, Exception):
