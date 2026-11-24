@@ -21,7 +21,7 @@
 			const [head, ...result] = report.split('--- RESULT ---');
 			const field = (pattern: RegExp) => head.match(pattern)?.[1]?.trim() ?? '';
 			return {
-				task: field(/^Original task: (.*)$/m),
+				title: field(/^Title: (.*)\nOriginal task: /m) || field(/^Original task: (.*)$/m),
 				chatId: field(/^Subagent chat: (.*)$/m),
 				status: field(/^Status: (\S+)/m),
 				duration: field(/Duration: (\S+)/),
@@ -44,7 +44,7 @@
 			aria-expanded={!!expanded[index]}
 			on:click={() => (expanded[index] = !expanded[index])}
 		>
-			<span dir="auto" class="min-w-0 truncate">{label(report.status)} · {report.task}</span>
+			<span dir="auto" class="min-w-0 truncate">{label(report.status)} · {report.title}</span>
 			<span class="shrink-0 text-xs tabular-nums">{report.duration}</span>
 			<ChevronDown
 				strokeWidth="3.5"
@@ -70,7 +70,7 @@
 						type="button"
 						class="mt-1 text-xs text-base-400 transition hover:text-base-600 dark:text-base-600 dark:hover:text-base-400"
 						on:click={() =>
-							appLayout?.openPageTab?.({ href: `/c/${report.chatId}`, label: report.task })}
+							appLayout?.openPageTab?.({ href: `/c/${report.chatId}`, label: report.title })}
 					>
 						{$i18n.t('Open thread')}
 					</button>

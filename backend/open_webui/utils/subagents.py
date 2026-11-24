@@ -491,6 +491,7 @@ async def delegate(
     context: str,
     background: bool,
     *,
+    title: str = '',
     file_ids: list[str] | None = None,
     model_id: str | None = None,
     request: Request,
@@ -504,6 +505,7 @@ async def delegate(
     task = task.strip()
     if not task:
         return 'Error: task must not be empty.'
+    title = ' '.join((title or '').split() or task.split())[:60]
     if not parent_chat_id or not user_data.get('id'):
         return 'Error: chat and user context are required.'
 
@@ -645,7 +647,7 @@ async def delegate(
             ChatForm(
                 chat={
                     'id': chat_id,
-                    'title': f'Sub-agent: {task[:60]}',
+                    'title': title,
                     'models': [model_id],
                     'machine_id': machine_id_of(run),
                     # Read when the user's answer or message continues this chat.
@@ -836,6 +838,7 @@ async def delegate(
                 'to use the result or continue without it.'
             ),
             '',
+            f'Title: {title}',
             f'Original task: {task}',
         ]
         if context:

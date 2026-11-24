@@ -1910,6 +1910,7 @@ async def view_chat(
 
 async def delegate_task(
     task: str,
+    title: str = '',
     context: str = '',
     file_ids: list[str] | None = None,
     background: bool = False,
@@ -1924,6 +1925,7 @@ async def delegate_task(
     Delegate focused work to a parallel sub-agent using the current tools.
 
     :param task: The specific task for the sub-agent to complete
+    :param title: A short name for the task, 3 to 6 words
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
@@ -1942,6 +1944,7 @@ async def delegate_task(
         task,
         context,
         background,
+        title=title,
         file_ids=file_ids,
         model_id=model_id,
         request=__request__,

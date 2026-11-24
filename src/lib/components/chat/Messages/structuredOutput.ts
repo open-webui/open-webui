@@ -238,9 +238,7 @@ export function buildToolCallToken(
 				typeof item.arguments === 'string'
 					? JSON.parse(item.arguments || '{}')
 					: (item.arguments ?? {});
-			const task = typeof args.task === 'string' && args.task ? args.task : '?';
-			const label = args.background ? 'Background sub-agent' : 'Sub-agent';
-			name = `${label}: "${task.length > 60 ? `${task.slice(0, 60)}...` : task}"`;
+			name = String(args.title || args.task || 'Sub-agent').slice(0, 60);
 		} catch {
 			name = 'Sub-agent';
 		}
