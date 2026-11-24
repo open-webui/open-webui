@@ -244,13 +244,18 @@ class ChatMessageModel(BaseModel):
 class ChatMessageTable:
     @staticmethod
     def _apply_message_data(message: ChatMessage, data: dict, now: int) -> None:
-        """Replace the stored message with the payload, keeping its author."""
+        """Overwrite only the columns the payload carries, keeping the message's author."""
         replacement = ChatMessageTable._build_message(message.id, message.chat_id, message.user_id, data, now)
         kept = {'id', 'chat_id', 'user_id'}
         if 'timestamp' not in data:
             kept.add('created_at')
         for column in ChatMessage.__table__.columns:
-            if column.key not in kept:
+            json_key = ChatMessageTable.DB_TO_JSON_KEY_MAP.get(column.key, column.key)
+            # Usage may come under the legacy `info` key.
+            is_sent = (
+                column.key in data or json_key in data or (column.key == 'usage' and replacement.usage is not None)
+            )
+            if column.key not in kept and (is_sent or column.key in ('data', 'updated_at')):
                 setattr(message, column.key, getattr(replacement, column.key))
 
     @staticmethod
@@ -312,7 +317,7 @@ class ChatMessageTable:
         data: dict,
         db: Optional[AsyncSession] = None,
     ) -> None:
-        """Insert a chat message or replace the stored one."""
+        """Insert a chat message or update the stored one."""
         async with nullcontext(db) if db is not None else get_async_db_context() as session:
             now = int(time.time())
             # Use composite ID: {chat_id}-{message_id}
