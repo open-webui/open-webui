@@ -57,7 +57,7 @@
 	import ContentRenderer from './ContentRenderer.svelte';
 	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
 	import SubagentResultRow from './SubagentResultRow.svelte';
-	import TimerRow from './TimerRow.svelte';
+	import InternalMessageRow from './InternalMessageRow.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
@@ -779,10 +779,13 @@
 			{/if}
 
 			{#if isInternalMessage(parentMessage)}
-				{#if parentMessage.meta.type === 'timer'}
-					<TimerRow content={parentMessage.content} />
-				{:else}
+				{#if parentMessage.meta.type === 'subagent'}
 					<SubagentResultRow content={parentMessage.content} />
+				{:else}
+					<InternalMessageRow
+						label={parentMessage.meta.type === 'timer' ? $i18n.t('Timer') : $i18n.t('Message')}
+						content={parentMessage.content}
+					/>
 				{/if}
 			{/if}
 

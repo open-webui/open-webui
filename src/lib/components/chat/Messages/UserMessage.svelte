@@ -28,7 +28,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SubagentResultRow from './SubagentResultRow.svelte';
-	import TimerRow from './TimerRow.svelte';
+	import InternalMessageRow from './InternalMessageRow.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { models } = getChatContext();
@@ -168,7 +168,7 @@
 	id="message-{message.id}"
 	style="scroll-margin-top: 3rem;"
 >
-	{#if !compactPreview && (!chatBubble || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+	{#if !compactPreview && (!chatBubble || !isOwn) && !isInternalMessage(message)}
 		<div class="shrink-0 me-2 {chatBubble ? 'mt-6' : 'hidden @lg:flex mt-0.5'}">
 			<!-- LICENSE covers this Open WebUI fallback logo.
 			Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -184,13 +184,9 @@
 		</div>
 	{/if}
 	<div
-		class="flex-auto w-0 max-w-full {(message?.meta?.internal === true &&
-			message?.meta?.type === 'subagent') ||
-		(message?.meta?.internal === true && message?.meta?.type === 'timer')
-			? ''
-			: 'pl-1'}"
+		class="flex-auto w-0 max-w-full {isInternalMessage(message) ? '' : 'pl-1'}"
 	>
-		{#if !compactPreview && (!chatBubble || !isOwn) && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+		{#if !compactPreview && (!chatBubble || !isOwn) && !isInternalMessage(message)}
 			<div class={chatBubble ? 'mb-1 ps-2 text-xs text-base-400 dark:text-base-500' : ''}>
 				{#if chatBubble}
 					{authorName}
@@ -381,10 +377,13 @@
 						</div>
 					</div>
 				</div>
-			{:else if message?.meta?.internal === true && message?.meta?.type === 'timer'}
-				<TimerRow content={message.content} />
-			{:else if message?.meta?.internal === true && message?.meta?.type === 'subagent'}
+			{:else if isInternalMessage(message) && message.meta.type === 'subagent'}
 				<SubagentResultRow content={message.content} />
+			{:else if isInternalMessage(message)}
+				<InternalMessageRow
+					label={message.meta.type === 'timer' ? $i18n.t('Timer') : $i18n.t('Message')}
+					content={message.content}
+				/>
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div
@@ -441,7 +440,7 @@
 				</div>
 			{/if}
 
-			{#if edit !== true && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
+			{#if edit !== true && !isInternalMessage(message)}
 				<div
 					class="buttons flex items-center {chatBubble
 						? isOwn

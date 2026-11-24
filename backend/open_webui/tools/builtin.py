@@ -1915,7 +1915,6 @@ async def delegate_task(
     title: str = '',
     context: str = '',
     file_ids: list[str] | None = None,
-    background: bool = True,
     model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
@@ -1924,17 +1923,16 @@ async def delegate_task(
     __message_id__: str = None,
 ) -> str:
     """
-    Delegate focused work to a parallel sub-agent using the current tools.
+    Delegate focused work to a parallel sub-agent using the current tools. The result comes back to this chat by itself,
+    so do not wait or poll for it.
 
     :param task: The specific task for the sub-agent to complete
     :param title: A short name for the task, 3 to 6 words
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
-    :param background: Return immediately; the result comes back to this chat by itself, so do not wait or poll for it.
-        Set to false only when this reply cannot go on without the result
     :param model_id: ID of an available sub-agent model. Omit to use the current model
-    :return: Foreground result text, or a JSON dispatch handle for background work
+    :return: The sub-agent's chat ID
     """
     if __request__ is None:
         return 'Error: request context not available.'
@@ -1946,7 +1944,6 @@ async def delegate_task(
     return await delegate(
         task,
         context,
-        background,
         title=title,
         file_ids=file_ids,
         model_id=model_id,
@@ -1974,7 +1971,7 @@ async def send_message(
     :return: Whether the message was sent
     """
     from open_webui.utils.automations import _resolve_model_defaults
-    from open_webui.utils.subagents import _build_request, queue_user_message
+    from open_webui.utils.subagents import insert_internal_message
     from open_webui.utils.tool_approval import build_tool_approval_resume_payload
 
     user = UserModel(**__user__)
@@ -1984,34 +1981,23 @@ async def send_message(
     if await ChatMessages.get_chat_ids_with_pending_approval([chat_id]):
         return 'Error: that chat is waiting for the user.'
 
-    user_message = {
-        'id': str(uuid4()),
-        'parentId': chat.current_message_id,
-        'role': 'user',
-        'content': f'[Message from chat {__chat_id__}, not from the user. Reply to it with send_message.]\n\n{message}',
-    }
     try:
-        if await queue_user_message(__request__, chat_id, user, user_message, chat.current_message_id):
-            event = {'chat_id': chat_id, 'data': {'type': 'chat:reload'}}
-            await sio.emit('events', event, room=f'user:{user.id}')
-            return 'Sent.'
-
-        form_data = await build_tool_approval_resume_payload(chat_id, chat.current_message_id, chat=chat)
-        form_data.pop('assistant_message_id')
-        defaults = await _resolve_model_defaults(__request__.app, form_data['model'])
-        await __request__.app.state.CHAT_COMPLETION_HANDLER(
-            await _build_request(__request__, user.id, internal=False),
+        settings = await build_tool_approval_resume_payload(chat_id, chat.current_message_id, chat=chat)
+        defaults = await _resolve_model_defaults(__request__.app, settings['model'])
+        await insert_internal_message(
+            __request__,
+            user,
+            chat_id,
+            chat.current_message_id,
+            f'[Message from chat {__chat_id__}. Reply to it with send_message.]\n\n{message}',
+            {'type': 'message'},
             {
-                **form_data,
+                **settings,
                 **defaults,
+                'model_id': settings['model'],
                 'machine_id': machine_id_of(chat.chat) or defaults.get('machine_id'),
-                'id': str(uuid4()),
-                'parent_id': chat.current_message_id,
-                'user_message': user_message,
-                'session_id': f'message:{chat_id}',
-                'background_tasks': {},
+                'chat_context': {key: settings[key] for key in ('messages', 'params', 'chat_variables')},
             },
-            user=user,
         )
     except HTTPException as exc:
         return f'Error: {exc.detail}'

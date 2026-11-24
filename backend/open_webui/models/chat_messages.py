@@ -396,7 +396,7 @@ class ChatMessageTable:
             return result.scalar_one_or_none() is not None
 
     async def has_queued_message(self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None) -> bool:
-        """Whether the user sent a message while this reply was still running."""
+        """Whether the user or another chat sent a message while this reply was still running."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChatMessage.meta)
@@ -405,7 +405,8 @@ class ChatMessageTable:
                 .where(ChatMessage.role == 'user')
             )
             return any(
-                (meta or {}).get('status') == 'pending' and (meta or {}).get('internal') is not True
+                (meta or {}).get('status') == 'pending'
+                and ((meta or {}).get('internal') is not True or meta.get('type') == 'message')
                 for meta in result.scalars()
             )
 
