@@ -168,7 +168,7 @@
 				<div class="mt-3">
 					{#if shareMode === 'continue'}
 						<p class="mb-3 text-xs text-base-500">
-							{$i18n.t('People who can reply can also use this chat’s own machine.')}
+							{$i18n.t('People who can reply may get access to this chat’s machine and files.')}
 						</p>
 					{/if}
 					<AccessControl

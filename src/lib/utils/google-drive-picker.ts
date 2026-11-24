@@ -30,6 +30,7 @@ const validateCredentials = () => {
 
 let pickerApiLoaded = false;
 let oauthToken: string | null = null;
+let oauthTokenExpiresAt = 0;
 let initialized = false;
 
 export const loadGoogleDriveApi = () => {
@@ -69,7 +70,7 @@ export const loadGoogleAuthApi = () => {
 };
 
 export const getAuthToken = async () => {
-	if (!oauthToken) {
+	if (!oauthToken || Date.now() >= oauthTokenExpiresAt) {
 		return new Promise((resolve, reject) => {
 			const tokenClient = google.accounts.oauth2.initTokenClient({
 				client_id: CLIENT_ID,
@@ -77,6 +78,8 @@ export const getAuthToken = async () => {
 				callback: (response: any) => {
 					if (response.access_token) {
 						oauthToken = response.access_token;
+						// Renew a minute before the token expires
+						oauthTokenExpiresAt = Date.now() + (response.expires_in - 60) * 1000;
 						resolve(oauthToken);
 					} else {
 						reject(new Error('Failed to get access token'));
