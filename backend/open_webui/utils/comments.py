@@ -106,7 +106,7 @@ def note_comment_text(content):
     return text(content['json']) if isinstance(content.get('json'), dict) else content.get('md') or ''
 
 
-def validate_comment_target(resource_type, resource, form):
+async def validate_comment_target(resource_type, resource, form):
     if bool(form.target_type) != bool(form.target_id) or (form.anchor and not form.target_id):
         raise HTTPException(422, 'A selection requires a target')
     if not form.target_id:
@@ -116,7 +116,9 @@ def validate_comment_target(resource_type, resource, form):
 
         target = next((p for p in normalize_pages(resource.data)['pages'] if p['id'] == form.target_id), None)
     elif resource_type == 'chat' and form.target_type == 'chat_message':
-        target = (resource.chat.get('history', {}).get('messages') or {}).get(form.target_id)
+        from open_webui.models.chats import Chats
+
+        target = await Chats.get_message_by_id_and_message_id(resource.id, form.target_id)
         if target and target.get('role') == 'assistant' and target.get('done') is False:
             raise HTTPException(409, 'Wait for the message to finish')
     else:

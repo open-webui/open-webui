@@ -670,7 +670,7 @@ async def _append_run_to_chat(
     from open_webui.utils.subagents import _parent_locks
 
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-        async with Chats._chat_transaction(chat_id) as (_, chat):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
             if not chat or chat.user_id != automation.user_id:
                 return False
             chat_data = copy.deepcopy(chat.chat or {})
@@ -679,9 +679,8 @@ async def _append_run_to_chat(
                 chat_data.pop('terminal_id', None)  # former name
                 chat_data.pop('working_directory', None)
                 chat_data['machine_id'] = machine_id
-            history = chat_data.setdefault('history', {})
-            messages = history.setdefault('messages', {})
-            current_id = history.get('currentId')
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
+            current_id = chat.current_message_id
             parent_id = Chats._last_descendant_id(messages, current_id) if current_id in messages else None
             now = int(time.time())
             user_message = {
@@ -704,16 +703,19 @@ async def _append_run_to_chat(
                 'model': model_id,
                 'timestamp': now,
             }
-            messages[user_msg_id] = user_message
-            messages[assistant_msg_id] = assistant_message
-            if parent_id:
-                messages[parent_id].setdefault('childrenIds', []).append(user_msg_id)
-            history['currentId'] = assistant_msg_id
             chat.chat = chat_data
             chat.current_message_id = assistant_msg_id
             chat.updated_at = now
-        await ChatMessages.upsert_message(user_msg_id, chat_id, automation.user_id, user_message)
-        await ChatMessages.upsert_message(assistant_msg_id, chat_id, automation.user_id, assistant_message)
+            await ChatMessages.upsert_message(user_msg_id, chat_id, automation.user_id, user_message, db=session)
+            await ChatMessages.upsert_message(
+                assistant_msg_id, chat_id, automation.user_id, assistant_message, db=session
+            )
+            if parent_id:
+                parent = messages[parent_id]
+                parent.setdefault('childrenIds', []).append(user_msg_id)
+                await ChatMessages.upsert_message(
+                    parent_id, chat_id, parent.get('user_id') or chat.user_id, parent, db=session
+                )
         return parent_id
 
 

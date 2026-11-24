@@ -59,7 +59,7 @@ async def validate_source(event_type, resource_type, resource_id, object_type, o
             and resource_type == 'chat'
             and obj.chat_id == resource_id
             and obj.role == 'assistant'
-            and obj.done
+            and obj.done is not False
             and not obj.error
         )
     elif event_type == 'automation.run_failed':
@@ -443,7 +443,7 @@ async def consume_event(event, db):
             not message
             or message.chat_id != subject_id
             or message.role != 'assistant'
-            or not message.done
+            or message.done is False
             or message.error
         ):
             return set()

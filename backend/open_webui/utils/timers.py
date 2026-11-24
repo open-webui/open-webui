@@ -308,9 +308,7 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                     await db.commit()
                     return
 
-                parent_chat = copy.deepcopy(parent.chat or {})
-                history = parent_chat.setdefault('history', {})
-                messages = history.setdefault('messages', {})
+                messages = await ChatMessages.get_messages_map_by_chat_id(parent_chat_id, db=db) or {}
                 done_assistants = [
                     message
                     for message in messages.values()
@@ -350,8 +348,11 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                     if user_message_id not in children:
                         children.append(user_message_id)
 
-                parent.chat = parent_chat
-                history['currentId'] = assistant_message_id
+                for message_id in (parent_id, user_message_id, assistant_message_id):
+                    if message_id in messages:
+                        await ChatMessages.upsert_message(
+                            message_id, parent_chat_id, timer.user_id, messages[message_id], db=db
+                        )
                 parent.current_message_id = assistant_message_id
                 parent.updated_at = int(time.time())
                 timer_row = await db.get(Chat, timer_id)
@@ -363,8 +364,6 @@ async def execute_due_timer(app, timer_id: str, claim_id: str | None = None) -> 
                     }
                     timer_row.updated_at = int(time.time())
                 await db.commit()
-            await ChatMessages.upsert_message(user_message_id, parent_chat_id, timer.user_id, user_message)
-            await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, timer.user_id, assistant_message)
 
         await sio.emit(
             'events',
