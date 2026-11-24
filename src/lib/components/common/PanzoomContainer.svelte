@@ -5,7 +5,6 @@
 	const defaultOpts: PanZoomOptions = {
 		bounds: true,
 		boundsPadding: 0.1,
-		pinchSpeed: 3.5,
 		beforeWheel: () => true
 	};
 
