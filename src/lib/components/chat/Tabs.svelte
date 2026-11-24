@@ -118,7 +118,7 @@
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	let stopTerminalChoice: ((stop: boolean) => void) | null = null;
 	import SplitPanel from '../icons/SplitPanel.svelte';
-	import { isSavedChatId } from '$lib/utils/chatId';
+	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 
 	const i18n = getContext<any>('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -1499,9 +1499,17 @@
 		return source ? `${tab.label} · ${source.label}` : tab.label;
 	};
 	$: showArtifactsTab = $mainArtifacts.length > 0 && $visibleControls['chat.artifacts'];
+	// A temporary side chat tab keeps no chat id; a citation clicked there comes from the active tab.
 	$: embedSourceTab =
 		$embed?.chatId && $embed.chatId !== chatId
-			? tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === $embed.chatId)
+			? (tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === $embed.chatId) ??
+				($showEmbeds &&
+				isTemporaryChatId($embed.chatId) &&
+				activeTab?.kind === 'chat' &&
+				activeTab.id !== mainChatTabId &&
+				!activeTab.chatId
+					? activeTab
+					: undefined))
 			: undefined;
 	$: showPreviewTab = !!$embed && ($embed.chatId === chatId || !!embedSourceTab);
 	$: availableViews = [
