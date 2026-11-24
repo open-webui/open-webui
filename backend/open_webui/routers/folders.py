@@ -172,10 +172,10 @@ async def get_active_folders(
     user=Depends(get_verified_user),
     db: AsyncSession = Depends(get_async_session),
 ):
-    await check_folders_permission(request, user, db=db)
-
-    folders = await Folders.get_folders_by_user_id(user.id, db=db)
-    folder_ids = [folder.id for folder in folders]
+    folders = {folder.id: folder for folder in await Folders.get_folders_by_user_id(user.id, db=db)}
+    for folder in await get_shared_folders(request, user, db):
+        folders.setdefault(folder['id'], FolderModel.model_validate(folder))
+    folder_ids = list(folders)
     active_chats = await Chats.get_active_chats(user.id, folder_ids, db=db)
     views = await FolderViewStates.get_by_folder_ids(user.id, folder_ids, db)
 
@@ -183,7 +183,7 @@ async def get_active_folders(
         folder.id: ActiveFolderResponse(
             id=folder.id, name=folder.name, directory=(folder.data or {}).get('working_directory')
         )
-        for folder in folders
+        for folder in folders.values()
     }
     for chat_id, (folder_id, waiting, updated_at) in active_chats.items():
         if waiting:
