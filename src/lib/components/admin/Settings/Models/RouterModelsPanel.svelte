@@ -37,7 +37,11 @@
 		accessGrants = null
 	) => {
 		const result = await setRouterModelsConfig(localStorage.token, nextConfig).catch((err) => {
-			toast.error(`${err?.detail ?? err}`);
+			toast.error(
+				Array.isArray(err?.detail)
+					? err.detail.map((entry) => entry.msg).join('\n')
+					: `${err?.detail ?? err}`
+			);
 			return null;
 		});
 
