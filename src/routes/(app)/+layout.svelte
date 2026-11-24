@@ -55,7 +55,9 @@
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
+	import Modal from '$lib/components/common/Modal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import { loadKeybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
@@ -463,7 +465,26 @@
 </script>
 
 {#if settingsRequested}
-	{#await import('$lib/components/chat/SettingsModal.svelte') then { default: SettingsModal }}
+	{#await import('$lib/components/chat/SettingsModal.svelte')}
+		<Modal
+			show={!!$showSettings}
+			size="full"
+			containerClassName="p-3 sm:p-4 lg:p-6"
+			className="relative h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex items-center justify-center bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
+			ariaLabel={$i18n.t('Settings')}
+			onRequestClose={() => showSettings.set(false)}
+		>
+			<button
+				type="button"
+				class="absolute top-1 left-1 flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300"
+				on:click={() => showSettings.set(false)}
+			>
+				<ChevronLeft className="size-3" strokeWidth="2" />
+				<span>{$i18n.t('Back')}</span>
+			</button>
+			<Spinner className="size-6" />
+		</Modal>
+	{:then { default: SettingsModal }}
 		<SettingsModal bind:show={$showSettings} />
 	{/await}
 {/if}
