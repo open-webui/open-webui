@@ -2762,9 +2762,6 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                             tool_function = await make_tool_function(client, tool_spec['name'])
 
                             tool_name = re.sub(r'[^a-zA-Z0-9_-]', '_', f'{server_id}_{tool_spec["name"]}')
-                            # Providers reject tool names over 64 characters
-                            if len(tool_name) > 64:
-                                tool_name = f'{tool_name[:55]}_{hashlib.sha256(tool_name.encode()).hexdigest()[:8]}'
 
                             mcp_tools_dict[tool_name] = {
                                 'spec': {
@@ -2892,6 +2889,12 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     tools_dict[name] = {**tools_dict[name], 'file_tool': tool_dict}
 
         await filter_user_terminal_tools(request, user, tools_dict, metadata, extra_params)
+
+        # Providers reject tool names over 64 characters
+        for name in [name for name in tools_dict if len(name) > 64]:
+            tool = tools_dict.pop(name)
+            name = f'{name[:55]}_{hashlib.sha256(name.encode()).hexdigest()[:8]}'
+            tools_dict[name] = {**tool, 'spec': {**tool['spec'], 'name': name}}
 
         if tools_dict:
             # Always store resolved tools in metadata so downstream consumers

@@ -1,17 +1,26 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
+	import { getContext, onDestroy } from 'svelte';
+	import { writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { v4 as uuidv4 } from 'uuid';
 	import type { AppLayoutContext } from '$lib/types';
 
-	import { config, selectedFolder, settings, user } from '$lib/stores';
+	import {
+		chatId,
+		config,
+		embed,
+		selectedFolder,
+		settings,
+		showEmbeds,
+		showTabs,
+		user
+	} from '$lib/stores';
 	import { updateFolderDetails, type FolderDetails } from '$lib/stores/folderStates';
 	import { getFolderById, updateFolderById } from '$lib/apis/folders';
 	import { uploadFile } from '$lib/apis/files';
 	import { decodeString, formatFileSize } from '$lib/utils';
 
-	import FileItemModal from '$lib/components/common/FileItemModal.svelte';
 	import FilesOverlay from '$lib/components/chat/MessageInput/FilesOverlay.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
@@ -47,11 +56,6 @@
 	let saving = 0;
 	let dragging = false;
 	let inputElement: HTMLInputElement;
-
-	let showItemModal = false;
-	let editing: Item | null = null;
-	let editingKey = '';
-	let editingContext: string | undefined;
 
 	$: files = (folder?.data?.files ?? []) as Item[];
 	/** Everything shown, saved first, so the count in the toolbar matches the list. */
@@ -205,20 +209,18 @@
 		for (const file of Array.from(list ?? [])) void uploadOne(file);
 	}
 
-	// The preview can switch a file between focused retrieval and its full text; that choice is saved on close.
-	// Notes, knowledge bases and chats open as their own page, in a tab beside the folder like chats do.
+	// Notes and chats open as their own page, in a tab beside the folder like chats do.
 	const pageOf = (item: Item) =>
 		!item.id
 			? null
-			: item.type === 'collection'
-				? `/workspace/knowledge/${item.id}`
-				: item.type === 'note'
-					? `/notes/${item.id}`
-					: item.type === 'chat'
-						? `/c/${item.id}`
-						: null;
+			: item.type === 'note'
+				? `/notes/${item.id}`
+				: item.type === 'chat'
+					? `/c/${item.id}`
+					: null;
 	const canOpen = (item: Item) =>
-		item.status !== 'uploading' && (!!pageOf(item) || (item.type ?? 'file') === 'file');
+		item.status !== 'uploading' &&
+		(!!pageOf(item) || ['file', 'collection'].includes(item.type ?? 'file'));
 
 	function open(item: Item) {
 		if (!canOpen(item)) return;
@@ -228,26 +230,62 @@
 			else void goto(href);
 			return;
 		}
-		editing = { ...item };
-		editingKey = keyOf(item);
-		editingContext = item.context;
-		showItemModal = true;
+		if (item.id) openFile(item);
 	}
 
-	$: if (!showItemModal && editing) {
-		const item = editing;
-		editing = null;
-		if (!readOnly && item.context !== editingContext && editingKey === keyOf(item)) {
-			void save((current) =>
-				current.map((entry) =>
-					sameEntry(entry, item)
-						? item.context
-							? { ...entry, context: item.context }
-							: (({ context, ...rest }) => rest)(entry)
-						: entry
-				)
-			);
-		}
+	// A file's tab can switch it between focused retrieval and its full text while the folder is shown.
+	let openedFiles: { folderId?: string; item: Item }[] = [];
+	const attachedFiles = writable<Item[]>([]);
+	$: attachedFiles.set(
+		readOnly
+			? []
+			: openedFiles
+					.filter(
+						(file) =>
+							file.folderId === folder?.id && files.some((entry) => sameEntry(entry, file.item))
+					)
+					.map((file) => file.item)
+	);
+	onDestroy(() => {
+		attachedFiles.set([]);
+		if ($embed?.file?.attachedFiles === attachedFiles) embed.set(null);
+	});
+
+	function openFile(item: Item) {
+		const attachment = { ...item, type: item.type ?? 'file' };
+		openedFiles = [
+			...openedFiles.filter((file) => !sameEntry(file.item, item)),
+			{ folderId: folder?.id, item: attachment }
+		];
+		showTabs.set(true);
+		showEmbeds.set(true);
+		embed.set({
+			file: {
+				id: item.type === 'collection' ? undefined : item.id,
+				knowledgeId: item.type === 'collection' ? item.id : null,
+				page: null,
+				passages: [],
+				content: item.file?.data?.content ?? '',
+				attachment,
+				attachedFiles,
+				onAttachmentChange: () => {
+					const { context } = attachment as Item;
+					void save((current) =>
+						current.map((entry) =>
+							sameEntry(entry, attachment)
+								? context
+									? { ...entry, context }
+									: (({ context, ...rest }) => rest)(entry)
+								: entry
+						)
+					);
+				}
+			},
+			key: item.id,
+			url: item.url,
+			title: decodeString(item.name ?? ''),
+			chatId: $chatId
+		});
 	}
 
 	const typeLabel = (item: Item) =>
@@ -263,10 +301,6 @@
 
 	const isFiles = (event: DragEvent) => event.dataTransfer?.types.includes('Files') ?? false;
 </script>
-
-{#if showItemModal && editing}
-	<FileItemModal bind:show={showItemModal} bind:item={editing} edit={!readOnly} />
-{/if}
 
 <input
 	bind:this={inputElement}

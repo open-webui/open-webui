@@ -867,6 +867,7 @@
 				disabled={!focus}
 				on:click={copySelection}><Icon name="copy" size={13} /></button
 			>
+			<slot name="toolbar" />
 		</div>
 	</div>
 </div>

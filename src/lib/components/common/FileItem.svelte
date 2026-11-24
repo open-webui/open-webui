@@ -4,7 +4,7 @@
 
 	import { formatFileSize, safeLinkUrl } from '$lib/utils';
 	import type { AppLayoutContext } from '$lib/types';
-	import { settings, showFileNavPath, user } from '$lib/stores';
+	import { embed, settings, showEmbeds, showFileNavPath, showTabs, user } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -23,8 +23,10 @@
 
 	export let dismissible = false;
 	export let modal = false;
-	/** Opens the file somewhere other than the modal. */
-	export let onOpen: (() => void) | null = null;
+	/** The chat the file opens in a tab beside, instead of in the modal. */
+	export let chatId: string | null = null;
+	/** Anything more the file's tab needs. */
+	export let tabOptions: Record<string, any> = {};
 	export let loading = false;
 
 	export let item: any = null;
@@ -42,7 +44,9 @@
 	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
+	// Where there are no chat tabs to browse it in
 	const canOpenKnowledge = () =>
+		!modal &&
 		item?.type === 'collection' &&
 		!!item.id &&
 		!!appLayout?.openPageTab &&
@@ -54,6 +58,33 @@
 		} catch (e) {
 			return str;
 		}
+	};
+
+	const openInTab = () => {
+		const id = item?.type === 'file' ? item.id : null;
+		const knowledgeId = item?.type === 'collection' ? item.id : null;
+		const content = item?.file?.data?.content ?? item?.content ?? '';
+		const key = item?.id || item?.itemId || item?.url;
+		if (chatId === null || !(id || knowledgeId || (key && content))) return false;
+
+		showTabs.set(true);
+		showEmbeds.set(true);
+		embed.set({
+			key,
+			file: {
+				id: id ?? undefined,
+				knowledgeId,
+				page: null,
+				passages: [],
+				content,
+				attachment: item,
+				...tabOptions
+			},
+			url: item.url,
+			title: decodeString(name ?? ''),
+			chatId
+		});
+		return true;
 	};
 </script>
 
@@ -73,6 +104,8 @@
 
 			if (filesystemPath) {
 				showFileNavPath.set(filesystemPath);
+			} else if (item?.type === 'collection' && openInTab()) {
+				// Browsed beside the chat
 			} else if (canOpenKnowledge()) {
 				// Opens beside the chat, so the conversation stays readable
 				appLayout?.openPageTab?.({
@@ -81,8 +114,7 @@
 					inSplit: true
 				});
 			} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
-				if (onOpen) onOpen();
-				else showModal = !showModal;
+				if (!openInTab()) showModal = !showModal;
 			} else {
 				if (url) {
 					if (type === 'file') {

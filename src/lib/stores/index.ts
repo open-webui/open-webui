@@ -212,7 +212,7 @@ export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(nul
 export const showFileNavDir: Writable<string | null> = writable(null);
 export const selectedMachineId: Writable<string | null> = writable(null);
 
-export const embed = writable(null);
+export const embed = writable<any>(null);
 
 /** Whether the main chat is temporary, or for a new chat, whether it starts as one. */
 export const temporaryChat = writable(false);

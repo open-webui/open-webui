@@ -349,7 +349,9 @@
 			<slot name="toolbar" slot="toolbar" />
 		</DocxPreview>
 	{:else if excelWorkbook !== null}
-		<ExcelPreview workbook={excelWorkbook} bind:selectedSheet={selectedExcelSheet} />
+		<ExcelPreview workbook={excelWorkbook} bind:selectedSheet={selectedExcelSheet}>
+			<slot name="toolbar" slot="toolbar" />
+		</ExcelPreview>
 	{:else if fileOfficeSlides !== null && fileOfficeSlides.length > 0}
 		<PptxPreview
 			bind:this={pptxPreviewRef}
@@ -357,7 +359,9 @@
 			bind:currentSlide
 			{targetPage}
 			className="w-full h-full"
-		/>
+		>
+			<slot name="toolbar" slot="toolbar" />
+		</PptxPreview>
 	{:else if fileContent !== null}
 		{#if searchTarget || showRaw}
 			<div class="absolute inset-0">
@@ -544,6 +548,7 @@
 					/>
 				</svg>
 			</button>
+			<slot name="toolbar" />
 		</div>
 	{/if}
 </div>

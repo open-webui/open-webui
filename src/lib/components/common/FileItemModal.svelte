@@ -6,8 +6,7 @@
 
 	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { config, settings } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 
@@ -21,7 +20,7 @@
 
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import Switch from './Switch.svelte';
+	import FileContextSwitch from './FileContextSwitch.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
@@ -31,15 +30,12 @@
 	import PptxPreview from './PptxPreview.svelte';
 	import Reset from '../icons/Reset.svelte';
 
-	export let item;
+	export let item: any;
 	export let show = false;
 	export let edit = false;
 
-	let enableFullContent = false;
 	let loading = false;
 	let externalKnowledge = false;
-
-	const getCharacterCount = (text: string) => Array.from(text).length;
 
 	let isPDF = false;
 	let isAudio = false;
@@ -187,11 +183,6 @@
 		expandedContent = false;
 		docxData = null;
 		externalKnowledge = false;
-		if ($config?.file?.full_text_threshold === undefined) {
-			await getBackendConfig()
-				.then((value) => config.set(value))
-				.catch((error) => console.error('Error fetching file context settings:', error));
-		}
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -237,19 +228,6 @@
 	$: if (show) {
 		loadContent();
 	}
-
-	$: fullTextThreshold = $config?.file?.full_text_threshold ?? 0;
-	$: contentLength = getCharacterCount(item?.file?.data?.content ?? '');
-	$: automaticFullContent =
-		!externalKnowledge &&
-		(Boolean($config?.file?.full_context) ||
-			// Files are measured by the backend, which can count tokens.
-			(item?.type === 'file' && Boolean(item?.file?.full_text)) ||
-			(item?.type === 'text' &&
-				$config?.file?.full_text_threshold_type !== 'token' &&
-				contentLength > 0 &&
-				contentLength <= fullTextThreshold));
-	$: enableFullContent = automaticFullContent || item?.context === 'full';
 
 	onMount(() => {
 		console.log(item);
@@ -344,40 +322,9 @@
 						{/if}
 					</div>
 
-					{#if edit && !loading && $config?.file?.full_text_threshold !== undefined}
+					{#if edit && !loading}
 						<div class=" self-end">
-							<Tooltip
-								content={automaticFullContent
-									? $config?.file?.full_context
-										? $i18n.t('Full text is always enabled by your administrator.')
-										: $i18n.t(
-												'This attachment fits within the full text threshold, so its entire text is included automatically.'
-											)
-									: enableFullContent
-										? $i18n.t(
-												'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-											)
-										: $i18n.t(
-												'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-											)}
-							>
-								<div class="flex items-center gap-1.5 text-xs">
-									{#if enableFullContent}
-										{$i18n.t('Using Entire Document')}
-									{:else}
-										{$i18n.t('Using Focused Retrieval')}
-									{/if}
-									{#if !automaticFullContent}
-										<Switch
-											bind:state={enableFullContent}
-											ariaLabel={$i18n.t('Using Entire Document')}
-											on:change={(e) => {
-												item.context = e.detail ? 'full' : undefined;
-											}}
-										/>
-									{/if}
-								</div>
-							</Tooltip>
+							<FileContextSwitch bind:item {externalKnowledge} />
 						</div>
 					{/if}
 				</div>

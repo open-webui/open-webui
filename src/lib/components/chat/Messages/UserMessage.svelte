@@ -7,11 +7,10 @@
 	import { toast } from 'svelte-sonner';
 	import { tick, getContext, onMount } from 'svelte';
 
-	import { embed, settings, showEmbeds, showTabs } from '$lib/stores';
+	import { settings } from '$lib/stores';
 	import { user as _user } from '$lib/stores';
 	import {
 		copyToClipboard as _copyToClipboard,
-		decodeString,
 		formatMessageTimestamp,
 		formatMessageTimestampFull,
 		isRasterImageContentType
@@ -99,29 +98,6 @@
 		if (res) {
 			toast.success($i18n.t('Copying to clipboard was successful!'));
 		}
-	};
-
-	const getFileContent = (file) => file.file?.data?.content ?? file.content ?? '';
-	// A saved view of a chat has no tabs to open a file in
-	const canOpenInTab = (file) =>
-		!readOnly &&
-		!compactPreview &&
-		((file.type === 'file' && !!file.id) || (!!file.url && !!getFileContent(file)));
-	// An attached file opens beside the chat, as a cited one does
-	const openFileInTab = (file) => {
-		showTabs.set(true);
-		showEmbeds.set(true);
-		embed.set({
-			file: {
-				id: file.type === 'file' ? file.id : undefined,
-				page: null,
-				passages: [],
-				content: getFileContent(file)
-			},
-			url: file.url,
-			title: decodeString(file.name ?? ''),
-			chatId
-		});
 	};
 
 	const editMessageHandler = async () => {
@@ -244,6 +220,7 @@
 								{#if file.type === 'image' || isRasterImageContentType(file?.content_type)}
 									<Image src={fileUrl} imageClassName=" max-h-96 rounded-lg" />
 								{:else}
+									<!-- A saved view of a chat has no tabs to open a file in -->
 									<FileItem
 										item={file}
 										url={file.url}
@@ -251,7 +228,7 @@
 										type={file.type}
 										size={file?.size}
 										small={true}
-										onOpen={canOpenInTab(file) ? () => openFileInTab(file) : null}
+										chatId={readOnly || compactPreview ? null : chatId}
 									/>
 								{/if}
 							</div>

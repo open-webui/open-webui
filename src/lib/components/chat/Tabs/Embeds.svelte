@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
+	import { readable, type Readable } from 'svelte/store';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
+	import { safeLinkUrl } from '$lib/utils';
 	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
@@ -10,6 +12,8 @@
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Markdown from '$lib/components/chat/Messages/Markdown.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import FileContextSwitch from '$lib/components/common/FileContextSwitch.svelte';
+	import OpenFileLink from './OpenFileLink.svelte';
 	import RelevanceBadge from '$lib/components/chat/Messages/Citations/RelevanceBadge.svelte';
 
 	// A cited or attached upload, shown at its cited page. PDFs also mark the cited text.
@@ -38,6 +42,8 @@
 	const MODEL_EXTS = new Set(['glb', 'gltf', 'stl', 'obj', 'ply']);
 	const EXCEL_EXTS = new Set(['xlsx', 'xls']);
 	const LAID_OUT_EXTS = new Set(['pdf', 'docx', 'pptx', ...EXCEL_EXTS]);
+	// Documents whose text is only what was extracted; code and plain text are their text
+	const EXTRACTED_EXTS = new Set('doc ppt odt ods odp rtf epub msg'.split(' '));
 	// Text the preview draws as something other than its lines
 	const DRAWN_TEXT_EXTS = new Set(
 		'md markdown mdx csv tsv html htm json jsonc jsonl json5 svg ipynb'.split(' ')
@@ -89,6 +95,8 @@
 			if (fileId === id) fileLoading = false;
 		}
 	};
+	// Images and media are set at once, so this runs before what is drawn is decided
+	$: if ((embed?.file?.id ?? '') !== fileId) loadFile(embed?.file?.id ?? '', fileExt);
 	$: hasPreview =
 		fileDocxData ||
 		fileSqliteData ||
@@ -99,7 +107,6 @@
 		fileContent !== null ||
 		fileOfficeSlides ||
 		excelWorkbook;
-	$: if ((embed?.file?.id ?? '') !== fileId) loadFile(embed?.file?.id ?? '', fileExt);
 	$: isPlainText = !DRAWN_TEXT_EXTS.has(fileExt) && !LAID_OUT_EXTS.has(fileExt);
 	// Code and plain text are drawn as they are, so the lines are matched as they are
 	const textLines = (passage: string) => [
@@ -178,6 +185,24 @@
 	const NO_QUOTES: string[] = [];
 	$: shownQuotes = showQuotes ? fileQuotes : NO_QUOTES;
 	$: if (!showQuotes) hoveredText = null;
+	// A web page has no file of its own, so its address is opened
+	$: openUrl = fileId
+		? `${WEBUI_API_BASE_URL}/files/${fileId}/content`
+		: safeLinkUrl(embed?.url ?? '');
+	// A file still in the composer can have how it is sent changed
+	const NO_FILES: Readable<any[]> = readable([]);
+	let attachedFiles = NO_FILES;
+	$: attachedFiles = embed?.file?.attachedFiles ?? NO_FILES;
+	$: attachment = $attachedFiles.includes(embed?.file?.attachment) ? embed.file.attachment : null;
+	$: openLabel = fileId ? $i18n.t('Open file') : $i18n.t('Open link');
+	// These previews have a bar of their own, which the actions join
+	$: hasBar =
+		fileData ||
+		fileDocxData ||
+		fileImageUrl ||
+		excelWorkbook ||
+		fileOfficeSlides?.length ||
+		(fileContent && fileExt === 'svg');
 	let fileSource: any = null;
 	$: if (embed?.file !== fileSource) {
 		fileSource = embed?.file ?? null;
@@ -307,6 +332,12 @@
 										</button>
 									</Tooltip>
 								{/if}
+								{#if attachment}
+									<div class="px-1.5">
+										<FileContextSwitch item={attachment} onChange={embed.file.onAttachmentChange} />
+									</div>
+								{/if}
+								{#if openUrl}<OpenFileLink href={openUrl} label={openLabel} />{/if}
 							</svelte:fragment>
 						</PdfPagesPreview>
 					{/key}
@@ -372,6 +403,12 @@
 										</button>
 									</Tooltip>
 								{/if}
+								{#if attachment}
+									<div class="px-1.5">
+										<FileContextSwitch item={attachment} onChange={embed.file.onAttachmentChange} />
+									</div>
+								{/if}
+								{#if openUrl}<OpenFileLink href={openUrl} label={openLabel} />{/if}
 							</svelte:fragment>
 						</FilePreview>
 					</div>
@@ -385,28 +422,35 @@
 					/>
 				{:else if !fileLoading && (fileText || fileSource?.content)}
 					<FilePreview
-						selectedFile={`${fileName}.md`}
+						selectedFile={isPlainText && !EXTRACTED_EXTS.has(fileExt) && !/^https?:/.test(fileName)
+							? fileName
+							: `${fileName}.md`}
 						fileContent={fileText || fileSource.content}
 						wrapLines={true}
 						readOnly={true}
 					/>
 				{:else}
 					<div
-						class="flex h-full flex-col items-center justify-center gap-1 text-xs text-base-500 dark:text-base-400"
+						class="flex h-full items-center justify-center text-xs text-base-500 dark:text-base-400"
 					>
 						{#if fileLoading}
 							<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 						{:else}
 							{$i18n.t('Preview failed')}
-							{#if fileId}
-								<a
-									class="underline"
-									href={`${WEBUI_API_BASE_URL}/files/${fileId}/content`}
-									target="_blank"
-									rel="noopener noreferrer">{$i18n.t('Open file')}</a
-								>
-							{/if}
 						{/if}
+					</div>
+				{/if}
+				{#if (openUrl || attachment) && !hasBar && !fileLoading}
+					<!-- Styled as the bars of the other previews are -->
+					<div
+						class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center rounded-lg border border-base-200/60 bg-base-0/90 px-1 py-0.5 text-base-500 shadow-lg backdrop-blur-sm dark:border-base-700/60 dark:bg-base-850/90 dark:text-base-400"
+					>
+						{#if attachment}
+							<div class="px-1.5">
+								<FileContextSwitch item={attachment} onChange={embed.file.onAttachmentChange} />
+							</div>
+						{/if}
+						{#if openUrl}<OpenFileLink href={openUrl} label={openLabel} />{/if}
 					</div>
 				{/if}
 				{#if hoveredText}

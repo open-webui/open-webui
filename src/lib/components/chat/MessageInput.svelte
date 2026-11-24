@@ -22,7 +22,8 @@
 	dayjs.extend(duration);
 	dayjs.extend(relativeTime);
 
-	import { onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { onDestroy, onMount, tick, getContext, createEventDispatcher } from 'svelte';
+	import { writable } from 'svelte/store';
 	import type { Writable } from 'svelte/store';
 
 	import { createPicker, getAuthToken } from '$lib/utils/google-drive-picker';
@@ -41,6 +42,7 @@
 		skills,
 		machines,
 		user as _user,
+		embed,
 		showTabs,
 		showSettings,
 		showFileNavDir,
@@ -1165,6 +1167,14 @@
 		}
 	};
 
+	// A file's tab offers its context only while the file is still here to be sent
+	const attachedFiles = writable<any[]>([]);
+	$: attachedFiles.set(files);
+	onDestroy(() => {
+		attachedFiles.set([]);
+		if ($embed?.file?.attachedFiles === attachedFiles) embed.set(null);
+	});
+
 	const uploadFileHandler = async (file, process = true, itemData = {}) => {
 		if ($_user?.role !== 'admin' && !($_user?.permissions?.chat?.file_upload ?? true)) {
 			toast.error($i18n.t('You do not have permission to upload files.'));
@@ -1191,7 +1201,7 @@
 			error: '',
 			itemId: tempItemId,
 			// Stamp the user's default upload mode so the sent payload carries it;
-			// the per-file toggle in FileItemModal can still override it afterwards.
+			// the per-file toggle in FileContextSwitch can still override it afterwards.
 			...($settings?.defaultUploadContext === 'full' ? { context: 'full' } : {}),
 			...itemData
 		};
@@ -2410,6 +2420,7 @@
 												</div>
 											</div>
 										{:else}
+											<!-- A chat tab that has not started has no tab of its own to open beside -->
 											<FileItem
 												item={file}
 												name={file.name}
@@ -2420,6 +2431,11 @@
 												edit={true}
 												small={true}
 												modal={['file', 'collection'].includes(file?.type)}
+												chatId={embedded && !chatId ? null : chatId}
+												tabOptions={{
+													attachedFiles,
+													onAttachmentChange: () => (files = files)
+												}}
 												on:dismiss={async () => {
 													// Remove from UI state
 													files.splice(fileIdx, 1);
