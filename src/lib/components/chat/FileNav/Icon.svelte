@@ -522,11 +522,13 @@
 		<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z" />
 		<path d="M14 3v6h6M9 15h6M12 12v6" />
 	{:else if name === 'folder-plus' || name === 'folder-upload'}
-		<path d="M3 7V5a2 2 0 0 1 2-2h5l3 4h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+		<path
+			d="m13.06 6.31-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
+		/>
 		{#if name === 'folder-plus'}
-			<path d="M9 14h6M12 11v6" />
+			<path d="M12 10.5v6m3-3H9" />
 		{:else}
-			<path d="M12 18v-7m-3 3 3-3 3 3" />
+			<path d="M12 17v-6m-3 3 3-3 3 3" />
 		{/if}
 	{:else if name === 'upload-tray' || name === 'download-tray'}
 		<path d="M4 16v4h16v-4M12 3v12" />
