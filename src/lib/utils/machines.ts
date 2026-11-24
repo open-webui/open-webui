@@ -10,6 +10,9 @@ export const selectMachine = (
 	chatId: string | null
 ) => {
 	selectedMachineId.set(id);
+	// New chats start on the last pick.
+	if (id) localStorage.selectedMachineId = id;
+	else delete localStorage.selectedMachineId;
 	if (isSavedChatId(chatId))
 		updateChatById(localStorage.token, chatId!, { machine_id: id, working_directory: '' }).catch(
 			(error) => toast.error(String(error))

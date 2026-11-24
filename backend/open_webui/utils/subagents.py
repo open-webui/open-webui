@@ -559,6 +559,7 @@ async def delegate(
                     'id': chat_id,
                     'title': f'Sub-agent: {task[:60]}',
                     'models': [model_id],
+                    'machine_id': machine_id_of(run),
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {

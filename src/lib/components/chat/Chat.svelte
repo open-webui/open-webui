@@ -3193,6 +3193,10 @@
 		if (signal.aborted) return;
 		// Clear the previous chat first, so its id and history don't affect the new chat's defaults.
 		await chatId.set('');
+		if (!machineIdOf(destinationFolder?.data)) {
+			const machineId = localStorage.selectedMachineId;
+			selectedMachineId.set(isMachineAvailable(machineId) ? machineId : null);
+		}
 		if (preserveTabs) {
 			chatIdProp = '';
 			loadedChatIdProp = '';
