@@ -2482,6 +2482,7 @@ async def get_app_config(request: Request):
         'rag.full_context',
         'rag.bypass_embedding_and_retrieval',
         'rag.full_context_char_threshold',
+        'rag.full_text_threshold_type',
         'file.image_compression_width',
         'file.image_compression_height',
         'user.permissions',
@@ -2622,7 +2623,8 @@ async def get_app_config(request: Request):
                     'full_context': bool(
                         config.get('rag.full_context') or config.get('rag.bypass_embedding_and_retrieval')
                     ),
-                    'full_text_char_threshold': config.get('rag.full_context_char_threshold'),
+                    'full_text_threshold': config.get('rag.full_context_char_threshold'),
+                    'full_text_threshold_type': config.get('rag.full_text_threshold_type'),
                     'image_compression': {
                         'width': config.get('file.image_compression_width'),
                         'height': config.get('file.image_compression_height'),

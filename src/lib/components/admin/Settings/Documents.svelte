@@ -171,7 +171,11 @@
 		),
 		RAG_EMBEDDING_QUERY_PREFIX: $i18n.t('settings.admin.documents.embeddingQueryPrefix.label'),
 		RAG_EMBEDDING_CONTENT_PREFIX: $i18n.t('settings.admin.documents.embeddingContentPrefix.label'),
-		RAG_FULL_TEXT_CHAR_THRESHOLD: $i18n.t('settings.admin.documents.fullTextCharThreshold.label'),
+		RAG_FULL_TEXT_THRESHOLD_TYPE: $i18n.t('settings.admin.documents.fullTextThresholdType.label'),
+		RAG_FULL_TEXT_THRESHOLD:
+			RAGConfig?.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+				? $i18n.t('settings.admin.documents.fullTextTokenThreshold.label')
+				: $i18n.t('settings.admin.documents.fullTextCharThreshold.label'),
 		RAG_FULL_CONTEXT: $i18n.t('settings.admin.documents.fullContextMode.label'),
 		ENABLE_RAG_HYBRID_SEARCH: $i18n.t('settings.admin.documents.hybridSearch.label'),
 		ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: $i18n.t(
@@ -1506,16 +1510,35 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.documents.sections.retrieval.title')}>
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.documents.fullTextThresholdType.label')}
+						description={$i18n.t('settings.admin.documents.fullTextThresholdType.description')}
+						let:labelId
+					>
+						<SettingsSelect
+							id={`${labelId}-control`}
+							bind:value={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE}
+							disabled={RAGConfig.RAG_FULL_CONTEXT}
+						>
+							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+						</SettingsSelect>
+					</AdminSettingRow>
+
 					<AdminSettingField
-						label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
-						description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
-						forId="full-text-char-threshold"
+						label={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+							? $i18n.t('settings.admin.documents.fullTextTokenThreshold.label')
+							: $i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
+						description={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+							? $i18n.t('settings.admin.documents.fullTextTokenThreshold.description')
+							: $i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
+						forId="full-text-threshold"
 					>
 						<input
-							id="full-text-char-threshold"
+							id="full-text-threshold"
 							class={inputClass}
 							type="number"
-							bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
+							bind:value={RAGConfig.RAG_FULL_TEXT_THRESHOLD}
 							disabled={RAGConfig.RAG_FULL_CONTEXT}
 							min="0"
 							step="1"

@@ -964,15 +964,19 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 )
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
-RAG_FULL_TEXT_CHAR_THRESHOLD = max(
+RAG_FULL_TEXT_THRESHOLD = max(
     0,
     int(
         os.getenv(
-            'RAG_FULL_TEXT_CHAR_THRESHOLD',
-            os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+            'RAG_FULL_TEXT_THRESHOLD',
+            os.getenv(
+                'RAG_FULL_TEXT_CHAR_THRESHOLD',
+                os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+            ),
         )
     ),
 )
+RAG_FULL_TEXT_THRESHOLD_TYPE = os.getenv('RAG_FULL_TEXT_THRESHOLD_TYPE', '')
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 KNOWLEDGE_MAX_UPLOAD_COUNT = (
@@ -3045,7 +3049,8 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
     # Retain the stored key so renaming the setting preserves saved thresholds.
-    'rag.full_context_char_threshold': RAG_FULL_TEXT_CHAR_THRESHOLD,
+    'rag.full_context_char_threshold': RAG_FULL_TEXT_THRESHOLD,
+    'rag.full_text_threshold_type': RAG_FULL_TEXT_THRESHOLD_TYPE,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'knowledge.max_upload_count': KNOWLEDGE_MAX_UPLOAD_COUNT,
     'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,

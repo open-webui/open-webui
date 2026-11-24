@@ -187,7 +187,7 @@
 		expandedContent = false;
 		docxData = null;
 		externalKnowledge = false;
-		if ($config?.file?.full_text_char_threshold === undefined) {
+		if ($config?.file?.full_text_threshold === undefined) {
 			await getBackendConfig()
 				.then((value) => config.set(value))
 				.catch((error) => console.error('Error fetching file context settings:', error));
@@ -238,15 +238,17 @@
 		loadContent();
 	}
 
-	$: fullTextCharThreshold = $config?.file?.full_text_char_threshold ?? 0;
+	$: fullTextThreshold = $config?.file?.full_text_threshold ?? 0;
 	$: contentLength = getCharacterCount(item?.file?.data?.content ?? '');
 	$: automaticFullContent =
 		!externalKnowledge &&
 		(Boolean($config?.file?.full_context) ||
-			((item?.type === 'file' || item?.type === 'text') &&
-				fullTextCharThreshold > 0 &&
+			// Files are measured by the backend, which can count tokens.
+			(item?.type === 'file' && Boolean(item?.file?.full_text)) ||
+			(item?.type === 'text' &&
+				$config?.file?.full_text_threshold_type !== 'token' &&
 				contentLength > 0 &&
-				contentLength <= fullTextCharThreshold));
+				contentLength <= fullTextThreshold));
 	$: enableFullContent = automaticFullContent || item?.context === 'full';
 
 	onMount(() => {
@@ -342,7 +344,7 @@
 						{/if}
 					</div>
 
-					{#if edit && !loading && $config?.file?.full_text_char_threshold !== undefined}
+					{#if edit && !loading && $config?.file?.full_text_threshold !== undefined}
 						<div class=" self-end">
 							<Tooltip
 								content={automaticFullContent

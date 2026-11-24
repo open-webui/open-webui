@@ -421,7 +421,8 @@ type Config = {
 		max_size?: number | null;
 		max_count?: number | null;
 		full_context?: boolean;
-		full_text_char_threshold?: number;
+		full_text_threshold?: number;
+		full_text_threshold_type?: string;
 		image_compression?: { width?: number | null; height?: number | null };
 	};
 	metadata?: {

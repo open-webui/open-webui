@@ -12,6 +12,7 @@ from urllib.parse import quote
 import aiohttp
 import numpy as np
 import requests
+import tiktoken
 from fastapi import HTTPException
 from langchain_classic.retrievers import (
     ContextualCompressionRetriever,
@@ -1380,6 +1381,17 @@ def filter_source_metadata(metadata: dict) -> dict:
     return result
 
 
+TIKTOKEN_DISALLOWED_SPECIAL = ()
+
+
+def is_full_text(content: str, config: dict) -> bool:
+    threshold = config.get('rag.full_context_char_threshold') or 0
+    if threshold and config.get('rag.full_text_threshold_type') == 'token':
+        encoding = tiktoken.get_encoding(config['rag.tiktoken_encoding_name'])
+        return 0 < len(encoding.encode(content, disallowed_special=TIKTOKEN_DISALLOWED_SPECIAL)) <= threshold
+    return 0 < len(content) <= threshold
+
+
 async def get_sources_from_items(
     request,
     items,
@@ -1396,9 +1408,13 @@ async def get_sources_from_items(
 ):
     log.debug('items: %s %s %s %s %s', items, queries, embedding_function, reranking_function, full_context)
 
-    context_config = await Config.get_many('rag.bypass_embedding_and_retrieval', 'rag.full_context_char_threshold')
+    context_config = await Config.get_many(
+        'rag.bypass_embedding_and_retrieval',
+        'rag.full_context_char_threshold',
+        'rag.full_text_threshold_type',
+        'rag.tiktoken_encoding_name',
+    )
     bypass_embedding_and_retrieval = context_config.get('rag.bypass_embedding_and_retrieval')
-    char_threshold = context_config.get('rag.full_context_char_threshold') or 0
     extracted_collections = []
     query_results = []
     folder_items = set()
@@ -1428,7 +1444,7 @@ async def get_sources_from_items(
             # Used during temporary chat file uploads or web page & youtube attachements
 
             content = (item.get('file') or {}).get('data', {}).get('content') or ''
-            if item.get('context') == 'full' or (char_threshold > 0 and 0 < len(content) <= char_threshold):
+            if item.get('context') == 'full' or await asyncio.to_thread(is_full_text, content, context_config):
                 if item.get('file'):
                     # if item has file data, use it
                     query_result = {
@@ -1577,7 +1593,7 @@ async def get_sources_from_items(
                         )
                     ):
                         content = (file_object.data or {}).get('content') or '' if file_object else ''
-                        if char_threshold > 0 and 0 < len(content) <= char_threshold:
+                        if await asyncio.to_thread(is_full_text, content, context_config):
                             query_result = {
                                 'documents': [[content]],
                                 'metadatas': [

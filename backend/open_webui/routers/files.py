@@ -39,13 +39,13 @@ from open_webui.models.config import Config
 from open_webui.models.files import (
     FileForm,
     FileListResponse,
-    FileModel,
     FileModelResponse,
     Files,
 )
 from open_webui.models.groups import Groups
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.users import Users
+from open_webui.retrieval.utils import is_full_text
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.audio import transcribe
 from open_webui.routers.knowledge import check_knowledge_upload_limits
@@ -641,7 +641,7 @@ async def delete_all_files(
 # Get File By Id
 
 
-@router.get('/{id}', response_model=Optional[FileModel])
+@router.get('/{id}', response_model=Optional[dict])
 async def get_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)):
     file = await Files.get_file_by_id(id, db=db)
 
@@ -652,7 +652,12 @@ async def get_file_by_id(id: str, user=Depends(get_verified_user), db: AsyncSess
         )
 
     if file.user_id == user.id or user.role == 'admin' or await has_access_to_file(id, 'read', user, db=db):
-        return file
+        config = await Config.get_many(
+            'rag.full_context_char_threshold', 'rag.full_text_threshold_type', 'rag.tiktoken_encoding_name', db=db
+        )
+        content = (file.data or {}).get('content') or ''
+        full_text = await asyncio.to_thread(is_full_text, content, config)
+        return {**file.model_dump(), 'full_text': full_text}
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
