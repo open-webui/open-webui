@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import copy
 import fnmatch
 import hashlib
 import logging
@@ -16,7 +17,7 @@ from typing import Literal, Optional
 
 import aiohttp
 import jwt
-from authlib.integrations.starlette_client import OAuth
+from authlib.integrations.starlette_client import OAuth, StarletteOAuth2App
 from authlib.oauth2.rfc6749.errors import OAuth2Error
 from authlib.oidc.core import UserInfo
 from cryptography.fernet import Fernet, InvalidToken
@@ -25,6 +26,7 @@ from fastapi import (
     status,
 )
 from joserfc.errors import BadSignatureError
+from joserfc.jwk import OctKey
 from joserfc.jws import JWSRegistry
 from mcp.shared.auth import (
     OAuthClientMetadata as MCPOAuthClientMetadata,
@@ -100,6 +102,19 @@ from starlette.responses import RedirectResponse
 # Some IdPs put private params in ID token JOSE headers (CAS: client_id, CyberArk: app_id).
 # Authlib exposes no way to pass a registry, so relax it globally; crit, alg and signature checks still apply.
 JWSRegistry.__init__ = partialmethod(JWSRegistry.__init__, strict_check_header=False)
+
+
+class OAuthLoginClient(StarletteOAuth2App):
+    """Authlib client that also verifies ID tokens signed with the client secret."""
+
+    async def parse_id_token(self, token: dict, nonce: Optional[str], **kwargs):
+        header = jwt.get_unverified_header(token['id_token'])
+        if not header['alg'].startswith('HS'):
+            return await super().parse_id_token(token, nonce, **kwargs)
+        secret_key = OctKey.import_key(self.client_secret, {'kid': header['kid']} if 'kid' in header else None)
+        secret_client = copy.copy(self)
+        secret_client.server_metadata = {**self.server_metadata, 'jwks': {'keys': [secret_key.as_dict()]}}
+        return await StarletteOAuth2App.parse_id_token(secret_client, token, nonce, **kwargs)
 
 
 class OAuthClientMetadata(MCPOAuthClientMetadata):
@@ -1422,6 +1437,7 @@ class OAuthClientManager(OAuthSessionRefresher):
 class OAuthManager(OAuthSessionRefresher):
     def __init__(self, app):
         self.oauth = OAuth()
+        self.oauth.oauth2_client_cls = OAuthLoginClient
         self.app = app
 
         self._clients = {}
