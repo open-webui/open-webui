@@ -67,15 +67,11 @@
 					)}
 	>
 		<div class="flex items-center gap-1.5 text-xs">
-			{#if enableFullContent}
-				{$i18n.t('Using Entire Document')}
-			{:else}
-				{$i18n.t('Using Focused Retrieval')}
-			{/if}
+			{$i18n.t('Full text')}
 			{#if !automaticFullContent}
 				<Switch
 					bind:state={enableFullContent}
-					ariaLabel={$i18n.t('Using Entire Document')}
+					ariaLabel={$i18n.t('Full text')}
 					on:change={(e) => {
 						item.context = e.detail ? 'full' : undefined;
 						onChange();

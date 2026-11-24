@@ -2106,9 +2106,7 @@
 				type="button"
 			>
 				<span id="default-upload-mode-state">
-					{defaultUploadContext === 'full'
-						? $i18n.t('Using Entire Document')
-						: $i18n.t('Using Focused Retrieval')}
+					{defaultUploadContext === 'full' ? $i18n.t('Full text') : $i18n.t('Relevant passages')}
 				</span>
 			</button>
 		</div>

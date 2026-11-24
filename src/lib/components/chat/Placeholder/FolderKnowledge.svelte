@@ -395,7 +395,7 @@
 						>
 						{#if item.context === 'full'}
 							<span class="hidden shrink-0 text-xs text-base-400 @md:block dark:text-base-500"
-								>{$i18n.t('Using Entire Document')}</span
+								>{$i18n.t('Full text')}</span
 							>
 						{/if}
 					</button>
