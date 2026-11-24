@@ -47,21 +47,16 @@
 
 <div class="group/setting-row flex gap-1.5">
 	<Tooltip
-		className="w-full relative"
+		className="w-full"
 		content={$i18n.t(`WebUI will make requests to "{{url}}/api/chat"`, {
 			url
 		})}
 		placement="top-start"
 	>
-		{#if !(config?.enable ?? true)}
-			<div
-				class="pointer-events-none absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-base-0 dark:bg-base-900 z-10"
-			></div>
-		{/if}
-
 		<button
 			type="button"
 			class="block text-left truncate cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white w-full text-sm bg-transparent outline-hidden"
+			class:opacity-50={!(config?.enable ?? true)}
 			on:click={() => (showConfigModal = true)}
 		>
 			{url || $i18n.t('Enter URL (e.g. http://localhost:11434)')}
