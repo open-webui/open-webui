@@ -407,7 +407,20 @@
 			if (viewState !== loading) return;
 			// The chat restores its machine and directory together; layouts must not override them.
 			entry.state.selectedMachineId = $selectedMachineId;
-			entry.state.panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
+			let panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
+			const mainGroup = panels.groups.find((group) => group.tabIds.includes(mainChatTabId));
+			const activeIds = [panels.activeId, mainGroup?.activeId];
+			// Opening a chat shows that chat, not the page or other chat it was left on.
+			if (
+				panels.tabs.some(
+					(tab) =>
+						activeIds.includes(tab.id) &&
+						tab.id !== mainChatTabId &&
+						(tab.kind === 'page' || tab.kind === 'chat')
+				)
+			)
+				panels = activateTab(panels, mainChatTabId);
+			entry.state.panels = panels;
 			tabs = entry.state.panels;
 			dirtyFiles = {};
 			fileContexts = {};

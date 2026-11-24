@@ -1217,6 +1217,8 @@ ENABLE_AUDIT_LOGS_FILE = os.getenv('ENABLE_AUDIT_LOGS_FILE', 'True').lower() == 
 # Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
 # provide the whole path, like: /app/audit.log
 AUDIT_LOGS_FILE_PATH = os.getenv('AUDIT_LOGS_FILE_PATH', f'{DATA_DIR}/audit.log')
+# When enabled, startup fails if audit logging is on and the audit log file cannot be opened
+ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK = os.getenv('ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK', 'False').lower() == 'true'
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv('AUDIT_LOG_FILE_ROTATION_SIZE', '10MB')
 

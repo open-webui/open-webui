@@ -28,7 +28,7 @@
 		WEBUI_DEPLOYMENT_ID,
 		mobile,
 		socket,
-		socketConnected,
+		socketLost,
 		chatId,
 		tags,
 		temporaryChat,
@@ -200,9 +200,8 @@
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
+			socketLost.set(true);
 		});
-
-		let hasConnectedOnce = false;
 
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
@@ -210,16 +209,13 @@
 			// Cancel any pending disconnect toast if we reconnected quickly
 			clearDisconnectToastTimer();
 
-			if (hasConnectedOnce) {
-				socketConnected.set(true);
-				// Only show "Reconnected" if the user actually saw the disconnect warning
-				if (disconnectWarningShown) {
-					toast.success($i18n.t('Reconnected'));
-				}
+			socketLost.set(false);
+			// Only show "Reconnected" if the user actually saw the disconnect warning
+			if (disconnectWarningShown) {
+				toast.success($i18n.t('Reconnected'));
 			}
 			disconnectWarningShown = false;
 			disconnectReason = null;
-			hasConnectedOnce = true;
 
 			const res = await getVersion(localStorage.token);
 
@@ -277,7 +273,7 @@
 
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
-			socketConnected.set(false);
+			socketLost.set(true);
 			disconnectReason = reason;
 			disconnectWarningShown = false;
 

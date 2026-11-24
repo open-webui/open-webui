@@ -29,6 +29,7 @@
 		tools,
 		skills,
 		socket,
+		onSocketRestored,
 		functions,
 		tags,
 		banners,
@@ -174,10 +175,10 @@
 			} else if (event?.data?.type === 'access:updated') void refreshAccess();
 		};
 		socketInstance?.on('events', eventHandler);
-		socketInstance?.on('connect', changed);
+		const unsubscribe = onSocketRestored(changed);
 		return () => {
 			socketInstance?.off('events', eventHandler);
-			socketInstance?.off('connect', changed);
+			unsubscribe();
 		};
 	});
 
