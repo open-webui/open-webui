@@ -89,7 +89,6 @@
 		pzInstance = panzoom(sceneEl, {
 			bounds: true,
 			boundsPadding: 0.1,
-			pinchSpeed: 3.5,
 			filterKey: (e?: KeyboardEvent) => !!e && slideShortcutKeys.includes(e.key),
 			beforeWheel: () => true,
 			beforeMouseDown: (event?: MouseEvent) => {
