@@ -358,6 +358,10 @@ class GroupTable:
                             stmt = stmt.filter(anyone_can_share)
                     else:
                         stmt = stmt.filter(and_(Group.data.isnot(None), json_share_lower == 'false'))
+                        if member_id:
+                            stmt = stmt.filter(
+                                Group.id.in_(select(user_group_memberships([member_id], True).c.group_id))
+                            )
 
                 else:
                     # Only apply member_id filter when share filter is NOT present
