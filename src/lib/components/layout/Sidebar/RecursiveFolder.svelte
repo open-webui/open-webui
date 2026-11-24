@@ -951,7 +951,8 @@
 						<FolderMenu
 							onNewChat={async () => {
 								if ($selectedFolder?.id !== folderId) await openFolderHandler();
-								if ($page.params.folderId === folderId) chatTabRequest.set({ folderId });
+								if ($page.params.folderId === folderId || $selectedFolder?.id === folderId)
+									chatTabRequest.set({ folderId });
 								if ($mobile) showSidebar.set(false);
 							}}
 							onNewNote={($config?.features?.enable_notes ?? false) &&
