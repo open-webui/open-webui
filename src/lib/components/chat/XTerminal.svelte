@@ -84,6 +84,45 @@
 		if (active && terminalEl?.clientWidth && terminalEl?.clientHeight) fitAddon?.fit();
 	}
 
+	// Keys a touch keyboard lacks.
+	const touch = window.matchMedia('(pointer: coarse)').matches;
+	const keys: { label: string; name?: string; value: string; arrow?: boolean }[] = [
+		{ label: 'Tab', value: '\t' },
+		{ label: 'Esc', value: '\x1b' },
+		{ label: 'Ctrl', value: '' },
+		{ label: '↑', name: 'Up', value: 'A', arrow: true },
+		{ label: '↓', name: 'Down', value: 'B', arrow: true },
+		{ label: '←', name: 'Left', value: 'D', arrow: true },
+		{ label: '→', name: 'Right', value: 'C', arrow: true },
+		...['|', '~', '/', '-', '_'].map((value) => ({ label: value, value }))
+	];
+	let ctrlHeld = false;
+
+	function withCtrl(char: string) {
+		if (char === ' ') return '\0';
+		const code = char.toUpperCase().charCodeAt(0);
+		return code >= 64 && code <= 95 ? String.fromCharCode(code - 64) : char;
+	}
+
+	function pressKey(key: (typeof keys)[number]) {
+		if (!term) return;
+		if (!key.value) {
+			ctrlHeld = !ctrlHeld;
+		} else if (key.arrow) {
+			// Full-screen programs may ask for the other form of the arrow keys.
+			const prefix = ctrlHeld
+				? '\x1b[1;5'
+				: term.modes.applicationCursorKeysMode
+					? '\x1bO'
+					: '\x1b[';
+			ctrlHeld = false;
+			term.input(prefix + key.value);
+		} else {
+			term.input(key.value);
+		}
+		term.focus();
+	}
+
 	function updateTheme() {
 		if (!term) return;
 		term.options.theme = document.documentElement.classList.contains('dark')
@@ -277,6 +316,10 @@
 		requestAnimationFrame(fit);
 		if (!readOnly) {
 			term.onData((data) => {
+				if (ctrlHeld && data.length === 1) {
+					ctrlHeld = false;
+					data = withCtrl(data);
+				}
 				if (ws?.readyState === WebSocket.OPEN) ws.send(new TextEncoder().encode(data));
 			});
 			term.onBinary((data) => {
@@ -309,7 +352,7 @@
 	});
 </script>
 
-<div class="terminal-view h-full min-h-0 relative bg-transparent">
+<div class="terminal-view flex h-full min-h-0 flex-col relative bg-transparent">
 	{#if reconnecting}
 		<div
 			class="absolute top-1 right-2 z-10 rounded bg-base-0/90 px-2 py-1 text-xs text-base-600 dark:bg-base-900/90 dark:text-base-300"
@@ -318,11 +361,34 @@
 			Connection interrupted. Reconnecting to the same terminal…
 		</div>
 	{/if}
-	<div
-		bind:this={terminalEl}
-		class="absolute inset-0 pl-2 pr-0.5"
-		class:pointer-events-none={overlay}
-	></div>
+	<div class="relative flex-1 min-h-0">
+		<div
+			bind:this={terminalEl}
+			class="absolute inset-0 pl-2 pr-0.5"
+			class:pointer-events-none={overlay}
+		></div>
+	</div>
+	{#if touch && !readOnly}
+		<div
+			class="flex shrink-0 items-center gap-1 overflow-x-auto scrollbar-none px-2 py-1"
+			class:pointer-events-none={overlay}
+		>
+			{#each keys as key (key.label)}
+				<!-- Keeps focus in the terminal, so the keyboard stays open. -->
+				<button
+					type="button"
+					class="min-w-8 shrink-0 rounded-md px-2.5 py-1 font-mono text-xs transition {!key.value &&
+					ctrlHeld
+						? 'bg-base-900 text-base-0 dark:bg-base-100 dark:text-base-900'
+						: 'bg-base-50 text-base-600 dark:bg-base-850 dark:text-base-300'}"
+					aria-label={key.name}
+					aria-pressed={key.value ? undefined : ctrlHeld}
+					on:mousedown|preventDefault
+					on:click={() => pressKey(key)}>{key.label}</button
+				>
+			{/each}
+		</div>
+	{/if}
 </div>
 
 <style>

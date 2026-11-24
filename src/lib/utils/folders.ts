@@ -124,5 +124,21 @@ export type CanEditChat = (chat: Pick<WorkspaceChat, 'user_id'>) => boolean;
 export type WorkspacePage = { chats: WorkspaceChat[]; total: number; has_more: boolean };
 export type FolderUser = { id: string; name: string; count: number };
 
+// Folders missing from the saved order go last, by name.
+export const sortFolders = <T extends { id: string; name?: string }>(
+	folders: T[],
+	order: string[] = []
+): T[] => {
+	const position = new Map(order.map((id, index) => [id, index]));
+	return [...folders].sort(
+		(a, b) =>
+			(position.get(a.id) ?? order.length) - (position.get(b.id) ?? order.length) ||
+			(a.name ?? '').localeCompare(b.name ?? '', undefined, {
+				numeric: true,
+				sensitivity: 'base'
+			})
+	);
+};
+
 export const isChatUnread = (chat: WorkspaceChat) =>
 	(chat.last_read_at ?? 0) === 0 || chat.updated_at > (chat.last_read_at ?? 0);

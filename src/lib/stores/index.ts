@@ -392,6 +392,8 @@ type Settings = {
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	pinnedNotesOrder?: string[];
+	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
+	folderOrder?: Record<string, string[]>;
 
 	defaultUploadContext?: 'full' | 'focused';
 

@@ -1,5 +1,8 @@
 <script context="module">
 	let closeActiveHoverPreview = null;
+	// Drag data can't be read until the drop
+	/** @type {string | null} */
+	let draggedFolderId = null;
 </script>
 
 <script>
@@ -24,6 +27,7 @@
 		config,
 		mobile,
 		selectedFolder,
+		settings,
 		showSidebar,
 		user
 	} from '$lib/stores';
@@ -40,6 +44,7 @@
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
+	import { sortFolders } from '$lib/utils/folders';
 	import { updateNoteFolderIdById } from '$lib/apis/notes';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import dayjs from '$lib/dayjs';
@@ -90,9 +95,13 @@
 
 	export let onDelete = () => {};
 	export let onItemMove = () => {};
+	/** @type {(id: string, targetId: string, position: 'before' | 'after') => void} */
+	export let onReorder = () => {};
 	export let onFolderUnreadCounts = () => {};
 
 	let folderElement;
+	/** @type {HTMLElement} */
+	let rowElement;
 
 	let openPreview = false;
 	let showFolderModal = false;
@@ -103,6 +112,7 @@
 	let createSubFolderParentId = null;
 
 	let draggedOver = false;
+	let dropPosition = 'inside';
 	let dragged = false;
 
 	let clickTimer = null;
@@ -199,6 +209,18 @@
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
 
+	/** @param {any} e */
+	const getDropPosition = (e) => {
+		// Only folders reorder, and shared folders keep their place
+		if (draggedFolderId && !folders[folderId]?.shared && rowElement.contains(e.target)) {
+			const rect = rowElement.getBoundingClientRect();
+			const offset = (e.clientY - rect.top) / rect.height;
+			if (offset < 0.25) return 'before';
+			if (offset > 0.75) return 'after';
+		}
+		return 'inside';
+	};
+
 	const onDragOver = (e) => {
 		e.stopPropagation();
 		if (dragged || parentDragged || !isWritable) {
@@ -206,6 +228,7 @@
 		}
 		e.preventDefault();
 		draggedOver = true;
+		dropPosition = getDropPosition(e);
 	};
 
 	const onDrop = async (e) => {
@@ -260,6 +283,13 @@
 							const { type, id, item } = data;
 
 							if (type === 'folder') {
+								const position = getDropPosition(e);
+								if (position !== 'inside') {
+									draggedOver = false;
+									onReorder(id, folderId, position);
+									return;
+								}
+
 								open = true;
 								if (id === folderId) {
 									return;
@@ -386,6 +416,7 @@
 		event.dataTransfer.setData('application/x-open-webui-drag', '');
 
 		dragged = true;
+		draggedFolderId = folderId;
 		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
 
@@ -401,6 +432,7 @@
 
 		folderElement.style.opacity = '1'; // Reset visual cue after drag
 		dragged = false;
+		draggedFolderId = null;
 	};
 
 	onMount(async () => {
@@ -736,9 +768,16 @@
 	role="listitem"
 	draggable={!folders[folderId]?.shared}
 >
-	{#if draggedOver}
+	{#if draggedOver && dropPosition === 'inside'}
 		<div
 			class="pointer-events-none absolute inset-0 z-50 touch-none bg-base-1000/[0.02] ring-1 ring-inset ring-base-1000/10 dark:bg-base-0/[0.02] dark:ring-base-0/10"
+		></div>
+	{:else if draggedOver}
+		<div
+			class="pointer-events-none absolute inset-x-1 z-50 h-px rounded-[1px] bg-base-800/20 dark:bg-base-200/20 {dropPosition ===
+			'before'
+				? 'top-0'
+				: 'bottom-0'}"
 		></div>
 	{/if}
 
@@ -754,6 +793,7 @@
 		<div class="w-full group">
 			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
+				bind:this={rowElement}
 				id="folder-{folderId}-button"
 				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition"
 				on:click|stopPropagation
@@ -949,14 +989,10 @@
 					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-base-100 dark:border-base-900"
 				>
 					{#if folders[folderId]?.childrenIds}
-						{@const children = folders[folderId]?.childrenIds
-							.map((id) => folders[id])
-							.sort((a, b) =>
-								a.name.localeCompare(b.name, undefined, {
-									numeric: true,
-									sensitivity: 'base'
-								})
-							)}
+						{@const children = sortFolders(
+							folders[folderId].childrenIds.map((id) => folders[id]),
+							$settings?.folderOrder?.[folderId]
+						)}
 
 						{#if children.length > 0}
 							<div role="list">
@@ -966,8 +1002,9 @@
 										{folders}
 										folderId={childFolder.id}
 										{shiftKey}
-										parentDragged={dragged}
+										parentDragged={dragged || parentDragged}
 										{onItemMove}
+										{onReorder}
 										{onDelete}
 										{onFolderUnreadCounts}
 										on:import={(e) => {
