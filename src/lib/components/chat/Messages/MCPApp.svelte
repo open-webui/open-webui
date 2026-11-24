@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-	import type { CallToolResult } from '@modelcontextprotocol/client';
+	import type { CallToolResult, EmbeddedResource } from '@modelcontextprotocol/client';
 
 	export type MCPAppEmbed = {
 		type: 'mcp_app';
@@ -13,6 +13,7 @@
 
 <script lang="ts">
 	import { getContext, onDestroy, onMount } from 'svelte';
+	import fileSaver from 'file-saver';
 	import { AppBridge, PostMessageTransport } from '@modelcontextprotocol/ext-apps/app-bridge';
 	import { WEBUI_API_BASE_URL, WEBUI_VERSION } from '$lib/constants';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -21,6 +22,7 @@
 	import { getChatContext } from '$lib/components/chat/context';
 
 	export let app: MCPAppEmbed;
+	const { saveAs } = fileSaver;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const { submitPrompt } = getChatContext();
 	const lifetime = new AbortController();
@@ -82,6 +84,31 @@
 		});
 	}
 
+	function openLink(url: string) {
+		const parsed = new URL(url);
+		if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password)
+			throw new Error('Invalid link');
+		link = parsed.href;
+		window.open(link, '_blank', 'noopener,noreferrer');
+	}
+
+	function resourceName(uri: string) {
+		const name = uri.split(/[?#]/)[0].split('/').pop() || 'download';
+		try {
+			return decodeURIComponent(name);
+		} catch {
+			return name;
+		}
+	}
+
+	function saveResource(resource: EmbeddedResource['resource']) {
+		const data =
+			'blob' in resource
+				? Uint8Array.from(atob(resource.blob), (c) => c.charCodeAt(0))
+				: resource.text;
+		saveAs(new Blob([data], { type: resource.mimeType }), resourceName(resource.uri));
+	}
+
 	async function start() {
 		const resource = await rpc('ui/resource', {});
 		if (closing) return;
@@ -90,6 +117,7 @@
 			{ name: 'Open WebUI', version: WEBUI_VERSION },
 			{
 				openLinks: {},
+				downloadFile: {},
 				message: { text: {} },
 				serverTools: {},
 				serverResources: {},
@@ -138,11 +166,26 @@
 			return {};
 		};
 		bridge.onopenlink = async ({ url }) => {
-			const parsed = new URL(url);
-			if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password)
-				throw new Error('Invalid link');
-			link = parsed.href;
-			window.open(link, '_blank', 'noopener,noreferrer');
+			openLink(url);
+			return {};
+		};
+		bridge.ondownloadfile = async ({ contents }, extra) => {
+			const signal = AbortSignal.any([lifetime.signal, extra.mcpReq.signal]);
+			const text = contents
+				.map((item) => (item.type === 'resource' ? resourceName(item.resource.uri) : item.uri))
+				.join('\n');
+			if (!text || !(await requestConfirmation($i18n.t('Download'), text, signal)))
+				return { isError: true };
+			for (const item of contents) {
+				if (item.type === 'resource') {
+					saveResource(item.resource);
+				} else if (/^https?:/i.test(item.uri)) {
+					openLink(item.uri);
+				} else {
+					const result = await rpc('resources/read', { uri: item.uri }, signal);
+					result.contents.forEach(saveResource);
+				}
+			}
 			return {};
 		};
 		bridge.onrequestdisplaymode = async () => ({ mode: 'inline' });
