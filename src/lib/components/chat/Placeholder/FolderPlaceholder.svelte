@@ -5,6 +5,8 @@
 	import { config, socket, selectedFolder, user } from '$lib/stores';
 	import {
 		loadFolderChatPage,
+		folderChatPageKey,
+		getFolderState,
 		updateFolderDetails,
 		markFolderChatsDirty,
 		isCancelledFolderRequest,
@@ -95,6 +97,7 @@
 	async function loadNotes(pages = notesPage) {
 		const folderId = folder?.id;
 		if (!folderId || !canUseNotes) return;
+		const state = getFolderState(folderId);
 		notesLoading = true;
 		try {
 			const results = await Promise.all(
@@ -102,6 +105,7 @@
 					getFolderNotes(localStorage.token, folderId, index + 1)
 				)
 			);
+			state.notes = results[0];
 			if (folder?.id !== folderId) return;
 			notes = [
 				...new Map(results.flatMap((page) => page.items).map((note) => [note.id, note])).values()
@@ -126,9 +130,11 @@
 	async function loadAutomations() {
 		const folderId = folder?.id;
 		if (!folderId || !canUseAutomations) return;
+		const state = getFolderState(folderId);
 		automationsLoading = true;
 		try {
 			const folderAutomations = await getFolderAutomations(localStorage.token, folderId);
+			state.automations = folderAutomations;
 			if (folder?.id === folderId) automations = folderAutomations;
 		} catch (error) {
 			if (folder?.id === folderId) automations = [];
@@ -628,6 +634,7 @@
 	async function fetchOptions() {
 		const id = folder?.id;
 		if (!id) return;
+		const state = getFolderState(id);
 		const version = ++optionsGeneration;
 		try {
 			const [next, nextUsers] = await Promise.all([
@@ -635,6 +642,8 @@
 				getFolderUsers(localStorage.token, id)
 			]);
 			if (version === optionsGeneration) {
+				state.tags = next;
+				state.users = nextUsers;
 				options = next;
 				folderUsers = nextUsers;
 				optionsReady = true;
@@ -660,7 +669,14 @@
 		const keys = groupKeys();
 		const depth = reset ? {} : groupPages;
 		if (reset) {
-			groups = {};
+			// What was shown before stays until it is refreshed.
+			const { chatPages } = getFolderState(id);
+			groups = Object.fromEntries(
+				keys.flatMap((key) => {
+					const page = chatPages[folderChatPageKey(query(1, key))];
+					return page ? [[key, page]] : [];
+				})
+			) as unknown as typeof groups;
 			groupPages = {};
 		}
 		loading = true;
@@ -1004,6 +1020,8 @@
 
 	$: if (folder?.id && folder.id !== currentFolderId) {
 		currentFolderId = folder.id;
+		// What was shown before stays until it is refreshed.
+		const state = getFolderState(folder.id);
 		search = '';
 		appliedSearch = '';
 		searchOpen = false;
@@ -1011,18 +1029,18 @@
 		priorityFilter = [];
 		selectedTags = [];
 		selectedUsers = [];
-		folderUsers = [];
+		folderUsers = state.users ?? [];
 		activity = undefined;
 		updatedRange = '';
 		updatedAtGte = undefined;
-		options = [];
-		optionsReady = false;
+		options = state.tags ?? [];
+		optionsReady = !!state.tags;
 		optionsError = '';
 		clearTimeout(timer);
 		folderSection = 'chats';
-		automations = [];
-		notes = [];
-		notesTotal = 0;
+		automations = state.automations ?? [];
+		notes = state.notes?.items ?? [];
+		notesTotal = state.notes?.total ?? 0;
 		void loadOptions();
 		void load(true);
 		void loadNotes(1);

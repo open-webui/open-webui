@@ -46,7 +46,12 @@ from open_webui.models.shared_chats import ChatShareMode, ShareChatForm, SharedC
 from open_webui.models.tags import TagModel, Tags, get_tag_id
 from open_webui.models.users import UserModel
 from open_webui.socket.main import get_event_emitter
-from open_webui.tasks import get_response_streams_by_chat_id, has_active_tasks, stop_item_tasks
+from open_webui.tasks import (
+    get_response_streams_by_chat_id,
+    has_active_tasks,
+    list_task_ids_by_item_id,
+    stop_item_tasks,
+)
 from open_webui.utils.access_control import has_permission, validate_access_grants
 from open_webui.utils.access_control.folders import has_folder_move_access, has_folder_write_access
 from open_webui.utils.auth import bearer_security, get_admin_user, get_current_user, get_verified_user
@@ -1539,6 +1544,13 @@ async def get_chat_by_id(
             await get_response_streams_by_chat_id(request.app.state.redis, id),
         )
         data['context_usage'] = await get_chat_context_usage(chat)
+        data['task_ids'] = (
+            await Chats.filter_task_ids_by_user_id(
+                chat, user.id, await list_task_ids_by_item_id(request.app.state.redis, id)
+            )
+            if data['write_access']
+            else []
+        )
         return data
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND)

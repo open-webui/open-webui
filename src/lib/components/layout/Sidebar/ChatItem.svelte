@@ -46,7 +46,6 @@
 		mobile,
 		showSidebar,
 		tags,
-		selectedFolder,
 		settings,
 		user
 	} from '$lib/stores';
@@ -205,10 +204,6 @@
 			chatSelection.setAnchor(id);
 		}
 		dispatch('select');
-
-		if ($selectedFolder) {
-			selectedFolder.set(null);
-		}
 
 		// Optimistically mark as read in UI when clicked
 		unread = false;

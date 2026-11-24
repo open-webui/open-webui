@@ -121,8 +121,7 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 
 export async function loadChatView(entry: Entry) {
 	if (!entry.persistent) return;
-	if (entry.load) return entry.load;
-	entry.load = (async () => {
+	const load = (entry.load ??= (async () => {
 		try {
 			// Revalidate access even when the view is already cached. Never replace local edits.
 			const result = await getChatView(entry.chatId!);
@@ -145,8 +144,10 @@ export async function loadChatView(entry: Entry) {
 			entry.load = undefined;
 			notify();
 		}
-	})();
-	return entry.load;
+	})());
+	// A view already loaded is shown at once; a failed check shows as its error.
+	if (entry.loaded) return void load.catch(() => {});
+	return load;
 }
 
 export function changeChatView(entry: Entry, state = entry.state, immediate = false) {

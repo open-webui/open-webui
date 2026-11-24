@@ -43,6 +43,7 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
+	import { cachedChats } from '$lib/stores/chatCache';
 	import { clearFolderStates } from '$lib/stores/folderStates';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
@@ -1062,6 +1063,7 @@
 		const unsubscribeQueueUser = user.subscribe(async (value) => {
 			if (queueUserId !== value?.id) {
 				clearFolderStates();
+				cachedChats.clear();
 				channelRequestQueues.set({});
 				queueUserId = value?.id;
 			}

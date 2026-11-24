@@ -362,6 +362,7 @@ class ChatResponse(BaseModel):
 
 class ChatAccessResponse(ChatResponse):
     write_access: bool
+    task_ids: list[str] | None = None
 
 
 class ChatTitleIdResponse(BaseModel):

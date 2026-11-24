@@ -405,7 +405,10 @@
 		if (!$user?.id) return;
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
-		tabs = createTabsState();
+		// A chat shows while its layout loads. A folder opens as it was left, so it waits.
+		tabs = isFolderSessionId(id)
+			? createTabsState()
+			: setMainChatTab(createTabsState(), true, mainTabTitle);
 		terminalTitles = {};
 		terminalProcesses = {};
 		chatStreamingStates = {};
@@ -2113,7 +2116,7 @@
 					}}>{$i18n.t('Retry')}</button
 				>
 			</div>
-		{:else if chatLoading || !viewReady}
+		{:else if chatLoading || (!viewReady && !mainChatActive)}
 			<div
 				role="status"
 				aria-label={$i18n.t('Loading…')}

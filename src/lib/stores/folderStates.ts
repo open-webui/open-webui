@@ -2,13 +2,16 @@ import {
 	FOLDER_PAGE_SIZE,
 	type FolderStatus,
 	type FolderPriority,
-	type FolderActivity
+	type FolderActivity,
+	type FolderUser
 } from '$lib/utils/folders';
 import { readonly, writable } from 'svelte/store';
 import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
 import { getChatListByFolderId } from '$lib/apis/chats';
 import { getModels } from '$lib/apis';
 import type { Model } from '$lib/stores';
+import type { FolderAutomation } from '$lib/apis/automations';
+import type { FolderTag } from '$lib/utils/tags';
 import { isMachine, machineIdOf } from '$lib/utils/machines';
 
 export type FolderDetails = {
@@ -52,6 +55,11 @@ export type FolderState = {
 	details: FolderDetails | null;
 	chatPages: Record<string, FolderChatPage>;
 	sidebarPage: number;
+	tags?: FolderTag[];
+	users?: FolderUser[];
+	/** The first page. */
+	notes?: { items: any[]; total: number };
+	automations?: FolderAutomation[];
 	agentModels: {
 		machineId: string;
 		directory: string;
@@ -209,6 +217,22 @@ export function loadFolderChatPage(
 	);
 }
 
+/** Where chats were put from this window; a list that is not loaded does not show them. */
+const movedChats = new Map<string, string | null>();
+/** The folder a chat is known to be in, without asking the server. */
+export const findFolderChat = (
+	chatId: string
+): { folder_id: string | null; title?: string } | undefined => {
+	for (const [folder_id, folder] of Object.entries(entries)) {
+		for (const [key, page] of Object.entries(folder.chatPages)) {
+			const chat = !JSON.parse(key)[3] && page.chats.find((chat) => chat.id === chatId);
+			if (chat) return { folder_id, title: chat.title };
+		}
+	}
+	const folder_id = movedChats.get(chatId);
+	return folder_id === undefined ? undefined : { folder_id };
+};
+
 export function setFolderSidebarPage(id: string, page: number) {
 	getFolderState(id).sidebarPage = page;
 	notify();
@@ -255,6 +279,7 @@ export function updateFolderChatLists(
 ) {
 	const { chat: conversation, ...row } = chat;
 	chat = row;
+	if (destination !== undefined) movedChats.set(chat.id, destination);
 	for (const [id, folder] of Object.entries(entries)) {
 		const known = Object.values(folder.chatPages).some((page) =>
 			page.chats.some((item) => item.id === chat.id)
@@ -396,6 +421,7 @@ export function clearFolderStates() {
 	entries = {};
 	pending.clear();
 	agentRequests.clear();
+	movedChats.clear();
 	revisions.clear();
 	connectionsSignature = '';
 	connectionRevision++;

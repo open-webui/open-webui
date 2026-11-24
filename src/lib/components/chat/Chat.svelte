@@ -64,6 +64,7 @@
 	import { updateFolderById } from '$lib/apis/folders';
 	import {
 		loadFolderDetails,
+		findFolderChat,
 		getFolderAgentModels,
 		loadFolderAgentModels,
 		setFolderModelConnections,
@@ -73,6 +74,7 @@
 		type FolderDetails
 	} from '$lib/stores/folderStates';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
+	import { cacheChat, cachedChats, getCachedChat } from '$lib/stores/chatCache';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -117,7 +119,6 @@
 		forkChatById,
 		getAllTags,
 		getChatById,
-		getTagsById,
 		importChats,
 		resolveChatMessageToolCall,
 		updateChatById,
@@ -581,7 +582,6 @@
 	};
 	$: chatFolderId = (chat ? chat.folder_id : (draftFolderId ?? $selectedFolder?.id)) ?? null;
 	$: if ($machines) void checkFolderMachine(chatFolderId);
-	let tags = [];
 
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
 	$: isShared = chat != null && chat.user_id !== $user?.id;
@@ -1077,7 +1077,32 @@
 		return chatLoadController.signal;
 	};
 	onDestroy(() => chatLoadController.abort());
+	const cacheOpenChat = () => {
+		if (loading || generating || taskIds?.length || $temporaryChat || chat?.id !== $chatId) return;
+		cacheChat({
+			...chat,
+			variables: chatVariables,
+			tasks: chatTasks,
+			task_ids: [],
+			context_usage: serverContextUsage,
+			current_message_id: history.currentId,
+			chat: {
+				...chat.chat,
+				title: $chatTitle,
+				history,
+				params,
+				files: chatFiles,
+				machine_id: $selectedMachineId,
+				working_directory:
+					machineContext?.machineId === $selectedMachineId
+						? machineContext?.currentDirectory
+						: undefined
+			}
+		});
+	};
+
 	const navigateHandler = async () => {
+		cacheOpenChat();
 		loading = true;
 		selectedFolder.set(null);
 		tabs?.resetForChatSwitch();
@@ -1139,7 +1164,6 @@
 		loading = true;
 		loadedChatIdProp = '';
 		chat = null;
-		tags = [];
 		taskIds = null;
 		chatTasks = [];
 		serverContextUsage = null;
@@ -1759,6 +1783,11 @@
 			try {
 				const fresh = await getChatById(localStorage.token, id, signal);
 				if ($chatId !== id || joinedChatId !== id || signal.aborted) return;
+				// Nothing happened since the chat was shown from the cache: load the server's copy.
+				if (fresh && cachedHistory && !loading && !generating && equal(history, cachedHistory)) {
+					await loadChat(signal, fresh);
+					return;
+				}
 				chat = fresh;
 				mergeChatMessages(fresh.chat.history, baseline);
 			} catch (error) {
@@ -2358,6 +2387,7 @@
 
 		return () => {
 			try {
+				cacheOpenChat();
 				cancelBrowserInteractions();
 				clearTimeout(saveControlsTimer);
 				saveControls();
@@ -2855,12 +2885,18 @@
 	const openInFolder = async (id: string, preserveTabs: boolean) => {
 		// Phones show one chat at a time, and links into a message need the chat itself.
 		if ($mobile || $page.url.search || $page.url.hash) return false;
-		const promise =
-			pendingChatRequest?.id === id
-				? pendingChatRequest.promise
-				: getChatById(localStorage.token, id);
-		pendingChatRequest = { id, promise };
-		const found = await promise.catch(() => null);
+		let found: any =
+			pendingChatRequest?.id === id ? null : (findFolderChat(id) ?? cachedChats.get(id));
+		if (!found) {
+			const promise =
+				pendingChatRequest?.id === id
+					? pendingChatRequest.promise
+					: getChatById(localStorage.token, id);
+			pendingChatRequest = { id, promise };
+			found = await promise.catch(() => null);
+			// The folder's tab shows this copy.
+			if (found?.folder_id) cacheChat(found);
+		}
 		const folder = found?.folder_id
 			? await loadFolderDetails(localStorage.token, found.folder_id).catch(() => null)
 			: null;
@@ -2874,9 +2910,15 @@
 			await tick();
 			if ($page.params.id !== id) return true;
 		}
-		tabs?.openPageTab({ href: `/c/${id}`, label: found.title });
+		tabs?.openPageTab({ href: `/c/${id}`, label: found?.title ?? '' });
 		void tabs?.joinChatSessions(id);
 		return true;
+	};
+	const refreshFolder = async (id: string) => {
+		const folder = await loadFolderDetails(localStorage.token, id, true).catch(() => null);
+		// The sidebar copies the rest.
+		if (folder && $selectedFolder?.id === id && !equal($selectedFolder.data, folder.data))
+			selectedFolder.set({ ...$selectedFolder, data: folder.data });
 	};
 	// The layout keeps this component mounted; route changes update only the main pane.
 	let routeInitialized = false;
@@ -2891,6 +2933,7 @@
 			chatIdProp = id;
 		} else if ($page.params.folderId || $page.url.pathname === '/') {
 			selectedFolder.set($page.data.folder ?? null);
+			if ($page.data.folder) void refreshFolder($page.data.folder.id);
 			// On a first load the input is on screen before set-up, so what was entered there stays.
 			await initNewChat({ preserveTabs, preserveInput: !preserveTabs, url: $page.url });
 		} else if (initialPage) {
@@ -3075,6 +3118,7 @@
 
 		if (preserveTabs) tabs?.carryPagesToNewChat();
 		else tabs?.resetForChatSwitch();
+		cacheOpenChat();
 		loading = true;
 		if (
 			!embedded &&
@@ -3111,6 +3155,7 @@
 			.map((m) => m.id);
 
 		const defaultModels = normalizeSelectedModels();
+		let agentModels: Promise<void> | null = null;
 
 		let modelSearch = '';
 		const openModelSelectorWithSearch = async (modelId: string) => {
@@ -3155,7 +3200,9 @@
 				// A configured folder machine overrides the previous selection.
 				applyFolderMachine(destinationFolder);
 				if (machineIdOf(destinationFolder.data)) {
-					await refreshAgentModels(destinationFolder, signal);
+					agentModels = refreshAgentModels(destinationFolder, signal);
+					// Without models of its own, the folder may default to one of the machine's agents.
+					if (!destinationFolder.data?.model_ids?.length) await agentModels;
 					if (signal.aborted) return;
 				}
 				selectedModels = normalizeSelectedModels(destinationFolder.data?.model_ids ?? []);
@@ -3233,7 +3280,6 @@
 			chatIdProp = '';
 			loadedChatIdProp = '';
 			chat = null;
-			tags = [];
 			serverContextUsage = null;
 		}
 		await chatTitle.set('');
@@ -3257,6 +3303,10 @@
 		if (input) applyChatInputControls(input.controls);
 		if (selectedModelIds.some((id) => id)) await setDefaults(true);
 		if (signal.aborted) return;
+		// An agent's defaults wait for the machine to list it.
+		void agentModels?.then(() => {
+			if (!signal.aborted && !$chatId && !history.currentId) return setDefaults(true);
+		});
 		// A chat opened or a message sent in the meantime keeps its id and history
 		if ($chatId || history.currentId) {
 			loading = false;
@@ -3373,9 +3423,13 @@
 		if (!$mobile) messageInput?.focus({ preventScroll: true });
 	};
 
-	const loadChat = async (signal = startChatLoad()) => {
-		if (chatIdProp && chatIdProp !== $chatId) tabs?.resetForChatSwitch();
-		if (chatIdProp && chatIdProp !== $chatId) {
+	// The history of a chat shown from the cache, until the server's copy replaces it.
+	let cachedHistory: typeof history | null = null;
+	const loadChat = async (signal = startChatLoad(), fresh: any = null) => {
+		const switching = chatIdProp && chatIdProp !== $chatId;
+		const activeTaskIds = taskIds;
+		if (switching) {
+			tabs?.resetForChatSwitch();
 			machineContext = null;
 			history = { messages: {}, currentId: null };
 		}
@@ -3391,20 +3445,24 @@
 		}
 
 		const id = $chatId;
-		const request =
-			pendingChatRequest?.id === id
-				? pendingChatRequest.promise
-				: getChatById(localStorage.token, id, signal);
+		// Queued messages are sent once the chat loads, so they wait for the server's copy.
+		const cached = switching && !$chatRequestQueues[id]?.length ? getCachedChat(id) : null;
+		// Loading changes the copy it is given; leaving the chat caches it again.
+		cachedChats.delete(id);
+		const pending = pendingChatRequest?.id === id ? pendingChatRequest.promise : null;
 		pendingChatRequest = null;
-		const loadedChat = await request.catch(async (error) => {
-			if (tabbed && !signal.aborted) toast.error(`${error}`);
-			console.error('[note-chat] getChatById failed', {
-				chatIdProp,
-				activeChatId: $chatId,
-				error
-			});
-			return null;
-		});
+		const loadedChat =
+			fresh ??
+			cached ??
+			(await (pending ?? getChatById(localStorage.token, id, signal)).catch((error) => {
+				if (tabbed && !signal.aborted) toast.error(`${error}`);
+				console.error('[note-chat] getChatById failed', {
+					chatIdProp,
+					activeChatId: $chatId,
+					error
+				});
+				return null;
+			}));
 		if (signal.aborted) return;
 		noteChatDebug('getChatById completed', {
 			found: !!loadedChat,
@@ -3414,18 +3472,7 @@
 		});
 
 		if (loadedChat) {
-			const loadedTags = await getTagsById(localStorage.token, id, signal).catch(async (error) => {
-				console.warn('[note-chat] getTagsById failed; continuing without tags', {
-					chatIdProp,
-					activeChatId: $chatId,
-					error
-				});
-				return [];
-			});
-			if (signal.aborted) return;
 			chat = loadedChat;
-			tags = loadedTags;
-			noteChatDebug('getTagsById completed', { tagCount: tags?.length ?? 0 });
 
 			const chatContent = chat.chat;
 			chatVariables = chat?.variables ?? {};
@@ -3447,6 +3494,8 @@
 					machines.set(servers);
 				}
 				const machineId = machineIdOf(chatContent);
+				const previousEnvironment = getAgentEnvironment();
+				let agentModels: Promise<void> | null = null;
 				// A machine missing from the list may only be unreachable for now.
 				selectedMachineId.set($config?.features?.enable_tool_servers ? (machineId ?? null) : null);
 				machineContext =
@@ -3459,11 +3508,12 @@
 					if ($selectedMachineId) {
 						const environment = getAgentEnvironment();
 						if (
-							!environment ||
-							environment !== loadedAgentEnvironment?.key ||
-							$models !== loadedAgentEnvironment?.models
+							!(fresh && environment === previousEnvironment) &&
+							(!environment ||
+								environment !== loadedAgentEnvironment?.key ||
+								$models !== loadedAgentEnvironment?.models)
 						) {
-							await refreshAgentModels(null, signal);
+							agentModels = refreshAgentModels(null, signal);
 						}
 					} else selectedModels = selectedModels.filter((modelId) => !modelId.startsWith('agent:'));
 				}
@@ -3490,7 +3540,7 @@
 				}
 
 				chatContent.history ??= convertMessagesToHistory(chatContent.messages);
-				// Keep live updates received while the chat and tags were loading.
+				// Keep live updates received while the chat was loading.
 				for (const [id, message] of Object.entries(history.messages)) {
 					if (initialHistory.messages[id] !== message)
 						chatContent.history.messages[id] = { ...chatContent.history.messages[id], ...message };
@@ -3505,6 +3555,7 @@
 				// Sanitize history: repair orphaned references and structurally-malformed
 				// nodes from failed regenerations (#24424, #24157, #20474)
 				sanitizeHistory(history);
+				cachedHistory = cached ? { ...history, messages: { ...history.messages } } : null;
 
 				chatTitle.set(chatContent.title);
 				branchPointMessageId =
@@ -3521,7 +3572,7 @@
 				chatTasks = chat?.tasks ?? [];
 				serverContextUsage = chat?.context_usage ?? null;
 
-				autoScroll = true;
+				if (!fresh) autoScroll = true;
 				await tick();
 				if (signal.aborted) return;
 
@@ -3542,18 +3593,7 @@
 				// Reconcile active tasks with message state:
 				// If the response is already done, remaining tasks are just background
 				// work (follow-ups, title gen) that shouldn't block the input.
-				const activeTaskIds = taskIds;
-				const pendingTaskIds = await getTaskIdsByChatId(localStorage.token, id, signal)
-					.then((res) => res?.task_ids ?? [])
-					.catch((error) => {
-						console.warn('[note-chat] getTaskIdsByChatId failed; continuing without tasks', {
-							chatIdProp,
-							activeChatId: $chatId,
-							error
-						});
-						return [];
-					});
-				if (signal.aborted) return;
+				const pendingTaskIds = loadedChat.task_ids ?? [];
 				const currentMessage = history.currentId ? history.messages[history.currentId] : null;
 				noteChatDebug('task reconciliation completed', {
 					pendingTaskCount: pendingTaskIds.length,
@@ -3604,6 +3644,16 @@
 					if (signal.aborted) return;
 					await setDefaults(restored);
 					if (signal.aborted) return;
+					if (agentModels && !modelDefaults) {
+						// An agent's defaults wait for the machine to list it, and add to what is picked.
+						if (!restored) {
+							modelDefaults = getChatInputControls();
+							defaultsModelIds = [];
+						}
+						void agentModels.then(() => {
+							if (!signal.aborted) return setDefaults(true);
+						});
+					}
 					loading = false;
 					await tick();
 					if (signal.aborted) return;
