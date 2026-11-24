@@ -10,6 +10,9 @@ export const selectMachine = (
 	chatId: string | null
 ) => {
 	selectedMachineId.set(id);
+	// Only a pick is remembered for new chats, never the machine of a chat that was opened.
+	if (id) localStorage.selectedMachineId = id;
+	else delete localStorage.selectedMachineId;
 	if (isSavedChatId(chatId))
 		updateChatById(localStorage.token, chatId!, { machine_id: id, working_directory: '' }).catch(
 			(error) => toast.error(String(error))
