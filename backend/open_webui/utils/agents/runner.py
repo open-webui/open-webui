@@ -104,7 +104,7 @@ async def run(request, form_data, user, metadata, model):
     if any(f.get('machine_error') for f in uploads):
         raise ValueError('An attachment could not be uploaded to the agent environment')
     paths = [f['machine_path'] for f in uploads]
-    for file in files:
+    for file in (metadata.get('user_message') or {}).get('files') or files:
         if file.get('type') == 'filesystem':
             if machine_id_of(file) != agent['machine_id']:
                 raise ValueError('Attachment belongs to another machine')
