@@ -368,6 +368,7 @@ class Relay:
                     return await self.reserve(action, sid, user, channel, data, state)
                 require(state and data.get('session') == state['session'] and self.local.get(sid) == channel)
                 pid = data.get('participation')
+                require(isinstance(pid, str))
                 member = state['members'].get(pid)
                 require(member and member['sid'] == sid and member['user'] == user.id)
                 member['seen'] = time.time()
