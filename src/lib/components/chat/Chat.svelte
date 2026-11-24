@@ -998,7 +998,7 @@
 		});
 	};
 
-	const applyChatInputControls = (input: ReturnType<typeof getChatInputControls>) => {
+	const applyChatInputControls = (input: Partial<ReturnType<typeof getChatInputControls>>) => {
 		selectedToolIds = input.selectedToolIds ?? [];
 		selectedSkillIds = input.selectedSkillIds ?? [];
 		selectedFilterIds = input.selectedFilterIds ?? [];
@@ -1257,20 +1257,8 @@
 	const resetInput = async () => {
 		// Let the $: update finish first, or webSearchActive misses the default-feature writes
 		await tick();
-		selectedToolIds = [];
-		selectedSkillIds = [];
-		selectedFilterIds = [];
 		pendingOAuthTools = [];
-		webSearchEnabled = false;
-		imageGenerationEnabled = false;
-		codeInterpreterEnabled = false;
-		selectedImageModelId = '';
-		videoGenerationEnabled = false;
-		selectedVideoModelId = '';
-
-		if (selectedModelIds.filter((id) => id).length > 0) {
-			await setDefaults();
-		}
+		applyChatInputControls({});
 	};
 
 	/** Check whether a machine ID references an available machine. */
@@ -2903,11 +2891,8 @@
 			chatIdProp = id;
 		} else if ($page.params.folderId || $page.url.pathname === '/') {
 			selectedFolder.set($page.data.folder ?? null);
-			// On a first load the input is on screen before set-up, which resets it;
-			// what was typed there goes back in.
-			const typed = preserveTabs ? '' : prompt;
-			await initNewChat({ preserveTabs, url: $page.url });
-			if (typed) messageInput?.setText(typed);
+			// On a first load the input is on screen before set-up, so what was entered there stays.
+			await initNewChat({ preserveTabs, preserveInput: !preserveTabs, url: $page.url });
 		} else if (initialPage) {
 			if (!preserveTabs) await initNewChat();
 			loading = false;
@@ -3073,6 +3058,7 @@
 
 	const initNewChat: NonNullable<AppLayoutContext['initNewChat']> = async ({
 		preserveTabs = false,
+		preserveInput = false,
 		temporary,
 		url = initialPage || preserveTabs ? undefined : $page.url
 	} = {}) => {
@@ -3227,12 +3213,14 @@
 
 		autoScroll = true;
 
+		const input = preserveInput ? { prompt, files, controls: getChatInputControls() } : null;
 		// resetInput() must stay last: the selected model's defaults override the draft's selection.
 		prompt = '';
 		files = [];
 		const chatInputPrompt = (await restoreChatInput(sessionStorage.getItem(getChatInputKey())))
 			? prompt
 			: null;
+		if (input) files = [...input.files, ...files];
 		if (signal.aborted) return;
 		// Clear the previous chat first, so its id and history don't affect the new chat's defaults.
 		await chatId.set('');
@@ -3262,6 +3250,12 @@
 		chatTasks = [];
 
 		await resetInput();
+		if (signal.aborted) return;
+		// No defaults are applied yet, so setDefaults() adds the model's to what was picked.
+		modelDefaults = getChatInputControls();
+		defaultsModelIds = [];
+		if (input) applyChatInputControls(input.controls);
+		if (selectedModelIds.some((id) => id)) await setDefaults(true);
 		if (signal.aborted) return;
 		// A chat opened or a message sent in the meantime keeps its id and history
 		if ($chatId || history.currentId) {
@@ -3326,7 +3320,7 @@
 		await tick();
 		if (signal.aborted) return;
 		// The new-chat input stays mounted through set-up, so set its text either way.
-		messageInput?.setText(chatInputPrompt ?? '');
+		messageInput?.setText(input?.prompt || chatInputPrompt || '');
 		if (modelSearch) await openModelSelectorWithSearch(modelSearch);
 
 		// Consume call requests or the acknowledged Tether handoff.

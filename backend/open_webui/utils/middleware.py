@@ -164,7 +164,11 @@ from open_webui.utils.task import (
     rag_template,
     tools_function_calling_generation_template,
 )
-from open_webui.utils.machines import filter_user_terminal_tools, upload_files_to_machine
+from open_webui.utils.machines import (
+    filter_user_terminal_tools,
+    save_tool_result_to_machine,
+    upload_files_to_machine,
+)
 from open_webui.utils.tool_approval import complete_tool_call, pending_tool_calls
 from open_webui.utils.tool_permissions import (
     ToolApprovalRequired,
@@ -980,7 +984,13 @@ async def process_tool_result(
 
     max_chars = await Config.get('tools.output_max_chars')
     if max_chars and tool_result and len(tool_result) > max_chars:
-        tool_result = f'{tool_result[:max_chars]}\n\n[Truncated: {len(tool_result)} characters, limit {max_chars}]'
+        note = f'Truncated: {len(tool_result)} characters, limit {max_chars}'
+        # Machine tools read the saved file, so saving their results would only copy it again.
+        if tool_type != 'terminal':
+            path = await save_tool_result_to_machine(request, user, metadata, tool_result)
+            if path:
+                note += f', full result saved to {path} on the machine'
+        tool_result = f'{tool_result[:max_chars]}\n\n[{note}]'
 
     return tool_result, tool_result_files, tool_result_embeds
 

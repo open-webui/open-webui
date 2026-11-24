@@ -7,6 +7,7 @@ import ntpath
 import posixpath
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
+from uuid import uuid4
 
 import aiohttp
 
@@ -785,6 +786,23 @@ async def upload_files_to_machine(request, user, files: list[dict], metadata: di
         log.warning('File terminal unavailable (%s)', type(error).__name__)
         for entry in files:
             entry['machine_error'] = 'File saved in Open WebUI, but the selected terminal is unavailable.'
+
+
+async def save_tool_result_to_machine(request, user, metadata: dict | None, content: str) -> str | None:
+    """Save a tool's full result where the model's machine tools can read it, and return its path."""
+    tools = (metadata or {}).get('tools') or {}
+    if not any(tool.get('type') == 'terminal' for tool in tools.values()):
+        return None
+    try:
+        # Beside the user's recent folders (src/lib/apis/machines/recentFolders.ts).
+        home = (await get_machine_json(request, user, metadata, '/files/cwd'))['home']
+        path = posixpath.join(home, f'.open-webui/users/{user.id}/outputs/{uuid4().hex}.txt')
+        body = {'path': path, 'content': content}
+        result = await get_machine_json(request, user, metadata, '/files/write', method='POST', body=body)
+        return result['path'] if result else None
+    except Exception as error:
+        log.warning('Tool result could not be saved to the machine (%s)', type(error).__name__)
+        return None
 
 
 async def get_machine_file(request, user, metadata: dict, path: str, *, max_bytes: int) -> bytes:
