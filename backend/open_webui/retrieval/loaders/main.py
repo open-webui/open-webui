@@ -2,7 +2,9 @@ import asyncio
 import csv
 import logging
 import os
+import shutil
 import sys
+import tempfile
 import time
 import zipfile
 
@@ -94,6 +96,10 @@ known_source_ext = [
     'toml',
     'svg',
 ]
+
+
+def is_pivot_cache_records(entry_name: str) -> bool:
+    return entry_name.startswith('xl/pivotCache/pivotCacheRecords') and entry_name.endswith('.xml')
 
 
 class ExcelLoader:
@@ -359,8 +365,9 @@ class Loader:
         self.metadata = {}
 
     def load(self, filename: str, file_content_type: str, file_path: str) -> list[Document]:
-        loader = self._get_loader(filename, file_content_type, file_path)
-        docs = loader.load()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            loader = self._get_loader(filename, file_content_type, file_path, temp_dir)
+            docs = loader.load()
         # ftfy's auto mode unescapes entities on every line before the first literal '<', rewriting the document.
         return [
             Document(
@@ -542,7 +549,23 @@ class Loader:
 
         return (cjk_count / total) >= threshold
 
-    def _get_loader(self, filename: str, file_content_type: str, file_path: str):
+    def _strip_pivot_cache_records(self, file_path: str, temp_dir: str) -> str:
+        """Copy a workbook with its pivot cache records emptied; extraction only needs the sheets."""
+        stripped_path = os.path.join(temp_dir, os.path.basename(file_path))
+        with zipfile.ZipFile(file_path) as archive, zipfile.ZipFile(stripped_path, 'w') as stripped:
+            for entry in archive.infolist():
+                if is_pivot_cache_records(entry.filename):
+                    stripped.writestr(
+                        entry,
+                        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<pivotCacheRecords '
+                        'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="0"/>',
+                    )
+                else:
+                    with archive.open(entry) as source, stripped.open(entry, 'w') as target:
+                        shutil.copyfileobj(source, target)
+        return stripped_path
+
+    def _get_loader(self, filename: str, file_content_type: str, file_path: str, temp_dir: str):
         file_ext = filename.split('.')[-1].lower()
 
         if zipfile.is_zipfile(file_path):
@@ -555,7 +578,13 @@ class Loader:
             if max_file_size_bytes > 0:
                 try:
                     with zipfile.ZipFile(file_path) as archive:
-                        uncompressed_size = sum(entry.file_size for entry in archive.infolist())
+                        # Pivot cache records are emptied before extraction, so they do not count.
+                        uncompressed_size = sum(
+                            entry.file_size
+                            for entry in archive.infolist()
+                            if not is_pivot_cache_records(entry.filename)
+                        )
+                        has_pivot_cache_records = any(is_pivot_cache_records(name) for name in archive.namelist())
                 except (zipfile.BadZipFile, OSError):
                     pass
                 else:
@@ -565,6 +594,8 @@ class Loader:
                     )
                     if uncompressed_size > max_bytes:
                         raise ValueError('Document archive is too large after decompression')
+                    if has_pivot_cache_records:
+                        file_path = self._strip_pivot_cache_records(file_path, temp_dir)
 
         if (
             self.engine == 'external'
