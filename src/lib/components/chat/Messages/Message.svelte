@@ -57,9 +57,14 @@
 		isInternalMessage(history.messages[messageId]) &&
 		history.messages[messageId].childrenIds?.length > 0;
 
-	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
-	$: isCurrentTurn =
-		messageId === history.currentId || messageId === history.messages[history.currentId]?.parentId;
+	// Keep the latest turn's real height when assigning a chat ID remounts the message list, and once
+	// it is no longer the latest: virtualizing it on screen blanks it before it is drawn again.
+	let wasCurrentTurn = false;
+	$: if (
+		messageId === history.currentId ||
+		messageId === history.messages[history.currentId]?.parentId
+	)
+		wasCurrentTurn = true;
 
 	// WebKit's content-visibility implementation has paint bugs that leave
 	// on-screen messages blank (#26712), so skip virtualization there
@@ -78,7 +83,7 @@
 		? 'max-w-full'
 		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
 	class:hidden={shownInReply}
-	class:message-virtualized={!isWebKit && !isFirefox && !isCurrentTurn}
+	class:message-virtualized={!isWebKit && !isFirefox && !wasCurrentTurn}
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}
