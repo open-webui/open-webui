@@ -180,6 +180,11 @@ interface PickerParams {
 	search: {
 		enabled: boolean;
 	};
+	selection: {
+		mode: string;
+		enablePersistence: boolean;
+		maximumCount?: number;
+	};
 	typesAndSources: {
 		mode: string;
 		pivots: Record<string, boolean>;
@@ -194,7 +199,7 @@ interface PickerResult {
 }
 
 // Get picker parameters based on account type
-function getPickerParams(): PickerParams {
+function getPickerParams(maxCount?: number): PickerParams {
 	const channelId = uuidv4();
 	const config = OneDriveConfig.getInstance();
 
@@ -210,6 +215,11 @@ function getPickerParams(): PickerParams {
 		},
 		search: {
 			enabled: true
+		},
+		selection: {
+			mode: 'multiple',
+			enablePersistence: true,
+			maximumCount: maxCount
 		},
 		typesAndSources: {
 			mode: 'files',
@@ -243,13 +253,8 @@ interface OneDriveFileInfo {
 // Download file from OneDrive
 async function downloadOneDriveFile(
 	fileInfo: OneDriveFileInfo,
-	authorityType?: 'personal' | 'organizations'
+	accessToken: string
 ): Promise<Blob> {
-	const accessToken = await getToken(undefined, authorityType);
-	if (!accessToken) {
-		throw new Error('Unable to retrieve OneDrive access token.');
-	}
-
 	// The endpoint URL is provided in the file info
 	const fileInfoUrl = `${fileInfo['@sharePoint.endpoint']}/drives/${fileInfo.parentReference.driveId}/items/${fileInfo.id}`;
 
@@ -283,7 +288,8 @@ async function downloadOneDriveFile(
 
 // Open OneDrive file picker and return selected file metadata
 export async function openOneDrivePicker(
-	authorityType?: 'personal' | 'organizations'
+	authorityType?: 'personal' | 'organizations',
+	maxCount?: number
 ): Promise<PickerResult | null> {
 	if (typeof window === 'undefined') {
 		throw new Error('Not in browser environment');
@@ -296,7 +302,7 @@ export async function openOneDrivePicker(
 	return new Promise((resolve, reject) => {
 		let pickerWindow: Window | null = null;
 		let channelPort: MessagePort | null = null;
-		const params = getPickerParams();
+		const params = getPickerParams(maxCount);
 		const baseUrl = config.getBaseUrl();
 
 		const handleWindowMessage = (event: MessageEvent) => {
@@ -435,20 +441,31 @@ export async function openOneDrivePicker(
 	});
 }
 
-// Pick and download file from OneDrive
-export async function pickAndDownloadFile(
-	authorityType?: 'personal' | 'organizations'
-): Promise<{ blob: Blob; name: string } | null> {
-	const pickerResult = await openOneDrivePicker(authorityType);
+// Pick and download files from OneDrive
+export async function pickAndDownloadFiles(
+	authorityType?: 'personal' | 'organizations',
+	maxCount?: number
+): Promise<{ files: File[]; errors: string[] } | null> {
+	const pickerResult = await openOneDrivePicker(authorityType, maxCount);
 
 	if (!pickerResult || !pickerResult.items || pickerResult.items.length === 0) {
 		return null;
 	}
 
-	const selectedFile = pickerResult.items[0];
-	const blob = await downloadOneDriveFile(selectedFile, authorityType);
+	const accessToken = await getToken(undefined, authorityType);
+	const files: File[] = [];
+	const errors: string[] = [];
 
-	return { blob, name: selectedFile.name };
+	for (const item of pickerResult.items) {
+		try {
+			const blob = await downloadOneDriveFile(item, accessToken);
+			files.push(new File([blob], item.name, { type: blob.type || 'application/octet-stream' }));
+		} catch (error) {
+			errors.push(`${item.name}: ${error instanceof Error ? error.message : error}`);
+		}
+	}
+
+	return { files, errors };
 }
 
 export { downloadOneDriveFile };

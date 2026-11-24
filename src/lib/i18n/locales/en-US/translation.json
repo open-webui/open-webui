@@ -1423,6 +1423,7 @@
 	"Error accessing directory": "",
 	"Error accessing Google Drive: {{error}}": "",
 	"Error accessing media devices.": "",
+	"Error accessing OneDrive: {{error}}": "",
 	"Error deleting model: {{error}}": "",
 	"Error previewing file: {{error}}": "",
 	"Error starting recording.": "",
