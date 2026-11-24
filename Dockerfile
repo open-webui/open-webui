@@ -41,6 +41,9 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 COPY package.json package-lock.json ./
+# onnxruntime-node's postinstall downloads CUDA EP binaries from GitHub releases (asset removed upstream -> 404).
+# The frontend build does not need CUDA, so skip it.
+ENV ONNXRUNTIME_NODE_INSTALL_CUDA=skip
 RUN npm ci --force
 
 COPY . .
