@@ -534,3 +534,10 @@
 		</div>
 	</div>
 </Modal>
+
+<style>
+	audio::-webkit-media-controls-enclosure,
+	audio::-webkit-media-controls-panel {
+		background-color: transparent;
+	}
+</style>
