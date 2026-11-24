@@ -19,6 +19,11 @@ metadata:
     environment: ${APP_ENVIRONMENT}
 data:
   config.yaml: |
+    # Bedrock's Converse API rejects some OpenAI parameters (for example
+    # tool_choice="none", which Open WebUI sends when it wants a final answer
+    # after tool calls). Drop them instead of failing the whole reply.
+    litellm_settings:
+      drop_params: true
     model_list:
       - model_name: bedrock-claude-sonnet-5-5
         litellm_params:
