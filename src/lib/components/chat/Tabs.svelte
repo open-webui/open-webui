@@ -206,6 +206,7 @@
 	$: if (
 		viewReady &&
 		!chatLoading &&
+		isPanelViewReady(panelChatId, viewEntry) &&
 		$chatTabRequest &&
 		'folderId' in $chatTabRequest &&
 		$chatTabRequest.folderId === mainTabFolder?.id
