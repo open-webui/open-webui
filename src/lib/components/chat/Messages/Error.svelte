@@ -42,7 +42,7 @@
 >
 	<Info className="mt-0.5 size-4 shrink-0 text-base-400 dark:text-base-500" strokeWidth="1.8" />
 
-	<div class="min-w-0 break-words text-[0.8125rem] leading-5">
+	<div class="min-w-0 whitespace-pre-line break-words text-[0.8125rem] leading-5">
 		{message}
 	</div>
 </div>
