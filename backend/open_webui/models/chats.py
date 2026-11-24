@@ -495,12 +495,22 @@ class ChatTable:
 
     async def _with_history(self, chat: Chat, db: AsyncSession) -> ChatModel:
         """The chat model with chat.history built from its message rows."""
-        messages = await ChatMessages.get_messages_map_by_chat_id(chat.id, db=db) or {}
-        return ChatModel.model_validate(chat).model_copy(
-            update={
-                'chat': {**(chat.chat or {}), 'history': {'messages': messages, 'currentId': chat.current_message_id}}
-            }
-        )
+        return (await self._with_histories([chat], db=db))[0]
+
+    async def _with_histories(self, chats: list[Chat], db: AsyncSession) -> list[ChatModel]:
+        """The chat models with chat.history built from their message rows, in one query."""
+        messages = await ChatMessages.get_messages_maps_by_chat_ids([chat.id for chat in chats], db=db)
+        return [
+            ChatModel.model_validate(chat).model_copy(
+                update={
+                    'chat': {
+                        **(chat.chat or {}),
+                        'history': {'messages': messages.get(chat.id, {}), 'currentId': chat.current_message_id},
+                    }
+                }
+            )
+            for chat in chats
+        ]
 
     @staticmethod
     def _without_history(chat: dict) -> dict:
@@ -2112,7 +2122,7 @@ class ChatTable:
             stmt = select(Chat).where(Chat.meta['internal'].as_boolean().is_not(True))
             result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
             all_chats = result.scalars().all()
-            return [await self._with_history(chat, db=session) for chat in all_chats]
+            return await self._with_histories(all_chats, db=session)
 
     async def get_user_usage_chat_stats(self, user_id: str, db: AsyncSession | None = None) -> dict:
         async with get_async_db_context(db) as session:
@@ -2189,7 +2199,7 @@ class ChatTable:
 
             return ChatListResponse(
                 **{
-                    'items': [await self._with_history(chat, db=session) for chat in all_chats],
+                    'items': await self._with_histories(all_chats, db=session),
                     'total': total,
                 }
             )
@@ -2223,7 +2233,7 @@ class ChatTable:
             stmt = select(Chat).filter_by(user_id=user_id, archived=True)
             stmt = stmt.where(Chat.meta['internal'].as_boolean().is_not(True))
             result = await session.execute(stmt.order_by(Chat.updated_at.desc()))
-            return [await self._with_history(chat, db=session) for chat in result.scalars().all()]
+            return await self._with_histories(result.scalars().all(), db=session)
 
     # search user conversations
     async def get_chats_by_user_id_and_search_text(  # noqa: C901
@@ -2822,7 +2832,7 @@ class ChatTable:
 
             result = await session.execute(stmt)
             all_chats = result.scalars().all()
-            return [await self._with_history(chat, db=session) for chat in all_chats]
+            return await self._with_histories(all_chats, db=session)
 
     async def update_chat_folder_id_by_id_and_user_id(
         self, id: str, user_id: str, folder_id: str, db: AsyncSession | None = None

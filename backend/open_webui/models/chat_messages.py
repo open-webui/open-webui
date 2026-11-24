@@ -421,14 +421,28 @@ class ChatMessageTable:
         (get_message_list, middleware) work unchanged.  Returns None if
         no rows exist for the chat.
         """
+        return (await self.get_messages_maps_by_chat_ids([chat_id], db=db)).get(chat_id)
+
+    async def get_messages_maps_by_chat_ids(
+        self, chat_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, dict]:
+        """get_messages_map_by_chat_id for many chats in one query; chats without rows are left out."""
+        rows = []
         async with nullcontext(db) if db is not None else get_async_db_context() as db:
-            # Plain rows, not session objects: callers change the returned messages and save them back.
-            result = await db.execute(select(ChatMessage.__table__).filter_by(chat_id=chat_id))
-            rows = sorted(result.all(), key=lambda row: (row.created_at or 0, row.id))
+            # Databases limit how many values one query may bind.
+            for start in range(0, len(chat_ids), 500):
+                # Plain rows, not session objects: callers change the returned messages and save them back.
+                result = await db.execute(
+                    select(ChatMessage.__table__).where(ChatMessage.chat_id.in_(chat_ids[start : start + 500]))
+                )
+                rows.extend(result.all())
+        rows_by_chat_id: dict[str, list[Row]] = {}
+        for row in sorted(rows, key=lambda row: (row.created_at or 0, row.id)):
+            rows_by_chat_id.setdefault(row.chat_id, []).append(row)
+        return {chat_id: self._messages_map(chat_id, rows) for chat_id, rows in rows_by_chat_id.items()}
 
-        if not rows:
-            return None
-
+    def _messages_map(self, chat_id: str, rows: list[Row]) -> dict:
+        """The {message_id: message} map of one chat's rows."""
         messages_map = {message['id']: message for message in map(self.to_message, rows)}
 
         # A partial save can move a child away without saving its old parent.

@@ -1249,7 +1249,7 @@ async def archive_all_chats(
 async def unarchive_all_chats(
     request: Request, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
 ):
-    chats = await Chats.get_archived_chats_by_user_id(user.id, db=db)
+    chats = await Chats.get_archived_chat_list_by_user_id(user.id, limit=None, db=db)
     tags = await Tags.get_tags_by_resources('chat', [chat.id for chat in chats], db=db)
     tag_ids = {tag['id'] for chat_tags in tags.values() for tag in chat_tags}
     result = await Chats.unarchive_all_chats_by_user_id(user.id, db=db)
