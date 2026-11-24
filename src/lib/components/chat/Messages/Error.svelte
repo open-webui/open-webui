@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Info from '$lib/components/icons/Info.svelte';
+	import Markdown from './Markdown.svelte';
 
 	export let content: unknown = '';
 
@@ -42,7 +43,9 @@
 >
 	<Info className="mt-0.5 size-4 shrink-0 text-base-400 dark:text-base-500" strokeWidth="1.8" />
 
-	<div class="min-w-0 whitespace-pre-line break-words text-[0.8125rem] leading-5">
-		{message}
+	<div
+		class="markdown-prose min-w-0 text-[0.8125rem]! leading-5! text-base-500! dark:text-base-400! [&_p]:leading-5!"
+	>
+		<Markdown content={message} allowRemoteContent={false} editCodeBlock={false} />
 	</div>
 </div>
