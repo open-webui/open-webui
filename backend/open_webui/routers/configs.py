@@ -733,7 +733,7 @@ class RouterModelRoute(BaseModel):
     @field_validator('condition', 'pattern', mode='before')
     @classmethod
     def normalize_empty(cls, value):
-        return (value or '').strip() or None
+        return value if (value or '').strip() else None
 
     @model_validator(mode='after')
     def validate_match(self):
