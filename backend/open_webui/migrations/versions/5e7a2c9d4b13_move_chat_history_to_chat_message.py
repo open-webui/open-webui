@@ -84,7 +84,7 @@ def _history_messages(chat: dict) -> dict:
         for index, message in enumerate(chat['messages']):
             if isinstance(message, dict):
                 message_id = str(message.get('id') or index)
-                messages[message_id] = {**message, 'id': message_id, 'parentId': message.get('parentId') or parent_id}
+                messages[message_id] = {**message, 'parentId': message.get('parentId') or parent_id}
                 parent_id = message_id
     return {message_id: message for message_id, message in (messages or {}).items() if isinstance(message, dict)}
 
@@ -154,20 +154,39 @@ def _move_chat_history(
     existing = {
         row.id: row
         for row in conn.execute(
-            sa.select(columns.id, columns.user_id, columns.output, columns.usage, columns.created_at).where(
-                columns.chat_id == chat_id
-            )
+            sa.select(
+                columns.id,
+                columns.user_id,
+                columns.role,
+                columns.content,
+                columns.output,
+                columns.usage,
+                columns.created_at,
+            ).where(columns.chat_id == chat_id)
         )
     }
+    history = chat.get('history') if isinstance(chat.get('history'), dict) else {}
     # The web client used to delete messages by saving the chat without them, which left their rows.
-    deleted_ids = existing.keys() - {f'{chat_id}-{message_id}' for message_id in messages}
-    if deleted_ids:
-        conn.execute(sa.delete(chat_message_table).where(columns.id.in_(deleted_ids)))
+    if isinstance(history.get('messages'), dict):
+        deleted_ids = existing.keys() - {f'{chat_id}-{message_id}' for message_id in history['messages']}
+        if deleted_ids:
+            conn.execute(sa.delete(chat_message_table).where(columns.id.in_(deleted_ids)))
 
     now = int(time.time())
     updates, inserts = [], []
     for message_id, message in messages.items():
         row_id = f'{chat_id}-{message_id}'
+        # An old list entry without an id of its own is already saved when a row has its role and content.
+        if (
+            row_id not in existing
+            and not isinstance(history.get('messages'), dict)
+            and 'id' not in message
+            and any(
+                stored.role == message.get('role') and stored.content == message.get('content')
+                for stored in existing.values()
+            )
+        ):
+            continue
         created_at = _recorded_timestamp(message.get('timestamp'))
         author = message.get('user') if isinstance(message.get('user'), dict) else {}
         author_id = message.get('user_id') or author.get('id')
@@ -216,7 +235,6 @@ def _move_chat_history(
     if inserts:
         conn.execute(sa.insert(chat_message_table), inserts)
 
-    history = chat.get('history') if isinstance(chat.get('history'), dict) else {}
     conn.execute(
         sa.update(chat_table)
         .where(chat_table.c.id == chat_id)
