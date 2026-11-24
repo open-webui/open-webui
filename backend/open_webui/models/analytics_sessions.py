@@ -283,7 +283,7 @@ async def session_messages(
                     ChatMessage.model_id,
                     ChatMessage.created_at,
                     ChatMessage.parent_id,
-                    ChatMessage.done,
+                    ChatMessage.done.is_not(False).label('done'),
                     func.substr(content, 1, 320).label('preview'),
                     (func.length(content) > 320).label('preview_truncated'),
                     func.substr(json_text(db, ChatMessage.error), 1, 500).label('error'),
