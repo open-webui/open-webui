@@ -218,7 +218,8 @@
 							<td class="px-3 py-1.5">
 								<div class="flex items-center gap-2">
 									<img
-										src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.id}"
+										src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.id}&v={model.info
+											?.updated_at}"
 										alt={model.name}
 										class="size-5 rounded-full object-cover shrink-0"
 										on:error={(e) => {

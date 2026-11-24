@@ -19,7 +19,7 @@
 
 	import { formatDate } from '$lib/utils';
 
-	import { settings, user, shortCodesToEmojis } from '$lib/stores';
+	import { settings, user, shortCodesToEmojis, models } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { getMessageData } from '$lib/apis/channels';
 
@@ -416,7 +416,7 @@
 					>
 						{#if message?.reply_to_message?.meta?.model_id}
 							<img
-								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}`}
+								src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.reply_to_message.meta.model_id}&v=${$models.find((model) => model.id === message.reply_to_message.meta.model_id)?.info?.updated_at}`}
 								alt={message.reply_to_message.meta.model_name ??
 									message.reply_to_message.meta.model_id}
 								class="size-4 ml-0.5 rounded-full object-cover"
@@ -478,7 +478,7 @@
 						{#if showUserProfile}
 							{#if message?.meta?.model_id}
 								<img
-									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}`}
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${message.meta.model_id}&v=${$models.find((model) => model.id === message.meta.model_id)?.info?.updated_at}`}
 									alt={message.meta.model_name ?? message.meta.model_id}
 									class="size-6 mt-0.5 object-cover rounded-full"
 									on:error={(e) => {

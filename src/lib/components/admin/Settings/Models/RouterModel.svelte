@@ -6,6 +6,7 @@
 
 	import RouterModelModal from './RouterModelModal.svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { models } from '$lib/stores';
 	export let model;
 	export let onEdit: (model: object, accessGrants: object[]) => Promise<boolean> = async () => true;
 
@@ -31,7 +32,7 @@
 	}}
 >
 	<img
-		src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}`}
+		src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&v=${$models.find((item) => item.id === model.id)?.info?.updated_at}`}
 		alt=""
 		class="size-4 shrink-0 rounded-full object-cover"
 	/>

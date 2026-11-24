@@ -90,7 +90,7 @@
 			>
 				<div class="flex min-w-0 items-center text-base-1000 dark:text-base-100">
 					<img
-						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+						src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}&v=${model.info?.updated_at}`}
 						alt={resolveLocalizedModelName(model, $i18n.language) ?? model.id}
 						class="mr-2 size-4.5 rounded-full object-cover"
 						on:error={(e) => {

@@ -1043,7 +1043,7 @@
 													: 'opacity-50 dark:opacity-50'} bg-transparent rounded-xl"
 											>
 												<img
-													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+													src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}&v=${model.updated_at}`}
 													alt={$i18n.t('modelfile profile')}
 													class=" rounded-xl size-7 object-cover"
 													loading="lazy"

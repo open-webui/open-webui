@@ -771,7 +771,7 @@
 											class="{model.is_active ? '' : 'opacity-50 dark:opacity-50'} bg-transparent"
 										>
 											<img
-												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}&v=${model.updated_at}`}
 												alt=""
 												class="size-7 rounded-lg object-cover"
 												loading="lazy"
