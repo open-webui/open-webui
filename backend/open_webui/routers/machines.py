@@ -430,7 +430,10 @@ async def browser_http(request: Request, server_id: str, sid: str, browser_token
             raise HTTPException(400, 'Invalid file path')
         path = f'files/serve/{file_path}'
     else:
-        path = f'browser/view/{sid}/{data["capability"]}/{path}'
+        page_path = _sanitize_proxy_path(path) if path else ''
+        if page_path is None:
+            raise HTTPException(400, 'Invalid path')
+        path = f'browser/view/{sid}/{data["capability"]}/{page_path}'
     return await _proxy_machine(
         server_id,
         path,
