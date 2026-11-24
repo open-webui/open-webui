@@ -66,8 +66,12 @@
 			aria-hidden="true"
 		></video>
 
-		<div class="absolute inset-0 bg-linear-to-t from-base-1000/80 via-base-1000/20 to-transparent"></div>
-		<div class="absolute inset-0 bg-linear-to-r from-base-1000/50 via-base-1000/10 to-transparent"></div>
+		<div
+			class="absolute inset-0 bg-linear-to-t from-base-1000/80 via-base-1000/20 to-transparent"
+		></div>
+		<div
+			class="absolute inset-0 bg-linear-to-r from-base-1000/50 via-base-1000/10 to-transparent"
+		></div>
 
 		<div class="relative z-10 flex h-screen max-h-[100dvh] w-full">
 			<div class="flex w-full flex-col justify-end px-6 pb-8 sm:px-10 sm:pb-10 lg:px-16 lg:pb-14">

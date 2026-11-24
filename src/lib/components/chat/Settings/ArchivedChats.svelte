@@ -145,7 +145,6 @@
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
 
-
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
 
@@ -210,7 +209,11 @@
 	}}
 />
 
-<div bind:this={chatListElement} id="tab-archived-chats" class="flex flex-col h-full overflow-y-auto text-sm">
+<div
+	bind:this={chatListElement}
+	id="tab-archived-chats"
+	class="flex flex-col h-full overflow-y-auto text-sm"
+>
 	<div class="mb-3 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.archivedChats.title')}

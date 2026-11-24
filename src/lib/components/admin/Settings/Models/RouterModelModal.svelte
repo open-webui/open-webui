@@ -207,7 +207,8 @@
 			strategy = model.meta?.strategy ?? 'first';
 			decisions = { ...DEFAULT_DECISIONS, ...(model.config?.decisions ?? {}) };
 			accessGrants =
-				/** @type {any} */ (($models ?? []).find((m) => m.id === model.id))?.info?.access_grants ?? [];
+				/** @type {any} */ (($models ?? []).find((m) => m.id === model.id))?.info?.access_grants ??
+				[];
 		}
 	};
 

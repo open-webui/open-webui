@@ -585,7 +585,8 @@
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
-			on:confirm={() => withListFocus(containerElement, selectedNote.id, deleteNoteHandler, searchInputElement)}
+			on:confirm={() =>
+				withListFocus(containerElement, selectedNote.id, deleteNoteHandler, searchInputElement)}
 		>
 			<div class=" text-sm text-base-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.

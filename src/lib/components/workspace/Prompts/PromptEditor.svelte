@@ -577,9 +577,7 @@
 					onClose={() => (historyDiff = null)}
 				/>
 			{:else}
-				<div
-					class="flex shrink-0 items-center gap-1 px-2.5 py-1.5 text-xs"
-				>
+				<div class="flex shrink-0 items-center gap-1 px-2.5 py-1.5 text-xs">
 					<div class="min-w-0 flex-1">
 						{#if edit}
 							<Dropdown bind:show={showHistory} align="start">

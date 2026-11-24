@@ -308,7 +308,9 @@
 			{#if (items ?? []).length === 0}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
 					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
-						<div tabindex="-1" data-focus-fallback class="mb-1.5 text-sm">{$i18n.t('No feedback found')}</div>
+						<div tabindex="-1" data-focus-fallback class="mb-1.5 text-sm">
+							{$i18n.t('No feedback found')}
+						</div>
 						<div class="text-center text-xs leading-5 text-base-500">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
