@@ -152,8 +152,10 @@ async def run(transport, output, prompt, images, options):
                             done=True,
                         )
             elif kind == 'result':
-                if (message.get('origin') or {}).get('kind') == 'task-notification':
-                    # About a background command, not an answer to the user.
+                if (message.get('origin') or {}).get('kind') == 'task-notification' and not message.get(
+                    'user_message_uuids'
+                ):
+                    # About a background command, and answers no message of the user's.
                     continue
                 output.state['session_id'] = message['session_id']
                 output.usage = message.get('usage')
