@@ -1389,7 +1389,7 @@
 
 	const applyFolderMachine = (folder: any) => {
 		const machineId = machineIdOf(folder?.data);
-		if (!machineId) return;
+		if (!machineId || !$config?.features?.enable_tool_servers) return;
 		selectedMachineId.set(machineId);
 		machineContext = { machineId, currentDirectory: folder.data?.working_directory ?? '' };
 	};
