@@ -2246,7 +2246,7 @@
 											<img
 												alt={$i18n.t('model profile')}
 												class="size-3.5 max-w-[1.75rem] object-cover rounded-full"
-												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${($models ?? []).find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}`}
+												src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${($models ?? []).find((model) => model.id === atSelectedModel.id).id}&lang=${$i18n.language}&v=${($models ?? []).find((model) => model.id === atSelectedModel.id)?.info?.updated_at}`}
 											/>
 											<div class="translate-y-[0.5px]">
 												<span class="">{atSelectedModelName}</span>

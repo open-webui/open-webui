@@ -258,7 +258,7 @@
 								{/if}
 							{:else if item.type === 'model'}
 								<img
-									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}`}
+									src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${item.id}&lang=${$i18n.language}&v=${item.data?.info?.updated_at}`}
 									alt={item?.data?.name ?? item.id}
 									class="size-4 shrink-0 rounded-full object-cover"
 									on:error={(e) => {

@@ -113,7 +113,7 @@
 				>
 					<div class="flex text-base-1000 dark:text-base-100 line-clamp-1">
 						<img
-							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(model.id)}`}
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(model.id)}&v=${model.info?.updated_at}`}
 							alt={model?.name ?? model.id}
 							class="rounded-full size-5 items-center mr-2"
 							loading="lazy"

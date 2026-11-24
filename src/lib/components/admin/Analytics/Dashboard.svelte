@@ -723,7 +723,9 @@
 											<td class="font-normal px-3 py-1.5 text-base-900 dark:text-base-0">
 												<div class="flex items-center gap-2">
 													<img
-														src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}"
+														src="{WEBUI_API_BASE_URL}/models/model/profile/image?id={model.model_id}&v={$models.find(
+															(item) => item.id === model.model_id
+														)?.info?.updated_at}"
 														alt={model.name}
 														class="size-5 rounded-full object-cover shrink-0"
 														on:error={(e) => {
