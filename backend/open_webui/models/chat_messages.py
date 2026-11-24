@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.session_records import has_pending_tool_approval, normalize_tool_output, recorded_timestamp
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -229,13 +229,18 @@ class ChatMessageModel(BaseModel):
     sources: Optional[list] = None
     embeds: Optional[list] = None
     meta: Optional[dict] = None
-    done: Optional[bool] = None
+    done: bool = True
     status_history: Optional[list] = None
     error: Optional[dict | str] = None
     usage: Optional[dict] = None
     context_summary: Optional[str] = None
     created_at: int
     updated_at: int
+
+    @field_validator('done', mode='before')
+    @classmethod
+    def normalize_done(cls, value: Optional[bool]) -> bool:
+        return value is not False
 
 
 # Table Operations
