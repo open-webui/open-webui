@@ -29,9 +29,7 @@ class FolderViewStatesTable:
 
     async def get_by_folder_ids(self, user_id, folder_ids, db):
         result = await db.execute(
-            select(FolderViewState).where(
-                FolderViewState.user_id == user_id, FolderViewState.folder_id.in_(folder_ids)
-            )
+            select(FolderViewState).where(FolderViewState.user_id == user_id, FolderViewState.folder_id.in_(folder_ids))
         )
         return {row.folder_id: row for row in result.scalars().all()}
 

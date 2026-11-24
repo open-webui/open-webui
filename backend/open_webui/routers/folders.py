@@ -219,7 +219,11 @@ async def get_active_folders(
                 for tab in tabs
                 if tab.get('kind') == 'browser'
                 # The label becomes the page's title, so the port is read from the address.
-                and (match := re.match(r'https?://(?:localhost|127\.0\.0\.1):(\d{1,5})(?:[/?#]|$)', tab.get('path') or ''))
+                and (
+                    match := re.match(
+                        r'https?://(?:localhost|127\.0\.0\.1):(\d{1,5})(?:[/?#]|$)', tab.get('path') or ''
+                    )
+                )
             }
         )
         active[folder_id].updated_at = max(active[folder_id].updated_at, view.updated_at)
@@ -863,9 +867,7 @@ async def update_folder_view(
     db: AsyncSession = Depends(get_async_session),
 ):
     await check_folder_read_access(request, id, user, db)
-    saved = await FolderViewStates.save(
-        user.id, id, form.state.model_dump(exclude_unset=True), form.revision, db
-    )
+    saved = await FolderViewStates.save(user.id, id, form.state.model_dump(exclude_unset=True), form.revision, db)
     if not saved:
         return JSONResponse(await FolderViewStates.get(user.id, id, db), status_code=409)
     return saved
