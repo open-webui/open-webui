@@ -18,7 +18,12 @@ from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    get_content_from_message,
+    get_message_list,
+    is_raster_image_content_type,
+)
 from open_webui.utils.models import get_filtered_models
 from open_webui.utils.session_records import has_pending_tool_approval
 from open_webui.utils.tool_calling import strip_tool_approval_prompt
@@ -618,6 +623,12 @@ async def delegate(
         assistant_message_id = str(uuid4())
         prompt = f'{task}\n\n## Context\n{context}' if context else task
         prompt_files = delegated_files
+        chat_context = copy.deepcopy(run.get('chat_context') or {})
+        system_messages = add_or_update_system_message(
+            str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT,
+            [*chat_context.get('messages', [])],
+            append=True,
+        )
         user_message = {
             'id': user_message_id,
             'parentId': None,
@@ -637,6 +648,10 @@ async def delegate(
                     'title': f'Sub-agent: {task[:60]}',
                     'models': [model_id],
                     'machine_id': machine_id_of(run),
+                    # Read when the user's answer or message continues this chat.
+                    'params': {
+                        'system': '\n\n'.join(get_content_from_message(message) or '' for message in system_messages)
+                    },
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
@@ -692,19 +707,11 @@ async def delegate(
             )
             child_request = await _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
-            chat_context = copy.deepcopy(run.get('chat_context') or {})
             child_request.state.chat_context = chat_context
-            subagent_system_prompt = (
-                str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
-            )
             form_data = {
                 'model': model_id,
                 'params': chat_context.get('params') or {},
-                'messages': add_or_update_system_message(
-                    subagent_system_prompt,
-                    [*chat_context.get('messages', []), {'role': 'user', 'content': prompt}],
-                    append=True,
-                ),
+                'messages': [*system_messages, {'role': 'user', 'content': prompt}],
                 'stream': True,
                 'chat_id': chat_id,
                 'id': assistant_message_id,
