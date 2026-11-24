@@ -261,7 +261,14 @@
 			comment = '';
 			onChange();
 			void load();
-			if (selected && action !== 'create') await select(selected, view);
+			if (selected && action !== 'create') {
+				const version = generation;
+				// Code and Checks load only their own data, so read the new state first.
+				const pr = ['code', 'checks'].includes(view)
+					? await request<PullRequest>('view', { number: String(selected.number) })
+					: selected;
+				if (version === generation) await select(pr, view);
+			}
 		} catch (reason) {
 			error = String(reason instanceof Error ? reason.message : reason);
 		} finally {
