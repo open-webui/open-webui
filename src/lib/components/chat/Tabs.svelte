@@ -1975,6 +1975,9 @@
 				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
 					url.searchParams.set('temporary-chat', String($temporaryChat));
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
+			} else if (active?.id === mainChatTabId && url.pathname === get(page).url.pathname) {
+				// Keep the query, such as ?message=, so a reload lands there again.
+				url.search = get(page).url.search;
 			}
 			if (url.origin === location.origin && url.href !== location.href) {
 				// Reflect selection without routing through SvelteKit and remounting the workspace.
