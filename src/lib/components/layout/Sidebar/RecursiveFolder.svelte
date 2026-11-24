@@ -637,7 +637,7 @@
 			!($pendingChatRequest && $pendingChatRequest.id === $page.params.id);
 
 	const openFolderHandler = async () => {
-		await goto(`/folders/${folderId}`);
+		await goto(`/folders/${folderId}`, { keepFocus: true });
 		if ($mobile) showSidebar.set(false);
 	};
 
@@ -856,8 +856,16 @@
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
-							on:blur={() => {
-								console.log('Blur');
+							on:blur={(e) => {
+								// Opening the folder focuses its composer while a rename is in progress.
+								// A composer the user pressed is active; one focused by the page is not.
+								const input = e.currentTarget;
+								const composer = e.relatedTarget?.closest('[data-composer-id]');
+								if (composer && !composer.matches(':active')) {
+									setTimeout(() => input.focus());
+									return;
+								}
+
 								updateHandler({ name });
 								edit = false;
 							}}
