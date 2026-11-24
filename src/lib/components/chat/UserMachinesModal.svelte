@@ -27,7 +27,7 @@
 		resolveMachineTarget,
 		type MachineTarget
 	} from '$lib/apis/machines';
-	import { machines } from '$lib/stores';
+	import { machines, user } from '$lib/stores';
 	import MachineSystemInfoModal from './MachineSystemInfoModal.svelte';
 	import Activity from '$lib/components/icons/Activity.svelte';
 	import Folder from '$lib/components/icons/Folder.svelte';
@@ -796,7 +796,7 @@
 					labels={{ private: $i18n.t('Restricted') }}
 					onChange={saveAccess}
 					accessRoles={['read']}
-					sharePublic={false}
+					sharePublic={$user?.role === 'admin'}
 					shareOpen={false}
 				>
 					<p class="text-xs text-base-500 dark:text-base-400">

@@ -228,7 +228,7 @@ _SHARING_PERMISSION_KEYS = {
     'channel': (None, 'sharing.public_channels', None),
     'calendar': (None, 'sharing.public_calendars', None),
     'shared_chat': (None, 'sharing.public_chats', 'sharing.open_chats'),
-    'machine': (None, None, None),
+    'machine': (None, 'sharing.public_machines', None),  # not a grantable permission, so only admins can
     'terminal': (None, None, None),  # former name of 'machine'
 }
 

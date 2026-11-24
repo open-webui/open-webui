@@ -131,11 +131,6 @@ async def get_shares(machine_id: str, user=Depends(get_verified_user)):
 @router.post('/{machine_id}/access')
 async def set_shares(machine_id: str, body: ShareForm, user=Depends(get_verified_user)):
     await template_connection(user, machine_id, 'write')
-    if any(
-        g.get('principal_type') not in ('user', 'group') or g.get('principal_id') in (None, '', '*')
-        for g in body.access_grants
-    ):
-        raise HTTPException(400, 'Public machine sharing is not allowed')
     grants = await validate_access_grants(
         await Config.get('user.permissions'), user.id, user.role, body.access_grants, resource_type='machine'
     )
