@@ -2657,7 +2657,7 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 skill_manifest += format_machine_skill_manifest_entry(skill)
                 continue
             if sid in activated_skill_ids or not use_builtin_tools or not model_builtin_tools.get('skills', True):
-                skill_name = unquote(sid.removeprefix(machine_skill_prefix))
+                skill_name = unquote(strip_machine_prefix(sid))
                 loaded = await get_machine_skill(
                     request,
                     user.model_dump(),
