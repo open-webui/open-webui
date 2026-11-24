@@ -227,6 +227,16 @@ def _move_chat_history(
     )
 
 
+def _chat_blob(chat: Any) -> dict:
+    """The stored chat as a dict; older versions saved some as a JSON string."""
+    if isinstance(chat, str):
+        try:
+            chat = json.loads(chat)
+        except ValueError:
+            return {}
+    return chat if isinstance(chat, dict) else {}
+
+
 def _blob_has_history(chat: dict) -> bool:
     return 'history' in chat or 'messages' in chat
 
@@ -280,7 +290,9 @@ def upgrade() -> None:
         for chat_id in chat_ids.all():
             raw = conn.execute(sa.text('SELECT chat::text FROM chat WHERE id = :id'), {'id': chat_id}).scalar_one()
             conn.execute(
-                sa.update(chat_table).where(chat_table.c.id == chat_id).values(chat=_without_nul(json.loads(raw)))
+                sa.update(chat_table)
+                .where(chat_table.c.id == chat_id)
+                .values(chat=_without_nul(_chat_blob(json.loads(raw))))
             )
 
     checked = 0
@@ -293,8 +305,9 @@ def upgrade() -> None:
                         chat_table.c.id == chat_id
                     )
                 ).one()
+                chat = _chat_blob(chat)
                 # Checked here, not in SQL: older SQLite refuses blobs holding NaN.
-                if _blob_has_history(chat or {}):
+                if _blob_has_history(chat):
                     _move_chat_history(conn, chat_id, owner_id, chat, current_message_id)
             conn.exec_driver_sql('COMMIT')
             checked += len(chat_ids)
@@ -310,7 +323,8 @@ def downgrade() -> None:
                 chat, current_message_id = conn.execute(
                     sa.select(chat_table.c.chat, chat_table.c.current_message_id).where(chat_table.c.id == chat_id)
                 ).one()
-                if _blob_has_history(chat or {}):
+                chat = _chat_blob(chat)
+                if _blob_has_history(chat):
                     continue
                 rows = conn.execute(
                     sa.select(chat_message_table)
@@ -322,7 +336,7 @@ def downgrade() -> None:
                     .where(chat_table.c.id == chat_id)
                     .values(
                         chat={
-                            **(chat or {}),
+                            **chat,
                             'history': {'messages': _rows_to_messages(rows), 'currentId': current_message_id},
                         }
                     )
