@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Το Open WebUI είναι <a href="https://docs.openwebui.com/"><strong>ένα σπίτι για την τεχνητή νοημοσύνη</strong></a>: μια επεκτάσιμη, εύχρηστη πλατφόρμα που φιλοξενείτε εσείς, σχεδιασμένη να λειτουργεί πλήρως εκτός σύνδεσης. Συνδέστε τοπικά μοντέλα μέσω του Ollama ή χρησιμοποιήστε API συμβατά με το OpenAI για τοπικά μοντέλα και μοντέλα στο cloud.</p>
+<p>Το Open WebUI είναι <a href="https://docs.openwebui.com/"><strong>ένα σπίτι για την τεχνητή νοημοσύνη</strong></a>: μια επεκτάσιμη, εύχρηστη πλατφόρμα που φιλοξενείτε εσείς, σχεδιασμένη να λειτουργεί πλήρως εκτός σύνδεσης. Συνδέστε τοπικά μοντέλα μέσω του Ollama, χρησιμοποιήστε API συμβατά με το OpenAI για τοπικά μοντέλα και μοντέλα στο cloud ή προσθέστε πράκτορες μέσω του <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI, <a href="https://docs.openwebui.com/"><strong>yapay zekâ için bir yuva</strong></a>dır: tamamen çevrimdışı çalışmak üzere tasarlanmış, genişletilebilir, kullanımı kolay ve kendi sunucunuzda barındırabileceğiniz bir platform. Yerel modellere Ollama üzerinden bağlanın veya yerel ve bulut modelleri için OpenAI uyumlu API’leri kullanın.</p>
+<p>Open WebUI, <a href="https://docs.openwebui.com/"><strong>yapay zekâ için bir yuva</strong></a>dır: tamamen çevrimdışı çalışmak üzere tasarlanmış, genişletilebilir, kullanımı kolay ve kendi sunucunuzda barındırabileceğiniz bir platform. Yerel modellere Ollama üzerinden bağlanın, yerel ve bulut modelleri için OpenAI uyumlu API’leri kullanın veya <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a> üzerinden ajanlar ekleyin.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

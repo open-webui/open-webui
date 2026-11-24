@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI は <a href="https://docs.openwebui.com/"><strong>AI のためのホーム</strong></a>です。拡張可能で使いやすく、完全オフラインでの動作に対応したセルフホスト型プラットフォームです。Ollama でローカルモデルに接続するほか、OpenAI 互換 API を通じてローカルやクラウドのモデルを利用できます。</p>
+<p>Open WebUI は <a href="https://docs.openwebui.com/"><strong>AI のためのホーム</strong></a>です。拡張可能で使いやすく、完全オフラインでの動作に対応したセルフホスト型プラットフォームです。Ollama でローカルモデルに接続するほか、OpenAI 互換 API を通じてローカルやクラウドのモデルを利用したり、<a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a> を通じてエージェントを追加したりできます。</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

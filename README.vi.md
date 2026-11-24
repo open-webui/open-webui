@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI là <a href="https://docs.openwebui.com/"><strong>ngôi nhà dành cho AI</strong></a>: một nền tảng tự lưu trữ, dễ mở rộng, dễ sử dụng và được thiết kế để hoạt động hoàn toàn ngoại tuyến. Kết nối mô hình cục bộ qua Ollama hoặc dùng API tương thích với OpenAI cho các mô hình cục bộ và trên đám mây.</p>
+<p>Open WebUI là <a href="https://docs.openwebui.com/"><strong>ngôi nhà dành cho AI</strong></a>: một nền tảng tự lưu trữ, dễ mở rộng, dễ sử dụng và được thiết kế để hoạt động hoàn toàn ngoại tuyến. Kết nối mô hình cục bộ qua Ollama, dùng API tương thích với OpenAI cho các mô hình cục bộ và trên đám mây, hoặc thêm tác tử qua <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

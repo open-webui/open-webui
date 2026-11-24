@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI হলো <a href="https://docs.openwebui.com/"><strong>AI-এর একটি আপন ঠিকানা</strong></a>: একটি সম্প্রসারণযোগ্য, সহজে ব্যবহারযোগ্য ও নিজে হোস্ট করা যায় এমন প্ল্যাটফর্ম, যা সম্পূর্ণ অফলাইনে চলার জন্য তৈরি। Ollama দিয়ে স্থানীয় মডেল সংযুক্ত করুন, অথবা স্থানীয় ও ক্লাউড মডেলের জন্য OpenAI-সামঞ্জস্যপূর্ণ API ব্যবহার করুন।</p>
+<p>Open WebUI হলো <a href="https://docs.openwebui.com/"><strong>AI-এর একটি আপন ঠিকানা</strong></a>: একটি সম্প্রসারণযোগ্য, সহজে ব্যবহারযোগ্য ও নিজে হোস্ট করা যায় এমন প্ল্যাটফর্ম, যা সম্পূর্ণ অফলাইনে চলার জন্য তৈরি। Ollama দিয়ে স্থানীয় মডেল সংযুক্ত করুন, স্থানীয় ও ক্লাউড মডেলের জন্য OpenAI-সামঞ্জস্যপূর্ণ API ব্যবহার করুন, অথবা <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>-এর মাধ্যমে এজেন্ট যোগ করুন।</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

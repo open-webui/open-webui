@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI 是 <a href="https://docs.openwebui.com/"><strong>AI 的家</strong></a>：一個可擴充、易於使用的自架平台，支援完全離線執行。透過 Ollama 連接本機模型，或使用相容於 OpenAI 的 API 連接本機和雲端模型。</p>
+<p>Open WebUI 是 <a href="https://docs.openwebui.com/"><strong>AI 的家</strong></a>：一個可擴充、易於使用的自架平台，支援完全離線執行。透過 Ollama 連接本機模型，使用相容於 OpenAI 的 API 連接本機和雲端模型，或透過 <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a> 新增代理。</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI คือ <a href="https://docs.openwebui.com/"><strong>บ้านสำหรับ AI</strong></a>: แพลตฟอร์มที่โฮสต์เองได้ ขยายความสามารถได้ ใช้งานง่าย และออกแบบให้ทำงานแบบออฟไลน์ได้ทั้งหมด เชื่อมต่อโมเดลภายในเครื่องผ่าน Ollama หรือใช้ API ที่เข้ากันได้กับ OpenAI สำหรับโมเดลภายในเครื่องและบนคลาวด์</p>
+<p>Open WebUI คือ <a href="https://docs.openwebui.com/"><strong>บ้านสำหรับ AI</strong></a>: แพลตฟอร์มที่โฮสต์เองได้ ขยายความสามารถได้ ใช้งานง่าย และออกแบบให้ทำงานแบบออฟไลน์ได้ทั้งหมด เชื่อมต่อโมเดลภายในเครื่องผ่าน Ollama ใช้ API ที่เข้ากันได้กับ OpenAI สำหรับโมเดลภายในเครื่องและบนคลาวด์ หรือเพิ่มเอเจนต์ผ่าน <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a></p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |
