@@ -115,8 +115,6 @@
 	let dropPosition = 'inside';
 	let dragged = false;
 
-	let clickTimer = null;
-
 	$: if ($mobile || edit || dragged || parentDragged || draggedOver || showFolderModal) {
 		openPreview = false;
 	}
@@ -876,13 +874,9 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5 pr-6"
+								class="flex min-w-0 flex-1 self-stretch -my-1 -ms-1.5 ps-1.5 items-center gap-1.5 pr-6"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-									if (clickTimer) {
-										clearTimeout(clickTimer); // cancel the single-click action
-										clickTimer = null;
-									}
 									renameHandler();
 								}}
 								onclick={(e) => {
@@ -890,15 +884,8 @@
 									e.stopPropagation();
 									if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									e.preventDefault();
-									if (clickTimer) {
-										clearTimeout(clickTimer);
-										clickTimer = null;
-									}
-
-									clickTimer = setTimeout(async () => {
-										await openFolderHandler();
-										clickTimer = null;
-									}, 100); // 100ms delay (typical double-click threshold)
+									// A double click's second click only renames.
+									if (e.detail < 2) openFolderHandler();
 								}}
 								onkeydown={(e) => {
 									if (e.currentTarget !== e.target) return;
@@ -937,7 +924,7 @@
 
 				{#if isWritable}
 					<div
-						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-base-300"
+						class="absolute z-10 right-2 hover-reveal pointer-coarse:opacity-100! pointer-coarse:pointer-events-auto! self-center flex items-center dark:text-base-300"
 						role="presentation"
 						on:pointerdown={() => (openPreview = false)}
 					>
